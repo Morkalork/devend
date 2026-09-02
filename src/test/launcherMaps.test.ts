@@ -19,7 +19,10 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
+import {
+  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
+  type LaunchFacing, type Blocker,
+} from "@/lib/launcher";
 import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
@@ -80,27 +83,29 @@ describe("the launchers in map.yml", () => {
     }
   });
 
-  it("does not fire straight into the board edge", () => {
+  it("does not fire straight into the board edge, or into another obstacle", () => {
     // The cup's open side is the only way out, so the muzzle needs somewhere to
     // go. A ball that leaves and immediately bounces back in is a map that
     // opens by wasting the player's one shot.
+    //
+    // Runs through launcherRunway, which is the SAME function the map editor
+    // draws its arrow and its "FIRES INTO A WALL" warning from. It used to
+    // recompute the ray here, and against the arena edge only - so the editor
+    // could pass a barrel this rejected, and this could pass a barrel aimed
+    // point-blank at a wall. A designer told two different things by two copies
+    // of one rule stops believing either.
     for (const { level, cups } of withCups) {
+      const blockers = (level.entities ?? [])
+        .filter(e => e.shape === "rect")
+        .map(e => e as unknown as Blocker);
       for (const c of cups) {
-        // The TURNED muzzle, not the bare facing: a canted barrel fires
-        // somewhere its facing alone does not describe, and reading only the
-        // facing would clear a barrel aimed straight at the wall beside it.
-        const dir = muzzleVector(c.facing, c.angle);
-        const mouthX = c.x + c.width / 2 + dir.x * (c.width / 2);
-        const mouthY = c.y + c.height / 2 + dir.y * (c.height / 2);
-        // How far the muzzle ray runs before it leaves the arena, in either
-        // axis: the shorter of the two is the real runway for a diagonal shot.
-        const runX = dir.x > 0 ? (BOARD_WIDTH - MARGIN - mouthX) / dir.x
-          : dir.x < 0 ? (mouthX - MARGIN) / -dir.x : Infinity;
-        const runY = dir.y > 0 ? (BOARD_HEIGHT - MARGIN - mouthY) / dir.y
-          : dir.y < 0 ? (mouthY - MARGIN) / -dir.y : Infinity;
-        const runway = Math.min(runX, runY);
+        const runway = launcherRunway(
+          c,
+          blockers.filter(b => (b as unknown as { id: string }).id !== c.id),
+          { width: BOARD_WIDTH, height: BOARD_HEIGHT, margin: MARGIN },
+        );
         expect(runway, `${level.id}/${c.id} has no room to fire`)
-          .toBeGreaterThan(BOARD_WIDTH * 0.25);
+          .toBeGreaterThan(BOARD_WIDTH * MIN_LAUNCH_RUNWAY_FRACTION);
       }
     }
   });

@@ -249,3 +249,111 @@ export function maxSafeLaunchPower(
   const maxSpeed = (2 * band) / physicsStep;
   return maxSpeed / Math.max(1, baseSpeed);
 }
+
+// ── Where the shot actually goes ───────────────────────────────────────────
+
+/** The authored fields a runway check needs. Any launcher entity satisfies it. */
+export interface LauncherPlacement {
+  x: number; y: number; width: number; height: number;
+  facing: LaunchFacing;
+  angle?: number;
+}
+
+/** An axis-aligned box a shot can run into. */
+export interface Blocker { x: number; y: number; width: number; height: number }
+
+/**
+ * Where the muzzle sits and which way it points.
+ *
+ * The origin is the centre pushed out along the barrel by half its length,
+ * which is the mouth of the tube rather than the middle of the rect. A shot
+ * traced from the centre would start INSIDE the barrel and report the barrel's
+ * own back wall as the first thing it hits.
+ */
+export function muzzleRay(cup: LauncherPlacement): { origin: Vector2; direction: Vector2 } {
+  const direction = muzzleVector(cup.facing, cup.angle);
+  const cx = cup.x + cup.width / 2;
+  const cy = cup.y + cup.height / 2;
+  const reach = (Math.abs(direction.x) > Math.abs(direction.y) ? cup.width : cup.height) / 2;
+  return {
+    origin: { x: cx + direction.x * reach, y: cy + direction.y * reach },
+    direction,
+  };
+}
+
+/** Distance along a ray to the arena edge. Infinity is impossible: it is a box. */
+function distanceToArenaEdge(
+  origin: Vector2, dir: Vector2, width: number, height: number, margin: number,
+): number {
+  const runX = dir.x > 0 ? (width - margin - origin.x) / dir.x
+    : dir.x < 0 ? (origin.x - margin) / -dir.x
+    : Infinity;
+  const runY = dir.y > 0 ? (height - margin - origin.y) / dir.y
+    : dir.y < 0 ? (origin.y - margin) / -dir.y
+    : Infinity;
+  return Math.max(0, Math.min(runX, runY));
+}
+
+/** Distance along a ray to an axis-aligned box, or Infinity if it never hits. */
+function distanceToBox(origin: Vector2, dir: Vector2, b: Blocker): number {
+  // Slab method. A zero component means the ray is parallel to that pair of
+  // slabs, so it only ever hits if it already lies between them.
+  let near = -Infinity, far = Infinity;
+  const axes: Array<[number, number, number, number]> = [
+    [origin.x, dir.x, b.x, b.x + b.width],
+    [origin.y, dir.y, b.y, b.y + b.height],
+  ];
+  for (const [o, d, lo, hi] of axes) {
+    if (Math.abs(d) < 1e-9) {
+      if (o < lo || o > hi) return Infinity;
+      continue;
+    }
+    const t1 = (lo - o) / d, t2 = (hi - o) / d;
+    near = Math.max(near, Math.min(t1, t2));
+    far = Math.min(far, Math.max(t1, t2));
+  }
+  if (far < near || far < 0) return Infinity;
+  return Math.max(0, near);
+}
+
+/**
+ * How far a straight shot travels before it meets something.
+ *
+ * The number behind the editor's "this fires into a wall" warning, and behind
+ * the map.yml guard, deliberately the SAME function for both. A designer who is
+ * told a barrel is fine and then ships a map the test rejects has been told two
+ * different things by two copies of one rule.
+ *
+ * Blockers are treated as their bounding boxes. That is approximate for a
+ * circle or a bent shape, and it is the right approximation here: this drives a
+ * warning, and a warning that fires slightly early costs a designer a glance,
+ * while one that fires slightly late costs them a map that cannot be played.
+ *
+ * The straight shot is the worst case on purpose. A player can steer up to
+ * LAUNCH_SPREAD either side, so a barrel whose centre line is blocked may still
+ * be playable - but a launcher whose ONLY good shots are at the edge of the
+ * cone is a launcher that punishes using it as it looks.
+ */
+export function launcherRunway(
+  cup: LauncherPlacement,
+  blockers: ReadonlyArray<Blocker>,
+  bounds: { width: number; height: number; margin: number },
+): number {
+  const { origin, direction } = muzzleRay(cup);
+  let shortest = distanceToArenaEdge(
+    origin, direction, bounds.width, bounds.height, bounds.margin,
+  );
+  for (const b of blockers) {
+    shortest = Math.min(shortest, distanceToBox(origin, direction, b));
+  }
+  return shortest;
+}
+
+/**
+ * Runway below which a barrel is judged to be firing into something.
+ *
+ * A fraction of the board rather than a flat distance, so it means the same
+ * thing if the board is ever resized. A quarter of the board is roughly "the
+ * ball gets clear of the launcher's own neighbourhood before it has to turn".
+ */
+export const MIN_LAUNCH_RUNWAY_FRACTION = 0.25;

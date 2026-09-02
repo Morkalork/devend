@@ -1,6 +1,10 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Minus, Plus as PlusIcon } from 'lucide-react';
 import { FIT_VIEW, computeEditorBoardRect, zoomAboutPoint, type EditorView } from '@/lib/editorView';
+import {
+  muzzleRay, launcherRunway, LAUNCH_SPREAD, MIN_LAUNCH_RUNWAY_FRACTION,
+  type LauncherPlacement, type Blocker,
+} from '@/lib/launcher';
 import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
@@ -599,6 +603,98 @@ export function MapCanvas({
       }
     });
 
+    /**
+     * A launcher's muzzle: which way it fires, and whether it can.
+     *
+     * A launcher is authored as a rect and drew as one, so on the canvas it was
+     * a red box exactly like a wall. Which side is open is not in the shape and
+     * the barrel's `angle` moves it again, so the only way to find out where a
+     * map's opening shot went was to play it, and a barrel canted round into
+     * the wall beside it looked identical to a good one.
+     *
+     * Drawn AFTER the entity pass rather than inside it, so a later obstacle
+     * cannot paint over the arrow, and the runway ray is not interrupted by the
+     * thing it is warning about.
+     */
+    const drawMuzzle = (entity: LevelEntity) => {
+      if (entity.kind !== 'launcher' || entity.shape !== 'rect') return;
+      const cup = entity as unknown as LauncherPlacement;
+
+      const blockers = (level.entities || [])
+        .filter(e => e.id !== entity.id && e.shape === 'rect')
+        .map(e => e as unknown as Blocker);
+      const runway = launcherRunway(cup, blockers, {
+        width: BOARD_WIDTH, height: BOARD_WIDTH,
+        margin: BOARD_WIDTH * ARENA_MARGIN,
+      });
+      const blocked = runway < BOARD_WIDTH * MIN_LAUNCH_RUNWAY_FRACTION;
+      const colour = blocked ? '#ff5b5b' : '#ffb347';
+
+      const { origin, direction } = muzzleRay(cup);
+      const from = worldToScreen(origin.x, origin.y);
+      // The arrow stops where the shot stops, so its LENGTH is the warning:
+      // a stubby arrow is a barrel with nowhere to fire.
+      const shown = Math.min(runway, BOARD_WIDTH * 0.42);
+      const to = worldToScreen(
+        origin.x + direction.x * shown, origin.y + direction.y * shown,
+      );
+
+      // The cone the player can actually steer within, so a designer can see
+      // that a blocked centre line may still have a way out.
+      const base = Math.atan2(direction.y, direction.x);
+      ctx.strokeStyle = hexToRgba(colour, 0.3);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 6]);
+      for (const sign of [-1, 1]) {
+        const a = base + sign * LAUNCH_SPREAD;
+        const edge = worldToScreen(
+          origin.x + Math.cos(a) * shown, origin.y + Math.sin(a) * shown,
+        );
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(edge.x, edge.y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // The shot itself.
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+
+      // Arrowhead, turned with the shot.
+      const head = 11;
+      const ang = Math.atan2(to.y - from.y, to.x - from.x);
+      ctx.fillStyle = colour;
+      ctx.beginPath();
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - Math.cos(ang - 0.4) * head, to.y - Math.sin(ang - 0.4) * head);
+      ctx.lineTo(to.x - Math.cos(ang + 0.4) * head, to.y - Math.sin(ang + 0.4) * head);
+      ctx.closePath();
+      ctx.fill();
+
+      // The open end, marked on the barrel itself: without it a barrel whose
+      // arrow is clipped short still has to say which end is the mouth.
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(from.x, from.y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (blocked) {
+        ctx.fillStyle = '#ff5b5b';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('FIRES INTO A WALL', from.x, from.y - 12);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      }
+    };
+
     // Draw entities
     (level.entities || []).forEach(entity => {
       /**
@@ -879,6 +975,11 @@ export function MapCanvas({
         }
       }
     });
+
+    // Muzzles last, over every obstacle: the arrow is about the relationship
+    // BETWEEN a launcher and the things in front of it, so it must not be
+    // hidden by one of them.
+    (level.entities || []).forEach(drawMuzzle);
 
     // Draw balls
     level.balls.forEach(ball => {

@@ -1,7 +1,11 @@
 import type { Bearing } from '@/lib/physics/obstacleRules';
+import {
+  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
+  type LauncherPlacement, type Blocker,
+} from '@/lib/launcher';
 import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
   ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
-  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package } from 'lucide-react';
+  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package, AlertTriangle } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 import {
@@ -501,6 +505,11 @@ export function EntityPanel({
             <BearingEditor
               kind={selectedEntity.kind}
               bearing={selectedEntity.kind === 'box' ? selectedEntity.mouth : selectedEntity.facing}
+              cup={selectedEntity.kind === 'launcher'
+                ? (selectedEntity as unknown as LauncherPlacement) : undefined}
+              blockers={(level.entities || [])
+                .filter(e => e.id !== selectedEntity.id && e.shape === 'rect')
+                .map(e => e as unknown as Blocker)}
               onUpdate={(bearing) => onUpdateEntity(
                 selectedEntity.id,
                 (selectedEntity.kind === 'box'
@@ -1291,9 +1300,25 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
  * that showed them differently would suggest they were different kinds of
  * field.
  */
-function BearingEditor({ kind, bearing, onUpdate }: {
+/**
+ * A heading in words, because degrees alone do not answer "is that into the
+ * wall on my left". Eight points: finer would be false precision on a barrel a
+ * designer turns by dragging.
+ */
+function headingWord(dir: { x: number; y: number }): string {
+  const deg = ((Math.round((Math.atan2(dir.y, dir.x) * 180) / Math.PI) % 360) + 360) % 360;
+  const NAMES = ['right', 'down-right', 'down', 'down-left',
+                 'left', 'up-left', 'up', 'up-right'];
+  return NAMES[Math.round(deg / 45) % 8];
+}
+
+function BearingEditor({ kind, bearing, cup, blockers = [], onUpdate }: {
   kind: 'launcher' | 'box' | 'cage';
   bearing: Bearing;
+  /** The launcher itself, when this is one: needed to resolve where it FIRES. */
+  cup?: LauncherPlacement;
+  /** Everything a shot could run into. */
+  blockers?: ReadonlyArray<Blocker>;
   onUpdate: (bearing: Bearing) => void;
 }) {
   const label = kind === 'launcher' ? 'Fires out of'
@@ -1331,12 +1356,55 @@ function BearingEditor({ kind, bearing, onUpdate }: {
           );
         })}
       </div>
-      {kind === 'launcher' && (
-        <div className="text-[11px] text-muted-foreground">
-          That side is left OPEN. The ball fires out within a 35 degree cone,
-          and the power it is fired at multiplies the map's base pay.
-        </div>
-      )}
+      {kind === 'launcher' && cup && (() => {
+        // The RESOLVED heading, not the facing. `facing` names the open side of
+        // an unturned rect; the barrel's angle then moves it, so a launcher can
+        // read "fires out of: right" and shoot at the floor. The compass and
+        // the runway below are about where the ball actually goes.
+        const dir = muzzleVector(cup.facing, cup.angle);
+        const deg = (Math.atan2(dir.y, dir.x) * 180) / Math.PI;
+        // Screen bearing to a compass a person can picture: 0 is east, and y
+        // grows downward, so a positive angle points DOWN the board.
+        const compass = ((Math.round(deg) % 360) + 360) % 360;
+        const runway = launcherRunway(cup, blockers, {
+          width: BOARD_WIDTH, height: BOARD_WIDTH, margin: BOARD_WIDTH * ARENA_MARGIN,
+        });
+        const floor = BOARD_WIDTH * MIN_LAUNCH_RUNWAY_FRACTION;
+        const blocked = runway < floor;
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">Fires at</span>
+              <span className="font-mono tabular-nums text-orange-300">
+                {compass}deg ({headingWord(dir)})
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">Clear run</span>
+              <span
+                className="font-mono tabular-nums"
+                style={{ color: blocked ? '#ff5b5b' : '#fdba74' }}
+              >
+                {Math.round(runway)}
+              </span>
+            </div>
+            {blocked && (
+              <div className="flex items-start gap-1 rounded bg-red-500/15 border border-red-500/40 p-1.5 text-[11px] text-red-300">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>
+                  A straight shot hits something after {Math.round(runway)} units.
+                  The map opens by firing into a wall. Turn the barrel, move it,
+                  or clear what is in front of it.
+                </span>
+              </div>
+            )}
+            <div className="text-[11px] text-muted-foreground">
+              That side is left OPEN. The ball fires out within a 35 degree cone,
+              and the power it is fired at multiplies the map's base pay.
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
