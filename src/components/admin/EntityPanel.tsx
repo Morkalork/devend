@@ -1,4 +1,5 @@
 import type { Bearing } from '@/lib/physics/obstacleRules';
+import { BOUNCER_HOURS } from '@/lib/physics/bouncer';
 import {
   muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
@@ -559,6 +560,20 @@ export function EntityPanel({
             <span className="text-amber-400">Bouncer</span>
             <span className="text-muted-foreground">(kicks balls away, faster)</span>
           </label>
+          )}
+
+          {/* A bumper's own settings, shown only once it IS one. The bank is the
+              reason a player keeps a ball in play instead of taking the quick
+              win, so it is the number a designer is really tuning, and it was
+              only settable by hand-editing the yaml. */}
+          {!isMoverEntity(selectedEntity) && !!(selectedEntity as { bouncer?: boolean }).bouncer && (
+            <BumperEditor
+              hours={(selectedEntity as { bounceHours?: number }).bounceHours}
+              bearing={(selectedEntity as { bounceBearing?: Bearing }).bounceBearing}
+              onUpdate={(updates) => onUpdateEntity(
+                selectedEntity.id, updates as Partial<LevelEntity>,
+              )}
+            />
           )}
 
           {/* Latch. Opens once, on progress, and stays open. */}
@@ -1300,6 +1315,101 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
  * that showed them differently would suggest they were different kinds of
  * field.
  */
+/**
+ * A bumper's bank, and whether it scatters or aims.
+ *
+ * HOURS is the number a designer is actually tuning. A bumper pays one hour per
+ * bump until it runs dry and then keeps bouncing for nothing, so the bank is
+ * the whole reason a player keeps a ball alive rather than taking the quick
+ * win - and it is a fixed per-map amount precisely so it cannot be farmed. It
+ * was reachable only by hand-editing the yaml, which meant the one thing worth
+ * balancing was the one thing the editor could not touch.
+ *
+ * BEARING is here because it changes what the object IS. A radial bouncer
+ * scatters - which way a ball leaves depends on where it happened to hit - and
+ * a kicker fires the same way every time, so it can be aimed and learned. That
+ * is the difference between a pinball and a plan, and it was invisible both in
+ * the panel and on the canvas.
+ */
+function BumperEditor({ hours, bearing, onUpdate }: {
+  hours?: number;
+  bearing?: Bearing;
+  onUpdate: (updates: Record<string, unknown>) => void;
+}) {
+  const ICON: Record<Bearing, typeof ArrowUp> = {
+    up: ArrowUp, down: ArrowDown, left: ArrowLeft, right: ArrowRight,
+  };
+  const effective = hours ?? BOUNCER_HOURS;
+  return (
+    <div className="space-y-2 rounded border border-amber-400/40 bg-amber-400/10 p-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+        <CircleDot className="w-3.5 h-3.5" />
+        Bumper
+      </div>
+
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-amber-300 whitespace-nowrap">Holds (hours)</span>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={hours ?? ''}
+          placeholder={String(BOUNCER_HOURS)}
+          onChange={(e) => onUpdate({
+            // Blank means "use the default", which is not the same as zero: a
+            // zero bank is an authored decision (a bumper that only kicks), and
+            // storing 0 for an empty box would silently make every new bumper
+            // worthless.
+            bounceHours: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)),
+          })}
+          className="w-16 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+        />
+        <span className="text-muted-foreground">
+          {effective === 0 ? 'kicks only, pays nothing' : `${effective} bumps of pay`}
+        </span>
+      </div>
+
+      <div className="text-[11px] text-muted-foreground">
+        {bearing ? 'Kicker: fires the same way every time, so it can be aimed.'
+          : 'Bouncer: scatters, so which way a ball leaves depends on where it hits.'}
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onUpdate({ bounceBearing: undefined })}
+          className="flex-1 flex items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] transition-colors"
+          style={{
+            color: !bearing ? '#0b0b12' : '#fbbf24',
+            backgroundColor: !bearing ? '#fbbf24' : '#fbbf2422',
+            border: `1px solid #fbbf24${!bearing ? 'ff' : '66'}`,
+          }}
+          title="Kick radially outward from the middle"
+        >
+          scatter
+        </button>
+        {(['up', 'down', 'left', 'right'] as const).map(b => {
+          const active = bearing === b;
+          const Icon = ICON[b];
+          return (
+            <button
+              key={b}
+              onClick={() => onUpdate({ bounceBearing: b })}
+              className="flex-1 flex items-center justify-center rounded px-1.5 py-1 text-[11px] transition-colors"
+              style={{
+                color: active ? '#0b0b12' : '#fbbf24',
+                backgroundColor: active ? '#fbbf24' : '#fbbf2422',
+                border: `1px solid #fbbf24${active ? 'ff' : '66'}`,
+              }}
+              title={`Always fire ${b}`}
+            >
+              <Icon className="w-3 h-3" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
  * A heading in words, because degrees alone do not answer "is that into the
  * wall on my left". Eight points: finer would be false precision on a barrel a

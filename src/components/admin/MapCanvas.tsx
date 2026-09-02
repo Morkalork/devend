@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Minus, Plus as PlusIcon } from 'lucide-react';
 import { FIT_VIEW, computeEditorBoardRect, zoomAboutPoint, type EditorView } from '@/lib/editorView';
+import { BEARING_VECTOR, type Bearing } from '@/lib/physics/obstacleRules';
+import { BOUNCER_HOURS } from '@/lib/physics/bouncer';
 import {
   muzzleRay, launcherRunway, LAUNCH_SPREAD, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
@@ -604,6 +606,114 @@ export function MapCanvas({
     });
 
     /**
+     * A bumper, drawn as one.
+     *
+     * On this canvas a bumper was a plain circle or rect, exactly like any
+     * other obstacle, so the objects that pay hours and change a ball's speed
+     * were indistinguishable from the ones that just sit there. In game they
+     * already read at a glance - concentric rings, green while the bank has
+     * hours in it - and the editor said nothing at all.
+     *
+     * Echoes the in-game shape deliberately rather than inventing an editor
+     * symbol: the point of a map editor is to show you the map, and a designer
+     * who learns one vocabulary here and another in play has learned neither.
+     * What it adds is the two things play cannot show: the BANK as a number
+     * (at design time a digit is information, where at a phone's scale mid-game
+     * it is not) and the KICKER's bearing, which is invisible until a ball
+     * happens to hit one.
+     */
+    const drawBumper = (entity: LevelEntity) => {
+      const we = entity as unknown as {
+        bouncer?: boolean; bounceHours?: number; bounceBearing?: Bearing;
+      };
+      if (!we.bouncer) return;
+
+      // Bounds of the DRAWN outline, so a bumper that has been bowed or turned
+      // is ringed where it actually is. This is the same derivation initGame
+      // uses - it takes the bumper's centre from `polygonBounds` of the built
+      // polygon, explicitly not the authored cx/cy, "because the polygon is
+      // what the ball actually hits". An editor ring drawn on the authored
+      // centre would sit off the thing it describes on exactly the bent
+      // obstacles where that is hardest to eyeball.
+      const pts = drawnOutline(entity);
+      if (pts.length < 3) return;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const v of pts) {
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+        if (v.y < minY) minY = v.y;
+        if (v.y > maxY) maxY = v.y;
+      }
+      const c = worldToScreen((minX + maxX) / 2, (minY + maxY) / 2);
+      const r = Math.min(maxX - minX, maxY - minY) / 2 * boardRect.scale;
+      if (!(r > 0)) return;
+
+      const hours = we.bounceHours ?? BOUNCER_HOURS;
+      // Same reading as the game: a bank with something in it is worth aiming
+      // at. An authored zero is a bumper that only kicks, and says so.
+      const colour = hours > 0 ? '#4ade80' : '#ff5b5b';
+
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r * 0.94, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(colour, hours > 0 ? 0.45 : 0.12);
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // The bank, which is the number a designer is tuning.
+      const labelPx = Math.max(9, Math.min(14, r * 0.5));
+      ctx.font = `bold ${labelPx}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colour;
+      ctx.fillText(`${hours}h`, c.x, c.y - r - labelPx * 0.7);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+
+      // A kicker aims; a bouncer scatters. Which one this is changes how a
+      // whole lane of them plays and is otherwise invisible until a ball
+      // happens to hit one.
+      if (we.bounceBearing) {
+        const [dx, dy] = BEARING_VECTOR[we.bounceBearing];
+        const tip = { x: c.x + dx * r * 1.75, y: c.y + dy * r * 1.75 };
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(c.x + dx * r * 0.9, c.y + dy * r * 0.9);
+        ctx.lineTo(tip.x, tip.y);
+        ctx.stroke();
+        const ang = Math.atan2(dy, dx);
+        const head = 8;
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(tip.x - Math.cos(ang - 0.45) * head, tip.y - Math.sin(ang - 0.45) * head);
+        ctx.lineTo(tip.x - Math.cos(ang + 0.45) * head, tip.y - Math.sin(ang + 0.45) * head);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Scatter: short spokes all round, so "it goes wherever you hit it"
+        // is a shape rather than something to remember.
+        ctx.strokeStyle = hexToRgba(colour, 0.7);
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4;
+          ctx.beginPath();
+          ctx.moveTo(c.x + Math.cos(a) * r * 1.02, c.y + Math.sin(a) * r * 1.02);
+          ctx.lineTo(c.x + Math.cos(a) * r * 1.3, c.y + Math.sin(a) * r * 1.3);
+          ctx.stroke();
+        }
+      }
+    };
+
+    /**
      * A launcher's muzzle: which way it fires, and whether it can.
      *
      * A launcher is authored as a rect and drew as one, so on the canvas it was
@@ -979,6 +1089,7 @@ export function MapCanvas({
     // Muzzles last, over every obstacle: the arrow is about the relationship
     // BETWEEN a launcher and the things in front of it, so it must not be
     // hidden by one of them.
+    (level.entities || []).forEach(drawBumper);
     (level.entities || []).forEach(drawMuzzle);
 
     // Draw balls
