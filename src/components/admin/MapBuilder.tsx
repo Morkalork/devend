@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle, Undo2, Redo2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle, Undo2, Redo2, PanelLeft, PanelRight } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity, GravityWell } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
 import { DEFAULT_MOVER_RANGE, DEFAULT_MOVER_SPEED } from '@/lib/moverPath';
 import { MapCanvas } from './MapCanvas';
+import {
+  readPanelSide, writePanelSide, otherSide, panelSideClasses, type PanelSide,
+} from '@/lib/admin/panelSide';
 import type { AddEntityType } from './EntityPanel';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
@@ -43,6 +46,10 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  // Which side the tools live on. Remembered per device: which hand you keep
+  // your tools under is not a decision worth making twice.
+  const [panelSide, setPanelSide] = useState<PanelSide>(readPanelSide);
+  const sideClasses = panelSideClasses(panelSide);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   /**
    * Does the ladder in memory differ from the one on disk?
@@ -846,6 +853,22 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         >
           <Redo2 className="w-4 h-4" />
         </button>
+        {/* Which side the panel sits on. An icon of where it will GO, not where
+            it is: a button showing the current state reads as "the panel is on
+            the right" and gets pressed by someone who wanted it there. */}
+        <button
+          onClick={() => {
+            const next = otherSide(panelSide);
+            setPanelSide(next);
+            writePanelSide(next);
+          }}
+          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          title={`Move the panel to the ${otherSide(panelSide)}`}
+        >
+          {panelSide === 'right'
+            ? <PanelLeft className="w-4 h-4" />
+            : <PanelRight className="w-4 h-4" />}
+        </button>
         <button
           onClick={() => setSnapToGrid(s => !s)}
           className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
@@ -952,7 +975,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className={`flex-1 flex flex-col ${sideClasses.row} overflow-hidden`}>
         {/* Canvas Area — min-w-0 so the canvas' intrinsic buffer width can't
             push the side panel off-screen (flex items default to min-width:auto). */}
         <div className="flex-1 min-h-0 min-w-0 p-2">
@@ -1006,7 +1029,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         </div>
 
         {/* Side Panel */}
-        <div className="admin-chrome-zoom flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto max-h-64 lg:max-h-full lg:h-full">
+        <div className={`admin-chrome-zoom flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 ${sideClasses.panel} border-border bg-card overflow-y-auto max-h-64 lg:max-h-full lg:h-full`}>
           {currentLevel && (
             <>
               <LevelPanel

@@ -14,6 +14,7 @@
  */
 import { LANGUAGE_STORAGE_KEY } from '@/i18n';
 import { disableRunFlush } from '@/lib/runSaveFlush';
+import { PANEL_SIDE_KEY } from '@/lib/admin/panelSide';
 
 // Device/app preferences that are NOT game progression. A total reset keeps
 // these so the player isn't dropped back into the wrong UI language, a blaring
@@ -24,6 +25,7 @@ const PRESERVED_KEYS = new Set<string>([
   'devend:musicVolume',
   'devend:sfxVolume',
   'devend:soundMuted',
+  PANEL_SIDE_KEY, // 'devend:admin.panelSide' - a workspace layout, not progress
 ]);
 
 /**
