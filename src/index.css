@@ -616,3 +616,39 @@
     display: none;               /* WebKit (Chrome, Safari) */
   }
 }
+
+/* ── Admin map builder: bigger chrome on a desktop screen ──────────────────
+ *
+ * The builder's panels are built from text-xs and text-[11px], which is right
+ * on the phone-sized viewport the game itself targets and too small to work in
+ * on a monitor. This scales the CHROME - the toolbars and the side panel - and
+ * deliberately not the canvas.
+ *
+ * `zoom` rather than `transform: scale()` because zoom participates in layout:
+ * the panel genuinely gets wider, scroll heights and hit targets stay correct,
+ * and nothing has to be re-measured. A transform would leave every element's
+ * layout box at its old size and put clicks in the wrong place.
+ *
+ * NEVER put this on the canvas column. MapCanvas maps pointer positions to
+ * world coordinates through getBoundingClientRect, and a zoomed ancestor is
+ * exactly the kind of hidden transform that makes a click land somewhere other
+ * than where it was made. The game's own board overlays already learned this.
+ *
+ * Gated at the `lg` breakpoint, which is the same 1024px the builder already
+ * uses to switch from a stacked phone layout to the side-by-side desktop one:
+ * below it the panel is a short strip under the map and has no room to spare.
+ */
+.admin-chrome-zoom {
+  --admin-chrome-zoom: 1;
+  zoom: var(--admin-chrome-zoom);
+}
+
+@media (min-width: 1024px) {
+  .admin-chrome-zoom { --admin-chrome-zoom: 1.25; }
+}
+
+/* A large monitor has the room for another step, and is where the panels felt
+   smallest. Kept modest: past about 1.4 the side panel starts eating the map. */
+@media (min-width: 1536px) {
+  .admin-chrome-zoom { --admin-chrome-zoom: 1.4; }
+}

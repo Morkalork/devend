@@ -811,7 +811,12 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-3 bg-card border-b border-border flex items-center gap-3">
+      {/* Toolbars and the side panel are the builder's CHROME, and the only
+          things scaled up on a desktop screen. The canvas column below is
+          deliberately left alone: it maps clicks to world coordinates
+          through getBoundingClientRect, and a zoomed ancestor would put
+          every click somewhere other than where it was made. */}
+      <div className="admin-chrome-zoom flex-shrink-0 p-3 bg-card border-b border-border flex items-center gap-3">
         <button
           onClick={onBack}
           className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
@@ -897,7 +902,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       </div>
 
       {/* Level Selector */}
-      <div className="flex-shrink-0 p-2 bg-muted/50 border-b border-border overflow-x-auto">
+      <div className="admin-chrome-zoom flex-shrink-0 p-2 bg-muted/50 border-b border-border overflow-x-auto">
         <div className="flex gap-2 items-center min-w-max">
           {levels.map((level, index) => (
             <div key={level.id} className="flex items-center gap-0.5">
@@ -1001,7 +1006,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         </div>
 
         {/* Side Panel */}
-        <div className="flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto max-h-64 lg:max-h-full lg:h-full">
+        <div className="admin-chrome-zoom flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto max-h-64 lg:max-h-full lg:h-full">
           {currentLevel && (
             <>
               <LevelPanel

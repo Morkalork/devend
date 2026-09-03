@@ -95,9 +95,20 @@ function Thumb({ level, rotation }: { level: LevelConfig; rotation: MapRotation 
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const dpr = window.devicePixelRatio || 1;
-    c.width = SIZE * dpr;
-    c.height = SIZE * dpr;
+    // The side panel is zoomed up on a desktop screen (.admin-chrome-zoom), and
+    // devicePixelRatio knows nothing about that: the canvas would be drawn at
+    // SIZE x dpr and then displayed over a larger box, so these thumbnails - the
+    // one place in the panel that is a picture rather than text - would be the
+    // only thing that got blurrier as the panel got bigger.
+    //
+    // Measured rather than read from the CSS, because the zoom is a media query
+    // and the factor lives in the stylesheet. Asking the element how big it
+    // actually is cannot fall out of step with it.
+    const box = c.getBoundingClientRect().width;
+    const zoom = box > 0 ? box / SIZE : 1;
+    const dpr = (window.devicePixelRatio || 1) * zoom;
+    c.width = Math.round(SIZE * dpr);
+    c.height = Math.round(SIZE * dpr);
     const ctx = c.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
