@@ -27,7 +27,9 @@ export type GameMessageId =
   /** The cut started on ground that has already been captured. */
   | "capturedStart"
   /** An existing fence borders the start point. */
-  | "wallInTheWay";
+  | "wallInTheWay"
+  /** A barrel is still ejecting; no fence until it has finished. */
+  | "launcherLoaded";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -79,6 +81,7 @@ export function messageExpired(
  */
 export const GAME_MESSAGE_IDS: GameMessageId[] = [
   "breakableAnchor", "fenceLimit", "capturedStart", "wallInTheWay",
+  "launcherLoaded",
 ];
 
 /**

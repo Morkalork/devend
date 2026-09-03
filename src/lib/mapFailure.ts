@@ -33,7 +33,9 @@ export type MapFailKind =
   /** The last fence in the map's budget completed without winning (WIP Limit). */
   | "outOfFences"
   /** A gate Colored Area with no target ball left that could still reach it. */
-  | "areaUnreachable";
+  | "areaUnreachable"
+  /** A ball sealed inside a launcher barrel before it had finished ejecting. */
+  | "launcherPrematureLock";
 
 export interface MapFailure {
   kind: MapFailKind;

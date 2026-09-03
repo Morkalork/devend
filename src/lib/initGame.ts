@@ -1140,6 +1140,7 @@ export function createInitialGameData(
       angle: spec.angle,
       ballIds: loaded.map(b => b.id),
       fired: false,
+      armed: false,
     });
   }
 

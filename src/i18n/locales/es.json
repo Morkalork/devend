@@ -277,7 +277,7 @@
     "boxIntroTitle": "✦ La columna Hecho",
     "boxIntroBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
     "launcherIntroTitle": "El lanzador",
-    "launcherIntroBody": "Todas las bolas del mapa están en el cañón. Tira de la goma trasera y suelta: la dirección apunta, la distancia marca la velocidad.\n\nEsa velocidad nunca baja, y la paga base del mapa se multiplica por ella. Tira fuerte para un mapa más rico, más rápido y más difícil.",
+    "launcherIntroBody": "Todas las bolas del mapa están en el cañón. Tira de la goma trasera y suelta: la dirección apunta, la distancia marca la velocidad.\n\nEsa velocidad nunca baja, y la paga base del mapa se multiplica por ella. Tira fuerte para un mapa más rico, más rápido y más difícil. No puedes trazar vallas hasta que el barril se vacie. Despues su interior es un bolsillo como cualquier otro, asi que una bola que vuelva a entrar puede encerrarse ahi, pero si sellas una dentro antes de que se vacie, pierdes una vida.",
     "launcherTutorialTitle": "El lanzador",
     "launcherTutorialBody": "Toda la plantilla espera en el cañón hasta que tiras de la goma y sueltas. La velocidad nunca baja, así que la potencia con la que disparas es a la vez la dificultad del mapa y el multiplicador de su paga base.",
     "boxTutorialTitle": "✦ La columna Hecho",
@@ -1672,13 +1672,15 @@
     "breakableAnchor": "Una valla no puede anclarse en algo rompible. Rompelo primero, o lleva el corte hasta un muro solido.",
     "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
     "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
-    "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla."
+    "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla.",
+    "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas."
   },
   "mapFailure": {
     "title": "Mapa fallido",
     "timeUp": "Se acabó el tiempo",
     "outOfFences": "Sin vallas",
     "areaUnreachable": "Ya no se puede alcanzar la zona",
+    "launcherPrematureLock": "Sellaste una bola en el lanzador antes de que se vaciara",
     "stillNeeded": "Aún te faltaba",
     "livesLeft_one": "Queda {{count}} vida",
     "livesLeft_other": "Quedan {{count}} vidas",

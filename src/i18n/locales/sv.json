@@ -277,7 +277,7 @@
     "boxIntroTitle": "✦ Klart-kolumnen",
     "boxIntroBody": "En sida av lådan är ett membran: bollar kommer in men aldrig ut. Valla in dem för att fylla den. Tills den är full håller den sitt eget golv utanför spelplanen, så du kan inte bli klar utan att mata den.",
     "launcherIntroTitle": "Avfyraren",
-    "launcherIntroBody": "Alla bollar på kartan ligger i pipan. Dra i gummibandet baktill och släpp: riktningen siktar, draglängden sätter farten.\n\nDen farten avtar aldrig, och kartans grundlön multipliceras med den. Dra hårt för en rikare, snabbare och svårare karta.",
+    "launcherIntroBody": "Alla bollar på kartan ligger i pipan. Dra i gummibandet baktill och släpp: riktningen siktar, draglängden sätter farten.\n\nDen farten avtar aldrig, och kartans grundlön multipliceras med den. Dra hårt för en rikare, snabbare och svårare karta. Du kan inte dra stangsel forran pipan har tomts. Darefter ar dess insida en ficka som vilken annan, sa en boll som kommer tillbaka in kan lasas dar, men forsegla en inuti innan den tomts och du forlorar ett liv.",
     "launcherTutorialTitle": "Avfyraren",
     "launcherTutorialBody": "Hela uppsättningen ligger i pipan tills du drar i bandet och släpper. Farten avtar aldrig, så kraften du skjuter med är både kartans svårighetsgrad och multiplikatorn för grundlönen.",
     "boxTutorialTitle": "✦ Klart-kolumnen",
@@ -1672,13 +1672,15 @@
     "breakableAnchor": "Ett stangsel kan inte forankras i nagot krossbart. Slog sonder det forst, eller dra snittet till en solid vagg.",
     "fenceLimit": "Du bygger redan sa manga stangsel samtidigt som du kan. Vanta tills ett blir klart, eller uppgradera for fler.",
     "capturedStart": "Borja stangslet i oppen yta. Den marken ar redan intagen.",
-    "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort."
+    "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort.",
+    "launcherLoaded": "Avfyraren skjuter fortfarande. Du kan inte dra stangsel forran alla bollar har lamnat den."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",
     "timeUp": "Tiden är ute",
     "outOfFences": "Slut på staket",
     "areaUnreachable": "Zonen går inte längre att nå",
+    "launcherPrematureLock": "Du forseglade en boll i avfyraren innan den var tom",
     "stillNeeded": "Du behövde fortfarande",
     "livesLeft_one": "{{count}} liv kvar",
     "livesLeft_other": "{{count}} liv kvar",

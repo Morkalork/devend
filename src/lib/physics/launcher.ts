@@ -28,6 +28,104 @@ export interface LauncherState {
    */
   ballIds: string[];
   fired: boolean;
+  /**
+   * ARMED, and latching: true from the first frame after firing when the barrel
+   * interior is empty, and true forever after.
+   *
+   * The barrel interior is forbidden ground until this flips. You cannot fence
+   * while it is false (a fence there would trap balls the shot is still
+   * emptying), and a ball sealed inside while it is false fails the map. Once
+   * armed, the interior is an ordinary - if tricky - pocket: a ball that finds
+   * its way back in can be locked there like anywhere else.
+   *
+   * Latching is the point. A returning ball puts a ball back inside an ARMED
+   * barrel, and that must stay lockable rather than dropping the barrel back
+   * into its forbidden state and failing the map for the very play the rule
+   * exists to allow.
+   */
+  armed?: boolean;
+}
+
+/**
+ * Is a world point inside a barrel's interior?
+ *
+ * The interior rect is stored axis-aligned in the barrel's OWN frame (see
+ * initGame), so a turned barrel needs the point brought back into that frame
+ * first - rotated about the interior's centre by minus the barrel's angle -
+ * before an ordinary rect test means anything. Testing the world point against
+ * the un-turned rect would check a box the barrel no longer occupies, which is
+ * the same authored-vs-real mistake entityOutline exists to stop.
+ */
+export function pointInLauncherInterior(p: Vector2, launcher: LauncherState): boolean {
+  const { inner, angle } = launcher;
+  const cx = inner.x + inner.width / 2;
+  const cy = inner.y + inner.height / 2;
+  let lx = p.x, ly = p.y;
+  if (angle) {
+    const rad = (-angle * Math.PI) / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const dx = p.x - cx, dy = p.y - cy;
+    lx = cx + dx * cos - dy * sin;
+    ly = cy + dx * sin + dy * cos;
+  }
+  return lx >= inner.x && lx <= inner.x + inner.width
+      && ly >= inner.y && ly <= inner.y + inner.height;
+}
+
+/** True while any ball (awake or asleep) still sits inside this barrel. */
+export function launcherHoldsBall(
+  game: Pick<CanvasGameState, "balls">, launcher: LauncherState,
+): boolean {
+  return game.balls.some(b =>
+    b.state !== "won" && pointInLauncherInterior(b.position, launcher));
+}
+
+/**
+ * Latch every fired barrel that has finished emptying.
+ *
+ * Called once per active frame. Only ever sets armed true, never false: see the
+ * note on `armed` for why a returning ball must not un-arm the barrel.
+ */
+export function updateLauncherArming(game: Pick<CanvasGameState, "balls" | "launchers">): void {
+  for (const l of game.launchers ?? []) {
+    if (l.armed || !l.fired) continue;
+    if (!launcherHoldsBall(game, l)) l.armed = true;
+  }
+}
+
+/**
+ * May the player start a fence right now?
+ *
+ * No, while any barrel is not yet armed - unfired (still holding the whole
+ * roster) or fired but still draining. A fence during the drain would seal
+ * balls the shot is mid-way through ejecting, which is the exact thing the
+ * lock-inside rule fails the map for; blocking the fence is the humane half of
+ * that rule, refusing the mistake rather than punishing it.
+ */
+export function fencesBlockedByLauncher(
+  game: Pick<CanvasGameState, "launchers">,
+): boolean {
+  return (game.launchers ?? []).some(l => !l.armed);
+}
+
+/**
+ * A barrel that just had a ball sealed inside it before it was armed, or null.
+ *
+ * The failure state of the lock-inside rule. Reads the balls that locked THIS
+ * pass rather than every won ball, so a lock landing in an already-armed barrel
+ * (the intended play, a returning ball) is untouched.
+ */
+export function lockedInsideUnarmedLauncher(
+  game: Pick<CanvasGameState, "balls" | "launchers">,
+  wonThisPass: ReadonlyArray<{ position: Vector2 }>,
+): LauncherState | null {
+  for (const l of game.launchers ?? []) {
+    if (l.armed) continue;
+    for (const b of wonThisPass) {
+      if (pointInLauncherInterior(b.position, l)) return l;
+    }
+  }
+  return null;
 }
 
 /** True while any cup on the map still holds its ball. */

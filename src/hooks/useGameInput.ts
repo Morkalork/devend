@@ -23,6 +23,7 @@ import {
   FREEZE_TAP_SLOP,
   SUPERIOR_LOCK_DURATION,
 } from "@/lib/gameConstants";
+import { fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -164,6 +165,16 @@ export function useGameInput(
       // board is still flying together (physics is held until it lands).
       if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
+
+      // No fence until every barrel has finished ejecting. A cut during the
+      // drain would seal balls the shot is mid-way through firing, which is the
+      // exact mistake the lock-inside rule fails the map for - so it is refused
+      // here rather than punished there. (Before firing the loop is already
+      // paused; this also covers the drain window, when it is not.)
+      if (fencesBlockedByLauncher(game)) {
+        onMessageRef?.current?.("launcherLoaded");
+        return;
+      }
 
       // No loot-collect branch here any more. A smashed chest grants its reward
       // on the smash (destructibles.ts), so the gem it drops is a receipt, not a

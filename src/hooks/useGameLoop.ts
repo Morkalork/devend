@@ -29,7 +29,7 @@ import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
-import { launchPending } from "@/lib/physics/launcher";
+import { launchPending, updateLauncherArming } from "@/lib/physics/launcher";
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
@@ -459,6 +459,12 @@ export function createGameLoop(
         updateBall(ball, PHYSICS_STEP, game, phasedOut);
       }
       handleBallCollisions(game);
+
+      // Arm a barrel the frame it finishes emptying. After ball movement, so a
+      // ball that left the interior this step counts as gone this step, and
+      // before the win checks downstream, so the first frame a fence could be
+      // drawn is the frame the interior is genuinely clear.
+      updateLauncherArming(game);
 
       // Deliveries: a ball that has crossed a box's membrane is taken out of
       // play and counted. Runs after ball movement so a ball that arrived this

@@ -5,6 +5,7 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
+import { lockedInsideUnarmedLauncher } from "./launcher";
 import { handleGameOverFn } from "./handleGameOver";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
 import { mapFailure } from "@/lib/mapFailure";
@@ -290,8 +291,43 @@ export function applyCutFn(
   // lock it is about to paint was a tight seal. The grade is decided inside
   // checkBallWonState and nothing else carries it out here.
   const superiorBefore = game.superiorLockCount;
+  // Who was already sealed before this cut, so the launcher check below reads
+  // only the balls THIS cut locked.
+  const wonBefore = new Set(game.balls.filter(b => b.state === "won").map(b => b.id));
   const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions);
   const wasSuperior = game.superiorLockCount > superiorBefore;
+
+  // A ball sealed inside a barrel that has not finished ejecting fails the map.
+  // Reached only if a cut ever completes while a launcher is un-armed - which
+  // the fence block in useGameInput is meant to prevent - so this is the rule's
+  // safety net rather than its everyday path. Same shape as the time-up fail:
+  // dock ONE life and restart the map fresh, or end the run at the last life.
+  if (anyBallWon) {
+    const justWon = game.balls.filter(b => b.state === "won" && !wonBefore.has(b.id));
+    if (lockedInsideUnarmedLauncher(game, justWon)) {
+      const failure = mapFailure(
+        "launcherPrematureLock", resolveWinSpec(level), readWinSnapshot(game, level));
+      const newLives = callbacks.getLives() - 1;
+      callbacks.setLivesRef(newLives);
+      callbacks.setDisplayLives(newLives);
+      callbacks.onLivesChange(newLives);
+      if (newLives <= 0) {
+        handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks, failure);
+        return;
+      }
+      game.gameOver = true;
+      if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
+      callbacks.setScreenFlash("red");
+      callbacks.setIsShaking(true);
+      callbacks.shakeTimeoutRef.current = setTimeout(() => {
+        callbacks.shakeTimeoutRef.current = null;
+        callbacks.setScreenFlash("none");
+        callbacks.setIsShaking(false);
+        callbacks.onMapTimedOut?.(failure);
+      }, 700);
+      return;
+    }
+  }
   if (anyBallWon) {
     // How many balls this cut locked: the simultaneous-trap multiplier pays
     // x2/x3 for multi-locks, and the tint mask below stores the same count so
