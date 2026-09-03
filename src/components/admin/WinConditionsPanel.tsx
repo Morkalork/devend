@@ -23,7 +23,7 @@ import { Plus, Trash2, Trophy, AlertTriangle, Eye, RotateCcw } from 'lucide-reac
 import type { LevelConfig } from '@/types/level';
 import type { WinCondition, WinConditionKind } from '@/types/winSpec';
 import { WIN_CONDITION_KINDS } from '@/types/winSpec';
-import { resolveWinSpec, winSpecProblems } from '@/lib/winSpec';
+import { resolveWinSpec, winSpecProblems, areasGatingWin } from '@/lib/winSpec';
 import { winConditionsBody } from '@/lib/winConditions';
 import { getAllBallTypes } from '@/lib/ballTypes';
 
@@ -74,9 +74,22 @@ export function WinConditionsPanel({ level, onUpdateLevel }: Props) {
   // on offer rather than their sum.
   const altPremium = Math.max(0, ...spec.alsoWinIf.map(c => c.bonusPercent ?? 0));
 
-  /** Write an edited spec onto the level, which makes it authored from here on. */
-  const write = (require: WinCondition[], alsoWinIf: WinCondition[]) =>
-    onUpdateLevel({ ...level, win: { require, alsoWinIf } });
+  /**
+   * Write an edited spec onto the level, which makes it authored from here on.
+   *
+   * Asking for an area lock also makes the map's areas GATE the win, when none
+   * of them did. The two used to be separate acts in separate panels - the
+   * clause here, the "Win gate" checkbox over in the area editor - so it was
+   * possible, and easy, to do only the first half and end up with a clause that
+   * can never be satisfied. Level 5 shipped that way. See areasGatingWin for
+   * why it only fires when nothing gates the win yet.
+   */
+  const write = (require: WinCondition[], alsoWinIf: WinCondition[]) => {
+    const areas = level.coloredAreas;
+    const next: LevelConfig = { ...level, win: { require, alsoWinIf } };
+    if (areas?.length) next.coloredAreas = areasGatingWin(areas, require, alsoWinIf);
+    onUpdateLevel(next);
+  };
 
   const editGroup = (group: 'require' | 'alsoWinIf') => ({
     add: (kind: WinConditionKind) => {

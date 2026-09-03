@@ -14,7 +14,7 @@
  * five fields a second time and reach its own conclusion, so a map could tell
  * the player one thing and check another. Both now read one spec.
  */
-import type { LevelConfig } from "@/types/level";
+import type { LevelConfig, ColoredArea } from "@/types/level";
 import type {
   WinCondition, WinConditionProgress, WinSnapshot, WinSpec,
 } from "@/types/winSpec";
@@ -325,4 +325,54 @@ export function winBonusPercent(spec: WinSpec, snap: WinSnapshot): number {
   }
   for (const c of spec.require) add(c);
   return percent;
+}
+
+/**
+ * Make the map's areas gate the win, when a win condition has started asking
+ * them to.
+ *
+ * An `area` clause reads a counter that is only ever incremented inside
+ * `if (areaGate && ...)` in checkBallWonState, and `areaGate` is "this map has
+ * at least one area without `required: false`". So asking for an area lock on a
+ * map whose areas are all bonus pockets is not a hard win condition, it is an
+ * impossible one - the clause can never be satisfied and the map is winnable
+ * only through whatever alternative happens to be there. Level 5 shipped in
+ * exactly that state: two bonus pockets, a required area clause, and a player
+ * told to "lock a ball inside the area for a 1x payout" on a map where the
+ * multiplier could not even be read (gateAreas was empty, so the copy fell back
+ * to 1x while the board plainly showed x2 and x1.5).
+ *
+ * Setting the clause and setting the flag were two separate acts in two
+ * different panels, so the editor let you do half of it. This makes the second
+ * half follow from the first.
+ *
+ * ── Only when there is no gate at all ──────────────────────────────────────
+ *
+ * A map that already has one gate and one bonus pocket is a deliberate
+ * arrangement: the gate is the target, the pocket is a reward. Promoting
+ * everything there would flatten a real design decision, and the clause is
+ * already satisfiable, so there is nothing to fix. This fires only on the
+ * broken state, where nothing gates the win and the clause is dead.
+ *
+ * Both groups count. An `area` clause in `alsoWinIf` is just as dead as one in
+ * `require` - it simply never fires - and winSpecProblems does not even look
+ * there, so it would be the quieter of the two failures.
+ */
+export function areasGatingWin(
+  areas: ColoredArea[],
+  require: WinCondition[],
+  alsoWinIf: WinCondition[],
+): ColoredArea[] {
+  const wantsArea = [...require, ...alsoWinIf].some(c => c.kind === "area");
+  if (!wantsArea || areas.length === 0) return areas;
+  if (gateAreas(areas).length > 0) return areas;
+
+  // The key is DELETED rather than set to undefined. `required: undefined`
+  // survives an object spread as a present key and js-yaml writes it out, so
+  // the saved map would grow a `required: null` that reads as neither.
+  return areas.map(a => {
+    const next = { ...a };
+    delete next.required;
+    return next;
+  });
 }
