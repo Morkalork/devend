@@ -219,13 +219,11 @@ levels:
         'y': 625
         width: 275
         height: 250
-        required: false
       - kind: let
         x: 0
         'y': 625
         width: 300
         height: 250
-        required: false
     entities:
       - id: pocket-shelf
         kind: wall
@@ -251,7 +249,18 @@ levels:
         axis: horizontal
         range: 260
         speed: 150
-    balls: []
+    balls:
+      - id: ball-1788421889336
+        initialSpeed: 300
+        topSpeed: 600
+        color: 00d4ff
+        startX: 725
+        startY: 150
+    win:
+      require:
+        - kind: area
+          count: 1
+      alsoWinIf: []
 
   # 6 "Legacy Wall" - MEET the breakable.
   # A thin wall across the board with the good space behind it. Smashing costs
@@ -269,11 +278,11 @@ levels:
       - id: soft-wall
         kind: wall
         shape: rect
-        x: 530
-        'y': 100
-        width: 26
-        height: 700
-        bend: 0.3
+        x: 450
+        'y': 175
+        width: 75
+        height: 525
+        bend: 0.428
         breakable: true
         hitsToBreak: 3
       - id: nub
@@ -290,6 +299,15 @@ levels:
         cy: 375
         radius: 45
         bend: -0.95
+      - id: launcher-1788422810361
+        kind: launcher
+        shape: rect
+        x: 500
+        'y': 650
+        width: 240
+        height: 110
+        facing: right
+        angle: -120
     balls: []
 
   # 7 "Refactor" - FIGHT: the breakable crossed with the mover, and the act's
