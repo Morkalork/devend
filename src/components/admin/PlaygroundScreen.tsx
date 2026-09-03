@@ -669,9 +669,12 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           </div>
         )}
 
-        {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
+        {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case).
+            Desktop only: on a phone this sat in the same 16px band as the GAME's
+            own control row (menu, specs, objective) and the two interleaved into
+            an unreadable pile. Everything here is in the controls sheet below. */}
         {selectedLevel && <div
-          className="scrollbar-hide"
+          className="scrollbar-hide hidden lg:block"
           style={{ position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 50, overflowX: 'auto' }}
         >
         <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: 8, width: 'max-content', marginLeft: 'auto' }}>
@@ -932,13 +935,13 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
       <button
         onClick={() => setDevMenuOpen(true)}
         aria-label="Playground controls"
-        className="lg:hidden fixed bottom-4 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-opacity hover:opacity-90"
+        className="lg:hidden fixed bottom-4 left-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-opacity hover:opacity-90"
         style={{ backgroundColor: accent, color: '#000', boxShadow: `0 0 16px ${accent}66` }}
       >
         <SlidersHorizontal className="w-5 h-5" />
         {appliedActiveCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+            className="absolute -top-1 -left-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
             style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: accent }}
           >
             {appliedActiveCount}
@@ -986,8 +989,27 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 </button>
               </div>
 
-              {!selectedLevel && (
-                <>
+              {/* Opens the level-edit drawer, and only exists with a level
+                  loaded. `md:hidden` matches the button it replaces: from `md`
+                  up the editor is a static sidebar and there is nothing to
+                  open. */}
+              {selectedLevel && (
+                <button
+                  onClick={() => { setDevMenuOpen(false); setEditorOpen(true); }}
+                  className="md:hidden w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
+                  style={{ backgroundColor: '#a855f722', color: '#a855f7', border: '1px solid #a855f755' }}
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit level
+                </button>
+              )}
+
+              {/* The level, the roster, the reset and the freeze toggle are on
+                  BOTH desktop toolbars, so they are unguarded here. Only the
+                  first draft of this sheet put them behind `!selectedLevel`,
+                  which is why picking a level emptied it down to one row while
+                  the pile it replaced was still on screen. */}
+              <>
                   {/* The arrows keep the sheet OPEN. Stepping is something you
                       do several times in a row, and a menu that closed on each
                       press would have to be reopened for every level. */}
@@ -1035,28 +1057,31 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     )}
                   </button>
 
-                  <button
-                    onClick={() => { setDevMenuOpen(false); openModal(); }}
-                    className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
-                    style={{ backgroundColor: accent, color: '#000' }}
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Modifiers
-                    {appliedActiveCount > 0 && (
-                      <span
-                        className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold"
-                        style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-                      >
-                        {appliedActiveCount}
-                      </span>
-                    )}
-                  </button>
-                </>
+              </>
+
+              {/* Modifiers is the one control the selected-level toolbar does
+                  NOT carry, so it stays guarded: offering it here would be a
+                  new feature wearing a bug fix's clothes. */}
+              {!selectedLevel && (
+                <button
+                  onClick={() => { setDevMenuOpen(false); openModal(); }}
+                  className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
+                  style={{ backgroundColor: accent, color: '#000' }}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Modifiers
+                  {appliedActiveCount > 0 && (
+                    <span
+                      className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+                    >
+                      {appliedActiveCount}
+                    </span>
+                  )}
+                </button>
               )}
 
-              {/* Freeze on clear is available in BOTH modes, so it sits outside
-                  the block above: on a selected level it is the only control
-                  there is, and the sheet must not open empty. */}
+              {/* Freeze on clear, available in both modes like the rest. */}
               <button
                 onClick={() => setFreezeOnClear(v => !v)}
                 className="w-full flex items-center gap-2 px-4 h-12 rounded-lg text-sm font-semibold"
