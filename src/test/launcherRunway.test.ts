@@ -102,6 +102,36 @@ describe("how far a shot gets", () => {
   });
 });
 
+describe("a breakable is a price, not a door", () => {
+  it("does not stop a shot", () => {
+    // Level 6, exactly. The barrel is aimed into a bowed BREAKABLE wall, and
+    // the warning called it "fires into a wall" at 135 units of runway against
+    // a 225 floor. Ignoring the breakable it has 707. The rule was refusing the
+    // one map where the shot most obviously makes sense: level 6 is the map
+    // whose whole lesson is the breakable, and a launched ball is the best
+    // thing you can pay that price with, since impact damage goes as
+    // `speed^1.6` and a ball fired at 2x hits about three times as hard.
+    const wall: Blocker = { x: 400, y: 300, width: 30, height: 300, breakable: true };
+    expect(launcherRunway(cup(), [wall], BOUNDS)).toBeCloseTo(900 - 45 - 220, 6);
+  });
+
+  it("still stops on the solid one behind it", () => {
+    // Skipping breakables must not skip everything after them.
+    const soft: Blocker = { x: 300, y: 300, width: 30, height: 300, breakable: true };
+    const hard: Blocker = { x: 500, y: 300, width: 30, height: 300 };
+    expect(launcherRunway(cup(), [soft, hard], BOUNDS)).toBeCloseTo(500 - 220, 6);
+  });
+
+  it("treats an unmarked blocker as solid", () => {
+    // The flag is opt-in. A blocker with no `breakable` field is a wall, which
+    // is what keeps every existing map measuring as it did.
+    const wall: Blocker = { x: 400, y: 300, width: 30, height: 300 };
+    expect(launcherRunway(cup(), [wall], BOUNDS)).toBeCloseTo(400 - 220, 6);
+    const explicit: Blocker = { ...wall, breakable: false };
+    expect(launcherRunway(cup(), [explicit], BOUNDS)).toBeCloseTo(400 - 220, 6);
+  });
+});
+
 describe("the warning the editor shows", () => {
   const floor = 900 * MIN_LAUNCH_RUNWAY_FRACTION;
 

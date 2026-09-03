@@ -65,15 +65,17 @@ describe("no mechanic is introduced and then dropped", () => {
     // Bent shape came OFF this list when the designer bent walls on 2, 6 and 7.
     // That is the intended direction of travel for every name here.
     //
-    //   Launcher       level 11 only, its debut map
     //   Bumper         level 11 only, placed with the launcher
     //   Delivery box   level 23 only
+    //
+    // Launcher came off when a barrel was placed on level 6, which is the
+    // second time this list has shrunk the way it is supposed to.
     //
     // When one of these gains a second map the test fails and the line comes
     // out. When a NEW name appears here, something was introduced once and
     // forgotten - which is the failure this file exists to catch.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["bouncer", "box", "launcher", "mutator", "threadLock"]);
+      .toEqual(["bouncer", "box", "mutator", "threadLock"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

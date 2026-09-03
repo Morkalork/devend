@@ -260,7 +260,21 @@ export interface LauncherPlacement {
 }
 
 /** An axis-aligned box a shot can run into. */
-export interface Blocker { x: number; y: number; width: number; height: number }
+export interface Blocker {
+  x: number; y: number; width: number; height: number;
+  /**
+   * A breakable does NOT stop a shot for the purposes of this warning.
+   *
+   * It is a price, not a door - and a launched ball is the best thing you can
+   * pay it with, since impact damage goes as `speed^1.6`, so a ball fired at 2x
+   * hits about three times as hard. Level 6 is the map whose whole lesson is
+   * the breakable, and the barrel aimed into its bowed wall was flagged as
+   * "fires into a wall" with 135 units of runway; ignoring the breakable it has
+   * 707. The warning was refusing the one map where the shot most obviously
+   * makes sense.
+   */
+  breakable?: boolean;
+}
 
 /**
  * Where the muzzle sits and which way it points.
@@ -329,6 +343,9 @@ function distanceToBox(origin: Vector2, dir: Vector2, b: Blocker): number {
  * warning, and a warning that fires slightly early costs a designer a glance,
  * while one that fires slightly late costs them a map that cannot be played.
  *
+ * Breakables are skipped entirely. See the note on Blocker: firing into one is
+ * a legitimate opening, and on the breakable-teaching map it is the point.
+ *
  * The straight shot is the worst case on purpose. A player can steer up to
  * LAUNCH_SPREAD either side, so a barrel whose centre line is blocked may still
  * be playable - but a launcher whose ONLY good shots are at the edge of the
@@ -344,6 +361,7 @@ export function launcherRunway(
     origin, direction, bounds.width, bounds.height, bounds.margin,
   );
   for (const b of blockers) {
+    if (b.breakable) continue;   // a price, not a door - see Blocker
     shortest = Math.min(shortest, distanceToBox(origin, direction, b));
   }
   return shortest;

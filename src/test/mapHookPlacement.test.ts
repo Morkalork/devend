@@ -292,7 +292,10 @@ describe("the ladder actually carries these hooks", () => {
     // into the pink box) and level 34, whose whole premise is the box. Listing
     // them by name rather than by a rule is the point: a new one appearing here
     // should be a decision someone made, not something an edit did quietly.
-    const GATE_MAPS = ["level-10", "level-20", "level-30", "level-34", "level-35"];
+    // level-5 was added by hand, and is the first non-boss map to gate on an
+    // area. It is the reason the list is a list: the change showed up here as a
+    // failure, which is what let it be a decision rather than a drift.
+    const GATE_MAPS = ["level-10", "level-20", "level-30", "level-34", "level-35", "level-5"];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);
