@@ -19,6 +19,7 @@
  * geometry.
  */
 import { describe, it, expect } from "vitest";
+import { entityOutlineBounds } from "@/lib/entityOutline";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
@@ -36,11 +37,14 @@ interface Box { x0: number; y0: number; x1: number; y1: number; id: string }
 function solids(level: any): Box[] {
   const out: Box[] = [];
   for (const e of level.entities ?? []) {
-    if (e.shape === "circle") {
-      out.push({ x0: e.cx - e.radius, y0: e.cy - e.radius, x1: e.cx + e.radius, y1: e.cy + e.radius, id: e.id });
-    } else if (typeof e.x === "number") {
-      out.push({ x0: e.x, y0: e.y, x1: e.x + e.width, y1: e.y + e.height, id: e.id });
-    }
+    // The DEFORMED bounds. These were the authored x/y/width/height, which stop
+    // describing the object the moment it is bowed or turned - and level 6 is
+    // exactly that case: a wall bent 0.428 and a barrel turned -120 degrees
+    // overlap as RECTANGLES by 25x50 units and do not touch at all as shapes.
+    // The guard failed a layout that was fine, which is the worse direction for
+    // a guard to fail in: it teaches the author to stop believing it.
+    const b = entityOutlineBounds(e);
+    if (b) out.push({ ...b, id: e.id });
   }
   // A slot's WORST case: the whole candidate range, at the largest radius it
   // may roll. A placement that only collides on an unlucky roll is a bug that
@@ -218,7 +222,12 @@ describe("every breakable can be reached and hit", () => {
     const clashes: string[] = [];
     for (const level of LEVELS) {
       for (const b of breakables(level)) {
-        const box: Box = { x0: b.x, y0: b.y, x1: b.x + b.width, y1: b.y + b.height, id: b.id };
+        // Deformed, like the solids it is compared against. Measuring one side
+        // of the comparison after its bend and the other before it is worse
+        // than measuring neither.
+        const bounds = entityOutlineBounds(b);
+        if (!bounds) continue;
+        const box: Box = { ...bounds, id: b.id };
         for (const solid of solids(level)) {
           if (solid.id === b.id) continue;
           // A breakable stacked flush ON another solid is a deliberate pattern
