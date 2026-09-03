@@ -171,6 +171,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballCatalog, setBallCatalog] = useState<BallTypeDef[]>(getAllBallTypes());
   const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
+  /** The phone's version of the floating toolbar: one button, one sheet. */
+  const [devMenuOpen, setDevMenuOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
@@ -633,7 +635,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         <button
           onClick={() => setFreezeOnClear(v => !v)}
           title="On clear, play the desaturation drain then freeze; click the board to reload"
-          className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+          className="hidden lg:flex absolute bottom-4 left-4 items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-opacity hover:opacity-90"
           style={{
             zIndex: 50,
             backgroundColor: freezeOnClear ? `${accent}1a` : '#1a1f1a',
@@ -855,7 +857,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
       {/* ── Floating toolbar (only when in default playground mode, no level selected) ── */}
       {!selectedLevel && (
-        <div className="fixed bottom-4 left-2 right-2 z-50 overflow-x-auto scrollbar-hide">
+        <div className="hidden lg:block fixed bottom-4 left-2 right-2 z-50 overflow-x-auto scrollbar-hide">
         <div className="flex flex-nowrap items-center gap-2 w-max ml-auto pr-1">
           <button
             onClick={hardReset}
@@ -916,6 +918,180 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         </div>
         </div>
       )}
+
+      {/* Mobile: one button, everything behind it.
+          The same controls laid out in a row do not fit a phone. They were in a
+          horizontally scrolling strip with the freeze toggle pinned underneath
+          them, so the two overlapped and most of the bar sat off-screen: a
+          toolbar you cannot read is not a toolbar. Below `lg` it collapses to a
+          single button and a sheet where every control has room for its label.
+
+          Deliberately not a second copy of the desktop bar. That layout leans
+          on `title` tooltips and icon-only buttons, and a phone has no hover to
+          reveal either, so the sheet spells each control out. */}
+      <button
+        onClick={() => setDevMenuOpen(true)}
+        aria-label="Playground controls"
+        className="lg:hidden fixed bottom-4 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-opacity hover:opacity-90"
+        style={{ backgroundColor: accent, color: '#000', boxShadow: `0 0 16px ${accent}66` }}
+      >
+        <SlidersHorizontal className="w-5 h-5" />
+        {appliedActiveCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+            style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: accent }}
+          >
+            {appliedActiveCount}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {devMenuOpen && (
+          <motion.div
+            key="dev-menu-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="lg:hidden fixed inset-0 z-[70] flex items-end"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+            onClick={() => setDevMenuOpen(false)}
+          >
+            <motion.div
+              key="dev-menu-panel"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.2 }}
+              className="w-full rounded-t-xl overflow-y-auto p-4 space-y-2"
+              style={{
+                backgroundColor: '#0a0f0a',
+                border: `1px solid ${accent}55`,
+                maxHeight: '80vh',
+                // Clear of the phone's own gesture bar, which otherwise
+                // swallows taps on the last row.
+                paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-2">
+                <span
+                  className="font-black tracking-widest uppercase text-sm"
+                  style={{ fontFamily: 'Michroma, sans-serif', color: accent }}
+                >
+                  Playground
+                </span>
+                <button onClick={() => setDevMenuOpen(false)} aria-label="Close">
+                  <X className="w-5 h-5" style={{ color: accent }} />
+                </button>
+              </div>
+
+              {!selectedLevel && (
+                <>
+                  {/* The arrows keep the sheet OPEN. Stepping is something you
+                      do several times in a row, and a menu that closed on each
+                      press would have to be reopened for every level. */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={goToPreviousLevel}
+                      aria-label="Previous level"
+                      className="flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0"
+                      style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => { setDevMenuOpen(false); setLevelPickerOpen(true); }}
+                      className="flex-1 flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm min-w-0"
+                      style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+                    >
+                      <Layers className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{levelLabel}</span>
+                    </button>
+                    <button
+                      onClick={goToNextLevel}
+                      aria-label="Next level"
+                      className="flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0"
+                      style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => { setDevMenuOpen(false); setBallPickerOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
+                    style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+                  >
+                    <Circle className="w-4 h-4" />
+                    Balls
+                    {ballTypeIds !== null && (
+                      <span
+                        className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+                      >
+                        {effectiveBallIds.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => { setDevMenuOpen(false); openModal(); }}
+                    className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
+                    style={{ backgroundColor: accent, color: '#000' }}
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    Modifiers
+                    {appliedActiveCount > 0 && (
+                      <span
+                        className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+                      >
+                        {appliedActiveCount}
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Freeze on clear is available in BOTH modes, so it sits outside
+                  the block above: on a selected level it is the only control
+                  there is, and the sheet must not open empty. */}
+              <button
+                onClick={() => setFreezeOnClear(v => !v)}
+                className="w-full flex items-center gap-2 px-4 h-12 rounded-lg text-sm font-semibold"
+                style={{
+                  backgroundColor: freezeOnClear ? `${accent}1a` : '#1a1f1a',
+                  border: `1px solid ${freezeOnClear ? `${accent}55` : 'rgba(255,255,255,0.12)'}`,
+                  color: freezeOnClear ? accent : 'hsl(var(--foreground))',
+                }}
+              >
+                Freeze on clear
+                <span
+                  className="ml-auto relative inline-flex items-center rounded-full transition-colors flex-shrink-0"
+                  style={{ width: 36, height: 20, backgroundColor: freezeOnClear ? accent : 'rgba(255,255,255,0.15)' }}
+                >
+                  <span
+                    className="absolute rounded-full bg-white transition-all"
+                    style={{ width: 14, height: 14, top: 3, left: freezeOnClear ? 19 : 3 }}
+                  />
+                </span>
+              </button>
+
+              {/* Last, and set apart: it throws the run away. Sitting flush with
+                  the others it is one mis-tap from every control above it. */}
+              <button
+                onClick={() => { setDevMenuOpen(false); hardReset(); }}
+                className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm mt-3"
+                style={{ backgroundColor: '#ef4444', color: '#fff' }}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset game and modifiers
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Level picker modal */}
       <AnimatePresence>

@@ -83,10 +83,14 @@ describe("degenerate input", () => {
 });
 
 /**
- * There are TWO toolbars, one shown with a level loaded and one without, and
- * adding the button to only the first is the obvious miss: the toolbar you are
- * looking at when you want to step BACK is normally the one with a level
- * already open.
+ * There are several toolbars - one shown with a level loaded, one without, and
+ * the phone's controls sheet - and adding a button to only the first is the
+ * obvious miss: the toolbar you are looking at when you want to step BACK is
+ * normally the one with a level already open.
+ *
+ * These count the DESKTOP pair, which are the two that carry `title` tooltips.
+ * The sheet labels its arrows for screen readers instead, since a phone has no
+ * hover to reveal a title; playgroundMobileMenu.test.ts checks that one.
  */
 describe("both toolbars carry both buttons", () => {
   const SRC = readFileSync(
@@ -189,10 +193,18 @@ describe("the level label says what is loaded, from the start", () => {
     resolve(__dirname, "../components/admin/PlaygroundScreen.tsx"), "utf8",
   );
 
-  it("derives one label and uses it in both toolbars", () => {
+  it("derives one label and uses it on every level button", () => {
+    // Counted against the level buttons rather than pinned at a number. It was
+    // `toBe(2)`, which was only ever a stand-in for "both toolbars", and it
+    // broke the moment a THIRD place needed the label - the phone's controls
+    // sheet - reporting a passing feature as a failure. What actually matters
+    // is that no level button names the level for itself.
     expect(SRC).toMatch(/const levelLabel = selectedLevel/);
-    const uses = SRC.match(/\{levelLabel\}/g) ?? [];
-    expect(uses.length, "both toolbars should render the same label").toBe(2);
+    const uses = (SRC.match(/\{levelLabel\}/g) ?? []).length;
+    const buttons = (SRC.match(/setLevelPickerOpen\(true\)/g) ?? []).length;
+    expect(buttons, "no level button left to label").toBeGreaterThanOrEqual(2);
+    expect(uses, "a level button is labelled from something other than levelLabel")
+      .toBe(buttons);
   });
 
   /**
