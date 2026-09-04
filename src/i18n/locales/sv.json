@@ -308,6 +308,7 @@
     "beatCrunchTime": "Slutspurt",
     "beatReorg": "Omorganisation",
     "beatWellWakes": "Gravitationen vaknar",
+    "beatDeadline": "Deadline",
     "beatEffectBalls_one": "en ny boll tillkommer",
     "beatEffectBalls_other": "{{count}} nya bollar tillkommer",
     "beatEffectSpeed": "bollarna snabbas upp {{percent}}%",

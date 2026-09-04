@@ -356,10 +356,13 @@ describe("the ladder actually carries these hooks", () => {
     // into the pink box) and level 34, whose whole premise is the box. Listing
     // them by name rather than by a rule is the point: a new one appearing here
     // should be a decision someone made, not something an edit did quietly.
-    // level-5 was added by hand, and is the first non-boss map to gate on an
-    // area. It is the reason the list is a list: the change showed up here as a
-    // failure, which is what let it be a decision rather than a drift.
-    const GATE_MAPS = ["level-10", "level-20", "level-30", "level-34", "level-35", "level-5"];
+    // level-5 was on this list and came OFF it when act I was reauthored, which
+    // is the list working in the other direction. A gate is the LATE form of a
+    // colored area: you win by locking a target inside one and fail by locking
+    // it outside, and teaching that on map 5 inverts the order the whole
+    // primitive depends on (bonus first, so the symbol is familiar by the time
+    // the act I boss makes it the only way to ship). Its pocket is a bonus now.
+    const GATE_MAPS = ["level-10", "level-20", "level-30", "level-34", "level-35"];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);

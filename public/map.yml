@@ -11,13 +11,38 @@ levels:
   # Given up to act II: chests, reveals, terminals, the WIP limit, 4 balls.
   # ===========================================================================
 
-  # 1 "First Commit" - MEET the seal.
-  # One ball, two soft chambers, a neck too wide to fail at. The onboarding map
-  # teaches the verb once (onboardingMap.ts, first run only), so this one only
-  # has to teach that a SHAPE can be sealed. The corner shelf is the first
-  # superior-sized pocket in the game and nothing draws attention to it: some
-  # players will seal there by accident and get paid, which is a better first
-  # lesson about pocket size than any explanation.
+  # -------------------------------------------------------------------------
+  # Maps 1-5 are authored at variety 0 and randomShapes 0, deliberately.
+  #
+  # `variety` jitters every rect's width and height by up to +/-variety% about
+  # its centre, so an authored 60-unit neck is not a 60-unit neck at runtime:
+  # two 300-tall stubs at variety 10 move their facing edges 15 each, and the
+  # gap arrives anywhere in [30, 90]. Half of that range is the band the gap
+  # rule forbids. Seven shipping maps already land in it (see
+  # runtimeGapRule.test.ts), and the authored-coordinate guard cannot see it.
+  #
+  # An onboarding map is the worst place to spend that: these five exist to
+  # make one idea legible each, and a doorway whose width is a dice roll is the
+  # opposite. They go back to jittering when the guard measures what ships.
+  # -------------------------------------------------------------------------
+
+  # 1 "First Commit" - MEET the doorway, and the choice to end early.
+  #
+  # Two rooms, one doorway, one ball. The only decision on the board is the one
+  # the whole game is made of: locking every ball WINS the map outright (the
+  # standing allLocked alternative in winSpec), and with one ball that means the
+  # nook in the top-right corner is a button marked "finish now". Take it and
+  # you get a superior lock and the Ship Early bonus on a board you barely
+  # touched. Leave it and you clear to 60% for the space money with the ball
+  # still loose.
+  #
+  # No mechanic, no Turn. A Turn needs a plan to disrupt and the player does not
+  # have one yet; see MAP_DESIGN_GUIDELINES.md section 6.3.
+  #
+  # The nook is 155x150 = 3.5% of the board, comfortably under the 4% superior
+  # bar at this map's denominator (one ball, so it never drops below the initial
+  # cell count). Nothing points at it. Some players will seal there by accident
+  # and get paid, which teaches pocket size better than any explanation.
   - id: level-1
     level: 1
     sizeThreshold: 40
@@ -27,240 +52,307 @@ levels:
     randomShapes: 0
     maxBalls: 1
     entities:
-      - id: stub-top
+      - id: jamb-top
         kind: wall
         shape: rect
-        x: 425
-        'y': 25
-        width: 25
-        height: 200
-      - id: stub-bottom
-        kind: wall
-        shape: rect
-        x: 450
-        'y': 675
+        x: 437
+        'y': 45
         width: 26
-        height: 200
-      - id: corner-shelf
+        height: 300
+      - id: jamb-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 555
+        width: 26
+        height: 300
+      - id: nook-lip
         kind: wall
         shape: rect
         x: 700
-        'y': 475
-        width: 175
-        height: 25
-      - id: wall-1788189135085
-        kind: wall
-        shape: rect
-        x: 25
-        'y': 475
-        width: 175
-        height: 25
+        'y': 195
+        width: 155
+        height: 24
     balls: []
 
   # 2 "Pair Programming" - MEET the second ball.
-  # The same wide neck, now crossed by two balls on their own schedules. Nothing
-  # else changes, which is the point: the difficulty is entirely the second ball.
+  #
+  # The same doorway, narrowed from 210 to 150, and now two balls cross it on
+  # their own schedules. Nothing else is new, which is the point.
+  #
+  # The second ball is what turns a lock into a decision rather than an ending.
+  # On map 1 sealing the ball finished the map; here you can spend one ball on a
+  # nook and keep playing, and the price is that the survivor has the whole
+  # board to wreck your fences in and you have half the herding power left.
+  #
+  # A nook per chamber, both 155x150 and both superior-sized, so the choice is
+  # which one to spend a ball on and not whether a pocket qualifies.
   - id: level-2
     level: 2
+    sizeThreshold: 37
+    expectedCuts: 4
+    points: 20
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: jamb-top
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 45
+        width: 26
+        height: 330
+      - id: jamb-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 525
+        width: 26
+        height: 330
+      - id: nook-lip-right
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+      - id: nook-lip-left
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 681
+        width: 155
+        height: 24
+    balls: []
+
+  # 3 "Standup" - MEET the marked zone.
+  #
+  # The game's first Colored Area, in its BONUS form (required: false): seal a
+  # ball inside the pink box and the lock pays 1.5x, ignore it and you lose
+  # nothing at all. The first map that shows the symbol must not be able to
+  # punish a player for misreading it, because by the act I boss the same box is
+  # the only way to ship and the symbol has to be familiar by then.
+  #
+  # Drawn at 225x225 = 7.7% of the board, well ABOVE the 4% superior bar and on
+  # purpose: this map teaches WHERE you locked, not how tightly. A box small
+  # enough to look like the hardest kind would grade superior by itself and
+  # collapse the two multipliers into one, which is the sizing trap in
+  # MAP_DESIGN_GUIDELINES.md section 6.2. Superior stays maps 1 and 2's lesson.
+  #
+  # THE TURN, and the first one on the ladder: at 50% remaining the balls speed
+  # up 20% for the rest of the map, telegraphed. Every fence timing the player
+  # has just learned is now wrong, which is the cheapest legible complication
+  # available this early - no mechanic on the board yet can open or close a
+  # passage, and adding a ball is the axis of last resort.
+  - id: level-3
+    level: 3
     sizeThreshold: 34
     expectedCuts: 4
     points: 20
-    variety: 8
-    randomShapes: 6
+    variety: 0
+    randomShapes: 0
     maxBalls: 2
     entities:
-      - id: divider-top
+      - id: jamb-top
         kind: wall
         shape: rect
         x: 437
         'y': 45
         width: 26
-        height: 280
-      - id: divider-bottom
+        height: 330
+      - id: jamb-bottom
         kind: wall
         shape: rect
         x: 437
-        'y': 620
+        'y': 525
         width: 26
-        height: 235
-      - id: pillar
-        kind: wall
-        shape: circle
-        cx: 700
-        cy: 475
-        radius: 70
-      - id: corner-shelf
+        height: 330
+      - id: nook-lip
         kind: wall
         shape: rect
-        x: 150
-        'y': 450
-        width: 150
-        height: 125
-        bend: -0.427
-    balls: []
-
-  # 3 "Standup" - USE the topology: the necks ARE the hook.
-  # An alcove in the top-left whose only way in is a corner gap one short fence
-  # closes. Sized at roughly 150x150 on purpose, comfortably under 4% of the
-  # board, so a seal there grades SUPERIOR and pays double. The right-hand half
-  # is an ordinary two-chamber map and clears the threshold on its own, which is
-  # the safe skip that makes the alcove a decision rather than a requirement.
-  - id: level-3
-    level: 3
-    sizeThreshold: 30
-    expectedCuts: 4
-    points: 20
-    variety: 8
-    randomShapes: 6
-    maxBalls: 2
-    entities:
-      - id: alcove-lip-v
-        kind: wall
-        shape: rect
-        x: 250
-        'y': 25
-        width: 22
-        height: 90
-      - id: alcove-lip-h
-        kind: wall
-        shape: rect
-        x: 25
-        'y': 250
-        width: 90
-        height: 22
-      - id: spine-top
-        kind: wall
-        shape: rect
-        x: 550
-        'y': 45
-        width: 24
-        height: 300
-      - id: spine-bottom
-        kind: wall
-        shape: rect
-        x: 550
-        'y': 620
-        width: 24
-        height: 235
-    balls: []
+        x: 630
+        'y': 270
+        width: 225
+        height: 24
     coloredAreas:
       - kind: var
-        x: 25
-        'y': 25
+        x: 630
+        'y': 45
         width: 225
         height: 225
         required: false
+    beats:
+      - id: crunch
+        atSpaceRemaining: 50
+        speedSpike: 0.2
+        announce: game.beatCrunchTime
+    balls: []
 
   # 4 "Blocker" - MEET the mover.
-  # A patrol crossing the one neck, so the question stops being "can I draw this
-  # fence" and becomes "can I draw it NOW". First map that rotates (level >= 4),
-  # which is why the pocket sits in a corner rather than against one edge.
+  #
+  # A patrol sweeps the doorway, so the question stops being "can I draw this
+  # fence" and becomes "can I draw it NOW". The mover is the only new thing, and
+  # it is the only hook: the corner pocket behind it is unmarked, the way maps 1
+  # and 2 left theirs. Map 3's pink box was deliberately NOT carried over here.
+  # Two consecutive maps whose eye goes to the same box is one focal point too
+  # many, and it would have put a colored area on six of act I's ten maps -
+  # which is the exact over-use MAP_DESIGN_GUIDELINES.md section 2 exists to
+  # stop. The box comes back on map 5, priced.
+  #
+  # The doorway widens back to 210 because the difficulty has moved into the
+  # timing. A neck that is both narrow and guarded is two problems, and this map
+  # is about one of them.
+  #
+  # First map that ROTATES (level >= 4), so nothing here depends on which way is
+  # down: the patrol is horizontal in authored space and becomes vertical in two
+  # of the four deals, which changes how the doorway reads without changing what
+  # it asks. The Turn is a spawn rather than a topple for the same reason -
+  # gravity does not rotate with the board.
+  #
+  # THE TURN, and it is map 3's turned inside out. Map 3's fires on SPACE, so it
+  # answers what the player did; this one fires on the CLOCK at 50 seconds and
+  # arrives whether or not they got anywhere. Same effect, opposite lesson: the
+  # board reacts to you, and then it does not. A duplication beat would have
+  # been the obvious choice and is a no-op below level 11 (DUPLICATION_MIN_LEVEL)
+  # - it was in the first draft of this map and mapBeats.test.ts caught it.
   - id: level-4
     level: 4
-    sizeThreshold: 28
+    sizeThreshold: 31
     expectedCuts: 5
     points: 20
-    variety: 10
-    randomShapes: 8
+    variety: 0
+    randomShapes: 0
     maxBalls: 2
     entities:
-      - id: divider-top
+      - id: jamb-top
         kind: wall
         shape: rect
         x: 437
         'y': 45
         width: 26
         height: 300
-      - id: divider-bottom
+      - id: jamb-bottom
         kind: wall
         shape: rect
         x: 437
-        'y': 650
+        'y': 555
         width: 26
-        height: 205
+        height: 300
+      - id: nook-lip
+        kind: wall
+        shape: rect
+        x: 630
+        'y': 270
+        width: 225
+        height: 24
       - id: guard
         kind: mover
         shape: rect
         x: 300
-        'y': 475
+        'y': 438
         width: 300
         height: 26
         axis: horizontal
         range: 280
         speed: 130
-      - id: corner-shelf
-        kind: wall
-        shape: rect
-        x: 700
-        'y': 200
-        width: 155
-        height: 22
+    beats:
+      - id: crunch
+        atSeconds: 50
+        speedSpike: 0.15
+        announce: game.beatCrunchTime
+        leadMs: 2000
     balls: []
 
-  # 5 "Nice To Have" - USE the marked zone: the game's first Colored Area.
-  # A BONUS var pocket (required: false), so ignoring it costs nothing and the
-  # first map that shows the pink box cannot punish you for misreading it. By
-  # L10 the same box is the boss's win gate and the symbol is already familiar.
+  # 5 "Technical Debt" - MEET the breakable, USE the mover.
   #
-  # Drawn at 225x225, well ABOVE 4% of the board, deliberately: it marks WHERE
-  # you locked, not how tightly, and a box small enough to look "hardest" would
-  # grade superior by itself and collapse the two multipliers into one.
+  # The divider has a soft section in it. Smash it and you own a SECOND doorway
+  # into the right-hand chamber, at y 207-345, which the patrol never reaches -
+  # it sweeps the lower doorway only. So the map quotes you two prices for the
+  # same trip: walk the guarded doorway on the guard's schedule, or spend six
+  # hits and go where it cannot follow. That is the whole lesson: a breakable is
+  # not an obstacle, it is a price quoted in tempo.
+  #
+  # The slab does NOT enclose anything, and that is deliberate rather than
+  # incidental. The first draft bricked up the pink pocket instead, and the
+  # audit killed it: a fully sealed region is written off by
+  # captureUnreachableCells as unreachable-hence-captured, so the vault started
+  # the map already claimed, and a ball driven in after the break would land in
+  # ground the player already owned and lock itself for free (the stranded-lock
+  # rule). A breakable that seals a pocket is a free lock with extra steps.
+  #
+  # THE TURN: at 45% remaining the slab goes whether you were ready or not, with
+  # a banner. It reads like a gift and is the opposite. Until it breaks, that
+  # stretch of divider is WALL, and wall is what a fence anchors on: a player
+  # part-way through sealing the top-right chamber has been leaning on it. The
+  # deadline puts a hole in their anchor and a new mouth in the pocket they were
+  # about to close. It is a real reason not to break it yourself.
+  #
+  # The two seams either side of the slab are 12 units, passages to nothing. The
+  # doorway below it is 210. Those numbers only survive because this map is at
+  # variety 0; see the note at the top of act I.
   - id: level-5
     level: 5
-    sizeThreshold: 26
+    sizeThreshold: 28
     expectedCuts: 5
     points: 20
-    variety: 10
-    randomShapes: 8
+    variety: 0
+    randomShapes: 0
     maxBalls: 2
-    coloredAreas:
-      - kind: var
-        x: 600
-        'y': 625
-        width: 275
-        height: 250
-      - kind: let
-        x: 0
-        'y': 625
-        width: 300
-        height: 250
     entities:
-      - id: pocket-shelf
+      - id: jamb-top
         kind: wall
         shape: rect
-        x: 575
-        'y': 600
-        width: 350
+        x: 437
+        'y': 45
+        width: 26
+        height: 150
+      - id: slab
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 207
+        width: 26
+        height: 138
+        breakable: true
+        hitsToBreak: 6
+      - id: jamb-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 555
+        width: 26
+        height: 300
+      - id: nook-lip
+        kind: wall
+        shape: rect
+        x: 630
+        'y': 270
+        width: 225
         height: 24
-      - id: pocket-lip
-        kind: wall
-        shape: rect
-        x: -25
-        'y': 600
-        width: 350
-        height: 25
       - id: guard
         kind: mover
         shape: rect
-        x: 400
-        'y': 575
-        width: 110
+        x: 300
+        'y': 438
+        width: 300
         height: 26
         axis: horizontal
-        range: 260
-        speed: 150
-    balls:
-      - id: ball-1788421889336
-        initialSpeed: 300
-        topSpeed: 600
-        color: 00d4ff
-        startX: 725
-        startY: 150
-    win:
-      require:
-        - kind: area
-          count: 1
-      alsoWinIf: []
+        range: 280
+        speed: 130
+    coloredAreas:
+      - kind: var
+        x: 630
+        'y': 45
+        width: 225
+        height: 225
+        required: false
+    beats:
+      - id: deadline
+        atSpaceRemaining: 45
+        breakId: slab
+        announce: game.beatDeadline
+    balls: []
 
   # 6 "Legacy Wall" - MEET the breakable.
   # A thin wall across the board with the good space behind it. Smashing costs

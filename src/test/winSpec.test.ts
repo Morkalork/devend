@@ -110,11 +110,11 @@ describe("every shipped map still means what it meant", () => {
    */
   it("authors a win only on the maps that mean to", () => {
     expect(MAPS.length).toBeGreaterThan(30);
-    // level-5 joined the list when its colored areas were promoted from bonus
-    // pockets to win gates: the map now asks for a lock inside one, which is a
-    // clause it has to state rather than derive.
+    // level-5 was here while its colored areas were win gates and left when act
+    // I was reauthored and they went back to being bonus pockets. It derives a
+    // spec again, like every other non-act-IV map.
     const authored = MAPS.filter(m => resolveWinSpec(m).authored).map(m => String(m.id));
-    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34", "level-5"]);
+    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34"]);
   });
 
   it("still derives a working spec for every other map", () => {
