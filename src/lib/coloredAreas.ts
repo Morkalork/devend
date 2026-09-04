@@ -211,3 +211,26 @@ export function coloredAreaMultiplierAt(x: number, y: number, areas: ColoredArea
   }
   return m;
 }
+
+/**
+ * Is there still a ball that could reach a gate zone, or has the map become
+ * unwinnable?
+ *
+ * A gate-area map is lost the moment no target can ever land in the zone again
+ * (see applyCut's areaUnreachable). "Could reach it" is any ball not already
+ * locked away - and on a boss map, the boss specifically, since only the boss
+ * satisfies the gate there.
+ *
+ * DORMANT and FROZEN balls count as live targets. A dormant ball is one that
+ * has not entered play yet (a circuit sleeper waiting to be wired, a launcher's
+ * roster waiting to be fired); a frozen ball is at rest and will thaw. An
+ * earlier version tested `speed > 0`, which predates dormant balls and read a
+ * ball at rest as a ball that was gone - so a gate map whose targets all
+ * started dormant failed on its first frame.
+ */
+export function anyGateTargetInPlay(
+  balls: ReadonlyArray<{ state: string; isBoss?: boolean }>,
+): boolean {
+  const hasBoss = balls.some(b => b.isBoss);
+  return balls.some(b => b.state !== "won" && (!hasBoss || b.isBoss));
+}

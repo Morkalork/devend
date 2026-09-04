@@ -39,7 +39,7 @@ import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
-import { gateAreas } from "@/lib/coloredAreas";
+import { anyGateTargetInPlay, gateAreas } from "@/lib/coloredAreas";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
@@ -552,10 +552,10 @@ export function evaluateWinConditions(
   // property of the board, not of the spec, so it is checked whenever the win
   // actually depends on an area.
   if (spec.require.some(c => c.kind === "area") && !isWinMet(spec, snap)) {
-    const hasBoss = game.balls.some(b => b.isBoss);
-    const activeTargets = game.balls.some(b =>
-      b.state !== "won" && b.speed > 0 && (!hasBoss || b.isBoss));
-    if (!activeTargets) {
+    // Dormant and frozen targets count as live - a dormant ball has not entered
+    // play yet, a frozen one will thaw. See anyGateTargetInPlay for why the old
+    // `speed > 0` test made a gate-area circuit map lose on its first frame.
+    if (!anyGateTargetInPlay(game.balls)) {
       // No target left that could still reach the zone. Nothing on the board
       // shows this - the map simply becomes unwinnable - so it has to be said.
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
