@@ -693,6 +693,44 @@ levels:
         cy: 290
         radius: 42
         bouncer: true
+      # The GOVERNOR: two more bumpers, and the map's answer to its own wager.
+      #
+      # A launched ball keeps its speed for the whole map - nothing in the
+      # engine damps one - and a fast ball is a ball you cannot fence. A CHARGED
+      # bumper takes 5% off and pays an hour for it, so the right-hand chamber
+      # is where a player who pulled too hard goes to buy the speed back, and it
+      # costs the bumpers' banks to do it. Run them dry and the same bumpers
+      # start kicking instead, which is the trap.
+      #
+      # Two rather than one because the braking is bank-limited, not
+      # position-limited. Measured over a map, three bumpers put about 15 hours
+      # of brake on the board and five put 19-25; the first crossing of the shot
+      # is unchanged either way, because a ball only meets what it happens to
+      # meet. What these buy is a chamber that keeps braking after the first
+      # pass, rather than one that is spent by the time it matters.
+      #
+      # `kick-in` is a KICKER rather than a bouncer: it fires along a fixed
+      # bearing whatever the approach, so it aims into the chain instead of
+      # scattering off it. A radial bumper is a pinball; a kicker is a plan.
+      # Placed at the bottom of the chain rather than at the mouth: anything
+      # that drifts down the right-hand side is fired back up through it, so
+      # the gauntlet feeds itself. It is deliberately NOT in front of the
+      # muzzle - a bumper there narrows the spine's gap and seals the board.
+      - id: kick-in
+        kind: wall
+        shape: circle
+        cx: 810
+        cy: 600
+        radius: 40
+        bouncer: true
+        bearing: up
+      - id: bumper-d
+        kind: wall
+        shape: circle
+        cx: 800
+        cy: 420
+        radius: 42
+        bouncer: true
       - id: chest-cover
         kind: wall
         shape: rect
@@ -1638,6 +1676,29 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+      # The zone below is called "the narrow pipe" and until now it was only
+      # ground: a colour on the floor with nothing to bump into. These are its
+      # walls, so the metaphor is geometry.
+      #
+      # A corridor is normally the CHEAPEST lock on a board - short mouths, two
+      # quick safe cuts - which would be a gift on a map about greed. Here the
+      # whole corridor stands on ground that builds fences at 45%, so the
+      # cheapest pocket is also the longest you will ever stand still, and the
+      # chest is inside it. Open at both ends, so nothing is sealed for free.
+      - id: pipe-left
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 180
+        width: 24
+        height: 540
+      - id: pipe-right
+        kind: wall
+        shape: rect
+        x: 554
+        'y': 180
+        width: 24
+        height: 540
       - id: rack-tl
         kind: wall
         shape: rect
