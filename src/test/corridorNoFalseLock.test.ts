@@ -52,7 +52,17 @@ const MODS: GameModifiers = {
 // units above the bottom board edge; the ball is radius 18 (36 diameter).
 function levelWithGap(gap: number): LevelConfig {
   return {
-    id: `corridor-${gap}`, level: 6, sizeThreshold: 25, expectedCuts: 14, points: 40,
+    // Level 3, and it has to stay under ROTATION_MIN_LEVEL (4). From there up a
+    // map is dealt in one of four rotations off an UNSEEDED rng, so `box` lands
+    // somewhere different run to run - measured at level 6: (200,500)-(400,831)
+    // as authored, or (500,500)-(831,700), or (69,200)-(400,400), or
+    // (500,69)-(700,400). Every coordinate below (the corner the fence starts
+    // at, where the two balls stand, which side the pocket is on) is computed
+    // by hand for the authored deal, so in three deals out of four this
+    // scenario is not the scenario at all. It usually still failed to lock, for
+    // the wrong reason, and sometimes locked - which is exactly the shape of
+    // the ~1-in-4 CI failure this file has been showing.
+    id: `corridor-${gap}`, level: 3, sizeThreshold: 25, expectedCuts: 14, points: 40,
     maxBalls: 2,
     // Without this the level gets random obstacles, which can move the ball or
     // block the fence so ownership rejects the cut entirely. The two "does NOT
@@ -67,7 +77,7 @@ function levelWithGap(gap: number): LevelConfig {
 }
 
 function makeGame(level: LevelConfig): CanvasGameState {
-  const data = createInitialGameData(level, 6, MODS);
+  const data = createInitialGameData(level, 3, MODS);
   return {
     spaceGrid: data.spaceGrid, gridRegions: data.gridRegions, regions: data.regions,
     walls: data.walls, obstaclePolygons: data.obstaclePolygons, mirrorPolygons: data.mirrorPolygons,
@@ -123,7 +133,7 @@ function runScenario(gap: number): CanvasGameState {
   const boxBottomRight = { x: 400, y: 855 - gap };
   applyCutFn(
     completedWall({ x: 620, y: (boxBottomRight.y + 700) / 2 }, boxBottomRight, { x: 855, y: 700 }),
-    game, level, 6, MODS, false, false, 0, noopCallbacks,
+    game, level, 3, MODS, false, false, 0, noopCallbacks,
   );
   return game;
 }
@@ -151,8 +161,12 @@ describe("corridor under a box: locking requires a REAL seal", () => {
 // This pair was dropped once as flaky: the positive case needs the cut to land,
 // and wouldWallOrphanBall was rejecting it about 1 run in 4 on a sightline that
 // had nothing to do with this fence. That bug is fixed (see
-// orphanCheckLineOfSight.test.ts), which is what makes the scenario
-// deterministic enough to assert on.
+// orphanCheckLineOfSight.test.ts).
+//
+// It went on flaking at about the same rate afterwards, for a second and
+// entirely separate reason: the fixture was dealt a random map rotation. See
+// levelWithGap. Two causes with one rate is why fixing the first one looked
+// like it had worked.
 describe("lock diagnostics capture the rejection", () => {
   beforeEach(() => {
     localStorage.clear();
