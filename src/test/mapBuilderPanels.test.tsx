@@ -56,13 +56,18 @@ describe("the orientations strip", () => {
 
 describe("the mechanics panel", () => {
   it("names the mechanics the current map actually uses", () => {
-    // Level 6 is the bent Legacy Wall: a breakable, and now a bend.
+    // Level 6 is "Merge Conflict": one breakable divider and nothing else
+    // headline, which is the map working as designed rather than a thin one.
+    // It used to be asserted on "Bent shape" too; that is seasoning now (a
+    // shape modifier, never a map's subject) and no longer chips at all.
     render(<MechanicSpreadPanel levels={LEVELS} current={lvl(6)} />);
-    // getAllByText, not getByText: each of these appears twice on purpose -
-    // once as a chip for this map and once in the warnings below, because
-    // "Bent shape" is currently single-use and level 6 is where it is used.
+    // getAllByText rather than getByText: a name can appear twice, once as a
+    // chip for this map and once in the warnings below it.
     expect(screen.getAllByText(/Breakable/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Bent shape/).length).toBeGreaterThan(0);
+    // ...and the panel must not claim a mechanic the map does not have. Level 7
+    // has the chest; level 6 does not, and a panel that listed it would be
+    // describing the ladder rather than the map in front of the designer.
+    expect(screen.queryByText(/^Chest$/)).toBeNull();
   });
 
   it("says so plainly when a map uses no headline mechanic", () => {
@@ -75,7 +80,7 @@ describe("the mechanics panel", () => {
     // These are the findings the panel exists for, so they must be visible in
     // the default view, not one click away.
     render(<MechanicSpreadPanel levels={LEVELS} current={lvl(6)} />);
-    // Three of them today (bend, threadLock, mutator), so this is plural.
+    // Several today (launcher, bumper, portal, box, threadLock, mutator).
     expect(screen.getAllByText(/introduced and never developed/).length).toBeGreaterThan(0);
   });
 

@@ -354,276 +354,362 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 6 "Legacy Wall" - MEET the breakable.
-  # A thin wall across the board with the good space behind it. Smashing costs
-  # time you could have spent sealing, which is the whole lesson: a breakable is
-  # a price, not a door. Geometry kept from the map that already taught this.
+  # 6 "Merge Conflict" - FIGHT the breakable, USE the mover.
+  #
+  # No new mechanic. Map 5 taught that a breakable is a price you pay in tempo;
+  # this one charges the opposite way round, because the fourth thing breaking a
+  # wall does is the one nobody thinks about: it MERGES two regions into one.
+  #
+  # The divider is soft, and the balls chip it just by living. Nothing the
+  # player does protects it - they can steer away from it, and that is the
+  # skill - so the two-chamber board they are reading is on a clock they do not
+  # control. Seal the far room while it is still a room, or clear the near one
+  # safely and find the far one has become the same room.
+  #
+  # Two 66-unit necks, one at each end of the divider, are the honest way
+  # through while it stands. Both are legal passages rather than the seams on
+  # map 5: this map is about the wall in the middle, not about getting past it.
+  #
+  # No patrol, deliberately. Maps 4 and 5 are both about a mover and 7 and 9
+  # both use one, and mechanicSpread flagged the act at seven movers in ten maps
+  # when this map had one too - which is the "same gimmick every map" line in the
+  # guidelines' own anti-pattern list. The pressure here is the wall's decay, and
+  # a patrol on top of it would have been decoration charged as difficulty.
+  #
+  # THE TURN: at 55 seconds the divider goes whether the balls got there or not.
+  # A clock rather than a threshold, because the whole map is a race against
+  # something the player cannot stop, and a space trigger would have made it
+  # something they caused.
   - id: level-6
     level: 6
-    sizeThreshold: 24
+    sizeThreshold: 25
     expectedCuts: 5
     points: 20
-    variety: 10
-    randomShapes: 8
+    variety: 0
+    randomShapes: 0
     maxBalls: 2
     entities:
-      # The RAIL: two nested arcs, both bowed back towards the plunger, making
-      # a channel the shot runs rather than a face it meets.
-      #
-      # A ball in this engine REFLECTS; it never slides. It only follows a curve
-      # by striking it again and again, which happens on a CONCAVE face and only
-      # while it arrives shallow - so a wall bowed the other way is a hump, and
-      # every shot leaves it on the first touch. That is the bounce.
-      #
-      # Two arcs and not one because the launcher FANS its roster across half
-      # its cone (fanDirections, +/-17.5 degrees): the balls never take the same
-      # line, so a single face carries one and throws the other away, and even
-      # for the one it carries it is a knife edge - measured, the old shape went
-      # from riding the curve to bouncing off it inside five degrees of aim. A
-      # channel does not care which line a ball entered on.
-      #
-      # Both arcs ARE breakable, with a deep bank of hits, and that is doing two
-      # jobs at once. Riding a wall damages it - about 2.5 of 3 hits within
-      # thirty seconds - so at the usual 3 the rail would vanish partway through
-      # the map; at 14 it survives a shot and still yields to a player who
-      # decides the space behind it is worth the time. Which is exactly this
-      # level's lesson, and it is also what lets the rail sit in front of the
-      # muzzle at all: launcherRunway skips breakables on purpose, because
-      # firing into one is a legitimate opening rather than a blocked barrel.
-      - id: guide
+      - id: anchor-top
         kind: wall
         shape: rect
-        x: 380
-        'y': 110
+        x: 437
+        'y': 45
         width: 26
-        height: 620
-        bend: -0.7
-        breakable: true
-        hitsToBreak: 14
-      - id: lane
+        height: 84
+      - id: gate
         kind: wall
         shape: rect
-        x: 280
-        'y': 220
-        width: 22
-        height: 460
-        bend: -0.8
-        breakable: true
-        hitsToBreak: 14
-      # The breakable this level teaches, kept clear of the rail. It used to be
-      # the rail as well, and was failing at both jobs.
-      - id: soft-wall
-        kind: wall
-        shape: rect
-        x: 640
-        'y': 250
+        x: 437
+        'y': 195
         width: 26
-        height: 400
+        height: 510
         breakable: true
-        hitsToBreak: 3
-      - id: nub
+        hitsToBreak: 8
+      - id: anchor-bottom
         kind: wall
-        shape: circle
-        cx: 225
-        cy: 525
-        radius: 45
-        bend: 0.95
-      - id: wall-1788191964368
-        kind: wall
-        shape: circle
-        cx: 225
-        cy: 375
-        radius: 45
-        bend: -0.95
-      # Moved to the bottom-left corner, firing up and across the board.
-      # Its old spot (500,650 at -120) cannot work: the muzzle needs 225 units
-      # of clear board in front of it (launcherMaps.test.ts), and by 225 units
-      # the fan has already thrown the two balls far enough apart that no
-      # channel narrow enough to steer one of them can catch both.
-      - id: launcher-1788422810361
-        kind: launcher
         shape: rect
-        x: 160
-        'y': 700
-        width: 190
-        height: 96
-        facing: right
-        angle: -45
+        x: 437
+        'y': 771
+        width: 26
+        height: 84
+      - id: nook-lip
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+    beats:
+      - id: deadline
+        atSeconds: 55
+        breakId: gate
+        announce: game.beatDeadline
+        leadMs: 2000
     balls: []
 
-  # 7 "Refactor" - FIGHT: the breakable crossed with the mover, and the act's
-  # first TURN.
-  # Nothing new on the board; both halves are already known, and the map is the
-  # question of which order to spend them in. The speed spike is telegraphed a
-  # beat early so the Turn is fair (MAP_DESIGN_GUIDELINES.md convention 3).
+  # 7 "Bonus Pool" - MEET the chest, USE the breakable.
+  #
+  # The chest is the first thing on the board that pays for being DESTROYED
+  # rather than for being sealed around, which is why it gets its own map: every
+  # lesson so far has been "make a small room and put a ball in it", and this one
+  # is "drive a ball at that until it comes apart".
+  #
+  # It sits in an open alcove, not a sealed one. A vault with no way in is a
+  # region captureUnreachableCells writes off at load, and the map would hand it
+  # over for free before the player touched anything - the trap map 5's first
+  # draft fell into. The mouth is 84 units, a legal neck, and a patrol crosses
+  # the approach to it.
+  #
+  # So the alcove is worth two different things and they compete for the same
+  # ball. Keep one in there and it smashes the chest for loot; seal the mouth
+  # with a ball inside and you have a lock instead. Doing both means holding a
+  # ball in the alcove while you draw the cut across a patrol's line, which is
+  # the map's one greedy read.
+  #
+  # The partition is the safe skip. Breaking it opens the lower half into one
+  # room, which is map 6's lesson quoted back: easier to reach, harder to seal.
   - id: level-7
     level: 7
     sizeThreshold: 22
     expectedCuts: 6
     points: 20
-    variety: 12
-    randomShapes: 10
+    variety: 0
+    randomShapes: 0
     maxBalls: 2
     entities:
-      - id: gate
+      - id: vault-jamb
         kind: wall
         shape: rect
-        x: 225
-        'y': 150
-        width: 25
-        height: 625
+        x: 585
+        'y': 45
+        width: 24
+        height: 141
+      - id: vault-lip
+        kind: wall
+        shape: rect
+        x: 585
+        'y': 270
+        width: 270
+        height: 24
+      - id: chest-7
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 90
+        width: 110
+        height: 90
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: partition
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 400
+        width: 26
+        height: 455
         breakable: true
         hitsToBreak: 4
       - id: patrol
         kind: mover
-        shape: circle
-        cx: 450
-        cy: 475
-        radius: 45
-        axis: vertical
-        range: 525
-        speed: 150
-        bend: -0.41
-      - id: wall-1788192072207
-        kind: wall
         shape: rect
-        x: 650
-        'y': 150
-        width: 25
-        height: 625
-        breakable: true
-        hitsToBreak: 4
+        x: 450
+        'y': 330
+        width: 200
+        height: 26
+        axis: horizontal
+        range: 240
+        speed: 150
     beats:
       - id: crunch
-        atSpaceRemaining: 50
+        atSeconds: 55
         speedSpike: 0.15
         announce: game.beatCrunchTime
+        leadMs: 2000
     balls: []
 
-  # 8 "Scope" - FIGHT: the marked zone behind a guarded chokepoint, with three
-  # balls. Also where POWER-UP TOKENS begin (game-config.yml pickups.start_level
-  # is 8), and the first map in the game to curate where they land: a token that
-  # spawns in a corner you already sealed is a token nobody can reach.
+  # 8 "Refactor" - MEET reveals, BREAK the marked zone.
+  #
+  # `reveals` is the one mechanic that makes the board BIGGER. The corner behind
+  # the curtain is 276x255 of board that does not exist yet: its cells start
+  # locked and uncuttable, and three hits on the curtain hand them over.
+  #
+  # The pink box is drawn over that corner, which is what makes this map 3's
+  # inversion. There the box was free to ignore and free to seal. Here it is not
+  # even THERE until it is paid for, and the moment it arrives it is 10.7% of
+  # the board - over the 10% lock threshold - so sealing the whole corner does
+  # not lock at all. The player has to cut it down before it pays. The pocket
+  # they learned to measure on map 3 will not hold still.
+  #
+  # The corner is sealed by two board edges, the curtain and a jamb, with a
+  # 12-unit seam between them: no ball can be inside it. That is not cosmetic.
+  # The first draft revealed an open strip instead, and the bot audit came back
+  # with nineteen "[OWNERSHIP] ball has no valid region" against a baseline of
+  # one or two - balls wandering into cells that are REMOVED by design and
+  # belong to no region. A revealed area has to be genuinely shut.
+  #
+  # Power-up tokens arrive on this map by gate (pickups.start_level is 8), so
+  # the spots are authored rather than left to the roll.
+  #
+  # THE TURN: at 45% remaining the curtain goes on its own, and the space bar
+  # runs BACKWARDS. Ten percent of new board appears at the moment the player
+  # was closing out the map, and their remaining% - the one number they have
+  # been steering by for eight maps - goes up. Telegraphed, so it is a shock
+  # rather than an ambush.
   - id: level-8
     level: 8
-    sizeThreshold: 20
+    sizeThreshold: 19
     expectedCuts: 6
     points: 20
-    variety: 12
-    randomShapes: 10
+    variety: 0
+    randomShapes: 0
     maxBalls: 3
     coloredAreas:
       - kind: var
-        x: 45
-        'y': 620
-        width: 220
-        height: 225
+        x: 579
+        'y': 45
+        width: 276
+        height: 255
         required: false
     pickupSpots:
-      - { x: 650, y: 200 }
-      - { x: 250, y: 250 }
-      - { x: 680, y: 700 }
-    entities:
-      - id: pocket-shelf
-        kind: wall
-        shape: rect
-        x: 45
-        'y': 596
-        width: 240
-        height: 24
-      - id: pocket-lip
-        kind: wall
-        shape: rect
-        x: 265
+      - x: 150
+        'y': 200
+      - x: 250
         'y': 700
-        width: 24
-        height: 155
-      - id: choke-top
+      - x: 620
+        'y': 640
+    entities:
+      - id: jamb-top
         kind: wall
         shape: rect
         x: 437
         'y': 45
         width: 26
-        height: 330
-      - id: choke-bottom
+        height: 200
+      - id: jamb-bottom
         kind: wall
         shape: rect
         x: 437
-        'y': 675
+        'y': 555
         width: 26
-        height: 180
-      - id: guard
-        kind: mover
+        height: 300
+      - id: curtain-jamb
+        kind: wall
         shape: rect
-        x: 400
-        'y': 480
-        width: 100
-        height: 26
-        axis: horizontal
-        range: 260
-        speed: 165
+        x: 555
+        'y': 45
+        width: 24
+        height: 243
+      - id: curtain
+        kind: wall
+        shape: rect
+        x: 555
+        'y': 300
+        width: 300
+        height: 24
+        breakable: true
+        fence: true
+        hitsToBreak: 3
+        reveals:
+          x: 585
+          'y': 51
+          width: 264
+          height: 243
+    beats:
+      - id: deadline
+        atSpaceRemaining: 45
+        breakId: curtain
+        announce: game.beatDeadline
+    balls: []
 
-  # 9 "Code Review" - the act's SKILL CHECK. Nothing new.
-  # Every idea act I owns, arranged so the greedy line COSTS the safe one: the
-  # pay pocket sits behind the breakable, and the fence that reaches it is the
-  # fence that would otherwise have sealed the easy left chamber. The boss is
-  # never the first test of an act's content; this is.
+  # 9 "Release Candidate" - the skill check. Nothing new.
+  #
+  # The act ends on a map with no toys in it, because the boss is never the
+  # first test of an act's content. Everything here has been met and developed:
+  # a doorway, a patrol across it, a breakable that merges what it separates, a
+  # chest that pays for being smashed, and a pink box that pays for being sealed
+  # around. Three balls, and the tightest threshold of the act at 84%.
+  #
+  # The one thing it adds is that all five compete for the same attention at
+  # once. The chest and the box are on opposite sides of the divider, so the
+  # greedy line is to run a ball at the chest while sealing around the box, and
+  # the patrol crosses the only doorway between them.
+  #
+  # THE TURN: map 3's speed spike, back at its smallest and latest. The act
+  # opened by teaching that the board reacts to progress; it closes by charging
+  # for it when there is the least room left to absorb it.
   - id: level-9
     level: 9
     sizeThreshold: 16
     expectedCuts: 6
     points: 20
-    variety: 14
-    randomShapes: 10
+    variety: 0
+    randomShapes: 0
     maxBalls: 3
     coloredAreas:
       - kind: var
-        x: 630
-        'y': 45
-        width: 205
-        height: 205
+        x: 45
+        'y': 610
+        width: 200
+        height: 245
         required: false
     pickupSpots:
-      - { x: 200, y: 450 }
-      - { x: 700, y: 620 }
+      - x: 620
+        'y': 640
+      - x: 250
+        'y': 200
     entities:
-      - id: soft-wall
+      - id: jamb-top
         kind: wall
         shape: rect
-        x: 560
-        'y': 120
+        x: 437
+        'y': 45
+        width: 26
+        height: 285
+      - id: jamb-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 540
+        width: 26
+        height: 315
+      - id: pay-lip
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 586
+        width: 200
+        height: 24
+      - id: vault-lip
+        kind: wall
+        shape: rect
+        x: 585
+        'y': 270
+        width: 270
+        height: 24
+      - id: vault-jamb
+        kind: wall
+        shape: rect
+        x: 585
+        'y': 45
         width: 24
-        height: 660
+        height: 141
+      - id: chest-9
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 90
+        width: 110
+        height: 90
+        chest: true
         breakable: true
         hitsToBreak: 3
-      - id: nub
-        kind: wall
-        shape: circle
-        cx: 250
-        cy: 300
-        radius: 50
-      - id: pay-shelf
+      - id: seam
         kind: wall
         shape: rect
-        x: 584
-        'y': 250
-        width: 271
-        height: 22
+        x: 130
+        'y': 300
+        width: 26
+        height: 180
+        breakable: true
+        hitsToBreak: 5
       - id: patrol
         kind: mover
         shape: rect
-        x: 250
-        'y': 600
-        width: 110
-        height: 26
+        x: 437
+        'y': 380
+        width: 26
+        height: 120
         axis: horizontal
         range: 300
-        speed: 170
+        speed: 175
     beats:
       - id: crunch
-        atSpaceRemaining: 40
+        atSpaceRemaining: 35
         speedSpike: 0.12
         announce: game.beatCrunchTime
+    balls: []
+
 
   - id: level-10
     level: 10

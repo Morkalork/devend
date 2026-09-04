@@ -82,8 +82,15 @@ describe("no mechanic is introduced and then dropped", () => {
     // arrives on its way OFF the unused list is the other direction, and only
     // means anything while somebody is still counting: if Portal is still
     // alone in a month it means the same as the rest of them.
+    //
+    //   Launcher      NEW here, and transitional: act I was reauthored to the
+    //                 mechanic ledger, which puts the launcher's Meet on level
+    //                 16, so it came OFF level 6 and is waiting on act II with
+    //                 only level 11 to stand on. It comes back to two the
+    //                 moment act II is built. If act II lands and it is still
+    //                 alone, this line means what every other line here means.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["bouncer", "box", "mutator", "portal", "threadLock"]);
+      .toEqual(["bouncer", "box", "launcher", "mutator", "portal", "threadLock"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -101,6 +108,11 @@ describe("no mechanic is introduced and then dropped", () => {
     // than having them scattered automatically. They come off one at a time as
     // they land on maps; if they are still here in a month, that is the answer
     // this rule is designed to give.
+    // Bent shape briefly appeared here when act I was reauthored without bent
+    // obstacles. It was never a mechanic a map could be ABOUT - it is a shape
+    // modifier on a wall that is already something else - so it was demoted to
+    // seasoning rather than scattered back onto maps to satisfy this list. That
+    // is the only honest way off it that is not "place it somewhere".
     expect(unused.map(w => w.label).sort(), "a supported mechanic is on no map at all")
       .toEqual(["Cage", "Latch", "Rotor"]);
   });
@@ -133,7 +145,6 @@ describe("no single idea owns an act", () => {
       "Breakable: on 6 of act II's 10 maps",
       "Colored area: on 4 of act IV's 5 maps",
       "Colored area: on 7 of act III's 10 maps",
-      "Mover: on 6 of act I's 10 maps",
     ]);
   });
 

@@ -52,7 +52,13 @@ export const MECHANICS: Mechanic[] = [
   { key: "reveals", label: "Reveals", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.reveals) },
   { key: "mirror", label: "Mirror", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.mirror) },
   { key: "phasing", label: "Phasing", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.isPhasing) },
-  { key: "bend", label: "Bent shape", headline: true, detect: l => anyEntity(l, e => !!e.bend || !!e.curves?.some(c => !!c)) },
+  // Seasoning, not headline: a bend is a shape MODIFIER on a wall that is
+  // already something else, and no map is ever about one. It was headline while
+  // act I leaned on bent obstacles for texture, and went straight onto the
+  // "supported but on no map" list the moment act I was reauthored without them
+  // - which is the wrong answer to the right question. See the mechanic ledger
+  // in MAP_DESIGN_GUIDELINES.md section 2.
+  { key: "bend", label: "Bent shape", headline: false, detect: l => anyEntity(l, e => !!e.bend || !!e.curves?.some(c => !!c)) },
   { key: "oneWay", label: "One-way", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.oneWay) },
   { key: "gate", label: "Ball gate", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.passTypes?.length) },
   { key: "fenceGround", label: "Fence ground", headline: true, detect: l => !!l.fenceZones?.length },

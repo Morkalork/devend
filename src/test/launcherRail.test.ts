@@ -1,5 +1,5 @@
 /**
- * Map 6's rail: the launcher's shot really does follow the bend.
+ * The rail: a launcher's shot really does follow a bend.
  *
  * ── Why a rail is two walls and not one ─────────────────────────────────────
  *
@@ -19,10 +19,23 @@
  *
  * A channel does not have that problem. With walls on both sides, a ball that
  * enters the mouth is committed whatever angle it entered on, and the arc it
- * traces out is the arc the designer drew. This is what map 6 is built from,
- * and it is what this file guards - measured as "how much of its flight did
- * the ball spend beside the guide", against the map on disk rather than a
- * fixture, because the thing that breaks a rail is somebody editing the map.
+ * traces out is the arc the designer drew. That is what this file guards,
+ * measured as "how much of its flight did the ball spend beside the guide".
+ *
+ * ── Why a fixture and not a shipped map ─────────────────────────────────────
+ *
+ * It used to read level 6 off map.yml, on the reasoning that the thing which
+ * breaks a rail is somebody editing the map. That was true and it was also a
+ * dependency on one map keeping one launcher forever: act I was reauthored to
+ * the mechanic ledger, which puts the launcher's Meet on level 16, and this
+ * file failed for a reason that had nothing to do with rails.
+ *
+ * The geometry below is level 6's, lifted verbatim on the day it was retired,
+ * so the numbers are the ones it actually delivered. What is being guarded is
+ * the ENGINE: that a channel of two concave arcs carries a fanned shot. When a
+ * map is built on a rail again, it is that map's own test that should assert
+ * the map still has one - which is the split MAP_DESIGN_GUIDELINES.md section 8
+ * draws between a structural guard and a map-specific pin.
  */
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
@@ -38,25 +51,49 @@ vi.mock("@/lib/gameHaptics", () => ({
   vibrateBallLock: () => {}, setHapticsEnabled: () => {}, isHapticsEnabled: () => false,
 }));
 
-import yaml from "js-yaml";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { fireLauncher, pendingLauncher } from "@/lib/physics/launcher";
 import { setRunSeedText } from "@/lib/runRng";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import type { LevelConfig, LevelData } from "@/types/level";
+import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
 type V = { x: number; y: number };
 
-const level6 = (): LevelConfig => {
-  const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-  const lvl = doc.levels.find(l => l.level === 6);
-  if (!lvl) throw new Error("map.yml has no level 6");
-  return lvl as unknown as LevelConfig;
-};
+/**
+ * The rail, as level 6 shipped it. Kept whole rather than minimised: the
+ * nub, the soft wall and the loose obstacles are what the shot actually flew
+ * past, and the hug numbers below were measured against all of it.
+ */
+const railMap = (): LevelConfig => ({
+  // The id stays "level-6" even though the shipped level 6 is now something
+  // else entirely, and it is load-bearing: the deal is picked by
+  // getRunRng(`rotation:${levelId}`), so the id is an INPUT to which of the four
+  // rotations `ride` gets. Renaming it to "rail-fixture" dealt a different board
+  // and every hug number fell to zero.
+  id: "level-6",
+  level: 6,
+  sizeThreshold: 24,
+  expectedCuts: 5,
+  points: 20,
+  variety: 10,
+  randomShapes: 8,
+  maxBalls: 2,
+  entities: [
+    { id: "guide", kind: "wall", shape: "rect", x: 380, y: 110, width: 26, height: 620,
+      bend: -0.7, breakable: true, hitsToBreak: 14 },
+    { id: "lane", kind: "wall", shape: "rect", x: 280, y: 220, width: 22, height: 460,
+      bend: -0.8, breakable: true, hitsToBreak: 14 },
+    { id: "soft-wall", kind: "wall", shape: "rect", x: 640, y: 250, width: 26, height: 400,
+      breakable: true, hitsToBreak: 3 },
+    { id: "nub", kind: "wall", shape: "circle", cx: 225, cy: 525, radius: 45, bend: 0.95 },
+    { id: "nub-upper", kind: "wall", shape: "circle", cx: 225, cy: 375, radius: 45, bend: -0.95 },
+    { id: "plunger", kind: "launcher", shape: "rect", x: 160, y: 700, width: 190, height: 96,
+      facing: "right", angle: -45 },
+  ],
+  balls: [],
+} as unknown as LevelConfig);
 
 /**
  * Fire the plunger and measure how much of the flight each ball spent on the
@@ -65,7 +102,7 @@ const level6 = (): LevelConfig => {
  */
 function ride(aimDegrees: number, steps = 300) {
   setRunSeedText("deal-d");
-  const d = createInitialGameData(level6(), 6, DEFAULT_MODIFIERS);
+  const d = createInitialGameData(railMap(), 6, DEFAULT_MODIFIERS);
   const game = {
     ...d, objectDebris: [], pendingDestroys: [], bouncerFlashes: [], assimilations: new Map(),
   } as unknown as CanvasGameState;
@@ -102,21 +139,18 @@ function ride(aimDegrees: number, steps = 300) {
   return { fired: fired !== null, count: game.balls.length, hug: beside.map(c => c / steps) };
 }
 
-describe("map 6 has a launcher and a rail to fire it down", () => {
-  it("still has a plunger, two arcs and the breakable it teaches", () => {
-    const ids = (level6().entities ?? []).map(e => e.id);
-    expect(ids, "the plunger is gone").toContain("launcher-1788422810361");
+describe("the fixture is a rail and not one wall", () => {
+  it("is a CHANNEL: a plunger and two arcs, not a plunger and a face", () => {
+    const ids = (railMap().entities ?? []).map(e => e.id);
+    expect(ids, "the plunger is gone").toContain("plunger");
     expect(ids, "the outer arc is gone").toContain("guide");
     expect(ids, "the inner arc is gone, so the rail is one wall again").toContain("lane");
-    // Level 6 is where the game introduces the breakable (see map.yml's note).
-    const breakables = (level6().entities ?? []).filter(e => (e as { breakable?: boolean }).breakable);
-    expect(breakables.length, "map 6 no longer teaches the breakable").toBeGreaterThan(0);
   });
 
   it("bows its arcs towards the plunger, not away", () => {
     // The sign IS the mechanic. Positive bows the other way, which turns the
     // rail's inside face into a hump and scatters every shot off it.
-    const byId = new Map((level6().entities ?? []).map(e => [e.id, e as unknown as { bend?: number }]));
+    const byId = new Map((railMap().entities ?? []).map(e => [e.id, e as unknown as { bend?: number }]));
     expect(byId.get("guide")?.bend, "the outer arc is bowed the wrong way").toBeLessThan(0);
     expect(byId.get("lane")?.bend, "the inner arc is bowed the wrong way").toBeLessThan(0);
   });
@@ -132,7 +166,7 @@ describe("map 6 has a launcher and a rail to fire it down", () => {
     // What it must NOT be is the ordinary 3. Riding a wall damages it - about
     // 2.5 of 3 hits inside thirty seconds - so at 3 the rail disappears partway
     // through the map, which is worse than never having worked.
-    const byId = new Map((level6().entities ?? []).map(e => [e.id, e as unknown as { breakable?: boolean; hitsToBreak?: number }]));
+    const byId = new Map((railMap().entities ?? []).map(e => [e.id, e as unknown as { breakable?: boolean; hitsToBreak?: number }]));
     for (const id of ["guide", "lane"]) {
       expect(byId.get(id)?.breakable, `${id} must stay breakable, or the muzzle guard rejects the map`).toBe(true);
       expect(byId.get(id)?.hitsToBreak ?? 0, `${id} breaks too easily to be ridden`).toBeGreaterThanOrEqual(10);
