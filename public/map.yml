@@ -1954,6 +1954,44 @@ levels:
         cx: 250
         cy: 640
         radius: 54
+      # The DRAIN: a pipe under the neck, and the map's second decision.
+      #
+      # The shelf above already only works downwards, so the lower half fills
+      # and never empties. This is the same rule turned into a place rather
+      # than a floor: its lid is one-way too, so a ball that drops in cannot
+      # climb back out, but the pipe is OPEN AT THE BOTTOM, so it leaves the
+      # ordinary way unless you close it.
+      #
+      # That is the whole of it. One short cut across the bottom turns a pocket
+      # that filled itself into a lock, and the cut is cheap - the mouth is 92
+      # units, the narrowest seal on the map. What it costs is timing: cut it
+      # empty and you have spent a fence on nothing, cut it late and the ball
+      # has already wandered out the bottom.
+      #
+      # Sitting under the escalation neck on purpose. Paging yourself does not
+      # only move the problem downstairs now, it feeds this.
+      - id: drain-lid
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 470
+        width: 140
+        height: 26
+        oneWay: down
+      - id: drain-left
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 496
+        width: 24
+        height: 264
+      - id: drain-right
+        kind: wall
+        shape: rect
+        x: 496
+        'y': 496
+        width: 24
+        height: 264
 
   # 32 "Controlled Burn" - FIGHT: the chest crossed with the charge, under a WIP
   # limit. Every fence is rationed, the chest is behind a slab, and the charge
