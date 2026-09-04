@@ -1063,6 +1063,50 @@ levels:
         cx: 220
         cy: 620
         radius: 65
+      # The PORTAL PIPE, and the reason it is on the budget map.
+      #
+      # A portal pair changes what is NEXT TO what without moving a wall: a
+      # ball entering one mouth leaves the other, so the two chambers are
+      # joined without using the neck. On a map where every fence is counted
+      # that is worth something real - a route you did not have to pay for.
+      #
+      # And it cuts the other way, which is the point of putting it in a pipe.
+      # A region holding a live portal CANNOT be locked (see portal.test.ts):
+      # a pocket the ball can leave is not a pocket, and paying out for a seal
+      # it walks out of a second later is the one outcome no screen could
+      # explain. So this corridor is the cheapest-looking pocket on the board -
+      # two short mouths, a quick safe cut - and sealing it pays nothing. On a
+      # budget map that is the most expensive mistake available, which is what
+      # makes it a decision rather than a gotcha: the shortcut and the trap are
+      # the same object, and the player is told so by the mouths glowing.
+      - id: warp-near
+        kind: wall
+        shape: circle
+        cx: 712
+        cy: 290
+        radius: 34
+        portal: wip
+      - id: warp-far
+        kind: wall
+        shape: circle
+        cx: 200
+        cy: 250
+        radius: 34
+        portal: wip
+      - id: wip-pipe-l
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 140
+        width: 24
+        height: 300
+      - id: wip-pipe-r
+        kind: wall
+        shape: rect
+        x: 800
+        'y': 140
+        width: 24
+        height: 300
 
   # 18 "Sprint Capacity" - FIGHT: the budget crossed with the mirrors.
   # A bounced fence covers more board per cut, which is exactly what a budget

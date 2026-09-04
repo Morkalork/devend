@@ -71,11 +71,19 @@ describe("no mechanic is introduced and then dropped", () => {
     // Launcher came off when a barrel was placed on level 6, which is the
     // second time this list has shrunk the way it is supposed to.
     //
+    //   Portal         level 17 only, and NEW here rather than forgotten: it
+    //                  came off the unused list below in the same change that
+    //                  put it on the budget map, and it is the next name that
+    //                  should earn a second one.
+    //
     // When one of these gains a second map the test fails and the line comes
     // out. When a NEW name appears here, something was introduced once and
-    // forgotten - which is the failure this file exists to catch.
+    // forgotten - which is the failure this file exists to catch. A name that
+    // arrives on its way OFF the unused list is the other direction, and only
+    // means anything while somebody is still counting: if Portal is still
+    // alone in a month it means the same as the rest of them.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["bouncer", "box", "mutator", "threadLock"]);
+      .toEqual(["bouncer", "box", "mutator", "portal", "threadLock"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -85,13 +93,16 @@ describe("no mechanic is introduced and then dropped", () => {
     // 24/27 - which is exactly the window this rule exists to make visible
     // rather than let become permanent.
     //
-    // Four names are in that window now. The cage, the portal, the latch and
-    // the rotor all exist as engine, renderer and editor, and the designer is
-    // placing them by hand rather than having them scattered automatically.
-    // They come off this list one at a time as they land on maps; if they are
-    // still here in a month, that is the answer this rule is designed to give.
+    // The portal came off this list onto level 17, where the pipe it sits in is
+    // the cheapest-looking pocket on a map that counts every fence - and pays
+    // nothing, because a region holding a live portal cannot be locked. Three
+    // names left. The cage, the latch and the rotor all exist as engine,
+    // renderer and editor, and the designer is placing them by hand rather
+    // than having them scattered automatically. They come off one at a time as
+    // they land on maps; if they are still here in a month, that is the answer
+    // this rule is designed to give.
     expect(unused.map(w => w.label).sort(), "a supported mechanic is on no map at all")
-      .toEqual(["Cage", "Latch", "Portal", "Rotor"]);
+      .toEqual(["Cage", "Latch", "Rotor"]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {
