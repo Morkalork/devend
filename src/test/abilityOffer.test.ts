@@ -182,7 +182,12 @@ describe('the wiring, not the rules', () => {
 
   it('saves the retainers with the run, or they die at the next resume', () => {
     const src = read('src/hooks/useGameSession.ts');
-    expect(src, 'retainers are never written to the run save').toContain('retainedAbilityIds,\n  };');
+    // Matched with a CRLF-tolerant regex, not a literal newline: on a Windows
+    // checkout Git hands the file back with \r\n endings, so a literal \n
+    // failed here on that platform only while CI (Linux) stayed green - a
+    // test that failed by machine rather than by behaviour.
+    expect(src, 'retainers are never written to the run save')
+      .toMatch(/retainedAbilityIds,\r?\n\s*};/);
     expect(src, 'retainers are never read back from the run save')
       .toContain('save.retainedAbilityIds');
   });
