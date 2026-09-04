@@ -275,14 +275,58 @@ levels:
     randomShapes: 8
     maxBalls: 2
     entities:
+      # The RAIL: two nested arcs, both bowed back towards the plunger, making
+      # a channel the shot runs rather than a face it meets.
+      #
+      # A ball in this engine REFLECTS; it never slides. It only follows a curve
+      # by striking it again and again, which happens on a CONCAVE face and only
+      # while it arrives shallow - so a wall bowed the other way is a hump, and
+      # every shot leaves it on the first touch. That is the bounce.
+      #
+      # Two arcs and not one because the launcher FANS its roster across half
+      # its cone (fanDirections, +/-17.5 degrees): the balls never take the same
+      # line, so a single face carries one and throws the other away, and even
+      # for the one it carries it is a knife edge - measured, the old shape went
+      # from riding the curve to bouncing off it inside five degrees of aim. A
+      # channel does not care which line a ball entered on.
+      #
+      # Both arcs ARE breakable, with a deep bank of hits, and that is doing two
+      # jobs at once. Riding a wall damages it - about 2.5 of 3 hits within
+      # thirty seconds - so at the usual 3 the rail would vanish partway through
+      # the map; at 14 it survives a shot and still yields to a player who
+      # decides the space behind it is worth the time. Which is exactly this
+      # level's lesson, and it is also what lets the rail sit in front of the
+      # muzzle at all: launcherRunway skips breakables on purpose, because
+      # firing into one is a legitimate opening rather than a blocked barrel.
+      - id: guide
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 110
+        width: 26
+        height: 620
+        bend: -0.7
+        breakable: true
+        hitsToBreak: 14
+      - id: lane
+        kind: wall
+        shape: rect
+        x: 280
+        'y': 220
+        width: 22
+        height: 460
+        bend: -0.8
+        breakable: true
+        hitsToBreak: 14
+      # The breakable this level teaches, kept clear of the rail. It used to be
+      # the rail as well, and was failing at both jobs.
       - id: soft-wall
         kind: wall
         shape: rect
-        x: 450
-        'y': 175
-        width: 75
-        height: 525
-        bend: 0.428
+        x: 640
+        'y': 250
+        width: 26
+        height: 400
         breakable: true
         hitsToBreak: 3
       - id: nub
@@ -299,15 +343,20 @@ levels:
         cy: 375
         radius: 45
         bend: -0.95
+      # Moved to the bottom-left corner, firing up and across the board.
+      # Its old spot (500,650 at -120) cannot work: the muzzle needs 225 units
+      # of clear board in front of it (launcherMaps.test.ts), and by 225 units
+      # the fan has already thrown the two balls far enough apart that no
+      # channel narrow enough to steer one of them can catch both.
       - id: launcher-1788422810361
         kind: launcher
         shape: rect
-        x: 500
-        'y': 650
-        width: 240
-        height: 110
+        x: 160
+        'y': 700
+        width: 190
+        height: 96
         facing: right
-        angle: -120
+        angle: -45
     balls: []
 
   # 7 "Refactor" - FIGHT: the breakable crossed with the mover, and the act's

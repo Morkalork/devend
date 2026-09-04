@@ -19,12 +19,13 @@
  * geometry.
  */
 import { describe, it, expect } from "vitest";
-import { entityOutlineBounds } from "@/lib/entityOutline";
+import { entityOutline, entityOutlineBounds } from "@/lib/entityOutline";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import type { LevelConfig } from "@/types/level";
+import type { Vector2 } from "@/lib/polygon";
 
 const LEVELS = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
@@ -218,9 +219,46 @@ describe("every breakable can be reached and hit", () => {
   const breakables = (level: any) =>
     (level.entities ?? []).filter((e: any) => e.breakable);  // eslint-disable-line @typescript-eslint/no-explicit-any
 
+  /** Do two outlines actually share ground? Containment either way, or a crossing. */
+  const outlinesTouch = (a: Vector2[], b: Vector2[]): boolean => {
+    if (a.length < 3 || b.length < 3) return false;
+    const inside = (p: Vector2, poly: Vector2[]) => {
+      let hit = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        if ((poly[i].y > p.y) !== (poly[j].y > p.y) &&
+            p.x < ((poly[j].x - poly[i].x) * (p.y - poly[i].y)) / (poly[j].y - poly[i].y) + poly[i].x) {
+          hit = !hit;
+        }
+      }
+      return hit;
+    };
+    if (a.some(p => inside(p, b)) || b.some(p => inside(p, a))) return true;
+    // Crossing edges with no vertex inside: two rings overlapping at their rims.
+    const cross = (p: Vector2, q: Vector2, r: Vector2, s: Vector2) => {
+      const d = (q.x - p.x) * (s.y - r.y) - (q.y - p.y) * (s.x - r.x);
+      if (Math.abs(d) < 1e-9) return false;
+      const t = ((r.x - p.x) * (s.y - r.y) - (r.y - p.y) * (s.x - r.x)) / d;
+      const u = ((r.x - p.x) * (q.y - p.y) - (r.y - p.y) * (q.x - p.x)) / d;
+      return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+    };
+    for (let i = 0; i < a.length; i++) {
+      const p = a[i], q = a[(i + 1) % a.length];
+      for (let j = 0; j < b.length; j++) {
+        if (cross(p, q, b[j], b[(j + 1) % b.length])) return true;
+      }
+    }
+    return false;
+  };
+
   it("never buries one inside another solid", () => {
     const clashes: string[] = [];
     for (const level of LEVELS) {
+      const outlineById = new Map<string, Vector2[]>(
+        (level.entities ?? []).map(e => [
+          e.id,
+          entityOutline(e as unknown as Parameters<typeof entityOutline>[0]),
+        ]),
+      );
       for (const b of breakables(level)) {
         // Deformed, like the solids it is compared against. Measuring one side
         // of the comparison after its bend and the other before it is worse
@@ -236,12 +274,38 @@ describe("every breakable can be reached and hit", () => {
           if (overlaps(box, solid) && solid.id !== b.id) {
             const bury = Math.min(box.x1, solid.x1) - Math.max(box.x0, solid.x0) > 8
               && Math.min(box.y1, solid.y1) - Math.max(box.y0, solid.y0) > 8;
-            if (bury) clashes.push(`${label(level)}: ${b.id} inside ${solid.id}`);
+            if (!bury) continue;
+            // Bounds were the first approximation and they were not enough. Two
+            // NESTED ARCS - a rail, a chute, anything concentric - have deeply
+            // overlapping boxes and never share a single point: level 6's pair
+            // sits 65 units apart at its closest, wider than the ball meant to
+            // run between them. So a box overlap only raises the question, and
+            // the outlines answer it. Same direction of travel as the bounds
+            // did over the authored rects: measure the shape the object IS.
+            const a = outlineById.get(b.id);
+            const c = outlineById.get(solid.id);
+            if (a && c && !outlinesTouch(a, c)) continue;
+            clashes.push(`${label(level)}: ${b.id} inside ${solid.id}`);
           }
         }
       }
     }
     expect(clashes).toEqual([]);
+  });
+
+  it("still catches a breakable genuinely swallowed by a solid", () => {
+    // The guard above got looser, so this pins that it did not get toothless:
+    // one rect wholly inside another is a burial by any measure.
+    const swallowed = {
+      level: 99, id: "fixture",
+      entities: [
+        { id: "slab", kind: "wall", shape: "rect", x: 100, y: 100, width: 300, height: 300 },
+        { id: "hidden", kind: "wall", shape: "rect", x: 180, y: 180, width: 60, height: 60, breakable: true, hitsToBreak: 3 },
+      ],
+    } as unknown as LevelConfig;
+    const a = entityOutline((swallowed.entities ?? [])[1] as never);
+    const c = entityOutline((swallowed.entities ?? [])[0] as never);
+    expect(outlinesTouch(a, c), "a rect inside a rect no longer reads as buried").toBe(true);
   });
 
   it("gives every breakable a hit count", () => {
