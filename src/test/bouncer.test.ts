@@ -26,10 +26,13 @@
 import { describe, it, expect } from "vitest";
 import {
   bouncerKick, bouncerReady, BOUNCER_COOLDOWN_MS, BOUNCER_KICK,
-  BOUNCER_MAX_SPEED_SCALE, BOUNCER_HOURS, BOUNCER_SLOW, type BouncerSpec,
+  BOUNCER_MAX_SPEED_SCALE, BOUNCER_HOURS, BOUNCER_SLOW, bouncerCharge, type BouncerSpec,
 } from "@/lib/physics/bouncer";
 import { PHYSICS_STEP, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { bouncerRings } from "@/lib/rendering/sleek/bouncerRings";
 import type { Ball } from "@/types/game";
 
 /**
@@ -43,7 +46,7 @@ import type { Ball } from "@/types/game";
  */
 const spec = (over: Partial<BouncerSpec> = {}): BouncerSpec => ({
   id: "b1", centre: { x: 0, y: 0 }, kick: BOUNCER_KICK,
-  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, hours: 0, ...over,
+  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, hours: 0, maxHours: BOUNCER_HOURS, ...over,
 });
 
 /** A bumper with hours left: the one that brakes and pays. */
@@ -352,5 +355,121 @@ describe("a charged bumper brakes instead of kicking", () => {
     const b = () => ball({ x: 100, y: 0 }, { x: -200, y: 0 });
     expect(bouncerKick(b(), charged()).intensity).toBeCloseTo(1, 6);
     expect(bouncerKick(b(), spec()).intensity).toBeCloseTo(1, 6);
+  });
+});
+
+/**
+ * The countdown, which is what the player actually sees.
+ *
+ * A bumper's bank was readable only as a colour: green while anything was left,
+ * red once it was not. So a bumper with one hour in it looked exactly like one
+ * with five, and a bump costing an hour looked like nothing happening. The
+ * renderer draws this fraction as a shrinking ring inside a rim that never
+ * moves - the gap between the two IS the readout - and it lives here rather
+ * than in the renderer so there is one definition of "how full" to disagree
+ * with.
+ */
+describe("how full a bumper reads", () => {
+  it("is full at the start and empty when spent", () => {
+    expect(bouncerCharge({ hours: BOUNCER_HOURS, maxHours: BOUNCER_HOURS })).toBe(1);
+    expect(bouncerCharge({ hours: 0, maxHours: BOUNCER_HOURS })).toBe(0);
+  });
+
+  it("steps down as the bank is spent, so a bump is visible", () => {
+    const steps = [5, 4, 3, 2, 1, 0].map(h => bouncerCharge({ hours: h, maxHours: 5 }));
+    for (let i = 1; i < steps.length; i++) {
+      expect(steps[i], `hour ${5 - i} did not shrink the gauge`).toBeLessThan(steps[i - 1]);
+    }
+    expect(steps).toEqual([1, 0.8, 0.6, 0.4, 0.2, 0]);
+  });
+
+  it("measures against the bank the map authored, not the default", () => {
+    // A bumper authored with two hours is FULL at two. Measuring it against
+    // BOUNCER_HOURS would draw it as three-fifths spent from the first frame,
+    // which is a gauge that lies before the player has touched it.
+    expect(bouncerCharge({ hours: 2, maxHours: 2 })).toBe(1);
+    expect(bouncerCharge({ hours: 1, maxHours: 2 })).toBe(0.5);
+  });
+
+  it("never draws outside the rim it is measured against", () => {
+    expect(bouncerCharge({ hours: 99, maxHours: 5 })).toBe(1);
+    expect(bouncerCharge({ hours: -3, maxHours: 5 })).toBe(0);
+    // A spec with no bank at all reads as spent rather than dividing by zero.
+    expect(bouncerCharge({ hours: 0, maxHours: 0 })).toBe(0);
+  });
+});
+
+/**
+ * The countdown as the player sees it: which ring moves and which does not.
+ *
+ * The gauge is only worth anything if the rim stays where the ball will
+ * actually bounce. A rim that shrank with the bank would read beautifully and
+ * be a lie, and the player would find out by aiming at a small circle and
+ * hitting a big one.
+ */
+describe("the rings that draw the countdown", () => {
+  const R = 40;
+
+  it("never moves the rim, whatever the bank holds", () => {
+    const rims = [0, 0.25, 0.5, 0.75, 1].map(c => bouncerRings(c, R, 0).rim);
+    expect(new Set(rims).size, "the rim moved with the bank").toBe(1);
+    // Nor with a hit: the flare thickens the stroke, it does not grow the ring.
+    expect(bouncerRings(1, R, 1).rim).toBe(bouncerRings(1, R, 0).rim);
+  });
+
+  it("shrinks the gauge as the bank empties, and hides it when spent", () => {
+    const gauge = [1, 0.8, 0.6, 0.4, 0.2, 0].map(c => bouncerRings(c, R, 0).charge);
+    for (let i = 1; i < gauge.length; i++) {
+      expect(gauge[i], `step ${i} did not shrink`).toBeLessThan(gauge[i - 1]);
+    }
+    // Zero, so the caller draws nothing rather than leaving a dot that reads
+    // as a bumper still holding something.
+    expect(gauge[gauge.length - 1]).toBe(0);
+  });
+
+  it("keeps the gauge inside the rim, so the gap is always the readout", () => {
+    for (const c of [0, 0.5, 1]) {
+      for (const f of [0, 1]) {
+        const ring = bouncerRings(c, R, f);
+        expect(ring.charge, `charge ${c} flare ${f}`).toBeLessThan(ring.rim);
+        expect(ring.core, `core at charge ${c} flare ${f}`).toBeLessThan(ring.rim);
+      }
+    }
+  });
+
+  it("leaves a spent bumper an ember rather than nothing", () => {
+    // It is still a bumper and still bounces - and once spent it kicks, which
+    // is the thing a player most needs to keep noticing.
+    expect(bouncerRings(0, R, 0).core).toBeGreaterThan(0);
+  });
+
+  it("clamps whatever it is handed", () => {
+    expect(bouncerRings(9, R, 9).charge).toBe(bouncerRings(1, R, 1).charge);
+    expect(bouncerRings(-4, R, -4).charge).toBe(bouncerRings(0, R, 0).charge);
+  });
+});
+
+/**
+ * The joint the geometry above cannot reach.
+ *
+ * bouncerRings can be perfect and the layer can still hand it a constant, which
+ * is a bumper whose gauge never moves and looks entirely deliberate. Pixi draw
+ * calls are the one place in this codebase nothing can assert against, so the
+ * call itself is read from the source - the same trick rendererPathHygiene
+ * uses on the same directory, and for the same reason.
+ */
+describe("the layer actually draws the bank it was given", () => {
+  const layer = readFileSync(
+    resolve(__dirname, "../lib/rendering/sleek/entityLayer.ts"), "utf8");
+
+  it("feeds the live charge into the rings, not a constant", () => {
+    const call = layer.match(/bouncerRings\(([^)]*)\)/);
+    expect(call, "the bumper stopped using bouncerRings at all").toBeTruthy();
+    expect(call![1], "the gauge is drawn from a literal, so it never moves")
+      .toContain("charge");
+  });
+
+  it("takes that charge from the spec rather than inventing one", () => {
+    expect(layer).toContain("bouncerCharge(spec)");
   });
 });

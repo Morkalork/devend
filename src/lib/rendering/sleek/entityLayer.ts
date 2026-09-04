@@ -16,7 +16,8 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
-import { BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
+import { BOUNCER_FLASH_MS, bouncerCharge, type BouncerSpec } from "@/lib/physics/bouncer";
+import { bouncerRings } from "./bouncerRings";
 import type { PortalSpec } from "@/lib/physics/portal";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
@@ -208,16 +209,23 @@ export class EntityLayer {
     // a digit inside a 40-pixel ring is not information.
     const colour = spec.hours > 0 ? PALETTE.bouncerFull : PALETTE.bouncerSpent;
     const g = this.rims;
-    // Outer ring, thickened by the flare.
-    g.circle(c.x, c.y, r * 0.94)
+
+    // Which ring moves with the bank and which does not is the whole design,
+    // and it lives in bouncerRings.ts where a test can reach it.
+    const charge = bouncerCharge(spec);
+    const ring = bouncerRings(charge, r, flare);
+
+    // The rim: where the ball actually bounces, and fixed.
+    g.circle(c.x, c.y, ring.rim)
       .stroke({ width: Math.max(1.5, (2.5 + flare * 3) * scale), color: colour, alpha: 0.75 + flare * 0.25 });
-    // Inner ring.
-    g.circle(c.x, c.y, r * 0.62)
-      .stroke({ width: Math.max(1, 1.8 * scale), color: colour, alpha: 0.5 + flare * 0.4 });
-    // The core, which is what actually lights up. A spent bumper's core is
-    // hollow: it is still a bumper, and it is visibly no longer worth aiming at.
-    g.circle(c.x, c.y, r * (0.3 + flare * 0.22))
-      .fill({ color: colour, alpha: spec.hours > 0 ? 0.45 + flare * 0.55 : 0.12 + flare * 0.3 });
+    // The gauge. Absent rather than a dot when the bank is empty.
+    if (ring.charge > 0) {
+      g.circle(c.x, c.y, ring.charge)
+        .stroke({ width: Math.max(1, (1.8 + flare * 1.6) * scale), color: colour, alpha: 0.55 + flare * 0.4 });
+    }
+    // The core, which is what lights up on a hit.
+    g.circle(c.x, c.y, ring.core)
+      .fill({ color: colour, alpha: spec.hours > 0 ? 0.3 + charge * 0.15 + flare * 0.55 : 0.12 + flare * 0.3 });
   }
 
   /**

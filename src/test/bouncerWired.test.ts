@@ -36,7 +36,7 @@ vi.mock("@/lib/gameHaptics", () => ({
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_SLOW } from "@/lib/physics/bouncer";
+import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_SLOW, bouncerCharge } from "@/lib/physics/bouncer";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -218,5 +218,56 @@ describe("bumper hours", () => {
       peak = Math.max(peak, Math.hypot(ball.velocity.x, ball.velocity.y));
     }
     expect(peak, "a spent bumper stopped bouncing").toBeCloseTo(300 * BOUNCER_KICK, 0);
+  });
+});
+
+/**
+ * The countdown's wiring: the gauge needs a number the map put there.
+ *
+ * bouncer.test.ts pins what the fraction means. This pins that the running
+ * game supplies both halves of it, which is the part that fails silently -
+ * a spec with no `maxHours` divides into a gauge that is either always full
+ * or always empty, and either one looks like a deliberate art choice.
+ */
+describe("a built bumper knows what its bank started at", () => {
+  it("records the authored bank, not just the remaining one", () => {
+    const d = build(true);
+    const spec = [...d.bouncers.values()][0];
+    expect(spec.maxHours, "the gauge has no denominator").toBe(BOUNCER_HOURS);
+    expect(spec.hours).toBe(BOUNCER_HOURS);
+    expect(bouncerCharge(spec), "a fresh bumper does not read as full").toBe(1);
+  });
+
+  it("carries a map's own bank through to the gauge", () => {
+    // Authored at two hours: full is two, and the gauge has to agree or the
+    // bumper reads as three-fifths spent before anything has touched it.
+    const lvl = {
+      id: "bounce-test", level: 5, name: "B", sizeThreshold: 30, expectedCuts: 4,
+      points: 20, variety: 0, randomShapes: 0, pickupChance: 0, maxBalls: 1,
+      entities: [{
+        id: "bump", kind: "wall", shape: "circle", cx: 450, cy: 450, radius: 60,
+        bouncer: true, bounceHours: 2,
+      }],
+    } as unknown as LevelConfig;
+    const spec = [...createInitialGameData(lvl, 5, DEFAULT_MODIFIERS).bouncers.values()][0];
+    expect(spec.maxHours).toBe(2);
+    expect(bouncerCharge(spec)).toBe(1);
+  });
+
+  it("empties the gauge as the bank is spent through the real payment path", () => {
+    // Not a re-implementation of the decrement: the same run that pays the
+    // hours is the one the gauge is read from, so the two cannot drift.
+    const d = build(true);
+    const game = { ...d } as unknown as CanvasGameState;
+    const spec = [...game.bouncers!.values()][0];
+    const before = bouncerCharge(spec);
+    const ball = game.balls[0];
+    ball.position = { x: 450 - 60 - ball.radius - 2, y: 450 };
+    ball.velocity = { x: 300, y: 0 };
+    ball.speed = 300;
+    ball.baseSpeed = 250;
+    for (let i = 0; i < 40; i++) updateBall(ball, 1 / 120, game);
+    expect(bouncerCharge(spec), "the bumper was hit and the gauge did not move")
+      .toBeLessThan(before);
   });
 });

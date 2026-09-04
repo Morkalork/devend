@@ -90,6 +90,18 @@ export interface BouncerSpec {
    */
   hours: number;
   /**
+   * What `hours` STARTED at, so the countdown can be drawn as a fraction.
+   *
+   * Held beside the live bank rather than derived from BOUNCER_HOURS, because a
+   * map may author any bank it likes: assuming the default would draw a bumper
+   * authored with two hours as though it were already three-fifths spent, which
+   * is a gauge that lies from the first frame.
+   *
+   * Never zero - initGame floors it at 1 - so the renderer can divide by it
+   * without a guard that would quietly hide a broken spec.
+   */
+  maxHours: number;
+  /**
    * KICKER: fire along this fixed bearing instead of radially outward.
    *
    * The difference between a pop bumper and a slingshot, and it is the whole
@@ -141,6 +153,21 @@ export const BOUNCER_COOLDOWN_MS = 90;
 
 /** How long a bouncer stays lit after firing, in ms. */
 export const BOUNCER_FLASH_MS = 220;
+
+/**
+ * How full a bumper's bank is, 0..1.
+ *
+ * Pure and shared, because the countdown is drawn from it and a second copy of
+ * "hours over the starting hours" inside the renderer is the kind of duplicate
+ * that only disagrees once a map authors a bank that is not the default.
+ * Clamped both ways: a spec with more hours than it started with is a bug
+ * somewhere else, and a gauge over 1 would draw outside the rim it is measured
+ * against.
+ */
+export function bouncerCharge(spec: Pick<BouncerSpec, "hours" | "maxHours">): number {
+  const max = Math.max(1, spec.maxHours);
+  return Math.max(0, Math.min(1, spec.hours / max));
+}
 
 /** Whether this bouncer is allowed to act on this ball right now. */
 export function bouncerReady(ball: Ball, spec: BouncerSpec, now: number): boolean {

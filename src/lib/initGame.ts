@@ -649,6 +649,11 @@ export function createInitialGameData(
               ? (we.bounceMaxSpeedScale as number) : BOUNCER_MAX_SPEED_SCALE,
             hours: Number.isFinite(we.bounceHours) && (we.bounceHours as number) >= 0
               ? Math.round(we.bounceHours as number) : BOUNCER_HOURS,
+            // Floored at 1: maxHours is a divisor in the renderer's gauge, and
+            // a bumper authored with an empty bank should read as spent rather
+            // than as a shape with no gauge at all.
+            maxHours: Math.max(1, Number.isFinite(we.bounceHours) && (we.bounceHours as number) >= 0
+              ? Math.round(we.bounceHours as number) : BOUNCER_HOURS),
             ...(we.bounceBearing ? { bearing: we.bounceBearing } : {}),
           };
           bouncers.set(obstaclePolygon, spec);
