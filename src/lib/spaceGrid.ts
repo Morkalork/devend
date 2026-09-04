@@ -1062,6 +1062,42 @@ export function buildGridRegionMap(gridRegions: GridRegion[]): Map<number, GridR
  * SEARCH_RADIUS cells looking for an ACTIVE cell that IS in a region.  The search
  * is performed in spiral order so the nearest valid cell wins.
  */
+/**
+ * Is this ball standing in space the player has already claimed?
+ *
+ * The state a portal can put a ball into, reported from play on level 17: the
+ * far mouth's chamber was captured first, a ball went in the near mouth, and it
+ * came out somewhere that is no longer part of the board. It has no region, so
+ * findGridRegionForBall returns null, so the lock sweep skips it - forever. The
+ * ball bounces around finished ground that can never be sealed again, and its
+ * lock is simply gone.
+ *
+ * Portals are the only door to it today, but nothing here is portal-specific:
+ * anything that moves a ball across a fence lands in the same place.
+ *
+ * The test is the ball's own cell AND all eight neighbours, and both halves
+ * matter. REMOVED alone fires on a ball resting a hair over the edge of a live
+ * region, which is the very case findGridRegionForBall's 5x5 fallback exists to
+ * forgive; requiring the whole neighbourhood means the ball is genuinely inside
+ * claimed ground rather than on its boundary. And an off-grid ball reads FALSE
+ * on purpose: a ball outside the board is a different bug, and quietly awarding
+ * it a lock would hide that one behind this one.
+ */
+export function ballInClaimedSpace(grid: SpaceGrid, x: number, y: number): boolean {
+  const idx = worldToGridIndex(grid, x, y);
+  if (idx < 0) return false;
+  const col = idx % grid.width;
+  const row = Math.floor(idx / grid.width);
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const r = row + dr, c = col + dc;
+      if (r < 0 || r >= grid.height || c < 0 || c >= grid.width) continue;
+      if (grid.cells[r * grid.width + c] !== CellState.REMOVED) return false;
+    }
+  }
+  return true;
+}
+
 export function findGridRegionForBall(
   grid: SpaceGrid,
   regionMap: Map<number, GridRegion>,

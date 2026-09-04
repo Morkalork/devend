@@ -21,6 +21,8 @@ import {
   countActiveCells,
   buildGridRegionMap,
   findGridRegionForBall,
+  ballInClaimedSpace,
+  worldToGridIndex,
   isRegionTrulySealed,
   floodRemovedEnclosure,
   gridIndexToWorld,
@@ -283,8 +285,45 @@ export function checkAndUpdateBallWonStates(
     // Use neighbour-search fallback: ball may sit in a REMOVED cell (e.g. its grid-cell
     // centre fractionally overlaps a mirror-polygon boundary even though the ball itself
     // is outside the obstacle).
-    const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
-    if (!ballRegion) continue;
+    const found = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
+
+    /**
+     * STRANDED: no region, because the ball is standing on ground the player
+     * already claimed. A portal is the door to this today - seal the far
+     * chamber, then send a ball in the near mouth - and without this it is a
+     * dead end: no region means the sweep skips the ball on every pass, so it
+     * bounces around finished board forever and its lock is simply gone.
+     *
+     * It locks, and the reasoning is that the seal ALREADY EXISTS. The player
+     * spent the fences to close that ground off; a ball delivered into it has
+     * been delivered into a sealed pocket, just one that was paid for earlier.
+     * The alternative was to refuse the warp, which keeps a ball in play at the
+     * cost of a portal that sometimes silently does nothing - and an object
+     * that works except when it does not is worse to read than one that pays.
+     */
+    const stranded = !found
+      && ball.state === 'active'
+      && ballInClaimedSpace(game.spaceGrid, ball.position.x, ball.position.y);
+    if (!found && !stranded) continue;
+
+    /**
+     * The pocket, for a stranded ball: one cell, its own.
+     *
+     * Synthesised rather than special-cased all the way down, so the lock takes
+     * the SAME path as every other one - the sound, the assimilation animation,
+     * the counters, the area check. A lock that skipped those would be a ball
+     * quietly vanishing, which is the failure this whole branch exists to stop.
+     *
+     * It is never graded superior (see `isSuperior`): a superior lock is a
+     * tight pocket the player built on purpose, and a one-cell region would
+     * take that grade automatically for what is really a delivery.
+     */
+    const ballRegion = found ?? {
+      id: -1,
+      cellIndices: [worldToGridIndex(game.spaceGrid, ball.position.x, ball.position.y)],
+      centroid: { x: ball.position.x, y: ball.position.y },
+      cellCount: 1,
+    } as unknown as NonNullable<typeof found>;
 
     // Lock rule (configurable via game-config.yml `lock:`; see GameCanvas):
     // a ball locks when its region is small enough by PERCENT of the win
@@ -360,7 +399,7 @@ export function checkAndUpdateBallWonStates(
       });
     };
 
-    if (!lockedByPercent && !lockedBySliver && !containedInArea) {
+    if (!stranded && !lockedByPercent && !lockedBySliver && !containedInArea) {
       // Near-misses only. Every ball on the open board fails this gate on every
       // cut, and logging those would push the interesting entries out of the ring.
       if (percentage <= threshold * 3) diagnose('below-gate', null);
@@ -375,7 +414,9 @@ export function checkAndUpdateBallWonStates(
     // A rule rather than an oversight, and the most interesting thing about the
     // object: a portal makes one pocket a place you must NOT use, which is what
     // gives a portal map an order to solve it in.
-    if (game.portals?.size && regionHoldsPortal(game, ballRegion.cellIndices)) {
+    // A stranded ball is exempt: the pocket it is in is claimed ground, not a
+    // region it could escape from, and it is standing in it BECAUSE of a portal.
+    if (!stranded && game.portals?.size && regionHoldsPortal(game, ballRegion.cellIndices)) {
       diagnose('below-gate', null);
       continue;
     }
@@ -384,9 +425,9 @@ export function checkAndUpdateBallWonStates(
     // capture severed a sub-ball-width gap still opens onto living space, so the
     // ball must keep playing until the player actually closes it off. (Skipped
     // when no snapshot was passed.)
-    const trulySealed = preCaptureCells
+    const trulySealed = stranded ? true : (preCaptureCells
       ? isRegionTrulySealed(game.spaceGrid, preCaptureCells, ballRegion.cellIndices)
-      : null;
+      : null);
     if (trulySealed === false) {
       diagnose('rejected-unsealed', false);
       continue;
@@ -401,8 +442,8 @@ export function checkAndUpdateBallWonStates(
     // lockThresholdBonus never also widens the superior bar. A sliver-floor
     // lock is by definition tiny and always grades superior.
     const baseThreshold = game.lockBaseThresholdPercent ?? threshold;
-    const isSuperior = lockedBySliver
-      || percentage <= baseThreshold * lockQuality.superiorThresholdFraction;
+    const isSuperior = !stranded
+      && (lockedBySliver || percentage <= baseThreshold * lockQuality.superiorThresholdFraction);
     if (isSuperior) superiorIds.add(ball.id);
 
     // Boss ball (issue #56): a trap is a HIT, not an instant win. While it has HP
