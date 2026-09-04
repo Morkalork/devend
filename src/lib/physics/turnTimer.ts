@@ -8,7 +8,7 @@
  *
  * ── Why it is telegraphed, and why the turn is a right angle ───────────────
  *
- * LEVELDESIGN.md's third convention says a Turn has to be visible coming or it
+ * MAP_DESIGN_GUIDELINES.md's third convention says a Turn has to be visible coming or it
  * is an ambush. A ball that changed heading unannounced would be noise: you
  * could not plan around it, only be robbed by it. The ring says WHEN.
  *

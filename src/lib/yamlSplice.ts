@@ -5,7 +5,7 @@
  * The Playground's map editor used to save by parsing map.yml, editing the
  * object and dumping the whole thing back. js-yaml keeps no comments, so every
  * save silently deleted the entire file's commentary: the header explaining the
- * schema, the notes on why a map is tuned the way it is, the LEVELDESIGN.md
+ * schema, the notes on why a map is tuned the way it is, the MAP_DESIGN_GUIDELINES.md
  * cross-references. Editing one field of one level cost all of it, and because
  * the game still loaded fine, nothing complained.
  *
@@ -104,7 +104,7 @@ export function spliceYamlEntry(
  * The Map Builder holds the WHOLE ladder in memory and used to save it with a
  * single `yaml.dump({ levels })`, which meant every save rewrote all 40 entries
  * and deleted all 269 comment lines: the act headers, the per-map design notes,
- * the LEVELDESIGN.md cross-references. It cost the file's entire commentary to
+ * the MAP_DESIGN_GUIDELINES.md cross-references. It cost the file's entire commentary to
  * nudge one wall, and nothing complained because the game loads a comment-free
  * file perfectly well.
  *

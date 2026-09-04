@@ -4,7 +4,7 @@
  *
  * The editor used to parse map.yml, edit the object and dump the whole document
  * back. js-yaml keeps no comments, so every save silently deleted the schema
- * header, the per-map design notes and the LEVELDESIGN.md cross-references.
+ * header, the per-map design notes and the MAP_DESIGN_GUIDELINES.md cross-references.
  * Nothing complained, because the game loads a comment-free file perfectly well.
  *
  * The splice replaces only the edited entry's lines. Comments inside that entry
@@ -19,7 +19,7 @@ import { spliceYamlEntry, spliceYamlEntries, findEntryRange } from "@/lib/yamlSp
 
 const DOC = [
   "# map.yml - the level list.",
-  "# Every map follows the three conventions in LEVELDESIGN.md.",
+  "# Every map follows the three conventions in MAP_DESIGN_GUIDELINES.md.",
   "",
   "levels:",
   "  # The onboarding map: one ball, no obstacles.",
@@ -161,7 +161,7 @@ describe("the real map.yml", () => {
  * The builder holds the whole ladder in memory and used to save it with one
  * `yaml.dump({ levels })`. That rewrote all 40 entries and deleted all 269
  * comment lines in map.yml: the act headers, the per-map design notes, the
- * LEVELDESIGN.md cross-references. Moving one wall cost the file's entire
+ * MAP_DESIGN_GUIDELINES.md cross-references. Moving one wall cost the file's entire
  * commentary, and nothing complained because the game loads a comment-free
  * map.yml perfectly well. It is how the file got flattened once already.
  */

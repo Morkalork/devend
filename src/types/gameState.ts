@@ -237,7 +237,7 @@ export interface CanvasGameState {
   objective: ActiveMapObjective | null;
   /** Boss phase ids already fired this map (issue #56), so each fires once. */
   bossFiredPhases: string[];
-  /** Map-beat ids already fired this map (LEVELDESIGN.md Turn), so each fires once. */
+  /** Map-beat ids already fired this map (MAP_DESIGN_GUIDELINES.md Turn), so each fires once. */
   firedBeats: string[];
   /** Map-beat ids whose telegraph warning has shown, so each warns once. */
   warnedBeats: string[];

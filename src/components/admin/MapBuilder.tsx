@@ -421,8 +421,9 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     setSelectedAreaIndex(null);
   }, [currentLevel, updateLevel]);
 
-  // Add a Colored Area (win-gate zone). Sized by kind, per the LEVELDESIGN
-  // convention: var is easiest so it's drawn biggest, const hardest/smallest.
+  // Add a Colored Area (win-gate zone). Sized by kind, per the
+  // MAP_DESIGN_GUIDELINES.md convention: var is easiest so it's drawn biggest,
+  // const hardest/smallest.
   const addArea = useCallback((kind: AreaKind) => {
     if (!currentLevel) return;
 

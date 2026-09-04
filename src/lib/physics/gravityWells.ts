@@ -11,7 +11,7 @@
  *
  * A well is also a TOOL, not only a hazard. You can aim a ball into one to bend
  * it toward a pocket you have already fenced, which is the greed-hook from
- * LEVELDESIGN.md in a new form: go near the dangerous thing to put a ball where
+ * MAP_DESIGN_GUIDELINES.md in a new form: go near the dangerous thing to put a ball where
  * you want it.
  *
  * The pull steers rather than accelerates, for the same reason gravity maps do

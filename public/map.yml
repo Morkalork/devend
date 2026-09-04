@@ -6,7 +6,7 @@ levels:
   # at 5, reveals at 7, terminals at 8. Everything the game owns was on the
   # board before the player was fluent at sealing anything, and nothing was ever
   # revisited. It now owns SIX ideas and spends four of its maps developing them
-  # (see LEVELDESIGN.md: Meet / Use / Fight / Break).
+  # (see MAP_DESIGN_GUIDELINES.md: Meet / Use / Fight / Break).
   #
   # Given up to act II: chests, reveals, terminals, the WIP limit, 4 balls.
   # ===========================================================================
@@ -363,7 +363,7 @@ levels:
   # first TURN.
   # Nothing new on the board; both halves are already known, and the map is the
   # question of which order to spend them in. The speed spike is telegraphed a
-  # beat early so the Turn is fair (LEVELDESIGN.md convention 3).
+  # beat early so the Turn is fair (MAP_DESIGN_GUIDELINES.md convention 3).
   - id: level-7
     level: 7
     sizeThreshold: 22
@@ -1300,7 +1300,7 @@ levels:
   # in the whole band was the black ball at 25. It now owns every gravity idea
   # in the game, plus the three mechanics that used to appear exactly once.
   #
-  # Each mechanic gets beats rather than a debut (see LEVELDESIGN.md):
+  # Each mechanic gets beats rather than a debut (see MAP_DESIGN_GUIDELINES.md):
   #   Meet  - alone and legible, nothing else on the map is new
   #   Use   - the mechanic IS the greed hook
   #   Fight - the mechanic as a hazard, crossed with something older
@@ -1986,7 +1986,7 @@ levels:
   # against act III's 15, which also gave the assignment block spanning it the
   # thinnest targets on the ladder.
   #
-  # It owns no new primitives, by design (LEVELDESIGN.md): this is where the
+  # It owns no new primitives, by design (MAP_DESIGN_GUIDELINES.md): this is where the
   # vocabulary the other acts taught gets combined and then turned around. What
   # IS new is that these maps state their own win conditions rather than leaning
   # on the implicit clear, and PRICE them: a map that asks for something harder
@@ -2056,7 +2056,7 @@ levels:
       # The greed hook: a tight corner pocket hanging off the top right, whose
       # only approach runs back over the well's mouth.
       # Lifted so the way in is a 70-wide neck rather than the 50 it was: a gap
-      # a ball only half-fits through is the one thing LEVELDESIGN forbids, and
+      # a ball only half-fits through is the one thing MAP_DESIGN_GUIDELINES.md forbids, and
       # 50 against a 36 diameter is precisely that.
       - id: hook-lip
         kind: wall

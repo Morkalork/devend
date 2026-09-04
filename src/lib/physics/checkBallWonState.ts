@@ -450,7 +450,7 @@ export function checkAndUpdateBallWonStates(
     // to spare the boss BREAKS OUT (repositions to open space, faster and smaller)
     // instead of locking; only its final HP actually locks and marks it defeated.
     // It never counts as a normal lock (no lockedBallsCount bump, no lock bonus).
-    // Colored Area win gate (LEVELDESIGN.md): the target ball's lock LOCATION
+    // Colored Area win gate (MAP_DESIGN_GUIDELINES.md): the target ball's lock LOCATION
     // decides the map. Boss map -> the boss is the target; otherwise any ball is.
     //
     // HP AND THE GATE. The damage branch below used to be skipped whenever a

@@ -1,5 +1,5 @@
 /**
- * Map beats (LEVELDESIGN.md convention 3, "the Turn") — threshold-triggered
+ * Map beats (MAP_DESIGN_GUIDELINES.md convention 3, "the Turn") — threshold-triggered
  * one-shot events for ANY map, generalizing boss phases (bossPhases.ts).
  *
  * Runs once per frame OUTSIDE the ball-iteration loop (effects may append to

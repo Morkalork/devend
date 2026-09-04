@@ -156,7 +156,7 @@ describe("public/mapMutators.yml", () => {
     // The conveyor was removed deliberately, not by accident. It applied a
     // steady drift to every ball for a whole map with nothing on screen to say
     // so, in a game whose entire skill is predicting where a ball will be:
-    // LEVELDESIGN.md's third convention says a Turn has to be visible coming or
+    // MAP_DESIGN_GUIDELINES.md's third convention says a Turn has to be visible coming or
     // it is an ambush, and an invisible force acting all map is exactly that.
     // Players read it as the map being broken, which is what it looks like.
     //

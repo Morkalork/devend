@@ -430,7 +430,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
    *
    * Splices the edited level over its own lines in the fetched source, so every
    * comment in map.yml survives a save: the schema header, the per-map design
-   * notes, the LEVELDESIGN.md cross-references. Re-dumping the whole document
+   * notes, the MAP_DESIGN_GUIDELINES.md cross-references. Re-dumping the whole document
    * (the old behaviour) deleted all of it on every save, silently, because the
    * game loads a comment-free file perfectly well.
    *

@@ -1,5 +1,5 @@
 /**
- * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier).
+ * Fence budget / "WIP Limit" (MAP_DESIGN_GUIDELINES.md modifier).
  *
  * A per-map cap on COMPLETED fences. When the last allowed fence completes and
  * the map still is not won, the player has run out of moves: lose a life and

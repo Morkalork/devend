@@ -554,7 +554,7 @@ export function GameCanvas({
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
   const chestToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (chestToastTimer.current) clearTimeout(chestToastTimer.current); }, []);
-  // Map-beat telegraph banner (LEVELDESIGN.md Turn): a warning shown ahead of a
+  // Map-beat telegraph banner (MAP_DESIGN_GUIDELINES.md Turn): a warning shown ahead of a
   // beat firing so the player is not ambushed. `announce` is an i18n key.
   const [beatBanner, setBeatBanner] = useState<
     { key: number; announce: string; effects?: BeatEffectLine[] } | null

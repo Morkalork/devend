@@ -17,7 +17,7 @@
  *     indicator was designed and never built.
  *
  * So a mechanic that bends every path on the board had no expression on the
- * board, and a player meeting it reads a malfunction. LEVELDESIGN.md's third
+ * board, and a player meeting it reads a malfunction. MAP_DESIGN_GUIDELINES.md's third
  * convention already covers this: a Turn has to be visible coming or it is an
  * ambush.
  *

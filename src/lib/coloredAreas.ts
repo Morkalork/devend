@@ -1,5 +1,5 @@
 /**
- * Colored Areas: typed var/let/const lock zones (LEVELDESIGN.md).
+ * Colored Areas: typed var/let/const lock zones (MAP_DESIGN_GUIDELINES.md).
  *
  * Every area pays its kind's multiplier to a ball locked inside, easiest
  * (biggest, by convention) to hardest (smallest): var 1.5x < let 2x < const 3x.

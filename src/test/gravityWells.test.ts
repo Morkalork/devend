@@ -259,7 +259,7 @@ describe("the four bearings", () => {
 
 /**
  * Dormant wells: visible the whole map, inert until the board has been cleared
- * down to a threshold. LEVELDESIGN.md's "Turn" in well form.
+ * down to a threshold. MAP_DESIGN_GUIDELINES.md's "Turn" in well form.
  *
  * What makes it a Turn rather than an ambush is that the well is DRAWN while
  * dormant, so a player sees it coming and plans around it. That half lives in

@@ -437,7 +437,7 @@ export interface LevelConfig {
    * Boss maps could already force one; ordinary maps could not, so a mutator
    * could only ever be a random visitor. A set-piece built AROUND its mutator
    * (the shifting-gravity map of issue #77 is the case that needed this) has to
-   * be able to author it, the same way LEVELDESIGN.md expects a map's Turn to
+   * be able to author it, the same way MAP_DESIGN_GUIDELINES.md expects a map's Turn to
    * be authored rather than hoped for.
    *
    * An ID, not an inline MapMutator, because that is how every map.yml that has
@@ -451,7 +451,7 @@ export interface LevelConfig {
    */
   mutator?: string;
   /**
-   * Scripted "Turn" beats (LEVELDESIGN.md convention 3): threshold-triggered
+   * Scripted "Turn" beats (MAP_DESIGN_GUIDELINES.md convention 3): threshold-triggered
    * one-shot events so the endgame differs from the opening. Generalizes boss
    * phases to ANY map. Each beat fires once when its space-remaining or
    * active-seconds threshold is crossed.
@@ -482,7 +482,7 @@ export interface LevelConfig {
    */
   dataStream?: DataStreamConfig;
   /**
-   * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
+   * Fence budget / "WIP Limit" (MAP_DESIGN_GUIDELINES.md modifier): the max number of
    * COMPLETED fences allowed on this map. Running out before the map is
    * finished loses a life and restarts the map. Only successful partitions
    * count (a fence a ball destroys mid-draw is free). Absent = unlimited.
@@ -509,7 +509,7 @@ export interface MapBeat {
   speedSpike?: number;
   /**
    * Telegraph label (an i18n key) shown as a warning banner when the beat is
-   * about to fire, so the player is not ambushed (LEVELDESIGN.md: telegraph the
+   * about to fire, so the player is not ambushed (MAP_DESIGN_GUIDELINES.md: telegraph the
    * Turn). Absent = no banner (e.g. a breakId beat self-telegraphs by the wall
    * visibly breaking).
    */
@@ -559,7 +559,7 @@ export interface CircuitConfig {
 }
 
 /**
- * "Deploy Charge" (LEVELDESIGN.md convention 3, a player-authored Turn): a fuse
+ * "Deploy Charge" (MAP_DESIGN_GUIDELINES.md convention 3, a player-authored Turn): a fuse
  * sits on/beside an obstacle slab. Routing a fence within `radius` of the fuse
  * ARMS it; after `delaySeconds` of telegraph it DETONATES, destroying the target
  * obstacle (reopening its footprint as capturable space), flinging nearby balls,
@@ -590,7 +590,7 @@ export interface DataStreamReward {
 }
 
 /**
- * "Data Stream" (LEVELDESIGN.md convention 2, a greed hook on fence PLACEMENT):
+ * "Data Stream" (MAP_DESIGN_GUIDELINES.md convention 2, a greed hook on fence PLACEMENT):
  * a glowing vein across the board. A fence drawn ALONG the seam (running within
  * `width` of it, not merely crossing it) harvests the spans it covers, paying
  * `reward` scaled by how much of the seam is covered. The seam is laid so
@@ -614,7 +614,7 @@ export interface DataStreamConfig {
  * By convention a var area is drawn largest (easiest), a const smallest.
  *
  * An area is either a GATE or a BONUS pocket (`required`), which is the single
- * authorable form of LEVELDESIGN.md's greed hook:
+ * authorable form of MAP_DESIGN_GUIDELINES.md's greed hook:
  * - GATE (default): a REQUIRED win condition. You win the map by locking a
  *   target ball inside one (boss map: the boss; else any ball); locking the
  *   target outside fails the map (lose a life, restart).
@@ -672,7 +672,7 @@ export interface GravityWell {
    *
    * A dormant well is drawn the whole time, drained and inert, and starts
    * pulling when the board has been cleared down to this much. That is
-   * LEVELDESIGN.md's "Turn" in well form: the endgame is not the opening, and
+   * MAP_DESIGN_GUIDELINES.md's "Turn" in well form: the endgame is not the opening, and
    * critically the player can SEE it coming and plan around it, which is the
    * difference between a turn and an ambush.
    *
