@@ -81,10 +81,10 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | fight | break |
 |---|---|---|---|---|---|---|
-| colored area (bonus) | D | Meet | 2 | 3 | 8 | 13 |
-| mover | C | Meet | 4 | 6 | 11 | 23 |
-| breakable | A | Meet | 5 | 6 | 12 | 25 |
-| chest | A | Compressed | 7 | 12 | 22 | 32 |
+| colored area (bonus) | D | Meet | 3 | 5 | 8 | 13 |
+| mover | C | Meet | 4 | 5 | 7 | 23 |
+| breakable | A | Meet | 5 | 7 | 6 | 25 |
+| chest | A | Compressed | 7 | 9 | 22 | 32 |
 | reveals | A | Compressed | 8 | 19 | - | - |
 | mirror | B | Meet | 11 | 12 | 16 | 33 |
 | WIP limit | D | Meet | 13 | 18 | 32 | - |
@@ -106,6 +106,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | thread lock | D | Compressed | 29 | 34 | - | - |
 | colored area (gate) | D | Meet | 20 (boss) | 30 | 33 | 35 |
 | bent shape | B | Seasoning | - | - | - | - |
+| the second ball | - | roster | 2 | - | - | - |
 | rotor | C | Seasoning | - | - | - | - |
 | pickup spots | E | Seasoning | - | - | - | - |
 | pinned mutator | D | Seasoning | - | - | - | - |
@@ -236,22 +237,25 @@ topology is built around, so a map of fewer, larger chambers legitimately wants
 fewer cuts than its neighbour. What is forbidden is a collapse, so a map may sit
 at most one cut below its act's high-water mark.
 
-### Act I - Onboarding (1-10)
+### Act I - Onboarding (1-10)  *(built)*
 
 *Owns: sealing, the bonus pocket, the solids that change, the first machine.*
 Maps 1-3 never rotate. Power-up tokens begin at 8.
 
+Authored at **variety 0 and randomShapes 0** throughout: see section 7.2 for
+why, and change it back only once the runtime gap guard measures what ships.
+
 | L | new | develops | premise |
 |---|---|---|---|
-| 1 | - (topology) | - | Two chambers, one neck. The map that teaches a neck is a decision. |
-| 2 | **Meet** colored area (bonus) | topology | A pink pocket off the main room: free money if you seal it, free to ignore. |
-| 3 | - | Use colored area | Three chambers, the bonus in the tightest. The first time greed costs tempo. |
-| 4 | **Meet** mover | Fight topology | A block patrols the only neck; every cut is a read on its cycle. |
-| 5 | **Meet** breakable | Use mover | An amber slab walls off the bonus. Smashing it spends the time you needed for the neck. |
-| 6 | - | Fight breakable + mover | Break the slab and the mover's lane opens into your workspace. |
-| 7 | **Compressed** chest | Use breakable | The vault map: one chest, one guard, one safe path past both. |
-| 8 | **Compressed** reveals | Break colored area | Smashing the support opens board *under* the bonus box, so the pocket you sized is the wrong size now. |
-| 9 | - skill check | all of act I | No new toys. Everything act I taught, at act I's tightest. |
+| 1 | - (the doorway) | - | Two rooms, one doorway, one ball. Locking every ball wins outright, so the corner nook is a button marked "finish now". |
+| 2 | the second ball | topology | The same doorway, two schedules. A lock is a decision now rather than an ending. |
+| 3 | **Meet** colored area (bonus) | topology | A pink box that pays 1.5x and costs nothing to ignore. |
+| 4 | **Meet** mover | Fight topology | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". |
+| 5 | **Meet** breakable | Use mover, Use colored area | Six hits buy a second doorway the patrol never reaches. |
+| 6 | - | Fight breakable | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
+| 7 | **Compressed** chest | Use breakable, Fight mover | An open alcove worth two different things, and they compete for the same ball. |
+| 8 | **Compressed** reveals | Break colored area | The box is 10% of the board the moment it arrives, so sealing it whole does not lock. |
+| 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
 ### Act II - The Sprint (11-20)
@@ -400,6 +404,10 @@ seconds), so the endgame differs from the opening. Beginning (setup), Turn
 (complication), End (scramble). This is the single biggest lever against
 long-run boredom across 31 maps.
 
+- **A Turn needs a plan to disrupt.** Maps whose job is teaching the base verb
+  do not have one yet, so maps 1 and 2 are exempt; from map 3 on it is
+  mandatory. A complication on a map where the player has no plan is just noise
+  with a banner over it.
 - One designed beat beyond ambient scope creep.
 - **Telegraph it** (`announce` + `leadMs`, or a visibly cracking wall) so it is
   fair. `breakId` self-telegraphs.
@@ -437,7 +445,34 @@ sealable. It also silently changes meaning when the big-ball gift rolls. Both
 bugs it was written for (a 26-unit slot on the old level 9, a 40-unit alcove
 mouth on the old level 3) were invisible by eye and failed no other test.
 
-### 7.2 Rotation, and why authored coordinates are not runtime coordinates
+### 7.2 Variety, and why authored gaps are not runtime gaps
+
+`applyRectVariation` scales every non-mirror rect's width and height by up to
+**+/-variety%** about its centre. So each facing edge of a neck moves by
+`variety% x its own extent / 2`, and a neck between two stubs can close by the
+sum of both.
+
+Two 300-tall stubs at variety 10 move 15 each: an **authored 60-unit neck
+arrives anywhere in [30, 90]**, and half that range is the band section 7.1
+forbids. The authored-coordinate guard cannot see any of it.
+
+This is not hypothetical. When it was first measured, **seven shipping maps**
+landed in the band at runtime while passing the authored check - level 27 on
+nearly every deal, and level 34's typed pipe, documented in map.yml as a
+"66-unit corridor only grey balls may enter", measuring 51-60 in practice.
+
+Two ways to author safely, and act I took the second:
+
+1. **Budget for it.** An authored gap must be at least
+   `60 + variety% x (extent_a + extent_b) / 2`.
+2. **Set `variety: 0`** on any map whose geometry has to be exact. A teaching
+   map's job is legibility, and a doorway whose width is a dice roll is the
+   opposite of it.
+
+`runtimeGapRule.test.ts` builds each map eight times and measures the result.
+Its unmigrated list may only shrink.
+
+### 7.3 Rotation, and why authored coordinates are not runtime coordinates
 
 From **level 4** up, a map is dealt in one of four rotations
 (`ROTATION_MIN_LEVEL`). Consequences:
@@ -451,7 +486,7 @@ From **level 4** up, a map is dealt in one of four rotations
   level number below 4 or by seeding the rotation rng. This has caused two
   separate ~1-in-4 CI flakes; see `corridorNoFalseLock.test.ts`.
 
-### 7.3 The content gates
+### 7.4 The content gates
 
 A mechanic debuting at level N needs its gate at or below N. **A gate below its
 content is the worst case, because nothing throws.**
@@ -483,7 +518,7 @@ cannot appear on it:
 The black ball is the reason "smash the mirror" and "fracture your own fence"
 content cannot exist before level 25.
 
-### 7.4 Lock economy numbers
+### 7.5 Lock economy numbers
 
 | quantity | value |
 |---|---|
@@ -493,6 +528,31 @@ content cannot exist before level 25.
 | Denominator | `max(active cells, initial cells / active balls)`, swings ~2x over a map |
 | Bumper bank | 5 hours, 1 per bump; charged brakes 5%, spent kicks 1.25x, capped at 2.2x the ball's own base speed |
 | Deformable | 3% per contact, permanent dent capped at 7 units |
+
+---
+
+### 7.6 Two ways a sealed region bites
+
+Both of these were caught by the bot audit while authoring act I, and neither
+is visible in the YAML.
+
+**A breakable that fully encloses a pocket hands it over for free.**
+`captureUnreachableCells` writes off any region no ball can reach as
+unreachable-hence-captured, so a vault sealed at load starts the map already
+claimed. Worse, a ball driven in after the break lands in ground the player
+already owns and locks itself with no fence at all. If a breakable is the only
+way into a space, that space is not a prize, it is a gift with extra steps.
+
+**A `reveals` area must be genuinely shut.** Its cells start REMOVED and belong
+to no region, so a ball that can wander in has no region either - nineteen
+"[OWNERSHIP] ball has no valid region" in one 24-seed sweep, against a baseline
+of one or two. Seal it with board edges, a jamb and the breakable itself; a
+12-unit seam is a wall to a ball and keeps the shape readable.
+
+The two pull in opposite directions, and the difference is what happens to the
+cells. A region that is merely unreachable gets captured. A `reveals` region is
+explicitly locked and is handed over as new capturable board when it opens,
+which is why it may - and must - be completely sealed.
 
 ---
 
