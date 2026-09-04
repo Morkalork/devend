@@ -93,6 +93,11 @@ export interface Ball {
   /** Bouncer that last kicked this ball, and when, for the per-bouncer cooldown. */
   lastBouncerId?: string;
   lastBouncerAt?: number;
+  /** Deformable that last took a dent from this ball, and when. Same cooldown
+   *  problem as the bouncer: a ball resting in the band would dent 120 times a
+   *  second and be taxed to a standstill inside one. */
+  lastDeformId?: string;
+  lastDeformAt?: number;
   /** When this ball last came out of a portal, so a pair cannot become a loop. */
   lastPortalAt?: number;
   leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)

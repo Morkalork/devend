@@ -30,6 +30,7 @@ export type BoardEntityKind =
   | "mirror"
   | "mover"
   | "phasing"
+  | "deformable"
   | "obstacle"
   | "area";
 
@@ -87,6 +88,15 @@ export function boardEntityAt(game: CanvasGameState, x: number, y: number): Boar
   }
   for (const poly of game.mirrorPolygons) {
     if (pointInPolygon({ x, y }, poly)) return { kind: "mirror" };
+  }
+  // Before the plain obstacle sweep: a deformable IS in obstaclePolygons, and
+  // answering "solid, balls bounce off it" for the one wall on the board that
+  // quietly takes 3% off every ball would be the most useful thing this whole
+  // gesture could have told the player, withheld.
+  for (const poly of game.obstaclePolygons) {
+    if (game.deformables?.has(poly) && pointInPolygon({ x, y }, poly)) {
+      return { kind: "deformable" };
+    }
   }
   for (const poly of game.obstaclePolygons) {
     if (pointInPolygon({ x, y }, poly)) return { kind: "obstacle" };

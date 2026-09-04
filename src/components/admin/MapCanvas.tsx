@@ -3,6 +3,8 @@ import { Minus, Plus as PlusIcon } from 'lucide-react';
 import { FIT_VIEW, computeEditorBoardRect, zoomAboutPoint, type EditorView } from '@/lib/editorView';
 import { BEARING_VECTOR, type Bearing } from '@/lib/physics/obstacleRules';
 import { BOUNCER_HOURS } from '@/lib/physics/bouncer';
+import { subdivideOutline } from '@/lib/physics/deformable';
+import { deformPlies } from '@/lib/rendering/sleek/deformSkin';
 import {
   muzzleRay, launcherRunway, LAUNCH_SPREAD, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
@@ -622,6 +624,32 @@ export function MapCanvas({
      * it is not) and the KICKER's bearing, which is invisible until a ball
      * happens to hit one.
      */
+    /**
+     * The padding on a deformable, drawn the way the game draws it.
+     *
+     * Same argument as the bumper above: a deformable is authored by ticking a
+     * box and is otherwise identical to the wall beside it, so an editor that
+     * showed nothing would let a designer place one, forget, and wonder later
+     * why that corridor eats speed. The inset contours are the game's own cue,
+     * from the same `deformPlies`, so the two views cannot drift apart.
+     */
+    const drawDeformable = (entity: LevelEntity) => {
+      if (!(entity as unknown as { deformable?: boolean }).deformable) return;
+      const pts = drawnOutline(entity);
+      if (pts.length < 3) return;
+      ctx.strokeStyle = '#8ea0b4';
+      ctx.lineWidth = 1.5;
+      for (const ply of deformPlies(subdivideOutline(pts))) {
+        ctx.beginPath();
+        ply.forEach((v, i) => {
+          const p = worldToScreen(v.x, v.y);
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+      }
+    };
+
     const drawBumper = (entity: LevelEntity) => {
       const we = entity as unknown as {
         bouncer?: boolean; bounceHours?: number; bounceBearing?: Bearing;
@@ -1089,6 +1117,7 @@ export function MapCanvas({
     // Muzzles last, over every obstacle: the arrow is about the relationship
     // BETWEEN a launcher and the things in front of it, so it must not be
     // hidden by one of them.
+    (level.entities || []).forEach(drawDeformable);
     (level.entities || []).forEach(drawBumper);
     (level.entities || []).forEach(drawMuzzle);
 

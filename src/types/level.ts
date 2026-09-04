@@ -84,6 +84,17 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
    * bend and the turn, and composes with breakable and the rest.
    */
   bouncer?: boolean;
+  /**
+   * DEFORMABLE: this wall never breaks, but it keeps every dent it takes and
+   * charges the ball 3% of its speed for each one. A flag like `bouncer` and
+   * `mirror`, so it inherits every shape, the bend and the turn.
+   *
+   * The dent's depth comes from the SAME force model breakables use (mass x
+   * closing speed), so a heavy ball at pace leaves a crater and a graze leaves
+   * a dimple - and two objects on one board never disagree about which hit was
+   * harder. See src/lib/physics/deformable.ts.
+   */
+  deformable?: boolean;
   /** Speed multiplier per kick (default BOUNCER_KICK). */
   bounceKick?: number;
   /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */

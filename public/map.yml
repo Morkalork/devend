@@ -750,6 +750,10 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+      # The spine takes the pinball cluster's punishment, so it is the wall
+      # that gives. Everything east of it has been sped up by the plunger and
+      # then by five bumpers; this is the only thing on the map that takes
+      # speed back, and after a long rally its face reads as exactly that.
       - id: spine-top
         kind: wall
         shape: rect
@@ -757,6 +761,7 @@ levels:
         'y': 45
         width: 24
         height: 300
+        deformable: true
       - id: spine-bottom
         kind: wall
         shape: rect
@@ -764,6 +769,7 @@ levels:
         'y': 620
         width: 24
         height: 235
+        deformable: true
     slots:
       - id: pillar-mid
         candidates:
@@ -1580,6 +1586,10 @@ levels:
     randomShapes: 10
     maxBalls: 3
     entities:
+      # Both rails of the mid-board alley give. The charge blows the plug
+      # between them and the balls pour through at whatever the blast left
+      # them; these are what the map has to take that back with, and the
+      # dents afterwards say how much traffic the alley actually saw.
       - id: bar-left
         kind: wall
         shape: rect
@@ -1587,6 +1597,7 @@ levels:
         'y': 430
         width: 300
         height: 32
+        deformable: true
       - id: bar-right
         kind: wall
         shape: rect
@@ -1594,6 +1605,7 @@ levels:
         'y': 430
         width: 300
         height: 32
+        deformable: true
       - id: slab-plug
         kind: wall
         shape: rect

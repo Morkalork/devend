@@ -1126,6 +1126,10 @@
       "title": "Phasing block",
       "body": "Fades in and out on a cycle. Solid when visible, passable when not. A fence drawn through it while it is out will be cut when it returns."
     },
+    "deformable": {
+      "title": "Padded block",
+      "body": "It never breaks. Every hit dents it instead and takes 3% off the ball, so it is the board's own brake on a ball that has been made too fast. The dents stay, so its face shows how much traffic it has taken."
+    },
     "obstacle": {
       "title": "Obstacle",
       "body": "Solid. Balls bounce off it and fences stop dead against it, which makes it a good anchor for a pocket."

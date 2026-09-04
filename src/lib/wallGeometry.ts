@@ -6,6 +6,7 @@ import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Add, vec2Scale, vec2Norm
 import type { ObstacleRule } from "./physics/obstacleRules";
 import type { BouncerSpec } from "./physics/bouncer";
 import type { PortalSpec } from "./physics/portal";
+import type { DeformState } from "./physics/deformable";
 
 export interface Wall {
   id: string;
@@ -30,6 +31,10 @@ export interface Wall {
    * inert at its edges.
    */
   bouncer?: BouncerSpec;
+  /** Deformable this edge belongs to. Carried on the wall AND on the polygon
+   *  for the usual reason: updateBall consults both, and a property honoured in
+   *  only one gives a wall that dents at its face and is pristine at its edges. */
+  deformable?: DeformState;
   /** The portal this wall is an edge of. Balls skip it; fences do not. */
   portal?: PortalSpec;
   /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */

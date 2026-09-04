@@ -1659,6 +1659,10 @@
       "title": "Blinkande block",
       "body": "Tonar in och ut i cykler. Fast när det syns, genomträngligt när det inte gör det. Ett stängsel draget medan det är borta kapas när det kommer tillbaka."
     },
+    "deformable": {
+      "title": "Vadderat block",
+      "body": "Det går aldrig sönder. Varje träff bucklar det i stället och tar 3% av bollens fart, så det är brädets egen broms på en boll som blivit för snabb. Bucklorna sitter kvar, så ytan visar hur mycket trafik den tagit."
+    },
     "obstacle": {
       "title": "Hinder",
       "body": "Fast. Bollar studsar och stängsel stannar mot det, vilket gör det till ett bra fäste för en ficka."

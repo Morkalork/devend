@@ -8,6 +8,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, BOUNCER_HOURS_PER_BUMP, type BouncerSpec } from "@/lib/physics/bouncer";
+import { applyDent, deformReady, deformSlow, dentDepth, type DeformState } from "@/lib/physics/deformable";
 import { portalAt, portalExit, portalArrival, portalReady } from "@/lib/physics/portal";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
@@ -284,6 +285,36 @@ function applyBouncer(
   flashes.push({
     id: spec.id, x: spec.centre.x, y: spec.centre.y, at: now, intensity: hit.intensity,
   });
+}
+
+/**
+ * One contact with a deformable: the surface sinks, the ball pays 3%.
+ *
+ * Shared by both collision systems for the reason the whole mechanic depends
+ * on - the polygon and the edge walls describe ONE surface, and a dent written
+ * by only one of them would be a wall that gives at its face and is rigid at
+ * its rim. The per-ball cooldown is what makes one contact seen by both paths
+ * still one dent and one 3%.
+ *
+ * No flash queue, unlike the bouncer. A bumper's kick has no visible cause
+ * without one; this one leaves a permanent mark exactly where it landed, which
+ * is a better record than any flash.
+ */
+function applyDeformable(
+  ball: Ball, state: DeformState | undefined,
+  at: Vector2, normalSpeed: number, now: number,
+): void {
+  if (!state || !deformReady(ball, state, now)) return;
+  applyDent(state, at, dentDepth(ball, normalSpeed));
+  const hit = deformSlow(ball);
+  ball.velocity = hit.velocity;
+  ball.speed = hit.speed;
+  ball.lastDeformId = state.id;
+  ball.lastDeformAt = now;
+  // The polygon's cached AABB (_obstacleBounds) is deliberately NOT dropped: a
+  // dent only ever pulls vertices toward the centre, so the stale box is a
+  // superset of the dented shape and the broad phase stays conservative. The
+  // per-wall AABB is a different story and applyDent invalidates it - see there.
 }
 
 export function updateBall(
@@ -662,6 +693,26 @@ export function updateBall(
       ball.velocity = obstacleResult.velocity;
       surfaceHit = true;
 
+      // Deformable face. The reflection has already happened, so the closing
+      // speed along the normal is half the change in velocity it caused, and
+      // the normal itself is the direction of that change - no need to ask the
+      // resolver which edge was struck. A contact that reflected nothing (the
+      // resolver merely depenetrated a ball already moving away) is not an
+      // impact and must not dent: ballImpactDamage floors at 0.15, so without
+      // this guard a ball nestled against the wall would be taxed for nothing.
+      const dvx = ball.velocity.x - vBefore.x, dvy = ball.velocity.y - vBefore.y;
+      const dvl = Math.hypot(dvx, dvy);
+      if (dvl > 1e-6) {
+        applyDeformable(
+          ball, game.deformables?.get(obstacle),
+          // Back off the ball's radius along the normal, so the dent is centred
+          // on the SURFACE rather than on the ball's middle a radius clear of it.
+          { x: ball.position.x - (dvx / dvl) * ball.radius,
+            y: ball.position.y - (dvy / dvl) * ball.radius },
+          dvl / 2, now,
+        );
+      }
+
       // Pop bumper: it does not merely reflect, it KICKS - outward from the
       // bouncer's middle, faster than the ball arrived. Applied after the
       // resolver has already pushed the ball clear, so the kick starts from a
@@ -716,6 +767,15 @@ export function updateBall(
     // Register wall impact for visual effect
     if (impactPoint) {
       surfaceHit = true;
+      // The same dent from the edge as from the face. `wall.deformable` is the
+      // very object the polygon map holds, so the two paths cannot disagree.
+      // Read the normal off the wall BEFORE the dent moves it.
+      if (wall.deformable) {
+        const dex = wall.end.x - wall.start.x, dey = wall.end.y - wall.start.y;
+        const del = Math.hypot(dex, dey) || 1;
+        const dvn = Math.abs(ball.velocity.x * (-dey / del) + ball.velocity.y * (dex / del));
+        applyDeformable(ball, wall.deformable, impactPoint, dvn, now);
+      }
       // The same kick from the edge as from the face. `wall.bouncer` is the very
       // object the polygon map holds, so the two paths cannot disagree.
       applyBouncer(game, ball, wall.bouncer, now);

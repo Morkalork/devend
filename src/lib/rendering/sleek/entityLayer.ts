@@ -18,6 +18,8 @@ import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { BOUNCER_FLASH_MS, bouncerCharge, type BouncerSpec } from "@/lib/physics/bouncer";
 import { bouncerRings } from "./bouncerRings";
+import { deformPlies } from "./deformSkin";
+import { deformWear, type DeformState } from "@/lib/physics/deformable";
 import type { PortalSpec } from "@/lib/physics/portal";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
@@ -131,7 +133,16 @@ export class EntityLayer {
 
     for (const poly of game.obstaclePolygons) {
       if (skip.has(poly as Polygon)) continue;
-      this.drawSlab(poly as Polygon, light, w2s, scale);
+      // A deformable is made of different stuff, so it is not painted in the
+      // furniture colour. Same value as an ordinary slab (it stands in the same
+      // light and is furniture too); the hue is what says the material differs,
+      // exactly as the breakable's warmth does.
+      const deform = game.deformables?.get(poly as Polygon);
+      this.drawSlab(
+        poly as Polygon, light, w2s, scale,
+        deform ? mix(PALETTE.deformable, PALETTE.deformableWorn, deformWear(deform)) : undefined,
+      );
+      if (deform) this.drawDeformSkin(poly as Polygon, deform, w2s, scale);
       // A membrane or a gate that looks exactly like a wall is not a mechanic,
       // it is a bug the player has to reverse-engineer by dying. Drawn after
       // the slab so the cue sits on top of its own face.
@@ -169,6 +180,46 @@ export class EntityLayer {
    * should look like it belongs to it. With more than one type admitted the rim
    * alternates between their colours.
    */
+  /**
+   * A deformable's face: padding you can see, and a record of what it has taken.
+   *
+   * Both cues come from deformSkin.ts, where a test can reach them. Drawn over
+   * the slab rather than instead of it: this IS a solid - it never breaks and
+   * it never opens - so it must keep the silhouette, the shadow and the contact
+   * band every other solid has. Only the material differs.
+   */
+  private drawDeformSkin(
+    poly: Polygon, state: DeformState, w2s: W2S, scale: number,
+  ): void {
+    const g = this.rims;
+    const wear = deformWear(state);
+
+    // The ghost of the shape as authored. Dashed, so it never competes with the
+    // lit rim of the real edge beside it, and drawn unconditionally: while the
+    // wall is pristine it lies exactly on that rim and is invisible, and the
+    // gap that opens as it sinks is the whole point of drawing it.
+    const ghost = state.original.map(v => w2s(v.x, v.y));
+    for (let i = 0; i < ghost.length; i++) {
+      const a = ghost[i], b = ghost[(i + 1) % ghost.length];
+      dashedLine(g, a.x, a.y, b.x, b.y, 5 * scale, 4 * scale);
+    }
+    g.stroke({
+      width: hairline(),
+      color: PALETTE.deformableWorn,
+      alpha: 0.2 + wear * 0.45,
+    });
+
+    // The padding, inside the LIVE face, so the plies sink with it.
+    for (const ply of deformPlies(poly.vertices)) {
+      const pts = ply.map(v => w2s(v.x, v.y));
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        g.moveTo(a.x, a.y).lineTo(b.x, b.y);
+      }
+    }
+    g.stroke({ width: hairline(), color: PALETTE.deformable, alpha: 0.55 });
+  }
+
   /**
    * A pop bumper: concentric rings around a lit core, flaring on a hit.
    *
@@ -308,7 +359,9 @@ export class EntityLayer {
   }
 
   /** A static obstacle: shadow, lit fill, contact band, rim on the lit edges. */
-  private drawSlab(poly: Polygon, light: LightScope, w2s: W2S, scale: number): void {
+  private drawSlab(
+    poly: Polygon, light: LightScope, w2s: W2S, scale: number, body: number = PALETTE.obstacle,
+  ): void {
     const pts = dentedContour(poly.vertices, w2s);
     if (pts.length < 3) return;
 
@@ -347,7 +400,7 @@ export class EntityLayer {
     const amb = ambientAt(light, cx, cy);
     this.bodies
       .poly(pts)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.55 + amb * 0.45), alpha: 1 });
+      .fill({ color: mix(PALETTE.shadow, body, 0.55 + amb * 0.45), alpha: 1 });
 
     // Per-edge rim: only edges whose outward normal faces the monitor.
     const n = pts.length;

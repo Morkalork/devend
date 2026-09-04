@@ -1659,6 +1659,10 @@
       "title": "Bloque intermitente",
       "body": "Aparece y desaparece por ciclos. Sólido cuando se ve, atravesable cuando no. Una valla trazada mientras no está se cortará al volver."
     },
+    "deformable": {
+      "title": "Bloque acolchado",
+      "body": "Nunca se rompe. Cada golpe lo abolla y le quita un 3% de velocidad a la bola, así que es el freno del tablero para una bola demasiado rápida. Las abolladuras se quedan, así que su cara muestra cuánto tráfico ha aguantado."
+    },
     "obstacle": {
       "title": "Obstáculo",
       "body": "Sólido. Las bolas rebotan y las vallas se detienen contra él, lo que lo hace buen anclaje para un bolsillo."

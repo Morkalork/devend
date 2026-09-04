@@ -107,6 +107,20 @@ export const PALETTE = {
    * the load-bearing cue.
    */
   breakable: 0x5e6d51,
+  /**
+   * Deformable slabs: the obstacle colour pulled cool and grey at the SAME
+   * value, on the breakable's reasoning and for the same reason.
+   *
+   * Hue carries the material, brightness carries the light. A deformable stands
+   * in the same room as the wall beside it, so making it brighter would say
+   * "lit differently" rather than "made of something else" - the mistake the
+   * breakable comment above records. Cool and desaturated because the thing it
+   * has to read as is dense and soft, a lead-lined pad rather than the warm
+   * brittle stuff that chips.
+   */
+  deformable: 0x5f6b7a,
+  /** The same material once it has drunk a lot of speed: duller still. */
+  deformableWorn: 0x8ea0b4,
   obstacleEdge: 0x9fd0b6,
   /** Board perimeter. */
   edge: 0x5c8172,

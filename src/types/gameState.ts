@@ -23,6 +23,7 @@ import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { BouncerSpec } from "@/lib/physics/bouncer";
+import type { DeformState } from "@/lib/physics/deformable";
 import type { PortalSpec } from "@/lib/physics/portal";
 import type { CageState } from "@/lib/physics/cage";
 import type { FenceZone } from "@/lib/physics/fenceZones";
@@ -110,6 +111,9 @@ export interface CanvasGameState {
   obstacleRules?: ObstacleRuleMap;
   /** Pop bumpers, keyed by polygon identity the same way obstacleRules is. */
   bouncers?: Map<Polygon, BouncerSpec>;
+  /** Deformables: walls that dent and tax rather than break. Keyed by the same
+   *  polygon object the collision resolver walks, like bouncers and portals. */
+  deformables?: Map<Polygon, DeformState>;
   /** Portal mouths, keyed the same way. Balls pass through; fences do not. */
   portals?: Map<Polygon, PortalSpec>;
   /**

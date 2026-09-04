@@ -6,7 +6,7 @@ import {
 } from '@/lib/launcher';
 import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
   ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
-  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package, AlertTriangle } from 'lucide-react';
+  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package, AlertTriangle, Waves } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 import {
@@ -42,7 +42,7 @@ const PULL_ICON: Record<WellPull, typeof ArrowDownToLine> = {
 export type AddEntityType =
   | 'circle' | 'polygon' | 'rect'
   | 'mover-rect' | 'mover-circle'
-  | 'bouncer' | 'kicker' | 'portal'
+  | 'bouncer' | 'kicker' | 'portal' | 'deformable'
   | 'launcher' | 'cage' | 'box';
 
 interface EntityPanelProps {
@@ -411,6 +411,13 @@ export function EntityPanel({
               <Send className="w-3.5 h-3.5" />
             </button>
             <button
+              onClick={() => onAddEntity('deformable')}
+              className="p-1.5 rounded bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 transition-colors"
+              title="Add a padded block (never breaks; dents on every hit and takes 3% off the ball)"
+            >
+              <Waves className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={() => onAddEntity('portal')}
               className="p-1.5 rounded bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 transition-colors"
               title="Add a linked portal PAIR (a lone portal is inert)"
@@ -559,6 +566,19 @@ export function EntityPanel({
             />
             <span className="text-amber-400">Bouncer</span>
             <span className="text-muted-foreground">(kicks balls away, faster)</span>
+          </label>
+          )}
+
+          {!isMoverEntity(selectedEntity) && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={!!(selectedEntity as { deformable?: boolean }).deformable}
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { deformable: e.target.checked || undefined } as Partial<LevelEntity>)}
+              className="rounded"
+            />
+            <span className="text-slate-300">Deformable</span>
+            <span className="text-muted-foreground">(dents, and takes 3% speed)</span>
           </label>
           )}
 

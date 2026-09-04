@@ -292,6 +292,20 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         bouncer: true,
         ...(type === 'kicker' ? { bounceBearing: 'right' as const } : {}),
       };
+    } else if (type === 'deformable') {
+      // Its own button for the bumper's reason. Sized as a slab rather than a
+      // disc because that is what a speed sink is FOR: something a ball has to
+      // run along, not a pillar it clips once.
+      newEntity = {
+        id: `pad-${Date.now()}`,
+        kind: 'wall',
+        shape: 'rect',
+        x: 350,
+        y: 437,
+        width: 200,
+        height: 28,
+        deformable: true,
+      };
     } else if (type === 'launcher') {
       newEntity = {
         id: `launcher-${Date.now()}`,

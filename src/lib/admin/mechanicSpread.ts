@@ -65,6 +65,7 @@ export const MECHANICS: Mechanic[] = [
   { key: "box", label: "Delivery box", headline: true, detect: l => anyEntity(l, e => e.kind === "box") },
   { key: "bouncer", label: "Bumper", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.bouncer) },
   { key: "portal", label: "Portal", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.portal) },
+  { key: "deformable", label: "Deformable", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.deformable) },
   { key: "latch", label: "Latch", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && e.latchAfter !== undefined) },
   { key: "rotor", label: "Rotor", headline: true, detect: l => anyEntity(l, e => e.kind === "mover" && e.motion === "rotate") },
   { key: "gravityWell", label: "Gravity well", headline: true, detect: l => !!l.gravityWells?.length },

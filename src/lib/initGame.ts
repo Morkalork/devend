@@ -43,6 +43,7 @@ import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/phys
 import { type LauncherState } from "@/lib/physics/launcher";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
+import { inwardMitres, subdivideOutline, type DeformState } from "@/lib/physics/deformable";
 import type { PortalSpec } from "@/lib/physics/portal";
 import type { CageState } from "@/lib/physics/cage";
 import { rotateFenceZones } from "@/lib/mapRotation";
@@ -152,6 +153,7 @@ export interface InitialGameData {
   deliveryBoxes: DeliveryBoxState[];
   launchers: LauncherState[];
   bouncers: Map<Polygon, BouncerSpec>;
+  deformables: Map<Polygon, DeformState>;
   portals: Map<Polygon, PortalSpec>;
   cages: CageState[];
   /** Fence-speed ground, already rotated into this deal's orientation. */
@@ -239,6 +241,7 @@ export function createInitialGameData(
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
   const bouncers = new Map<Polygon, BouncerSpec>();
+  const deformables = new Map<Polygon, DeformState>();
   const portals = new Map<Polygon, PortalSpec>();
   const cages: CageState[] = [];
   const deliveryBoxes: DeliveryBoxState[] = [];
@@ -601,6 +604,17 @@ export function createInitialGameData(
             mirrorPolygon: obstaclePolygon,
           });
         }
+        // A deformable's outline is resampled BEFORE anything is built from
+        // it, so the polygon, the edge walls and the space grid are all made
+        // from one shape. A rectangle has four corners and a dent moves
+        // vertices, so an unresampled 300-unit bar would take a hit in its
+        // middle and show nothing. See DENT_RESOLUTION.
+        if ((entity as WallEntity).deformable) {
+          obstaclePolygon = {
+            ...obstaclePolygon,
+            vertices: subdivideOutline(obstaclePolygon.vertices),
+          };
+        }
         obstaclePolygons.push(obstaclePolygon);
         // One-way membranes and ball-type gates. Recorded only when they say
         // something, so an ordinary wall costs nothing and the map stays empty
@@ -658,6 +672,29 @@ export function createInitialGameData(
           };
           bouncers.set(obstaclePolygon, spec);
           for (const w of obstacleWalls) w.bouncer = spec;
+        }
+
+        // DEFORMABLE: a wall that dents and taxes rather than breaking. The
+        // state is put on the polygon AND on every edge wall, exactly as the
+        // bouncer's is and for the same reason - the resolver walks both, and a
+        // dent recorded in only one of them is a wall that deforms at its face
+        // and stays pristine at its edges.
+        if ((entity as WallEntity).deformable) {
+          const state: DeformState = {
+            id: entity.id,
+            original: obstaclePolygon.vertices.map(v => ({ x: v.x, y: v.y })),
+            polygon: obstaclePolygon,
+            walls: obstacleWalls,
+            // Degenerate outline -> every direction is (0,0), so the wall taxes
+            // balls and never visibly moves. Better than throwing at load, and
+            // it cannot happen to a shape the editor can draw.
+            inward: inwardMitres(obstaclePolygon.vertices)
+              ?? obstaclePolygon.vertices.map(() => ({ x: 0, y: 0 })),
+            dents: [],
+            totalDepth: 0,
+          };
+          deformables.set(obstaclePolygon, state);
+          for (const w of obstacleWalls) w.deformable = state;
         }
         allWalls.push(...obstacleWalls);
 
@@ -1316,6 +1353,7 @@ export function createInitialGameData(
     deliveryBoxes,
     launchers,
     bouncers,
+    deformables,
     portals,
     cages,
     // Rotated here rather than at the consumer: a zone is a rect on the board
