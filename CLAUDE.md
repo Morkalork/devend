@@ -71,6 +71,21 @@ packaging.
   comma, colon, parentheses, or a spaced hyphen (`-`) instead. (Code comments
   are not UI text and are exempt.)
 
+## TL;DR first
+
+Open every reply that finishes a task with a **TL;DR**: three to five bullets,
+before the detailed write-up, saying what changed and what I still need to know.
+The long explanation stays, it just stops being the only way in.
+
+What earns a bullet: what the work actually does, anything I decided on my own
+that could have gone the other way, anything I got wrong and reversed, and
+anything left for the user to do. What does not: how I got there, files touched,
+or a restatement of the ask.
+
+The deploy and CI line belongs here too, at the top: the SHA, the deploy state
+and the CI conclusion, so "is it testable" is answered in the first line rather
+than the last paragraph.
+
 ## Closing recap
 
 End every reply with a short recap, after the work, as a markdown blockquote so
