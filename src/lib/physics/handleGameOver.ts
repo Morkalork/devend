@@ -31,12 +31,18 @@ export function handleGameOverFn(
   activeModifiers: GameModifiers,
   callbacks: GameCallbacks,
   /**
-   * Why the map was lost, when the caller knows. Optional because the ordinary
-   * death (a ball through your fence) is a hazard the player watched happen and
-   * needs no sentence; every WIN-CONDITION failure passes one, and the result
-   * screen says so rather than showing a bare GAME OVER.
+   * Why the run ended. REQUIRED, so the compiler refuses a loss the player
+   * cannot have explained to them.
+   *
+   * It used to be optional, on the argument that the ordinary death - a ball
+   * through your fence - is a hazard the player watched happen and needs no
+   * sentence. That holds while the map continues. It does not hold here: this
+   * function ends the RUN, and four call sites reached it with nothing to say,
+   * so a ball on the cut line, a mover cutting your fence on the last life, a
+   * ball cutting it on the last life, and a lost push all finished twenty
+   * minutes of play on a bare GAME OVER.
    */
-  failure?: MapFailure,
+  failure: MapFailure,
 ): void {
   game.gameOver = true;
   playDeathSound();

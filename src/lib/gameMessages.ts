@@ -29,7 +29,19 @@ export type GameMessageId =
   /** An existing fence borders the start point. */
   | "wallInTheWay"
   /** A barrel is still ejecting; no fence until it has finished. */
-  | "launcherLoaded";
+  | "launcherLoaded"
+  /**
+   * A ball cut through a fence you were still drawing, and it cost a life.
+   *
+   * Not a refusal like the five above, which is why the doc at the top of this
+   * file says "the last thing you tried" rather than "the last thing you did":
+   * the bar is the one place under the board that can say a short sentence
+   * without covering it, and a life going with nothing but a red flash to
+   * explain it was the largest silent moment left in the game.
+   */
+  | "lifeLostBall"
+  /** A moving block ran through the fence you were drawing, and it cost a life. */
+  | "lifeLostMover";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -75,14 +87,24 @@ export function messageExpired(
 /**
  * Every id, for the tests that check each one has words in every language.
  *
- * A literal list rather than something derived: deriving it from the type is
- * not possible at runtime, and deriving it from the locale file would make the
- * test that checks the locale file circular.
+ * Built from an exhaustive Record, so adding an id to the union without adding
+ * it here is a COMPILE error. The previous note here said deriving the list
+ * from the type was not possible at runtime; the keys of a
+ * `Record<GameMessageId, true>` are exactly that, and the type checker refuses
+ * a missing one. Deriving it from the locale file instead would make the test
+ * that checks the locale file circular, which is why that is still not done.
  */
-export const GAME_MESSAGE_IDS: GameMessageId[] = [
-  "breakableAnchor", "fenceLimit", "capturedStart", "wallInTheWay",
-  "launcherLoaded",
-];
+const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
+  breakableAnchor: true,
+  fenceLimit: true,
+  capturedStart: true,
+  wallInTheWay: true,
+  launcherLoaded: true,
+  lifeLostBall: true,
+  lifeLostMover: true,
+};
+
+export const GAME_MESSAGE_IDS = Object.keys(ALL_MESSAGE_IDS) as GameMessageId[];
 
 /**
  * Deliberately NOT here: running out of the fence budget.

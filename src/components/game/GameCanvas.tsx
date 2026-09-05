@@ -1351,6 +1351,7 @@ export function GameCanvas({
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
+      onGameMessage: (id: GameMessageId) => onMessageRef.current?.(id),
       onTutorialCutSuccess,
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.

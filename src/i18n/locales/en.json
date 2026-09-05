@@ -1157,7 +1157,9 @@
     "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
     "capturedStart": "Start your fence in open space. That ground has already been captured.",
     "wallInTheWay": "A fence is already anchored there. Start from open space a little further along.",
-    "launcherLoaded": "The launcher is still firing. You cannot fence until every ball has left it."
+    "launcherLoaded": "The launcher is still firing. You cannot fence until every ball has left it.",
+    "lifeLostBall": "A ball cut through your fence. Life lost.",
+    "lifeLostMover": "A moving block cut through your fence. Life lost."
   },
   "mapFailure": {
     "title": "Map failed",
@@ -1180,7 +1182,9 @@
     "needSpeed": "Finish within {{target}}s (you took {{current}}s)",
     "needSmashed": "Smash {{target}} breakables (you had {{current}})",
     "needDelivered": "Deliver {{target}} balls (you had {{current}})",
-    "lockedOut": "Every ball is locked, with the job unfinished"
+    "lockedOut": "Every ball is locked, with the job unfinished",
+    "ballHitFence": "A ball cut through your fence",
+    "moverHitFence": "A moving block cut through your fence"
   },
   "winGate": {
     "superiorLocks": "Superior",

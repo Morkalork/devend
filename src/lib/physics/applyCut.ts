@@ -195,7 +195,12 @@ export function applyCutFn(
     if (ball.state === 'won') continue;
     if (ball.state === 'dormant') continue; // un-booted (#73): fences pass through it
     if (isBallOnCutLine(ball, wall)) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      // The same death as a ball cutting a growing fence, caught at completion
+      // instead of during growth. NB this one ends the run outright rather than
+      // docking a life, unlike updateFenceWall's version - a difference that
+      // predates the reason being carried and is left alone here.
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+        mapFailure("ballHitFence", resolveWinSpec(level), readWinSnapshot(game, level)));
       return;
     }
   }
@@ -323,26 +328,9 @@ export function applyCutFn(
   if (anyBallWon) {
     const justWon = game.balls.filter(b => b.state === "won" && !wonBefore.has(b.id));
     if (lockedInsideUnarmedLauncher(game, justWon)) {
-      const failure = mapFailure(
-        "launcherPrematureLock", resolveWinSpec(level), readWinSnapshot(game, level));
-      const newLives = callbacks.getLives() - 1;
-      callbacks.setLivesRef(newLives);
-      callbacks.setDisplayLives(newLives);
-      callbacks.onLivesChange(newLives);
-      if (newLives <= 0) {
-        handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks, failure);
-        return;
-      }
-      game.gameOver = true;
-      if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-      callbacks.setScreenFlash("red");
-      callbacks.setIsShaking(true);
-      callbacks.shakeTimeoutRef.current = setTimeout(() => {
-        callbacks.shakeTimeoutRef.current = null;
-        callbacks.setScreenFlash("none");
-        callbacks.setIsShaking(false);
-        callbacks.onMapTimedOut?.(failure);
-      }, 700);
+      failMapCostingALife(
+        game, level, levelNumber, activeModifiers, callbacks,
+        mapFailure("launcherPrematureLock", resolveWinSpec(level), readWinSnapshot(game, level)));
       return;
     }
   }

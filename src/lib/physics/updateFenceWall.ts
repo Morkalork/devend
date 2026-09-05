@@ -4,6 +4,9 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { handleGameOverFn, handlePushFailedFn } from "./handleGameOver";
+import { readWinSnapshot } from "./applyCut";
+import { resolveWinSpec } from "@/lib/winSpec";
+import { mapFailure, type MapFailKind } from "@/lib/mapFailure";
 import { circleCapsuleCollision, lineSegmentIntersection, pointInPolygon, vec2Distance, vec2Normalize, vec2Sub, vec2Add, vec2Scale } from "@/lib/polygon";
 import { getWallSpeedBase } from "@/lib/gameUtils";
 import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityEffects";
@@ -30,6 +33,17 @@ export const FREEZE_MAX_MS = 1500;
  * whole freeze came to be missing from the per-map reset: a clear that has to
  * be remembered in N places is a clear that will be forgotten in one.
  */
+/**
+ * Why the run just ended, built from the same spec and snapshot the win check
+ * reads. Worked out at the moment of death, because the board is about to be
+ * torn down and this is the only record of how close the player had got.
+ */
+function fenceDeath(
+  kind: MapFailKind, game: CanvasGameState, level: LevelConfig,
+) {
+  return mapFailure(kind, resolveWinSpec(level), readWinSnapshot(game, level));
+}
+
 export function clearFreeze(game: CanvasGameState): void {
   game.frozenBallId = null;
   game.frozenBallPosition = null;
@@ -198,9 +212,13 @@ export function updateFenceWallFn(
     callbacks.onLivesChange(newLives);
     game.activeWalls = [];
     if (newLives <= 0) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+        fenceDeath("moverHitFence", game, level));
       return;
     }
+    // A life remains and the map goes on, so this says what happened in the one
+    // slot under the board rather than stopping play to explain it.
+    callbacks.onGameMessage?.("lifeLostMover");
     game.isRecovering = true;
     game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
     callbacks.setIsRecovering(true);
@@ -308,10 +326,12 @@ export function updateFenceWallFn(
 
     if (newLives <= 0) {
       clearFreeze(game);
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+        fenceDeath("ballHitFence", game, level));
       return;
     }
 
+    callbacks.onGameMessage?.("lifeLostBall");
     game.isRecovering = true;
     game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
     callbacks.setIsRecovering(true);

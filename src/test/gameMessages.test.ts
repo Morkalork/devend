@@ -119,9 +119,23 @@ describe("every message has words", () => {
 describe("the refusals actually raise one", () => {
   const INPUT = readFileSync(
     resolve(__dirname, "../hooks/useGameInput.ts"), "utf8");
+  /**
+   * Every module allowed to put a sentence in the bar.
+   *
+   * It used to be useGameInput alone, because every message was an input
+   * refusal. The physics layer raises two now - a ball or a mover cutting a
+   * fence you were drawing, which costs a life and lets play continue - so the
+   * check is "raised from one of the raising sites" rather than "raised from
+   * that one file". Still not a whole-tree grep: a message id that appears
+   * only in a test or a locale file is exactly the silence this guards.
+   */
+  const RAISERS = [
+    "../hooks/useGameInput.ts",
+    "../lib/physics/updateFenceWall.ts",
+  ].map(f => readFileSync(resolve(__dirname, f), "utf8")).join("\n");
 
   it.each(GAME_MESSAGE_IDS)("raises %s somewhere", (id: GameMessageId) => {
-    expect(INPUT).toContain(`onMessageRef?.current?.("${id}")`);
+    expect(RAISERS).toContain(`("${id}")`);
   });
 
   it("says something at the breakable dud, not just a buzz", () => {

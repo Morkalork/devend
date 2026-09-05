@@ -178,12 +178,32 @@ describe("the rules are wired in, not just defined", () => {
     expect(input.slice(at, at + 120)).toContain("return");
   });
 
+  /**
+   * Two statements rather than one window over the source.
+   *
+   * This used to look for `getLives() - 1` within 400 characters of the guard,
+   * which tied it to the life-docking being INLINE. It was inline in three
+   * places - the deadline, the lock-out and here - and those three copies of an
+   * ordering-sensitive block are now one shared helper, so the old assertion
+   * failed on a change that made the code better. Asserting "this path costs a
+   * life" and "costing a life docks one" separately leaves each free to move.
+   */
   it("fails the map when a cut seals a ball inside an un-armed barrel", () => {
     const applyCut = read("src/lib/physics/applyCut.ts");
     // The live guard, not merely a mention of it: `if (lockedInside...(...))`.
     expect(applyCut, "the premature-lock fail is gone or disabled")
       .toMatch(/if \(lockedInsideUnarmedLauncher\(game, justWon\)\) \{/);
     expect(applyCut, "the premature lock does not cost a life")
-      .toMatch(/lockedInsideUnarmedLauncher[\s\S]{0,400}getLives\(\) - 1/);
+      .toMatch(/lockedInsideUnarmedLauncher[\s\S]{0,400}failMapCostingALife\(/);
+  });
+
+  it("docks exactly one life on the shared fail path", () => {
+    const applyCut = read("src/lib/physics/applyCut.ts");
+    const at = applyCut.indexOf("function failMapCostingALife(");
+    expect(at, "the shared fail path is gone").toBeGreaterThan(-1);
+    const body = applyCut.slice(at, at + 900);
+    expect(body, "a map failure stopped costing a life").toContain("getLives() - 1");
+    expect(body, "the reason no longer reaches the restart").toContain("onMapTimedOut");
+    expect(body, "the last life no longer ends the run").toContain("handleGameOverFn");
   });
 });

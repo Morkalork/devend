@@ -1690,7 +1690,9 @@
     "fenceLimit": "Du bygger redan sa manga stangsel samtidigt som du kan. Vanta tills ett blir klart, eller uppgradera for fler.",
     "capturedStart": "Borja stangslet i oppen yta. Den marken ar redan intagen.",
     "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort.",
-    "launcherLoaded": "Avfyraren skjuter fortfarande. Du kan inte dra stangsel forran alla bollar har lamnat den."
+    "launcherLoaded": "Avfyraren skjuter fortfarande. Du kan inte dra stangsel forran alla bollar har lamnat den.",
+    "lifeLostBall": "En boll gick genom ditt staket. Ett liv forlorat.",
+    "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",
@@ -1713,7 +1715,9 @@
     "needSpeed": "Klara inom {{target}}s (du tog {{current}}s)",
     "needSmashed": "Krossa {{target}} krossbara (du hade {{current}})",
     "needDelivered": "Leverera {{target}} bollar (du hade {{current}})",
-    "lockedOut": "Alla bollar inlasta, med jobbet ogjort"
+    "lockedOut": "Alla bollar inlasta, med jobbet ogjort",
+    "ballHitFence": "En boll gick rakt genom ditt staket",
+    "moverHitFence": "Ett rorligt block gick rakt genom ditt staket"
   },
   "winGate": {
     "superiorLocks": "Perfekt",

@@ -29,8 +29,9 @@ import { evaluateWinConditions } from "@/lib/physics/applyCut";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { mapFailure, failHeadline, failLines, type MapFailKind } from "@/lib/mapFailure";
-import type { WinSpec, WinSnapshot } from "@/types/winSpec";
+import { mapFailure, failHeadline, failLines, MAP_FAIL_KINDS, type MapFailKind } from "@/lib/mapFailure";
+import { WIN_CONDITION_KINDS } from "@/types/winSpec";
+import type { WinSpec, WinSnapshot, WinCondition, WinConditionKind } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
@@ -178,11 +179,10 @@ describe("the reason itself", () => {
  */
 describe("every reason has words in every language", () => {
   const LOCALES = ["en", "es", "sv"] as const;
-  const KINDS: MapFailKind[] = ["timeUp", "outOfFences", "areaUnreachable"];
-  const NEED_KEYS = [
-    "needSpace", "needLocks", "needSuperior", "needArea", "needLockType",
-    "needBoss", "needAllLocked", "needUnderPar", "needSpeed",
-  ];
+  // Derived, not hand-listed. The hand-written version had drifted three kinds
+  // behind the union, so launcherPrematureLock could have shipped with no
+  // words in any language and nothing would have said so.
+  const KINDS: MapFailKind[] = MAP_FAIL_KINDS;
   const CHROME = ["title", "stillNeeded", "tapToRetry", "livesLeft_one", "livesLeft_other"];
 
   const block = (lang: string) => JSON.parse(
@@ -192,8 +192,50 @@ describe("every reason has words in every language", () => {
   it.each(LOCALES)("%s carries every kind, clause and chrome key", (lang) => {
     const b = block(lang);
     expect(b, `${lang} has no mapFailure block`).toBeTruthy();
-    for (const key of [...KINDS, ...NEED_KEYS, ...CHROME]) {
+    for (const key of [...KINDS, ...CHROME]) {
       expect(b[key], `${lang}.mapFailure.${key}`).toBeTruthy();
+    }
+  });
+
+  /**
+   * Driven through failLines rather than against a parallel list of keys.
+   *
+   * The old test checked a hand-written NEED_KEYS array, which is a second
+   * statement of what failLines already knows and drifts the same way the kind
+   * list did: `delivered` was a legal clause with no case in that switch, so it
+   * produced `undefined` and the array never noticed. Asking the real function
+   * for a line per clause kind cannot go stale.
+   */
+  it.each(LOCALES)("%s explains every kind of unmet requirement", (lang) => {
+    const b = block(lang);
+    const t = ((key: string) => {
+      const short = key.replace(/^mapFailure\./, "");
+      return b[short] ?? `MISSING:${short}`;
+    }) as unknown as Parameters<typeof failLines>[0];
+
+    const sample: Record<WinConditionKind, WinCondition> = {
+      space: { kind: "space", threshold: 20 },
+      locks: { kind: "locks", count: 2 },
+      superiorLocks: { kind: "superiorLocks", count: 1 },
+      area: { kind: "area", count: 1 },
+      lockType: { kind: "lockType", ballType: "black", count: 1 },
+      boss: { kind: "boss" },
+      allLocked: { kind: "allLocked" },
+      smashed: { kind: "smashed", count: 1 },
+      delivered: { kind: "delivered", count: 1 },
+      underPar: { kind: "underPar", delta: 0 },
+      speedClear: { kind: "speedClear", seconds: 30 },
+    };
+
+    for (const kind of WIN_CONDITION_KINDS) {
+      const lines = failLines(t, {
+        kind: "timeUp",
+        unmet: [{
+          condition: sample[kind], current: 0, target: 1, met: false, mode: "accumulate",
+        }],
+      });
+      expect(lines[0], `${lang}: no line for an unmet ${kind}`).toBeTruthy();
+      expect(lines[0], `${lang}: ${kind} has no words`).not.toMatch(/^MISSING:/);
     }
   });
 

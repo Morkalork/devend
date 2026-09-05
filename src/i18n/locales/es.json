@@ -1690,7 +1690,9 @@
     "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
     "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
     "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla.",
-    "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas."
+    "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas.",
+    "lifeLostBall": "Una bola atraveso tu valla. Vida perdida.",
+    "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida."
   },
   "mapFailure": {
     "title": "Mapa fallido",
@@ -1713,7 +1715,9 @@
     "needSpeed": "Terminar en {{target}}s (tardaste {{current}}s)",
     "needSmashed": "Rompe {{target}} rompibles (tenias {{current}})",
     "needDelivered": "Entrega {{target}} bolas (tenias {{current}})",
-    "lockedOut": "Todas las bolas encerradas, con el trabajo sin terminar"
+    "lockedOut": "Todas las bolas encerradas, con el trabajo sin terminar",
+    "ballHitFence": "Una bola atraveso tu valla",
+    "moverHitFence": "Un bloque movil atraveso tu valla"
   },
   "winGate": {
     "superiorLocks": "Superior",

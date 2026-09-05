@@ -34,6 +34,18 @@ export interface GameCallbacks {
   /** Out of time with lives to spare: the reason travels with it, because the
    *  map is about to restart and nothing else on screen will say what happened. */
   onMapTimedOut?: (failure: import("@/lib/mapFailure").MapFailure) => void;
+  /**
+   * Say something in the one feedback slot under the board.
+   *
+   * The physics layer needs this for a life lost mid-map: a ball or a mover
+   * cutting a growing fence docks a life and lets play continue, and until now
+   * said so with a red flash and nothing else. It is the commonest life loss in
+   * the game and it was the only one with no words at all.
+   *
+   * Never a modal: the map is still being played, and a dialog over a live
+   * board is worse than a sentence under it.
+   */
+  onGameMessage?: (id: import("@/lib/gameMessages").GameMessageId) => void;
   onTutorialCutSuccess?: () => void;
   /** Fired once per ball the instant it locks, with its ball-type id (#tutorial
    *  encountered-ball-types tracking). Returns true iff this was the player's

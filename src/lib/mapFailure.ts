@@ -37,6 +37,23 @@ export type MapFailKind =
   /** A ball sealed inside a launcher barrel before it had finished ejecting. */
   | "launcherPrematureLock"
   /**
+   * A ball hit a fence while it was still growing.
+   *
+   * The commonest death in the game, and the one the old code argued needed no
+   * sentence because the player watched it happen. That holds while the map
+   * continues; it does not hold on the last life, where the run ends and the
+   * results screen showed a bare GAME OVER.
+   */
+  | "ballHitFence"
+  /**
+   * A mover ran through a fence while it was still growing.
+   *
+   * Kept apart from ballHitFence because the lesson is different: a ball is
+   * dodgeable and a patrolling mover is a timing window, and "your fence was
+   * cut by a ball" would be a lie about which thing on the board killed you.
+   */
+  | "moverHitFence"
+  /**
    * Every ball locked with the map's requirements still unmet.
    *
    * Sealing the last ball used to be a free win on 27 of the 35 maps: the
@@ -53,6 +70,26 @@ export type MapFailKind =
    * whose zone became impossible.
    */
   | "lockedOut";
+
+/**
+ * Every kind, as a runtime list.
+ *
+ * Built from an exhaustive Record so that adding a kind to the union without
+ * adding it here is a COMPILE error, not a silent gap. The alternative - a
+ * hand-written array - is what let `launcherPrematureLock` ship without ever
+ * being checked for having words in the three locales.
+ */
+const ALL_FAIL_KINDS: Record<MapFailKind, true> = {
+  timeUp: true,
+  outOfFences: true,
+  areaUnreachable: true,
+  launcherPrematureLock: true,
+  ballHitFence: true,
+  moverHitFence: true,
+  lockedOut: true,
+};
+
+export const MAP_FAIL_KINDS = Object.keys(ALL_FAIL_KINDS) as MapFailKind[];
 
 export interface MapFailure {
   kind: MapFailKind;
