@@ -31,8 +31,8 @@ const ALL_LOCKED: WinCondition = { kind: "allLocked" };
  * The derivation is the compatibility contract, so it is written to mirror the
  * old `if` order rather than to be tidy:
  *
- *   gate area present -> the area is the SOLE win (no space clause at all)
  *   boss present      -> the boss is the SOLE win, space never applies
+ *   gate area present -> the area is the SOLE win (no space clause at all)
  *   otherwise         -> clear to the threshold, and lock threadLockRequired,
  *                        with all-balls-locked as a standing alternative
  */
@@ -48,16 +48,27 @@ export function resolveWinSpec(level: LevelConfig): WinSpec {
     };
   }
 
+  // Boss maps are about the boss, not about grinding the board.
+  //
+  // BEFORE the gate check, and that ordering is the whole point. Every boss map
+  // fences its boss into a var zone, so the gate branch below matched first and
+  // every boss on the ladder won through `area count 1` - which counts ANY
+  // target ball locked inside the zone, not the boss being beaten.
+  //
+  // On a single boss those are the same moment. On the CHAINED PAIRS (levels 20
+  // and 35) they are not: `bossDefeated` waits for both to be shipped, and
+  // checkBallWonState says so in as many words ("a single trap can't end the
+  // map or pop its partner") - but the win check was never asking it. Trapping
+  // one of the two ended the map with the other still loose.
+  if (level.boss) {
+    return { require: [{ kind: "boss" }], alsoWinIf: [], authored: false };
+  }
+
   // A gate area is the sole win: locking a target inside ships the map whatever
   // space is left, and no other clause applies. Count 1 reproduces the old
   // boolean `coloredAreaSatisfied`.
   if (gateAreas(level.coloredAreas ?? []).length > 0) {
     return { require: [{ kind: "area", count: 1 }], alsoWinIf: [], authored: false };
-  }
-
-  // Boss maps are about the boss, not about grinding the board.
-  if (level.boss) {
-    return { require: [{ kind: "boss" }], alsoWinIf: [], authored: false };
   }
 
   const require: WinCondition[] = [{ kind: "space", threshold: level.sizeThreshold }];

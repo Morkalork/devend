@@ -801,7 +801,8 @@
     "terminals": "Tand {{count}} terminaler genom att dra ett staket genom dem.",
     "harvested": "Skorda {{count}} strackor av dataflodet.",
     "shortTerminals": "tand {{count}} terminaler",
-    "shortHarvested": "skorda {{count}} strackor"
+    "shortHarvested": "skorda {{count}} strackor",
+    "bossPair": "Båda bossarna måste skeppas. Att fånga en lämnar den andra lös."
   },
   "upgradeShop": {
     "storeLabel": "Butik",

@@ -30,7 +30,11 @@ describe("winConditionsBody", () => {
     expect(body).toContain('winConditions.lock({"count":3}');
   });
 
-  it("colored-area map: area win + fail, no clear line; boss target is the boss", () => {
+  it("boss map with an area: still says WHERE, and that it is the boss", () => {
+    // The instruction used to come from the derived `area` clause. Boss maps
+    // derive `boss` now, because that is the only clause that waits for both
+    // halves of a chained pair - so the area lines travel with it. Losing them
+    // would have left the map saying "defeat the boss" with no word on how.
     const body = winConditionsBody(t, base({
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
       boss: {} as LevelConfig["boss"],
@@ -40,7 +44,18 @@ describe("winConditionsBody", () => {
     expect(body).toContain('"mult":1.5');
     expect(body).toContain("winConditions.areaFail");
     expect(body).toContain("winConditions.targetBoss"); // t() of the target key
+    expect(body).toContain("winConditions.boss");
     expect(body).not.toContain("winConditions.clear");
+  });
+
+  it("says a chained pair is one win", () => {
+    // Neither trap ends the map on its own, and nothing on the board says so.
+    const pair = winConditionsBody(t, base({
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
+      boss: { bossBall: { count: 2 } } as unknown as LevelConfig["boss"],
+    }), 20);
+    expect(pair).toContain("winConditions.bossPair");
+    expect(pair, "a pair is described as a single boss").not.toContain("winConditions.boss ");
   });
 
   it("boss map without an area: defeat the boss", () => {

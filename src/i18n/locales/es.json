@@ -801,7 +801,8 @@
     "terminals": "Enciende {{count}} terminales pasando una valla por ellos.",
     "harvested": "Cosecha {{count}} tramos del flujo de datos.",
     "shortTerminals": "enciende {{count}} terminales",
-    "shortHarvested": "cosecha {{count}} tramos"
+    "shortHarvested": "cosecha {{count}} tramos",
+    "bossPair": "Hay que enviar a los dos jefes. Atrapar a uno deja al otro suelto."
   },
   "upgradeShop": {
     "storeLabel": "Tienda",

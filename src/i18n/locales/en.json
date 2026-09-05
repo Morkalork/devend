@@ -816,7 +816,8 @@
     "terminals": "Light {{count}} terminals by running a fence through them.",
     "harvested": "Harvest {{count}} stretches of the data stream.",
     "shortTerminals": "light {{count}} terminals",
-    "shortHarvested": "harvest {{count}} stretches"
+    "shortHarvested": "harvest {{count}} stretches",
+    "bossPair": "Both bosses have to be shipped. Trapping one leaves the other loose."
   },
   "upgradeShop": {
     "storeLabel": "Store",

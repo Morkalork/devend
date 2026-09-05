@@ -76,10 +76,30 @@ function winConditionParts(
         }));
         noteworthy = true;
         break;
-      case "boss":
-        parts.push(t("winConditions.boss"));
+      case "boss": {
+        // Say WHERE, when there is a where. Every boss on the ladder is beaten
+        // by fencing it into a var zone, and the map used to derive an `area`
+        // clause that spelled that out. The clause is `boss` now - it is the
+        // only one that waits for BOTH halves of a chained pair - but the
+        // player still has to be told the same thing, so the area lines come
+        // along with it rather than being lost with the clause that carried
+        // them.
+        const zone = areas[0]?.kind;
+        if (zone) {
+          const mult = AREA_KINDS[zone]?.multiplier ?? 1;
+          parts.push(t("winConditions.areaWin", { target, area: zone, mult }));
+          parts.push(t("winConditions.areaFail", { target }));
+        }
+        // Two chained bosses are ONE win and neither trap ends the map alone,
+        // which is not something the board tells you.
+        if ((level.boss?.bossBall?.count ?? 1) > 1) {
+          parts.push(t("winConditions.bossPair"));
+        } else {
+          parts.push(t("winConditions.boss"));
+        }
         noteworthy = true;
         break;
+      }
       case "allLocked":
         parts.push(t("winConditions.allLocked"));
         noteworthy = true;
