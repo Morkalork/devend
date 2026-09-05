@@ -688,6 +688,48 @@ The bot is a *lead generator*, not a verdict. It cannot tell you a map is fun. I
 can tell you a map is impossible, trivial, or shaped differently from how it
 reads, and it does that across every deal in seconds.
 
+### How bad the bot is, in numbers
+
+**The bot spends two to four times par.** Measured over six seeds on maps with
+no WIP limit: L14 (par 7) took 17-34 cuts, L24 (par 8) took 17-38, L19 (par 9)
+took 25-32, L17 unlimited (par 7) took 13-31. There is no map on the ladder
+where it plays anywhere near the designer's estimate.
+
+That ratio is the single most useful thing to know before reading a sweep, and
+it is why `cuts` far over `expectedCuts` in the table above means "look at the
+map", not "the map is broken":
+
+- **A WIP limit the bot cannot meet says nothing.** Every budgeted map (17, 18,
+  32, all at par+3) loses 6/6 to `outOfFences`, and all three are won on every
+  seed with the limit lifted. A budget set for a human is invisible to a player
+  spending 3x par, so the bot cannot be used to argue a budget up or down. Only
+  a human playtest settles that.
+- **The bot has no strategy for content.** It does not aim balls at breakables,
+  route them into circuit terminals, deliver into boxes, or arm a charge. Maps
+  asking for those (5, 7, 9, 25, 31, 32) lose to `lockedOut` or the clock
+  because it seals everything instead. That is the map's rule working, not a
+  map that cannot be finished.
+- **`lockedOut` on a content map is the expected result**, not a lead.
+
+What IS a lead: an unexplained 0/N on a map with nothing but space and locks, a
+`violations` entry, or a plateau on a map the bot should walk through.
+
+### The bot banks a Push Your Luck offer, and used to not
+
+A push prompt sets neither `levelComplete` nor `gameOver`. The bot loop breaks on
+those two flags, so before `runBot` learned to bank, a prompted map left it
+cutting into a board it had already cleared until the frame cap or the budget ran
+out - and the run was reported as a **stall**, or an **outOfFences**.
+
+This is worth knowing because of the direction of the error: it converted WINS
+into failures, and it did it on exactly the maps that were going well. Level 14
+reads 0/6 under the old harness and 6/6 under the fixed one, with no change to
+the map. Two separate readings of "this map looks broken" in one session turned
+out to be this and nothing else.
+
+Any sweep result recorded before that fix is suspect and should be re-measured
+rather than reasoned about.
+
 ### Test inventory, for the rebuild
 
 55 test files read `map.yml`. They split in two, and the split matters when a map

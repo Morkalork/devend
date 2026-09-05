@@ -109,6 +109,26 @@ export function runBot(
     stepBot(ctx, PHYSICS_STEP);
     record(checkInvariants(ctx.game));
 
+    // BANK a Push Your Luck offer the moment it appears.
+    //
+    // Without this the bot is not a cautious player, it is a player who walked
+    // away from the machine: the prompt sets neither levelComplete nor
+    // gameOver, so the loop keeps cutting into a map that has already been won
+    // and every such run is reported as a stall or an outOfFences. That is not
+    // a small distortion - it silently converted WINS into failures across
+    // whole sweeps, and I twice read the result as a broken map before finding
+    // the prompt underneath it. Level 14 goes 0/6 to 6/6 on this line alone.
+    //
+    // Banking rather than pushing on purpose: it is the choice with no further
+    // decisions in it, so a sweep measures the MAP rather than a betting policy
+    // nobody wrote. A bot that pushes is a separate experiment.
+    if (ctx.game.pushMode === "prompt" || ctx.game.pushPromptPending) {
+      ctx.game.pushPromptPending = false;
+      ctx.game.pushMode = "none";
+      ctx.game.levelComplete = true;
+      break;
+    }
+
     // Half a percent, so grid rounding does not read as progress forever.
     if (ctx.events.remainingPercent < bestRemaining - 0.5) {
       bestRemaining = ctx.events.remainingPercent;
