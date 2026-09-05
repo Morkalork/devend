@@ -105,6 +105,10 @@ export function evaluateWinCondition(
       return accumulate(snap.delivered, condition.count);
     case "smashed":
       return accumulate(snap.smashed, condition.count);
+    case "terminals":
+      return accumulate(snap.terminals, condition.count);
+    case "harvested":
+      return accumulate(snap.harvested, condition.count);
     case "underPar":
       return limit(snap.cuts, snap.par + condition.delta);
     case "speedClear":
@@ -177,8 +181,9 @@ export function winningCondition(spec: WinSpec, snap: WinSnapshot): WinCondition
     // plain lock count does.
     // A smash ranks with the "you did a specific thing" group: on a map whose
     // win is "clear the board AND break the slab", the slab is the story.
-    boss: 0, area: 1, delivered: 2, smashed: 3, lockType: 4, superiorLocks: 5,
-    allLocked: 6, locks: 7, speedClear: 8, underPar: 9, space: 10,
+    boss: 0, area: 1, delivered: 2, smashed: 3, terminals: 4, harvested: 5,
+    lockType: 6, superiorLocks: 7, allLocked: 8, locks: 9, speedClear: 10,
+    underPar: 11, space: 12,
   };
   return [...spec.require].sort((a, b) => rank[a.kind] - rank[b.kind])[0];
 }
@@ -262,6 +267,21 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
           `Asks for ${c.count} smashed, but the map has ${breakables} breakable ${breakables === 1 ? "obstacle" : "obstacles"}.`);
       }
     }
+    if (c.kind === "terminals") {
+      const count = level.circuit?.terminals?.length ?? 0;
+      if (c.count > count) {
+        problems.push(
+          `Asks for ${c.count} terminals lit, but the map has ${count}.`);
+      }
+    }
+    if (c.kind === "harvested") {
+      // Segments, not points: a path of N points has N-1 seams to run along.
+      const segments = Math.max(0, (level.dataStream?.path?.length ?? 0) - 1);
+      if (c.count > segments) {
+        problems.push(
+          `Asks for ${c.count} seams harvested, but the map's stream has ${segments}.`);
+      }
+    }
     if (c.kind === "underPar" && level.expectedCuts + c.delta < 1) {
       problems.push("The cut budget this allows is less than one cut.");
     }
@@ -314,6 +334,10 @@ export function winReasonFor(spec: WinSpec, snap: WinSnapshot): WinReason {
     // test never reached it.
     case "smashed": return "smashed";
     case "delivered": return "delivered";
+    // Both read as "you operated the map's machine", which is the nearest of
+    // the stored reasons and better than calling a wiring win a clear.
+    case "terminals": return "wired";
+    case "harvested": return "harvested";
     // A win earned by sealing balls reads as an all-locked ending: the map
     // finished because of what you trapped, not because the board ran out.
     case "locks":

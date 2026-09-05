@@ -222,6 +222,8 @@ describe("every reason has words in every language", () => {
       boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
       smashed: { kind: "smashed", count: 1 },
+      terminals: { kind: "terminals", count: 1 },
+      harvested: { kind: "harvested", count: 1 },
       delivered: { kind: "delivered", count: 1 },
       underPar: { kind: "underPar", delta: 0 },
       speedClear: { kind: "speedClear", seconds: 30 },

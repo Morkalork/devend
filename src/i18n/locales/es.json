@@ -543,7 +543,9 @@
       "area": "Objetivo encerrado en la zona",
       "alsoCleared": "objetivo de espacio también cumplido",
       "smashed": "Objetivo roto",
-      "delivered": "Bola entregada"
+      "delivered": "Bola entregada",
+      "wired": "Circuito conectado",
+      "harvested": "Flujo cosechado"
     },
     "axes": {
       "title": "Evaluacion de desempeno",
@@ -795,7 +797,11 @@
     "smashed": "Rompe {{count}} objetos rompibles del mapa.",
     "delivered": "Entrega {{count}} bolas en una caja.",
     "shortSmashed": "rompe {{count}} rompibles",
-    "shortDelivered": "entrega {{count}} bolas"
+    "shortDelivered": "entrega {{count}} bolas",
+    "terminals": "Enciende {{count}} terminales pasando una valla por ellos.",
+    "harvested": "Cosecha {{count}} tramos del flujo de datos.",
+    "shortTerminals": "enciende {{count}} terminales",
+    "shortHarvested": "cosecha {{count}} tramos"
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
@@ -1717,7 +1723,9 @@
     "needDelivered": "Entrega {{target}} bolas (tenias {{current}})",
     "lockedOut": "Todas las bolas encerradas, con el trabajo sin terminar",
     "ballHitFence": "Una bola atraveso tu valla",
-    "moverHitFence": "Un bloque movil atraveso tu valla"
+    "moverHitFence": "Un bloque movil atraveso tu valla",
+    "needTerminals": "Enciende {{target}} terminales (tenias {{current}})",
+    "needHarvested": "Cosecha {{target}} tramos del flujo (tenias {{current}})"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1729,7 +1737,9 @@
     "speedClear": "Contrarreloj",
     "smashed": "Roto",
     "delivered": "Entregado",
-    "atRisk": "Ultima bola: falta {{label}}"
+    "atRisk": "Ultima bola: falta {{label}}",
+    "terminals": "Conectado",
+    "harvested": "Cosechado"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

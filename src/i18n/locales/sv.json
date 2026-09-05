@@ -543,7 +543,9 @@
       "area": "Målbollen inlåst i zonen",
       "alsoCleared": "ytmålet uppnåddes också",
       "smashed": "Malet krossat",
-      "delivered": "Boll levererad"
+      "delivered": "Boll levererad",
+      "wired": "Kretsen kopplad",
+      "harvested": "Flodet skordat"
     },
     "axes": {
       "title": "Utvecklingssamtal",
@@ -795,7 +797,11 @@
     "smashed": "Krossa {{count}} av banans krossbara foremal.",
     "delivered": "Leverera {{count}} bollar i en lada.",
     "shortSmashed": "krossa {{count}} krossbara",
-    "shortDelivered": "leverera {{count}} bollar"
+    "shortDelivered": "leverera {{count}} bollar",
+    "terminals": "Tand {{count}} terminaler genom att dra ett staket genom dem.",
+    "harvested": "Skorda {{count}} strackor av dataflodet.",
+    "shortTerminals": "tand {{count}} terminaler",
+    "shortHarvested": "skorda {{count}} strackor"
   },
   "upgradeShop": {
     "storeLabel": "Butik",
@@ -1717,7 +1723,9 @@
     "needDelivered": "Leverera {{target}} bollar (du hade {{current}})",
     "lockedOut": "Alla bollar inlasta, med jobbet ogjort",
     "ballHitFence": "En boll gick rakt genom ditt staket",
-    "moverHitFence": "Ett rorligt block gick rakt genom ditt staket"
+    "moverHitFence": "Ett rorligt block gick rakt genom ditt staket",
+    "needTerminals": "Tand {{target}} terminaler (du hade {{current}})",
+    "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})"
   },
   "winGate": {
     "superiorLocks": "Perfekt",
@@ -1729,7 +1737,9 @@
     "speedClear": "Mot klockan",
     "smashed": "Krossat",
     "delivered": "Levererat",
-    "atRisk": "Sista bollen: {{label}} aterstar"
+    "atRisk": "Sista bollen: {{label}} aterstar",
+    "terminals": "Kopplat",
+    "harvested": "Skordat"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",

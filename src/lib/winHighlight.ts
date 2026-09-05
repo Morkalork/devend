@@ -66,7 +66,10 @@ function polygonBounds(vertices: ReadonlyArray<{ x: number; y: number }>): Highl
  */
 export function winHighlightRects(
   spec: WinSpec,
-  game: Pick<CanvasGameState, "destructibles" | "coloredAreas" | "deliveryBoxes">,
+  game: Pick<
+    CanvasGameState,
+    "destructibles" | "coloredAreas" | "deliveryBoxes" | "circuit" | "dataStream"
+  >,
 ): HighlightRect[] {
   const out: HighlightRect[] = [];
 
@@ -86,6 +89,21 @@ export function winHighlightRects(
       }
     } else if (c.kind === "delivered") {
       for (const b of game.deliveryBoxes ?? []) out.push({ ...b.inner });
+    } else if (c.kind === "terminals") {
+      // A terminal is a circle, announced by the square that bounds it: the
+      // ring is drawn as a rect either way, and a player needs to see the
+      // catchment a fence has to pass through rather than a mathematical point.
+      for (const t of game.circuit?.terminals ?? []) {
+        if (t.lit) continue;
+        out.push({ x: t.x - t.radius, y: t.y - t.radius, width: t.radius * 2, height: t.radius * 2 });
+      }
+    } else if (c.kind === "harvested") {
+      // The seam's own bounds. One ring around the whole polyline rather than
+      // one per segment: a stream is a lane you run a fence ALONG, and eight
+      // rings down its length would read as eight things to do.
+      const path = game.dataStream?.path ?? [];
+      const rect = polygonBounds(path);
+      if (rect) out.push(rect);
     }
   }
 

@@ -664,6 +664,11 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     // excluded - they are scenery a ball happens to hit.
     smashed: (game.destructibles ?? [])
       .filter(d => d.kind === "breakable" && d.destroyed).length,
+    // Both derived from the runtime lists rather than from counters kept
+    // alongside them, for the reason `smashed` is: a second copy of the same
+    // fact needs every path that can light or harvest to remember to bump it.
+    terminals: (game.circuit?.terminals ?? []).filter(t => t.lit).length,
+    harvested: (game.dataStream?.harvested ?? []).filter(Boolean).length,
     areaTargets: game.coloredAreaTargets ?? 0,
     lockedByType: game.lockedByType ?? {},
     bossDefeated: game.bossDefeated,

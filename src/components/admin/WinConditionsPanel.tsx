@@ -39,6 +39,8 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   allLocked: 'Lock every ball',
   delivered: 'Deliver N balls into a box',
   smashed: 'Smash N breakables',
+  terminals: 'Light N circuit terminals',
+  harvested: 'Harvest N stream seams',
   underPar: 'Finish under par',
   speedClear: 'Finish within N seconds',
 };
@@ -58,6 +60,8 @@ function blankCondition(kind: WinConditionKind, level: LevelConfig): WinConditio
     // switch. Listing it without a case here would have returned undefined.
     case 'delivered': return { kind, count: 1 };
     case 'smashed': return { kind, count: 1 };
+    case 'terminals': return { kind, count: 1 };
+    case 'harvested': return { kind, count: 1 };
     case 'underPar': return { kind, delta: 0 };
     case 'speedClear': return { kind, seconds: 60 };
   }

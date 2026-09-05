@@ -757,7 +757,8 @@ export function GameScreen({
   // explainer.
   const anyExplainerModal =
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
-    || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro;
+    || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro
+    || showCircuitOverlay;
 
 
   // Mechanics the player has just met. These used to stop the game to deliver a
@@ -770,11 +771,6 @@ export function GameScreen({
   useEffect(() => {
     if (showBreakOverlay) { fileManualEntry('break'); setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } }
   }, [showBreakOverlay]);
-  useEffect(() => {
-    if (showCircuitOverlay) { fileManualEntry('circuit'); setShowCircuitIntro(false); try { localStorage.setItem(circuitSeenKey(level.id), '1'); } catch { /* ignore */ } }
-    // level.id is a real dependency now that the key is per map: without it the
-    // effect could file the wrong map's key after a level change.
-  }, [showCircuitOverlay, level.id]);
   useEffect(() => {
     if (showTopBarOverlay) { fileManualEntry('topBar'); onTopBarTutorialSeen?.(); }
   }, [showTopBarOverlay, onTopBarTutorialSeen]);
@@ -1365,6 +1361,17 @@ export function GameScreen({
               fileManualEntry('launcher');
               setShowLauncherIntro(false);
               try { localStorage.setItem(LAUNCHER_SEEN_KEY, '1'); } catch { /* ignore */ }
+            },
+          },
+          {
+            show: showCircuitOverlay,
+            accentColor: '#7fe3d4',
+            title: t('game.circuitTutorialTitle'),
+            body: t('game.circuitTutorialBody'),
+            onDismiss: () => {
+              fileManualEntry('circuit');
+              setShowCircuitIntro(false);
+              try { localStorage.setItem(circuitSeenKey(level.id), '1'); } catch { /* ignore */ }
             },
           },
           {

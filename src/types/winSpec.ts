@@ -80,6 +80,26 @@ export type WinCondition = (
    * happens to hit rather than a thing the player sets out to do.
    */
   | { kind: "smashed"; count: number }
+  /**
+   * Light at least `count` of the map's circuit terminals.
+   *
+   * A terminal is lit by routing a fence THROUGH it, which is a different verb
+   * from sealing or breaking: it spends a cut on something that does not shrink
+   * the board. That trade is the whole point of a wiring map, and until now the
+   * win could not ask for it - the Engagement axis has always measured lit
+   * terminals, so the game counted the play it could not require.
+   */
+  | { kind: "terminals"; count: number }
+  /**
+   * Harvest at least `count` segments of the map's data stream.
+   *
+   * Harvested by running a fence ALONG the seam rather than through a point,
+   * so it is its own verb again. Counted in segments, which is what the runtime
+   * flags, rather than in whole streams: a seam is partially harvestable by
+   * design and a win that could only ask for all of it would be a different,
+   * much harder clause wearing the same name.
+   */
+  | { kind: "harvested"; count: number }
   /** Finish using at most `par + delta` cuts (delta may be negative). */
   | { kind: "underPar"; delta: number }
   /** Meet the rest of the win inside `seconds` of ACTIVE play. */
@@ -91,7 +111,8 @@ export type WinConditionKind = WinCondition["kind"];
 /** Every kind, in the order the admin panel and the modal list them. */
 export const WIN_CONDITION_KINDS: WinConditionKind[] = [
   "space", "locks", "superiorLocks", "area", "lockType",
-  "boss", "allLocked", "smashed", "delivered", "underPar", "speedClear",
+  "boss", "allLocked", "smashed", "delivered", "terminals", "harvested",
+  "underPar", "speedClear",
 ];
 
 /**
@@ -129,6 +150,10 @@ export interface WinSnapshot {
   delivered: number;
   /** The map's breakable obstacles that have been destroyed. */
   smashed: number;
+  /** Circuit terminals lit by routing a fence through them. */
+  terminals: number;
+  /** Data-stream segments harvested by running a fence along them. */
+  harvested: number;
   bossDefeated: boolean;
   /** True when no ball is still in play. */
   allLocked: boolean;

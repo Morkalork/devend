@@ -453,7 +453,17 @@ produce**.
 | a breakable, a chest | `smashed` |
 | a gate colored area | `area` |
 | a delivery box | `delivered` |
+| a circuit | `terminals` |
+| a data stream | `harvested` |
 | nothing but walls | `locks` (closes blind clearing; that is all a bare map can ask) |
+
+The five clause families are exactly the five the Engagement axis measures, and
+that is the rule for adding a sixth: **a clause must read a counter the game
+already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
+`harvested` flags. Mirrors, portals, gravity wells and one-ways get no clause
+on purpose - they are terrain, there is no state saying whether you "engaged"
+with a wall that bounced a ball, and they earn their keep by changing HOW you
+satisfy `space`, `locks` or `area`.
 
 Two rules on top of it:
 

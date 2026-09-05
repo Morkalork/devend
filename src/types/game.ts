@@ -407,7 +407,11 @@ export type WinReason =
   /** The map's breakable objective smashed. */
   | 'smashed'
   /** A ball herded into a delivery box. */
-  | 'delivered';
+  | 'delivered'
+  /** The map's circuit wired up. */
+  | 'wired'
+  /** The map's data stream harvested. */
+  | 'harvested';
 
 export interface LevelScoreData {
   levelNumber: number;

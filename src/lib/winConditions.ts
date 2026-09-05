@@ -88,6 +88,14 @@ function winConditionParts(
         parts.push(t("winConditions.smashed", { count: c.count }));
         noteworthy = true;
         break;
+      case "terminals":
+        parts.push(t("winConditions.terminals", { count: c.count }));
+        noteworthy = true;
+        break;
+      case "harvested":
+        parts.push(t("winConditions.harvested", { count: c.count }));
+        noteworthy = true;
+        break;
       case "delivered":
         parts.push(t("winConditions.delivered", { count: c.count }));
         noteworthy = true;
@@ -146,6 +154,8 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
     case "boss": return t("winConditions.shortBoss");
     case "allLocked": return t("winConditions.shortAllLocked");
     case "smashed": return t("winConditions.shortSmashed", { count: c.count });
+    case "terminals": return t("winConditions.shortTerminals", { count: c.count });
+    case "harvested": return t("winConditions.shortHarvested", { count: c.count });
     case "delivered": return t("winConditions.shortDelivered", { count: c.count });
     case "underPar": return t("winConditions.shortUnderPar", { count: level.expectedCuts + c.delta });
     case "speedClear": return t("winConditions.shortSpeed", { seconds: c.seconds });

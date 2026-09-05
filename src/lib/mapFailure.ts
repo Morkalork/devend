@@ -152,6 +152,8 @@ export function failLines(t: TFunction, failure: MapFailure): string[] {
       case "boss": return t("mapFailure.needBoss") as string;
       case "allLocked": return t("mapFailure.needAllLocked") as string;
       case "smashed": return t("mapFailure.needSmashed", v) as string;
+      case "terminals": return t("mapFailure.needTerminals", v) as string;
+      case "harvested": return t("mapFailure.needHarvested", v) as string;
       case "delivered": return t("mapFailure.needDelivered", v) as string;
       case "underPar": return t("mapFailure.needUnderPar", v) as string;
       case "speedClear": return t("mapFailure.needSpeed", v) as string;

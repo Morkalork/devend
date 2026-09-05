@@ -546,7 +546,9 @@
       "area": "Target locked in zone",
       "alsoCleared": "space target also met",
       "smashed": "Objective smashed",
-      "delivered": "Ball delivered"
+      "delivered": "Ball delivered",
+      "wired": "Circuit wired",
+      "harvested": "Stream harvested"
     },
     "axes": {
       "title": "Performance Review",
@@ -810,7 +812,11 @@
     "smashed": "Smash {{count}} of the map's breakable objects.",
     "delivered": "Deliver {{count}} balls into a box.",
     "shortSmashed": "smash {{count}} breakables",
-    "shortDelivered": "deliver {{count}} balls"
+    "shortDelivered": "deliver {{count}} balls",
+    "terminals": "Light {{count}} terminals by running a fence through them.",
+    "harvested": "Harvest {{count}} stretches of the data stream.",
+    "shortTerminals": "light {{count}} terminals",
+    "shortHarvested": "harvest {{count}} stretches"
   },
   "upgradeShop": {
     "storeLabel": "Store",
@@ -1184,7 +1190,9 @@
     "needDelivered": "Deliver {{target}} balls (you had {{current}})",
     "lockedOut": "Every ball is locked, with the job unfinished",
     "ballHitFence": "A ball cut through your fence",
-    "moverHitFence": "A moving block cut through your fence"
+    "moverHitFence": "A moving block cut through your fence",
+    "needTerminals": "Light {{target}} terminals (you had {{current}})",
+    "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1196,7 +1204,9 @@
     "speedClear": "On the clock",
     "smashed": "Smashed",
     "delivered": "Delivered",
-    "atRisk": "Last ball: {{label}} still outstanding"
+    "atRisk": "Last ball: {{label}} still outstanding",
+    "terminals": "Wired",
+    "harvested": "Harvested"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",
