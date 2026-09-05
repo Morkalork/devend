@@ -1119,15 +1119,29 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+      # The guard was a circle shuttling left and right. It is a ROTOR now: a
+      # bar pivoting about its own centre, which is the same family (a machine
+      # on its own schedule) asking a different question.
+      #
+      # A linear patrol has one number - when is it here. A rotor's TIP moves
+      # much faster than its hub, so where you cross it matters as much as
+      # when: cut near the pivot and the bar crawls past your fence, cut at the
+      # arc and it is on you. Nothing else on the ladder prices a cut by
+      # distance from a thing.
+      #
+      # Sat at y 660 rather than 620 so the swept circle clears the chest above
+      # it by 73 units - a neck, not the 33 it would have been.
       - id: guard
         kind: mover
-        shape: circle
-        cx: 450
-        cy: 620
-        radius: 48
+        shape: rect
+        x: 350
+        'y': 648
+        width: 200
+        height: 24
         axis: horizontal
-        range: 320
-        speed: 170
+        range: 0
+        motion: rotate
+        speed: 50
       - id: rib-left
         kind: wall
         shape: rect
@@ -1464,6 +1478,25 @@ levels:
         'y': 500
         width: 24
         height: 200
+      # MEET the cage. Four balls on an eleven-fence budget is the map that
+      # most wants somewhere to PUT one: every other tool here is permanent - a
+      # lock removes a ball for good, a fence divides the board for good - and
+      # this is the only way to say "not this one, not yet" while you deal with
+      # the corner it keeps ruining.
+      #
+      # Tucked against post-left with a 5-unit seam, so the pair reads as one
+      # solid and the only way in is the mouth. Facing up: the mouth looks back
+      # into the chamber the balls are actually in, so a ball can wander in on
+      # its own and the cage is a place rather than a trap you have to aim at.
+      - id: holding-pen
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 620
+        width: 130
+        height: 130
+        facing: up
+        holdSeconds: 7
 
   # 19 "Regression" - BREAK the lesson: the space you open comes with company.
   # Twelve maps have taught that a `reveals` gate is a gift. This one hides its
@@ -1730,15 +1763,20 @@ levels:
         'y': 700
         width: 24
         height: 155
+      # USE the rotor, in the open half, where the well can hand it a ball.
+      # Faster than 13's and in a chamber with nothing to hide behind, so the
+      # arc is the obstacle rather than a thing you time around.
       - id: roamer
         kind: mover
-        shape: circle
-        cx: 250
-        cy: 450
-        radius: 45
+        shape: rect
+        x: 160
+        'y': 438
+        width: 180
+        height: 24
         axis: horizontal
-        range: 300
-        speed: 150
+        range: 0
+        motion: rotate
+        speed: 55
 
   # 23 "No Rollback" - MEET the one-way membrane, and the box it feeds.
   # The two dividers already made a neck; now the neck only works downwards.
@@ -2026,6 +2064,23 @@ levels:
         cx: 700
         cy: 620
         radius: 58
+      # MEET the latch. Phasing walls open on a clock; this is the only thing
+      # on the board that opens because of something the PLAYER did, and it
+      # stays open once it has.
+      #
+      # One lock. That is deliberately cheap: the point of the first latch is
+      # that the board answers you, not that it is a second puzzle. What it
+      # buys is a map with two acts - the stream above the curtain is simply
+      # not available until you have put a ball away, so the harvest cannot be
+      # the opening move on the map that teaches harvesting.
+      - id: curtain
+        kind: wall
+        shape: rect
+        x: 330
+        'y': 150
+        width: 240
+        height: 26
+        latchAfter: 1
 
   # 27 "Bandwidth" - FIGHT: the seam against fence ground.
   # Same greed, and now the pipe is narrow. Tracing the vein spends a cut that
@@ -2258,6 +2313,20 @@ levels:
         height: 26
         breakable: true
         hitsToBreak: 3
+      # USE the cage, on the far side of the board from everything it helps
+      # with. The map wants a ball parked while you work the shield and the
+      # vault, and the walk to the pen costs you the tempo it buys - which is
+      # the decision, and is why it sits in the corner rather than next to the
+      # work.
+      - id: holding-pen
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 45
+        width: 120
+        height: 120
+        facing: right
+        holdSeconds: 8
       - id: patrol
         kind: mover
         shape: circle
@@ -2443,6 +2512,19 @@ levels:
         cx: 250
         cy: 640
         radius: 54
+      # USE the latch, crossed with the terminal this map already asks for.
+      # The bar sits over the upper-left chamber and opens on the SECOND lock,
+      # not the first: by act IV the answer-back is known, so what is being
+      # asked is whether you spend two locks before the clock rather than
+      # whether you noticed the wall moved.
+      - id: shutter
+        kind: wall
+        shape: rect
+        x: 120
+        'y': 180
+        width: 200
+        height: 26
+        latchAfter: 2
       # The DRAIN: a pipe under the neck, and the map's second decision.
       #
       # The shelf above already only works downwards, so the lower half fills

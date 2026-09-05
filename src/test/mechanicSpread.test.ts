@@ -95,26 +95,25 @@ describe("no mechanic is introduced and then dropped", () => {
 
   it("has no headline mechanic the engine supports but no map uses", () => {
     const unused = spreadWarnings(LEVELS).filter(w => w.kind === "unused");
-    // One-way, ball gates and fence ground spent a day on this list between
-    // shipping as engine + editor and being placed on maps 23/31, 33/34 and
-    // 24/27 - which is exactly the window this rule exists to make visible
-    // rather than let become permanent.
+    // The list is EMPTY, and that is the whole point of the rule rather than a
+    // milestone worth softening it for.
     //
-    // The portal came off this list onto level 17, where the pipe it sits in is
-    // the cheapest-looking pocket on a map that counts every fence - and pays
-    // nothing, because a region holding a live portal cannot be locked. Three
-    // names left. The cage, the latch and the rotor all exist as engine,
-    // renderer and editor, and the designer is placing them by hand rather
-    // than having them scattered automatically. They come off one at a time as
-    // they land on maps; if they are still here in a month, that is the answer
-    // this rule is designed to give.
+    // One-way, ball gates and fence ground spent a day here between shipping
+    // as engine + editor and being placed on maps 23/31, 33/34 and 24/27 -
+    // exactly the window this exists to make visible rather than permanent.
+    // The portal came off onto level 17. The cage, the latch and the rotor
+    // were the last three and stayed for longer than a day: cage on 18 and 29,
+    // latch on 26 and 31, rotor on 13 and 22.
+    //
     // Bent shape briefly appeared here when act I was reauthored without bent
     // obstacles. It was never a mechanic a map could be ABOUT - it is a shape
     // modifier on a wall that is already something else - so it was demoted to
     // seasoning rather than scattered back onto maps to satisfy this list. That
-    // is the only honest way off it that is not "place it somewhere".
+    // is the only honest way off it that is not "place it somewhere", and it
+    // stays available: a mechanic that genuinely cannot carry a map should be
+    // marked `headline: false`, not given a token home.
     expect(unused.map(w => w.label).sort(), "a supported mechanic is on no map at all")
-      .toEqual(["Cage", "Latch", "Rotor"]);
+      .toEqual([]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {

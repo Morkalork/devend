@@ -182,11 +182,26 @@ describe("the shipped maps agree with the builder's defaults", () => {
     readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
   ) as { levels: { level?: number; entities?: Record<string, unknown>[] }[] };
 
-  const movers = MAPS.levels.flatMap(l =>
+  const allMovers = MAPS.levels.flatMap(l =>
     (l.entities ?? []).filter(e => e.kind === "mover") as unknown as LevelMoverEntity[]);
+
+  /**
+   * LINEAR movers only, for the defaults below.
+   *
+   * A rotor is the same `kind` and shares the fields, but it reads them
+   * differently: `range` is ignored outright, and `speed` is DEGREES per second
+   * rather than world units. Two rotors on the ladder at `range: 0` dragged the
+   * median range from 300 to 280, which is the median of a population that
+   * includes numbers meaning nothing. The builder seeds a LINEAR mover, so a
+   * linear median is what it should be seeded from.
+   */
+  const movers = allMovers.filter(m =>
+    (m as unknown as { motion?: string }).motion !== "rotate");
 
   it("finds movers to check", () => {
     expect(movers.length).toBeGreaterThan(5);
+    expect(allMovers.length, "the rotors vanished, or were never separated")
+      .toBeGreaterThan(movers.length);
   });
 
   /**

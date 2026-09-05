@@ -47,8 +47,11 @@ and map N+1 is a ball, one of them should not exist.
 ## 2. The grammar: 27 mechanics in 5 families
 
 The engine supports 27 headline mechanics. That is a large vocabulary for 31
-non-boss maps, and it is why the ladder kept ending up with `coloredArea` on 19
-maps and `cage`, `latch` and `rotor` on none: the easy mechanics keep winning.
+non-boss maps, and for a long time it showed: `coloredArea` was on 19 maps while
+`cage`, `latch` and `rotor` were on none. All three are placed now (18/29, 26/31,
+13/22), and `mechanicSpread`'s unused list is empty - but the pressure that
+produced that gap has not gone anywhere. The easy mechanics keep winning, which
+is what the ledger below is for.
 
 Grouping them into families is what makes the vocabulary affordable. **A
 family's first member costs a full teaching map. Its siblings cost a third of
@@ -91,7 +94,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | portal | B | Meet | 14 | 15 | 21 | 34 |
 | launcher | C | Meet | 16 | 17 | 25 | 19 |
 | bumper | C | Compressed | 17 | 19 | 25 | - |
-| terminals | E | Meet | 18 | 29 | 31 | - |
+| terminals | E | Meet | 15 | 16 | 31 | - |
 | cage | E | Compressed | 18 | 29 | - | - |
 | gravity well | C | Meet | 21 | 22 | 26 | 28 |
 | one-way | B | Meet | 23 | 24 | 31 | - |
@@ -106,8 +109,9 @@ Every mechanic gets a status, and the status decides what it costs.
 | thread lock | D | Compressed | 29 | 34 | - | - |
 | colored area (gate) | D | Meet | 8 | 20 (boss) | 33 | 35 |
 | bent shape | B | Seasoning | - | - | - | - |
+| polygon shape | - | Seasoning | - | - | - | - |
 | the second ball | - | roster | 2 | - | - | - |
-| rotor | C | Seasoning | - | - | - | - |
+| rotor | C | Compressed | 13 | 22 | - | - |
 | pickup spots | E | Seasoning | - | - | - | - |
 | pinned mutator | D | Seasoning | - | - | - | - |
 
