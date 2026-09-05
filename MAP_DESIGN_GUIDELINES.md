@@ -82,47 +82,67 @@ Every mechanic gets a status, and the status decides what it costs.
   appear on at least 2 maps (`mechanicSpread`'s floor) or be marked
   `headline: false` in `src/lib/admin/mechanicSpread.ts`.
 
-| mechanic | family | status | meet | use | fight | break |
-|---|---|---|---|---|---|---|
-| colored area (bonus) | D | Meet | 3 | 5 | 8 | 13 |
-| mover | C | Meet | 4 | 5 | 7 | 23 |
-| breakable | A | Meet | 5 | 7 | 6 | 25 |
-| chest | A | Compressed | 7 | 9 | 22 | 32 |
-| reveals | A | Compressed | 8 | 19 | - | - |
-| mirror | B | Meet | 11 | 12 | 16 | 33 |
-| WIP limit | D | Meet | 13 | 18 | 32 | - |
-| portal | B | Meet | 14 | 15 | 21 | 34 |
-| launcher | C | Meet | 16 | 17 | 25 | 19 |
-| bumper | C | Compressed | 17 | 19 | 25 | - |
-| terminals | E | Meet | 15 | 16 | 31 | - |
-| cage | E | Compressed | 18 | 29 | - | - |
-| gravity well | C | Meet | 21 | 22 | 26 | 28 |
-| one-way | B | Meet | 23 | 24 | 31 | - |
-| ball gate | B | Compressed | 23 | 33 | 34 | - |
-| fence ground | D | Meet | 24 | 27 | 28 | - |
-| deformable | A | Compressed | 25 | 25 | 32 | - |
-| phasing | A | Meet | 26 | 27 | 28 | 34 |
-| latch | A | Compressed | 26 | 31 | - | - |
-| charge | E | Meet | 27 | 32 | - | - |
-| data stream | E | Meet | 28 | 33 | - | - |
-| delivery box | E | Meet | 29 | 31 | - | - |
-| thread lock | D | Compressed | 29 | 34 | - | - |
-| colored area (gate) | D | Meet | 8 | 20 (boss) | 33 | 35 |
-| bent shape | B | Seasoning | - | - | - | - |
-| polygon shape | - | Seasoning | - | - | - | - |
-| the second ball | - | roster | 2 | - | - | - |
-| rotor | C | Compressed | 13 | 22 | - | - |
-| pickup spots | E | Seasoning | - | - | - | - |
-| pinned mutator | D | Seasoning | - | - | - | - |
+| mechanic | family | status | meet | use | also on |
+|---|---|---|---|---|---|
+| colored area (bonus) | D | Meet | 3 | 5 | 9, 14, 17, 21, 22, 24, 26, 28, 29, 31, 33 |
+| mover | C | Meet | 4 | 5 | 7, 9, 13, 22, 23, 29, 33 |
+| breakable | A | Meet | 5 | 6 | 7-9, 11-13, 16, 18, 19, 25, 29, 32 |
+| chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 23, 27, 32 |
+| reveals | A | Compressed | 8 | 12 | 19 |
+| pickup spots | E | Seasoning | 8 | 9 | - |
+| launcher | C | Meet | 11 | - | - |
+| bumper | C | Compressed | 11 | - | - |
+| deformable | A | Compressed | 11 | 25 | - |
+| phasing | A | Meet | 12 | 28 | 20 (boss), 35 (boss) |
+| rotor | C | Compressed | 13 | 22 | - |
+| mirror | B | Meet | 14 | 18 | - |
+| terminals | E | Meet | 15 | 16 | 31 |
+| portal | B | Meet | 17 | - | - |
+| WIP limit | D | Meet | 17 | 18 | 32 |
+| cage | E | Compressed | 18 | 29 | - |
+| thread lock | D | Compressed | 19 | - | - |
+| gravity well | C | Meet | 21 | 22 | 28, 29 |
+| one-way | B | Meet | 23 | 31 | - |
+| delivery box | E | Meet | 23 | - | - |
+| fence ground | D | Meet | 24 | 27 | - |
+| charge | E | Meet | 25 | 32 | - |
+| latch | A | Compressed | 26 | 31 | - |
+| data stream | E | Meet | 26 | 27 | - |
+| ball gate | B | Compressed | 33 | 34 | - |
+| pinned mutator | D | Seasoning | 34 | - | - |
+| colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
+| bent shape | B | Seasoning | - | - | `headline: false` |
+| polygon shape | - | Seasoning | - | - | `headline: false` |
+| the second ball | - | roster | 2 | - | - |
 
-**18 teachings across 31 playable maps**, so 13 maps carry no new mechanic at
-all. Those 13 are not filler: they are where the combinations live, and they are
-the reason the vocabulary is worth having.
+This table is **checked against `public/map.yml`** by `ladderLedger.test.ts`. It
+was wrong for a long time - it described a plan, and the maps were built to a
+different one - so it is now a claim the suite can falsify rather than a note
+someone has to remember to update.
 
-Introduction rate: **8 new things across maps 1-15** (one per ~1.9 maps), **10
-across 16-34**. The back half introduces *faster* and that is correct: by map 16
-every new mechanic is a family sibling of something already known, so it costs
-less to teach and can arrive on top of a combination.
+**Four rules the shipped ladder breaks, recorded rather than quietly fixed:**
+
+1. **Level 11 debuts three mechanics at once** (launcher, bumper, deformable)
+   against the one-Meet-per-map rule. It is the act II opener and it opens loud.
+2. **Ball gate debuts at 33**, inside the act that is supposed to introduce no
+   new primitives.
+3. **Launcher and bumper appear on exactly one map each**, and portal, delivery
+   box, thread lock and pinned mutator on one apiece. A Meet with no Use is a
+   mechanic the player sees once and never has to understand.
+4. Phasing used to debut on the level-20 BOSS, which is the worst place on the
+   ladder to learn anything. That one IS fixed: it meets at 12 now, with its
+   family, and the boss is no longer anyone's first encounter with it.
+
+**20 debuts across 31 playable maps**, so 11 maps carry no new mechanic at all.
+Those 11 are not filler: they are where the combinations live, and they are the
+reason the vocabulary is worth having.
+
+Introduction rate: **10 new things across maps 1-15**, **10 across 16-34**. The
+back half was meant to introduce faster, on the argument that by map 16 every
+new mechanic is a family sibling of something already known. It does not: the
+rate is flat, and the tail (33's ball gate, 34's mutator) arrives in the act
+that is supposed to be pure combination. That is a real finding about the
+shipped ladder, not a target to edit this number toward.
 
 ---
 
@@ -262,55 +282,62 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)
+### Act II - The Sprint (11-20)  *(built)*
 
-*Owns: pressure, the redirectors, the machines that add speed.*
+*Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
 
+**These rows describe the maps that SHIPPED, not a plan.** They used to describe
+a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
+act was built to a different order. Both tables read as authoritative and
+neither said which was stale, which nearly cost act II a ground-up rebuild to
+match a document that was itself the artifact. `ladderLedger.test.ts` now checks
+these numbers against `map.yml` so this cannot happen twice.
+
 | L | new | develops | premise |
 |---|---|---|---|
-| 11 | **Meet** mirror | Fight mover | Fences bend off a mirror wall: the first map where the cut you drew is not the cut you get. |
-| 12 | - | Use mirror + chest | The vault whose only fence line runs off a mirror. |
-| 13 | **Meet** WIP limit | Break colored area | Six fences for four pockets. The bonus is affordable or the map is, not both. |
-| 14 | **Meet** portal | Fight topology | Two chambers joined without a neck, and the cheapest-looking pocket on the board pays nothing. |
-| 15 | - | Use portal + breakable | A breakable conceals the portal mouth; behind it, a `const` room worth 6x. |
-| 16 | **Meet** launcher | Fight mirror | A barrel fires the whole roster down a mirrored lane. Speed is permanent. |
-| 17 | **Compressed** bumper | Use launcher | The pinball chamber: green bumpers pay an hour and brake, red ones only throw. |
-| 18 | **Meet** terminals + **Compressed** cage | Fight WIP limit | Balls asleep in cages. Every fence spent wiring is one you cannot seal with. |
-| 19 | - skill check | Break launcher + bumper | Drain the cluster for its hours and it turns on you. |
-| 20 | BOSS | - | *(out of scope)* |
+| 11 | **Meet** launcher, **Compressed** bumper + deformable | Fight breakable | The act opens loud: a barrel, bumpers that pay, and a wall that drinks hits instead of breaking. Three at once, against the one-Meet rule, and it is the only map that does it. |
+| 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
+| 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
+| 14 | **Meet** mirror | Fight topology | Fences bend off a mirror wall: the first map where the cut you drew is not the cut you get. |
+| 15 | **Meet** terminals | Use chest | No balls of its own. They arrive by booting sleepers, and the win asks for the terminal rather than a lock. |
+| 16 | - | Use terminals + mirror | Two terminals behind a mirrored lane. |
+| 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
+| 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
+| 19 | **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
+| 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
 
-### Act III - Legacy Code (21-30)
+### Act III - Legacy Code (21-30)  *(built)*
 
 *Owns: the board acting on its own schedule.*
-Board tilt unlocks at 21. Lodestone 21, black 25 (the first map that may ask for
-a mirror to be smashed).
+Board tilt unlocks at 21. Lodestone 21, black 25.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 21 | **Meet** gravity well | Use portal | The route between chambers is where your ball stops going where you aimed it. |
-| 22 | - | Use gravity well + chest | Slingshot: a paying pocket with a mouth no straight line reaches. |
-| 23 | **Meet** one-way + **Compressed** ball gate | Fight mover | A membrane balls fall through and cannot climb: a pocket that fills itself. |
-| 24 | **Meet** fence ground | Break colored area | Ground that builds fences at 45%. The cheapest pocket is the longest stand-still. |
-| 25 | **Compressed** deformable | Fight launcher, Break breakable | The wall that never breaks and drinks 3% a hit. Black ball unlocks here. |
-| 26 | **Meet** phasing + **Compressed** latch | Fight gravity well | A wall that is not always there, and one that opens once and stays open. |
-| 27 | **Meet** charge | Use phasing | A fuse, a delay, and a slab that will not be there in 1.4 seconds. |
-| 28 | **Meet** data stream | Fight fence ground, Break gravity well | The one lane you must cross is the one that builds slowest. |
-| 29 | **Meet** delivery box + **Compressed** thread lock | Break terminals | A lock that only counts somewhere specific, and the trip is the map. |
-| 30 | BOSS | - | *(out of scope)* |
+| 21 | **Meet** gravity well | Use bonus pocket | The route between chambers is where your ball stops going where you aimed it. |
+| 22 | - | Use gravity well + rotor | Slingshot: a paying pocket with a mouth no straight line reaches, and an arm sweeping the open half. |
+| 23 | **Meet** one-way + **Meet** delivery box | Fight mover | A membrane balls fall through and cannot climb, and a lock that only counts inside the box. |
+| 24 | **Meet** fence ground | Break colored area | Ground that builds fences slowly. The cheapest pocket is the longest stand-still. |
+| 25 | **Meet** charge | Use deformable, Break breakable | A fuse, a delay, and a slab that will not be there in 1.4 seconds. Black ball unlocks here. |
+| 26 | **Meet** data stream + **Compressed** latch | Fight gravity well | The stream is behind a curtain that lifts on your first lock, so the harvest cannot be the opening move on the map that teaches harvesting. |
+| 27 | - | Use data stream + fence ground | Two seams to take, on ground that fights you for the fences to take them with. |
+| 28 | - | Use phasing, Fight gravity well | The one lane you must cross is the one that is not always solid. |
+| 29 | - | Use cage + breakable, Fight mover | Four balls, seven percent, a shield in the way and a pen in the far corner. |
+| 30 | BOSS | - | *(the fence wipe)* |
 
-### Act IV - Crunch (31-35)
+### Act IV - Crunch (31-35)  *(built)*
 
-*No new primitives. Combination set-pieces, and the only act whose maps state
-their own win conditions.*
+*Combination set-pieces. Meant to introduce no new primitives, and it introduces
+two: the ball gate at 33 and the pinned mutator at 34. Recorded rather than
+tidied away - see the four broken rules under the ledger.*
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 31 | - | Use latch + delivery box, Fight one-way | The wall you anchored on leaves the moment you succeed. |
-| 32 | - | Fight WIP limit + deformable, Use charge | The vault is only reachable on the half-cycle, and you have six fences. |
-| 33 | - | Break mirror, Fight ball gate + data stream | A mover patrols the portal pair: the shortcut is open on a schedule you do not control. |
-| 34 | - | Break portal + phasing, Fight ball gate | The barrel fires four types and only one may enter the paying lane. |
-| 35 | BOSS | - | *(out of scope)* |
+| 31 | - | Use one-way + latch + terminals | A one-way neck over a drain that fills itself, a shutter that opens on your second lock, and a terminal to light. |
+| 32 | - | Fight WIP limit, Use charge + chest | Twelve fences, a slab, and the chest behind it. The burn is the map. |
+| 33 | **Compressed** ball gate | Break mirror, Use data stream + rotor | Only the compass may enter the safe lower line, so the two balls can no longer be solved in the same place. |
+| 34 | - | Use ball gate + pinned mutator | The gate is the whole win: two in the box, on a board with a live pull. |
+| 35 | BOSS | - | *(the chained pair, with the fence wipe)* |
 
 **Act IV states its win.** Two rules fall out of that:
 

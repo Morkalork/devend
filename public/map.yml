@@ -1079,6 +1079,36 @@ levels:
         cx: 450
         cy: 650
         radius: 60
+      # MEET phasing, here rather than where the player used to meet it.
+      #
+      # Phasing shipped on exactly three maps - 20, 28 and 35 - and 20 is a
+      # BOSS. A player's first encounter with a wall that is not always there
+      # was during a boss fight, which is the worst place on the ladder to
+      # learn anything: the map is already asking for everything you have, and
+      # a wall going intangible reads as the game glitching rather than as a
+      # rule.
+      #
+      # 12 takes it because it is the family's home. Phasing is a solid that
+      # changes, like the breakable at 5, the chest at 7, the reveals on the
+      # gate above and the deformable at 11 - so by here the grammar is known
+      # and only the cycle is new. The bar hangs in the lower-left chamber
+      # where it is genuinely in the way: wait for the fade and cut cheaply, or
+      # go round and pay for it.
+      #
+      # Hangs at y 560 rather than the 520 it wanted. 520 left a 66-unit gap to
+      # the gate above, which is a neck on paper and lands anywhere from 45 to
+      # 60 once the board is rotated - the half-fits band the gap rule forbids
+      # (see 7.3: authored coordinates are not runtime coordinates). 106 has
+      # the headroom to survive every deal.
+      - id: flicker
+        kind: wall
+        shape: rect
+        x: 200
+        'y': 560
+        width: 26
+        height: 200
+        isPhasing: true
+        phaseCycleSeconds: 8
 
   # 13 "Bonus Pool" - USE the chest: it IS the greed hook.
   # Parked in the open middle with a patrol orbiting it, so cracking it means
