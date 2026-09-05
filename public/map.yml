@@ -355,13 +355,6 @@ levels:
         'y': 555
         width: 26
         height: 300
-      - id: nook-lip
-        kind: wall
-        shape: rect
-        x: 630
-        'y': 270
-        width: 225
-        height: 24
       - id: guard
         kind: mover
         shape: rect
