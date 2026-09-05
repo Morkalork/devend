@@ -24,7 +24,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { evaluateWinConditions } from "@/lib/physics/applyCut";
 import { checkAndUpdateBallWonStates } from "@/lib/physics/checkBallWonState";
-import { worldToGridIndex } from "@/lib/spaceGrid";
+import { setRunSeedText } from "@/lib/runRng";
+import { worldToGridIndex, findGridRegions, buildGridRegionMap, findGridRegionForBall } from "@/lib/spaceGrid";
 import { MAP_FAIL_KINDS, type MapFailure } from "@/lib/mapFailure";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { createInitialGameData } from "@/lib/initGame";
@@ -242,8 +243,19 @@ describe("the map is failed, and named", () => {
  * proves the pocket DOES lock, and then the same pocket refusing.
  */
 describe("the lock decision actually asks", () => {
-  /** Seal a ring around the ball, on the slab, and report what the ball became. */
-  const sealOnTheSlab = (smashedAlready: boolean): string => {
+  /**
+   * Seal a ring around the ball, on the slab, and report what the ball became.
+   *
+   * Takes a RUN SEED because the deal is rotated off it and the fixture has to
+   * survive every rotation. `setRunSeedText` is global and leaks in from
+   * whichever test file ran before this one, so a fixture that only worked on
+   * one deal is a fixture that passes locally and fails on CI - which is
+   * exactly what this one did. Measured: the same slab lands at 420,400 or
+   * 480,500 or 500,420 (rotated 90 degrees, 40x200 becoming 200x40) depending
+   * on the seed.
+   */
+  const sealOnTheSlab = (smashedAlready: boolean, seed: string | null = null): string => {
+    setRunSeedText(seed);
     const lvl = level([{ kind: "smashed", count: 1 }]);
     const game = board(lvl);
     // The lock path writes to counters createInitialGameData does not seed
@@ -260,8 +272,20 @@ describe("the lock decision actually asks", () => {
 
     // Park the ball beside the slab, then wall a small box round the pair, so
     // the pocket is tiny enough to lock by percent and demonstrably holds it.
+    //
+    // Placed from the slab's RUNTIME polygon, never from the authored SLAB
+    // constant. Authored coordinates are not runtime coordinates - the deal is
+    // rotated off the level id (MAP_DESIGN_GUIDELINES 7.3) - so `SLAB.x - 30`
+    // is beside the slab on some rotations and across the board on others.
+    // That is exactly how this test passed locally and failed on CI: vitest
+    // ordered the files differently, the seed differed, and the ball landed
+    // nowhere near the slab, so the pocket held nothing and locked.
+    const verts = d.obstaclePolygon!.vertices;
+    const cx = verts.reduce((a, v) => a + v.x, 0) / verts.length;
+    const cy = verts.reduce((a, v) => a + v.y, 0) / verts.length;
+    const half = Math.max(...verts.map(v => Math.abs(v.x - cx)));
     const ball = game.balls[0];
-    ball.position = { x: SLAB.x - 30, y: SLAB.y + 40 };
+    ball.position = { x: cx - half - 22, y: cy };
     ball.state = "active";
     ball.speed = 100;
     for (const other of game.balls.slice(1)) { other.state = "won"; other.speed = 0; }
@@ -277,6 +301,18 @@ describe("the lock decision actually asks", () => {
         }
       }
     }
+    // The pocket must actually CONTAIN the slab, or "it did not lock" would be
+    // true for the wrong reason and "it locked" would prove nothing. The
+    // control (already-smashed) cannot catch a mis-placed ball, because with
+    // the slab spent there is no refusal either way.
+    const region = findGridRegionForBall(grid, buildGridRegionMap(findGridRegions(grid)),
+      ball.position.x, ball.position.y);
+    const held = region
+      ? regionHoldsNeededSlab({ ...game, destructibles: [{ ...d, destroyed: false }] } as CanvasGameState,
+          resolveWinSpec(lvl), region.cellIndices)
+      : false;
+    expect(held, "the fixture sealed a pocket that does not hold the slab").toBe(true);
+
     const noop = () => {};
     checkAndUpdateBallWonStates(
       game, DEFAULT_MODIFIERS, 0,
@@ -286,14 +322,18 @@ describe("the lock decision actually asks", () => {
     return ball.state;
   };
 
-  it("locks that pocket once the slab is already smashed", () => {
+  // The deals that put the slab in three different places, including the one
+  // that rotates it. Running every case on all of them is the point.
+  const SEEDS = [null, "a", "b", "c"];
+
+  it.each(SEEDS)("locks that pocket once the slab is smashed (seed %s)", (seed) => {
     // The control. Without it the next test passes on any pocket that simply
     // never locks, which is most of them.
-    expect(sealOnTheSlab(true), "the control pocket does not lock at all").toBe("won");
+    expect(sealOnTheSlab(true, seed), "the control pocket does not lock at all").toBe("won");
   });
 
-  it("refuses it while the slab still has to be broken", () => {
-    expect(sealOnTheSlab(false), "sealed a ball in with the slab it still had to break")
+  it.each(SEEDS)("refuses it while the slab still has to be broken (seed %s)", (seed) => {
+    expect(sealOnTheSlab(false, seed), "sealed a ball in with the slab it still had to break")
       .not.toBe("won");
   });
 });
