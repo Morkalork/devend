@@ -42,6 +42,7 @@ import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetInPlay, gateAreas } from "@/lib/coloredAreas";
+import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost } from "@/lib/physics/smashReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
@@ -239,13 +240,22 @@ export function applyCutFn(
         end: { ...waypoints[i + 1] },
         thickness: wall.thickness,
         createdAt: now,
+        // Every segment of one cut is the same kind of fence. Carried per
+        // segment rather than per cut because a fence is only ever read as
+        // walls after this point - the GrowingWall is gone.
+        fenceTypeId: wall.fenceTypeId ?? STANDARD_FENCE_ID,
       };
       if (game.spaceGrid) {
         segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);
       }
-      if (game.fenceDurability != null) {
-        segment.maxHits = game.fenceDurability;
-        segment.hitsLeft = game.fenceDurability;
+      // Durability: the fence type's own budget when it states one, otherwise
+      // the run's. A type that says nothing about hits does not override an
+      // Ascension durability bonus the player earned.
+      const typeHits = getFenceType(wall.fenceTypeId).maxHits;
+      const hits = typeHits ?? game.fenceDurability;
+      if (hits != null) {
+        segment.maxHits = hits;
+        segment.hitsLeft = hits;
       }
       game.walls.push(segment);
     }

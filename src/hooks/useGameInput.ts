@@ -16,6 +16,7 @@ import {
   vec2Length,
   vec2Normalize,
 } from "@/lib/polygon";
+import { STANDARD_FENCE_ID } from "@/lib/fences";
 import { WALL_THICKNESS, castRayWithReflections } from "@/lib/wallGeometry";
 import {
   BASE_SWIPE_MIN_DISTANCE,
@@ -436,6 +437,9 @@ export function useGameInput(
               isComplete:         isInstant,
               activeRegionId:     game.swipeRegionId!,
               startTime:          isInstant ? undefined : performance.now(),
+              // Read ONCE, here. Switching slots while this grows must not
+              // change the fence already on its way.
+              fenceTypeId:        game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
             } as GrowingWall);
 
             // Issue #35: record the swipe gesture so it can be drawn as a brief

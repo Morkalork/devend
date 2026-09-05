@@ -188,6 +188,18 @@ export interface GrowingWall {
   isComplete: boolean;
   activeRegionId: string;    // the region this wall is growing in
   startTime?: number;        // performance.now() when growth began (for easing)
+  /**
+   * Which KIND of fence this cut is drawing (FENCE_TYPES_PLAN.md).
+   *
+   * Fixed at the moment the cut starts and never re-read from the player's
+   * selection afterwards: switching slots mid-growth must not change a fence
+   * already on its way, or the thing you drew is not the thing you chose.
+   *
+   * Absent = the standard fence. Every reader goes through getFenceType, which
+   * resolves absent and unknown alike, so an old save is an ordinary fence
+   * rather than a crash.
+   */
+  fenceTypeId?: string;
 }
 
 export interface GameState {

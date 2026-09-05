@@ -185,6 +185,21 @@ export interface CanvasGameState {
    * reading of the win, in the layer least able to be tested.
    */
   winHighlights?: import("@/lib/winHighlight").HighlightRect[];
+  /**
+   * The fence type the next cut will draw (FENCE_TYPES_PLAN.md).
+   *
+   * A MODE, not a consumable: it stays selected until the player changes it,
+   * and there is no charge counter anywhere. Absent = the standard fence.
+   */
+  selectedFenceTypeId?: string;
+  /**
+   * The types in the player's four swappable slots, standard excluded.
+   *
+   * Slot 1 is always standard and is not stored here - it cannot be unequipped,
+   * so keeping it in the list would mean every reader had to remember not to
+   * remove it. Empty until the first type is acquired.
+   */
+  fenceSlotIds?: string[];
   gameOver: boolean;
   /**
    * Why the map was lost, recorded the moment it was.

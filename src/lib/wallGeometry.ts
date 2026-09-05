@@ -60,6 +60,18 @@ export interface Wall {
   blackHits?: number;
   /** ms timestamp of the last black-fracture tick (debounce, like lastDamageAt). */
   blackHitAt?: number;
+  /**
+   * The fence type this segment was drawn with (FENCE_TYPES_PLAN.md).
+   *
+   * Copied from the GrowingWall at completion, so every segment of one cut
+   * carries the same type. Absent = standard, which is what every wall in every
+   * save from before this feature reads as.
+   *
+   * On the WALL rather than looked up from the player's current selection,
+   * because it has to outlive the selection: a fence is ice for the rest of the
+   * map whatever the bar says afterwards.
+   */
+  fenceTypeId?: string;
 }
 
 /** Fences the player drew: not board edges, not obstacle boundaries. */

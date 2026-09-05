@@ -23,6 +23,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
+import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { ambientAt, facing, shadowFor, type LightScope } from "./light";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 
@@ -189,7 +190,8 @@ export class WallLayer {
       // Split the wall around any obstacle it passes through, so no fence is
       // ever painted across a slab it should be interrupted by.
       for (const seg of this.clippedSegments(w, game)) {
-        this.drawSegment(seg.start, seg.end, w.thickness, isEdge, light, w2s, scale);
+        this.drawSegment(seg.start, seg.end, w.thickness, isEdge, light, w2s, scale,
+          false, this.tintOf(w.fenceTypeId));
       }
     }
 
@@ -250,6 +252,22 @@ export class WallLayer {
       this.bodies = bodies;
       this.rims = rims;
     }
+  }
+
+  /**
+   * The colours a fence of this type is drawn in.
+   *
+   * `null` for the standard fence, and that is not an optimisation: it makes
+   * the standard path the SAME expressions it has always been, so adding fence
+   * types cannot quietly restyle the fence every player already knows. A test
+   * pins that standard's authored colour is PALETTE.accent, which is what lets
+   * this branch be a no-op rather than a coincidence.
+   */
+  private tintOf(fenceTypeId: string | undefined): number | null {
+    if (!fenceTypeId || fenceTypeId === STANDARD_FENCE_ID) return null;
+    const hex = getFenceType(fenceTypeId).color.replace("#", "");
+    const n = Number.parseInt(hex, 16);
+    return Number.isFinite(n) ? n : null;
   }
 
   /** A wall's sub-segments with the obstacle footprints removed. */
@@ -329,6 +347,10 @@ export class WallLayer {
     scale: number,
   ): void {
     const thickness = Math.max(1, wall.thickness * scale);
+    // The cut shows what it will BE, from the first frame. A fence that only
+    // took its colour on completion would make the slot bar something you
+    // verify afterwards rather than something you steer with.
+    const tint = this.tintOf(wall.fenceTypeId);
 
     // Walk each direction's completed legs, then the partial one it is on.
     const legs: Array<[Pt, Pt]> = [];
@@ -364,7 +386,7 @@ export class WallLayer {
         .lineTo(b.x, b.y)
         .stroke({
           width: snapWidth(thickness),
-          color: mix(PALETTE.shadow, PALETTE.accentDim, 0.55 + amb * 0.45),
+          color: mix(PALETTE.shadow, tint ?? PALETTE.accentDim, 0.55 + amb * 0.45),
           alpha: 1, cap: "butt",
         });
       this.bodies
@@ -372,7 +394,9 @@ export class WallLayer {
         .lineTo(b.x, b.y)
         .stroke({
           width: Math.max(1, snapWidth(thickness * 0.3)),
-          color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
+          color: tint === null
+            ? mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb)
+            : mix(mix(PALETTE.shadow, tint, 0.5), tint, 0.55 + 0.35 * amb),
           alpha: 0.8, cap: "butt",
         });
     }
@@ -548,6 +572,8 @@ export class WallLayer {
      * session, which is how it was reported.
      */
     rigid = false,
+    /** The fence type's colour, or null for the standard fence. */
+    tint: number | null = null,
   ): void {
     const thickness = Math.max(1, worldThickness * scale);
     const { pts, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness), rigid);
@@ -576,7 +602,12 @@ export class WallLayer {
     // Lit like a slab: the same mix(shadow, material, ambient) the obstacles
     // use, so a fence and a wall are visibly made of the same stuff.
     const amb = ambientAt(light, midX, midY);
-    const material = isEdge ? PALETTE.edge : PALETTE.accentDim;
+    // A tinted fence is lit exactly like an untinted one; only the material it
+    // is made of changes. Half-way to shadow keeps a bright type (ice, flare)
+    // from reading as a light source rather than as a thing standing in one.
+    const material = isEdge
+      ? PALETTE.edge
+      : (tint === null ? PALETTE.accentDim : mix(PALETTE.shadow, tint, 0.5));
     this.path(this.bodies, pts)
       .stroke({
         width: snapWidth(thickness),
@@ -601,7 +632,9 @@ export class WallLayer {
           // catching the monitor, not a neon tube. Blending most of the way to
           // PALETTE.accent (the first attempt) left it as hot as before and
           // still clashing with the furniture around it.
-          color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
+          color: tint === null
+            ? mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb)
+            : mix(material, tint, 0.55 + 0.35 * amb),
           alpha: 0.8,
         });
     }

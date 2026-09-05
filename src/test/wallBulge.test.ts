@@ -351,8 +351,17 @@ describe("the outer wall is rigid", () => {
     const outer = SRC.slice(SRC.indexOf("private drawOuterWall"), SRC.indexOf("/** A wall's sub-segments"));
     expect(outer).toMatch(/OUTER_WALL_THICKNESS, true, light, w2s, scale, true,/);
     // The fence pass must NOT be rigid: that is where the effect lives now.
+    //
+    // Asserted as "does not ask for rigid", not as the exact argument list. The
+    // list pinned here grew a fence-type tint and the old regex stopped
+    // matching - it would have failed on a change that has nothing to do with
+    // the rule, which is the second time a syntax pin in this suite has cost a
+    // green build.
     const fences = SRC.slice(SRC.indexOf("for (const w of game.walls)"), SRC.indexOf("for (const g of game.activeWalls)"));
-    expect(fences).toMatch(/this\.drawSegment\(seg\.start, seg\.end, w\.thickness, isEdge, light, w2s, scale\)/);
+    expect(fences, "the fence pass stopped drawing segments at all")
+      .toMatch(/this\.drawSegment\(seg\.start, seg\.end/);
+    expect(fences, "the fence pass went rigid, which is where the bulge lives")
+      .not.toMatch(/scale,\s*true/);
   });
 
   it("still lets fences and obstacles deform", () => {
