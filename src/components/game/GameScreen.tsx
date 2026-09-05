@@ -392,6 +392,7 @@ export function GameScreen({
     onBankAndContinue: undefined,
     pushBonusSoFar: 0,
     winGates: [],
+    ballsInPlay: 0,
     gameMessage: null,
   });
 
@@ -891,6 +892,7 @@ export function GameScreen({
             lockedBalls={mapLockedBalls}
             threadLockRequired={level.threadLockRequired}
             winGates={gameState.winGates}
+            ballsInPlay={gameState.ballsInPlay}
             onExplainWin={() => setWinModalOpen(true)}
             scopeCreepPercent={gameState.creepPercent}
             accentColor={accentColor}

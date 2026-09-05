@@ -1724,7 +1724,8 @@
     "underPar": "Bajo par",
     "speedClear": "Contrarreloj",
     "smashed": "Roto",
-    "delivered": "Entregado"
+    "delivered": "Entregado",
+    "atRisk": "Ultima bola: falta {{label}}"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

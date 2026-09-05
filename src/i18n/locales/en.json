@@ -1191,7 +1191,8 @@
     "underPar": "Under par",
     "speedClear": "On the clock",
     "smashed": "Smashed",
-    "delivered": "Delivered"
+    "delivered": "Delivered",
+    "atRisk": "Last ball: {{label}} still outstanding"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",

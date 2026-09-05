@@ -325,12 +325,14 @@ their own win conditions.*
 
 ## 6. Per-map craft
 
-A map that fits the schedule can still be a bad map. These three conventions are
-what make any single map good, and **a strong non-tutorial map embodies all
-three at once.**
+A map that fits the schedule can still be a bad map. These conventions are what
+make any single map good, and **a strong non-tutorial map embodies all of them
+at once.**
 
-They keep their historical numbering (Convention 1, 2, 3), which is what the
+Conventions 1-3 keep their historical numbering, which is what the
 cross-references scattered through `src/` and `public/map.yml` refer to.
+Convention 4 was added after bot runs showed that 27 of the 35 maps could be
+finished without engaging with anything on them.
 
 ### 6.1 Topology with intent  *(Convention 1)*
 
@@ -422,6 +424,51 @@ long-run boredom across 31 maps.
   destroys an in-progress fence.
 
 ---
+
+### 6.4 The map states its own win  *(Convention 4)*
+
+**Every map must ask for something its content can uniquely provide.** A map
+whose win is only "clear to N%" is not a puzzle, it is a stopwatch, and it was
+beatable two ways that ignored the board entirely:
+
+- **The lock rush.** Sealing every ball ended the map. `resolveWinSpec` hands
+  every derived map an `allLocked` ALTERNATIVE, so the last lock shipped it
+  whatever the board looked like. Measured across acts I and II: `locks ==
+  maxBalls` and `0.0%` remaining on every derived map.
+- **Blind clearing.** Greedy cutting to the threshold with every ball still
+  loose. Measured: maps 1-7 won 3/3 with **zero locks**, never touching a
+  breakable, a zone or a mover.
+
+The two are independent, and **removing the `allLocked` alternative fixes
+neither.** `captureUnreachableCells` writes off the whole board the instant
+nothing is in play, so `remaining` drops to ~0 and any `space` clause is met as
+a *consequence* of the last lock. The shortcut does not live in the
+alternative; it lives in the space clause.
+
+So: author a `win:` block, and put in it at least one clause **a lock cannot
+produce**.
+
+| The map's content | The clause that makes it matter |
+|---|---|
+| a breakable, a chest | `smashed` |
+| a gate colored area | `area` |
+| a delivery box | `delivered` |
+| nothing but walls | `locks` (closes blind clearing; that is all a bare map can ask) |
+
+Two rules on top of it:
+
+1. **Never put a `limit` clause in `alsoWinIf`.** `underPar` and `speedClear`
+   are met until they are *blown*, so as an alternative they fire before the
+   first cut and the map wins instantly. `winSpecProblems` flags this now.
+2. **Treat any `alsoWinIf` clause as a way to SKIP the space clear**, because
+   that is what it is. It has to be harder than clearing, not merely different,
+   or it is a new shortcut wearing a premium. Act I deliberately has none.
+
+A map that asks for something a lock cannot produce also gains a fail state:
+locking every ball with that requirement unmet strands it, and the map ends as
+a `lockedOut` failure costing a life. That is the tactical decision the win is
+there to create - keep a ball alive to break with - so the top-bar chip turns
+to a warning at one ball left, and the failure screen names what was missing.
 
 ## 7. Hard constraints the engine imposes
 
@@ -648,6 +695,9 @@ A map is not done until:
 - [ ] You can state its premise in **one sentence** ("this is the one where...").
       If you cannot, it has no identity yet.
 - [ ] It reads as **chambers and necks**, not scattered blocks.
+- [ ] It **authors a `win:`** that names its own content, with at least one
+      clause a lock cannot produce (section 6.4). A derived spec means the map
+      is still beatable by sealing everything or by never sealing anything.
 - [ ] There is **exactly one greed hook** with a real cost AND a safe skip.
 - [ ] There is **one telegraphed Turn**, so the end differs from the start.
 - [ ] At least one pocket is **superior-lock-sized**, measured against the worst

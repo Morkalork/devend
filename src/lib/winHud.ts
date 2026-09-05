@@ -82,3 +82,24 @@ export function hasOutstandingGate(spec: WinSpec, snap: WinSnapshot): boolean {
 export function gateLabelKey(condition: WinCondition): string {
   return `winGate.${condition.kind}`;
 }
+
+/**
+ * Would locking this ball throw the map away?
+ *
+ * Stranding a map costs a life, so it must never be a surprise. Once one ball
+ * is left in play every outstanding requirement rides on it: seal it in the
+ * wrong place, or seal it before the slab is broken, and nothing on the board
+ * can change again. The chip turns to a warning at that moment, which is where
+ * the player is already looking to see what the map wants.
+ *
+ * Only the EXTRA gates matter here, which is what makes the rule simple. Space
+ * and locks never appear as chips, and they are exactly the two a last lock
+ * would help rather than hurt: it adds a lock, and the capture cascade takes
+ * the board to zero. Everything left in this list - a zone to fill, a slab to
+ * break, a pocket to make tight - is a thing that last ball has to do first.
+ */
+export function gateAtRisk(
+  progress: WinConditionProgress, ballsInPlay: number,
+): boolean {
+  return ballsInPlay <= 1 && !gateSatisfied(progress);
+}

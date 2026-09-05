@@ -51,6 +51,12 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 1
+    win:
+      require:
+        - kind: space
+          threshold: 40
+        - kind: locks
+          count: 1
     entities:
       - id: jamb-top
         kind: wall
@@ -95,6 +101,12 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 37
+        - kind: locks
+          count: 2
     entities:
       - id: jamb-top
         kind: wall
@@ -153,6 +165,12 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 34
+        - kind: locks
+          count: 2
     entities:
       - id: jamb-top
         kind: wall
@@ -224,6 +242,12 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 31
+        - kind: locks
+          count: 2
     entities:
       - id: jamb-top
         kind: wall
@@ -299,6 +323,14 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 28
+        - kind: locks
+          count: 1
+        - kind: smashed
+          count: 1
     entities:
       - id: jamb-top
         kind: wall
@@ -388,6 +420,14 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 25
+        - kind: locks
+          count: 1
+        - kind: smashed
+          count: 1
     entities:
       - id: anchor-top
         kind: wall
@@ -456,6 +496,14 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 22
+        - kind: locks
+          count: 1
+        - kind: smashed
+          count: 2
     entities:
       - id: vault-jamb
         kind: wall
@@ -647,6 +695,14 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 16
+        - kind: locks
+          count: 2
+        - kind: smashed
+          count: 2
     coloredAreas:
       - kind: var
         x: 45

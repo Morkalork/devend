@@ -65,19 +65,36 @@ function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   return checkWaypoints(wall.startWaypoints) || checkWaypoints(wall.endWaypoints);
 }
 
+/**
+ * Balls you can still do something with.
+ *
+ * The counter behind both "every ball is locked" and the HUD's last-ball
+ * warning, defined once because those two must not be able to disagree: a
+ * warning that says "this is your last ball" on a board the win check thinks
+ * still has two is worse than no warning.
+ *
+ * A dormant ball (#73) counts as in play - it has not entered yet, so the
+ * lock-all win must not fire until it has been booted and then trapped. A won
+ * ball has speed 0 and is excluded by both tests.
+ */
+export function countBallsInPlay(
+  balls: ReadonlyArray<{ state: string; speed: number }>,
+): number {
+  let n = 0;
+  for (const b of balls) {
+    if (b.state !== 'won' && (b.speed > 0 || b.state === 'dormant')) n++;
+  }
+  return n;
+}
+
 function areAllBallsWon(game: CanvasGameState): boolean {
   // Single allocation-free scan (runs every frame via the win-condition check):
   // true iff at least one ball counts and every counting ball is won.
   let any = false;
   for (const b of game.balls) {
-    // A dormant ball (#73) counts and is NOT won, so the lock-all win can't fire
-    // until every dormant ball has been booted (and then trapped).
-    if (b.speed > 0 || b.state === 'won' || b.state === 'dormant') {
-      any = true;
-      if (b.state !== 'won') return false;
-    }
+    if (b.speed > 0 || b.state === 'won' || b.state === 'dormant') { any = true; break; }
   }
-  return any;
+  return any && countBallsInPlay(game.balls) === 0;
 }
 
 function getGridRemainingPercent(game: CanvasGameState): number {
@@ -693,7 +710,20 @@ function isPlainSpaceWin(spec: WinSpec): boolean {
  *
  * NB the comparison is <= to match the HUD: the top bar shows CLEAR at
  * remaining == sizeThreshold, and a win check of strictly-less left the map
- * unfinished on an exact landing.
+ * unfinished on an exact landing. That comparison now lives in the space
+ * clause rather than here.
+ *
+ * IT READS THE SPEC. It used to complete the level from `level.sizeThreshold`
+ * and `level.threadLockRequired` directly, which is the same win stated twice
+ * in two places free to disagree - and they did. Every caller reaches this
+ * function on paths where the spec has NOT been satisfied (the per-frame HUD
+ * update, a destroy that captured pocket cells), so any requirement the legacy
+ * fields do not model was simply skipped: level 8's authored Colored Area gate
+ * could be walked past by clearing to 19% with the zone empty, and every act I
+ * map that now asks for a smashed slab would have been beatable without
+ * touching it. For the derived specs the two readings are identical by
+ * construction - the derivation IS sizeThreshold plus threadLockRequired - so
+ * nothing changes on a map that never authored a win.
  *
  * Returns the rounded remaining percent for the caller's own bookkeeping.
  */
@@ -711,16 +741,13 @@ export function checkSpaceWin(
     game.bestRemainingPercent = percent;
   }
 
-  // Breaking objects is a bonus, not a win condition (issue #38) — the level is
-  // completed by shrinking the board, exactly as normal.
-  const lockReq = level.threadLockRequired ?? 0;
   // Never prompt on a board with nothing left in play. Push Your Luck is a bet
   // that you can keep clearing while the balls are still loose, so with every
   // ball locked there is no bet to make: the offer just hands the player an
   // empty map and a spent decision. Guarded here as well as at the call above,
   // because this is the mechanic's own precondition and not a property of any
   // one route into it.
-  if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq
+  if (requirementsMet(resolveWinSpec(level), readWinSnapshot(game, level))
       && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
     // Push Your Luck is a bet that you can keep clearing while the balls are
     // still loose. With every ball locked there is no bet to make, so the offer

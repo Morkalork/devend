@@ -32,7 +32,7 @@ vi.mock("@/lib/gameHaptics", () => ({
   vibrateDeath: () => {}, vibrateGameOver: () => {},
 }));
 
-import { evaluateWinConditions } from "@/lib/physics/applyCut";
+import { evaluateWinConditions, checkSpaceWin } from "@/lib/physics/applyCut";
 import { createInitialGameData } from "@/lib/initGame";
 import { captureUnreachableCells } from "@/lib/spaceGrid";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -102,6 +102,37 @@ function lockedOutBoard(lvl: LevelConfig, over: Partial<CanvasGameState> = {}): 
     screenSize: { width: 900, height: 900 },
     boardRect: { left: 0, top: 0, width: 900, height: 900, scale: 1 },
     ...over,
+  } as unknown as CanvasGameState;
+}
+
+/**
+ * Cleared well past the threshold with a ball still bouncing: the state the
+ * space path sees on an ordinary win.
+ */
+function clearedBoard(
+  lvl: LevelConfig, data: ReturnType<typeof createInitialGameData>,
+): CanvasGameState {
+  const grid = data.spaceGrid!;
+  // Remove all but a sliver, the way a run of fences would.
+  const keep = Math.floor(grid.cells.length * 0.05);
+  let active = 0;
+  for (let i = 0; i < grid.cells.length; i++) {
+    if (grid.cells[i] !== 0) continue;
+    if (active < keep) { active++; continue; }
+    grid.cells[i] = 1;
+  }
+  grid.activeCount = active;
+  return {
+    ...data, balls: data.balls.map(b => ({ ...b, state: "active", speed: 5 })),
+    walls: data.walls, activeWalls: [], movers: data.movers ?? [], objectDebris: [],
+    pendingDestroys: [], assimilations: new Map(),
+    destructibles: [{ id: "slab", kind: "breakable", hits: 0, maxHits: 4, lastHitAt: 0, destroyed: false }],
+    obstaclePolygons: data.obstaclePolygons ?? [], mirrorPolygons: data.mirrorPolygons ?? [],
+    pickups: [], pickupFeedback: [], regions: data.regions ?? [], chestLoot: [],
+    coloredAreas: [], activePlaySeconds: 10, lockedBallsCount: 1,
+    levelComplete: false, gameOver: false, pushMode: "none",
+    screenSize: { width: 900, height: 900 },
+    boardRect: { left: 0, top: 0, width: 900, height: 900, scale: 1 },
   } as unknown as CanvasGameState;
 }
 
@@ -182,5 +213,62 @@ describe("stranding the map by locking everything", () => {
     vi.runAllTimers();
 
     expect(h.calls.timedOutWith, "lost a map that was still being played").toHaveLength(0);
+  });
+});
+
+/**
+ * The space clear does not walk past the rest of the win.
+ *
+ * checkSpaceWin used to complete the level from `level.sizeThreshold` and
+ * `level.threadLockRequired` read directly off the LevelConfig - the same win
+ * stated twice, in two places free to disagree. Every caller reaches it on a
+ * path where the spec has NOT been satisfied (the per-frame HUD update, a
+ * destroy that captured pocket cells), so any requirement those two fields
+ * cannot model was simply skipped.
+ *
+ * That was live: bot runs won level 8 five times out of five with ZERO locks,
+ * on a map whose authored win is "clear to 19% AND lock a ball in the zone".
+ * Nothing in the suite noticed, because every test of the gate drove the spec
+ * path rather than the space path.
+ */
+describe("clearing to the threshold is not a win on its own", () => {
+  it("does not complete a map whose other requirements are unmet", () => {
+    const h = harness();
+    const lvl = level([{ kind: "space", threshold: 40 }, { kind: "smashed", count: 1 }]);
+    // Cleared past the threshold, slab intact, and a ball still in play - so
+    // the lock-out rule is not what is being measured here.
+    const data = createInitialGameData(lvl, 5, DEFAULT_MODIFIERS);
+    const board = clearedBoard(lvl, data);
+    checkSpaceWin(board, lvl, h.callbacks, 5, DEFAULT_MODIFIERS);
+    vi.runAllTimers();
+
+    // The symptom is the OFFER, not the completion: reaching the threshold with
+    // balls still loose opens the push-your-luck prompt, and banking from that
+    // prompt ends the map. So a map that is not actually won must never get
+    // that far. Asserting only "did not complete" passes under the old
+    // legacy-field reading too, because that reading opened the prompt rather
+    // than banking - which is exactly how level 8 was beatable with its zone
+    // empty.
+    expect(board.pushMode, "offered to bank a map that was not won").not.toBe("prompt");
+    expect(board.pushPromptPending, "queued the bank offer instead").toBeFalsy();
+    expect(h.calls.completed, "the clear walked past the unmet requirement").toBe(0);
+  });
+
+  it("still completes a map whose requirements the clear satisfies", () => {
+    // The other half: a derived spec is exactly "space plus threadLockRequired",
+    // so reading the spec instead of those two fields must be a no-op on the
+    // 26 maps that never authored a win. A guard that refused everything would
+    // pass the test above and break the whole ladder.
+    const h = harness();
+    const lvl = level([{ kind: "space", threshold: 40 }]);
+    const data = createInitialGameData(lvl, 5, DEFAULT_MODIFIERS);
+    const board = clearedBoard(lvl, data);
+    checkSpaceWin(board, lvl, h.callbacks, 5, DEFAULT_MODIFIERS);
+    vi.runAllTimers();
+
+    // Reaching the threshold with balls still loose opens the push-your-luck
+    // prompt rather than banking outright - that IS the ordinary clear, and it
+    // is the behaviour a guard that refused everything would have killed.
+    expect(board.pushMode, "an ordinary clear no longer reaches the win").toBe("prompt");
   });
 });

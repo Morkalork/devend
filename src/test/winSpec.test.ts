@@ -20,7 +20,7 @@ import {
   winSpecProblems, winReasonFor, winBonusPercent,
 } from "@/lib/winSpec";
 import { WIN_CONDITION_KINDS } from "@/types/winSpec";
-import type { WinCondition, WinSnapshot } from "@/types/winSpec";
+import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 
 const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
@@ -104,20 +104,30 @@ describe("every shipped map still means what it meant", () => {
   ) as { levels: LevelConfig[] }).levels;
 
   /**
-   * Act IV states its own win conditions; every other map still derives one.
-   * Pinned as a LIST rather than a count so authoring a `win:` block on a map
-   * is a deliberate act that shows up here, not something that drifts in.
+   * Act I and act IV state their own win conditions; the middle of the ladder
+   * still derives one. Pinned as a LIST rather than a count so authoring a
+   * `win:` block on a map is a deliberate act that shows up here, not
+   * something that drifts in.
    */
   it("authors a win only on the maps that mean to", () => {
     expect(MAPS.length).toBeGreaterThan(30);
-    // level-8 authors one on purpose, and is the first map outside act IV to do
-    // so. Its colored area is a gate, and a gate ALONE derives to
-    // `[{area, count: 1}]` with no space clause at all - the area would become
-    // the sole win and the clear would stop mattering, which is the "a gate
-    // never replaces the clear" rule. Stating both is the only way to ask for
-    // "clear the board AND lock one in the box", so it states both.
+    // All of act I authors one now. A derived spec carries the free
+    // `allLocked` alternative and asks for nothing but space, which is what
+    // made the opening maps beatable either by sealing every ball with the
+    // board untouched or by never locking one at all.
+    //
+    // level-8 was the first outside act IV to do so, and shows why authoring
+    // is needed rather than more legacy fields: its colored area is a gate,
+    // and a gate ALONE derives to `[{area, count: 1}]` with no space clause at
+    // all - the area would become the sole win and the clear would stop
+    // mattering, which is the "a gate never replaces the clear" rule. Stating
+    // both is the only way to ask for "clear the board AND lock one in the
+    // box", so it states both.
     const authored = MAPS.filter(m => resolveWinSpec(m).authored).map(m => String(m.id));
-    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34", "level-8"]);
+    expect(authored.sort()).toEqual([
+      "level-1", "level-2", "level-3", "level-32", "level-33", "level-34",
+      "level-4", "level-5", "level-6", "level-7", "level-8", "level-9",
+    ]);
   });
 
   it("still derives a working spec for every other map", () => {
@@ -266,6 +276,19 @@ describe("flagging a map that can never be won", () => {
 
   it("catches an area clause on a map with no gate area", () => {
     expect(problems([{ kind: "area", count: 1 }]).join(" ")).toMatch(/no gate area/);
+  });
+
+  it("catches a limit clause used as an alternative, which wins on frame one", () => {
+    // underPar and speedClear are met until they are blown, so as an
+    // alternative they fire before a single cut. The map ends instantly and
+    // the author has no way to tell why.
+    const spec = { require: [{ kind: "space", threshold: 40 }], alsoWinIf: [{ kind: "underPar", delta: 0 }], authored: true } as WinSpec;
+    expect(winSpecProblems(spec, level()).join(" ")).toMatch(/win instantly/);
+    const speed = { require: [{ kind: "space", threshold: 40 }], alsoWinIf: [{ kind: "speedClear", seconds: 60 }], authored: true } as WinSpec;
+    expect(winSpecProblems(speed, level()).join(" ")).toMatch(/win instantly/);
+    // The same clauses as REQUIREMENTS are correct and must stay unflagged.
+    const req = { require: [{ kind: "space", threshold: 40 }, { kind: "underPar", delta: 0 }], alsoWinIf: [], authored: true } as WinSpec;
+    expect(winSpecProblems(req, level())).toEqual([]);
   });
 
   it("catches a boss clause on a map with no boss", () => {

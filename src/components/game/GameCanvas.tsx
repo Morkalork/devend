@@ -120,7 +120,7 @@ import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
+import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -169,6 +169,11 @@ export interface GameStateInfo {
    * a requirement the gate disagrees with.
    */
   winGates: WinConditionProgress[];
+  /**
+   * Balls still in play. The top bar turns an outstanding gate into a warning
+   * at one, because from there a lock strands the map and costs a life.
+   */
+  ballsInPlay: number;
   /** The one live feedback message, or null. See lib/gameMessages. */
   gameMessage?: GameMessage | null;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
@@ -1775,6 +1780,9 @@ export function GameCanvas({
   // resolveWinSpec + readWinSnapshot are exactly what applyCut's win check
   // calls, so there is one reading of the map's win, not two.
   const winGates = extraGates(resolveWinSpec(level), readWinSnapshot(gameRef.current, level));
+  // Same counter the win check uses for "every ball is locked", so the warning
+  // cannot claim a last ball on a board the gate thinks still has two.
+  const ballsInPlay = countBallsInPlay(gameRef.current.balls);
 
   useEffect(() => {
     if (onGameStateChange) {
@@ -1799,13 +1807,14 @@ export function GameCanvas({
         onBankAndContinue: handleBankAndContinue,
         pushBonusSoFar,
         winGates,
+        ballsInPlay,
         gameMessage,
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -1724,7 +1724,8 @@
     "underPar": "Under par",
     "speedClear": "Mot klockan",
     "smashed": "Krossat",
-    "delivered": "Levererat"
+    "delivered": "Levererat",
+    "atRisk": "Sista bollen: {{label}} aterstar"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",

@@ -34,11 +34,13 @@ const ICONS = {
 interface Props {
   gate: WinConditionProgress;
   accentColor: string;
+  /** One ball left and this gate still outstanding: locking it strands the map. */
+  atRisk?: boolean;
   /** Opens the "How to win" text, which carries the full wording. */
   onExplain?: () => void;
 }
 
-export function WinGateChip({ gate, accentColor, onExplain }: Props) {
+export function WinGateChip({ gate, accentColor, atRisk = false, onExplain }: Props) {
   const { t } = useTranslation();
   const done = gateSatisfied(gate);
   const Icon = ICONS[gate.condition.kind as keyof typeof ICONS] ?? Diamond;
@@ -49,7 +51,10 @@ export function WinGateChip({ gate, accentColor, onExplain }: Props) {
     ? t(gateLabelKey(gate.condition), { type: gate.condition.ballType })
     : t(gateLabelKey(gate.condition));
 
-  const color = done ? accentColor : 'hsl(var(--foreground))';
+  // Three states, not two. Dim/plain/accent was "where you stand"; the warning
+  // is "you are one lock away from losing this", which is a different question
+  // and the only one that costs a life.
+  const color = done ? accentColor : atRisk ? '#ff6b6b' : 'hsl(var(--foreground))';
 
   return (
     <button
@@ -60,12 +65,16 @@ export function WinGateChip({ gate, accentColor, onExplain }: Props) {
       // nothing.
       onPointerDown={e => e.stopPropagation()}
       className="flex items-center gap-1.5 min-w-0 bg-transparent"
-      title={label}
-      aria-label={`${label} ${gate.current}/${gate.target}`}
+      title={atRisk ? t('winGate.atRisk', { label }) : label}
+      aria-label={`${label} ${gate.current}/${gate.target}${atRisk ? ` (${t('winGate.atRisk', { label })})` : ''}`}
     >
       <Icon
         className="w-4 h-4 flex-shrink-0"
-        style={{ color, filter: done ? `drop-shadow(0 0 6px ${accentColor}aa)` : 'none' }}
+        style={{
+          color,
+          filter: done ? `drop-shadow(0 0 6px ${accentColor}aa)`
+            : atRisk ? 'drop-shadow(0 0 6px #ff6b6baa)' : 'none',
+        }}
       />
       <span
         className="font-display text-sm font-bold tabular-nums"

@@ -211,6 +211,19 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
     }
   }
 
+  // A `limit` clause is met until it is BLOWN, so it reads as satisfied from
+  // the first frame. As a requirement that is correct and the whole point; as
+  // an ALTERNATIVE it wins the map on frame one, before a single cut, because
+  // metAlternative only asks whether the clause is met. An author reaching for
+  // "or finish under par for a bonus" gets a map that ends instantly, and
+  // nothing else would say why.
+  for (const c of spec.alsoWinIf) {
+    if (c.kind === "underPar" || c.kind === "speedClear") {
+      problems.push(
+        `An "${c.kind}" alternative is met before the first cut, so this map would win instantly. Limits belong in require.`);
+    }
+  }
+
   if (kinds.has("boss") && !level.boss) {
     problems.push("Asks for a boss defeat, but the map has no boss.");
   }

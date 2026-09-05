@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
 import { WinGateChip } from '@/components/game/WinGateChip';
+import { gateAtRisk } from '@/lib/winHud';
 import type { WinConditionProgress } from '@/types/winSpec';
 
 interface CertificateHourProgress {
@@ -34,6 +35,8 @@ interface GameTopBarProps {
    * space-and-locks map, which is most of them.
    */
   winGates?: WinConditionProgress[];
+  /** Balls still in play; at one, an outstanding gate becomes a warning. */
+  ballsInPlay?: number;
   /** Opens the "How to win" text, which carries the full wording. */
   onExplainWin?: () => void;
   /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
@@ -64,6 +67,7 @@ export function GameTopBar({
   lockedBalls,
   threadLockRequired,
   winGates,
+  ballsInPlay = 99,
   onExplainWin,
   scopeCreepPercent = 0,
   accentColor = '#00ff88',
@@ -322,6 +326,7 @@ export function GameTopBar({
             key={g.condition.kind + ('ballType' in g.condition ? g.condition.ballType : '')}
             gate={g}
             accentColor={accentColor}
+            atRisk={gateAtRisk(g, ballsInPlay)}
             onExplain={onExplainWin}
           />
         ))}
