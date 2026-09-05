@@ -100,6 +100,41 @@ a line.
 - `main` is the release branch: merging or pushing there still needs an
   explicit ask.
 
+## After a push: wait for the deploy, then say it is testable
+
+A push to `dev` starts two INDEPENDENT things, and the useful one is not the
+one people watch:
+
+| | trigger | takes | where to read it |
+|---|---|---|---|
+| GitHub Actions CI | push to `dev` / `main` | ~3.5 min | `actions_list` / `get_job_logs` |
+| Heroku deploy | push to `dev` | ~80 s | GitHub **Deployments** API |
+
+The Heroku deploy is what makes a build testable, and it is **not gated on
+CI** - it starts within ~20s of the push and finishes before CI does. A commit
+whose CI went red still deployed (`eb3d344` deployed `success` at 11:13:32
+while its CI failed at 11:15:24), so a live staging site is not evidence of a
+green build, and both have to be reported.
+
+Do not end a turn on "pushed". Wait for BOTH, then say so:
+
+```sh
+# Heroku: the deployment record, newest first, and its statuses
+curl -s "https://api.github.com/repos/Morkalork/devend/deployments?per_page=1"
+curl -s "https://api.github.com/repos/Morkalork/devend/deployments/<id>/statuses"
+```
+
+`state: success` on the newest deployment for the pushed SHA means staging is
+live at the `environment_url` it carries
+(`https://dev-end-staging-*.herokuapp.com/`). The site itself cannot be fetched
+from this sandbox - the egress proxy refuses `herokuapp.com` - so the
+deployment status is the authority, not a page load.
+
+Report the SHA, the deploy state, and the CI conclusion. If either is still
+running, wait rather than guessing; if the deploy succeeded but CI failed, say
+exactly that, because the thing being tested is then a build with a known
+failure in it.
+
 ## Github
 
 - If working on an issue, always add a comment there with what you've done
