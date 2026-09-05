@@ -16,6 +16,12 @@
  *   TRADE      the two things that cannot both be had, when the map poses one
  *   FAIL       what takes a life
  *
+ * A heading and its bullets are ONE SENTENCE, and that is a constraint on the
+ * strings rather than a nicety. "LOSE A LIFE IF" over "Finish within 60s."
+ * says that finishing on time costs you a life. So every fail bullet is
+ * written as the CONDITION ("The 60s clock runs out.") and the consequence is
+ * stated once, in the heading, where it cannot be attached to the wrong half.
+ *
  * The optional group is new content, not just a new heading. A BONUS colored
  * area (`required: false`) pays 1.5x to 3x and was never mentioned here at all:
  * the switch below only ever fired on a `area` win CLAUSE, so the greed hook -
@@ -108,6 +114,12 @@ function winConditionParts(
         // The fail is a FAIL, not a second thing to do. Sitting beside the win
         // in one paragraph, "trap it outside and you lose a life" read as an
         // instruction rather than as the penalty it is.
+        //
+        // Phrased as a CONDITION, because the heading above it supplies the
+        // consequence. Every bullet in this group has to complete the sentence
+        // "you lose a life if ..." - the first cut of this shipped headed
+        // "COSTS A LIFE" over the bullet "Finish within 60s.", which reads as
+        // though finishing on time is what costs you the life.
         say("fail", t("winConditions.areaFail", { target }));
         break;
       }

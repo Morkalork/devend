@@ -75,6 +75,64 @@ describe("every line lands in a named list", () => {
   });
 });
 
+/**
+ * A heading and its bullets are ONE SENTENCE.
+ *
+ * The first cut of this shipped a group headed "COSTS A LIFE" over the bullet
+ * "Finish within 60s.", which says that finishing on time is what costs you the
+ * life. The grouping was right and the wording was not: the heading supplies the
+ * consequence, so a bullet phrased as an INSTRUCTION composes into a lie.
+ *
+ * These read the real English rather than the key echo, because the bug was
+ * entirely in the words.
+ */
+describe("a heading and its bullets read as one sentence", () => {
+  /** The winConditions block of a locale file: flat strings plus the group map. */
+  type WinLocale = Record<string, string> & { group: Record<string, string> };
+  const locale = (lang: string): WinLocale => JSON.parse(readFileSync(
+    resolve(process.cwd(), `src/i18n/locales/${lang}.json`), "utf8"),
+  ).winConditions as WinLocale;
+  const EN = locale("en");
+
+  it("heads the fail list with the consequence", () => {
+    // Stated once, where it cannot attach to the wrong half.
+    expect(EN.group.fail, "the fail heading stopped naming the consequence")
+      .toMatch(/lose a life/i);
+  });
+
+  it("states the life cost in the heading and NOWHERE else", () => {
+    // A bullet that repeats it is a bullet that was written to stand alone,
+    // which is how the instruction phrasing got in.
+    for (const key of ["time", "fences", "areaFail"]) {
+      expect(EN[key], `winConditions.${key} restates the penalty`)
+        .not.toMatch(/lose a life|costs a life/i);
+    }
+  });
+
+  it("phrases every fail bullet as a condition, not an instruction", () => {
+    // "Finish within 60s" and "Trap the boss outside the area" are things to
+    // DO. Under this heading they have to be things that HAPPEN.
+    for (const key of ["time", "fences", "areaFail"]) {
+      expect(EN[key], `winConditions.${key} opens with an imperative`)
+        .not.toMatch(/^(Finish|Trap|Lock|Clear|Smash|Deliver|Light|Harvest|Land)\b/);
+    }
+  });
+
+  it("keeps the three locales on the same shape", () => {
+    // A translation that reverted to the instruction phrasing would read as the
+    // same lie in that language, and nobody playing in English would see it.
+    for (const lang of ["es", "sv"]) {
+      const node = locale(lang);
+      for (const g of CRITERION_GROUPS) {
+        expect(node.group[g], `${lang} is missing winConditions.group.${g}`).toBeTruthy();
+      }
+      for (const key of ["time", "fences", "areaFail"]) {
+        expect(node[key], `${lang} is missing winConditions.${key}`).toBeTruthy();
+      }
+    }
+  });
+});
+
 describe("optional is marked optional", () => {
   it("names the bonus pocket the modal used to hide", () => {
     // Level 5's var pocket: pays 1.5x, gates nothing, and no line of the old
