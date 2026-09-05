@@ -106,12 +106,47 @@ describe("the panel shows it", () => {
     }
   });
 
-  it("wraps the type rows instead of running them off the edge", () => {
-    // Twelve buttons across two rows in a side panel: without wrapping the
-    // last ones are simply not reachable.
-    expect(SRC, "a palette row still cannot wrap").not.toMatch(/className="flex gap-1"/);
-    expect(SRC).toContain('className="flex flex-wrap justify-end gap-1"');
-  });
+  /**
+   * Twelve buttons across two rows in a side panel: without wrapping the last
+   * ones are simply not reachable, which is how Machines lost its delivery-box
+   * button off the right edge.
+   *
+   * Checked STRUCTURALLY rather than by looking for a class string anywhere in
+   * the file. The first version of this test did the latter and passed while
+   * the palettes could not wrap at all: unrelated rows elsewhere in the panel
+   * carried the same classes, so the assertion was satisfied by markup that had
+   * nothing to do with the palettes.
+   *
+   * The failure being pinned is subtle. `flex-wrap` on the palette was already
+   * there and did nothing, because the palette was a flex ITEM of a
+   * `justify-between` header row, and a flex item defaults to
+   * `min-width: auto` - it will not shrink below its content, so there was
+   * never a narrower width to wrap into. It overflowed instead.
+   */
+  describe.each(["Areas (win gate)", "Obstacles", "Machines"])(
+    "the %s palette", (heading) => {
+      const after = () => {
+        const at = SRC.indexOf(`>${heading}</h3>`);
+        expect(at, `the ${heading} heading is gone: has it been renamed?`)
+          .toBeGreaterThan(-1);
+        return SRC.slice(at, at + 200);
+      };
+
+      it("is a wrapping row of its own", () => {
+        expect(after(), `the ${heading} palette cannot wrap`)
+          .toMatch(/<div className="flex flex-wrap gap-1/);
+      });
+
+      it("is not a flex item of a justify-between header", () => {
+        // The shape that made flex-wrap inert. The heading has to be on its own
+        // line with the palette beneath it, so the palette gets the full width.
+        const before = SRC.slice(Math.max(0, SRC.indexOf(`>${heading}</h3>`) - 400),
+          SRC.indexOf(`>${heading}</h3>`));
+        const lastTag = before.lastIndexOf("<div");
+        expect(before.slice(lastTag), `the ${heading} palette is boxed in again`)
+          .not.toContain("justify-between");
+      });
+    });
 
   it("heads the editor with the type, not the shape", () => {
     expect(SRC, 'the heading is back to "Rectangle Properties" over a bumper')

@@ -116,9 +116,19 @@ export function EntityPanel({
   // answer to "what IS this", and it points at the row that already explains
   // the type in its tooltip.
   const selectedType = selectedEntity ? entityAddType(selectedEntity) : null;
-  /** Ring the button for the type currently selected, leave the rest alone. */
+  /**
+   * Mark the button for the type currently selected, leave the rest alone.
+   *
+   * Ring AND brightness, because the palette buttons are not one colour: a ring
+   * that reads against the grey obstacle buttons is much weaker against the
+   * emerald and orange machine ones, and the whole job of this is to be seen
+   * without hunting. The offset is 2 so the ring sits clear of the button
+   * rather than hugging its own border.
+   */
   const sel = (type: AddEntityType) =>
-    selectedType === type ? ' ring-2 ring-primary ring-offset-1 ring-offset-background' : '';
+    selectedType === type
+      ? ' ring-2 ring-primary ring-offset-2 ring-offset-background brightness-150'
+      : '';
 
   const getEntityIcon = (entity: LevelEntity) => {
     const color = isMirrorEntity(entity) ? 'text-cyan-400' : 'text-destructive';
@@ -156,9 +166,16 @@ export function EntityPanel({
     <div className="p-3 space-y-4">
       {/* Colored Areas Section — the required win gate (var / let / const) */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Areas (win gate)</h3>
-          <div className="flex flex-wrap justify-end gap-1">
+        {/* Heading on its own line, palette beneath it.
+            These were one `justify-between` row with the buttons as a flex
+            ITEM, and a flex item defaults to `min-width: auto` - it will not
+            shrink below its content, so `flex-wrap` inside it never had a
+            narrower width to wrap into. It overflowed the panel instead, and
+            Machines lost its last button off the right edge. Giving the
+            palette the full width removes the constraint rather than fighting
+            it with min-w-0. */}
+        <h3 className="text-sm font-semibold text-muted-foreground mb-1">Areas (win gate)</h3>
+        <div className="flex flex-wrap gap-1 mb-2">
             {(Object.keys(AREA_KINDS) as AreaKind[]).map(kind => (
               <button
                 key={kind}
@@ -174,7 +191,6 @@ export function EntityPanel({
                 + {kind}
               </button>
             ))}
-          </div>
         </div>
 
         <div className="space-y-1">
@@ -365,9 +381,16 @@ export function EntityPanel({
 
       {/* Walls Section */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Obstacles</h3>
-          <div className="flex flex-wrap justify-end gap-1">
+        {/* Heading on its own line, palette beneath it.
+            These were one `justify-between` row with the buttons as a flex
+            ITEM, and a flex item defaults to `min-width: auto` - it will not
+            shrink below its content, so `flex-wrap` inside it never had a
+            narrower width to wrap into. It overflowed the panel instead, and
+            Machines lost its last button off the right edge. Giving the
+            palette the full width removes the constraint rather than fighting
+            it with min-w-0. */}
+        <h3 className="text-sm font-semibold text-muted-foreground mb-1">Obstacles</h3>
+        <div className="flex flex-wrap gap-1 mb-2">
             <button
               onClick={() => onAddEntity('rect')}
               className={`p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors${sel('rect')}`}
@@ -408,7 +431,6 @@ export function EntityPanel({
             >
               <CircleDot className="w-3.5 h-3.5" />
             </button>
-          </div>
         </div>
 
         {/* The behaving objects, on their own row.
@@ -417,9 +439,16 @@ export function EntityPanel({
             launcher, the delivery box and the cage were not reachable at all,
             because no button created their kind. A mechanic nobody can place is
             a mechanic nobody has, which is exactly how it was reported. */}
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Machines</h3>
-          <div className="flex flex-wrap justify-end gap-1">
+        {/* Heading on its own line, palette beneath it.
+            These were one `justify-between` row with the buttons as a flex
+            ITEM, and a flex item defaults to `min-width: auto` - it will not
+            shrink below its content, so `flex-wrap` inside it never had a
+            narrower width to wrap into. It overflowed the panel instead, and
+            Machines lost its last button off the right edge. Giving the
+            palette the full width removes the constraint rather than fighting
+            it with min-w-0. */}
+        <h3 className="text-sm font-semibold text-muted-foreground mb-1">Machines</h3>
+        <div className="flex flex-wrap gap-1 mb-2">
             <button
               onClick={() => onAddEntity('bouncer')}
               className={`p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors${sel('bouncer')}`}
@@ -469,7 +498,6 @@ export function EntityPanel({
             >
               <Package className="w-3.5 h-3.5" />
             </button>
-          </div>
         </div>
         
         <div className="space-y-1">
