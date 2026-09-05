@@ -122,7 +122,7 @@ import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
-import { processDestroysFn } from "@/lib/physics/destructibles";
+import { processDestroysFn, demolitionProgress } from "@/lib/physics/destructibles";
 import { pushBonusEarned } from "@/lib/pushLuck";
 import { extraGates } from "@/lib/winHud";
 import { resolveWinSpec } from "@/lib/winSpec";
@@ -1598,7 +1598,11 @@ export function GameCanvas({
         scoreMultiplier: activeModifiers.scoreMultiplier,
         locks: readLockAxes(game),
         tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
-        greedBonus: pushBonus + game.breakBonus,
+        greedBonus: pushBonus,
+        // The map's own content, as its own axis. It used to ride in on
+        // greedBonus above and drown there: Greed's pot is shared with
+        // clearing, so on any map where you also cleared it was full.
+        demolition: demolitionProgress(game.destructibles),
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
         flatBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,

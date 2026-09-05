@@ -153,7 +153,8 @@ describe("sealing the lit ball", () => {
 describe("the bonus cannot break the economy", () => {
   const CEILINGS = {
     delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25,
-    thriftFullAtParFraction: 0.4, greedFullAtSlackFraction: 0.6,
+    demolition: 35,
+  thriftFullAtParFraction: 0.4, greedFullAtSlackFraction: 0.6,
   };
   const axes = (premiumEarned: number) => bankAxes({
     lockedCapacity: 48, totalCapacity: 48,

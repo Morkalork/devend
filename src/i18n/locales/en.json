@@ -521,8 +521,13 @@
       },
       "axis_greed": {
         "title": "Greed",
-        "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck and demolition hours. Switches off entirely at three fences over par.",
+        "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck hours. Switches off entirely at three fences over par.",
         "tip": "Extra clearing costs fences and time. Greed pairs naturally with Craft, and fights Thrift for every cut."
+      },
+      "axis_demolition": {
+        "title": "Demolition",
+        "body": "The share of the map's breakable objects you actually took apart, weighted by how many hits each one was worth. It is a baseline like Delivery, not a tactic: if a map put something breakable on the board, breaking it is part of finishing the map. Maps with nothing to smash do not show this lane at all.",
+        "tip": "A big slab is worth far more than a small cover, so go for the expensive one first. Smashing costs time and fences, which is what makes it a real decision against Tempo and Thrift."
       },
       "winBonus": {
         "title": "Win bonus",
@@ -548,6 +553,7 @@
       "tempo": "Tempo",
       "thrift": "Thrift",
       "greed": "Greed",
+      "demolition": "Demolition",
       "full": "{{hours}}h ✓",
       "short": "-{{hours}}h",
       "outOf": "{{earned}}/{{ceiling}}h"

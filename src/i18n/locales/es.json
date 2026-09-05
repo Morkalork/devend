@@ -518,8 +518,13 @@
       },
       "axis_greed": {
         "title": "Codicia",
-        "body": "Cuanto del tablero que podias dejar te llevaste igualmente, mas las horas de arriesgar y demoler. Se apaga del todo a tres vallas sobre el par.",
+        "body": "Cuánto del tablero que podías dejar te has llevado igualmente, más las horas de arriesgar. Se apaga por completo a tres vallas por encima del par.",
         "tip": "Despejar de mas cuesta vallas y tiempo. La Codicia se lleva bien con el Oficio y pelea con el Ahorro por cada corte."
+      },
+      "axis_demolition": {
+        "title": "Demolición",
+        "body": "La parte de los objetos rompibles del mapa que has desmontado, ponderada por los golpes que costaba cada uno. Es una base como la Entrega, no una táctica: si un mapa pone algo rompible en el tablero, romperlo forma parte de terminarlo. Los mapas sin nada que romper no muestran esta barra.",
+        "tip": "Una losa grande vale mucho más que una tapa pequeña, así que ve primero a por la cara. Romper cuesta tiempo y vallas, y eso es lo que la convierte en una decisión real frente a Ritmo y Ahorro."
       },
       "winBonus": {
         "title": "Bono de victoria",
@@ -545,6 +550,7 @@
       "tempo": "Ritmo",
       "thrift": "Ahorro",
       "greed": "Codicia",
+      "demolition": "Demolición",
       "full": "{{hours}}h ✓",
       "short": "-{{hours}}h",
       "outOf": "{{earned}}/{{ceiling}}h"

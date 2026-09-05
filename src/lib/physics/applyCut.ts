@@ -34,6 +34,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
+import { demolitionProgress } from "@/lib/physics/destructibles";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
@@ -792,7 +793,11 @@ export function triggerLevelComplete(
       locks: readLockAxes(game),
       // Push-your-luck and demolition are the same bet as clearing past the
       // requirement, so they bank into Greed.
-      greedBonus: pushBonus + game.breakBonus,
+      greedBonus: pushBonus,
+      // The map's own content, as its own axis. It used to ride in on
+      // greedBonus above and drown there: Greed's pot is shared with
+      // clearing, so on any map where you also cleared it was full.
+      demolition: demolitionProgress(game.destructibles),
       // Owed regardless of route: the mutator's hazard premium, the objective
       // reward, and Stock Options / Comp Time, which used to raise a ceiling
       // that no longer binds anything.

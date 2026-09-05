@@ -15,6 +15,7 @@ export interface AxisCeilings {
   tempo: number;
   thrift: number;
   greed: number;
+  demolition: number;
 }
 
 /** Everything bankAxes needs, gathered so call sites stay readable. */
@@ -24,6 +25,11 @@ export interface ScoreAxisInput {
   lockedCapacity: number;
   /** The same sum over the map's whole roster: what a clean sweep is worth. */
   totalCapacity: number;
+  /** Authored hits of every breakable the run has actually destroyed. */
+  smashedHits?: number;
+  /** Authored hits of every breakable the map put on the board. Zero means the
+   *  map offers no demolition at all, not that the player failed at it. */
+  totalSmashableHits?: number;
   /** Hours the quality stack added on top of raw capacity (superior, zone,
    *  simultaneous, money, frozen, gravity). */
   premiumEarned: number;

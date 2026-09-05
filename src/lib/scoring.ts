@@ -75,6 +75,7 @@ export function getAxisCeilings(config: ScoringConfig = loadedConfig): AxisCeili
     tempo: num(a?.tempo, d.tempo),
     thrift: num(a?.thrift, d.thrift),
     greed: num(a?.greed, d.greed),
+    demolition: num(a?.demolition, d.demolition),
     thriftFullAtParFraction: num(a?.thriftFullAtParFraction, d.thriftFullAtParFraction),
     greedFullAtSlackFraction: num(a?.greedFullAtSlackFraction, d.greedFullAtSlackFraction),
   };
@@ -163,6 +164,8 @@ export function calculateScoreBreakdown(
     tempoCeilingMultiplier?: number;
     lockPayoutMultiplier?: number;
     flatGreedBonus?: number;
+    smashedHits?: number;
+    totalSmashableHits?: number;
   } = {},
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
@@ -178,6 +181,8 @@ export function calculateScoreBreakdown(
     shipEarlyPercent: axisInput.shipEarlyPercent ?? 0,
     shipEarlyMaxPercent: getShipEarlyMaxPercent(config),
     flatGreedBonus: axisInput.flatGreedBonus ?? 0,
+    smashedHits: axisInput.smashedHits ?? 0,
+    totalSmashableHits: axisInput.totalSmashableHits ?? 0,
     thriftCeilingMultiplier: underParBonusMultiplier,
     greedCeilingMultiplier: spaceBonusMultiplier,
     tempoCeilingMultiplier: axisInput.tempoCeilingMultiplier ?? 1,
@@ -265,7 +270,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 4.0,
     axes: {
-      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25,
+      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25, demolition: 35,
       thriftFullAtParFraction: 0.40,
       greedFullAtSlackFraction: 0.60,
     },
@@ -386,9 +391,15 @@ export interface ScoreOptions {
   /** The map's lock capacity and the quality premium earned against it: the
    *  raw material for the Delivery and Craft axes. */
   locks?: LockAxisInput;
-  /** Push-your-luck and demolition hours. These bank into Greed, since both
-   *  are the same bet: staying on a cleared board for more of it. */
+  /** Push-your-luck hours, which bank into Greed: the same bet as clearing
+   *  past the requirement, staying on a cleared board for more of it.
+   *  Demolition hours USED to ride along here and no longer do - Greed's pot
+   *  is shared with clearing, so on any map where you also cleared they were
+   *  swallowed. See the demolition axis. */
   greedBonus?: number;
+  /** Authored hits of the map's breakables, smashed and offered: the Demolition
+   *  axis. Read with demolitionProgress(game.destructibles). */
+  demolition?: { smashedHits: number; totalSmashableHits: number };
   /** Hours that belong to no axis and are simply owed: the map mutator's
    *  hazard premium, an objective's reward, and the Stock Options capstone,
    *  which used to raise a ceiling that no longer binds anything. */
@@ -466,7 +477,7 @@ export function calculateScore(
   winBonus: number;
 } {
   const {
-    scoreMultiplier = 1, locks, greedBonus = 0, flatBonus = 0, postCapBonus = 0,
+    scoreMultiplier = 1, locks, greedBonus = 0, demolition, flatBonus = 0, postCapBonus = 0,
     payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
     spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1, winBonusPercent = 0,
   } = options;
@@ -485,6 +496,8 @@ export function calculateScore(
       tempoCeilingMultiplier,
       lockPayoutMultiplier: payoutMultiplier,
       flatGreedBonus: greedBonus,
+      smashedHits: demolition?.smashedHits ?? 0,
+      totalSmashableHits: demolition?.totalSmashableHits ?? 0,
     },
   );
 

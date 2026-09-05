@@ -37,6 +37,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   axis_tempo: { icon: Timer, color: 'text-teal-400' },
   axis_thrift: { icon: Target, color: 'text-success' },
   axis_greed: { icon: Sparkles, color: 'text-primary' },
+  axis_demolition: { icon: Hammer, color: 'text-amber-400' },
 };
 
 interface LevelCompleteOverlayProps {

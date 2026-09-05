@@ -128,6 +128,43 @@ export function findBreakableDestructible(game: CanvasGameState, polygon: Polygo
  * `obstacle-<id>-edge-N` wall id). Obstacles are bounced by their edge walls,
  * so hit-detection keys off the wall, not the polygon.
  */
+/**
+ * What the Demolition axis is scored on: authored hits smashed, out of authored
+ * hits offered.
+ *
+ * DERIVED rather than counted as it happens. A destroyed breakable stays in
+ * `game.destructibles` with `destroyed: true`, so both halves are readable from
+ * one list at score time - and a running counter would be a second copy of the
+ * same fact, kept in step by every code path that can break something (a ball,
+ * a black ball, a map beat, a charge, a topple). One of those forgetting to
+ * increment is a silent scoring bug; this cannot have one.
+ *
+ * BREAKABLES ONLY. Mirrors and movers are destructible too, but only by the
+ * black ball, which unlocks at level 25 - counting them would put part of the
+ * axis behind a roster roll on every earlier map.
+ *
+ * Weighted by `maxHits`, so the denominator is the work the map is asking for
+ * rather than the number of objects it happens to have.
+ */
+export function demolitionProgress(
+  destructibles: Pick<DestructibleState, "kind" | "maxHits" | "destroyed">[],
+): { smashedHits: number; totalSmashableHits: number } {
+  let smashedHits = 0, totalSmashableHits = 0;
+  // Tolerates a missing list rather than trusting one. This runs on the
+  // map-completion path, where a throw does not lose a score - it loses the
+  // finished MAP, with nothing on screen to say why. spaceWin.test.ts drives
+  // triggerLevelComplete from a partial game state and found this immediately;
+  // "no destructibles" and "no demolition offered" are the same answer anyway.
+  if (!Array.isArray(destructibles)) return { smashedHits, totalSmashableHits };
+  for (const d of destructibles) {
+    if (d.kind !== "breakable") continue;
+    const hits = Number.isFinite(d.maxHits) && d.maxHits > 0 ? d.maxHits : 1;
+    totalSmashableHits += hits;
+    if (d.destroyed) smashedHits += hits;
+  }
+  return { smashedHits, totalSmashableHits };
+}
+
 export function findObstacleDestructibleById(game: CanvasGameState, id: string): DestructibleState | undefined {
   return game.destructibles.find(d => (d.kind === 'mirror' || d.kind === 'breakable') && !d.destroyed && d.id === id);
 }
@@ -486,6 +523,12 @@ function completeBreakable(
   // objective-counting gate reads this, so a break that is not counted can
   // strand the map.
   if (d.objective) game.objectivesBroken++;
+  // Recorded for the overlay and the run stats, NOT paid into Greed any more.
+  // It used to be `greedBonus: pushBonus + game.breakBonus`, which is how the
+  // map's own content came to be worth nothing: Greed's 25h pot is shared with
+  // clearing, so on any map where you also cleared it was already full and
+  // these hours evaporated. Demolition is its own axis now (scoreAxes.ts), paid
+  // on the share of the map's breakables actually taken apart.
   game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;
   // Every smash compounds the demolition multiplier, so stopping to break
   // things offsets the ship-early time it cost (issue #38). Write-Off

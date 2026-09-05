@@ -34,7 +34,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Lock, Medal, Timer, Scissors, Flame } from 'lucide-react';
+import { Lock, Medal, Timer, Scissors, Flame, Hammer } from 'lucide-react';
 import type { BankedAxes } from '@/types/scoring';
 import { AXIS_NAMES, type AxisName } from '@/lib/scoreAxes';
 
@@ -45,6 +45,7 @@ const AXIS_STYLE: Record<AxisName, { icon: typeof Lock; color: string; bar: stri
   tempo: { icon: Timer, color: 'text-teal-400', bar: 'bg-teal-400' },
   thrift: { icon: Scissors, color: 'text-success', bar: 'bg-success' },
   greed: { icon: Flame, color: 'text-primary', bar: 'bg-primary' },
+  demolition: { icon: Hammer, color: 'text-amber-400', bar: 'bg-amber-400' },
 };
 
 interface Props {
@@ -63,7 +64,19 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        {AXIS_NAMES.map((name, i) => {
+        {AXIS_NAMES.filter(name => (
+          // A lane the map never offered is not drawn at all.
+          //
+          // Demolition is the first axis that can be genuinely absent: the
+          // other five are offered by every map, so an empty bar there means
+          // "you left these hours on the table", which is the readout this
+          // component exists to give. On a map with nothing breakable on it, an
+          // empty Demolition bar would say the same thing and be a lie - there
+          // were no hours, and no play would have banked them. Hiding it is the
+          // same call as the note above about a deficit against an impossible
+          // number: false and demoralising.
+          name !== 'demolition' || axes.ceilings.demolition > 0
+        )).map((name, i) => {
           const style = AXIS_STYLE[name];
           const Icon = style.icon;
           const earned = axes[name];

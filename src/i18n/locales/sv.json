@@ -518,8 +518,13 @@
       },
       "axis_greed": {
         "title": "Girighet",
-        "body": "Hur mycket av planen du fick lamna kvar men tog anda, plus timmar fran chansning och rivning. Stangs av helt vid tre stangsel over par.",
+        "body": "Hur mycket av brädet du fick lämna kvar men tog ändå, plus timmar från att chansa. Stängs av helt vid tre staket över par.",
         "tip": "Extra rensning kostar stangsel och tid. Girighet passar med Hantverk och slass med Sparsamhet om varje snitt."
+      },
+      "axis_demolition": {
+        "title": "Rivning",
+        "body": "Andelen av banans krossbara föremål som du faktiskt tagit isär, viktad efter hur många träffar var och en var värd. Det är en grund som Leverans, inte en taktik: lägger en bana ut något krossbart så är det en del av att bli klar med banan. Banor utan något att krossa visar inte den här raden alls.",
+        "tip": "En stor platta är värd långt mer än ett litet lock, så ta det dyra först. Att krossa kostar tid och staket, och det är det som gör det till ett verkligt val mot Tempo och Sparsamhet."
       },
       "winBonus": {
         "title": "Vinstbonus",
@@ -545,6 +550,7 @@
       "tempo": "Tempo",
       "thrift": "Sparsamhet",
       "greed": "Girighet",
+      "demolition": "Rivning",
       "full": "{{hours}}h ✓",
       "short": "-{{hours}}h",
       "outOf": "{{earned}}/{{ceiling}}h"
