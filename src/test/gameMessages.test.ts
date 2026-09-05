@@ -132,10 +132,17 @@ describe("the refusals actually raise one", () => {
   const RAISERS = [
     "../hooks/useGameInput.ts",
     "../lib/physics/updateFenceWall.ts",
+    "../lib/physics/fenceStrike.ts",
   ].map(f => readFileSync(resolve(__dirname, f), "utf8")).join("\n");
 
   it.each(GAME_MESSAGE_IDS)("raises %s somewhere", (id: GameMessageId) => {
-    expect(RAISERS).toContain(`("${id}")`);
+    // A string literal in a raising module, not `("<id>")`. The physics ids are
+    // reached through an exhaustive Record keyed by the failure kind, so they
+    // are named as values rather than written at a call site - and pinning the
+    // parenthesised form would be pinning a syntax, which this file has already
+    // been caught doing once.
+    expect(RAISERS, `${id} is only ever mentioned in tests and locales`)
+      .toContain(`"${id}"`);
   });
 
   it("says something at the breakable dud, not just a buzz", () => {

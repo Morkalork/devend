@@ -61,13 +61,17 @@ describe("every run-ending path names its cause", () => {
 });
 
 describe("a life lost mid-map is explained without stopping play", () => {
-  const src = read("src/lib/physics/updateFenceWall.ts");
+  // The life-docking tail moved here when the three fence-break paths were
+  // unified; updateFenceWall now only decides WHICH break happened.
+  const src = read("src/lib/physics/fenceStrike.ts");
 
   it("says what happened when a life remains", () => {
     expect(src, "a ball cutting your fence still says nothing")
-      .toContain('callbacks.onGameMessage?.("lifeLostBall")');
+      .toContain('ballHitFence: "lifeLostBall"');
     expect(src, "a mover cutting your fence still says nothing")
-      .toContain('callbacks.onGameMessage?.("lifeLostMover")');
+      .toContain('moverHitFence: "lifeLostMover"');
+    expect(src, "the caption is never actually put in the bar")
+      .toContain("callbacks.onGameMessage?.(said)");
   });
 
   it("says it in the bar, never in a modal", () => {

@@ -7,6 +7,7 @@ import { GameCallbacks } from "./gameCallbacks";
 import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
 import { lockedInsideUnarmedLauncher } from "./launcher";
 import { handleGameOverFn } from "./handleGameOver";
+import { ballStruckFence } from "./fenceStrike";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
 import { mapFailure, type MapFailure } from "@/lib/mapFailure";
 import {
@@ -196,10 +197,12 @@ export function applyCutFn(
     if (ball.state === 'dormant') continue; // un-booted (#73): fences pass through it
     if (isBallOnCutLine(ball, wall)) {
       // The same death as a ball cutting a growing fence, caught at completion
-      // instead of during growth. NB this one ends the run outright rather than
-      // docking a life, unlike updateFenceWall's version - a difference that
-      // predates the reason being carried and is left alone here.
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+      // instead of during growth - so it costs the same. It used to end the run
+      // outright while the growth path docked one life, and which one you got
+      // came down to whether the fence finished a frame before the ball arrived
+      // or a frame after. That is not something a player decides or can even
+      // see, so it cannot be something they are charged differently for.
+      ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
         mapFailure("ballHitFence", resolveWinSpec(level), readWinSnapshot(game, level)));
       return;
     }
@@ -477,7 +480,11 @@ export function applyCutFn(
   if (budget === "fail") {
     // Out of moves. Name the budget AND what was still outstanding, or the map
     // just stops with the player's last fence looking like it did nothing.
-    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+    //
+    // Costs a life, not the run. A WIP limit is a puzzle you solve by replaying
+    // it with a better opening, which is the same argument the deadline makes,
+    // and the deadline has always docked one life.
+    failMapCostingALife(game, level, levelNumber, activeModifiers, callbacks,
       mapFailure("outOfFences", resolveWinSpec(level), readWinSnapshot(game, level)));
   } else if (budget === "bank") {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
@@ -589,7 +596,11 @@ export function evaluateWinConditions(
     if (!anyGateTargetInPlay(game.balls)) {
       // No target left that could still reach the zone. Nothing on the board
       // shows this - the map simply becomes unwinnable - so it has to be said.
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+      //
+      // A life, not the run, for the same reason the lock-out costs one: the
+      // map is stranded and a replay fixes it. Ending the run here was the
+      // harshest price on the board for the quietest mistake.
+      failMapCostingALife(game, level, levelNumber, activeModifiers, callbacks,
         mapFailure("areaUnreachable", spec, snap));
       return null;
     }

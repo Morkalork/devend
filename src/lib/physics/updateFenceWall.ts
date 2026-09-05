@@ -3,36 +3,20 @@ import { GrowingWall } from "@/types/game";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
-import { handleGameOverFn, handlePushFailedFn } from "./handleGameOver";
+import {
+  ballStruckFence, moverStruckFence, clearFreeze, FREEZE_MAX_MS,
+} from "./fenceStrike";
 import { readWinSnapshot } from "./applyCut";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { mapFailure, type MapFailKind } from "@/lib/mapFailure";
 import { circleCapsuleCollision, lineSegmentIntersection, pointInPolygon, vec2Distance, vec2Normalize, vec2Sub, vec2Add, vec2Scale } from "@/lib/polygon";
 import { getWallSpeedBase } from "@/lib/gameUtils";
 import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityEffects";
-import { MINIMUM_WALL_TIME, RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
-import { playFenceBreakSound } from "@/lib/gameAudio";
-import { vibrateFenceBreak } from "@/lib/gameHaptics";
+import { MINIMUM_WALL_TIME } from "@/lib/gameConstants";
 import { cutSpeedFactor } from "@/lib/physics/fenceZones";
 
-/**
- * How long a post-break freeze may last before the loop lifts it regardless.
- *
- * The shake timer that normally lifts it runs at 400ms. This is comfortably
- * past that, so the ordinary path always wins and this only ever fires when
- * that timer was cancelled by something with no idea a ball was frozen.
- */
-export const FREEZE_MAX_MS = 1500;
+export { clearFreeze, FREEZE_MAX_MS };
 
-/**
- * Drop the post-break freeze, whatever state it is in.
- *
- * One function rather than the four copies of the same four assignments that
- * used to be scattered through this file. The copies are exactly how the
- * deadline came to be missing from one of them in the first place, and how the
- * whole freeze came to be missing from the per-map reset: a clear that has to
- * be remembered in N places is a clear that will be forgotten in one.
- */
 /**
  * Why the run just ended, built from the same spec and snapshot the win check
  * reads. Worked out at the moment of death, because the board is about to be
@@ -42,13 +26,6 @@ function fenceDeath(
   kind: MapFailKind, game: CanvasGameState, level: LevelConfig,
 ) {
   return mapFailure(kind, resolveWinSpec(level), readWinSnapshot(game, level));
-}
-
-export function clearFreeze(game: CanvasGameState): void {
-  game.frozenBallId = null;
-  game.frozenBallPosition = null;
-  game.frozenBallVelocity = null;
-  game.frozenBallReleaseAt = null;
 }
 
 export function updateFenceWallFn(
@@ -204,31 +181,8 @@ export function updateFenceWallFn(
     }
     if (!moverHit) continue;
 
-    clearFreeze(game);
-    playFenceBreakSound(); vibrateFenceBreak();
-    const newLives = callbacks.getLives() - 1;
-    callbacks.setLivesRef(newLives);
-    callbacks.setDisplayLives(newLives);
-    callbacks.onLivesChange(newLives);
-    game.activeWalls = [];
-    if (newLives <= 0) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
-        fenceDeath("moverHitFence", game, level));
-      return;
-    }
-    // A life remains and the map goes on, so this says what happened in the one
-    // slot under the board rather than stopping play to explain it.
-    callbacks.onGameMessage?.("lifeLostMover");
-    game.isRecovering = true;
-    game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
-    callbacks.setIsRecovering(true);
-    if (callbacks.flashTimeoutRef.current) clearTimeout(callbacks.flashTimeoutRef.current);
-    if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-    callbacks.setScreenFlash("red");
-    callbacks.setIsShaking(true);
-    callbacks.flashTimeoutRef.current = setTimeout(() => { callbacks.setScreenFlash("none"); callbacks.flashTimeoutRef.current = null; }, 200);
-    callbacks.shakeTimeoutRef.current = setTimeout(() => { callbacks.setIsShaking(false); }, 400);
-    setTimeout(() => { game.isRecovering = false; callbacks.setIsRecovering(false); }, RECOVERY_WINDOW_MS);
+    moverStruckFence(game, level, levelNumber, activeModifiers, callbacks,
+      fenceDeath("moverHitFence", game, level));
     return;
   }
 
@@ -261,87 +215,8 @@ export function updateFenceWallFn(
     }
     if (!hit) continue;
 
-    // Freeze the ball
-    game.frozenBallId = ball.id;
-    game.frozenBallPosition = { ...ball.position };
-    game.frozenBallVelocity = { ...ball.velocity };
-    // The deadline the loop falls back on if the shake timer is cancelled by
-    // something that does not know about the freeze. Generous: the timer is
-    // the normal path and must be allowed to win.
-    game.frozenBallReleaseAt = performance.now() + FREEZE_MAX_MS;
-    ball.velocity = { x: 0, y: 0 };
-
-    const unfreezeAfterShake = () => {
-      // Identity, not an id lookup. Ball ids are `${type.id}-${index}` and are
-      // therefore only unique WITHIN a map, while this timer can outlive the
-      // map that scheduled it: looking "grey-0" up on the next map finds a
-      // different ball and teleports it to the previous map's coordinates. The
-      // per-map reset clears the freeze so this should never see a stale one,
-      // but the restore is the destructive half and gets its own check.
-      if (game.frozenBallId === ball.id && game.balls.includes(ball)) {
-        if (game.frozenBallPosition) ball.position = { ...game.frozenBallPosition };
-        if (game.frozenBallVelocity) ball.velocity = { ...game.frozenBallVelocity };
-      }
-      clearFreeze(game);
-    };
-
-    // Shield absorbs the hit
-    if (game.wallShieldsRemaining > 0) {
-      game.wallShieldsRemaining--;
-      callbacks.setWallShieldCount(game.wallShieldsRemaining);
-      game.activeWalls = [];
-      game.isRecovering = true;
-      game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
-      callbacks.setIsRecovering(true);
-      if (callbacks.flashTimeoutRef.current) clearTimeout(callbacks.flashTimeoutRef.current);
-      if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-      callbacks.setScreenFlash("red");
-      callbacks.setIsShaking(true);
-      callbacks.flashTimeoutRef.current = setTimeout(() => { callbacks.setScreenFlash("none"); callbacks.flashTimeoutRef.current = null; }, 150);
-      callbacks.shakeTimeoutRef.current = setTimeout(() => { callbacks.setIsShaking(false); unfreezeAfterShake(); }, 400);
-      setTimeout(() => { game.isRecovering = false; callbacks.setIsRecovering(false); }, RECOVERY_WINDOW_MS);
-      return;
-    }
-
-    // Push mode — fail the push, not the life
-    if (game.pushMode === "pushing") {
-      game.activeWalls = [];
-      if (callbacks.flashTimeoutRef.current) clearTimeout(callbacks.flashTimeoutRef.current);
-      if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-      callbacks.setScreenFlash("red");
-      callbacks.setIsShaking(true);
-      callbacks.flashTimeoutRef.current = setTimeout(() => { callbacks.setScreenFlash("none"); callbacks.flashTimeoutRef.current = null; }, 200);
-      callbacks.shakeTimeoutRef.current = setTimeout(() => { callbacks.setIsShaking(false); unfreezeAfterShake(); }, 400);
-      handlePushFailedFn(game, level, levelNumber, activeModifiers, callbacks);
-      return;
-    }
-
-    // Lose a life
-    playFenceBreakSound(); vibrateFenceBreak();
-    const newLives = callbacks.getLives() - 1;
-    callbacks.setLivesRef(newLives);
-    callbacks.setDisplayLives(newLives);
-    callbacks.onLivesChange(newLives);
-    game.activeWalls = [];
-
-    if (newLives <= 0) {
-      clearFreeze(game);
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
-        fenceDeath("ballHitFence", game, level));
-      return;
-    }
-
-    callbacks.onGameMessage?.("lifeLostBall");
-    game.isRecovering = true;
-    game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
-    callbacks.setIsRecovering(true);
-    if (callbacks.flashTimeoutRef.current) clearTimeout(callbacks.flashTimeoutRef.current);
-    if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-    callbacks.setScreenFlash("red");
-    callbacks.setIsShaking(true);
-    callbacks.flashTimeoutRef.current = setTimeout(() => { callbacks.setScreenFlash("none"); callbacks.flashTimeoutRef.current = null; }, 200);
-    callbacks.shakeTimeoutRef.current = setTimeout(() => { callbacks.setIsShaking(false); unfreezeAfterShake(); }, 400);
-    setTimeout(() => { game.isRecovering = false; callbacks.setIsRecovering(false); }, RECOVERY_WINDOW_MS);
+    ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
+      fenceDeath("ballHitFence", game, level));
     return;
   }
 }

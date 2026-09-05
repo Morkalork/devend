@@ -31,7 +31,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { FREEZE_MAX_MS, clearFreeze } from "@/lib/physics/updateFenceWall";
+import { FREEZE_MAX_MS, SHAKE_MS, clearFreeze } from "@/lib/physics/fenceStrike";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelData } from "@/types/level";
@@ -90,7 +90,7 @@ describe("the post-break freeze always lets go", () => {
   it("restores by identity, never by an id lookup", () => {
     // Looking the ball up by id is the retarget: on the next map it finds a
     // DIFFERENT ball wearing the same name and teleports it.
-    const src = read("src/lib/physics/updateFenceWall.ts");
+    const src = read("src/lib/physics/fenceStrike.ts");
     const idx = src.indexOf("const unfreezeAfterShake");
     expect(idx, "the unfreeze callback is gone").toBeGreaterThan(-1);
     const block = src.slice(idx, idx + 900);
@@ -100,22 +100,32 @@ describe("the post-break freeze always lets go", () => {
   });
 
   it("gives the normal timer room to win", () => {
-    // The shake timer releases at 400ms. If the deadline were at or under that
-    // the net would fire on every ordinary break, restoring the ball a beat
-    // early and making the shake look broken.
-    const src = read("src/lib/physics/updateFenceWall.ts");
-    const shake = [...src.matchAll(/unfreezeAfterShake\(\);\s*\},\s*(\d+)\)/g)]
-      .map(m => Number(m[1]));
-    expect(shake.length, "no timed unfreeze found at all").toBeGreaterThan(0);
-    for (const ms of shake) {
-      expect(FREEZE_MAX_MS, `unfreeze at ${ms}ms`).toBeGreaterThan(ms);
-    }
+    // The shake timer releases the freeze. If the deadline were at or under it
+    // the safety net would fire on every ordinary break, restoring the ball a
+    // beat early and making the shake look broken.
+    //
+    // Read as constants rather than grepped out of the source: this used to
+    // scrape `}, 400)` out of the file, which stopped matching the moment the
+    // shake moved into a helper and quietly found nothing to check.
+    expect(FREEZE_MAX_MS, "the net fires before the shake finishes")
+      .toBeGreaterThan(SHAKE_MS);
+  });
+
+  it("keeps the shake on one number", () => {
+    // The pairing above only means something if every unfreeze is on SHAKE_MS.
+    // A second hand-written duration would be a timer the constant does not
+    // describe and the check above cannot see.
+    const src = read("src/lib/physics/fenceStrike.ts");
+    const idx = src.indexOf("export const SHAKE_MS");
+    const body = src.slice(src.indexOf("function flashAndShake"));
+    expect(idx, "SHAKE_MS is gone").toBeGreaterThan(-1);
+    expect(body, "a shake duration was written out by hand").not.toMatch(/\},\s*\d+\);/);
   });
 
   it("records a deadline whenever it freezes a ball", () => {
     // A freeze with no deadline is exactly the stranding case: the loop has
     // nothing to enforce and the timer is the only way out.
-    const src = read("src/lib/physics/updateFenceWall.ts");
+    const src = read("src/lib/physics/fenceStrike.ts");
     const freezes = [...src.matchAll(/game\.frozenBallId\s*=\s*ball\.id;/g)].length;
     const deadlines = [...src.matchAll(/game\.frozenBallReleaseAt\s*=\s*performance\.now\(\)/g)].length;
     expect(freezes, "no freeze site found").toBeGreaterThan(0);
@@ -126,13 +136,14 @@ describe("the post-break freeze always lets go", () => {
     // Hand-copied clears are how the deadline came to be missing from one of
     // them. No loose assignment should be left anywhere.
     for (const file of [
+      "src/lib/physics/fenceStrike.ts",
       "src/lib/physics/updateFenceWall.ts",
       "src/hooks/useGameLoop.ts",
       "src/components/game/GameCanvas.tsx",
     ]) {
       const src = read(file);
       // The one inside clearFreeze itself is the definition, not a copy.
-      const body = file.endsWith("updateFenceWall.ts")
+      const body = file.endsWith("fenceStrike.ts")
         ? src.slice(src.indexOf("export function clearFreeze") + 200)
         : src;
       expect(
