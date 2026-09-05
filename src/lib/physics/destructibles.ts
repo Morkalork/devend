@@ -665,6 +665,15 @@ export function processDestroysFn(
     opened += toppleSupportedBy(game, d.id, now, levelNumber, callbacks, modifiers);
   }
 
+  // The static layer draws the obstacles, and this pass has just taken one out
+  // of the model: its polygon and its edge walls are gone from `game`. Marking
+  // that layer dirty is therefore owed on EVERY destroy, not only on the ones
+  // that reopened ground. It used to sit inside the `opened > 0` block below,
+  // so a breakable whose footprint reopened nothing - already-captured ground,
+  // or a sliver too thin for a cell centre to land inside - was removed from
+  // the model while the last render of it stayed on screen.
+  callbacks.repaintRegionCanvas();
+
   if (opened > 0 && game.spaceGrid) {
     // Reopened space a ball can actually reach becomes capturable again (the
     // point of breaking things). But a footprint reopened INSIDE captured
@@ -677,7 +686,6 @@ export function processDestroysFn(
     rebuildRegionsKeepAll(game);
     // A destroy-recapture can swallow a token's cell with no lock involved.
     wasteCapturedPickups(game);
-    callbacks.repaintRegionCanvas();
     callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
   }
 

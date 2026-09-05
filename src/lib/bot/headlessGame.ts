@@ -31,7 +31,10 @@ import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { tickPhasing } from "@/lib/physics/phasing";
 import { updateBall } from "@/lib/physics/updateBall";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
-import { applyCutFn } from "@/lib/physics/applyCut";
+import { applyCutFn, checkSpaceWin } from "@/lib/physics/applyCut";
+import { processDestroysFn } from "@/lib/physics/destructibles";
+import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
+import { tickCharges } from "@/lib/physics/charge";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
@@ -269,6 +272,31 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
       }
     }
   }
+  // ── The three end-of-frame passes useGameLoop runs, in its order ────────
+  //
+  // These were MISSING, and the gap was invisible because everything they do
+  // is a consequence rather than a step: a destructible reached zero hits and
+  // was queued, and nothing ever emptied the queue. So in every bot run ever
+  // recorded, breaking something had no effect on the world - no space
+  // reopened, no stack toppled, no chest paid, no gated area unsealed - while
+  // `destroyed` still flipped, so a report could say the bot smashed a slab on
+  // a board where smashing a slab did nothing.
+  //
+  // That is exactly the divergence this file's header warns about: it is the
+  // subset of the loop that moves the world, and when the loop's order changes
+  // this must change with it. Charges first, because a blast pushes its target
+  // onto pendingDestroys and shredded fences onto pendingWallBreaks and both
+  // should land the same frame.
+  tickCharges(game, {});
+  if (game.pendingWallBreaks.length > 0) processWallBreaksFn(game, callbacks);
+  if (game.pendingDestroys.length > 0) {
+    processDestroysFn(game, callbacks, levelNumber, modifiers);
+    // The real loop re-checks the win here: a destroy can capture pocket cells
+    // and take the remaining space past the goal with no fence involved, and
+    // without this the map shows CLEAR and never ends.
+    checkSpaceWin(game, level, callbacks, levelNumber, modifiers);
+  }
+
   ctx.frames += 1;
 }
 
