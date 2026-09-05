@@ -466,16 +466,33 @@ landed in the band at runtime while passing the authored check - level 27 on
 nearly every deal, and level 34's typed pipe, documented in map.yml as a
 "66-unit corridor only grey balls may enter", measuring 51-60 in practice.
 
+**It cuts both ways, and the seam side is easier to miss.** Level 32's chest
+sits 6 units from its vault wall - a seam by any reading - and at variety 14 the
+chest's own 156-unit width jitters that edge by up to 11, so the seam lands
+anywhere between overlapping and about 18. A seam authored close to the 12-unit
+cap drifts over it exactly as a neck authored close to 60 drifts under.
+
 Two ways to author safely, and act I took the second:
 
-1. **Budget for it.** An authored gap must be at least
-   `60 + variety% x (extent_a + extent_b) / 2`.
+1. **Budget for it**, at both ends. A neck must be at least
+   `60 + variety% x (extent_a + extent_b) / 2`; a seam at most
+   `12 - variety% x (extent_a + extent_b) / 2`. On a wide entity that second
+   number goes negative, which is the honest answer: at variety 14 a 156-unit
+   chest cannot hold a legal seam at all.
 2. **Set `variety: 0`** on any map whose geometry has to be exact. A teaching
    map's job is legibility, and a doorway whose width is a dice roll is the
    opposite of it.
 
-`runtimeGapRule.test.ts` builds each map eight times and measures the result.
-Its unmigrated list may only shrink.
+`runtimeGapRule.test.ts` builds each map on 24 **named** deals and measures the
+result. Its unmigrated list may only shrink.
+
+The deals are named rather than rolled, and that is not incidental. Both inputs
+here - the rotation and the variety draw - key off the run rng, which falls
+through to `Math.random` unseeded, so an unseeded sweep measures a different
+board every run. For any gap sitting near a threshold that makes the test a coin
+toss: this file shipped unseeded and flaked on CI within a day, on exactly the
+level-32 seam above. **Any test that asserts on built geometry has to pin the
+deal.** It is the same lesson as 7.3 and it has now been learned twice.
 
 ### 7.3 Rotation, and why authored coordinates are not runtime coordinates
 
