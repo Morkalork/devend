@@ -357,12 +357,17 @@ export class ObjectLayer {
     // broken rim below. This just stops a breakable being pixel-identical to
     // the wall beside it, which is what it was.
     const base = d.chest ? PALETTE.amber
-      : d.objective ? 0x8a6a3a
+      // The objective breakable keeps a step of separation from the ordinary
+      // one now that both are gold: a little more saturated, same luma.
+      : d.objective ? 0xa06610
       : PALETTE.breakable;
     const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45));
     this.bodies.poly(pts).fill({ color: body, alpha: 1 });
 
-    const rimColor = d.chest ? 0xffe9b0 : PALETTE.obstacleEdge;
+    // Chest first: it is loot, and its pale near-white amber keeps it apart
+    // from the slabs even though the whole family is gold now. Everything else
+    // here is a breakable, so it takes the breakable rim rather than the wall's.
+    const rimColor = d.chest ? 0xffe9b0 : PALETTE.breakableEdge;
     const rimStrength = 0.95 * (1 - damage * 0.7);
     if (d.chest) {
       this.rimEdges(pts, cx, cy, light, rimColor, rimStrength);

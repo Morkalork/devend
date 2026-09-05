@@ -34,14 +34,63 @@ describe("a breakable is the same material as a wall", () => {
     expect(breakable / solid).toBeLessThan(1.05);
   });
 
+  const share = (c: number[]) => [c[0] / (c[0] + c[1] + c[2]), c[2] / (c[0] + c[1] + c[2])];
+
   it("is still warmer, so it is not pixel-identical to that wall", () => {
     // Warmth carries the identity now that brightness does not. Losing it
     // entirely would put us back to a breakable being invisible until hit.
-    const share = (c: number[]) => [c[0] / (c[0] + c[1] + c[2]), c[2] / (c[0] + c[1] + c[2])];
     const [solidR, solidB] = share(rgb(PALETTE.obstacle));
     const [brkR, brkB] = share(rgb(PALETTE.breakable));
     expect(brkR, "the breakable lost its warm shift").toBeGreaterThan(solidR + 0.02);
     expect(brkB).toBeLessThan(solidB);
+  });
+
+  /**
+   * A warm SHIFT was not enough, and that is a report rather than a theory: a
+   * breakable slab was read as scenery on a phone. The shift was two steps of
+   * olive off the wall, which survives the test above and still loses at a
+   * glance. So the hue goes all the way to gold and the brightness stays put -
+   * the discipline the tests above protect is exactly what makes that safe.
+   */
+  it("reads as gold rather than as a slightly warm wall", () => {
+    const [wallR] = share(rgb(PALETTE.obstacle));
+    const [brkR] = share(rgb(PALETTE.breakable));
+    // Not "warmer than the wall" - decisively warmer, and red-dominant, which
+    // an olive is not.
+    expect(brkR, "the gold went back to being a warm olive")
+      .toBeGreaterThan(wallR + 0.12);
+    const [r, g, b] = rgb(PALETTE.breakable);
+    expect(r, "gold means red leads").toBeGreaterThan(g);
+    expect(g, "gold means blue trails").toBeGreaterThan(b);
+  });
+
+  it("is outlined in its own colour, not the wall's", () => {
+    // The silhouette is what the eye reads first, and breakables were outlined
+    // in obstacleEdge - the SAME edge as the wall beside them. The one part
+    // doing the identifying was drawing them as ordinary walls.
+    expect(PALETTE.breakableEdge, "breakables are wearing the wall's outline again")
+      .not.toBe(PALETTE.obstacleEdge);
+    // Same light on different material: the rim carries hue, not extra glare.
+    const wall = luma(rgb(PALETTE.obstacleEdge));
+    const brk = luma(rgb(PALETTE.breakableEdge));
+    expect(brk / wall, "the breakable rim became a highlight instead of an edge")
+      .toBeLessThan(1.1);
+    expect(brk / wall).toBeGreaterThan(0.9);
+  });
+
+  it("belongs to the same family as the chest and its own debris", () => {
+    // The board said "this comes apart" in three languages: an olive body, an
+    // amber chest, and #ffb454 shatter debris. One family, so the lesson from
+    // the chest carries to the slab.
+    const hue = (c: number[]) => (c[0] - c[2]) / (c[0] + c[1] + c[2]);
+    for (const [name, colour] of [
+      ["breakable", PALETTE.breakable],
+      ["breakableEdge", PALETTE.breakableEdge],
+      ["chest", PALETTE.amber],
+      ["debris", 0xffb454],
+    ] as const) {
+      expect(hue(rgb(colour)), `${name} is not in the warm family`).toBeGreaterThan(0.2);
+    }
   });
 });
 

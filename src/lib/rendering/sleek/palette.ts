@@ -105,8 +105,26 @@ export const PALETTE = {
    * breakable is made of the same stuff standing in the same room. The broken
    * rim is what says it comes apart, which is what objectLayer already called
    * the load-bearing cue.
+   *
+   * The warm shift was 0x5e6d51, an olive a couple of steps off the wall, and
+   * it was reported as not readable: a breakable slab was taken for scenery on
+   * a phone. So the HUE goes all the way to gold while the luma stays where it
+   * was - 108 against the wall's 104, inside a couple of percent - which keeps
+   * everything the note above is protecting. It is the same colour family the
+   * chest and the shatter debris (#ffb454) already use, so the board says
+   * "this comes apart" in one language instead of three.
    */
-  breakable: 0x5e6d51,
+  breakable: 0x8a6a24,
+  /**
+   * The rim on a breakable, and the change that actually does the work.
+   *
+   * Breakables were outlined in `obstacleEdge` - the SAME mint edge as the wall
+   * beside them. The silhouette is what the eye reads first at a glance, so the
+   * one part of a breakable that was doing the identifying was drawing it as an
+   * ordinary wall. Gold at roughly the mint edge's brightness, so it reads as
+   * the same light on different material rather than as a highlight.
+   */
+  breakableEdge: 0xf2c66a,
   /**
    * Deformable slabs: the obstacle colour pulled cool and grey at the SAME
    * value, on the breakable's reasoning and for the same reason.
