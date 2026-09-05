@@ -20,6 +20,7 @@ import { withCurve, MAX_BEND } from "@/lib/admin/bendHandles";
 import { getAllBallTypes } from '@/lib/ballTypes';
 import { clampZoneSpeed, MIN_ZONE_SPEED, MAX_ZONE_SPEED, type FenceZone } from '@/lib/physics/fenceZones';
 import { normaliseDegrees } from '@/lib/bendRotation';
+import { entityAddType, entityQualifiers, ADD_TYPE_LABEL } from '@/lib/admin/entityKind';
 
 /** The four bearings, laid out the way they point. */
 const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
@@ -109,6 +110,15 @@ export function EntityPanel({
   const selectedBall = level.balls.find(b => b.id === selectedBallId);
   const areas = level.coloredAreas || [];
   const selectedArea = selectedAreaIndex !== null ? areas[selectedAreaIndex] : undefined;
+  // Which palette button made the selected object. The list shows an id and a
+  // shape icon, so a mover, a bumper, a portal and a plain slab all read as
+  // "a rectangle called wall-1738"; lighting its button up is the shortest
+  // answer to "what IS this", and it points at the row that already explains
+  // the type in its tooltip.
+  const selectedType = selectedEntity ? entityAddType(selectedEntity) : null;
+  /** Ring the button for the type currently selected, leave the rest alone. */
+  const sel = (type: AddEntityType) =>
+    selectedType === type ? ' ring-2 ring-primary ring-offset-1 ring-offset-background' : '';
 
   const getEntityIcon = (entity: LevelEntity) => {
     const color = isMirrorEntity(entity) ? 'text-cyan-400' : 'text-destructive';
@@ -117,6 +127,20 @@ export function EntityPanel({
       case 'rect': return <Square className={`w-4 h-4 ${color}`} />;
       default: return <Pentagon className={`w-4 h-4 ${color}`} />;
     }
+  };
+
+  /**
+   * What to call this object in one short phrase.
+   *
+   * Falls back to the shape when nothing in the palette matches, which is a
+   * real case: an entity hand-written into the YAML can carry a combination no
+   * button produces, and calling that a Rectangle is at least true.
+   */
+  const describeEntity = (entity: LevelEntity) => {
+    const type = entityAddType(entity);
+    const base = type ? ADD_TYPE_LABEL[type] : getShapeLabel(entity.shape);
+    const extra = entityQualifiers(entity);
+    return extra.length > 0 ? `${base} (${extra.join(', ')})` : base;
   };
 
   const getShapeLabel = (shape: string) => {
@@ -134,7 +158,7 @@ export function EntityPanel({
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Areas (win gate)</h3>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap justify-end gap-1">
             {(Object.keys(AREA_KINDS) as AreaKind[]).map(kind => (
               <button
                 key={kind}
@@ -273,7 +297,7 @@ export function EntityPanel({
                       pointing rather than like reading a list. */}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="w-16">pulls</span>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                       {PULL_ORDER.map((dir) => {
                         const Icon = PULL_ICON[dir];
                         const on = (well.pull ?? 'down') === dir;
@@ -343,24 +367,24 @@ export function EntityPanel({
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Obstacles</h3>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap justify-end gap-1">
             <button
               onClick={() => onAddEntity('rect')}
-              className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+              className={`p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors${sel('rect')}`}
               title="Add Rectangle"
             >
               <Square className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('circle')}
-              className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+              className={`p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors${sel('circle')}`}
               title="Add Circle"
             >
               <Circle className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('polygon')}
-              className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+              className={`p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors${sel('polygon')}`}
               title="Add Polygon"
             >
               <Pentagon className="w-3.5 h-3.5" />
@@ -372,14 +396,14 @@ export function EntityPanel({
                 actually needs looking at. */}
             <button
               onClick={() => onAddEntity('mover-rect')}
-              className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+              className={`p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors${sel('mover-rect')}`}
               title="Add moving rectangle"
             >
               <MoveHorizontal className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('mover-circle')}
-              className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+              className={`p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors${sel('mover-circle')}`}
               title="Add moving circle"
             >
               <CircleDot className="w-3.5 h-3.5" />
@@ -395,52 +419,52 @@ export function EntityPanel({
             a mechanic nobody has, which is exactly how it was reported. */}
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Machines</h3>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap justify-end gap-1">
             <button
               onClick={() => onAddEntity('bouncer')}
-              className="p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors"
+              className={`p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors${sel('bouncer')}`}
               title="Add bumper (fires balls away; slows them 5% while it has overtime hours, kicks them faster once spent)"
             >
               <Target className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('kicker')}
-              className="p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors"
+              className={`p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors${sel('kicker')}`}
               title="Add kicker (a bumper that always fires the same way)"
             >
               <Send className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('deformable')}
-              className="p-1.5 rounded bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 transition-colors"
+              className={`p-1.5 rounded bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 transition-colors${sel('deformable')}`}
               title="Add a padded block (never breaks; dents on every hit and takes 3% off the ball)"
             >
               <Waves className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('portal')}
-              className="p-1.5 rounded bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 transition-colors"
+              className={`p-1.5 rounded bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 transition-colors${sel('portal')}`}
               title="Add a linked portal PAIR (a lone portal is inert)"
             >
               <CircleDot className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('launcher')}
-              className="p-1.5 rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-colors"
+              className={`p-1.5 rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-colors${sel('launcher')}`}
               title="Add launcher (holds the map's balls until you fire them)"
             >
               <Rocket className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('cage')}
-              className="p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors"
+              className={`p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors${sel('cage')}`}
               title="Add cage (shuts behind a ball, opens on a timer)"
             >
               <Lock className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onAddEntity('box')}
-              className="p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors"
+              className={`p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors${sel('box')}`}
               title="Add delivery box (a one-way membrane; balls in are delivered)"
             >
               <Package className="w-3.5 h-3.5" />
@@ -459,9 +483,15 @@ export function EntityPanel({
                   : 'bg-muted/50 hover:bg-muted'
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 {getEntityIcon(entity)}
-                <span className="text-sm">{entity.id}</span>
+                {/* The id is what the YAML calls it; the type is what it IS.
+                    Both, because an id is how you find a thing again and the
+                    type is how you know what you are looking at. */}
+                <span className="text-sm truncate">{entity.id}</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                  {describeEntity(entity)}
+                </span>
               </div>
               <div className="flex gap-0.5">
                 <button
@@ -499,7 +529,10 @@ export function EntityPanel({
       {selectedEntity && (
         <div className="p-2 rounded bg-muted/50 space-y-2">
           <h4 className="text-xs font-semibold text-muted-foreground">
-            {getShapeLabel(selectedEntity.shape)} Properties
+            {/* Was the SHAPE - "Rectangle Properties" over a bumper's editor.
+                The shape is the least interesting true thing about an object
+                that has a mechanic. */}
+            {describeEntity(selectedEntity)} Properties
           </h4>
 
           {isMoverEntity(selectedEntity) && (
@@ -811,7 +844,7 @@ function AreaEditor({ area, onUpdate }: { area: ColoredArea; onUpdate: (updates:
       {/* Kind: var (easiest, draw biggest) < let < const (hardest, smallest) */}
       <div className="space-y-1 text-xs">
         <span className="text-muted-foreground">Kind</span>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap justify-end gap-1">
           {(Object.keys(AREA_KINDS) as AreaKind[]).map(kind => {
             const active = area.kind === kind;
             return (
@@ -1393,7 +1426,7 @@ function BumperEditor({ hours, bearing, onUpdate }: {
         {bearing ? 'Kicker: fires the same way every time, so it can be aimed.'
           : 'Bouncer: scatters, so which way a ball leaves depends on where it hits.'}
       </div>
-      <div className="flex gap-1">
+      <div className="flex flex-wrap justify-end gap-1">
         <button
           onClick={() => onUpdate({ bounceBearing: undefined })}
           className="flex-1 flex items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] transition-colors"
@@ -1464,7 +1497,7 @@ function BearingEditor({ kind, bearing, cup, blockers = [], onUpdate }: {
         {kind === 'launcher' ? 'Launcher' : kind === 'cage' ? 'Cage' : 'Delivery box'}
       </div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="flex gap-1">
+      <div className="flex flex-wrap justify-end gap-1">
         {(['up', 'down', 'left', 'right'] as const).map(b => {
           const active = bearing === b;
           const Icon = ICON[b];
@@ -1618,7 +1651,7 @@ function MoverEditor({ entity, onUpdate }: {
       {entity.motion !== 'rotate' && (<>
       {/* Axis. Also draggable on the canvas: pulling the end handle sideways or
           downwards flips this, so the path never has to be imagined. */}
-      <div className="flex gap-1">
+      <div className="flex flex-wrap justify-end gap-1">
         {(['horizontal', 'vertical'] as const).map(axis => {
           const active = entity.axis === axis;
           const Icon = axis === 'horizontal' ? MoveHorizontal : MoveVertical;
