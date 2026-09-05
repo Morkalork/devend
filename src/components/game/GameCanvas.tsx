@@ -126,6 +126,7 @@ import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import { pushBonusEarned } from "@/lib/pushLuck";
 import { extraGates } from "@/lib/winHud";
+import { winHighlightRects } from "@/lib/winHighlight";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
@@ -1066,6 +1067,10 @@ export function GameCanvas({
       game.balls              = data.balls;
       game.destructibles      = data.destructibles;
       game.stackObjects       = data.stackObjects;
+      // What the win actually needs, for the map-open announcement. Computed
+      // here because it reads destructibles, coloredAreas and deliveryBoxes,
+      // which are all in place by now.
+      game.winHighlights = winHighlightRects(resolveWinSpec(level), game);
       game.objectivesTotal    = data.objectivesTotal;
       game.initialSamplePoints = data.initialSamplePoints;
       game.spaceGrid          = data.spaceGrid;

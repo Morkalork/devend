@@ -14,6 +14,7 @@ import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launche
 import { planCut, seededRandom } from "./policy";
 import type { LevelConfig } from "@/types/level";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
+import type { MapFailKind } from "@/lib/mapFailure";
 
 export interface BotRunResult {
   levelId: string;
@@ -25,6 +26,8 @@ export interface BotRunResult {
   remainingPercent: number;
   won: boolean;
   lost: boolean;
+  /** Why it lost, when the game said. Absent on a win or a plain timeout. */
+  failKind?: MapFailKind;
   violations: Violation[];
 }
 
@@ -137,6 +140,9 @@ export function runBot(
     remainingPercent: ctx.events.remainingPercent,
     won: ctx.events.levelComplete || ctx.game.levelComplete,
     lost: ctx.events.gameOver || ctx.game.gameOver,
+    // The state's own record first: the callback that carries the reason to the
+    // screen fires behind a 700ms flash, and no timer runs here.
+    failKind: ctx.game.failure?.kind ?? ctx.events.failKind,
     violations,
   };
 }

@@ -45,6 +45,7 @@ export function handleGameOverFn(
   failure: MapFailure,
 ): void {
   game.gameOver = true;
+  game.failure = failure;
   playDeathSound();
   vibrateDeath();
   const percent = Math.round((getCombinedArea(game) / game.originalArea) * 100);

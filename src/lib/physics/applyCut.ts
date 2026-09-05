@@ -534,6 +534,7 @@ function failMapCostingALife(
     return;
   }
   game.gameOver = true;
+  game.failure = failure;
   if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
   callbacks.setScreenFlash("red");
   callbacks.setIsShaking(true);

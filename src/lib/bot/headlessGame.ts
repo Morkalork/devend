@@ -36,7 +36,8 @@ import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import type { GrowingWall, Vector2 } from "@/types/game";
+import type { GrowingWall, Vector2, GameResult } from "@/types/game";
+import type { MapFailKind, MapFailure } from "@/lib/mapFailure";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifiers";
@@ -87,6 +88,16 @@ export interface BotEvents {
   cutsMade: number;
   locks: number;
   remainingPercent: number;
+  /**
+   * Why the map ended badly, when it did.
+   *
+   * The harness used to drop this on the floor: onGameEnd ignored its argument
+   * and onMapTimedOut was a no-op, so every bad ending read as a bare `lost`.
+   * "The bot lost level 5 five times out of five" and "the bot lost it to a
+   * fence five times out of five" are different findings, and only one of them
+   * is about the map.
+   */
+  failKind?: MapFailKind;
 }
 
 export interface BotGame {
@@ -127,7 +138,10 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
     setLockedBallsCount: (n: number) => { events.locks = n; },
     setRemainingPercent: (n: number) => { events.remainingPercent = n; },
     onLevelComplete: () => { events.levelComplete = true; },
-    onGameEnd: () => { events.gameOver = true; },
+    onGameEnd: (result: GameResult) => {
+      events.gameOver = true;
+      events.failKind ??= result.failure?.kind;
+    },
     onLivesChange: () => { events.livesLost += 1; },
 
     // ── things that only exist to paint ──────────────────────────────────
@@ -149,7 +163,12 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
     setDisplayLives: noop,
     setCompletedCuts: noop,
     onMapComplete: noop,
-    onMapTimedOut: noop,
+    // The map was lost for ONE life and would restart. The bot has no restart,
+    // so this ends its run - but the reason is the whole point of asking.
+    onMapTimedOut: (failure: MapFailure) => {
+      events.gameOver = true;
+      events.failKind ??= failure.kind;
+    },
     onTutorialCutSuccess: noop,
     onBossState: noop,
     onChargeArmed: noop,

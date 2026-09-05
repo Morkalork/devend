@@ -176,7 +176,28 @@ export interface CanvasGameState {
   activeWalls: GrowingWall[];
 
   // ── Game flags ─────────────────────────────────────────────────────────
+  /**
+   * The objects this map's win depends on, as rects to announce at map start.
+   *
+   * Computed once at init rather than per frame: they do not move, the pulse
+   * that draws them lasts a few seconds, and the alternative is handing the
+   * renderer a LevelConfig so it can resolve the win spec itself - a second
+   * reading of the win, in the layer least able to be tested.
+   */
+  winHighlights?: import("@/lib/winHighlight").HighlightRect[];
   gameOver: boolean;
+  /**
+   * Why the map was lost, recorded the moment it was.
+   *
+   * The reason reaches the SCREEN through a callback fired 700ms later, behind
+   * the red flash, so that a player reads it rather than seeing it flash past.
+   * That delay makes it invisible to anything that is not a browser: the bot
+   * harness saw `gameOver` with no reason at all and every act I loss reported
+   * as "(none)", which is the least useful possible answer to "is this map too
+   * hard". Set here at the same instant `gameOver` is, so the record does not
+   * depend on a timer running.
+   */
+  failure?: import("@/lib/mapFailure").MapFailure;
   levelComplete: boolean;
   /**
    * Mirror of the React `paused` prop (a modal/menu is up). The loop self-halts

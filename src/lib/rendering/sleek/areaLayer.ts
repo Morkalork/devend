@@ -353,26 +353,50 @@ export class AreaLayer {
     if (!pulse.active) return;
     const color = Number.parseInt(accentColor.replace("#", ""), 16);
 
-    // Everything the player is meant to aim AT gets one, and nothing they are
-    // meant to avoid does: an announcement on every obstacle would be noise.
-    const rects: Array<{ x: number; y: number; width: number; height: number }> = [
+    // Two sets, drawn the same way at different strengths.
+    //
+    // MARKINGS are the floor paint - every colored area and delivery box -
+    // announced because paint is designed not to compete with the objects
+    // standing on it and is the first thing an eye skips. That is a "worth your
+    // time" pulse and it includes bonus pockets the win does not care about.
+    //
+    // REQUIRED is what the win spec actually asks for, computed at init from
+    // the same resolveWinSpec the gate reads. It exists because a map can now
+    // ask you to break something, and a breakable is not floor paint: on level
+    // 5 the slab the win requires had no announcement at all while the bonus
+    // zone beside it pulsed, so the board pointed at the optional thing and
+    // away from the mandatory one.
+    //
+    // Required rings are brighter and thicker rather than a different colour.
+    // A second colour would be a language, and a language is learned by
+    // repetition that a 35-map run does not provide; "louder" needs no lesson.
+    const markings: Array<{ x: number; y: number; width: number; height: number }> = [
       ...(game.coloredAreas ?? []),
       ...(game.deliveryBoxes ?? []).map(b => b.inner),
     ];
-    if (rects.length === 0) return;
+    const required = game.winHighlights ?? [];
+    if (markings.length === 0 && required.length === 0) return;
 
     // Two rings a half-beat apart, so the eye catches the second even if it
     // arrived after the first.
-    for (const r of rects) {
+    const ring = (
+      r: { x: number; y: number; width: number; height: number }, strong: boolean,
+    ): void => {
       const q = worldRectQuad(r.x, r.y, r.width, r.height, w2s);
       for (const phase of [pulse.beat, (pulse.beat + 0.5) % 1]) {
         const grow = -phase * 26;
-        const alpha = pulse.strength * (1 - phase) * 0.85;
+        const alpha = pulse.strength * (1 - phase) * (strong ? 1 : 0.85);
         if (alpha < 0.02) continue;
         shapeOf(this.pulseG, q, grow)
-          .stroke({ width: 1.5 + (1 - phase) * 2.5, color, alpha });
+          .stroke({ width: (strong ? 2.5 : 1.5) + (1 - phase) * 2.5, color, alpha });
       }
-    }
+    };
+
+    // Markings first, so a required object that is ALSO a marking (a gate zone)
+    // ends up with the louder ring painted over the quieter one rather than
+    // under it.
+    for (const r of markings) ring(r, false);
+    for (const r of required) ring(r, true);
   }
 
   private drawPulse(areas: CanvasGameState["coloredAreas"], light: LightScope, w2s: W2S): void {

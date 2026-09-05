@@ -347,7 +347,7 @@ levels:
         width: 26
         height: 138
         breakable: true
-        hitsToBreak: 6
+        hitsToBreak: 2
       - id: jamb-bottom
         kind: wall
         shape: rect
@@ -444,7 +444,7 @@ levels:
         width: 26
         height: 510
         breakable: true
-        hitsToBreak: 8
+        hitsToBreak: 3
       - id: anchor-bottom
         kind: wall
         shape: rect
@@ -537,7 +537,7 @@ levels:
         width: 26
         height: 455
         breakable: true
-        hitsToBreak: 4
+        hitsToBreak: 3
       - id: patrol
         kind: mover
         shape: rect
@@ -769,7 +769,7 @@ levels:
         width: 26
         height: 180
         breakable: true
-        hitsToBreak: 5
+        hitsToBreak: 3
       - id: patrol
         kind: mover
         shape: rect

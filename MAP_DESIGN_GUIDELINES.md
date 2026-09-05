@@ -464,6 +464,27 @@ Two rules on top of it:
    that is what it is. It has to be harder than clearing, not merely different,
    or it is a new shortcut wearing a premium. Act I deliberately has none.
 
+**Early breakables cost at most three hits.** `maxHits` is not a count of
+contacts: the force model gives a standard ball striking head-on at nominal
+speed ~1.0 damage and scales with the closing speed along the normal to the
+power 1.6, so a glancing hit does a fraction of that and a crawling graze does
+0.15. A slab authored at 6 is a good deal MORE than six touches in practice,
+which is how the map that introduces breaking came to read as hardcore. Act I
+stays at 3 or under and puts its Meet/Fight escalation inside that range; the
+late-ladder set-pieces (level 25's 40-hit plug, which the black ball exists
+for) are not covered by this.
+
+**Everything the win requires is announced when the map opens.** The startup
+pulse used to ring the floor markings only - colored areas and delivery boxes -
+which was right while a win was "clear the board" and became misleading the
+moment a map could ask you to break something: on level 5 the slab the win
+requires had no announcement while the bonus zone beside it pulsed, so the
+board pointed at the optional thing and away from the mandatory one. The set is
+derived from `resolveWinSpec` (see `lib/winHighlight.ts`), so it cannot promise
+something the gate disagrees with, and required objects ring louder than plain
+markings rather than in a second colour - a colour would be a language, and a
+language needs more repetition than a 35-map run gives.
+
 A map that asks for something a lock cannot produce also gains a fail state:
 locking every ball with that requirement unmet strands it, and the map ends as
 a `lockedOut` failure costing a life. That is the tactical decision the win is

@@ -171,3 +171,47 @@ describe("the last ball is flagged before it strands the map", () => {
     expect(gateAtRisk(underPar, 1)).toBe(true);
   });
 });
+
+/**
+ * How hard the early breakables are allowed to be.
+ *
+ * `maxHits` is not a count of contacts: the force model gives a standard ball
+ * striking head-on at nominal speed ~1.0 damage, and scales with the closing
+ * speed along the normal to the power 1.6, so a glancing hit does a fraction of
+ * that and a crawling graze does 0.15. A slab authored at 6 is therefore a good
+ * deal MORE than six touches in practice, which is how level 5 came to read as
+ * hardcore on the map that introduces breaking at all.
+ *
+ * Three is the ceiling for act I. The Meet/Fight escalation lives inside that
+ * range rather than above it.
+ */
+describe("act I breakables stay inside three solid hits", () => {
+  const breakables = (l: LevelConfig) =>
+    (l.entities ?? []).filter(
+      (e): e is Extract<typeof e, { kind: "wall" }> => e.kind === "wall" && !!e.breakable,
+    );
+
+  it.each(ACT_ONE)("level %i asks for no more than three", (n) => {
+    for (const e of breakables(at(n))) {
+      expect(e.hitsToBreak ?? 1, `level ${n} ${e.id} takes ${e.hitsToBreak} hits`)
+        .toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("still escalates: the map that introduces breaking is the gentlest", () => {
+    // A flat 3 everywhere would satisfy the cap and teach nothing. Level 5 is
+    // the Meet, level 6 the Fight, and the Fight has to cost more.
+    const meet = breakables(at(5)).map(e => e.hitsToBreak ?? 1);
+    const fight = breakables(at(6)).map(e => e.hitsToBreak ?? 1);
+    expect(Math.max(...meet), "the first breakable is not the gentlest")
+      .toBeLessThan(Math.max(...fight));
+  });
+
+  it("leaves the late-ladder set-pieces alone", () => {
+    // The cap is an ACT I rule, not a ladder-wide nerf. Level 25's 40-hit plug
+    // is a set-piece the black ball exists for, and flattening it here would be
+    // a silent balance change nobody asked for.
+    const plug = breakables(at(25)).find(e => e.id === "slab-plug");
+    expect(plug?.hitsToBreak, "the act III set-piece was nerfed too").toBe(40);
+  });
+});
