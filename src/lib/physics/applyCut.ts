@@ -42,6 +42,7 @@ import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetInPlay, gateAreas } from "@/lib/coloredAreas";
+import { smashRequirementLost } from "@/lib/physics/smashReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
@@ -320,7 +321,10 @@ export function applyCutFn(
   // Who was already sealed before this cut, so the launcher check below reads
   // only the balls THIS cut locked.
   const wonBefore = new Set(game.balls.filter(b => b.state === "won").map(b => b.id));
-  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions);
+  const anyBallWon = checkAndUpdateBallWonStates(
+    game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions,
+    resolveWinSpec(level),
+  );
   const wasSuperior = game.superiorLockCount > superiorBefore;
 
   // A ball sealed inside a barrel that has not finished ejecting fails the map.
@@ -604,6 +608,31 @@ export function evaluateWinConditions(
         mapFailure("areaUnreachable", spec, snap));
       return null;
     }
+  }
+
+  // A slab the map still needs BROKEN, fenced off with no ball beside it.
+  //
+  // The other half of the rule in smashReach. A pocket sealed WITH a ball in it
+  // refuses to lock, so the slab stays winnable; sealed with no ball there is
+  // nothing to refuse for - the ground is claimed, nothing can reach the slab
+  // again, and the smash clause can never be met. Same shape as the gate-area
+  // check above, and the same argument: the board shows no sign of it, the map
+  // simply stops being winnable and keeps running until the clock says
+  // something true and useless about the clock.
+  //
+  // Costs a life and restarts, like every other stranding. Checked against the
+  // REQUIREMENT rather than any single slab, so a map with slack can lose the
+  // slabs it did not need.
+  // Only while a ball is still in play. With everything locked the truer
+  // reason is the lock-out below - the slab is unreachable because nothing is
+  // moving, not because of where the fences went - and reporting the slab
+  // would blame the last cut for a decision made several cuts earlier.
+  if (!isWinMet(spec, snap) && countBallsInPlay(game.balls) > 0
+      && smashRequirementLost(game, spec)) {
+    failMapCostingALife(
+      game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("objectiveBuried", spec, snap));
+    return null;
   }
 
   // An ALTERNATIVE win ends the map outright. "Every ball locked" is the one

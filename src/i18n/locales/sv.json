@@ -1744,7 +1744,8 @@
     "ballHitFence": "En boll gick rakt genom ditt staket",
     "moverHitFence": "Ett rorligt block gick rakt genom ditt staket",
     "needTerminals": "Tand {{target}} terminaler (du hade {{current}})",
-    "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})"
+    "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})",
+    "objectiveBuried": "Du stängde in ett förstörbart objekt du fortfarande måste krossa"
   },
   "winGate": {
     "superiorLocks": "Perfekt",

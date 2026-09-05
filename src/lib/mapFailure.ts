@@ -69,7 +69,21 @@ export type MapFailKind =
    * finished. Same shape as areaUnreachable, which has always ended a gate map
    * whose zone became impossible.
    */
-  | "lockedOut";
+  | "lockedOut"
+  /**
+   * A breakable the map still needs was fenced off with no ball beside it.
+   *
+   * The counterpart to the lock refusal in smashReach: a pocket sealed WITH a
+   * ball in it simply does not lock, so the slab stays winnable. Sealed with no
+   * ball there is nothing to refuse for - the ground is claimed, no ball can
+   * ever reach the slab again, and the smash clause can no longer be met.
+   *
+   * Its own kind rather than folded into areaUnreachable, though the shape is
+   * identical, because the thing that became impossible is different and the
+   * player needs to be told which: a zone you can no longer deliver to and a
+   * slab you can no longer hit are different mistakes with different lessons.
+   */
+  | "objectiveBuried";
 
 /**
  * Every kind, as a runtime list.
@@ -87,6 +101,7 @@ const ALL_FAIL_KINDS: Record<MapFailKind, true> = {
   ballHitFence: true,
   moverHitFence: true,
   lockedOut: true,
+  objectiveBuried: true,
 };
 
 export const MAP_FAIL_KINDS = Object.keys(ALL_FAIL_KINDS) as MapFailKind[];

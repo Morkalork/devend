@@ -88,7 +88,7 @@ describe("what a fence break is allowed to cost", () => {
     // with whatever the nearest copy happened to do.
     expect([...MAP_FAIL_KINDS].sort()).toEqual([
       "areaUnreachable", "ballHitFence", "launcherPrematureLock",
-      "lockedOut", "moverHitFence", "outOfFences", "timeUp",
+      "lockedOut", "moverHitFence", "objectiveBuried", "outOfFences", "timeUp",
     ]);
   });
 });

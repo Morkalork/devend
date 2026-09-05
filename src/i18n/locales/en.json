@@ -1211,7 +1211,8 @@
     "ballHitFence": "A ball cut through your fence",
     "moverHitFence": "A moving block cut through your fence",
     "needTerminals": "Light {{target}} terminals (you had {{current}})",
-    "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})"
+    "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})",
+    "objectiveBuried": "You fenced off a breakable you still had to smash"
   },
   "winGate": {
     "superiorLocks": "Superior",

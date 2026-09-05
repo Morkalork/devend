@@ -40,6 +40,8 @@ import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scori
 import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
+import { regionHoldsNeededSlab } from "@/lib/physics/smashReach";
+import type { WinSpec } from "@/types/winSpec";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 import { runStream } from "@/lib/runRng";
 
@@ -253,6 +255,12 @@ export function checkAndUpdateBallWonStates(
     gridRegions: ReturnType<typeof findGridRegions>;
     gridRegionMap: ReturnType<typeof buildGridRegionMap>;
   } | null = null,
+  /**
+   * The map's win spec, so a pocket holding a slab the map still needs broken
+   * can refuse the lock. Omitted (tests, older callers) means no such refusal:
+   * this only ever REMOVES locks, so a caller without a spec behaves as before.
+   */
+  winSpec: WinSpec | null = null,
 ): boolean {
   if (!game.spaceGrid) return false;
 
@@ -417,6 +425,25 @@ export function checkAndUpdateBallWonStates(
     // A stranded ball is exempt: the pocket it is in is claimed ground, not a
     // region it could escape from, and it is standing in it BECAUSE of a portal.
     if (!stranded && game.portals?.size && regionHoldsPortal(game, ballRegion.cellIndices)) {
+      diagnose('below-gate', null);
+      continue;
+    }
+
+    // A pocket around a slab the map still needs BROKEN is not a pocket either,
+    // and for a sharper reason than the portal: sealing it does not merely fail
+    // to pay, it takes the map away. A breakable is smashed by driving a ball
+    // into it, so burying the ball that could do it leaves an objective still
+    // drawn, still pulsing, and impossible - the map is over and keeps running.
+    //
+    // Refused rather than failed, because there IS a ball in here: the pocket
+    // stays open, the ball keeps bouncing, and the slab is still the player's
+    // to break. The seal simply does not count. (The no-ball case cannot be
+    // refused - there is nothing to refuse for and the ground is already
+    // claimed - so evaluateWinConditions fails the map outright instead.)
+    //
+    // Lifted once the clause is satisfied: past that the slabs stop being
+    // objectives and a pocket around one is an ordinary lock again.
+    if (!stranded && winSpec && regionHoldsNeededSlab(game, winSpec, ballRegion.cellIndices)) {
       diagnose('below-gate', null);
       continue;
     }

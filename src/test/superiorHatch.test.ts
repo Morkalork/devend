@@ -54,8 +54,13 @@ describe("marking it", () => {
 
   it("snapshots BEFORE the grade is decided, not after", () => {
     const before = CUT.indexOf("const superiorBefore");
-    const call = CUT.indexOf("checkAndUpdateBallWonStates(game");
+    // Not `"checkAndUpdateBallWonStates(game"`: the call grew an argument and
+    // wrapped, and the literal stopped matching - which made this assert that
+    // -1 came after `superiorBefore` and pass for the wrong reason. The ORDER
+    // is the rule; where the line breaks is not.
+    const call = CUT.search(/checkAndUpdateBallWonStates\(\s*\n?\s*game/);
     const after = CUT.indexOf("const wasSuperior");
+    expect(call, "the call moved or was renamed").toBeGreaterThan(-1);
     expect(before).toBeLessThan(call);
     expect(call).toBeLessThan(after);
   });
