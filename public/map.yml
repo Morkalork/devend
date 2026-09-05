@@ -506,13 +506,18 @@ levels:
         - kind: smashed
           count: 2
     entities:
-      - id: vault-jamb
-        kind: wall
-        shape: rect
-        x: 585
-        'y': 45
-        width: 24
-        height: 141
+      # The alcove is ONE wall now. It used to be two - a 141-long jamb hanging
+      # off the top edge at x 585 and this 270-long lip - which left the only
+      # way in as an 84-unit slot between the jamb's foot and the lip's top,
+      # against a 36-wide ball. Legal by the gap rule and miserable in the
+      # hand: the chest is one of the two smashes this map REQUIRES, so the
+      # hardest steering on the board was guarding a mandatory objective rather
+      # than an optional prize.
+      #
+      # Dropping the jamb (the shorter of the two, so the shelf that defines
+      # the alcove survives) opens the top-right to anything coming across from
+      # the left. The lip still makes it a pocket you have to mean to enter,
+      # and the patrol below still decides when.
       - id: vault-lip
         kind: wall
         shape: rect
