@@ -69,6 +69,17 @@ export type WinCondition = (
    * herding be satisfied by ordinary sealing.
    */
   | { kind: "delivered"; count: number }
+  /**
+   * Smash at least `count` of the map's breakable obstacles.
+   *
+   * The clause act I was missing. Breakables are the most common feature in
+   * the opening maps and there was no way to make one part of the win, so a
+   * map built to teach "break the slab" could be finished without ever
+   * touching it. Counts breakables only, on the same rule the Engagement axis
+   * uses: mirrors and movers are destructible too, but they are scenery a ball
+   * happens to hit rather than a thing the player sets out to do.
+   */
+  | { kind: "smashed"; count: number }
   /** Finish using at most `par + delta` cuts (delta may be negative). */
   | { kind: "underPar"; delta: number }
   /** Meet the rest of the win inside `seconds` of ACTIVE play. */
@@ -80,7 +91,7 @@ export type WinConditionKind = WinCondition["kind"];
 /** Every kind, in the order the admin panel and the modal list them. */
 export const WIN_CONDITION_KINDS: WinConditionKind[] = [
   "space", "locks", "superiorLocks", "area", "lockType",
-  "boss", "allLocked", "underPar", "speedClear",
+  "boss", "allLocked", "smashed", "delivered", "underPar", "speedClear",
 ];
 
 /**
@@ -116,6 +127,8 @@ export interface WinSnapshot {
   lockedByType: Record<string, number>;
   /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
   delivered: number;
+  /** The map's breakable obstacles that have been destroyed. */
+  smashed: number;
   bossDefeated: boolean;
   /** True when no ball is still in play. */
   allLocked: boolean;

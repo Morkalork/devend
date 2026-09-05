@@ -22,7 +22,9 @@ const applyCutSrc = readFileSync(resolve(process.cwd(), "src/lib/physics/applyCu
 const canvasSrc = readFileSync(resolve(process.cwd(), "src/components/game/GameCanvas.tsx"), "utf8");
 const en = JSON.parse(readFileSync(resolve(process.cwd(), "src/i18n/locales/en.json"), "utf8"));
 
-const ALL_REASONS: WinReason[] = ["space", "allLocked", "boss", "area"];
+const ALL_REASONS: WinReason[] = [
+  "space", "allLocked", "boss", "area", "smashed", "delivered",
+];
 
 describe("win reason reaches the results screen", () => {
   /**
@@ -35,7 +37,7 @@ describe("win reason reaches the results screen", () => {
   it("maps every win condition kind to a reason", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: { black: 9 }, delivered: 0, bossDefeated: true, allLocked: true,
+      lockedByType: { black: 9 }, delivered: 0, smashed: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const sample: Record<WinConditionKind, WinCondition> = {
@@ -47,6 +49,7 @@ describe("win reason reaches the results screen", () => {
       boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
     delivered: { kind: "delivered", count: 1 },
+      smashed: { kind: "smashed", count: 1 },
       underPar: { kind: "underPar", delta: 0 },
       speedClear: { kind: "speedClear", seconds: 60 },
     };
@@ -57,10 +60,10 @@ describe("win reason reaches the results screen", () => {
     }
   });
 
-  it("uses each of the four reasons somewhere", () => {
+  it("uses every reason somewhere", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: {}, delivered: 0, bossDefeated: true, allLocked: true,
+      lockedByType: {}, delivered: 9, smashed: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const reasonOf = (c: WinCondition) =>
@@ -69,6 +72,10 @@ describe("win reason reaches the results screen", () => {
     expect(reasonOf({ kind: "area", count: 1 })).toBe("area");
     expect(reasonOf({ kind: "allLocked" })).toBe("allLocked");
     expect(reasonOf({ kind: "space", threshold: 50 })).toBe("space");
+    // Both of these returned undefined before they had a case here, and
+    // undefined is what the results screen and the highscore ledger stored.
+    expect(reasonOf({ kind: "smashed", count: 1 })).toBe("smashed");
+    expect(reasonOf({ kind: "delivered", count: 1 })).toBe("delivered");
   });
 
   // The bug this change surfaced: the flag was a literal `true`, on a comment

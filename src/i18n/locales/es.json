@@ -541,7 +541,9 @@
       "allLocked": "Todas las bolas encerradas",
       "boss": "Jefe derrotado",
       "area": "Objetivo encerrado en la zona",
-      "alsoCleared": "objetivo de espacio también cumplido"
+      "alsoCleared": "objetivo de espacio también cumplido",
+      "smashed": "Objetivo roto",
+      "delivered": "Bola entregada"
     },
     "axes": {
       "title": "Evaluacion de desempeno",
@@ -789,7 +791,11 @@
     "shortBoss": "derrota al jefe",
     "shortAllLocked": "encierra todas las bolas",
     "shortUnderPar": "termina con {{count}} vallas",
-    "shortSpeed": "termina en {{seconds}}s"
+    "shortSpeed": "termina en {{seconds}}s",
+    "smashed": "Rompe {{count}} objetos rompibles del mapa.",
+    "delivered": "Entrega {{count}} bolas en una caja.",
+    "shortSmashed": "rompe {{count}} rompibles",
+    "shortDelivered": "entrega {{count}} bolas"
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
@@ -1704,7 +1710,10 @@
     "needBoss": "Derrotar al jefe",
     "needAllLocked": "Encerrar todas las bolas",
     "needUnderPar": "Terminar en {{target}} cortes (usaste {{current}})",
-    "needSpeed": "Terminar en {{target}}s (tardaste {{current}}s)"
+    "needSpeed": "Terminar en {{target}}s (tardaste {{current}}s)",
+    "needSmashed": "Rompe {{target}} rompibles (tenias {{current}})",
+    "needDelivered": "Entrega {{target}} bolas (tenias {{current}})",
+    "lockedOut": "Todas las bolas encerradas, con el trabajo sin terminar"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1713,7 +1722,9 @@
     "boss": "Jefe",
     "allLocked": "Todas cerradas",
     "underPar": "Bajo par",
-    "speedClear": "Contrarreloj"
+    "speedClear": "Contrarreloj",
+    "smashed": "Roto",
+    "delivered": "Entregado"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

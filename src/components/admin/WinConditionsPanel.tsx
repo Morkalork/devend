@@ -38,6 +38,7 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   boss: 'Defeat the boss',
   allLocked: 'Lock every ball',
   delivered: 'Deliver N balls into a box',
+  smashed: 'Smash N breakables',
   underPar: 'Finish under par',
   speedClear: 'Finish within N seconds',
 };
@@ -52,6 +53,11 @@ function blankCondition(kind: WinConditionKind, level: LevelConfig): WinConditio
     case 'lockType': return { kind, ballType: 'black', count: 1 };
     case 'boss': return { kind };
     case 'allLocked': return { kind };
+    // `delivered` was a clause the runtime understood and the panel could not
+    // author: it was missing from WIN_CONDITION_KINDS, so it never reached this
+    // switch. Listing it without a case here would have returned undefined.
+    case 'delivered': return { kind, count: 1 };
+    case 'smashed': return { kind, count: 1 };
     case 'underPar': return { kind, delta: 0 };
     case 'speedClear': return { kind, seconds: 60 };
   }

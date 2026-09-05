@@ -103,6 +103,8 @@ export function evaluateWinCondition(
       return accumulate(snap.allLocked ? 1 : 0, 1);
     case "delivered":
       return accumulate(snap.delivered, condition.count);
+    case "smashed":
+      return accumulate(snap.smashed, condition.count);
     case "underPar":
       return limit(snap.cuts, snap.par + condition.delta);
     case "speedClear":
@@ -173,8 +175,10 @@ export function winningCondition(spec: WinSpec, snap: WinSnapshot): WinCondition
     // A delivery ranks just under a gate zone: both are "you put a ball
     // somewhere specific", and that reads better as the reason you won than a
     // plain lock count does.
-    boss: 0, area: 1, delivered: 2, lockType: 3, superiorLocks: 4, allLocked: 5,
-    locks: 6, speedClear: 7, underPar: 8, space: 9,
+    // A smash ranks with the "you did a specific thing" group: on a map whose
+    // win is "clear the board AND break the slab", the slab is the story.
+    boss: 0, area: 1, delivered: 2, smashed: 3, lockType: 4, superiorLocks: 5,
+    allLocked: 6, locks: 7, speedClear: 8, underPar: 9, space: 10,
   };
   return [...spec.require].sort((a, b) => rank[a.kind] - rank[b.kind])[0];
 }
@@ -234,6 +238,17 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
           `Asks to lock a ${c.ballType}, which is not in this map's pinned roster (${roster.join(", ")}).`);
       }
     }
+    if (c.kind === "smashed") {
+      // Breakables only, matching the clause: a map whose only destructibles
+      // are mirrors and movers offers nothing to smash, and a win asking for
+      // one would be unwinnable with no hint on the board as to why.
+      const breakables = (level.entities ?? [])
+        .filter(e => e.kind === "wall" && e.breakable).length;
+      if (c.count > breakables) {
+        problems.push(
+          `Asks for ${c.count} smashed, but the map has ${breakables} breakable ${breakables === 1 ? "obstacle" : "obstacles"}.`);
+      }
+    }
     if (c.kind === "underPar" && level.expectedCuts + c.delta < 1) {
       problems.push("The cut budget this allows is less than one cut.");
     }
@@ -279,6 +294,13 @@ export function winReasonFor(spec: WinSpec, snap: WinSnapshot): WinReason {
     case "boss": return "boss";
     case "area": return "area";
     case "allLocked": return "allLocked";
+    // Two endings that used to fall off this switch entirely and return
+    // undefined, which the results screen and the highscore ledger both store.
+    // `delivered` has been a legal clause the whole time; it was invisible only
+    // because it was missing from WIN_CONDITION_KINDS, so the exhaustiveness
+    // test never reached it.
+    case "smashed": return "smashed";
+    case "delivered": return "delivered";
     // A win earned by sealing balls reads as an all-locked ending: the map
     // finished because of what you trapped, not because the board ran out.
     case "locks":

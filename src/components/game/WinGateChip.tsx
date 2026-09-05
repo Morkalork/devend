@@ -14,7 +14,7 @@
  * so it reads as a member of that row rather than as a new kind of thing.
  */
 import { useTranslation } from 'react-i18next';
-import { Diamond, Crosshair, Palette, Skull, Lock, Scissors, Timer } from 'lucide-react';
+import { Diamond, Crosshair, Palette, Skull, Lock, Scissors, Timer, Hammer, PackageCheck } from 'lucide-react';
 import { gateSatisfied, gateLabelKey } from '@/lib/winHud';
 import type { WinConditionProgress } from '@/types/winSpec';
 
@@ -25,6 +25,8 @@ const ICONS = {
   lockType: Crosshair,
   boss: Skull,
   allLocked: Lock,
+  smashed: Hammer,
+  delivered: PackageCheck,
   underPar: Scissors,
   speedClear: Timer,
 } as const;

@@ -35,7 +35,24 @@ export type MapFailKind =
   /** A gate Colored Area with no target ball left that could still reach it. */
   | "areaUnreachable"
   /** A ball sealed inside a launcher barrel before it had finished ejecting. */
-  | "launcherPrematureLock";
+  | "launcherPrematureLock"
+  /**
+   * Every ball locked with the map's requirements still unmet.
+   *
+   * Sealing the last ball used to be a free win on 27 of the 35 maps: the
+   * `allLocked` alternative shipped the map whatever the board looked like,
+   * and even without it captureUnreachableCells writes off the whole board the
+   * instant nothing is in play, so the space clause was met as a consequence.
+   * Locking everything therefore beat any map whose win was only space, with
+   * every object on it untouched.
+   *
+   * Nothing can change once no ball is in play - a slab cannot be smashed, a
+   * zone cannot be entered - so an unmet requirement at that moment is final,
+   * and saying so immediately is kinder than a board that quietly cannot be
+   * finished. Same shape as areaUnreachable, which has always ended a gate map
+   * whose zone became impossible.
+   */
+  | "lockedOut";
 
 export interface MapFailure {
   kind: MapFailKind;
@@ -97,6 +114,8 @@ export function failLines(t: TFunction, failure: MapFailure): string[] {
       case "lockType": return t("mapFailure.needLockType", { ...v, ball: c.ballType }) as string;
       case "boss": return t("mapFailure.needBoss") as string;
       case "allLocked": return t("mapFailure.needAllLocked") as string;
+      case "smashed": return t("mapFailure.needSmashed", v) as string;
+      case "delivered": return t("mapFailure.needDelivered", v) as string;
       case "underPar": return t("mapFailure.needUnderPar", v) as string;
       case "speedClear": return t("mapFailure.needSpeed", v) as string;
     }

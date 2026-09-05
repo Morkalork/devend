@@ -541,7 +541,9 @@
       "allLocked": "Alla bollar inlåsta",
       "boss": "Boss besegrad",
       "area": "Målbollen inlåst i zonen",
-      "alsoCleared": "ytmålet uppnåddes också"
+      "alsoCleared": "ytmålet uppnåddes också",
+      "smashed": "Malet krossat",
+      "delivered": "Boll levererad"
     },
     "axes": {
       "title": "Utvecklingssamtal",
@@ -789,7 +791,11 @@
     "shortBoss": "besegra bossen",
     "shortAllLocked": "las alla bollar",
     "shortUnderPar": "klara pa {{count}} stangsel",
-    "shortSpeed": "klara inom {{seconds}}s"
+    "shortSpeed": "klara inom {{seconds}}s",
+    "smashed": "Krossa {{count}} av banans krossbara foremal.",
+    "delivered": "Leverera {{count}} bollar i en lada.",
+    "shortSmashed": "krossa {{count}} krossbara",
+    "shortDelivered": "leverera {{count}} bollar"
   },
   "upgradeShop": {
     "storeLabel": "Butik",
@@ -1704,7 +1710,10 @@
     "needBoss": "Besegra bossen",
     "needAllLocked": "Lås in alla bollar",
     "needUnderPar": "Klara på {{target}} snitt (du använde {{current}})",
-    "needSpeed": "Klara inom {{target}}s (du tog {{current}}s)"
+    "needSpeed": "Klara inom {{target}}s (du tog {{current}}s)",
+    "needSmashed": "Krossa {{target}} krossbara (du hade {{current}})",
+    "needDelivered": "Leverera {{target}} bollar (du hade {{current}})",
+    "lockedOut": "Alla bollar inlasta, med jobbet ogjort"
   },
   "winGate": {
     "superiorLocks": "Perfekt",
@@ -1713,7 +1722,9 @@
     "boss": "Boss",
     "allLocked": "Alla lasta",
     "underPar": "Under par",
-    "speedClear": "Mot klockan"
+    "speedClear": "Mot klockan",
+    "smashed": "Krossat",
+    "delivered": "Levererat"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",

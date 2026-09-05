@@ -84,6 +84,14 @@ function winConditionParts(
         parts.push(t("winConditions.allLocked"));
         noteworthy = true;
         break;
+      case "smashed":
+        parts.push(t("winConditions.smashed", { count: c.count }));
+        noteworthy = true;
+        break;
+      case "delivered":
+        parts.push(t("winConditions.delivered", { count: c.count }));
+        noteworthy = true;
+        break;
       case "underPar":
         parts.push(t("winConditions.underPar", { count: level.expectedCuts + c.delta }));
         noteworthy = true;
@@ -137,6 +145,8 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
       count: c.count, ball: ballName(c.ballType) });
     case "boss": return t("winConditions.shortBoss");
     case "allLocked": return t("winConditions.shortAllLocked");
+    case "smashed": return t("winConditions.shortSmashed", { count: c.count });
+    case "delivered": return t("winConditions.shortDelivered", { count: c.count });
     case "underPar": return t("winConditions.shortUnderPar", { count: level.expectedCuts + c.delta });
     case "speedClear": return t("winConditions.shortSpeed", { seconds: c.seconds });
   }

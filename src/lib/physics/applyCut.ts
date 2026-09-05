@@ -8,7 +8,7 @@ import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkB
 import { lockedInsideUnarmedLauncher } from "./launcher";
 import { handleGameOverFn } from "./handleGameOver";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
-import { mapFailure } from "@/lib/mapFailure";
+import { mapFailure, type MapFailure } from "@/lib/mapFailure";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -496,6 +496,50 @@ export function applyCutFn(
  * Returns the remaining percent from the space check, or null when the
  * all-balls-won path finished the level (no percent was computed).
  */
+/**
+ * Lose the map, not the run: dock one life, name the reason, restart.
+ *
+ * Extracted rather than copied when the lock-out failure needed the same
+ * ending as the deadline. The sequence is not obvious - the failure has to be
+ * computed BEFORE the life is docked and the board torn down, because it is
+ * the only record of what the player had actually achieved, and the reason has
+ * to survive the red flash so it can be READ before the level remounts. That
+ * remount used to happen behind the flash, which is how a life could go with
+ * nothing on screen having named the clock. Two hand-copied versions of that
+ * would eventually disagree about which half to keep.
+ *
+ * Distinct from handleGameOverFn, which ends the whole RUN. Stranding a map is
+ * a mistake you learn from by replaying it, not one that should cost twenty
+ * minutes of progress.
+ */
+function failMapCostingALife(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  callbacks: GameCallbacks,
+  failure: MapFailure,
+): void {
+  const newLives = callbacks.getLives() - 1;
+  callbacks.setLivesRef(newLives);
+  callbacks.setDisplayLives(newLives);
+  callbacks.onLivesChange(newLives);
+  if (newLives <= 0) {
+    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks, failure);
+    return;
+  }
+  game.gameOver = true;
+  if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
+  callbacks.setScreenFlash("red");
+  callbacks.setIsShaking(true);
+  callbacks.shakeTimeoutRef.current = setTimeout(() => {
+    callbacks.shakeTimeoutRef.current = null;
+    callbacks.setScreenFlash("none");
+    callbacks.setIsShaking(false);
+    callbacks.onMapTimedOut?.(failure);
+  }, 700);
+}
+
 export function evaluateWinConditions(
   game: CanvasGameState,
   level: LevelConfig,
@@ -514,29 +558,9 @@ export function evaluateWinConditions(
     // Worked out BEFORE the life is docked and the board is torn down: this is
     // the only record of what the player had actually achieved, and the map is
     // about to restart from nothing.
-    const failure = mapFailure("timeUp", resolveWinSpec(level), readWinSnapshot(game, level));
-    const newLives = callbacks.getLives() - 1;
-    callbacks.setLivesRef(newLives);
-    callbacks.setDisplayLives(newLives);
-    callbacks.onLivesChange(newLives);
-    if (newLives <= 0) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks, failure);
-      return null;
-    }
-    // A life remains: freeze the loop, flash red, then hand the reason up so it
-    // can be READ before the level remounts. The remount used to happen behind
-    // the flash, which is how a life could go with nothing having named the
-    // clock.
-    game.gameOver = true;
-    if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
-    callbacks.setScreenFlash("red");
-    callbacks.setIsShaking(true);
-    callbacks.shakeTimeoutRef.current = setTimeout(() => {
-      callbacks.shakeTimeoutRef.current = null;
-      callbacks.setScreenFlash("none");
-      callbacks.setIsShaking(false);
-      callbacks.onMapTimedOut?.(failure);
-    }, 700);
+    failMapCostingALife(
+      game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("timeUp", resolveWinSpec(level), readWinSnapshot(game, level)));
     return null;
   }
   // ── The win, read from the map's spec rather than from a chain of ifs ────
@@ -590,6 +614,27 @@ export function evaluateWinConditions(
     return null;
   }
 
+  // Not won, and no ball left in play: the requirements are final and unmet.
+  //
+  // Locking every ball is the shortcut this exists to close. It used to win
+  // outright through the `allLocked` alternative, and dropping that alone
+  // would have changed nothing, because captureUnreachableCells writes off the
+  // whole board the moment nothing is in play - so `space` was satisfied as a
+  // CONSEQUENCE of the last lock, and any map asking only for space was beaten
+  // with every object on it untouched.
+  //
+  // The blast radius is deliberately narrow. A map whose requirements are met
+  // by that capture (every derived spec: space, plus a lock count the locks
+  // themselves satisfy) still wins above, exactly as before. Only a map that
+  // asks for something a lock cannot produce - a smashed slab, a ball in a
+  // zone - can reach here, and only by the player stranding it.
+  if (snap.allLocked) {
+    failMapCostingALife(
+      game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("lockedOut", spec, snap));
+    return null;
+  }
+
   // Not won yet. Only a spec that can still end through the space clear needs
   // the percent recomputed for the HUD; a gate map's top bar is not counting
   // down to anything.
@@ -606,6 +651,13 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     lockedBalls: game.lockedBallsCount,
     superiorLocks: game.superiorLockCount,
     delivered: deliveredCount(game),
+    // Breakables only, and derived from the list rather than from a counter:
+    // a destroyed destructible is NOT spliced out, it stays with
+    // destroyed: true, so both halves of the fraction come from one place and
+    // cannot drift. Mirrors and movers are destructible too and deliberately
+    // excluded - they are scenery a ball happens to hit.
+    smashed: (game.destructibles ?? [])
+      .filter(d => d.kind === "breakable" && d.destroyed).length,
     areaTargets: game.coloredAreaTargets ?? 0,
     lockedByType: game.lockedByType ?? {},
     bossDefeated: game.bossDefeated,

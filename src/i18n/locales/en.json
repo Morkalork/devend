@@ -544,7 +544,9 @@
       "allLocked": "All balls locked",
       "boss": "Boss defeated",
       "area": "Target locked in zone",
-      "alsoCleared": "space target also met"
+      "alsoCleared": "space target also met",
+      "smashed": "Objective smashed",
+      "delivered": "Ball delivered"
     },
     "axes": {
       "title": "Performance Review",
@@ -804,7 +806,11 @@
     "shortBoss": "defeat the boss",
     "shortAllLocked": "lock every ball",
     "shortUnderPar": "finish in {{count}} fences",
-    "shortSpeed": "finish within {{seconds}}s"
+    "shortSpeed": "finish within {{seconds}}s",
+    "smashed": "Smash {{count}} of the map's breakable objects.",
+    "delivered": "Deliver {{count}} balls into a box.",
+    "shortSmashed": "smash {{count}} breakables",
+    "shortDelivered": "deliver {{count}} balls"
   },
   "upgradeShop": {
     "storeLabel": "Store",
@@ -1171,7 +1177,10 @@
     "needBoss": "Defeat the boss",
     "needAllLocked": "Lock every ball",
     "needUnderPar": "Finish in {{target}} cuts (you used {{current}})",
-    "needSpeed": "Finish within {{target}}s (you took {{current}}s)"
+    "needSpeed": "Finish within {{target}}s (you took {{current}}s)",
+    "needSmashed": "Smash {{target}} breakables (you had {{current}})",
+    "needDelivered": "Deliver {{target}} balls (you had {{current}})",
+    "lockedOut": "Every ball is locked, with the job unfinished"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1180,7 +1189,9 @@
     "boss": "Boss",
     "allLocked": "All locked",
     "underPar": "Under par",
-    "speedClear": "On the clock"
+    "speedClear": "On the clock",
+    "smashed": "Smashed",
+    "delivered": "Delivered"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",

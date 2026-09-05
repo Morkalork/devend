@@ -403,7 +403,11 @@ export type WinReason =
   /** Boss beaten. On a boss map the space-clear path never applies at all. */
   | 'boss'
   /** Target ball locked inside a gate colored area, the sole win on those maps. */
-  | 'area';
+  | 'area'
+  /** The map's breakable objective smashed. */
+  | 'smashed'
+  /** A ball herded into a delivery box. */
+  | 'delivered';
 
 export interface LevelScoreData {
   levelNumber: number;
