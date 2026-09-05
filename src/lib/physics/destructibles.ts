@@ -330,6 +330,88 @@ function makeFalling(poly: Polygon, color: string, now: number): FallingObject {
 // ── Space / region rebuild ──────────────────────────────────────────────────
 
 /** Indices of grid cells whose centre lies inside `poly` and are REMOVED. */
+/**
+ * Is this cell REMOVED by something other than the obstacle coming down?
+ *
+ * Three things, and the list is the whole point: a fence the player drew (its
+ * grid band is the wall, and reopening across it would punch a hole in a seal
+ * they earned), the outside of the board, and another solid. Anything else that
+ * is REMOVED next to a destroyed obstacle is ground the obstacle itself was
+ * holding shut.
+ *
+ * Rebuilt per call rather than cached because `game.walls` changes underneath
+ * it - detachObstacle drops the obstacle's own edge walls before asking, which
+ * is what stops the obstacle from counting as its own blocker.
+ */
+function heldByOther(
+  game: CanvasGameState, grid: NonNullable<CanvasGameState["spaceGrid"]>,
+): (p: Vector2) => boolean {
+  return (p: Vector2): boolean => {
+    for (const w of game.walls) {
+      const corridor = (w.thickness ?? 6) / 2 + grid.cellSize / 2;
+      if (pointToSegmentDistance(p, w.start, w.end) <= corridor) return true;
+    }
+    if (game.boardPolygon && !pointInPolygon(p, game.boardPolygon)) return true;
+    for (const op of game.obstaclePolygons) if (pointInPolygon(p, op)) return true;
+    for (const mp of game.mirrorPolygons) if (pointInPolygon(p, mp)) return true;
+    return false;
+  };
+}
+
+/**
+ * The space the obstacle was sealing off, not just the space it stood on.
+ *
+ * Reported from a real session: one fence, and the ground beyond a breakable
+ * read as locked - then breaking the breakable did not give it back, and the
+ * remaining-% went UP, because its own footprint reopened while the pocket
+ * behind it stayed shut. Measured on level 7: 480 cells sealed off, 0 of them
+ * reopened by the break.
+ *
+ * The footprint reopening was only ever half the job. A wall that cuts a pocket
+ * off is holding that whole pocket, and when it comes down the pocket is not
+ * sealed any more - so the reopen floods outward from the footprint through
+ * contiguous REMOVED cells, stopping at the three things that are genuinely
+ * holding ground shut (see heldByOther). A pocket the PLAYER fenced is bounded
+ * by that fence's own grid band, so the flood cannot cross into it and earned
+ * captures are safe.
+ *
+ * Nothing here decides whether the space stays open: processDestroysFn runs
+ * captureUnreachableCells straight after, which takes back anything no ball can
+ * actually reach. So this hands back only ground that has genuinely become
+ * playable again, and a pocket that is still sealed some other way is captured
+ * again in the same frame.
+ */
+export function floodSealedShadow(
+  game: CanvasGameState, grid: NonNullable<CanvasGameState["spaceGrid"]>, seed: number[],
+): number[] {
+  if (seed.length === 0) return [];
+  const blocked = heldByOther(game, grid);
+  const seen = new Uint8Array(grid.cells.length);
+  for (const i of seed) seen[i] = 1;
+  const queue = [...seed];
+  const out: number[] = [];
+  while (queue.length > 0) {
+    const i = queue.pop()!;
+    const col = i % grid.width, row = (i - col) / grid.width;
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const c = col + dc, r = row + dr;
+      if (c < 0 || r < 0 || c >= grid.width || r >= grid.height) continue;
+      const n = r * grid.width + c;
+      if (seen[n]) continue;
+      seen[n] = 1;
+      if (grid.cells[n] !== CellState.REMOVED) continue;
+      const p = {
+        x: grid.originX + c * grid.cellSize + grid.cellSize / 2,
+        y: grid.originY + r * grid.cellSize + grid.cellSize / 2,
+      };
+      if (blocked(p)) continue;
+      out.push(n);
+      queue.push(n);
+    }
+  }
+  return out;
+}
+
 function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   const grid = game.spaceGrid;
   if (!grid) return [];
@@ -356,20 +438,11 @@ function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   // test is geometric against every wall segment - a fence's rasterCells list
   // can't be used here, because cells already removed by this obstacle's seal
   // were skipped during the fence's rasterization and never recorded on it.
-  const nearWallCorridor = (p: Vector2): boolean => {
-    for (const w of game.walls) {
-      const corridor = (w.thickness ?? 6) / 2 + grid.cellSize / 2;
-      if (pointToSegmentDistance(p, w.start, w.end) <= corridor) return true;
-    }
-    return false;
-  };
-  const inOtherSolid = (p: Vector2): boolean => {
-    for (const op of game.obstaclePolygons) if (pointInPolygon(p, op)) return true;
-    for (const mp of game.mirrorPolygons) if (pointInPolygon(p, mp)) return true;
-    return false;
-  };
   const vs = poly.vertices;
   const out: number[] = [];
+  // Held by something other than this obstacle: the player's fences, the edge
+  // of the board, another solid. Shared with the shadow flood below, which is
+  // bounded by exactly the same three things.
   for (let row = r0; row <= r1; row++) {
     for (let col = c0; col <= c1; col++) {
       const index = row * grid.width + col;
@@ -384,10 +457,7 @@ function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
         for (let i = 0; i < vs.length && !nearEdge; i++) {
           if (pointToSegmentDistance(p, vs[i], vs[(i + 1) % vs.length]) <= margin) nearEdge = true;
         }
-        inside = nearEdge
-          && !nearWallCorridor(p)
-          && (!game.boardPolygon || pointInPolygon(p, game.boardPolygon))
-          && !inOtherSolid(p);
+        inside = nearEdge && !heldByOther(game, grid)(p);
       }
       if (inside) out.push(index);
     }
@@ -406,7 +476,11 @@ function detachObstacle(game: CanvasGameState, id: string, poly: Polygon): numbe
   const prefix = `obstacle-${id}-edge-`;
   game.walls = game.walls.filter(w => !w.id.startsWith(prefix));
   if (!game.spaceGrid) return 0;
-  const cells = removedCellsUnder(game, poly);
+  const footprint = removedCellsUnder(game, poly);
+  // The footprint AND whatever it was holding shut. The pocket behind a wall is
+  // not sealed once the wall is gone, and giving back only the ground the wall
+  // stood on is what made breaking one read as doing nothing.
+  const cells = footprint.concat(floodSealedShadow(game, game.spaceGrid, footprint));
   if (cells.length > 0) {
     reopenCells(game, cells);
   }
