@@ -104,7 +104,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | data stream | E | Meet | 28 | 33 | - | - |
 | delivery box | E | Meet | 29 | 31 | - | - |
 | thread lock | D | Compressed | 29 | 34 | - | - |
-| colored area (gate) | D | Meet | 20 (boss) | 30 | 33 | 35 |
+| colored area (gate) | D | Meet | 8 | 20 (boss) | 33 | 35 |
 | bent shape | B | Seasoning | - | - | - | - |
 | the second ball | - | roster | 2 | - | - | - |
 | rotor | C | Seasoning | - | - | - | - |
@@ -254,7 +254,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 5 | **Meet** breakable | Use mover, Use colored area | Six hits buy a second doorway the patrol never reaches. |
 | 6 | - | Fight breakable | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
 | 7 | **Compressed** chest | Use breakable, Fight mover | An open alcove worth two different things, and they compete for the same ball. |
-| 8 | **Compressed** reveals | Break colored area | The box is 10% of the board the moment it arrives, so sealing it whole does not lock. |
+| 8 | **Compressed** reveals, **Meet** colored area (gate) | Break colored area | The box stops being optional: clear to 81% AND lock a ball in it, on ground that does not exist until you pay for it. |
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
@@ -312,7 +312,10 @@ their own win conditions.*
 
 - **A gate never replaces the clear.** Every authored map still requires
   `space`, so a gate is a second thing to do while doing the first, not a way to
-  skip the map.
+  skip the map. This costs a `win:` block: a gate area with no authored win
+  derives to `[{area, count: 1}]` and the space clause disappears entirely
+  (`resolveWinSpec`), so "clear AND lock one in the box" has to be stated. Level
+  8 is the first map outside act IV to state one, and that is why.
 - **A win that names a ball must pin the roster.** Ball types are otherwise
   picked from `maxBalls` and unlock levels, so a `lockType` clause left to the
   roll can produce a map that is unwinnable through no fault of the player.
@@ -366,7 +369,9 @@ One primitive, two stakes, chosen with `required`:
   form; drawn solid and bright.
 
 Teach in that order, so when a boss turns the same box into the only way to ship,
-the symbol is already familiar.
+the symbol is already familiar. On the built ladder that is **map 3 bonus, map 5
+charged for, map 8 gate** - three maps apart, with the same drawing, which is
+what makes the third one read as a promotion rather than a new mechanic.
 
 | kind | colour | multiplier |
 |------|--------|------------|

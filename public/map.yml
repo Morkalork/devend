@@ -514,12 +514,28 @@ levels:
   # the curtain is 276x255 of board that does not exist yet: its cells start
   # locked and uncuttable, and three hits on the curtain hand them over.
   #
-  # The pink box is drawn over that corner, which is what makes this map 3's
-  # inversion. There the box was free to ignore and free to seal. Here it is not
-  # even THERE until it is paid for, and the moment it arrives it is 10.7% of
-  # the board - over the 10% lock threshold - so sealing the whole corner does
-  # not lock at all. The player has to cut it down before it pays. The pocket
-  # they learned to measure on map 3 will not hold still.
+  # THE BOX STOPS BEING OPTIONAL HERE. On map 3 it was a bonus pocket, drawn
+  # dotted, free to ignore. This map is where it becomes a WIN CONDITION: clear
+  # to 81% AND lock at least one ball inside it, and it is drawn solid and
+  # bright to say so. That is the last new thing a colored area can do, and it
+  # is the second half of map 3's lesson rather than a different mechanic.
+  #
+  # Both clauses, not one. Flipping `required: true` alone would make the area
+  # the SOLE win (see resolveWinSpec) and the clear would stop mattering, which
+  # is the "a gate never replaces the clear" rule in the guidelines. An authored
+  # `win:` block asks for both, so the box is a second thing to do while doing
+  # the first.
+  #
+  # It is also this map's inversion, twice over. The box is not even THERE until
+  # the curtain is paid for - so the mechanic the map teaches is now MANDATORY,
+  # not a greed hook - and the moment it arrives it is 10.7% of the board, over
+  # the 10% lock threshold, so sealing the whole corner does not lock at all.
+  # The player has to cut it down before it counts. The pocket they learned to
+  # measure on map 3 will not hold still.
+  #
+  # The Turn is the safety net: it force-breaks the curtain at 45% remaining, so
+  # a player who never worked out that the wall was the way in still gets the
+  # corner in time to seal something in it.
   #
   # The corner is sealed by two board edges, the curtain and a jamb, with a
   # 12-unit seam between them: no ball can be inside it. That is not cosmetic.
@@ -544,13 +560,18 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 19
+        - kind: area
+          count: 1
     coloredAreas:
       - kind: var
         x: 579
         'y': 45
         width: 276
         height: 255
-        required: false
     pickupSpots:
       - x: 150
         'y': 200

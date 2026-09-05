@@ -339,7 +339,7 @@ export function UpgradeShop({
     let cheapest: UpgradeConfig | null = null;
     for (const u of offeredUpgrades) {
       if (allOwnedIds.includes(u.id)) continue;
-      if (isLocked(u.id, allOwnedIds)) continue;
+      if (isLocked(u.id, allOwnedIds)) continue;  // upgrades only; see lockedFor
       if (!cheapest || u.cost < cheapest.cost) cheapest = u;
     }
     return cheapest?.id ?? null;
@@ -360,6 +360,26 @@ export function UpgradeShop({
   // Closed only when the cap is what emptied it. A player who has simply bought
   // everything unlocked so far is not at the cap and must not be told they are.
   const abilitySlotClosed = abilityOfferCount > 0 && abilityCapReached(heldAbilityIds, abilitySlots);
+
+  /**
+   * Is this shelf item locked?
+   *
+   * A retainer never is, and that exemption is the whole reason this exists as
+   * a function rather than two call sites. `isLocked` opens with
+   * `if (!upgrade) return true` - an id the catalogue has never heard of is
+   * locked, which is exactly right for a typo'd prerequisite. A retainer's id
+   * is synthesised at roll time (`ability:<id>`, see abilityOffer.ts) and is in
+   * no catalogue, so the shop asked the catalogue about a card the catalogue
+   * could not know and got back "locked" for every ability ever offered. The
+   * slot rendered, priced and captioned perfectly, and was `disabled`.
+   *
+   * It has no prerequisites by construction - rollAbilityOffers only ever
+   * offers abilities the player can hold - so there is nothing to ask.
+   */
+  const lockedFor = useCallback(
+    (u: UpgradeConfig, owned: string[]) => !u.grantsAbility && isLocked(u.id, owned),
+    [isLocked],
+  );
 
   // The shelf as the player sees it. The ability slot leads, because it is the
   // one card that is always there and the one that is not an upgrade.
@@ -424,7 +444,7 @@ export function UpgradeShop({
 
     // Selections count toward prerequisites of other shelf items
     const effectiveOwned = [...allOwnedIds, ...selectedIds];
-    if (isLocked(upgrade.id, effectiveOwned)) return;
+    if (lockedFor(upgrade, effectiveOwned)) return;
 
     // Can't afford — shake instead of toast
     if (priceFor(upgrade) > currentRemainingBudget) {
@@ -464,7 +484,7 @@ export function UpgradeShop({
         setRestocksUsed(prev => prev + 1);
       }
     }
-  }, [closed, allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
+  }, [closed, allOwnedIds, selectedIds, lockedFor, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
 
   // Pick one option of a tier-3 choice group: strips any sibling first, then
   // toggles this variant in (budget-checked). The chosen variant may not be in
@@ -779,7 +799,7 @@ export function UpgradeShop({
                 // Other selected items count toward this card's prerequisites,
                 // so a restocked Senior tier unlocks while its Junior is selected
                 const effectiveOwned = [...allOwnedIds, ...selectedIds.filter(id => id !== upgrade.id)];
-                const locked = isLocked(upgrade.id, effectiveOwned);
+                const locked = lockedFor(upgrade, effectiveOwned);
                 // Price shown: the chosen option, else the cheapest of a choice, else this card's.
                 const shownPrice = chosenMember
                   ? priceFor(chosenMember)

@@ -26,7 +26,19 @@ function props(over: Partial<React.ComponentProps<typeof UpgradeShop>> = {}) {
     upgrades: plain,
     ownedUpgradeIds: [] as string[],
     completedLevel: 5,
-    isLocked: () => false,
+    /**
+     * The REAL rule, not `() => false`.
+     *
+     * useUpgradeManager's isLocked opens with `if (!upgrade) return true` - an
+     * id the catalogue has never heard of is locked, which is right for a
+     * typo'd prerequisite and fatal for a retainer card, because
+     * `ability:<id>` is synthesised at roll time and is in no catalogue. The
+     * stub that used to sit here said "nothing is ever locked", so every test
+     * below ran against a shop kinder than the shipped one and the slot was
+     * disabled in the actual game for as long as it existed.
+     */
+    isLocked: (id: string, owned: string[]) =>
+      !owned.includes(id) && !plain.some(u => u.id === id),
     onPurchase: vi.fn(),
     onContinue: vi.fn(),
     mapsRemaining: 10,
@@ -41,6 +53,18 @@ const abilityCard = () => screen.queryByText('Ability');
 afterEach(cleanup);
 
 describe('the ability slot on the shelf', () => {
+  it('can actually be selected, which is the whole point of a shelf', () => {
+    // The regression this file exists to stop from recurring: the card
+    // rendered, priced, inverted and captioned correctly, and could not be
+    // bought, because a synthetic id is an unknown id to the catalogue.
+    render(<UpgradeShop {...props()} />);
+    const card = abilityCard()!.closest('button')!;
+    expect(card.hasAttribute('disabled'), 'the retainer card is disabled').toBe(false);
+    fireEvent.click(card);
+    // Selecting spends against the budget, so the confirm button reflects it.
+    expect(screen.getByText(/Confirm|Buy|Continue/i)).toBeTruthy();
+  });
+
   it('is there beside the upgrades, not instead of one', () => {
     render(<UpgradeShop {...props()} />);
     expect(abilityCard()).toBeTruthy();

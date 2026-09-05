@@ -110,11 +110,14 @@ describe("every shipped map still means what it meant", () => {
    */
   it("authors a win only on the maps that mean to", () => {
     expect(MAPS.length).toBeGreaterThan(30);
-    // level-5 was here while its colored areas were win gates and left when act
-    // I was reauthored and they went back to being bonus pockets. It derives a
-    // spec again, like every other non-act-IV map.
+    // level-8 authors one on purpose, and is the first map outside act IV to do
+    // so. Its colored area is a gate, and a gate ALONE derives to
+    // `[{area, count: 1}]` with no space clause at all - the area would become
+    // the sole win and the clear would stop mattering, which is the "a gate
+    // never replaces the clear" rule. Stating both is the only way to ask for
+    // "clear the board AND lock one in the box", so it states both.
     const authored = MAPS.filter(m => resolveWinSpec(m).authored).map(m => String(m.id));
-    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34"]);
+    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34", "level-8"]);
   });
 
   it("still derives a working spec for every other map", () => {
