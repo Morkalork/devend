@@ -8,14 +8,14 @@ export interface ShipEarlyThreshold {
   percent: number;
 }
 
-/** The five Performance Review axes, in overtime hours at full ratio. */
+/** The Performance Review axes, in overtime hours at full ratio. */
 export interface AxisCeilings {
   delivery: number;
   craft: number;
   tempo: number;
   thrift: number;
   greed: number;
-  demolition: number;
+  engagement: number;
 }
 
 /** Everything bankAxes needs, gathered so call sites stay readable. */
@@ -25,11 +25,12 @@ export interface ScoreAxisInput {
   lockedCapacity: number;
   /** The same sum over the map's whole roster: what a clean sweep is worth. */
   totalCapacity: number;
-  /** Authored hits of every breakable the run has actually destroyed. */
-  smashedHits?: number;
-  /** Authored hits of every breakable the map put on the board. Zero means the
-   *  map offers no demolition at all, not that the player failed at it. */
-  totalSmashableHits?: number;
+  /** Share of the map's engageable features the run actually operated, 0..1.
+   *  See scoreEngagement.ts. */
+  engagementRatio?: number;
+  /** False when the map offers no engageable feature at all: the axis is then
+   *  not offered, rather than offered and failed. */
+  engagementOffered?: boolean;
   /** Hours the quality stack added on top of raw capacity (superior, zone,
    *  simultaneous, money, frozen, gravity). */
   premiumEarned: number;
@@ -43,7 +44,7 @@ export interface ScoreAxisInput {
   /** The Ship Early ladder's awarded percent, and its top rung. */
   shipEarlyPercent: number;
   shipEarlyMaxPercent: number;
-  /** Push-your-luck and demolition hours, which bank into Greed. */
+  /** Push-your-luck hours, which bank into Greed. */
   flatGreedBonus?: number;
   /** Upgrade multipliers, applied to axis CEILINGS rather than payouts. */
   thriftCeilingMultiplier?: number;

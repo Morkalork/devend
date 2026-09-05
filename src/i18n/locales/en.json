@@ -486,7 +486,7 @@
       },
       "overtimeEarned": {
         "title": "Overtime Earned",
-        "body": "What this level paid in total: the scaled base plus all bonuses, capped at twice the map's base payout. A new highscore multiplies past the cap.",
+        "body": "What this level paid in total: the scaled base plus all bonuses, capped at twice the map's base payout. A new highscore multiplies past the cap. The number after the slash is the most this map could have paid you: the base plus every lane at its ceiling. It disappears when you took all of it.",
         "tip": "If you hit the cap often, chase the highscore multiplier: it is applied after the cap, so it always pays."
       },
       "totalOvertime": {
@@ -524,10 +524,10 @@
         "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck hours. Switches off entirely at three fences over par.",
         "tip": "Extra clearing costs fences and time. Greed pairs naturally with Craft, and fights Thrift for every cut."
       },
-      "axis_demolition": {
-        "title": "Demolition",
-        "body": "The share of the map's breakable objects you actually took apart, weighted by how many hits each one was worth. It is a baseline like Delivery, not a tactic: if a map put something breakable on the board, breaking it is part of finishing the map. Maps with nothing to smash do not show this lane at all.",
-        "tip": "A big slab is worth far more than a small cover, so go for the expensive one first. Smashing costs time and fences, which is what makes it a real decision against Tempo and Thrift."
+      "axis_engagement": {
+        "title": "Engagement",
+        "body": "The share of the map's own features you actually operated: breakables smashed (weighted by how many hits each was worth), coloured zones with a ball locked in them, terminals lit, seams harvested, boxes delivered into. It is a baseline like Delivery, not a tactic: if a map put a feature on the board, using it is part of finishing the map. Maps that offer none do not show this lane at all.",
+        "tip": "A map is only measured on the features it actually carries, and each family counts the same, so the one thing on the board is the whole lane. Operating them costs time and fences, which is what makes it a real decision against Tempo and Thrift."
       },
       "winBonus": {
         "title": "Win bonus",
@@ -553,7 +553,7 @@
       "tempo": "Tempo",
       "thrift": "Thrift",
       "greed": "Greed",
-      "demolition": "Demolition",
+      "engagement": "Engagement",
       "full": "{{hours}}h ✓",
       "short": "-{{hours}}h",
       "outOf": "{{earned}}/{{ceiling}}h"

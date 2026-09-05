@@ -418,7 +418,7 @@ export interface LevelScoreData {
   pushFailed?: boolean; // true if player failed during push-your-luck mode
   pushBonus?: number; // bonus OT earned from push-your-luck area removal
   /**
-   * The Performance Review banking: what each of the five axes paid and what it
+   * The Performance Review banking: what each axis paid and what it
    * could have paid. The overlay reads this to show which lanes the run
    * committed to, which is the whole point of the axis economy - a player who
    * cannot see that Craft was full and Tempo empty has no basis for choosing a

@@ -18,14 +18,15 @@ scoring:
   # sloppily out-earned a flawless precise run 96h to 80h.
   overtimeCapHeadroom: 4.0
 
-  # ── The Performance Review: five axes, banked independently ───────────────
+  # ── The Performance Review: six axes, banked independently ────────────────
   #
-  # Income is DELIVERY (did you lock the balls at all) plus four tactical axes,
-  # each with its own ceiling. Maxing one never spends another's headroom, so
-  # there is no single pot for one route to crowd out.
+  # Income is two baselines - DELIVERY (did you lock the balls at all) and
+  # ENGAGEMENT (did you operate what the map put on the board) - plus four
+  # tactical axes, each with its own ceiling. Maxing one never spends another's
+  # headroom, so there is no single pot for one route to crowd out.
   #
   #   delivery    the baseline, not a tactic         blind to lock quality
-  #   demolition  the other baseline                  take the map's stuff apart
+  #   engagement  the other baseline                 operate the map's features
   #   craft       superior / zone / simultaneous      costs time and fences
   #   tempo       ship early                          costs craft
   #   thrift      finishing under par                 costs craft and greed
@@ -47,26 +48,34 @@ scoring:
     tempo: 24
     thrift: 20
     greed: 25
-    # DEMOLITION: the share of the map's breakables you actually took apart,
-    # weighted by their authored hits.
+    # ENGAGEMENT: the share of the map's own features you actually operated.
+    #
+    # Not just breakables. Every family of content that asks for a different
+    # kind of play counts, and a map is measured only on the families it
+    # actually puts on the board: breakables (smash them, weighted by their
+    # authored hits), colored areas (lock a ball in them), circuit terminals
+    # (light them), data-stream seams (harvest them), delivery boxes (deliver
+    # into them). The families are averaged, not pooled, because their units do
+    # not commensurate - a 40-hit slab and a single zone are each "the map's
+    # feature" and each worth the same share of this lane.
     #
     # 35 is sized against a REALISTIC run, not against the sum of ceilings -
     # that sum is deliberately unreachable (the four tactical axes fight each
-    # other, so about two land). A good run banks delivery, demolition and
+    # other, so about two land). A good run banks delivery, engagement and
     # roughly two tacticals: 30 + 35 + ~50 = 115, and 35 of that is 30%. Sizing
     # it against the 164 total instead would have put it at 55h and made every
     # other lane a rounding error.
     #
     # It exists because the map's own content had no lane. Smashing paid a flat
     # 5h per breakable INTO GREED, whose 25h pot it shared with clearing - so on
-    # any map where you also cleared, the pot was full and demolition paid
-    # nothing. It rendered no row either. The first nine maps could be finished
-    # on two quick locks with every object on the board untouched, which is the
-    # report this axis answers.
+    # any map where you also cleared, the pot was full and the map's content
+    # paid nothing. It rendered no row either. The first nine maps could be
+    # finished on two quick locks with every object on the board untouched,
+    # which is the report this axis answers.
     #
-    # Zero on a map with nothing breakable: the axis is not offered and the
-    # overlay draws five bars instead of six.
-    demolition: 35
+    # Zero on a map that offers no such feature: the axis is not offered and
+    # the overlay draws five bars instead of six.
+    engagement: 35
     # Under par by 40% of par banks all of Thrift: three cuts on a par-7 map,
     # two on a par-4. Relative because par runs 3..10 across the ladder, so an
     # absolute rung is a strong result on one map and impossible on another.

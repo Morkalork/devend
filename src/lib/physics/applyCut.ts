@@ -34,7 +34,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
-import { demolitionProgress } from "@/lib/physics/destructibles";
+import { engagementProgress } from "@/lib/scoreEngagement";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
@@ -791,13 +791,13 @@ export function triggerLevelComplete(
       tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
       // Delivery + Craft, read as a fraction of this map's own lock capacity.
       locks: readLockAxes(game),
-      // Push-your-luck and demolition are the same bet as clearing past the
-      // requirement, so they bank into Greed.
+      // Push-your-luck is the same bet as clearing past the requirement, so
+      // it banks into Greed. The map's own features no longer do; see below.
       greedBonus: pushBonus,
-      // The map's own content, as its own axis. It used to ride in on
+      // The map's own features, as their own axis. It used to ride in on
       // greedBonus above and drown there: Greed's pot is shared with
       // clearing, so on any map where you also cleared it was full.
-      demolition: demolitionProgress(game.destructibles),
+      engagement: engagementProgress(game),
       // Owed regardless of route: the mutator's hazard premium, the objective
       // reward, and Stock Options / Comp Time, which used to raise a ceiling
       // that no longer binds anything.

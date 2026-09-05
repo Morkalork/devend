@@ -68,7 +68,7 @@ export const THRIFT_FULL_AT_PAR_FRACTION = 0.4;
 export const GREED_FULL_AT_SLACK_FRACTION = 0.6;
 
 /** The five axes, in the order the results screen reads them. */
-export const AXIS_NAMES = ["delivery", "craft", "tempo", "thrift", "greed", "demolition"] as const;
+export const AXIS_NAMES = ["delivery", "craft", "tempo", "thrift", "greed", "engagement"] as const;
 export type AxisName = (typeof AXIS_NAMES)[number];
 
 const clamp01 = (v: number): number => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
@@ -96,36 +96,27 @@ export function deliveryRatio(lockedCapacity: number, totalCapacity: number): nu
 }
 
 /**
- * DEMOLITION: the share of the map's smashable content you actually took apart.
+ * ENGAGEMENT: the share of the map's own features you actually operated.
  *
  * A SECOND BASELINE, sitting beside Delivery rather than in the tactical ring.
- * That placement is the whole point of the axis. The ring is built so only
- * about two of its four are reachable in a run, which makes each of them a
- * choice you may decline - and the map's own content was living in there, as a
- * flat five hours per breakable poured into Greed's 25-hour pot alongside
- * clearing. On any map where you also cleared, that pot was already full, so
- * smashing paid nothing and showed nothing. The first nine maps could be
- * finished on two quick locks with every object on the board untouched.
+ * That placement is the whole point. The ring is built so only about two of its
+ * four are reachable in a run, which makes each of them a choice you may
+ * decline - and the map's content was living in there, as a flat five hours per
+ * breakable poured into Greed's 25-hour pot alongside clearing. On any map
+ * where you also cleared, that pot was already full, so the content paid
+ * nothing and showed nothing. The first nine maps could be finished on two
+ * quick locks with everything on the board untouched.
  *
- * So this is not declinable. If a map put something breakable on the board,
- * taking it apart is part of finishing the map, the same way sealing the balls
- * is.
+ * So this is not declinable. If a map put something on the board that asks to
+ * be operated - smashed, locked into, wired, harvested, delivered into - doing
+ * it is part of finishing the map, the same way sealing the balls is.
  *
- * WEIGHTED BY AUTHORED HITS, not by count: a 40-hit slab is most of a map's
- * demolition and a 2-hit chest cover is a detail, and counting them equally
- * would make the cover worth as much as the slab. Credit lands only when a
- * thing is actually destroyed - the game rewards no half-smashed object
- * anywhere else, and "you nearly broke it" is not a state worth paying for.
- *
- * Breakables ONLY. Mirrors and movers are smashable too, but only by the black
- * ball, which unlocks at level 25 - so counting them would put a share of the
- * axis behind a roster roll on every earlier map, which is the one thing the
- * ratio helpers exist to avoid.
+ * The ratio itself is computed in scoreEngagement.ts, which is where the
+ * families and their weightings live; this module only banks it. Not multiplied
+ * by lockMult and not gated by `shipped` below: both of those scale a lane by
+ * how the LOCKING went, and this lane is not about locking. A run that operated
+ * everything and lost a ball still operated everything.
  */
-export function demolitionRatio(smashedHits: number, totalSmashableHits: number): number {
-  return ratio(smashedHits, totalSmashableHits);
-}
-
 /**
  * CRAFT: the share of the available quality premium you earned.
  *
@@ -213,7 +204,7 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
     lockedCapacity, totalCapacity, premiumEarned, premiumAvailable,
     usedFences, parFences, actualRemovedRatio, requiredRemovedRatio,
     shipEarlyPercent, shipEarlyMaxPercent, flatGreedBonus = 0,
-    smashedHits = 0, totalSmashableHits = 0,
+    engagementRatio = 0, engagementOffered = false,
     thriftCeilingMultiplier = 1, greedCeilingMultiplier = 1, tempoCeilingMultiplier = 1,
     lockPayoutMultiplier = 1, fencesOverPar = 0,
     thriftFullAtParFraction, greedFullAtSlackFraction,
@@ -233,8 +224,8 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
   // Not multiplied by lockMult and not gated by `shipped` below: both of those
   // scale a lane by how the LOCKING went, and this lane is not about locking.
   // A run that smashed everything and lost a ball still took everything apart.
-  const demolition = Math.round(
-    ceiling(ceilings.demolition) * demolitionRatio(smashedHits, totalSmashableHits),
+  const engagement = Math.round(
+    ceiling(ceilings.engagement) * clamp01(engagementOffered ? engagementRatio : 0),
   );
   /**
    * DELIVERY GATES THE STYLE AXES.
@@ -281,8 +272,8 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
   const greed = Math.round(Math.min(greedCap, greedEarned));
 
   return {
-    delivery, craft, tempo, thrift, greed, demolition,
-    total: delivery + craft + tempo + thrift + greed + demolition,
+    delivery, craft, tempo, thrift, greed, engagement,
+    total: delivery + craft + tempo + thrift + greed + engagement,
     ratios: {
       delivery: shipped,
       craft: craftRatio(premiumEarned, premiumAvailable),
@@ -291,7 +282,7 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
       greed: fencesOverPar >= 3
         ? 0
         : greedRatio(actualRemovedRatio, requiredRemovedRatio, greedFullAtSlackFraction),
-      demolition: demolitionRatio(smashedHits, totalSmashableHits),
+      engagement: clamp01(engagementOffered ? engagementRatio : 0),
     },
     ceilings: {
       delivery: Math.round(ceiling(ceilings.delivery)),
@@ -301,11 +292,12 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
       greed: Math.round(greedCap),
       // ZERO on a map with nothing to smash, and that is load-bearing rather
       // than incidental: the overlay hides a lane whose ceiling is zero, so a
-      // map that offers no demolition shows five bars instead of six with an
-      // empty one. A bar that can never fill reads as hours left on the table,
+      // map that offers no engageable feature shows five bars instead of six
+      // with an empty one. A bar that can never fill reads as hours left on
+      // the table,
       // and this component's own note says a deficit against an impossible
       // number is demoralising and false.
-      demolition: totalSmashableHits > 0 ? Math.round(ceiling(ceilings.demolition)) : 0,
+      engagement: engagementOffered ? Math.round(ceiling(ceilings.engagement)) : 0,
     },
   };
 }

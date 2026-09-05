@@ -30,14 +30,14 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   overtimeEarned: { icon: Clock, color: 'text-primary' },
   totalOvertime: { icon: Clock, color: 'text-accent-foreground' },
   recordPace: { icon: TrendingUp, color: 'text-success' },
-  // The five Performance Review lanes. Holding a bar explains what that lane
+  // The Performance Review lanes. Holding a bar explains what that lane
   // pays for and, more usefully, what it costs you on the others.
   axis_delivery: { icon: Lock, color: 'text-cyan-400' },
   axis_craft: { icon: Medal, color: 'text-cyan-300' },
   axis_tempo: { icon: Timer, color: 'text-teal-400' },
   axis_thrift: { icon: Target, color: 'text-success' },
   axis_greed: { icon: Sparkles, color: 'text-primary' },
-  axis_demolition: { icon: Hammer, color: 'text-amber-400' },
+  axis_engagement: { icon: Hammer, color: 'text-amber-400' },
 };
 
 interface LevelCompleteOverlayProps {
@@ -239,9 +239,33 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // drift from the numerator.
   const earnedTotal = Math.max(0, Math.round(paidBase + (axes?.total ?? 0) - zonesMissedCost));
   const availableTotal = Math.max(earnedTotal, Math.round(mapCeiling ?? 0));
-  // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
-  // Greed and the lock stack into Delivery + Craft, so summing the itemised
-  // rows would count each of them twice.
+  // "Overtime x / y" on the always-visible row. The Score row above says the
+  // same thing but lives inside the itemised breakdown, which is collapsed by
+  // default, so the fraction only existed for players who opened a panel most
+  // never open - and the headline number alone cannot say whether 84h was the
+  // whole map or a third of it.
+  //
+  // Same denominator as that row on purpose: two fractions on one screen that
+  // disagree is worse than one that is hidden. It is the SCORER's ceiling, not
+  // a sum of the rows.
+  const overtimeCeiling = Math.round(mapCeiling ?? 0);
+  // Drop the fraction when the map paid everything it had: "112h" then means
+  // the same as "112 / 112h" and reads better.
+  //
+  // >= rather than ===, which also covers paying ABOVE the ceiling: a win
+  // premium or a highscore multiplier is banked on top of it, and "140 / 100h"
+  // reads as a bug in the player's favour. It is why this needs no floor at
+  // the payout the way the Score row does - that row always draws its
+  // fraction, this one stops drawing it exactly where a floor would kick in.
+  // A missing mapCeiling (old saves, the game-over path) lands here too and
+  // renders the bare number rather than "56 / 0".
+  //
+  // Compared against the final score, not the animating one, so the "/ y" does
+  // not blink away and back during the count-up.
+  const overtimeIsFull = levelScore >= overtimeCeiling;
+  // The axes ARE the bonus. Push-your-luck hours bank into Greed, the map's
+  // features into Engagement and the lock stack into Delivery + Craft, so
+  // summing the itemised rows would count each of them twice.
   const totalBonus = (axes
     ? axes.total
     : underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus)
@@ -451,7 +475,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             )}
 
             {/* ── One list, one idiom ──────────────────────────────────
-                This used to be the five axes AND an itemised list of the very
+                This used to be the axes AND an itemised list of the very
                 same hours: Delivery WAS Thread Locks, Craft WAS Superior Locks,
                 Thrift WAS under-par, Greed WAS the Space Bonus. The same money
                 twice, in two vocabularies, plus rows like "Zone Locks +9h" that
@@ -526,7 +550,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             <div {...hold('overtimeEarned')} className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">{t('levelComplete.overtimeEarned')}</span>
-              <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
+              <span className="text-xl sm:text-2xl font-bold text-primary">
+                {displayLevelScore}
+                {!overtimeIsFull && (
+                  <span className="text-base sm:text-lg text-muted-foreground"> / {overtimeCeiling}</span>
+                )}
+                h
+              </span>
             </div>
 
             {/* Total Overtime: the grand running total and the hero number of

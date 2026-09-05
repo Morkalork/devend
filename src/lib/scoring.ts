@@ -75,7 +75,7 @@ export function getAxisCeilings(config: ScoringConfig = loadedConfig): AxisCeili
     tempo: num(a?.tempo, d.tempo),
     thrift: num(a?.thrift, d.thrift),
     greed: num(a?.greed, d.greed),
-    demolition: num(a?.demolition, d.demolition),
+    engagement: num(a?.engagement, d.engagement),
     thriftFullAtParFraction: num(a?.thriftFullAtParFraction, d.thriftFullAtParFraction),
     greedFullAtSlackFraction: num(a?.greedFullAtSlackFraction, d.greedFullAtSlackFraction),
   };
@@ -84,7 +84,7 @@ export function getAxisCeilings(config: ScoringConfig = loadedConfig): AxisCeili
 /** Every axis ceiling added up: the part of the backstop the axes account for. */
 export function axisCeilingTotal(config: ScoringConfig = loadedConfig): number {
   const c = getAxisCeilings(config);
-  return c.delivery + c.craft + c.tempo + c.thrift + c.greed;
+  return c.delivery + c.craft + c.tempo + c.thrift + c.greed + c.engagement;
 }
 
 /** The top rung of the Ship Early ladder: Tempo's denominator. */
@@ -164,8 +164,8 @@ export function calculateScoreBreakdown(
     tempoCeilingMultiplier?: number;
     lockPayoutMultiplier?: number;
     flatGreedBonus?: number;
-    smashedHits?: number;
-    totalSmashableHits?: number;
+    engagementRatio?: number;
+    engagementOffered?: boolean;
   } = {},
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
@@ -181,8 +181,8 @@ export function calculateScoreBreakdown(
     shipEarlyPercent: axisInput.shipEarlyPercent ?? 0,
     shipEarlyMaxPercent: getShipEarlyMaxPercent(config),
     flatGreedBonus: axisInput.flatGreedBonus ?? 0,
-    smashedHits: axisInput.smashedHits ?? 0,
-    totalSmashableHits: axisInput.totalSmashableHits ?? 0,
+    engagementRatio: axisInput.engagementRatio ?? 0,
+    engagementOffered: axisInput.engagementOffered ?? false,
     thriftCeilingMultiplier: underParBonusMultiplier,
     greedCeilingMultiplier: spaceBonusMultiplier,
     tempoCeilingMultiplier: axisInput.tempoCeilingMultiplier ?? 1,
@@ -270,7 +270,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 4.0,
     axes: {
-      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25, demolition: 35,
+      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25, engagement: 35,
       thriftFullAtParFraction: 0.40,
       greedFullAtSlackFraction: 0.60,
     },
@@ -393,13 +393,15 @@ export interface ScoreOptions {
   locks?: LockAxisInput;
   /** Push-your-luck hours, which bank into Greed: the same bet as clearing
    *  past the requirement, staying on a cleared board for more of it.
-   *  Demolition hours USED to ride along here and no longer do - Greed's pot
-   *  is shared with clearing, so on any map where you also cleared they were
-   *  swallowed. See the demolition axis. */
+   *  The map's own features USED to ride along here and no longer do - Greed's
+   *  pot is shared with clearing, so on any map where you also cleared they
+   *  were swallowed. See the engagement axis. */
   greedBonus?: number;
-  /** Authored hits of the map's breakables, smashed and offered: the Demolition
-   *  axis. Read with demolitionProgress(game.destructibles). */
-  demolition?: { smashedHits: number; totalSmashableHits: number };
+  /** How much of the map's own content the run actually operated, and whether
+   *  the map offered any: the Engagement axis. Read with
+   *  engagementProgress(game), which covers breakables, colored areas, circuit
+   *  terminals, data-stream seams and delivery boxes. */
+  engagement?: { ratio: number; offered: boolean };
   /** Hours that belong to no axis and are simply owed: the map mutator's
    *  hazard premium, an objective's reward, and the Stock Options capstone,
    *  which used to raise a ceiling that no longer binds anything. */
@@ -477,7 +479,7 @@ export function calculateScore(
   winBonus: number;
 } {
   const {
-    scoreMultiplier = 1, locks, greedBonus = 0, demolition, flatBonus = 0, postCapBonus = 0,
+    scoreMultiplier = 1, locks, greedBonus = 0, engagement, flatBonus = 0, postCapBonus = 0,
     payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
     spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1, winBonusPercent = 0,
   } = options;
@@ -496,8 +498,8 @@ export function calculateScore(
       tempoCeilingMultiplier,
       lockPayoutMultiplier: payoutMultiplier,
       flatGreedBonus: greedBonus,
-      smashedHits: demolition?.smashedHits ?? 0,
-      totalSmashableHits: demolition?.totalSmashableHits ?? 0,
+      engagementRatio: engagement?.ratio ?? 0,
+      engagementOffered: engagement?.offered ?? false,
     },
   );
 
@@ -536,7 +538,13 @@ export function calculateScore(
   // is THEIR maximum on this map rather than a generic one.
   const c = breakdown.axes.ceilings;
   breakdown.mapCeiling =
-    multipliedBase + c.delivery + c.craft + c.tempo + c.thrift + c.greed;
+    multipliedBase + c.delivery + c.craft + c.tempo + c.thrift + c.greed
+    // Engagement is already zero in `ceilings` on a map that offers no
+    // feature, so this grows the denominator only where the lane is real.
+    // Leaving it out let the numerator collect 35h the denominator had never
+    // heard of, and "Score: 130 / 110h" is the exact drift mapCeiling exists
+    // to prevent.
+    + c.engagement;
   const mapPay = grossMapPay - zoneShareWithheld;
   breakdown.zoneShareWithheld = zoneShareWithheld;
   const winBonus = Math.round(mapPay * safeWinPct / 100);

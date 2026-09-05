@@ -1,5 +1,5 @@
 /**
- * The Performance Review: five bars showing which lanes a run committed to.
+ * The Performance Review: one bar per lane, showing which a run committed to.
  *
  * This is the half of the axis economy that makes it a CHOICE rather than a
  * formula. A player who cannot see that they filled Craft and left Tempo empty
@@ -16,7 +16,7 @@
  * chases a full axis when they can see what the last one cost, and is now back.
  * What changed is the premise, not the taste: that argument leaned on the hours
  * banked being visible "in the itemised rows below", and those rows are gone.
- * They were duplicates of these five axes - Thread Locks restated Delivery,
+ * They were duplicates of these axes - Thread Locks restated Delivery,
  * Superior Locks restated Craft - so the screen showed the same hours twice and
  * invited the player to add them up to a number the scorer never paid. With
  * them deleted, a bare "-12h" is the ONLY number on the row, and an axis that
@@ -45,7 +45,7 @@ const AXIS_STYLE: Record<AxisName, { icon: typeof Lock; color: string; bar: stri
   tempo: { icon: Timer, color: 'text-teal-400', bar: 'bg-teal-400' },
   thrift: { icon: Scissors, color: 'text-success', bar: 'bg-success' },
   greed: { icon: Flame, color: 'text-primary', bar: 'bg-primary' },
-  demolition: { icon: Hammer, color: 'text-amber-400', bar: 'bg-amber-400' },
+  engagement: { icon: Hammer, color: 'text-amber-400', bar: 'bg-amber-400' },
 };
 
 interface Props {
@@ -67,15 +67,16 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
         {AXIS_NAMES.filter(name => (
           // A lane the map never offered is not drawn at all.
           //
-          // Demolition is the first axis that can be genuinely absent: the
+          // Engagement is the first axis that can be genuinely absent: the
           // other five are offered by every map, so an empty bar there means
           // "you left these hours on the table", which is the readout this
-          // component exists to give. On a map with nothing breakable on it, an
-          // empty Demolition bar would say the same thing and be a lie - there
+          // component exists to give. On a map that puts no feature on the
+          // board, an empty Engagement bar would say the same thing and be a lie
+          // - there
           // were no hours, and no play would have banked them. Hiding it is the
           // same call as the note above about a deficit against an impossible
           // number: false and demoralising.
-          name !== 'demolition' || axes.ceilings.demolition > 0
+          name !== 'engagement' || axes.ceilings.engagement > 0
         )).map((name, i) => {
           const style = AXIS_STYLE[name];
           const Icon = style.icon;

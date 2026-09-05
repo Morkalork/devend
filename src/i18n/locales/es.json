@@ -483,7 +483,7 @@
       },
       "overtimeEarned": {
         "title": "Horas extra ganadas",
-        "body": "Lo que pagó este nivel en total: la base escalada más todos los bonos, con tope en el doble del pago base del mapa. Un nuevo récord multiplica por encima del tope.",
+        "body": "Lo que pagó este nivel en total: la base escalada más todos los bonos, con tope en el doble del pago base del mapa. Un nuevo récord multiplica por encima del tope. El numero tras la barra es lo maximo que este mapa podia pagarte: la base mas cada barra en su techo. Desaparece cuando te lo has llevado todo.",
         "tip": "Si alcanzas el tope a menudo, persigue el multiplicador de récord: se aplica después del tope, así que siempre paga."
       },
       "totalOvertime": {
@@ -521,10 +521,10 @@
         "body": "Cuánto del tablero que podías dejar te has llevado igualmente, más las horas de arriesgar. Se apaga por completo a tres vallas por encima del par.",
         "tip": "Despejar de mas cuesta vallas y tiempo. La Codicia se lleva bien con el Oficio y pelea con el Ahorro por cada corte."
       },
-      "axis_demolition": {
-        "title": "Demolición",
-        "body": "La parte de los objetos rompibles del mapa que has desmontado, ponderada por los golpes que costaba cada uno. Es una base como la Entrega, no una táctica: si un mapa pone algo rompible en el tablero, romperlo forma parte de terminarlo. Los mapas sin nada que romper no muestran esta barra.",
-        "tip": "Una losa grande vale mucho más que una tapa pequeña, así que ve primero a por la cara. Romper cuesta tiempo y vallas, y eso es lo que la convierte en una decisión real frente a Ritmo y Ahorro."
+      "axis_engagement": {
+        "title": "Implicación",
+        "body": "La parte de las características propias del mapa que has usado de verdad: rompibles destrozados (ponderados por los golpes que costaba cada uno), zonas de color con una bola encerrada dentro, terminales encendidos, vetas cosechadas, cajas con entrega hecha. Es una base como la Entrega, no una táctica: si un mapa pone una característica en el tablero, usarla forma parte de terminarlo. Los mapas que no ofrecen ninguna no muestran esta barra.",
+        "tip": "Un mapa solo se mide por lo que de verdad lleva, y cada familia cuenta igual, así que lo único que hay en el tablero es toda la barra. Usarlas cuesta tiempo y vallas, y eso es lo que la convierte en una decisión real frente a Ritmo y Ahorro."
       },
       "winBonus": {
         "title": "Bono de victoria",
@@ -550,7 +550,7 @@
       "tempo": "Ritmo",
       "thrift": "Ahorro",
       "greed": "Codicia",
-      "demolition": "Demolición",
+      "engagement": "Implicación",
       "full": "{{hours}}h ✓",
       "short": "-{{hours}}h",
       "outOf": "{{earned}}/{{ceiling}}h"

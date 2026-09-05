@@ -139,11 +139,13 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Tune scoring** — [public/scoring-config.yml](public/scoring-config.yml), logic in [lib/scoring.ts](src/lib/scoring.ts) and [lib/scoreAxes.ts](src/lib/scoreAxes.ts).
 
-A map's payout is its flat base (scaled by the over-par multiplier) plus five
+A map's payout is its flat base (scaled by the over-par multiplier) plus six
 independently-capped **Performance Review axes**: `delivery` (did you lock the
-balls), `craft` (superior / colored-area / simultaneous quality), `tempo` (ship
-early), `thrift` (under par) and `greed` (clearing past the requirement, plus
-push-your-luck and demolition). Each pays `ceiling x ratio`, and every ratio is
+balls), `engagement` (did you operate the features the map put on the board:
+breakables smashed, colored areas locked into, terminals lit, seams harvested,
+boxes delivered into), `craft` (superior / colored-area / simultaneous quality),
+`tempo` (ship early), `thrift` (under par) and `greed` (clearing past the
+requirement, plus push-your-luck). Each pays `ceiling x ratio`, and every ratio is
 measured against what THIS map could give, so the same quality of play is worth
 the same on level 3 and level 29.
 

@@ -40,7 +40,7 @@ function earnedAtPar(basePoints: number, par = 5, scoreMultiplier = 1) {
  * have `points: 20`), and lock income is a multiplicative stack that routinely
  * earned two to seven times that. Everything over the brim was discarded, and
  * because Ship Early was the only bonus paid ABOVE it, tempo was the only lever
- * still connected to a capped run's score. The five axes bound the payout now;
+ * still connected to a capped run's score. The axes bound the payout now;
  * this only catches a runaway config or upgrade stack.
  */
 describe("the backstop", () => {
@@ -60,6 +60,10 @@ describe("the backstop", () => {
       const full = calculateScore(1, 20, 0, 30, base, {
         locks: { totalCapacity: 240, lockedCapacity: 240, premiumEarned: 240, premiumAvailable: 240 },
         shipEarlyPercent: 30, greedBonus: 100,
+        // Engagement is part of the full set: the backstop has to clear it too,
+        // or a run that operated everything the map offered gets clipped for
+        // having done so.
+        engagement: { ratio: 1, offered: true },
       });
       expect(full.levelScore, `base ${base}`)
         .toBeGreaterThanOrEqual(axisCeilingTotal(DEFAULT_SCORING_CONFIG));

@@ -49,8 +49,28 @@ describe("what the scorer hands the overview", () => {
     const r = calculateScore(2, 4, 0, 30, 20, opts());
     const c = r.breakdown.axes.ceilings;
     expect(r.breakdown.mapCeiling).toBe(
-      r.breakdown.multipliedBase! + c.delivery + c.craft + c.tempo + c.thrift + c.greed,
+      r.breakdown.multipliedBase!
+        + c.delivery + c.craft + c.tempo + c.thrift + c.greed + c.engagement,
     );
+  });
+
+  it("counts the Engagement lane in the ceiling on a map that offers it", () => {
+    // The lane pays into axes.total, which is the NUMERATOR of "Score: x / y".
+    // Left out of mapCeiling it produced the one thing that line exists to
+    // prevent - "130 / 110h" - and only on maps carrying a feature, which is
+    // most of them and none of the fixtures that predate the axis.
+    const bare = calculateScore(2, 4, 0, 30, 20, opts());
+    const feature = calculateScore(2, 4, 0, 30, 20, opts({
+      engagement: { ratio: 1, offered: true },
+    }));
+
+    expect(bare.breakdown.axes.ceilings.engagement, "an unoffered lane has a ceiling").toBe(0);
+    expect(feature.breakdown.axes.ceilings.engagement).toBeGreaterThan(0);
+    expect(feature.breakdown.mapCeiling!).toBe(
+      bare.breakdown.mapCeiling! + feature.breakdown.axes.ceilings.engagement,
+    );
+    // The guard proper: a run that maxed the lane is still inside its ceiling.
+    expect(feature.breakdown.mapCeiling!).toBeGreaterThanOrEqual(feature.levelScore);
   });
 
   it("never offers a ceiling below what the same run was paid", () => {
