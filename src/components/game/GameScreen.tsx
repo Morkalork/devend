@@ -1333,7 +1333,7 @@ export function GameScreen({
           first, then the per-map "how to win", then one-time teaching overlays,
           and finally the Draw-A-Fence coach (#62). */}
       {anyExplainerModal && (() => {
-        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void; graphic?: React.ReactNode };
+        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void; graphic?: React.ReactNode; align?: "center" | "left" };
         const queue: Explainer[] = [
           ...(level.boss ? [{
             show: showBossOverlay,
@@ -1388,6 +1388,8 @@ export function GameScreen({
           {
             show: showWinModal, accentColor,
             title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber),
+            // The one explainer that is a LIST rather than a paragraph.
+            align: 'left' as const,
             onDismiss: () => setWinModalOpen(false),
           },
           {
@@ -1420,6 +1422,7 @@ export function GameScreen({
             accentColor={active.accentColor}
             title={active.title}
             body={active.body}
+            align={active.align}
             graphic={active.graphic}
           />
         ) : null;

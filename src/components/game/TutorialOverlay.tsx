@@ -6,6 +6,15 @@ interface TutorialOverlayProps {
   onDismiss: () => void;
   title: string;
   body: string;
+  /**
+   * Left-align the body instead of centring it.
+   *
+   * Centred prose is right for an explainer paragraph and wrong for a LIST: a
+   * centred bullet list has a ragged left edge, so the eye has to find where
+   * each line starts and the headings stop lining up with the items under
+   * them. The acceptance criteria are the only body here that is a list.
+   */
+  align?: "center" | "left";
   /** Optional illustration shown between the title and the (shorter) body. */
   graphic?: React.ReactNode;
   arrowDirection?: 'up' | 'down' | 'none';
@@ -20,6 +29,7 @@ export function TutorialOverlay({
   onDismiss,
   title,
   body,
+  align = "center",
   graphic,
   arrowDirection = 'none',
   showTapHint = true,
@@ -103,7 +113,9 @@ export function TutorialOverlay({
       {graphic && <div className="flex justify-center">{graphic}</div>}
 
       <p
-        className="text-sm sm:text-base text-center leading-relaxed whitespace-pre-line"
+        className={`text-sm sm:text-base leading-relaxed whitespace-pre-line ${
+          align === "left" ? "text-left" : "text-center"
+        }`}
         style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c8ffd8' }}
       >
         {body}
