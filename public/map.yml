@@ -323,12 +323,24 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    # THE SHAPE EVERY CONTENT MAP USES FROM HERE ON: space plus one clause a
+    # lock cannot produce, and no lock count beside it.
+    #
+    # Sealing every ball writes the rest of the board off as unreachable, so a
+    # space clause is met as a CONSEQUENCE of the last lock - which is why a
+    # lock count closes nothing on its own, and why the smash is what actually
+    # ends the rush here. Locking everything now leaves the smash unmet, and
+    # the lockedOut rule takes the life.
+    #
+    # Leaving the lock count off is deliberate the other way too: the Ship It
+    # assignment pays for clearing a map without sealing a single ball, and a
+    # win that demands a lock takes that map away from the mission. Maps 1-4
+    # and the maps with nothing operable still ask for locks, because with
+    # nothing to smash or light it is the only honest ask they have.
     win:
       require:
         - kind: space
           threshold: 28
-        - kind: locks
-          count: 1
         - kind: smashed
           count: 1
     entities:
@@ -417,8 +429,6 @@ levels:
       require:
         - kind: space
           threshold: 25
-        - kind: locks
-          count: 1
         - kind: smashed
           count: 1
     entities:
@@ -493,8 +503,6 @@ levels:
       require:
         - kind: space
           threshold: 22
-        - kind: locks
-          count: 1
         - kind: smashed
           count: 2
     entities:
@@ -692,8 +700,6 @@ levels:
       require:
         - kind: space
           threshold: 16
-        - kind: locks
-          count: 2
         - kind: smashed
           count: 2
     coloredAreas:
@@ -902,6 +908,12 @@ levels:
     variety: 12
     randomShapes: 10
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 16
+        - kind: smashed
+          count: 1
     entities:
       - id: plunger-11
         kind: launcher
@@ -1039,6 +1051,12 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: smashed
+          count: 1
     entities:
       - id: gate-1
         kind: wall
@@ -1075,6 +1093,12 @@ levels:
     variety: 14
     randomShapes: 10
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 13
+        - kind: smashed
+          count: 1
     entities:
       - id: chest-cover
         kind: wall
@@ -1131,6 +1155,12 @@ levels:
     variety: 14
     randomShapes: 10
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: locks
+          count: 2
     coloredAreas:
       # A first taste of the bonus pocket in a mirror map: the reflected lanes make
       # the corner easy to reach and hard to hold.
@@ -1186,6 +1216,12 @@ levels:
     variety: 5
     randomShapes: 0   # keep the sleepers' spots clear of stray mini-obstacles
     maxBalls: 0
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: terminals
+          count: 1
     circuit:
       radius: 28
       announce: game.circuitComplete
@@ -1228,6 +1264,12 @@ levels:
     variety: 8
     randomShapes: 0
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: terminals
+          count: 2
     circuit:
       radius: 30
       announce: game.circuitComplete
@@ -1286,6 +1328,12 @@ levels:
     variety: 10
     randomShapes: 8
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: locks
+          count: 2
     coloredAreas:
       # Opposite the pillar, across the divider: the pocket is cheap to fence and
       # expensive to reach, which is the trade the map is about.
@@ -1374,6 +1422,12 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 1
     fenceBudget: 11
     entities:
       # A breakable lip under the mirror: smash it and the bottom-right corner
@@ -1424,6 +1478,12 @@ levels:
     variety: 14
     randomShapes: 10
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: smashed
+          count: 1
     threadLockRequired: 1
     entities:
       - id: gate-19
@@ -1568,6 +1628,12 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: locks
+          count: 1
     coloredAreas:
       # Act III opens the board up again. The spine keeps this corner honest: you
       # have to commit to the left half to bank it.
@@ -1627,6 +1693,12 @@ levels:
     variety: 10
     randomShapes: 0
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: locks
+          count: 2
     gravityWells:
       # Fierce and narrow: a gentle wide well is a nudge nobody can aim with.
       - x: 520
@@ -1687,6 +1759,12 @@ levels:
     variety: 14
     randomShapes: 8
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: delivered
+          count: 1
     entities:
       # The membrane fills the 150-wide gap the two dividers leave. Down only.
       - id: one-way-neck
@@ -1780,6 +1858,12 @@ levels:
     variety: 16
     randomShapes: 10
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: locks
+          count: 2
     coloredAreas:
       # Above the catch shelf, where the pillars cannot help you. Taking it means
       # working the top of the board while the shelf collects everything else.
@@ -1833,6 +1917,12 @@ levels:
     variety: 12
     randomShapes: 10
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 1
     entities:
       # Both rails of the mid-board alley give. The charge blows the plug
       # between them and the balls pour through at whatever the blast left
@@ -1895,6 +1985,12 @@ levels:
     variety: 18
     randomShapes: 12
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 1
     coloredAreas:
       # Far from the core and both nodes, so the greedy line is the long one.
       - kind: let
@@ -1950,6 +2046,12 @@ levels:
     variety: 15
     randomShapes: 10
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 2
     fenceZones:
       # A band straddling the seam for the full height of the board, so any cut
       # that follows the vein pays for the whole run of it.
@@ -2046,6 +2148,12 @@ levels:
     variety: 14
     randomShapes: 8
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: locks
+          count: 2
     coloredAreas:
       # Small, high, and on the far side of the phasing roof: reachable only in the
       # window where the roof is out.
@@ -2106,6 +2214,12 @@ levels:
     variety: 16
     randomShapes: 10
     maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: smashed
+          count: 1
     tiltChance: 0.35
     gravityWells:
       - x: 300
@@ -2258,6 +2372,16 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: locks
+          count: 2
+        # The terminal is the only thing on this map a lock cannot produce, so
+        # it is what stops "seal everything" from being a win on its own.
+        - kind: terminals
+          count: 1
     coloredAreas:
       # Act IV: a const pocket tucked under the right shelf. Worth 3x, and the
       # shelf is in the way of every comfortable cut to it.
@@ -2380,8 +2504,11 @@ levels:
         - kind: superiorLocks
           count: 1
           bonusPercent: 20
-      alsoWinIf:
-        - kind: allLocked
+        # The burn. Without this the vault is optional, and a map whose entire
+        # shape is a slab, a charge and a chest behind them can be finished
+        # without touching any of the three.
+        - kind: smashed
+          count: 1
     entities:
       - id: vault-slab
         kind: wall
@@ -2487,8 +2614,6 @@ levels:
           ballType: compass
           count: 1
           bonusPercent: 30
-      alsoWinIf:
-        - kind: allLocked
     coloredAreas:
       - kind: const
         x: 630

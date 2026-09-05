@@ -104,30 +104,34 @@ describe("every shipped map still means what it meant", () => {
   ) as { levels: LevelConfig[] }).levels;
 
   /**
-   * Act I and act IV state their own win conditions; the middle of the ladder
-   * still derives one. Pinned as a LIST rather than a count so authoring a
-   * `win:` block on a map is a deliberate act that shows up here, not
-   * something that drifts in.
+   * EVERY non-boss map states its own win now. Pinned as a LIST rather than a
+   * count so a map dropping back to the derivation shows up here.
+   *
+   * A derived spec asks for space and carries the free `allLocked`
+   * alternative, which is the lock rush: seal every ball and the map is over,
+   * whatever is left on the board. Removing the alternative alone does not
+   * close it - sealing everything writes the remaining board off as
+   * unreachable, so the space clause is met as a consequence of the last lock.
+   * Only a clause a lock cannot produce closes it, which is why authoring is
+   * the fix rather than more legacy fields.
+   *
+   * level-8 shows why the `win:` block is needed rather than a flag: its
+   * colored area is a gate, and a gate ALONE derives to `[{area, count: 1}]`
+   * with no space clause at all, so the area would become the sole win and the
+   * clear would stop mattering. Stating both is the only way to ask for "clear
+   * the board AND lock one in the box".
+   *
+   * The bosses are the exception, and stay derived: a boss map's win IS the
+   * boss, and the derivation says exactly that.
    */
-  it("authors a win only on the maps that mean to", () => {
+  it("authors a win on every playable map, and leaves the bosses deriving", () => {
     expect(MAPS.length).toBeGreaterThan(30);
-    // All of act I authors one now. A derived spec carries the free
-    // `allLocked` alternative and asks for nothing but space, which is what
-    // made the opening maps beatable either by sealing every ball with the
-    // board untouched or by never locking one at all.
-    //
-    // level-8 was the first outside act IV to do so, and shows why authoring
-    // is needed rather than more legacy fields: its colored area is a gate,
-    // and a gate ALONE derives to `[{area, count: 1}]` with no space clause at
-    // all - the area would become the sole win and the clear would stop
-    // mattering, which is the "a gate never replaces the clear" rule. Stating
-    // both is the only way to ask for "clear the board AND lock one in the
-    // box", so it states both.
-    const authored = MAPS.filter(m => resolveWinSpec(m).authored).map(m => String(m.id));
-    expect(authored.sort()).toEqual([
-      "level-1", "level-2", "level-3", "level-32", "level-33", "level-34",
-      "level-4", "level-5", "level-6", "level-7", "level-8", "level-9",
-    ]);
+    const derived = MAPS.filter(m => !resolveWinSpec(m).authored).map(m => String(m.id));
+    expect(derived.sort()).toEqual(["level-10", "level-20", "level-30", "level-35"]);
+    for (const id of derived) {
+      expect(MAPS.find(m => String(m.id) === id)?.boss, `${id} derives but is no boss`)
+        .toBeTruthy();
+    }
   });
 
   it("still derives a working spec for every other map", () => {

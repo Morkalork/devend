@@ -79,23 +79,33 @@ describe("every act I map states its own win", () => {
 });
 
 /**
- * The two routes the ladder used to allow, stated as properties of the specs.
+ * The free route the ladder used to allow, stated as a property of the specs.
  *
  * Deliberately checked on the SPEC rather than by playing: "can this map be
- * won without locking" is a question about what it asks for, and a bot that
- * happens not to find the route proves nothing about whether the route exists.
+ * won by sealing everything" is a question about what it asks for, and a bot
+ * that happens not to find the route proves nothing about whether it exists.
  */
-describe("the two free routes are closed", () => {
-  it("no act I map can be won without locking a ball", () => {
-    // Route 2, the one that surprised me: greedy cutting to the threshold with
-    // every ball still loose. Measured at 3/3 wins and 0.0 locks on maps 1-7.
+describe("the lock rush is closed where it can be", () => {
+  it("prices no lock on an act I map that closes the rush with content", () => {
+    // This used to assert the opposite for route 2: that no map could be
+    // cleared without locking a ball. Route 2 is not an exploit, it is the
+    // Ship It assignment, which pays for clearing a map without sealing one -
+    // and `blockSpaceWinnableMaps` drops that mission from any block whose
+    // maps all demand a lock. Requiring locks across the ladder made that
+    // every block and deleted the mission outright.
+    //
+    // A lock count closes nothing against the rush anyway: the rush PRODUCES
+    // locks. So on a map that already closes it with content, the lock count
+    // was pure cost, and it goes. Maps 1-4 keep theirs: with nothing to smash
+    // they have no other ask, and the rush stays open on them by admission
+    // (see the pinned list in ladderWins.test.ts).
     for (const n of ACT_ONE) {
       const spec = resolveWinSpec(at(n));
-      const needsABall = spec.require.some(c =>
-        (c.kind === "locks" && c.count > 0)
-        || (c.kind === "area" && c.count > 0)
-        || c.kind === "superiorLocks" || c.kind === "lockType");
-      expect(needsABall, `level ${n} can be cleared without a single lock`).toBe(true);
+      const closesTheRush = spec.require.some(c => c.kind === "smashed");
+      if (!closesTheRush) continue;
+      const pricesALock = spec.require.some(c =>
+        (c.kind === "locks" && c.count > 0) || c.kind === "superiorLocks" || c.kind === "lockType");
+      expect(pricesALock, `level ${n} closes the rush AND still bills a lock`).toBe(false);
     }
   });
 

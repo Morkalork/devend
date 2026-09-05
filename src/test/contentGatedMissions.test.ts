@@ -78,7 +78,23 @@ describe("counting a block's clean-clearable maps", () => {
   });
 
   it("counts a block with no lock-priced wins in full", () => {
-    expect(blockSpaceWinnableMaps(levels, 11)).toBe(BLOCK_SIZE);
+    // Built rather than pointed at the ladder. This used to pin block 11 at a
+    // full five, which made it a statement about that block's authoring as
+    // much as about the counter: the moment one of those maps priced a lock it
+    // failed here, saying nothing about whether the counting was right.
+    const clean = [11, 12, 13, 14, 15].map(level => ({
+      id: `synthetic-${level}`, level,
+      win: { require: [{ kind: "space", threshold: 10 }] },
+    })) as unknown as typeof levels;
+    expect(blockSpaceWinnableMaps(clean, 11)).toBe(BLOCK_SIZE);
+  });
+
+  it("counts the real block 11, which prices one lock", () => {
+    // 14 is the block's one map with nothing operable on it, so a lock count
+    // is the only ask it has (see ladderWins.test.ts). The other four close
+    // the lock rush with content and leave the clean clear available, which is
+    // what keeps Ship It alive here.
+    expect(blockSpaceWinnableMaps(levels, 11)).toBe(BLOCK_SIZE - 1);
   });
 });
 

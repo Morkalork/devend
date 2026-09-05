@@ -71,12 +71,15 @@ describe("the act exists and is the right shape", () => {
 });
 
 describe("the win conditions it states", () => {
-  it("authors a win on the maps that combine, and leaves the rest deriving", () => {
-    expect(resolveWinSpec(at(32)).authored).toBe(true);
-    expect(resolveWinSpec(at(33)).authored).toBe(true);
-    expect(resolveWinSpec(at(34)).authored).toBe(true);
-    // 31 opens the act on rules the player already knows, deliberately.
-    expect(resolveWinSpec(at(31)).authored).toBe(false);
+  it("authors a win on every map of the act, 31 included", () => {
+    // 31 used to derive its win, on the argument that it opens the act on
+    // rules the player already knows. What it actually inherited was the
+    // derivation's free `allLocked` alternative, on a map carrying a circuit
+    // terminal the win never mentioned - so the act opened on the one map in
+    // it that could be finished by sealing three balls and touching nothing.
+    for (const n of [31, 32, 33, 34]) {
+      expect(resolveWinSpec(at(n)).authored, `level ${n}`).toBe(true);
+    }
   });
 
   it("flags none of them as unwinnable", () => {
@@ -125,18 +128,20 @@ describe("the win conditions it states", () => {
   });
 
   /**
-   * An authored spec gets no alternatives it did not ask for, so listing
-   * allLocked is a deliberate mercy: on 32 and 33 sealing everything is a
-   * legitimate way to finish. On 34 it is NOT, or locking all four balls
-   * anywhere would walk around the const box the map is built on.
+   * No map in the act keeps an all-locked back door, 32 and 33 included.
+   *
+   * They used to, as a deliberate mercy: on maps this tight, sealing
+   * everything is a hard-won finish in its own right. The mercy turned out to
+   * be the exploit. Sealing every ball writes the rest of the board off as
+   * unreachable, so the alternative was not "seal everything at 7% remaining",
+   * it was "seal everything, whenever" - and on 33 that walks around the
+   * compass gate the entire map is built to pose, on 32 around the vault.
    */
-  it("gives 34's gate no all-locked back door", () => {
-    expect(resolveWinSpec(at(34)).alsoWinIf).toEqual([]);
-    for (const n of [32, 33]) {
-      expect(resolveWinSpec(at(n)).alsoWinIf.map(c => c.kind), `level ${n}`).toContain("allLocked");
+  it("gives no gate in the act an all-locked back door", () => {
+    for (const n of [31, 32, 33, 34]) {
+      expect(resolveWinSpec(at(n)).alsoWinIf, `level ${n}`).toEqual([]);
     }
-  });
-});
+  });});
 
 describe("what the act charges for its gates", () => {
   const premiums = ACT_IV.flatMap(l =>
