@@ -19,8 +19,16 @@
  * same family of reasons.
  */
 
-/** How long the announcement lasts, in seconds of active play. */
-export const STARTUP_PULSE_SECONDS = 3.2;
+/**
+ * How long the announcement lasts, in seconds of active play.
+ *
+ * Was 3.2, and reported as simply not noticed. Three seconds is the window in
+ * which a player is still taking the whole board in, and a phone screen at
+ * arm's length is not a monitor - the thing being announced can finish
+ * announcing itself before the eye has arrived. Six is long enough to be
+ * caught late without becoming scenery.
+ */
+export const STARTUP_PULSE_SECONDS = 6;
 
 /** Beats within that window. Three reads as deliberate; one reads as a glitch. */
 const BEATS = 3;
@@ -51,4 +59,36 @@ export function startupPulse(activePlaySeconds: number): StartupPulse {
   const strength = Math.pow(1 - t, 1.4);
   const beat = (t * BEATS) % 1;
   return { strength, beat, active: true };
+}
+
+/**
+ * The slow breathe on an object the win actually REQUIRES, which does not stop.
+ *
+ * Separate from the startup pulse on purpose, because they answer different
+ * questions. The startup pulse says "here is what is on this board" once, while
+ * the player is looking at all of it. This says "this is the one you still have
+ * to deal with", and a player asks that at minute two as readily as at second
+ * one - which is exactly the report: a one-shot flash at map open was missed,
+ * and nothing afterwards pointed at the slab.
+ *
+ * It has to be quieter than the startup pulse by a good margin. Something drawn
+ * for the whole map becomes scenery if it shouts, and scenery is invisible in a
+ * different way. So: a shallow sine, no expanding ring, and it stops the moment
+ * the requirement is met - the set it is drawn from is recomputed as the map is
+ * played, so a smashed slab simply stops being in it.
+ */
+export interface WinTargetPulse {
+  /** 0..1 breathing amount, for alpha and stroke width. */
+  breathe: number;
+}
+
+/** Seconds for one full breath in and out. */
+const BREATHE_PERIOD = 1.8;
+
+export function winTargetPulse(activePlaySeconds: number): WinTargetPulse {
+  if (!(activePlaySeconds >= 0)) return { breathe: 0 };
+  // 0..1, peaking mid-period. Sine rather than a triangle so it reads as
+  // breathing rather than blinking.
+  const phase = (activePlaySeconds % BREATHE_PERIOD) / BREATHE_PERIOD;
+  return { breathe: (1 - Math.cos(phase * Math.PI * 2)) / 2 };
 }

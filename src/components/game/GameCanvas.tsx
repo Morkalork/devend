@@ -1406,6 +1406,10 @@ export function GameCanvas({
       }
     };
 
+    // Resolved once: the spec is a property of the level, and re-deriving it
+    // every frame to get the same answer is work the loop does not need.
+    const winSpec = resolveWinSpec(level);
+
     const gameLoopCallbacks: GameLoopCallbacks = {
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
@@ -1439,8 +1443,18 @@ export function GameCanvas({
       // Per-frame safety net (see useGameLoop): guarantees a cleared map always
       // finishes even if the space reached the goal by a path that didn't run
       // the win check, so the top bar can never stall showing CLEAR.
-      checkWinCondition: () =>
-        evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
+      checkWinCondition: () => {
+        // Refresh what the board is still pointing at. The set is what the win
+        // REQUIRES and has not got yet, so it has to shrink as the map is
+        // played: a marker breathing over a slab that is already rubble is
+        // worse than no marker, because it is an instruction to do something
+        // already done. Recomputed from one place rather than poked at by each
+        // path that can satisfy a clause - a smash, a lock, a lit terminal, a
+        // harvested seam - because one of those forgetting is a marker that
+        // never goes out.
+        game.winHighlights = winHighlightRects(winSpec, game);
+        return evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
+      },
       spawnTimedBalls: () => {
         tickRainbowSpawns(game, levelNumber);
         tickBossPhases(game, level, levelNumber);

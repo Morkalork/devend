@@ -495,6 +495,16 @@ something the gate disagrees with, and required objects ring louder than plain
 markings rather than in a second colour - a colour would be a language, and a
 language needs more repetition than a 35-map run gives.
 
+There are **two** effects, because they answer different questions. The opening
+pulse says "here is what is on this board", once, for six seconds of active
+play. The target marker says "this is the one you still have to deal with",
+quietly, for as long as that stays true - the opening pulse alone was reported
+as simply not noticed, which is what a one-shot flash gets while a player is
+still taking the board in. The target set is recomputed every frame, so a
+requirement drops out of it the moment it is met: a marker breathing over a
+slab that is already rubble is worse than none, being an instruction to do
+something already done.
+
 A map that asks for something a lock cannot produce also gains a fail state:
 locking every ball with that requirement unmet strands it, and the map ends as
 a `lockedOut` failure costing a life. That is the tactical decision the win is

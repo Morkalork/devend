@@ -30,7 +30,7 @@ import {
   type ScreenQuad,
 } from "./quad";
 import { PALETTE } from "./palette";
-import { startupPulse } from "../startupPulse";
+import { startupPulse, winTargetPulse } from "../startupPulse";
 import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
 import { clampZoneSpeed } from "@/lib/physics/fenceZones";
 import { mix } from "./palette";
@@ -217,6 +217,10 @@ export class AreaLayer {
     // Before the key check: the pulse is time-driven, so it must run on frames
     // where nothing about the areas themselves changed.
     this.drawPulse(areas, light, w2s);
+    // Order matters: both add into pulseG, which drawPulse clears. The
+    // persistent target ring goes down first so the louder opening pulse sits
+    // over it rather than under.
+    this.drawWinTargets(game, accentColor, w2s);
     this.drawStartupPulse(game, accentColor, w2s);
     const key =
       areas
@@ -348,6 +352,39 @@ export class AreaLayer {
    * zone announces its edges - which is the thing a player needs in order to
    * judge whether a ball will fit - rather than just going briefly lighter.
    */
+  /**
+   * A slow breathe on whatever the win still requires, for as long as it does.
+   *
+   * The opening pulse was missed - reported directly - and a one-shot flash is
+   * the wrong shape for the question it answers. "Which thing do I have to
+   * deal with" is asked at minute two as readily as at second one, and by
+   * minute two the opening pulse is four minutes gone.
+   *
+   * Deliberately much quieter than that pulse: no expanding ring, a shallow
+   * sine, alpha well under half. Anything drawn for the length of a map
+   * becomes scenery if it shouts, and scenery is invisible in its own way. It
+   * stops by disappearing from the set rather than by fading: game.winHighlights
+   * is recomputed as the map is played, so a smashed slab is simply not in it.
+   */
+  private drawWinTargets(game: CanvasGameState, accentColor: string, w2s: W2S): void {
+    const targets = game.winHighlights ?? [];
+    if (targets.length === 0) return;
+    const { breathe } = winTargetPulse(game.activePlaySeconds ?? 0);
+    const color = Number.parseInt(accentColor.replace("#", ""), 16);
+    // Two rings a few units apart: one line at this alpha reads as an edge the
+    // map happens to have, two concentric ones read as a marker put there.
+    for (const r of targets) {
+      const q = worldRectQuad(r.x, r.y, r.width, r.height, w2s);
+      for (const [grow, mul] of [[-3, 1], [-9, 0.55]] as const) {
+        shapeOf(this.pulseG, q, grow).stroke({
+          width: 1.5 + breathe * 1.5,
+          color,
+          alpha: (0.18 + breathe * 0.22) * mul,
+        });
+      }
+    }
+  }
+
   private drawStartupPulse(game: CanvasGameState, accentColor: string, w2s: W2S): void {
     const pulse = startupPulse(game.activePlaySeconds ?? 0);
     if (!pulse.active) return;
