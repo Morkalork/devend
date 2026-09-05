@@ -297,9 +297,14 @@ describe("the builder says when it has unsaved work", () => {
     // report the file as up to date.
     const save = SRC.slice(SRC.indexOf("const saveToServer"), SRC.indexOf("const copyYaml"));
     // Index comparison rather than one regex: what matters is that the clear
-    // sits INSIDE the ok branch, since a failed write reporting the file as up
-    // to date is worse than no indicator at all.
-    const ok = save.indexOf("if (res.ok)");
+    // sits AFTER the response has been checked, since a failed write reporting
+    // the file as up to date is worse than no indicator at all.
+    //
+    // Matched on `res.ok` rather than on one spelling of the branch. This read
+    // `if (res.ok)` and broke when the handler grew an error path and became
+    // `if (!res.ok) { ... } else { ... }` - the same guard, inverted. The test
+    // was pinning the syntax rather than the rule.
+    const ok = save.search(/if \(!?res\.ok\)/);
     expect(ok, "the save must check its response").toBeGreaterThan(-1);
     expect(save.indexOf("setDirty(false)")).toBeGreaterThan(ok);
   });

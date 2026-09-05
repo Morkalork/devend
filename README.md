@@ -37,10 +37,57 @@ npm run build
 
 ```sh
 npm run build
-npm start   # runs: serve -s dist -l $PORT
+npm start   # runs: node server/index.js
 ```
 
 Requires Node 20.x (`"engines": {"node": "20.x"}` in `package.json`).
+
+`server/index.js` serves `dist` (SPA fallback, hashed assets cached hard,
+`map.yml` never cached) and adds one endpoint: `PUT /api/map`. It has no
+dependencies - Node 20 has `http`, `fs` and `fetch`, and pulling in Express to
+serve a folder and proxy one PUT would be more surface than the feature.
+
+### Saving maps from the deployed builder
+
+The map builder is reachable on the deployed build (tap the welcome ball ten
+times), and its Save button used to have nowhere to write, so building a map
+meant running locally and committing `public/map.yml` by hand every time.
+
+`PUT /api/map` **commits the file to the repo** rather than writing it to disk.
+Two reasons:
+
+- A dyno's filesystem is ephemeral. A write would appear to work and vanish on
+  the next restart or deploy, which is worse than refusing, because it looks
+  like success.
+- `map.yml` is the file every map test reads. The gap rule, the win-spec
+  authoring guard, the mechanic spread and the bot sweep all guard the ladder in
+  CI. A map edited down a path that skips them is a map nothing checks.
+
+So a save pushes to `dev`, CI runs, Heroku redeploys, and the change is live in
+about ninety seconds having been checked on the way.
+
+| Config var | | |
+|---|---|---|
+| `GITHUB_TOKEN` | **required** | Fine-grained PAT, **Contents: read and write**, scoped to this repo only. Nothing else. |
+| `MAP_EDIT_SECRET` | **required** | Any long random string. The builder asks for it on the first save and keeps it in `localStorage`. |
+| `MAP_COMMIT_BRANCH` | `dev` | Where saves land. |
+| `MAP_COMMIT_REPO` | `Morkalork/devend` | |
+| `MAP_COMMIT_PATH` | `public/map.yml` | |
+
+```sh
+heroku config:set GITHUB_TOKEN=github_pat_... MAP_EDIT_SECRET="$(openssl rand -hex 24)"
+```
+
+With either of the first two unset the endpoint refuses every write and says
+which one is missing - it never half-works. The secret is **never** in the
+client bundle: the bundle is public, so a secret shipped in it would gate
+nothing. It is compared in constant time, so it cannot be found a character at
+a time by timing the reply.
+
+> **The token is the thing to be careful with.** Anyone holding it can commit to
+> the repo. Scope it to contents-write on this repo alone, and rotate it if the
+> app is ever shared. `MAP_EDIT_SECRET` is what stops a player who finds the
+> builder from using it; the token is what makes the commit.
 
 > ⚠️ **Do not track binary assets (mp3s, images) with Git LFS.** Heroku deploys
 > from a GitHub source tarball that contains LFS *pointer* files, not the real
@@ -60,7 +107,12 @@ The Admin button appears on the welcome screen under two conditions:
 | **Dev** (`npm run dev`) | Admin button is always visible |
 | **Production** | Add `?admin=true` to the URL — e.g. `https://your-app.com/?admin=true` |
 
-> **Note:** The actual Admin and Playground screens are only rendered in dev builds (`import.meta.env.DEV`). The `?admin=true` param makes the button visible in production, but the screens themselves will not render in a production build.
+> **Note:** the deployed build DOES render these screens. Admin is on
+> automatically in local dev; on the deployed build it is unlocked by a secret
+> gesture (tap the welcome-screen ball ten times) - see `adminUnlocked` in
+> `src/pages/Index.tsx`. This note used to say the screens never render in
+> production, which stopped being true and matters: it is why `PUT /api/map`
+> needs a secret rather than trusting that nobody can reach the builder.
 
 From the Admin screen you can navigate to:
 - **Map Builder** — visual map editor

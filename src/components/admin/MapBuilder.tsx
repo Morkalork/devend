@@ -25,6 +25,15 @@ interface MapBuilderProps {
   onBack: () => void;
 }
 
+/**
+ * Where the editor secret lives.
+ *
+ * localStorage, never the bundle: the map builder is reachable on the deployed
+ * build, and anything compiled into the client is readable by anyone who opens
+ * it - so a secret shipped that way would gate nothing.
+ */
+const MAP_SECRET_KEY = 'devend:mapEditSecret';
+
 export function MapBuilder({ onBack }: MapBuilderProps) {
   const [levels, setLevels] = useState<LevelConfig[]>([]);
   /**
@@ -51,6 +60,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [panelSide, setPanelSide] = useState<PanelSide>(readPanelSide);
   const sideClasses = panelSideClasses(panelSide);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  /** Why the last save failed, in the server's own words. */
+  const [saveError, setSaveError] = useState<string | null>(null);
   /**
    * Does the ladder in memory differ from the one on disk?
    *
@@ -734,25 +745,65 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     return spliceYamlEntries(raw, 'id', replacements) ?? fullDump();
   }, [levels]);
 
-  // Save YAML to server (dev server must be running)
+  /**
+   * Save.
+   *
+   * Locally this writes public/map.yml through the Vite dev plugin. On the
+   * deployed build the same PUT reaches the production server, which commits
+   * the file to the repo - so building a map no longer means running it on
+   * localhost and committing by hand.
+   *
+   * The deployed route needs a secret, held in localStorage rather than in the
+   * bundle: the map builder is reachable in production (the welcome ball
+   * unlocks it), and anything compiled into the client is public, so a secret
+   * shipped in the bundle would gate nothing at all. Asked for once, on the
+   * first save that needs it.
+   */
   const saveToServer = useCallback(async () => {
     setSaveStatus('saving');
     const yamlContent = saveYaml();
     try {
+      let secret = '';
+      try { secret = localStorage.getItem(MAP_SECRET_KEY) ?? ''; } catch { /* private mode */ }
       const res = await fetch('/api/map', {
         method: 'PUT',
         body: yamlContent,
-        headers: { 'Content-Type': 'text/yaml' },
+        headers: {
+          'Content-Type': 'text/yaml',
+          ...(secret ? { 'X-Map-Secret': secret } : {}),
+        },
       });
-      setSaveStatus(res.ok ? 'saved' : 'error');
-      // The file on disk is now what we just wrote, so a second save splices
-      // against it rather than against the version we first loaded.
-      if (res.ok) {
+
+      // 401 means the server IS configured and did not like the secret, which
+      // is the one error worth interrupting for: ask, keep it, and try again.
+      if (res.status === 401) {
+        const given = window.prompt(
+          'Editor secret for saving to the repo (MAP_EDIT_SECRET):', '');
+        if (given) {
+          try { localStorage.setItem(MAP_SECRET_KEY, given); } catch { /* private mode */ }
+          setSaveStatus('idle');
+          return;
+        }
+      }
+
+      if (!res.ok) {
+        // The server sends a sentence saying what to go and do - a missing
+        // config var, a stale file, a token without write access. A deployed
+        // build has no console to read, so it goes on screen.
+        const why = await res.json().then(j => j.error).catch(() => '');
+        setSaveError(why || `Save failed (${res.status}).`);
+        setSaveStatus('error');
+      } else {
+        setSaveError(null);
+        setSaveStatus('saved');
+        // The file on disk is now what we just wrote, so a second save splices
+        // against it rather than against the version we first loaded.
         rawMapYaml.current = yamlContent;
         originalLevels.current = JSON.parse(JSON.stringify(levels)) as LevelConfig[];
         setDirty(false);
       }
     } catch {
+      setSaveError('Could not reach the server.');
       setSaveStatus('error');
     }
     setTimeout(() => setSaveStatus('idle'), 2500);
@@ -919,8 +970,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           }`}
           title={
             saveStatus === 'saved'  ? 'Saved!' :
-            saveStatus === 'error'  ? 'Save failed - dev server running?' :
-            dirty ? 'Unsaved changes - save to disk (requires dev server)' :
+            saveStatus === 'error'  ? (saveError ?? 'Save failed.') :
+            dirty ? 'Unsaved changes - save (writes the file locally, commits it on the deployed build)' :
             'Saved. Nothing to write.'
           }
         >
@@ -938,6 +989,17 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           )}
         </button>
       </div>
+
+      {/* Why a save failed, in the server's own words.
+          Not just the button's tooltip: these are sentences like "GITHUB_TOKEN
+          is not set on this app" or "map.yml changed since this editor loaded
+          it", each naming something to go and do - and a deployed build has no
+          console to read them in. */}
+      {saveStatus === 'error' && saveError && (
+        <div className="admin-chrome-zoom flex-shrink-0 px-3 py-2 text-xs bg-destructive/15 text-destructive border-b border-destructive/30">
+          {saveError}
+        </div>
+      )}
 
       {/* Level Selector */}
       <div className="admin-chrome-zoom flex-shrink-0 p-2 bg-muted/50 border-b border-border overflow-x-auto">
