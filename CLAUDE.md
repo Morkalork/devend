@@ -87,6 +87,12 @@ of the ask I deliberately left out or deferred belongs in the second line.
 When the prompt was a screenshot, a file or a link, say what I took FROM it,
 since that reading is the most likely thing to be wrong.
 
+**If CI failed at any point and I fixed it, say so when I wrap up.** Not only in
+the turn where it broke: a red build that got fixed three turns ago is still
+something the recap should carry, because the alternative is a summary that
+reads as though the work went cleanly. Name what failed and what the fix was, in
+a line.
+
 ## Git
 
 - Default working branch is `dev`; the release branch is `main`.
