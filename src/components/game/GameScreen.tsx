@@ -27,6 +27,8 @@ import { MapFailedOverlay } from './MapFailedOverlay';
 import type { MapFailure } from '@/lib/mapFailure';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
+import { FenceSlotBar } from './FenceSlotBar';
+import { STANDARD_FENCE_ID } from '@/lib/fences';
 import { GameMessageBar } from './GameMessageBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel, type PanelFocus } from './TopBarDetailsPanel';
@@ -584,6 +586,7 @@ export function GameScreen({
    */
   const [topPanelFocus, setTopPanelFocus] = useState<PanelFocus>(null);
   const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
+  const [fenceInfoOpen, setFenceInfoOpen] = useState(false);
   const [superiorInfoOpen, setSuperiorInfoOpen] = useState(false);
   // Press-and-hold on a board object. Owned here rather than in GameCanvas so it
   // joins modalOverlayActive and PAUSES the map: reading an explainer while the
@@ -782,7 +785,7 @@ export function GameScreen({
   }, [showPickupOverlay]);
 
   const modalOverlayActive =
-    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || !!entityInfo || anyExplainerModal;
+    topPanelOpen || menuOpen || abilityInfoOpen || fenceInfoOpen || superiorInfoOpen || !!entityInfo || anyExplainerModal;
 
   /**
    * Pause when the page is hidden: a call, a notification, a lock screen, an
@@ -1071,6 +1074,22 @@ export function GameScreen({
           className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
           style={{ visibility: mapComplete ? 'hidden' : 'visible' }}
         >
+          {/* The fence slots sit ABOVE the ability buttons and below the
+              board, because they are about the cut you are about to draw
+              rather than a thing to press: the eye travels board -> what am I
+              drawing with -> what can I fire. Always five, empties included,
+              so acquiring a type never moves the board. */}
+          {!mapComplete && (
+            <div className="pointer-events-auto">
+              <FenceSlotBar
+                slotIds={gameState.fenceSlotIds ?? []}
+                selectedId={gameState.selectedFenceTypeId ?? STANDARD_FENCE_ID}
+                accentColor={accentColor}
+                onSelect={gameState.onSelectFenceType ?? (() => {})}
+                onInfoOpenChange={setFenceInfoOpen}
+              />
+            </div>
+          )}
           {!mapComplete && gameState.onUseAbility && (
             <div className="pointer-events-auto">
               <AbilityBar

@@ -1236,5 +1236,11 @@
     "pullToFire": "Drag and release to fling",
     "power": "x{{power}} - {{n}} caught",
     "tutorial": "Press where the balls should go, pull back through them, then let go."
+  },
+  "fenceTypes": {
+    "buildsSlower": "Builds {{percent}}% slower than a standard fence. That is what it costs.",
+    "buildsFaster": "Builds {{percent}}% faster than a standard fence.",
+    "staysSelected": "Tap a slot to select it. It stays selected until you change it, and never runs out.",
+    "emptySlot": "Empty fence slot"
   }
 }

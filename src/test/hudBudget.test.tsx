@@ -106,13 +106,62 @@ describe("how much the HUD is allowed to say at once", () => {
       .filter(n => /Bar$/.test(n));
   }
 
+  /**
+   * The bars that can be on screen AT ONCE.
+   *
+   * The count above is every bar mentioned in the stack, and it overstates the
+   * layout: GameMessageBar, ShipEarlyBar and AbilityCountdownBar share ONE
+   * reserved lane, gated on a single `contextLane` value, so at most one of
+   * them is ever drawn. The wrapper holds its height whether or not that lane
+   * is in use, which is what stopped the bottom of the screen moving in the
+   * first place - so the three of them cost one row, not three.
+   *
+   * This is the number the original complaint was about ("five separately
+   * positioned bars"), and it is the one worth a ceiling.
+   */
+  const CONTEXT_LANE_BARS = ["GameMessageBar", "ShipEarlyBar", "AbilityCountdownBar"];
+  function simultaneousBars(): string[] {
+    const bars = bottomStackSurfaces();
+    const shared = bars.filter(b => CONTEXT_LANE_BARS.includes(b));
+    return [...bars.filter(b => !CONTEXT_LANE_BARS.includes(b)), ...(shared.length ? ["<contextLane>"] : [])];
+  }
+
   it("keeps the bottom stack inside its budget", () => {
     // Five stacked bars was the reported state; each was positioned
     // independently, so the layout shifted under the thumb whenever one
-    // appeared. The ceiling sits just above today's count so that adding a
-    // sixth is a decision someone has to make on purpose.
+    // appeared. The ceiling sits just above the count so that adding another is
+    // a decision someone has to make on purpose.
+    //
+    // FenceSlotBar was that decision (FENCE_TYPES_PLAN.md step 2), taken
+    // deliberately and with the ceiling raised to say so. It earns a permanent
+    // row because it is not a readout: it is what the next cut will be, and it
+    // has to be reachable in the same reach as the cut itself. It also draws
+    // its empty slots rather than hiding them, so acquiring a fence type never
+    // moves the board - which is the failure this whole budget exists to stop.
     const bars = bottomStackSurfaces();
-    expect(bars.length, `bottom stack: ${bars.join(", ")}`).toBeLessThanOrEqual(5);
+    expect(bars.length, `bottom stack: ${bars.join(", ")}`).toBeLessThanOrEqual(6);
+  });
+
+  it("keeps the number that can be on screen at once lower still", () => {
+    // The count that matches what a player actually sees. Three of the six
+    // share one lane, so the real stack is the fence slots, the abilities, one
+    // context row and the push exit.
+    const at = simultaneousBars();
+    expect(at.length, `at once: ${at.join(", ")}`).toBeLessThanOrEqual(4);
+  });
+
+  it("keeps the shared lane shared", () => {
+    // The budget above is only honest while those three really are exclusive.
+    // If one of them ever gets its own row, the count it was excused from goes
+    // back up and this says so.
+    const src = read("GameScreen.tsx");
+    for (const bar of CONTEXT_LANE_BARS) {
+      const idx = src.indexOf(`<${bar}`);
+      if (idx < 0) continue;
+      const before = src.slice(Math.max(0, idx - 400), idx);
+      expect(before, `${bar} left the shared context lane and now has a row of its own`)
+        .toMatch(/contextLane === /);
+    }
   });
 
   it("still has the bars that carry real information", () => {

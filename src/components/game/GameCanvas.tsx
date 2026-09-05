@@ -1,4 +1,6 @@
 import { engagementProgress } from '@/lib/scoreEngagement';
+import { devFenceSlots } from "@/lib/devFlags";
+import { STANDARD_FENCE_ID } from "@/lib/fences";
 /**
  * GameCanvas — the playable game board.
  *
@@ -183,6 +185,12 @@ export interface GameStateInfo {
   abilityTimers?: AbilityTimer[];
   /** A targeted ability (Magnet) armed and awaiting a board tap; else null. */
   armedAbility?: string | null;
+  /** The fence type the next cut will draw (FENCE_TYPES_PLAN.md). */
+  selectedFenceTypeId?: string;
+  /** The four swappable fence slots, standard excluded. */
+  fenceSlotIds?: string[];
+  /** Choose the fence type the next cut draws. */
+  onSelectFenceType?: (fenceTypeId: string) => void;
 }
 
 /** A running time-based ability, for the countdown bar (#38). Wall-clock
@@ -1680,6 +1688,36 @@ export function GameCanvas({
     }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
+  /**
+   * The fence slots (FENCE_TYPES_PLAN.md).
+   *
+   * Run-scoped state held HERE rather than in the session, for step 2: the
+   * acquisition wiring is step 7, and until then the roster is whatever a dev
+   * flag hands over. Keeping it local means nothing about the run/session
+   * layer has to change for the bar to be real, and step 7 lifts it without
+   * having to unpick a shape guessed at now.
+   *
+   * Mirrored onto the game state on every change, because the physics reads it
+   * (the cut records its type at swipe time) and the physics has no React.
+   */
+  const [selectedFenceTypeId, setSelectedFenceTypeId] = useState<string>(STANDARD_FENCE_ID);
+  const [fenceSlotIds] = useState<string[]>(() => devFenceSlots());
+
+  const handleSelectFenceType = useCallback((fenceTypeId: string) => {
+    // Refuse a type that is not actually in a slot. The bar cannot produce one,
+    // but a stale save or a dev flag can, and a selection the player cannot see
+    // would draw fences they never chose.
+    const allowed = fenceTypeId === STANDARD_FENCE_ID || fenceSlotIds.includes(fenceTypeId);
+    const next = allowed ? fenceTypeId : STANDARD_FENCE_ID;
+    setSelectedFenceTypeId(next);
+    gameRef.current.selectedFenceTypeId = next;
+  }, [fenceSlotIds]);
+
+  useEffect(() => {
+    gameRef.current.selectedFenceTypeId = selectedFenceTypeId;
+    gameRef.current.fenceSlotIds = fenceSlotIds;
+  }, [selectedFenceTypeId, fenceSlotIds]);
+
   // Ability bar (#38): fire the pressed ability on the live game and spend one
   // banked charge in the session. The button is disabled at 0 charges; the
   // lockout guards a rapid double-press from firing twice off one charge.
@@ -1832,9 +1870,12 @@ export function GameCanvas({
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
+        selectedFenceTypeId,
+        fenceSlotIds,
+        onSelectFenceType: handleSelectFenceType,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

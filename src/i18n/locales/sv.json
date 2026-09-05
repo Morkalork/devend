@@ -1769,5 +1769,11 @@
     "pullToFire": "Dra och släpp för att slunga",
     "power": "x{{power}} - {{n}} fångade",
     "tutorial": "Tryck där bollarna ska hamna, dra bakåt genom dem och släpp."
+  },
+  "fenceTypes": {
+    "buildsSlower": "Byggs {{percent}}% långsammare än ett vanligt staket. Det är vad det kostar.",
+    "buildsFaster": "Byggs {{percent}}% snabbare än ett vanligt staket.",
+    "staysSelected": "Tryck på en plats för att välja den. Den förblir vald tills du byter, och tar aldrig slut.",
+    "emptySlot": "Tom staketplats"
   }
 }

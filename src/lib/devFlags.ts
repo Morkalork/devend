@@ -9,6 +9,7 @@
  */
 
 const INFINITE_LIVES_KEY = "devend:infiniteLives";
+const FENCE_SLOTS_KEY = "devend:fenceSlots";
 
 /** Lives handed out when the flag is on. Not truly infinite: a real number
  *  keeps every existing lives comparison (perfect-level, continues) working. */
@@ -138,4 +139,37 @@ export function forcedTilts(): boolean {
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;
+}
+
+/**
+ * The fence types in the player's four swappable slots (FENCE_TYPES_PLAN.md).
+ *
+ * A dev flag for now, ON PURPOSE. Acquisition is step 7 of the plan and every
+ * step before it has to be playable without it - wiring three economies into a
+ * mechanic that is still growing is how a feature ends up half-landed. So the
+ * roster comes from here until the store, the upgrade chains and the
+ * certificate store take over, and then this stays as the way to test a
+ * loadout without shopping for it.
+ *
+ * Stored as a comma-separated id list. Unknown ids are NOT filtered here: the
+ * catalogue resolves them to the standard fence, and quietly dropping a typo
+ * would make a mis-typed flag look like a flag that did nothing.
+ */
+export function devFenceSlots(): string[] {
+  try {
+    const raw = localStorage.getItem(FENCE_SLOTS_KEY);
+    if (!raw) return [];
+    return raw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 4);
+  } catch {
+    return [];
+  }
+}
+
+export function setDevFenceSlots(ids: string[]): void {
+  try {
+    if (ids.length === 0) localStorage.removeItem(FENCE_SLOTS_KEY);
+    else localStorage.setItem(FENCE_SLOTS_KEY, ids.slice(0, 4).join(","));
+  } catch {
+    /* storage blocked: the bar simply shows the standard slot */
+  }
 }

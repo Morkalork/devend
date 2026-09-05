@@ -1769,5 +1769,11 @@
     "pullToFire": "Arrastra y suelta para lanzar",
     "power": "x{{power}} - {{n}} atrapados",
     "tutorial": "Pulsa donde deben ir las bolas, tira hacia atras a traves de ellas y suelta."
+  },
+  "fenceTypes": {
+    "buildsSlower": "Se construye un {{percent}}% más lento que una valla normal. Ese es su precio.",
+    "buildsFaster": "Se construye un {{percent}}% más rápido que una valla normal.",
+    "staysSelected": "Toca una ranura para seleccionarla. Sigue activa hasta que la cambies y nunca se agota.",
+    "emptySlot": "Ranura de valla vacía"
   }
 }
