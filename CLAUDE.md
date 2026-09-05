@@ -45,8 +45,9 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
 See **ARCHITECTURE.md** for the game design and data model,
 **MAP_DESIGN_GUIDELINES.md** for how the ladder is designed (the mechanic
 ledger, the combination matrix, the per-map conventions and the engine
-constraints a map must satisfy), and **ANDROID.md** for Capacitor/Play-Store
-packaging.
+constraints a map must satisfy), **FENCE_TYPES_PLAN.md** for the agreed but
+UNBUILT design of the fence-slot bar, and **ANDROID.md** for
+Capacitor/Play-Store packaging.
 
 ## Conventions
 

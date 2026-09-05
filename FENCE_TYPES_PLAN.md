@@ -1,0 +1,226 @@
+# FENCE_TYPES_PLAN.md
+
+The plan for **fence types**: a row of five slots beneath the board that decides
+what kind of fence the next cut draws.
+
+Status: **design agreed, not built.** Every decision below that could have gone
+another way is recorded with the reason, so the build can be argued with rather
+than guessed at.
+
+---
+
+## 1. Why this is the right shape for this game
+
+Every mechanic on the ladder so far acts on the **balls** (movers, wells,
+bumpers, gates) or on the **space** (breakables, reveals, areas, fence ground).
+Exactly one touches the cut itself: `fenceZones`, and its own header says why
+that matters -
+
+> "Every other map mechanic acts on the balls or blocks the space. None of them
+> touches the cut itself - and the cut is what the game is actually about."
+
+Fence types are that observation turned into a system the player controls
+instead of one the map imposes. The map already decides *where* cutting is
+expensive; this decides *what kind* of cut you spend there. That is a genuinely
+new axis, and it is the axis the game was always about.
+
+It also fixes a standing complaint the ladder cannot currently answer: the
+player has no way to change how a map plays, only where they cut. Upgrades
+change numbers; abilities are panic buttons on a timer. Nothing changes the
+*verb*.
+
+---
+
+## 2. The four decisions, and what was chosen
+
+| decision | chosen | rejected, and why |
+|---|---|---|
+| **Cost model** | Unlimited once owned, but a special fence **builds slower**, and each type carries its own downside. | Per-map charges turn the bar into a meter to hoard rather than a choice to make. Overtime-per-cut competes with the store for the same hours and makes every cut a purchase. Unlimited with no drawback makes ice dominate every map. |
+| **Ice / fire** | A **step per bounce**, debounced, clamped to the existing `minimumSpeed` floor and a ceiling. | A timed effect stops the fence mattering once the ball leaves, so *where* you build it stops mattering. Region-bounded is the most interesting and the most expensive, and the hardest to show on screen. Permanent-on-contact compounds and cannot be undone. |
+| **Roster scope** | **Run-scoped**, acquired and swapped in the store. The certificate-bought type is the exception: account-scoped, so it is in the roster at run start. | Account-scoped-and-picked-at-run-start front-loads the decision and kills mid-run adaptation. Freely swappable removes the cost of carrying the wrong four. |
+| **The drill** | Anchors on a breakable, damages it over time, and **resumes growing** through the freed space when it dies. | Stopping at the gap loses the chain reaction that makes it worth building. Damage-only makes it a tool rather than a fence. |
+
+**The cost model is the load-bearing one.** "Builds slower" is what keeps the
+slot bar tactical: the whole tension of a fence is the race between it finishing
+and something hitting it, so a slower fence is a real risk taken on purpose,
+every single cut, and it needs no counter on screen to be felt.
+
+---
+
+## 3. What already exists, and is reused rather than rebuilt
+
+This feature is unusually cheap because the codebase has been building toward it
+without meaning to.
+
+| need | what already does it |
+|---|---|
+| A row of buttons under the board, long-press for an explainer | `AbilityBar.tsx`, in the fixed bottom wrapper, `MAX_ABILITY_SLOTS = 5` |
+| A config-driven catalogue with `startLevel`, weights, colours, `description`/`howTo` | `abilities.yml` + `abilities.ts` |
+| Per-wall variation carried on the wall itself | `Wall` already has `isMirror`, `passRule`, `bouncer`, `blackHits`, `maxHits`/`hitsLeft` |
+| A cut that builds at a non-standard speed | `fenceZones.ts` (`cutSpeedFactor`), already folded into `updateFenceWall` |
+| "One contact changes a ball's speed once" | `updateBall.ts:861`, the yellow ball's `speedRange` + `lastSpeedStepAt` 90ms debounce |
+| Damaging a breakable from something other than a ball | `registerObjectHit(game, d, ballId, now, amount, impact)` |
+| Fences that take damage and shatter | `blackHits`, `FENCE_FRACTURE_HITS`, `breakFenceWall.ts` |
+| Three separate acquisition channels | the store's ability slot (`abilityOffer.ts`), `upgrades.yml` levels, `certificates.yml` |
+| Refusing to anchor a cut on a breakable | `cutAnchorsBreakable` + the `breakableAnchor` game message |
+
+That last row is the happy accident: **the drill is the exception that makes the
+existing refusal meaningful.** Today "you cannot start a cut on a breakable" is
+an arbitrary-feeling rule. Once one fence type can, the rule becomes "only the
+drill bites into slabs", which teaches the drill for free.
+
+---
+
+## 4. The catalogue
+
+`public/fences.yml`, matching the shape of `abilities.yml`. Ships with six so
+the roster of four is a real choice from the moment the second is owned.
+
+| id | look | what it does | drawback | source |
+|---|---|---|---|---|
+| `standard` | the current green | the fence as it is today | none | always in slot 1, cannot be unequipped |
+| `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds ~30% slower | store |
+| `flare` | red, hot | a ball bouncing off it gains a speed step | builds ~30% slower, and a faster ball is more dangerous to *you* | upgrade chain |
+| `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds ~50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
+| `rebar` | heavy grey | survives more ball hits before fracturing (`maxHits`) | builds ~40% slower | store |
+| `tripwire` | thin yellow | builds ~40% FASTER | fractures on the first hit | upgrade chain |
+
+`tripwire` is deliberately the inverse of the others: it proves the axis runs
+both ways, and it gives the WIP-limit maps (17, 18, 32) something to think about
+that is not simply "be better".
+
+**Fence types never change what a fence IS.** They seal, they capture, they
+count toward the fence budget, they lock balls. A type that changed that would
+not be a fence type, it would be a different mechanic wearing the name.
+
+---
+
+## 5. Build order
+
+Seven steps. Each is shippable on its own and leaves the game working, which is
+the point: this is a big feature and it must never be half-landed on `dev`.
+
+### Step 1 - The type exists and does nothing
+
+- `public/fences.yml` with `standard` and `ice`, plus `src/lib/fences.ts`
+  (`getFenceType`, `getAllFenceTypes`, `FENCE_TYPE_IDS` from an exhaustive
+  Record so a missing entry is a compile error).
+- `fenceTypeId` on `GrowingWall` and on `Wall`, set in `cutStart` and copied in
+  `applyCut`'s `addSegmentWalls`.
+- `game.selectedFenceTypeId`, defaulting to `standard`.
+- Renderer: the wall's colour comes from its type.
+
+Nothing plays differently yet. **The test is that a fence remembers its type
+through growth, completion, segment splitting and a save/reload.**
+
+### Step 2 - The slot bar
+
+- `FenceSlotBar.tsx` beside `AbilityBar` in the same fixed bottom wrapper.
+  Five slots; slot 1 is always `standard` and is not swappable; tap to select;
+  long-press for the explainer modal (the house gesture, per CLAUDE.md).
+- The selected slot is ringed, the way `armedAbilityId` already rings a button.
+
+**The test is that the bar never moves the board** - the bottom wrapper already
+reserves height for exactly this reason, and a second bar is the thing most
+likely to break it.
+
+### Step 3 - Ice, and the speed step
+
+- `fenceSpeedStep(ball, wall, now)` in a new `src/lib/physics/fenceTouch.ts`,
+  called from `updateBall` where `surfaceHit` is already known. Needs the wall
+  that was hit, which the three `surfaceHit = true` sites have in scope.
+- Reuses the yellow ball's shape exactly: a 90ms debounce, clamped below by
+  `ball.minimumSpeed` and above by a new ceiling.
+
+**The test is the floor and the ceiling**, and that a ball resting against ice
+does not ratchet to a stop - the debounce is the whole safety.
+
+### Step 4 - Build speed, and the drawback that makes it fair
+
+- `cutSpeedFactor` gains the fence type's multiplier, folded in beside the zone
+  factor, the ability factor and the upgrade factor.
+- The Acceptance Criteria modal is untouched: this is a player property, not a
+  map property, and the criteria screen describes the map.
+
+**The test is that the factors MULTIPLY** and that a slow fence on slow ground
+is slower than either - a bug here would be invisible and would quietly make the
+whole system free.
+
+### Step 5 - Flare, rebar, tripwire
+
+Cheap once step 3 and 4 exist: flare is ice with the sign flipped, rebar sets
+`maxHits`, tripwire sets it to 1 and takes a speed factor above 1.
+
+### Step 6 - The drill
+
+The only genuinely new physics, and it gets its own step for that reason.
+
+- Anchoring: `cutAnchorsBreakable` becomes "refuse unless the selected type
+  `canAnchorOnBreakable`". The `breakableAnchor` message gains a second form
+  that names the drill once the player owns one.
+- Damage: a per-frame tick calls `registerObjectHit` with a small `amount`
+  for each breakable a drill fence is touching. The debounce is already there
+  (`HIT_DEBOUNCE_MS`).
+- **Resumed growth**: when a breakable the drill touches is destroyed, the
+  drill's completed segment goes back to growing from its blocked end, along
+  its original direction, until it meets the next solid thing. This is the
+  hard part. It needs:
+  - a `blockedBy` back-reference from the wall to the destructible;
+  - a re-entry into `updateFenceWall` for a wall that had already completed;
+  - and it must respect **`smashReach`**: the drill can bury a slab it just
+    freed access to, and the rule shipped for that has to see the resumed
+    growth as an ordinary cut.
+
+**The test is the chain**: two slabs in a line, one drill, and both fall.
+
+### Step 7 - Acquisition
+
+- Store: a fence-type card on the same shelf as the ability card
+  (`abilityOffer.ts` is the model), plus a swap UI for slots 2-5.
+- Upgrades: `flare` and `tripwire` as the top level of two chains.
+- Certificates: `drill`, account-scoped, so it is in the roster at run start.
+
+Deliberately LAST. Every step before it is playable with types granted by a dev
+flag, and wiring three economies into an unfinished mechanic is how a feature
+ends up half-landed.
+
+---
+
+## 6. The things most likely to go wrong
+
+Written down now, because each of these is a bug that would be silent.
+
+1. **A fence type that changes the lock rules.** It must not. `checkBallWonState`
+   already refuses a lock for a portal and for a needed slab; a fence type
+   must never become a third reason, or "why did this not lock" stops having an
+   answer a player can hold in their head.
+2. **The drill burying what it just freed.** It opens ground and then keeps
+   growing through it, which is exactly the shape `smashReach` guards. The
+   resumed growth has to run the same capture and the same checks.
+3. **Ice ratcheting a ball to a standstill.** The floor is `minimumSpeed` and the
+   debounce is 90ms; a ball wedged in an ice corner must not tick down every
+   frame. This is the one that would make the game unplayable rather than
+   merely wrong.
+4. **Speed factors adding instead of multiplying.** Silent, and it would make
+   every drawback free.
+5. **The second bottom bar moving the board.** The wrapper reserves height for
+   this reason; a bar that appears when the first type is bought would shift the
+   board mid-run.
+6. **The bot.** `runBot` draws standard fences and always will. Every sweep
+   after this ships measures a player who never uses the feature - which is
+   fine, and has to be written into MAP_DESIGN_GUIDELINES beside the note about
+   the bot spending 2-4x par, or the next person will read a sweep as evidence
+   about a system it never touched.
+
+---
+
+## 7. What this does NOT include
+
+Stated so the scope is arguable rather than assumed:
+
+- **No map authoring against fence types.** No map requires a type, forbids one,
+  or asks "clear this with ice". That is a good second feature and a bad first
+  one: it would make the ladder depend on a roster the player might not have.
+- **No fence type in the win spec.** Same reason.
+- **No per-type scoring axis.** The Performance Review has six axes and does not
+  need a seventh to say "you used the exotic fence".
