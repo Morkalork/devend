@@ -107,7 +107,22 @@ export function ResultScreen({
   return (
     <>
       <CRTBackground accentColor={accentColor} />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background/90 p-6 relative z-10">
+      {/*
+        Two rows, and the split is the whole point: the recap SCROLLS and the
+        run-continuation buttons DO NOT.
+
+        This screen was one column ending in its buttons, and it had grown -
+        outcome, ascension, new loadouts, level, the failure and what was still
+        needed, levels and certificate hours, the ladder placement with four
+        possible crowns under it, the build recap with its tag chips and
+        archetype record - so on a phone Play Again was off the bottom, below
+        content that only exists on some runs. A player who wanted to go again
+        had to read a report first, or know to scroll past one.
+
+        h-dvh rather than min-h-screen, so the middle row can own the overflow
+        instead of the page growing and taking the buttons with it.
+      */}
+      <div className="h-dvh flex flex-col bg-background/90 relative z-10">
       {/* Background effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -121,18 +136,22 @@ export function ResultScreen({
         />
       </div>
 
+      {/* `my-auto` on the column rather than `justify-center` here: a centred
+          flex column that overflows puts its own top out of reach, and the top
+          of this one is the word GAME OVER. */}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-6 pt-6 pb-3">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 flex flex-col items-center gap-8"
+        className="relative z-10 flex flex-col items-center gap-5 w-full max-w-md my-auto"
       >
         {/* Icon */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-          className={`w-24 h-24 rounded-full flex items-center justify-center ${
+          className={`w-20 h-20 rounded-full flex items-center justify-center ${
             isWin
               ? 'bg-success/20 border-2 border-success'
               : 'bg-danger/20 border-2 border-danger'
@@ -144,9 +163,9 @@ export function ResultScreen({
           }}
         >
           {isWin ? (
-            <Trophy className="w-12 h-12 text-success" />
+            <Trophy className="w-10 h-10 text-success" />
           ) : (
-            <Skull className="w-12 h-12 text-danger" />
+            <Skull className="w-10 h-10 text-danger" />
           )}
         </motion.div>
 
@@ -155,7 +174,7 @@ export function ResultScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className={`text-4xl md:text-5xl font-display font-black tracking-wider ${
+          className={`text-3xl md:text-4xl font-display font-black tracking-wider ${
             isWin ? 'text-success' : 'text-danger'
           }`}
           style={{
@@ -420,51 +439,16 @@ export function ResultScreen({
           </motion.div>
         )}
 
-        {/* Buttons */}
+        {/* The DETOURS. Reading the ladder, sharing the card and leaving for
+            the menu are all "instead of playing", so they sit at the end of the
+            recap they belong to, and the pinned bar below stays one decision
+            deep. */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.55 }}
-          className="mt-4 flex flex-col gap-3 w-full min-w-[200px]"
+          className="mt-2 flex flex-col gap-3 w-full"
         >
-          {checkpointLevel && checkpointLevel > 1 ? (
-            <>
-              {onPlayAgain && (
-                <motion.button
-                  className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-                  onClick={() => onPlayAgain()}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  {t('result.continueLevel', { level: checkpointLevel })}
-                </motion.button>
-              )}
-              {onRestart && (
-                <motion.button
-                  className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
-                  onClick={() => onRestart()}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  {t('result.restart')}
-                </motion.button>
-              )}
-            </>
-          ) : (
-            onPlayAgain && (
-              <motion.button
-                className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-                onClick={() => onPlayAgain()}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <RotateCcw className="w-5 h-5" />
-                {t('result.playAgain')}
-              </motion.button>
-            )
-          )}
           {/* Straight to the Performance Review: the rank block above teases
               the ladder, this shows it (back returns to this screen). */}
           {onRecords && (
@@ -501,6 +485,75 @@ export function ResultScreen({
           </motion.button>
         </motion.div>
       </motion.div>
+      </div>
+
+      {/*
+        PLAY AGAIN, always on screen.
+
+        Only the run-continuation choice lives here, and at most two buttons of
+        it: a bar deep enough to hold every action would take a third of a phone
+        and put the recap behind a letterbox, which trades one bad screen for
+        another. Continue-from-checkpoint and Restart-from-one stay together
+        because they are the same decision asked two ways, and splitting them
+        across the fold would hide the harder half.
+
+        The gradient is doing work, not decoration: it fades the recap out under
+        the bar so a screen with more above it reads as scrollable rather than
+        as finished.
+      */}
+      {(onPlayAgain || onRestart) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+          className="relative z-10 flex-none w-full flex justify-center px-6 pb-6 pt-4"
+          style={{
+            background:
+              'linear-gradient(to top, hsl(var(--background)) 55%, hsl(var(--background) / 0) 100%)',
+          }}
+        >
+          <div className="w-full max-w-md flex flex-col gap-3">
+            {checkpointLevel && checkpointLevel > 1 ? (
+              <>
+                {onPlayAgain && (
+                  <motion.button
+                    className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                    onClick={() => onPlayAgain()}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    {t('result.continueLevel', { level: checkpointLevel })}
+                  </motion.button>
+                )}
+                {onRestart && (
+                  <motion.button
+                    className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+                    onClick={() => onRestart()}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    {t('result.restart')}
+                  </motion.button>
+                )}
+              </>
+            ) : (
+              onPlayAgain && (
+                <motion.button
+                  className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                  onClick={() => onPlayAgain()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  {t('result.playAgain')}
+                </motion.button>
+              )
+            )}
+          </div>
+        </motion.div>
+      )}
       </div>
     </>
   );
