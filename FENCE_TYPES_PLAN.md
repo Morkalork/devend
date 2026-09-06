@@ -107,6 +107,7 @@ the roster of four is a real choice from the moment the second is owned.
 | `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds 30% slower | upgrade chain (Feature Freeze) **[CHANGED]** |
 | `flare` | red, hot | a ball bouncing off it gains a speed step | builds 30% slower, and a faster ball is more dangerous to *you* | upgrade chain (Breaking Change) |
 | `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds 50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
+| `breakpoint` | violet | once a map, the first ball to bounce off a finished one is held still for 2s | builds 15% slower, and the hold is one per MAP however many you draw | upgrade root, the open shelf **[CHANGED]** |
 | `redeploy` | rubber pink | a FINISHED one can be grabbed once, pulled back like a rubber band, aimed and released, and it flings the balls in front of it at up to 3x | builds 40% slower, and the ball it throws stays fast for the rest of the map | upgrade chain (Free Fall) **[CHANGED]** |
 | `tripwire` | thin yellow | builds 40% FASTER | fractures on the first hit | upgrade chain (Fast Compile) |
 
@@ -221,9 +222,8 @@ The only genuinely new physics, and it gets its own step for that reason.
 
 ### Step 7 - Acquisition  **[CHANGED]**
 
-- **Upgrades**: `ice`, `redeploy`, `flare` and `tripwire`, each a leaf on a
-  chain the player already knows - Feature Freeze, Free Fall, Breaking
-  Change, Fast Compile. A fence type is a change of VERB and worth walking to;
+- **Upgrades**: `breakpoint` on the open shelf, and `ice`, `redeploy`, `flare`
+  and `tripwire` as the crown of a MAXED family. See Step 9. A fence type is a change of VERB and worth walking to;
   a root would put it on the shelf of a player who has shown no interest in
   the line it belongs to.
 - **Certificates**: `drill`, account-scoped, one level. It earns the only
@@ -276,3 +276,54 @@ Stated so the scope is arguable rather than assumed:
 - **No fence type in the win spec.** Same reason.
 - **No per-type scoring axis.** The Performance Review has six axes and does not
   need a seventh to say "you used the exotic fence".
+
+
+---
+
+## Step 9 - Where they come from, take two  **[CHANGED]**
+
+The first cut hung all four off the JUNIOR of a line: two purchases from a
+standing start. That is not a commitment, so it could not reward one, and it
+sat the fence BESIDE a chain rather than at the end of it.
+
+**Three shelves, for the three things a player can be doing.**
+
+| Shelf | Types | How |
+|---|---|---|
+| Open | `breakpoint` | A root: no prerequisites, Junior, level 4. Eligible in any shop for any build, never guaranteed. |
+| Crown of a maxed family | `ice`, `tripwire`, `flare`, `redeploy` | `unlockAfterChoice`, on the family's top tier, whichever of its two options was taken. |
+| Account | `drill` | Certificate, unchanged. |
+
+**Why the open shelf exists.** With everything gated, a player who spreads
+their buys finishes a run with a bar of empty slots and no idea what fills
+them. They never meet the mechanic at all. One accessible fence is the
+introduction; the rest are the reward.
+
+**Why it needed a new field.** Every multi-tier family ends in a `choiceGroup`
+of two mutually exclusive options and `prerequisites` is AND, so "maxed,
+whichever branch" had no way to be written: naming both makes an upgrade that
+can never be bought (the graph validator says so), and naming one makes a
+reward a coin flip deletes. `unlockAfterChoice` is eligible once ANY member is
+owned. See `lib/upgradeUnlock.ts`.
+
+**The family is chosen for what it does**, not for where the fence used to sit:
+
+| Fence | Family maxed | Because |
+|---|---|---|
+| Ice | Load Balancer (L13) | the line that takes speed off balls |
+| Tripwire | Runway (L11) | the line about fences finishing sooner |
+| Flare | Technical Debt (L14) | "more overtime, faster balls" is flare's deal word for word |
+| Redeploy | Severance Package (L18) | paid per lock, crowned by the tool that manufactures one |
+
+Top tiers across the catalogue land anywhere from L5 to L32; these are picked
+from the L11-L18 band so there is half a run left to play with the fence.
+
+**Two things ride along for free.** Maxing a family is three or four upgrades
+of one tag, which is the tag-set threshold - so the set bonus and the fence
+land in the same purchase. And each fence carries its family's tag, so the
+shop's existing weighting (1 + owned upgrades sharing a tag) rolls it at four
+or five times baseline for the player who earned it and leaves it rare for
+everyone else. That is the whole of "a chance to show up, not a given".
+
+**The visible cost:** most runs will fill two of the four slots. Three empties
+is the normal sight, and it is what makes the fourth mean something.

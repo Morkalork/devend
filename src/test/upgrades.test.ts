@@ -117,6 +117,22 @@ describe("upgrade catalogue integrity", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("never prints one below its family GATE's either", () => {
+    // Same lie through the other door. `unlockAfterChoice` waits on a whole
+    // family's top tier, so an upgrade printing a level below where that tier
+    // even becomes buyable is advertising itself as available years early.
+    const offenders: string[] = [];
+    for (const u of upgrades) {
+      if (!u.unlockAfterChoice) continue;
+      const members = upgrades.filter(m => m.choiceGroup === u.unlockAfterChoice);
+      const earliest = Math.min(...members.map(m => m.unlockLevel ?? 1));
+      if ((u.unlockLevel ?? 1) < earliest) {
+        offenders.push(`${u.id} (L${u.unlockLevel ?? 1}) -> ${u.unlockAfterChoice} (L${earliest})`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("tags every upgrade with 1-2 valid archetypes", () => {
     const offenders = upgrades
       .filter(u => {
@@ -150,8 +166,15 @@ describe("upgrade catalogue integrity", () => {
 
 describe("track structure", () => {
   it("has exactly the intended non-ascension roots", () => {
+    // A root is what a player can be offered from a standing start, and
+    // `prerequisites` is no longer the only thing that stops that: the four
+    // crown-of-a-maxed-family fences carry no prerequisites at all and are
+    // gated by `unlockAfterChoice` instead. Counting them here would have
+    // called four of the most-gated upgrades in the catalogue roots.
     const roots = upgrades
-      .filter(u => !u.ascensionOnly && (u.prerequisites?.length ?? 0) === 0)
+      .filter(u => !u.ascensionOnly
+        && (u.prerequisites?.length ?? 0) === 0
+        && !u.unlockAfterChoice)
       .map(u => u.id)
       .sort();
     expect(roots).toEqual(EXPECTED_ROOTS);

@@ -124,3 +124,49 @@ describe("the shipped catalogue", () => {
     expect(errors).toEqual([]);
   });
 });
+
+describe("the fences the catalogue gates this way", () => {
+  const gated = CATALOGUE.filter(u => u.grantsFenceType && u.unlockAfterChoice);
+
+  it("crowns four maxed families, one fence each", () => {
+    expect(gated.map(u => u.grantsFenceType).sort())
+      .toEqual(["flare", "ice", "redeploy", "tripwire"]);
+    // Four different families, so no one line hands out two.
+    const groups = gated.map(u => u.unlockAfterChoice);
+    expect(new Set(groups).size).toBe(groups.length);
+  });
+
+  it("carries a tag its family already has", () => {
+    // Not decoration. Shop weight is 1 + owned upgrades sharing a tag, so a
+    // player who just maxed the family owns three or four of that tag and the
+    // fence rolls at four or five times the baseline. Without the shared tag it
+    // rolls at 1 and "a chance to show up" is a chance nobody gets.
+    const byGroup = choiceGroups(CATALOGUE);
+    for (const u of gated) {
+      const familyName = byGroup.get(u.unlockAfterChoice!)![0].name;
+      const familyTags = new Set(
+        CATALOGUE.filter(x => x.name === familyName).flatMap(x => x.tags ?? []));
+      const shared = (u.tags ?? []).filter(t => familyTags.has(t));
+      expect(shared.length, `${u.id} shares no tag with ${familyName}`)
+        .toBeGreaterThan(0);
+    }
+  });
+
+  it("is priced as a payoff, not as a mid-chain step", () => {
+    // Principal or Architect, both of which cost noticeably more per level than
+    // the Senior these used to be. A fence you walk a whole family for that
+    // costs what a Senior costs is not a payoff.
+    for (const u of gated) {
+      expect(["Principal", "Architect"], `${u.id} is a ${u.tier}`).toContain(u.tier);
+    }
+  });
+
+  it("does not sit behind ordinary prerequisites as well", () => {
+    // The gate IS the requirement. A chain on top of it would be a second
+    // commitment nobody asked for, and it would put the fence behind a branch
+    // again - the thing unlockAfterChoice exists to avoid.
+    for (const u of gated) {
+      expect(u.prerequisites ?? [], `${u.id} is gated twice`).toEqual([]);
+    }
+  });
+});

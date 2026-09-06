@@ -2099,13 +2099,28 @@ upgrades:
   # for a player who bought all five. So a purchase is a decision, and the
   # store stops offering once the four are full.
 
-  # Each hangs off the line it belongs to rather than starting a root of its
-  # own. That is not bookkeeping: the chain below is the argument for the type.
-  # Flare comes out of Breaking Change, the line about making things break
-  # sooner - a faster ball hits harder. Tripwire comes out of Fast Compile, the
-  # line about fences finishing sooner, which is exactly what it does and what
-  # it charges for. A player who took neither line has not been told
-  # this is a thing they want.
+  # Each is the CROWN OF A MAXED FAMILY, not a node beside one.
+  #
+  # They used to hang off the JUNIOR of a line: two purchases from a standing
+  # start, which is not a commitment, so it could not reward one. Now each waits
+  # on `unlockAfterChoice` - the family's top tier, whichever of its two options
+  # you took - and only then does it start turning up in shops. Maxing a family
+  # is three or four upgrades of one tag, so the tag set bonus and the fence
+  # land in the same purchase: commit to a line and it crowns itself twice.
+  #
+  # The family is chosen for what it DOES, not for where the fence used to sit.
+  # Ice comes out of Load Balancer, the line that takes speed off balls, because
+  # that is ice's whole job. Flare comes out of Technical Debt - more overtime,
+  # faster balls, your problem - which is flare's deal word for word. Tripwire
+  # comes out of Runway, the line about fences finishing sooner. Redeploy comes
+  # out of Severance Package, which pays you per lock, crowned by the tool that
+  # manufactures one.
+  #
+  # And each carries its family's TAG. That is not decoration: shop weight is
+  # 1 + owned upgrades sharing a tag, so a player who just maxed Technical Debt
+  # owns three or four `risk` upgrades and the Flare fence rolls at four or five
+  # times the baseline. It shows up for the player who earned it and stays rare
+  # for everyone else, which is the whole of "a chance, not a given".
   #
   # No costMultiplier. That surcharge is for DOORS - upgrades whose value is
   # opening a line the formula cannot see - and these open nothing: they are
@@ -2129,13 +2144,12 @@ upgrades:
 
   - id: cold_storage_ice
     name: Cold Storage
-    tier: Senior
+    tier: Principal
     description: "Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower."
-    unlockLevel: 6
+    unlockLevel: 13
     icon: snowflake
-    prerequisites:
-      - feature_freeze_junior
-    tags: [freeze]
+    unlockAfterChoice: load_balancer_architect
+    tags: [safety, freeze]
     grantsFenceType: ice
     modifiers: {}
 
@@ -2145,36 +2159,33 @@ upgrades:
   # nothing in the engine slows it down again.
   - id: rolling_redeploy
     name: Rolling Redeploy
-    tier: Senior
+    tier: Architect
     description: "Adds the Redeploy fence: grab it once and fling the balls in front of it. Builds 40% slower."
-    unlockLevel: 13
+    unlockLevel: 18
     icon: spline
-    prerequisites:
-      - free_fall_junior
-    tags: [risk]
+    unlockAfterChoice: severance_package_principal
+    tags: [risk, lock]
     grantsFenceType: redeploy
     modifiers: {}
 
   - id: incident_flare
     name: Incident Flare
-    tier: Senior
+    tier: Principal
     description: "Adds the Flare fence: balls bouncing off it speed up. It builds 30% slower."
-    unlockLevel: 8
+    unlockLevel: 14
     icon: flame
-    prerequisites:
-      - breaking_change_junior
+    unlockAfterChoice: technical_debt_architect
     tags: [risk]
     grantsFenceType: flare
     modifiers: {}
 
   - id: hotfix_tripwire
     name: Hotfix Tripwire
-    tier: Senior
+    tier: Principal
     description: "Adds the Tripwire fence: builds 40% faster, and the first ball to touch it breaks it."
-    unlockLevel: 10
+    unlockLevel: 11
     icon: zap
-    prerequisites:
-      - fast_compile_junior
-    tags: [tempo]
+    unlockAfterChoice: venture_capital_architect
+    tags: [tempo, bank]
     grantsFenceType: tripwire
     modifiers: {}
