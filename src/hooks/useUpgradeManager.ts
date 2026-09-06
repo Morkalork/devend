@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { UpgradeConfig, UpgradeData, UpgradeTier, TagSetsConfig } from '@/types/upgrade';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { prerequisitesMet, choiceGroups } from '@/lib/upgradeUnlock';
 import { LevelData } from '@/types/level';
 import { buildLevelPoints, mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 
@@ -144,6 +145,24 @@ export function useUpgradeManager() {
         }
       }
 
+      // A family-maxed gate has to name a group that exists, and one with a
+      // single member is not a choice - either way the gate would never open
+      // and the upgrade would be unbuyable with nothing on screen to say so.
+      {
+        const groups = choiceGroups(data.upgrades);
+        for (const upgrade of data.upgrades) {
+          const group = upgrade.unlockAfterChoice;
+          if (!group) continue;
+          const members = groups.get(group);
+          if (!members) {
+            throw new Error(`Upgrade "${upgrade.id}" waits on unknown choice group "${group}"`);
+          }
+          if (members.some(m => m.id === upgrade.id)) {
+            throw new Error(`Upgrade "${upgrade.id}" waits on its own choice group "${group}", which it can never satisfy`);
+          }
+        }
+      }
+
       // The prerequisite graph must be acyclic.
       detectPrerequisiteCycle(data.upgrades);
 
@@ -244,8 +263,7 @@ export function useUpgradeManager() {
         if (state.upgradeLookup.get(ownedId)?.choiceGroup === upgrade.choiceGroup) return true;
       }
     }
-    if (!upgrade.prerequisites || upgrade.prerequisites.length === 0) return false;
-    return upgrade.prerequisites.some(prereqId => !ownedIds.includes(prereqId));
+    return !prerequisitesMet(upgrade, ownedIds, state.upgradeLookup);
   }, [state.upgradeLookup]);
 
   return {

@@ -105,7 +105,9 @@ export type GraphIssueKind =
   /** A family Tenure can never offer as a head start. */
   | 'tenure-unreachable'
   /** No prerequisites and no dependents: a one-off, not a chain. */
-  | 'isolated';
+  | 'isolated'
+  /** unlockAfterChoice names a group that does not exist, or is its own. */
+  | 'dead-family-gate';
 
 export interface GraphIssue {
   kind: GraphIssueKind;
@@ -509,7 +511,23 @@ function findIssues(
         `Unlocks at level ${u.unlockLevel}, past the last level in map.yml (${options.lastLevel}), so it is never offered.`);
     }
 
-    if (node.prerequisites.length === 0 && node.dependents.length === 0) {
+    // The family-maxed gate (unlockAfterChoice). NOT drawn as edges: it is an
+    // OR over a group, and the graph's edges mean AND, so an edge from each
+    // member would claim the player needs both branches - the very thing the
+    // field exists to avoid saying.
+    const gate = u.unlockAfterChoice;
+    if (gate) {
+      const members = groupMembers.get(gate);
+      if (!members) {
+        add('dead-family-gate', 'error', [node.id],
+          `Waits on choice group "${gate}", which does not exist, so it can never be offered.`);
+      } else if (members.includes(node.id)) {
+        add('dead-family-gate', 'error', [node.id],
+          `Waits on choice group "${gate}", which it is itself a member of - taking it would be the only way to unlock it.`);
+      }
+    }
+
+    if (node.prerequisites.length === 0 && node.dependents.length === 0 && !gate) {
       add('isolated', 'info', [node.id],
         'Stands alone: nothing leads to it and nothing follows, so it is a one-off rather than a chain.');
     }

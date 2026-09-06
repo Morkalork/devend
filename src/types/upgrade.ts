@@ -38,6 +38,18 @@ export interface UpgradeConfig {
    */
   choiceGroup?: string;
   /**
+   * Eligible once the player owns ANY member of this choice group.
+   *
+   * "You maxed that family, whichever branch you took." Every multi-tier family
+   * ends in a two-way choiceGroup, and `prerequisites` is AND, so naming both
+   * branches makes an upgrade that can never be bought and naming one makes a
+   * reward a coin flip can delete. See lib/upgradeUnlock.ts.
+   *
+   * Composes with `prerequisites` rather than replacing it: both gates must
+   * pass.
+   */
+  unlockAfterChoice?: string;
+  /**
    * A deliberate price adjustment on top of the derived cost, as a multiplier.
    *
    * Costs are normally computed from unlock level x tier, which is what keeps

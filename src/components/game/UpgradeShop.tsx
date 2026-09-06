@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { prerequisitesMet } from '@/lib/upgradeUnlock';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
@@ -256,14 +257,15 @@ export function UpgradeShop({
         return true;
       });
     };
-    const unlocked = collapseChoiceGroups(available.filter(u => {
-      if (!u.prerequisites || u.prerequisites.length === 0) return true;
-      return u.prerequisites.every(p => ownedUpgradeIds.includes(p));
-    }));
-    const locked = collapseChoiceGroups(available.filter(u => {
-      if (!u.prerequisites || u.prerequisites.length === 0) return false;
-      return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
-    }));
+    // Through the shared rule, not a second copy of it. This split used to
+    // read `prerequisites` itself, which is how it came to know nothing about
+    // the family-maxed gate that isLocked would have enforced at purchase: the
+    // shelf would have offered a card the buy button then refused.
+    const byId = new Map(upgrades.map(u => [u.id, u]));
+    const unlocked = collapseChoiceGroups(
+      available.filter(u => prerequisitesMet(u, ownedUpgradeIds, byId)));
+    const locked = collapseChoiceGroups(
+      available.filter(u => !prerequisitesMet(u, ownedUpgradeIds, byId)));
     const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
     // Seeded runs (Daily Stand-up) roll the shelf from the run seed keyed by
     // the level, so everyone opening this shop sees the same offers. Shelves
