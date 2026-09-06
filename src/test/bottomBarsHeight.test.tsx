@@ -66,6 +66,43 @@ describe("the measurement", () => {
     expect(result.current).toBe(260);
   });
 
+  it("does NOT give the space back when the stack shrinks", () => {
+    // The stack changes size mid-map: the ability row gains a button when a
+    // chest grants a new ability, the push-exit bar comes and goes. The board
+    // is laid out against this number, and a board that moves while you are
+    // drawing a fence is its own bug - so growing is followed (the new row
+    // would otherwise land back over the board) and shrinking is not.
+    const el = mountBar(240);
+    const ro = installResizeObserver();
+    const { result } = renderHook(() => useBottomBarsHeight());
+    expect(result.current).toBe(240);
+    el.getBoundingClientRect = () => ({ height: 150 } as DOMRect);
+    ro.fire();
+    expect(result.current, "the board was dropped into space the bars want back")
+      .toBe(240);
+  });
+
+  it("re-measures from scratch when the viewport changes", () => {
+    // The one thing that may hand space back. Turning a phone landscape really
+    // does un-wrap the ability row, and the board is height-limited there, so
+    // holding a portrait reservation would cost real board.
+    const el = mountBar(240);
+    installResizeObserver();
+    const { result } = renderHook(() => useBottomBarsHeight());
+    expect(result.current).toBe(240);
+    el.getBoundingClientRect = () => ({ height: 120 } as DOMRect);
+    act(() => { window.dispatchEvent(new Event("resize")); });
+    expect(result.current).toBe(120);
+  });
+
+  it("can settle BELOW the fallback, which is a starting guess and not a floor", () => {
+    // A fallback used as a floor would over-reserve for the whole run on any
+    // screen whose stack is genuinely shorter than the guess.
+    mountBar(BOTTOM_BARS_FALLBACK_PX - 60);
+    const { result } = renderHook(() => useBottomBarsHeight());
+    expect(result.current).toBe(BOTTOM_BARS_FALLBACK_PX - 60);
+  });
+
   it("HOLDS its last height when the stack measures zero", () => {
     // The stack empties itself the instant a map is won - its children unmount
     // while the wrapper stays - so a zero reading arrives right as the board is
