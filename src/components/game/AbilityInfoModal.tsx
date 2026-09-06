@@ -1,9 +1,23 @@
 /**
- * AbilityInfoModal — the explainer for a chest-earned ability (#38). Opened by
+ * AbilityInfoModal - the explainer for an ability you are holding. Opened by
  * long-pressing an ability button, and auto-shown once the first time an ability
  * is acquired. Shows what it does and how to use it; dismiss on backdrop or X.
+ *
+ * ── What it deliberately does NOT say ──────────────────────────────────────
+ *
+ * How the ability was obtained. It carried a footer on every card reading
+ * "smash a box to drop this, then tap the gem within 2 seconds to grab it, miss
+ * it and it is gone", which was wrong twice over: the gem stopped being a
+ * deadline (the reward is banked the moment the chest breaks, and the gem is a
+ * receipt that fades - see LOOT_TTL_SECONDS), and a chest is no longer the only
+ * source anyway, with the store's ability slot and the level-10 Shockwave grant
+ * beside it.
+ *
+ * It was answering a question nobody has here regardless. This modal opens off
+ * an ability the player is ALREADY holding, so "how do you get one" is the one
+ * thing the situation has already answered.
  */
-import { X, Hand } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AbilityDef } from '@/lib/abilities';
 
@@ -52,14 +66,6 @@ export function AbilityInfoModal({ ability, onClose }: AbilityInfoModalProps) {
               <p className="text-muted-foreground leading-snug">{ability.howTo}</p>
             </div>
           )}
-          {/* How chest rewards are collected (#38 rework): tap the dropped gem. */}
-          <div
-            className="flex items-start gap-2 rounded-md px-2.5 py-2"
-            style={{ backgroundColor: `${color}14`, border: `1px solid ${color}33` }}
-          >
-            <Hand className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
-            <p className="text-muted-foreground leading-snug text-[13px]">{t('abilityInfo.collectHint')}</p>
-          </div>
         </div>
       </div>
     </div>

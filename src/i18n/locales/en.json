@@ -779,7 +779,6 @@
   },
   "abilityInfo": {
     "howToUse": "HOW TO USE",
-    "collectHint": "Smash a box to drop this, then tap the gem within 2 seconds to grab it. Miss it and it is gone.",
     "armed": {
       "magnet": "Tap the board to attract balls",
       "slowArea": "Tap the board to place the slow patch",

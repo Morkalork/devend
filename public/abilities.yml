@@ -1,7 +1,13 @@
-# Destruct-up rewards (issue #38): the abilities a smashed treasure chest can
-# grant. Each entry is ONE CHARGE of an activatable ability, banked run-wide and
-# spent from the ability bar beneath the board. Earning these is the whole reason
-# to seek out and break chests.
+# The activatable abilities: the buttons beneath the board. Each entry is ONE
+# CHARGE, banked run-wide and spent from the ability bar.
+#
+# THREE SOURCES, not one. A smashed treasure chest rolls one (issue #38, and
+# still the whole reason to seek chests out); the store's ability slot sells a
+# RETAINER that replenishes one every remaining map (lib/abilityOffer.ts); and
+# completing level 10 grants Shockwave for good (features.yml: panicShockwave,
+# `replenishTo` below). The info modal deliberately says none of this - it opens
+# off an ability you are already holding, so how you got it is the one question
+# already answered.
 #
 # A chest rolls (weighted, seeded) among every reward whose `startLevel` is <=
 # the current level. A chest in map.yml may set `chestRewards: [ids]` to narrow

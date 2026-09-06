@@ -764,7 +764,6 @@
   },
   "abilityInfo": {
     "howToUse": "SÅ HÄR ANVÄNDER DU",
-    "collectHint": "Krossa en låda för att släppa den här, tryck sedan på ädelstenen inom 2 sekunder för att ta den. Missar du den är den borta.",
     "armed": {
       "magnet": "Tryck på planen för att dra till dig bollarna",
       "slowArea": "Tryck på planen för att lägga ut den långsamma ytan",

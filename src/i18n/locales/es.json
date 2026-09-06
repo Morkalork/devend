@@ -764,7 +764,6 @@
   },
   "abilityInfo": {
     "howToUse": "CÓMO USAR",
-    "collectHint": "Rompe una caja para soltar esto y toca la gema en menos de 2 segundos para recogerla. Si la pierdes, desaparece.",
     "armed": {
       "magnet": "Toca el tablero para atraer las bolas",
       "slowArea": "Toca el tablero para colocar la zona lenta",
