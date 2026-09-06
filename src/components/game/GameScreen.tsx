@@ -715,10 +715,35 @@ export function GameScreen({
   }, [deadlineUrgent, deadlineRemaining]);
 
   // Close menu and unpause when the game ends so the overlays appear cleanly
+  /**
+   * The run-ending loss, held back until its reason has been read.
+   *
+   * Every OTHER way of losing a map already stops and says why (see
+   * MapFailedOverlay), because that path is the retry path. The last life is
+   * not on it, so the one death worth the most explanation - twenty minutes of
+   * run, gone - was the only one delivered as a red flash and a screen change.
+   */
+  const [runEndingLoss, setRunEndingLoss] = useState<GameResult | null>(null);
+
   const handleGameEnd = useCallback((result: GameResult) => {
     setMenuOpen(false);
     setIsPaused(false);
+    // A loss waits on its explanation; a win, and the theoretical loss with no
+    // reason recorded, go straight through. `failure` is required by
+    // handleGameOverFn, so the second case cannot happen today - but a screen
+    // that would silently swallow the run if it ever did is not worth having.
+    if (!result.isWin && result.failure) {
+      setRunEndingLoss(result);
+      return;
+    }
     onGameEnd(result);
+  }, [onGameEnd]);
+
+  const dismissRunEndingLoss = useCallback(() => {
+    setRunEndingLoss(prev => {
+      if (prev) onGameEnd(prev);
+      return null;
+    });
   }, [onGameEnd]);
 
   /**
@@ -1517,16 +1542,32 @@ export function GameScreen({
       />
 
       {/* Above everything: a life just went, and nothing else on screen says
-          why. Dismissing it is what restarts the map. */}
+          why. Dismissing it is what restarts the map - or, on the last life,
+          what ends the run. One overlay for both, because the question the
+          player is asking is the same one either way; only the promise
+          underneath it differs.
+
+          The run-ending case is checked FIRST. The two states cannot both be
+          set today (the last life takes the game-over branch and never reaches
+          the retry one), and if that ever stopped being true, showing the
+          milder of the two would be the wrong choice. */}
       <AnimatePresence>
-        {mapFailure && (
+        {runEndingLoss?.failure ? (
+          <MapFailedOverlay
+            failure={runEndingLoss.failure}
+            livesLeft={0}
+            runOver
+            accentColor={accentColor}
+            onDismiss={dismissRunEndingLoss}
+          />
+        ) : mapFailure ? (
           <MapFailedOverlay
             failure={mapFailure}
             livesLeft={lives}
             accentColor={accentColor}
             onDismiss={dismissMapFailure}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </>
   );

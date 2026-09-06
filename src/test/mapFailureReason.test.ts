@@ -118,8 +118,10 @@ describe("running out of time says so", () => {
   });
 
   it("carries the reason out to the result screen on the last life", () => {
-    // The run ends here, so the in-map overlay never shows. The final screen is
-    // the only thing left that can answer the question.
+    // The run ends here. The overlay now shows on this path too (see
+    // runEndingLoss in GameScreen), and the results screen states it again -
+    // but both of them read this field, so if it does not survive the seam
+    // neither of them has anything to say.
     const h = harness(1);
     evaluateWinConditions(gameAt(LIMIT), LEVEL, 12, DEFAULT_MODIFIERS, h.callbacks);
     vi.runAllTimers();
@@ -183,7 +185,13 @@ describe("every reason has words in every language", () => {
   // behind the union, so launcherPrematureLock could have shipped with no
   // words in any language and nothing would have said so.
   const KINDS: MapFailKind[] = MAP_FAIL_KINDS;
-  const CHROME = ["title", "stillNeeded", "tapToRetry", "livesLeft_one", "livesLeft_other"];
+  // Still hand-listed, which this file elsewhere calls out as how a list goes
+  // stale - but chrome keys have no union to derive from. `runOver` and
+  // `tapToFinish` are the last-life half of the overlay.
+  const CHROME = [
+    "title", "stillNeeded", "tapToRetry", "livesLeft_one", "livesLeft_other",
+    "runOver", "tapToFinish",
+  ];
 
   const block = (lang: string) => JSON.parse(
     readFileSync(resolve(process.cwd(), `src/i18n/locales/${lang}.json`), "utf8"),

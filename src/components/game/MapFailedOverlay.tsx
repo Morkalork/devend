@@ -15,35 +15,67 @@
  * outstanding when it did, with the numbers. The second line is the one worth
  * having. "Out of time" is a rule the player already knew; "you still needed 2
  * locks and had 1" is the information they can act on next attempt.
+ *
+ * ── The last life gets one too ─────────────────────────────────────────────
+ *
+ * It used to fire only when a life REMAINED, because the path it hangs off is
+ * the retry path. So the deaths that ended a run - the ones a player has the
+ * most reason to want explained, after twenty minutes of play - were the only
+ * ones with no explanation at all: a red flash, and then a results screen with
+ * the reason folded into a panel among the score, the level and the ranks.
+ *
+ * `runOver` is that case. Same two lines, because the question is identical;
+ * what changes is the promise underneath, since "tap to try again" over a
+ * finished run is simply untrue.
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Heart } from 'lucide-react';
+import { AlertTriangle, Heart, HeartCrack } from 'lucide-react';
 import { failHeadline, failLines, type MapFailure } from '@/lib/mapFailure';
 
 /** Long enough to read two short lines without becoming a wall between attempts. */
 export const MAP_FAILED_MS = 4200;
 
+/**
+ * The backstop on the last life, where the overlay waits for a tap instead.
+ *
+ * Not a reading window - it is far longer than anyone reads for. A run ending
+ * is not a retry loop, so there is no next attempt to hurry back to and the
+ * player is allowed to sit with it; but a modal with no timer at all is a modal
+ * that strands the whole run if its tap ever fails to land.
+ */
+export const MAP_FAILED_RUN_OVER_MS = 30000;
+
 interface Props {
   failure: MapFailure;
   /** Lives left after this one was docked, so the stakes are stated too. */
   livesLeft: number;
+  /**
+   * That life was the last one: this loss ends the RUN.
+   *
+   * Changes what the overlay promises, because "tap to try again" over a run
+   * that is over is a lie, and it waits for a tap rather than hurrying on.
+   */
+  runOver?: boolean;
   accentColor?: string;
-  /** Dismiss: remounts the level and starts the retry. */
+  /** Dismiss: remounts the level and starts the retry, or ends the run. */
   onDismiss: () => void;
 }
 
-export function MapFailedOverlay({ failure, livesLeft, accentColor = '#ff2244', onDismiss }: Props) {
+export function MapFailedOverlay({
+  failure, livesLeft, runOver = false, accentColor = '#ff2244', onDismiss,
+}: Props) {
   const { t } = useTranslation();
   const [lines] = useState(() => failLines(t, failure));
 
   // Auto-dismiss, so a player who has already read it is not made to tap, and
-  // one who looked away still gets on with the retry.
+  // one who looked away still gets on with the retry. On the last life this
+  // stretches to a backstop instead: see MAP_FAILED_RUN_OVER_MS.
   useEffect(() => {
-    const id = setTimeout(onDismiss, MAP_FAILED_MS);
+    const id = setTimeout(onDismiss, runOver ? MAP_FAILED_RUN_OVER_MS : MAP_FAILED_MS);
     return () => clearTimeout(id);
-  }, [onDismiss]);
+  }, [onDismiss, runOver]);
 
   return (
     <motion.div
@@ -88,12 +120,18 @@ export function MapFailedOverlay({ failure, livesLeft, accentColor = '#ff2244', 
         )}
 
         <div className="flex items-center gap-2 text-sm" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-          <Heart className="w-4 h-4" style={{ color: accentColor }} />
-          <span>{t('mapFailure.livesLeft', { count: livesLeft })}</span>
+          {runOver
+            ? <HeartCrack className="w-4 h-4" style={{ color: accentColor }} />
+            : <Heart className="w-4 h-4" style={{ color: accentColor }} />}
+          <span>
+            {runOver
+              ? t('mapFailure.runOver')
+              : t('mapFailure.livesLeft', { count: livesLeft })}
+          </span>
         </div>
 
         <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.5 }}>
-          {t('mapFailure.tapToRetry')}
+          {runOver ? t('mapFailure.tapToFinish') : t('mapFailure.tapToRetry')}
         </p>
       </motion.div>
     </motion.div>
