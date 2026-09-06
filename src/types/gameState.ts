@@ -231,6 +231,17 @@ export interface CanvasGameState {
   /** Last completed cut gesture, rendered as a brief fading afterglow (issue #35). */
   swipeTrail: { start: Vector2; end: Vector2; createdAt: number } | null;
   /**
+   * Hours of QUALIFIED overtime banked on this map (lib/qualifiedOvertime.ts).
+   *
+   * The one income that is paid ABOVE the per-map backstop, so it is kept apart
+   * from lockBonus rather than folded into it: everything in lockBonus is
+   * bounded by the delivery and craft ceilings, and a number that escapes them
+   * has to be added after the clamp or it is not escaping anything.
+   */
+  qualifiedOvertime?: number;
+  /** Passes that earned some, for the results line. */
+  qualifiedLockCount?: number;
+  /**
    * Breakpoint holds spent on this map (breakpointFence.ts).
    *
    * On the MAP rather than on the walls: the budget is a property of the map,

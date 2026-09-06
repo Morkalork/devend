@@ -30,6 +30,15 @@
 #   holdMs        milliseconds the first ball to bounce off a FINISHED fence of
 #                 this type is held still. Spent once per MAP, not per fence.
 #   holdsPerMap   how many of those a map gets. Only meaningful with holdMs.
+#   lockBand      [min, max] balls a pocket must hold for a cut of this type to
+#                 lock it at all. Absent = no band, which is every other type.
+#                 Outside the band the seal is REFUSED, not failed: the pocket
+#                 stays open and the ball keeps playing.
+#   qualifiedByCount  lock-value units of QUALIFIED overtime, indexed by balls
+#                 locked in the pass (entry 0 = one ball). Qualified overtime is
+#                 paid ABOVE the per-map backstop - see lib/qualifiedOvertime.ts
+#                 for why it has to be, and why it is a flat table that nothing
+#                 is allowed to multiply.
 #   slingshot     true = a finished fence of this type can be grabbed and
 #                 pulled back once, like a rubber band, to fling the balls in
 #                 front of it. Only the redeploy fence.
@@ -105,6 +114,39 @@ fences:
     source: upgrade
     description: "Once a map, the first ball to bounce off a finished one is held still for 2 seconds."
     howTo: "Build it in a lane you need to stop using, and let a ball find it."
+
+  # ── The two lock-band fences ───────────────────────────────────────────────
+  #
+  # One rule in two settings: a cut of this type locks a pocket only while the
+  # pocket holds between `lockBand[0]` and `lockBand[1]` balls. Mutex wants
+  # exactly one, Semaphore wants a crowd. Same field, opposite ends, the way ice
+  # and flare are one ballSpeedStep with the sign flipped.
+  #
+  # WHY THEY PAY OUTSIDE THE CAP. Lock income banks through delivery (30h) and
+  # craft (30h), so 60h is all the locks on a map can ever be worth. The
+  # simultaneous multiplier already pays N^2 - a four-ball pass earns 192h
+  # nominal - and the ceiling eats nearly all of it, which is why going from
+  # three balls to four is today often worth exactly nothing. Both of these pay
+  # into QUALIFIED overtime instead, which is added after the backstop.
+  - id: mutex
+    name: Mutex
+    color: "#8fd3ff"
+    buildSpeed: 0.8
+    lockBand: [1, 1]
+    qualifiedByCount: [0.5]
+    source: upgrade
+    description: "Locks a pocket only when exactly one ball is in it, and every such lock pays a little on top."
+    howTo: "Seal them one at a time. Small pockets, short cuts, steady pay."
+
+  - id: semaphore
+    name: Semaphore
+    color: "#ffb0e0"
+    buildSpeed: 0.6
+    lockBand: [2, 4]
+    qualifiedByCount: [0, 2, 6, 14]
+    source: upgrade
+    description: "Locks a pocket only when two or more balls are in it, and pays hugely for the ones that are."
+    howTo: "Herd two balls together before you cut. Four at once is the whole map in one seal."
 
   # The only entry that is faster than standard, and the only one that is more
   # fragile. It exists so the WIP-limit maps have an answer that is not simply

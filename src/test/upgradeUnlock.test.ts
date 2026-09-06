@@ -133,10 +133,10 @@ describe("the shipped catalogue", () => {
 describe("the fences the catalogue gates this way", () => {
   const gated = CATALOGUE.filter(u => u.grantsFenceType && u.unlockAfterChoice);
 
-  it("crowns four maxed families, one fence each", () => {
+  it("crowns a maxed family per gated fence, one family each", () => {
     expect(gated.map(u => u.grantsFenceType).sort())
-      .toEqual(["flare", "ice", "redeploy", "tripwire"]);
-    // Four different families, so no one line hands out two.
+      .toEqual(["flare", "ice", "mutex", "redeploy", "semaphore", "tripwire"]);
+    // A different family each, so no one line hands out two fences.
     const groups = gated.map(u => u.unlockAfterChoice);
     expect(new Set(groups).size).toBe(groups.length);
   });

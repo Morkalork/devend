@@ -340,6 +340,11 @@ export function applyCutFn(
   const anyBallWon = checkAndUpdateBallWonStates(
     game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions,
     resolveWinSpec(level),
+    // The cut that SEALED it decides the lock band and the qualified pay, not
+    // the walls that happen to bound the pocket. "I closed this with a
+    // Semaphore" is what the player did; a rule read off the boundary would
+    // depend on geometry they were not thinking about.
+    wall.fenceTypeId ?? STANDARD_FENCE_ID,
   );
   const wasSuperior = game.superiorLockCount > superiorBefore;
 
@@ -941,6 +946,7 @@ export function triggerLevelComplete(
       flatBonus: mutatorOvertimePremium(game.mapMutator) + objectiveBonus
         + activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
       postCapBonus: game.pickupOvertime ?? 0,
+      qualifiedOvertime: game.qualifiedOvertime ?? 0,
       // The Ship Early ladder's percent, which the Tempo axis is scored on.
       shipEarlyPercent,
       winBonusPercent: winPct,

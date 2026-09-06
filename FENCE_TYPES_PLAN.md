@@ -108,6 +108,8 @@ the roster of four is a real choice from the moment the second is owned.
 | `flare` | red, hot | a ball bouncing off it gains a speed step | builds 30% slower, and a faster ball is more dangerous to *you* | upgrade chain (Breaking Change) |
 | `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds 50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
 | `breakpoint` | violet | once a map, the first ball to bounce off a finished one is held still for 2s | builds 15% slower, and the hold is one per MAP however many you draw | upgrade root, the open shelf **[CHANGED]** |
+| `mutex` | pale blue | locks a pocket only while ONE ball is in it, and pays qualified overtime for each | builds 20% slower, and refuses every greedy seal | upgrade, crown of Fault Tolerance **[CHANGED]** |
+| `semaphore` | pink | locks a pocket only while TWO OR MORE are in it, and pays qualified overtime on a steep curve | builds 40% slower, and a cut that catches one ball captures nothing | upgrade, crown of Budget Cycle **[CHANGED]** |
 | `redeploy` | rubber pink | a FINISHED one can be grabbed once, pulled back like a rubber band, aimed and released, and it flings the balls in front of it at up to 3x | builds 40% slower, and the ball it throws stays fast for the rest of the map | upgrade chain (Free Fall) **[CHANGED]** |
 | `tripwire` | thin yellow | builds 40% FASTER | fractures on the first hit | upgrade chain (Fast Compile) |
 
@@ -335,3 +337,53 @@ everyone else. That is the whole of "a chance to show up, not a given".
 
 **The visible cost:** most runs will fill two of the four slots. Three empties
 is the normal sight, and it is what makes the fourth mean something.
+
+
+---
+
+## Step 10 - Lock bands, and the pay that escapes the cap  **[CHANGED]**
+
+Two fences and one rule: a cut of this type locks a pocket only while the
+pocket holds between `lockBand[0]` and `lockBand[1]` balls. Mutex is [1, 1],
+Semaphore is [2, 4]. Opposite ends of one field, the way ice and flare are one
+`ballSpeedStep` with the sign flipped.
+
+Outside the band the seal is **refused, not failed**: the pocket stays open,
+the ball keeps bouncing, and the player can cut again inside it. Same shape as
+the refusal a pocket around a still-needed slab already gets. That refusal is
+also the price - a Semaphore cut that catches one ball has spent a fence and
+captured nothing.
+
+**The cut that SEALS decides**, not the walls bounding the pocket. A pocket is
+usually closed by board edges, obstacles and old fences; a rule read off the
+boundary would depend on geometry the player was not thinking about.
+
+### Qualified overtime
+
+Lock income banks through delivery (30h) and craft (30h), so sixty hours is all
+the locks on a map can ever be worth. The simultaneous multiplier is already
+N-squared - at lockValue 12 a four-ball pass earns **192h nominal** - so the
+ceiling eats nearly all of it and the fourth ball is frequently worth nothing.
+
+So both these fences pay into a channel added **after** the backstop clamp, the
+only income in the game that is:
+
+| Balls locked in one pass | Units | Hours at lockValue 12 |
+|---|---|---|
+| 1 (Mutex) | 0.5 | 6 |
+| 2 (Semaphore) | 2 | 24 |
+| 3 | 6 | 72 |
+| 4 | 14 | 168 |
+
+Against a 244h map backstop that is +10%, +30% and +69%. Four at once also
+*ends* the map (all locked = win), so it is the whole board in one seal.
+
+Three properties keep an uncapped channel safe, and they are the design:
+
+- **A flat table.** Nothing multiplies it - not the money ball, not Golden
+  Handshake, not the score multiplier. Uncapped cannot become unbounded.
+- **The real count.** Keyed to balls locked, never to the simultaneous
+  MULTIPLIER, which Chain Reaction inflates - that would let a set bonus buy a
+  bracket for free.
+- **Clamped at four.** Every map's `maxBalls` is 1-4. A pass of five means
+  something upstream broke, so the table holds rather than extrapolates.

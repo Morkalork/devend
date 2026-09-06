@@ -41,6 +41,9 @@ import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { regionHoldsNeededSlab } from "@/lib/physics/smashReach";
+import { bandAllowsLock, ballsSharingPocket } from "@/lib/physics/lockBand";
+import { getFenceType } from "@/lib/fences";
+import { qualifiedHoursFor } from "@/lib/qualifiedOvertime";
 import type { WinSpec } from "@/types/winSpec";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 import { runStream } from "@/lib/runRng";
@@ -261,12 +264,38 @@ export function checkAndUpdateBallWonStates(
    * this only ever REMOVES locks, so a caller without a spec behaves as before.
    */
   winSpec: WinSpec | null = null,
+  /**
+   * The fence type of the cut that just sealed things, for the lock bands.
+   *
+   * Optional for the same reason `winSpec` is: omitted (tests, older callers)
+   * means no band, and no band is how every fence but Mutex and Semaphore
+   * behaves - so a caller that does not know what sealed the pocket keeps the
+   * behaviour it always had.
+   */
+  sealingFenceTypeId: string | null = null,
 ): boolean {
   if (!game.spaceGrid) return false;
 
   let anyBallWon = false;
   const prevLockedCount = game.lockedBallsCount;
   const wonThisPass: typeof game.balls = [];
+  /**
+   * How many balls share a pocket, memoised per region.
+   *
+   * Balls lock one at a time in the loop below but a band asks about the POCKET,
+   * and once the first of a pair is marked `won` the second would read the
+   * pocket as holding one. Answered once per region against the state the pass
+   * started in, so both balls of a Semaphore pair see the same two.
+   */
+  const pocketCounts = new Map<string | number, number>();
+  const ballsInPocket = (regionId: string | number): number => {
+    const seen = pocketCounts.get(regionId);
+    if (seen !== undefined) return seen;
+    const n = ballsSharingPocket(game, regionId, (x, y) =>
+      findGridRegionForBall(game.spaceGrid!, gridRegionMap, x, y) ?? null);
+    pocketCounts.set(regionId, n);
+    return n;
+  };
   /** Balls whose lock graded SUPERIOR this pass (tight pocket). */
   const superiorIds = new Set<string>();
   /** Colored area each lock counted as landing in; drives the tint AND the pay. */
@@ -444,6 +473,20 @@ export function checkAndUpdateBallWonStates(
     // Lifted once the clause is satisfied: past that the slabs stop being
     // objectives and a pocket around one is an ordinary lock again.
     if (!stranded && winSpec && regionHoldsNeededSlab(game, winSpec, ballRegion.cellIndices)) {
+      diagnose('below-gate', null);
+      continue;
+    }
+
+    // A lock band on the sealing cut (Mutex, Semaphore): the pocket has to hold
+    // the right crowd. Refused rather than failed, exactly like the slab above -
+    // the ball keeps bouncing and the player can cut again in here.
+    //
+    // Not applied to a STRANDED ball: its "pocket" is one synthesised cell on
+    // ground the player already claimed, and the seal it locks into was paid
+    // for by some earlier cut. Judging it by the band of whatever fence
+    // completed most recently would refuse a delivery for a rule it had no part
+    // in.
+    if (!stranded && !bandAllowsLock(sealingFenceTypeId, ballsInPocket(ballRegion.id))) {
       diagnose('below-gate', null);
       continue;
     }
@@ -831,6 +874,20 @@ export function checkAndUpdateBallWonStates(
     const superiorPay = Math.round(superiorPoints * simultaneousMultiplier * lockValue * lockQuality.superiorMultiplier);
     const superiorCountThisPass = wonThisPass.filter(b => superiorIds.has(b.id)).length;
     game.lockBonus += standardPay + superiorPay;
+
+    // QUALIFIED overtime: the pay that escapes the per-map backstop, and the
+    // only income in the game that does. Keyed to `newlyLocked` - the real ball
+    // count - and NEVER to simultaneousMultiplier, which Chain Reaction inflates
+    // and which would otherwise let a set bonus buy a bracket. See
+    // lib/qualifiedOvertime.ts for why it is a flat table nothing multiplies.
+    if (sealingFenceTypeId) {
+      const qualified = qualifiedHoursFor(
+        getFenceType(sealingFenceTypeId), newlyLocked, lockValue);
+      if (qualified > 0) {
+        game.qualifiedOvertime = (game.qualifiedOvertime ?? 0) + qualified;
+        game.qualifiedLockCount = (game.qualifiedLockCount ?? 0) + 1;
+      }
+    }
     // Delivery's share, never multiplied by anything. Craft is the remainder.
     game.lockDeliveryBonus = (game.lockDeliveryBonus ?? 0) + Math.round(rawCapacity * lockValue);
     game.superiorLockBonus += superiorPay;

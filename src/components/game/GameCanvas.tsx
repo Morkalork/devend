@@ -1017,6 +1017,10 @@ export function GameCanvas({
       // carried over would give map two no Breakpoint and no sign of why.
       game.breakpointHoldsUsed = 0;
       game.breakpointFlash = null;
+      // Qualified overtime is per MAP like every other bank here; carrying it
+      // over would pay map two for a seal made on map one.
+      game.qualifiedOvertime = 0;
+      game.qualifiedLockCount = 0;
       // Cryo Protocol: freeze pickup tokens so they never expire this run.
       game.freezePickups = activeModifiers.freezePickups > 0;
       // Free Fall (Escape Velocity): soften how hard wells and gravity maps
@@ -1657,6 +1661,8 @@ export function GameCanvas({
         // Bumper hours pay with the pickups, above the cap: a bumper counts
         // down from five in front of the player, so one bump must be one hour.
         postCapBonus: game.pickupOvertime + (game.bouncerOvertime ?? 0),
+        // Above the backstop, unlike everything else here.
+        qualifiedOvertime: game.qualifiedOvertime ?? 0,
         // Finishing fast pays a percent of the capped overtime, above the cap.
         shipEarlyPercent,
         // Demolition multiplier: chests/breakables smashed before the push.

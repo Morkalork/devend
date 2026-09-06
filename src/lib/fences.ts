@@ -92,6 +92,23 @@ export interface FenceTypeDef {
    * gesture on rather than a cut.
    */
   slingshot: boolean;
+  /**
+   * Balls a pocket must hold for a cut of this type to lock it, [min, max].
+   *
+   * Null for every type without a band, which is all but two. Outside the band
+   * the seal is REFUSED rather than failed: the pocket stays open and the ball
+   * keeps playing, the same shape as the refusal a pocket around a needed slab
+   * already gets.
+   */
+  lockBand: [number, number] | null;
+  /**
+   * Lock-value units of QUALIFIED overtime, indexed by balls locked in the pass
+   * (entry 0 is one ball). Empty for a type that pays none.
+   *
+   * See lib/qualifiedOvertime.ts for why this is paid above the backstop, and
+   * why it is a flat table nothing is permitted to multiply.
+   */
+  qualifiedByCount: number[];
   /** May a cut START on a breakable? Only the drill. */
   anchorOnBreakable: boolean;
   /** Damage per second dealt to a breakable this fence is touching. */
@@ -99,6 +116,22 @@ export interface FenceTypeDef {
   source: FenceSource;
   description?: string;
   howTo?: string;
+}
+
+/**
+ * A [min, max] ball band, or null for a type without one.
+ *
+ * A malformed band is dropped rather than repaired: a band is a REFUSAL, and a
+ * guessed one would refuse locks the author never meant to refuse - which on a
+ * fence type reads as the game silently not working.
+ */
+function parseBand(raw: unknown): [number, number] | null {
+  if (!Array.isArray(raw) || raw.length !== 2) return null;
+  const min = Math.round(Number(raw[0]));
+  const max = Math.round(Number(raw[1]));
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  if (min < 1 || max < min) return null;
+  return [min, max];
 }
 
 function parseEntry(raw: unknown): FenceTypeDef | null {
@@ -131,6 +164,10 @@ function parseEntry(raw: unknown): FenceTypeDef | null {
     // count means "it holds", and reading that as "it holds zero times" would
     // be a fence whose whole entry does nothing with nothing on screen to say.
     holdsPerMap: Math.max(0, Math.round(num(r.holdsPerMap, r.holdMs ? 1 : 0))),
+    lockBand: parseBand(r.lockBand),
+    qualifiedByCount: Array.isArray(r.qualifiedByCount)
+      ? r.qualifiedByCount.map(v => Math.max(0, num(v, 0)))
+      : [],
     slingshot: r.slingshot === true,
     anchorOnBreakable: r.anchorOnBreakable === true,
     drillDamage: Math.max(0, num(r.drillDamage, 0)),
@@ -164,6 +201,8 @@ const LAST_RESORT: FenceTypeDef = {
   ballSpeedStep: 0,
   holdMs: 0,
   holdsPerMap: 0,
+  lockBand: null,
+  qualifiedByCount: [],
   slingshot: false,
   anchorOnBreakable: false,
   drillDamage: 0,

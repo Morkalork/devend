@@ -2185,6 +2185,38 @@ upgrades:
     grantsFenceType: flare
     modifiers: {}
 
+  # The two lock-band fences, and deliberately a PAIR on opposite ends of one
+  # rule: Mutex seals one ball at a time for a steady drip, Semaphore refuses
+  # anything under two and pays hugely for the crowd. Both bank into qualified
+  # overtime, which is paid above the per-map cap - the only income that is -
+  # because lock pay banks through delivery and craft and sixty hours is all the
+  # locks on a map can ever be worth.
+  #
+  # Mutex crowns Fault Tolerance, the family about surviving, because sealing
+  # one ball at a time is the careful play. Semaphore crowns Budget Cycle, the
+  # family about spending big to earn big, which is the same wager it is.
+  - id: acquire_the_mutex
+    name: Acquire The Mutex
+    tier: Architect
+    description: "Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does."
+    unlockLevel: 15
+    icon: shield
+    unlockAfterChoice: fault_tolerance_architect
+    tags: [safety, lock]
+    grantsFenceType: mutex
+    modifiers: {}
+
+  - id: raise_the_semaphore
+    name: Raise The Semaphore
+    tier: Architect
+    description: "Adds the Semaphore fence: it locks only two or more balls at once, and pays past the map cap."
+    unlockLevel: 16
+    icon: dices
+    unlockAfterChoice: budget_cycle_principal
+    tags: [risk, lock]
+    grantsFenceType: semaphore
+    modifiers: {}
+
   - id: hotfix_tripwire
     name: Hotfix Tripwire
     tier: Principal

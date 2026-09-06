@@ -415,6 +415,16 @@ export interface ScoreOptions {
   /** Pickup overtime tokens: paid outside the axes, like flatBonus, so a
    *  claimed token always pays exactly what it said it would (default 0). */
   postCapBonus?: number;
+  /**
+   * QUALIFIED overtime: hours paid ABOVE the backstop (default 0).
+   *
+   * The only income that is. `postCapBonus` above escapes the AXES and is then
+   * clamped with everything else; this escapes the clamp itself, which is what
+   * "qualified" means here. Earned only by the lock-band fences, from a flat
+   * table nothing is allowed to multiply - see lib/qualifiedOvertime.ts for why
+   * that constraint is what makes an uncapped channel safe.
+   */
+  qualifiedOvertime?: number;
   /** The Ship Early ladder's awarded percent, which Tempo is scored on. */
   shipEarlyPercent?: number;
   /**
@@ -477,9 +487,12 @@ export function calculateScore(
   axes: BankedAxes;
   /** Hours the map's win conditions added on top of its earned pay. */
   winBonus: number;
+  /** Hours paid above the backstop, for the results line. */
+  qualifiedOvertime: number;
 } {
   const {
     scoreMultiplier = 1, locks, greedBonus = 0, engagement, flatBonus = 0, postCapBonus = 0,
+    qualifiedOvertime = 0,
     payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
     spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1, winBonusPercent = 0,
   } = options;
@@ -556,10 +569,21 @@ export function calculateScore(
   // this rework exists to remove - a skilled run losing what it earned.
   const backstop = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom)
     + axisCeilingTotal(loadedConfig);
-  const levelScore = Math.max(0, Math.min(earned, backstop));
+  // Qualified overtime is added AFTER the clamp, which nothing else in this
+  // function is. That is the whole feature: lock income banks through delivery
+  // and craft, sixty hours between them, so the N-squared simultaneous curve is
+  // eaten long before a four-ball pass is felt. Inside the clamp this would be
+  // one more number the ceiling swallows.
+  //
+  // Safe only because it is a flat table (lib/qualifiedOvertime.ts): no
+  // multiplier reaches it, so "uncapped" cannot become "unbounded".
+  const safeQualified = Number.isFinite(qualifiedOvertime) && qualifiedOvertime > 0
+    ? Math.round(qualifiedOvertime)
+    : 0;
+  const levelScore = Math.max(0, Math.min(earned, backstop)) + safeQualified;
 
   return {
     levelScore, breakdown, shipEarlyBonus: breakdown.axes.tempo,
-    axes: breakdown.axes, winBonus,
+    axes: breakdown.axes, winBonus, qualifiedOvertime: safeQualified,
   };
 }
