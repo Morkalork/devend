@@ -19,7 +19,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
   getAllFenceTypes, getFenceType, standardFenceType, isKnownFenceType,
-  loadFenceTypes, STANDARD_FENCE_ID, FENCE_SLOTS, FENCE_SOURCES,
+  applyFenceCatalogue, STANDARD_FENCE_ID, FENCE_SLOTS, FENCE_SOURCES,
 } from "@/lib/fences";
 import { PALETTE } from "@/lib/rendering/sleek/palette";
 
@@ -42,7 +42,7 @@ describe("the catalogue", () => {
     // The version above passes on the shipped file no matter what the code
     // does, because the file happens to declare standard first - so it cannot
     // tell a guarantee from a coincidence. This can.
-    loadFenceTypes([
+    applyFenceCatalogue([
       'fences:',
       '  - id: ice',
       '    color: "#7fd4ff"',
@@ -53,7 +53,7 @@ describe("the catalogue", () => {
     expect(getAllFenceTypes().map(f => f.id)).toEqual([STANDARD_FENCE_ID, "ice"]);
     expect(getAllFenceTypes().filter(f => f.id === STANDARD_FENCE_ID),
       "standard was hoisted AND left in place, so it appears twice").toHaveLength(1);
-    loadFenceTypes(read("public/fences.yml"));
+    applyFenceCatalogue(read("public/fences.yml"));
   });
 
   it("never returns undefined, whatever it is asked", () => {
@@ -69,26 +69,26 @@ describe("the catalogue", () => {
 
   it("survives a malformed catalogue", () => {
     // A bad fences.yml must cost the tuning it names, not the game.
-    loadFenceTypes("this: is: not: valid: yaml:");
+    applyFenceCatalogue("this: is: not: valid: yaml:");
     expect(standardFenceType().id).toBe(STANDARD_FENCE_ID);
-    loadFenceTypes("fences: []");
+    applyFenceCatalogue("fences: []");
     expect(standardFenceType().id).toBe(STANDARD_FENCE_ID);
     // And a catalogue that simply forgets standard still has one.
-    loadFenceTypes('fences:\n  - id: ice\n    color: "#7fd4ff"\n');
+    applyFenceCatalogue('fences:\n  - id: ice\n    color: "#7fd4ff"\n');
     expect(standardFenceType().id).toBe(STANDARD_FENCE_ID);
     expect(getFenceType("ice").id).toBe("ice");
-    loadFenceTypes(read("public/fences.yml"));   // restore for the rest of the file
+    applyFenceCatalogue(read("public/fences.yml"));   // restore for the rest of the file
     expect(getAllFenceTypes().length).toBeGreaterThan(3);
   });
 
   it("clamps a build speed that would break a cut", () => {
-    loadFenceTypes('fences:\n  - id: broken\n    color: "#ffffff"\n    buildSpeed: 0\n');
+    applyFenceCatalogue('fences:\n  - id: broken\n    color: "#ffffff"\n    buildSpeed: 0\n');
     expect(getFenceType("broken").buildSpeed, "a zero-speed fence never finishes")
       .toBeGreaterThan(0);
-    loadFenceTypes('fences:\n  - id: broken\n    color: "#ffffff"\n    buildSpeed: -3\n');
+    applyFenceCatalogue('fences:\n  - id: broken\n    color: "#ffffff"\n    buildSpeed: -3\n');
     expect(getFenceType("broken").buildSpeed, "a negative-speed fence grows backwards")
       .toBeGreaterThan(0);
-    loadFenceTypes(read("public/fences.yml"));
+    applyFenceCatalogue(read("public/fences.yml"));
   });
 
   it("names a real source for every type", () => {

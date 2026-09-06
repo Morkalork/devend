@@ -13,6 +13,10 @@
  *
  * ── Why it is always five ──────────────────────────────────────────────────
  *
+ * Five is the floor and the usual number: a run can fill four slots at most, so
+ * a player never sees more. The bar will draw more if it is handed more, which
+ * is what the admin Playground does with the whole catalogue.
+ *
  * Empty slots are DRAWN, not hidden. A bar that grew as types were acquired
  * would move the board every time the player bought one, and this sits directly
  * under a board whose bottom edge is where cuts get drawn. It also tells a new
@@ -69,8 +73,13 @@ export function FenceSlotBar({
   // save, a dev flag, a store card that forgot - would draw two Standard slots
   // and give the player a duplicate they cannot remove. Same argument as
   // withStandard in the catalogue: guarantee it, do not document it.
-  const roster = slotIds.filter(id => id !== STANDARD_FENCE_ID).slice(0, FENCE_SLOTS - 1);
+  const roster = slotIds.filter(id => id !== STANDARD_FENCE_ID);
   const owned = [standardFenceType(), ...roster.map(getFenceType)];
+  // Five is a FLOOR, not a ceiling. A run can only ever fill four (see
+  // ACQUIRABLE_SLOTS), so this changes nothing in a real game - but the admin
+  // Playground hands the bar the whole catalogue, and truncating there would
+  // hide a fence type from the one screen whose entire job is trying them all.
+  // Hiding what you were handed is the worse failure of the two.
   const empties = Math.max(0, FENCE_SLOTS - owned.length);
 
   // First-acquire: show the explainer once per type the player owns and has not

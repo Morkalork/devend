@@ -7,6 +7,7 @@ import { spliceYamlEntry } from '@/lib/yamlSplice';
 import { GameScreen } from '@/components/game/GameScreen';
 import type { GameStateInfo } from '@/components/game/GameCanvas';
 import { getAllAbilities, loadAbilities } from '@/lib/abilities';
+import { getAllFenceTypes, loadFenceTypes, STANDARD_FENCE_ID } from '@/lib/fences';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
@@ -112,6 +113,17 @@ const ADDITIVE_KEYS = Object.entries(MODIFIER_META)
   .filter(([, m]) => m.kind === 'additive')
   .map(([k]) => k as keyof GameModifiers);
 
+/**
+ * Height of GameScreen's bottom stack, in CSS pixels: the fence slots and the
+ * ability bar, each a 44px touch row inside 4px of padding.
+ *
+ * Anything the Playground floats over the board has to clear it. The ability
+ * tester sat at 96 and was drawn straight across the fence slots, which made
+ * the fence types unreachable on the one screen that is meant to try them all -
+ * and it read as the fence bar being broken rather than as two things overlapping.
+ */
+const BOTTOM_BARS_PX = 2 * (44 + 8);
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type ModifierValues = Partial<Record<keyof GameModifiers, number>>;
@@ -189,6 +201,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // via GameStateInfo, so the test panel can trigger any ability on demand.
   const abilityFireRef = useRef<((id: string) => void) | undefined>(undefined);
   const [abilitiesReady, setAbilitiesReady] = useState(false);
+  // Every fence type in the catalogue, held as state so a fences.yml reload
+  // below re-renders the bar with it.
+  const [fenceCatalog, setFenceCatalog] = useState(() => getAllFenceTypes());
   // Mobile: the level-edit sidebar is a slide-in drawer (on desktop it's a
   // static side column). `editorOpen` toggles the drawer on small screens.
   const [editorOpen, setEditorOpen] = useState(false);
@@ -222,6 +237,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     loadBallTypes().then(() => { setBallCatalog([...getAllBallTypes()]); setGameKey(k => k + 1); });
     // Pick up abilities.yml edits too, so the tester lists the latest catalogue.
     loadAbilities().then(() => setGameKey(k => k + 1));
+    // And fences.yml, so the slot bar below lists every type as authored.
+    loadFenceTypes().then(() => { setFenceCatalog([...getAllFenceTypes()]); setGameKey(k => k + 1); });
   }, []);
 
   // The level the game is running (base for the ball override below).
@@ -583,6 +600,12 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             return have <= 0 ? prev : { ...prev, [id]: have - 1 };
           })}
           abilityCharges={abilityCharges}
+          // Every fence type, not the four a run can own. The Playground is
+          // where a type is tried before it is priced, and the slot rules are
+          // an economy question that belongs to a run - so `fenceSlotsFrom` is
+          // deliberately NOT used here. Standard is dropped because the bar
+          // owns slot 1 itself.
+          fenceSlotIds={fenceCatalog.filter(f => f.id !== STANDARD_FENCE_ID).map(f => f.id)}
           onGameStateChange={(s) => {
             abilityFireRef.current = s.onUseAbility;
             setAbilitiesReady(!!s.onUseAbility); // React bails if unchanged, so no churn
@@ -606,7 +629,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <div
             className="absolute left-1/2 flex flex-col gap-1 px-3 py-2 rounded-lg shadow-lg"
             style={{
-              bottom: 96, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
+              bottom: BOTTOM_BARS_PX + 8, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
               backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)',
             }}
           >

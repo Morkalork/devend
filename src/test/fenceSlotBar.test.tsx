@@ -17,6 +17,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FenceSlotBar } from "@/components/game/FenceSlotBar";
 import { getAllFenceTypes, standardFenceType, FENCE_SLOTS } from "@/lib/fences";
+import { ACQUIRABLE_SLOTS, fenceSlotsFrom } from "@/lib/fenceOwnership";
 
 afterEach(cleanup);
 beforeEach(() => localStorage.clear());
@@ -65,13 +66,31 @@ describe("the bar is always the same size", () => {
     expect(screen.queryAllByLabelText("fenceTypes.emptySlot")).toHaveLength(0);
   });
 
-  it("ignores a roster longer than the bar", () => {
-    // A dev flag or a future store bug could hand over six. The bar must not
-    // grow to fit them.
+  it("never grows past five for a PLAYER, by the rule that owns that", () => {
+    // This is the invariant that actually keeps the board still mid-run, and it
+    // lives in the ownership rules rather than in a slice here: a run can fill
+    // four slots and no more, so five is all a player is ever handed.
+    //
+    // The bar used to enforce it a second time with a .slice(), which read as
+    // belt and braces and was not: the only caller that ever exceeds four is
+    // the admin Playground, and there the slice silently hid a fence type from
+    // the one screen whose whole job is trying them all.
+    expect(ACQUIRABLE_SLOTS + 1).toBe(FENCE_SLOTS);
+    const owned = getAllFenceTypes().filter(f => f.id !== "standard").map(f => f.id);
+    draw({ slotIds: fenceSlotsFrom(owned) });
+    expect(slots()).toHaveLength(FENCE_SLOTS);
+  });
+
+  it("draws every type it is handed, when it is handed more", () => {
+    // The Playground hands over the whole catalogue. Hiding one there is worse
+    // than a wider bar on a screen that has no player on it.
     const many = getAllFenceTypes().map(f => f.id);
     expect(many.length, "the catalogue got smaller than the bar").toBeGreaterThan(FENCE_SLOTS);
     draw({ slotIds: many });
-    expect(slots()).toHaveLength(FENCE_SLOTS);
+    expect(slots()).toHaveLength(many.length);
+    // Standard is still exactly once, and still first.
+    expect(slots().filter(el => el.getAttribute("data-fence-slot") === "standard")).toHaveLength(1);
+    expect(slots()[0].getAttribute("data-fence-slot")).toBe("standard");
   });
 });
 

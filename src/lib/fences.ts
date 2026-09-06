@@ -204,10 +204,43 @@ export function isKnownFenceType(id: FenceTypeId | undefined | null): boolean {
  */
 export const FENCE_SLOTS = 5;
 
-/** Replace the live catalogue from a fetched fences.yml. */
-export function loadFenceTypes(text: string): void {
+/**
+ * Replace the live catalogue from fences.yml TEXT. Returns whether it took.
+ *
+ * Refuses an empty parse rather than installing it: a malformed file must leave
+ * the build-time catalogue standing, because the alternative is a board where
+ * every fence silently becomes standard and nothing on screen says why.
+ */
+export function applyFenceCatalogue(text: string): boolean {
   const parsed = parseCatalogue(text);
-  if (parsed.length === 0) return;
+  if (parsed.length === 0) return false;
   liveFences = withStandard(parsed);
   fenceById = new Map(liveFences.map(f => [f.id, f]));
+  return true;
+}
+
+/**
+ * Re-fetch fences.yml at runtime, exactly as loadAbilities does.
+ *
+ * This existed only as the text-taking function above and NOTHING CALLED IT, so
+ * the runtime re-fetch the module header promises was never happening: a
+ * deployed build served whatever fences.yml was baked in at build time, and a
+ * YAML tweak on staging did nothing at all. Silent, because the build-time
+ * catalogue is valid - the game plays correctly and simply ignores the file.
+ *
+ * Same shape and same failure behaviour as the abilities and ball-type loaders,
+ * so all three are called together and none of them is the odd one out.
+ */
+export async function loadFenceTypes(): Promise<boolean> {
+  try {
+    const response = await fetch("/fences.yml", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Failed to load fences.yml: ${response.status}`);
+    if (!applyFenceCatalogue(await response.text())) {
+      throw new Error("fences.yml contained no valid fence types");
+    }
+    return true;
+  } catch (err) {
+    console.warn("[fences] Keeping the build-time catalogue:", err);
+    return false;
+  }
 }

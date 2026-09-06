@@ -30,6 +30,7 @@ import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng
 import { useCertificateManager, getLoadedCertBonuses, getLoadedCertStartingLevel } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { loadFenceTypes } from '@/lib/fences';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { performTotalReset } from '@/lib/totalReset';
 import { loadAbilities, getAllAbilities, rollCappedAbilityReward } from '@/lib/abilities';
@@ -971,6 +972,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         // it does not gate starting a run — same treatment as loadouts.
         loadBallTypes(),
         loadAbilities(),
+        // Fence types (fences.yml). Failure keeps the build-time catalogue.
+        loadFenceTypes(),
         loadFeatures(),
         // Door pool (doors.yml). On failure assignment levels fall back to the shop.
         loadDoors(),
@@ -1079,6 +1082,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLoadouts(),
         loadBallTypes(),
         loadAbilities(),
+        loadFenceTypes(),
         loadFeatures(),
         loadDoors(),
         loadCapstones(),
@@ -1145,6 +1149,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLoadouts(),
         loadBallTypes(),
         loadAbilities(),
+        loadFenceTypes(),
         loadFeatures(),
         loadDoors(),
         loadCapstones(),
@@ -2186,7 +2191,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
   // edits even before a run starts. handleStartGame reloads it per run.
-  useEffect(() => { loadBallTypes(); loadAbilities(); }, []);
+  useEffect(() => { loadBallTypes(); loadAbilities(); loadFenceTypes(); }, []);
 
   // Replenishing abilities (abilities.yml `replenishTo`, today just Shockwave):
   // every map opens topped up to the authored floor for anything the player has
