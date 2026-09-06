@@ -41,7 +41,7 @@ import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
-import { anyGateTargetInPlay, gateAreas } from "@/lib/coloredAreas";
+import { anyGateTargetCanReach, gateAreas } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost } from "@/lib/physics/smashReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -624,9 +624,24 @@ export function evaluateWinConditions(
   const areaClause = spec.require.find(c => c.kind === "area");
   if (areaClause && !evaluateWinCondition(areaClause, snap).met) {
     // Dormant and frozen targets count as live - a dormant ball has not entered
-    // play yet, a frozen one will thaw. See anyGateTargetInPlay for why the old
+    // play yet, a frozen one will thaw. See gateTargets for why the old
     // `speed > 0` test made a gate-area circuit map lose on its first frame.
-    if (!anyGateTargetInPlay(game.balls)) {
+    //
+    // ALIVE IS NOT THE SAME AS ABLE. This asked only whether a target still
+    // existed, so a board that had fenced the zone away from every ball kept
+    // running: reported from level 8 with two balls bouncing, the var zone
+    // sealed in ground they could no longer enter, and the map going on until
+    // the clock ran out - so the reason finally given was the clock, which was
+    // true and useless. anyGateTargetCanReach asks the question that was
+    // actually being decided.
+    //
+    // The zones come from the LEVEL, which is where resolveWinSpec got the
+    // clause being tested one line up. `game.coloredAreas` is the runtime copy
+    // and carries the same rectangles, but it is assigned by the canvas rather
+    // than by initGame - so reading it here would make the guard depend on
+    // something the clause does not, and "no zones" quietly means "keep
+    // playing", which is the guard switching itself off.
+    if (!anyGateTargetCanReach(game.spaceGrid, game.balls, gateAreas(level.coloredAreas ?? []))) {
       // No target left that could still reach the zone. Nothing on the board
       // shows this - the map simply becomes unwinnable - so it has to be said.
       //

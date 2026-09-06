@@ -251,7 +251,7 @@ describe("the gate-area fail says what the rule actually is", () => {
    * criteria said "You trap a ball outside the area." under LOSE A LIFE IF -
    * which reads as "any ball outside is fatal", so as "all of them have to go
    * in". The engine loses the map only when NO target is left that could still
-   * reach the zone (anyGateTargetInPlay), i.e. when every ball has been locked
+   * reach the zone (anyGateTargetCanReach), i.e. when every ball has been locked
    * without one landing in it.
    *
    * One string was doing two jobs. On a BOSS map "trap it outside and you lose"

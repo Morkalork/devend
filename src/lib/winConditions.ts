@@ -151,7 +151,7 @@ function winConditionParts(
           const mult = AREA_KINDS[zone]?.multiplier ?? 1;
           must(t("winConditions.areaWin", { target, area: zone, mult }));
           // Its OWN string, because on a boss map the rule really is "trap it
-          // outside and you lose": anyGateTargetInPlay counts only the boss, so
+          // outside and you lose": gateTargets counts only the boss, so
           // one target locked in the wrong place ends the map. That is exactly
           // what the shared string used to claim on every gate map, which is
           // why it had to stop being shared.

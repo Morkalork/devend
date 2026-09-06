@@ -14,7 +14,7 @@
  * + evaluateWinConditions, and rendering in the two renderers.
  */
 import type { AreaKind, ColoredArea } from "@/types/level";
-import { gridIndexToWorld, type SpaceGrid } from "@/lib/spaceGrid";
+import { gridIndexToWorld, worldToGridIndex, CellState, type SpaceGrid } from "@/lib/spaceGrid";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
 export interface AreaStyle {
@@ -142,8 +142,28 @@ export function regionCoverFraction(
 ): number {
   if (areas.length === 0 || cellIndices.length === 0) return 0;
   const region = new Set(cellIndices);
+  const cells = areaCellIndices(grid, areas);
+  if (cells.length === 0) return 0;
+  let covered = 0;
+  for (const idx of cells) if (region.has(idx)) covered++;
+  return covered / cells.length;
+}
+
+/**
+ * Every grid cell whose CENTRE lies inside one of these areas.
+ *
+ * The single definition of "the cells of a zone", because two readers ask about
+ * them and they must not disagree: the coverage fraction above grades whether a
+ * lock counts, and the reachability test below decides whether a lock is still
+ * possible at all. A map declared unwinnable against one set of cells while a
+ * lock is graded against another is a map that ends for no visible reason.
+ *
+ * Overlapping areas contribute a shared cell twice. That is the behaviour the
+ * coverage fraction has always had, and no shipped map overlaps two zones.
+ */
+export function areaCellIndices(grid: SpaceGrid, areas: ColoredArea[]): number[] {
+  const out: number[] = [];
   const { originX, originY, cellSize, width, height } = grid;
-  let total = 0, covered = 0;
   for (const a of areas) {
     const c0 = Math.max(0, Math.floor((a.x - originX) / cellSize));
     const c1 = Math.min(width - 1, Math.floor((a.x + a.width - originX) / cellSize));
@@ -153,13 +173,11 @@ export function regionCoverFraction(
       for (let col = c0; col <= c1; col++) {
         const wx = originX + col * cellSize + cellSize / 2;
         const wy = originY + row * cellSize + cellSize / 2;
-        if (!pointInArea(wx, wy, a)) continue;
-        total++;
-        if (region.has(row * width + col)) covered++;
+        if (pointInArea(wx, wy, a)) out.push(row * width + col);
       }
     }
   }
-  return total > 0 ? covered / total : 0;
+  return out;
 }
 
 /**
@@ -228,9 +246,75 @@ export function coloredAreaMultiplierAt(x: number, y: number, areas: ColoredArea
  * ball at rest as a ball that was gone - so a gate map whose targets all
  * started dormant failed on its first frame.
  */
-export function anyGateTargetInPlay(
-  balls: ReadonlyArray<{ state: string; isBoss?: boolean }>,
-): boolean {
+/**
+ * The balls that could still satisfy a gate zone. One definition, two readers -
+ * the reachability test below and the tests - so "target" cannot come to mean
+ * different things in the same rule.
+ */
+export function gateTargets<T extends { state: string; isBoss?: boolean }>(
+  balls: ReadonlyArray<T>,
+): T[] {
   const hasBoss = balls.some(b => b.isBoss);
-  return balls.some(b => b.state !== "won" && (!hasBoss || b.isBoss));
+  return balls.filter(b => b.state !== "won" && (!hasBoss || b.isBoss));
+}
+
+/**
+ * Can any target still REACH a gate zone, or has the board sealed it off?
+ *
+ * The roster above only says a target is ALIVE, and a live
+ * ball is not the same as a ball that can get there. Reported from level 8: two
+ * balls still bouncing, the var zone fenced away in ground they could no longer
+ * enter, and the map running on until the clock ran out - so the reason
+ * eventually given was the clock, which was true and useless.
+ *
+ * ── Why "shares a region with the zone" is the whole test ──────────────────
+ *
+ * A ball cannot cross into another region; that is the game. Cutting only ever
+ * SPLITS the region it is in, so every region a ball can ever be in from now on
+ * is a subset of the one it is in today. And every way a lock can count for a
+ * zone - the ball settling inside it, the pocket sitting within it, the pocket
+ * covering enough of it (see areaForLock) - requires the locked region to hold
+ * at least one cell of that zone. So a target whose region holds no zone cell
+ * can never satisfy the gate, and one whose region does might still.
+ *
+ * ── Every uncertainty resolves toward "keep playing" ───────────────────────
+ *
+ * This costs a life, so a false positive takes a map the player could still
+ * have won. A zone with no ACTIVE cell left is claimed ground and is genuinely
+ * gone; but active cells with no painted owner, or a ball standing on a cell
+ * with none, mean the paint is not telling us - and not knowing is never a
+ * reason to end someone's map.
+ */
+export function anyGateTargetCanReach(
+  grid: SpaceGrid,
+  balls: ReadonlyArray<{ state: string; isBoss?: boolean; position: { x: number; y: number } }>,
+  areas: ColoredArea[],
+): boolean {
+  if (areas.length === 0) return true;          // no zone to be cut off from
+  const targets = gateTargets(balls);
+  if (targets.length === 0) return false;       // nothing alive to reach it
+
+  // Which regions still own a piece of a zone. Read off the same painted
+  // ownership the ball side reads below, so the two cannot disagree.
+  const owners = new Set<string>();
+  let activeZoneCells = 0;
+  for (const idx of areaCellIndices(grid, areas)) {
+    if (grid.cells[idx] !== CellState.ACTIVE) continue;
+    activeZoneCells++;
+    const rid = grid.cellRegionIds[idx];
+    if (rid !== null) owners.add(rid);
+  }
+  // Claimed ground: nothing can be locked in there by anyone, ever.
+  if (activeZoneCells === 0) return false;
+  // Open ground the paint has no opinion about. Unknown, so: keep playing.
+  if (owners.size === 0) return true;
+
+  for (const b of targets) {
+    const idx = worldToGridIndex(grid, b.position.x, b.position.y);
+    const rid = idx >= 0 && grid.cells[idx] === CellState.ACTIVE
+      ? grid.cellRegionIds[idx] : null;
+    if (rid === null) return true;              // cannot place this one: keep playing
+    if (owners.has(rid)) return true;
+  }
+  return false;
 }

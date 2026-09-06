@@ -11,7 +11,7 @@
  *              under LOSE A LIFE IF, which reads as "any ball outside is
  *              fatal", so as "all of them have to go in". The engine loses the
  *              map only when NO target is left that could reach the zone
- *              (anyGateTargetInPlay) - every ball locked, none of them in it.
+ *              (anyGateTargetCanReach) - every ball locked, none of them in it.
  *              Covered in acceptanceCriteria.test.ts.
  *   THE REASON this file. The areaUnreachable check asked whether the WHOLE win
  *              was met, so a player who landed the zone and fell short on the
