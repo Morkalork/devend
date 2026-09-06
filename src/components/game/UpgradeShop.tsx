@@ -401,10 +401,18 @@ export function UpgradeShop({
     [isLocked],
   );
 
-  // The shelf as the player sees it. The ability slot leads, because it is the
-  // one card that is always there and the one that is not an upgrade.
+  // The shelf as the player sees it. The ability slot comes LAST, after every
+  // upgrade, including the ones a restock adds later.
+  //
+  // It used to lead, on the argument that it is the card always there and the
+  // one that is not an upgrade. Both are true and both are reasons to put it at
+  // the end instead: a slot that is always there needs no prime position, and
+  // the shelf's actual job is the upgrades, which are what differs from visit
+  // to visit and what a build is made of. Leading with the constant pushed the
+  // rolled offers down and made the one card the player had already seen every
+  // single visit the first thing they read.
   const shelfItems = useMemo(
-    () => [...abilityOffers, ...offeredUpgrades],
+    () => [...offeredUpgrades, ...abilityOffers],
     [abilityOffers, offeredUpgrades],
   );
 

@@ -65,6 +65,52 @@ describe('the ability slot on the shelf', () => {
     expect(screen.getByText(/Confirm|Buy|Continue/i)).toBeTruthy();
   });
 
+  it('comes LAST, after every upgrade on the shelf', () => {
+    // It is the one card that is always there, so it is the one card the player
+    // has already read every previous visit. Leading with it pushed the rolled
+    // offers - the part of the shelf that actually differs from visit to visit
+    // - down the carousel behind something known.
+    render(<UpgradeShop {...props()} />);
+    const ability = abilityCard()!;
+    const upgrade = screen.getByText('An ordinary upgrade');
+    expect(
+      upgrade.compareDocumentPosition(ability) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the ability card is drawn before an upgrade',
+    ).toBeTruthy();
+  });
+
+  it('stays last after a restock puts a fresh upgrade on the shelf', () => {
+    // Restocks append to the upgrade list, so "abilities last" has to be a
+    // property of the shelf's ORDER rather than of how it was first rolled.
+    const many: UpgradeConfig[] = [
+      { id: 'u_a', name: 'Alpha', tier: 'Junior', description: 'Upgrade alpha', cost: 30, unlockLevel: 1, tags: ['bank'], modifiers: {} },
+      { id: 'u_b', name: 'Beta', tier: 'Junior', description: 'Upgrade beta', cost: 30, unlockLevel: 1, tags: ['bank'], modifiers: {} },
+      { id: 'u_c', name: 'Gamma', tier: 'Junior', description: 'Upgrade gamma', cost: 30, unlockLevel: 1, tags: ['bank'], modifiers: {} },
+      { id: 'u_d', name: 'Delta', tier: 'Junior', description: 'Upgrade delta', cost: 30, unlockLevel: 1, tags: ['bank'], modifiers: {} },
+    ];
+    render(<UpgradeShop {...props({
+      upgrades: many,
+      // Restocking is a Procurement perk and is off by default.
+      shopRestockCount: 1,
+      isLocked: (id: string, owned: string[]) => !owned.includes(id) && !many.some(u => u.id === id),
+    })} />);
+
+    // Buy an upgrade (not the retainer: a retainer purchase deliberately does
+    // not restock) so a fresh offer is appended.
+    const before = screen.getAllByText(/^Upgrade (alpha|beta|gamma|delta)$/).length;
+    fireEvent.click(screen.getAllByText(/^Upgrade (alpha|beta|gamma|delta)$/)[0].closest('button')!);
+    const after = screen.getAllByText(/^Upgrade (alpha|beta|gamma|delta)$/).length;
+    expect(after, 'nothing restocked, so this proves nothing').toBeGreaterThan(before);
+
+    const ability = abilityCard()!;
+    for (const card of screen.getAllByText(/^Upgrade (alpha|beta|gamma|delta)$/)) {
+      expect(
+        card.compareDocumentPosition(ability) & Node.DOCUMENT_POSITION_FOLLOWING,
+        'a restocked upgrade landed after the ability card',
+      ).toBeTruthy();
+    }
+  });
+
   it('is there beside the upgrades, not instead of one', () => {
     render(<UpgradeShop {...props()} />);
     expect(abilityCard()).toBeTruthy();
