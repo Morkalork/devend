@@ -54,15 +54,21 @@ describe("the Playground offers every fence type", () => {
     }
   });
 
-  it("floats its testers clear of the bottom bars", () => {
-    // The fence slots and the ability bar are each a 44px touch row in 4px of
-    // padding. Anything the Playground floats over the board has to clear both,
-    // and the number has to be derived from them rather than guessed - a guess
-    // is what put the ability tester on top of the slots.
-    expect(src).toMatch(/const BOTTOM_BARS_PX = 2 \* \(44 \+ 8\)/);
-    expect(src, "a tester is still pinned inside the bars' band")
-      .not.toMatch(/bottom: 96,/);
-    expect(src).toMatch(/bottom: BOTTOM_BARS_PX/);
+  it("MEASURES the bottom bars rather than assuming a height", () => {
+    // Two guesses have been wrong here: 96 drew the ability tester across the
+    // fence slots, and so did 104. The stack is up to five rows deep and the
+    // ability row wraps, so no constant survives - the height is a fact the
+    // layout already knows, and the tester has to read it.
+    expect(src, "the height is measured from the live element")
+      .toMatch(/querySelector\('\[data-bottom-bars\]'\)/);
+    expect(src).toMatch(/getBoundingClientRect\(\)\.height/);
+    expect(src, "a tester is pinned to a hard-coded band again")
+      .not.toMatch(/bottom: (96|104|112),/);
+
+    // And the element it measures still exists, with that attribute on it.
+    const game = read("src/components/game/GameScreen.tsx");
+    expect(game, "GameScreen lost the handle the Playground measures")
+      .toMatch(/data-bottom-bars/);
   });
 });
 
@@ -87,5 +93,18 @@ describe("the fence catalogue is actually reloaded at runtime", () => {
     // alternative is every fence silently becoming standard, with nothing on
     // screen to say why.
     expect(src).toMatch(/Keeping the build-time catalogue/);
+  });
+});
+
+describe("every slot stays reachable when there are more than five", () => {
+  it("lets the row scroll sideways instead of clipping it", () => {
+    // Six slots do not fit across a phone. Reported from one: the row was cut
+    // off at both edges, so Standard and Drill could not be tapped at all.
+    const src = read("src/components/game/FenceSlotBar.tsx");
+    expect(src, "the row is clipped rather than scrollable").toMatch(/overflow-x-auto/);
+    // Centred while it fits, left-aligned once it does not. A centred flex row
+    // that overflows puts its FIRST item off-screen with no way back to it.
+    expect(src).toMatch(/w-max mx-auto/);
+    expect(src, "a slot still swallows the sideways pan").not.toMatch(/touchAction: 'none'/);
   });
 });

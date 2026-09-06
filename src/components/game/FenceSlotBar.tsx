@@ -98,9 +98,23 @@ export function FenceSlotBar({
 
   return (
     <>
+      {/* Scrolls sideways when the slots are wider than the screen, which they
+          are on a phone the moment there are six of them (the Playground hands
+          over the whole catalogue). Without this the row is simply clipped at
+          both edges and the first and last types cannot be reached at all.
+
+          `w-max` + `mx-auto` rather than `justify-center`: auto margins on a box
+          WIDER than its container resolve to zero, so the row centres while it
+          fits and starts at the left edge once it does not. A centred flex row
+          that overflows puts its first item off-screen with no way to scroll
+          back to it, which is the exact bug this is fixing. */}
       <div
-        className="pointer-events-auto flex justify-center gap-1.5 px-3 py-1"
-        style={{ backgroundColor: 'rgba(0,0,0,0.55)', fontFamily: "'JetBrains Mono', monospace" }}
+        className="pointer-events-auto overflow-x-auto scrollbar-hide"
+        style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+      >
+      <div
+        className="flex w-max mx-auto gap-1.5 px-3 py-1"
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
       >
         {owned.map(f => {
           const color = f.color || accentColor;
@@ -140,7 +154,12 @@ export function FenceSlotBar({
                 background: selected ? `${color}44` : `${color}14`,
                 boxShadow: selected ? `0 0 12px ${color}` : 'none',
                 opacity: selected ? 1 : 0.75,
-                touchAction: 'none',
+                // pan-x, not none: the row scrolls sideways when it overflows,
+                // and a button that swallowed the pan would make the types past
+                // the edge unreachable by the only gesture that reaches them.
+                // Vertical panning stays blocked, so a press still cannot drag
+                // the page, and a sideways drag already cancels the long-press.
+                touchAction: 'pan-x',
               }}
             >
               {/* The stripe IS the fence: the slot shows the colour that will
@@ -172,6 +191,7 @@ export function FenceSlotBar({
             +
           </div>
         ))}
+      </div>
       </div>
       {info && <FenceTypeInfoModal fence={info} onClose={() => setInfo(null)} />}
     </>

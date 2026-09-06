@@ -1075,6 +1075,13 @@ export function GameScreen({
             never outlive the board (a fade lagged behind the wave on-device).
             The wrapper is click-through; only the AbilityBar re-enables taps. */}
         <div
+          // The admin Playground floats its testers above this stack and
+          // MEASURES it through this attribute rather than assuming a height.
+          // Assuming one is how the ability tester came to be drawn across the
+          // fence slots: the stack is five rows deep on a bad day (slots,
+          // abilities, the context lane, the push-exit bar, the control row)
+          // and the ability row wraps, so no constant is ever right for long.
+          data-bottom-bars=""
           className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
           style={{ visibility: mapComplete ? 'hidden' : 'visible' }}
         >

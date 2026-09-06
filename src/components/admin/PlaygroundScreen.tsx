@@ -114,15 +114,42 @@ const ADDITIVE_KEYS = Object.entries(MODIFIER_META)
   .map(([k]) => k as keyof GameModifiers);
 
 /**
- * Height of GameScreen's bottom stack, in CSS pixels: the fence slots and the
- * ability bar, each a 44px touch row inside 4px of padding.
+ * Clearance to assume for GameScreen's bottom stack before it has been measured.
  *
- * Anything the Playground floats over the board has to clear it. The ability
- * tester sat at 96 and was drawn straight across the fence slots, which made
- * the fence types unreachable on the one screen that is meant to try them all -
- * and it read as the fence bar being broken rather than as two things overlapping.
+ * Only ever used for the first frame and for a GameScreen that somehow has no
+ * bottom stack. The real number is measured below, because every attempt to
+ * state it as a constant has been wrong: the stack is up to five rows deep
+ * (fence slots, abilities, the context lane, the push-exit bar, the map's own
+ * control row) and the ability row wraps, so its height depends on how many
+ * abilities are banked and how wide the phone is.
  */
-const BOTTOM_BARS_PX = 2 * (44 + 8);
+const BOTTOM_BARS_FALLBACK_PX = 200;
+
+/**
+ * The measured height of GameScreen's fixed bottom stack, in CSS pixels.
+ *
+ * The Playground floats dev testers over the board, and they have to clear the
+ * player's own bars. Two guesses have now been wrong - 96 put the ability
+ * tester straight across the fence slots, and 104 put it across them again -
+ * which is the whole argument for measuring: the height is a fact the layout
+ * already knows, and every copy of it in a constant is a copy free to be wrong.
+ *
+ * Re-queried on `gameKey` because a remount replaces the node.
+ */
+function useBottomBarsHeight(gameKey: number): number {
+  const [height, setHeight] = useState(BOTTOM_BARS_FALLBACK_PX);
+  useEffect(() => {
+    const el = document.querySelector('[data-bottom-bars]');
+    if (!(el instanceof HTMLElement)) return;
+    const read = () => setHeight(el.getBoundingClientRect().height);
+    read();
+    if (typeof ResizeObserver === 'undefined') return;   // jsdom, old webviews
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [gameKey]);
+  return height;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -570,6 +597,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     [baseLevel, effectiveBallIds],
   );
   const { accentHex: levelAccent } = useColorProgression(activeLevel.level);
+  // What the dev testers have to float above. Measured, never assumed.
+  const bottomBars = useBottomBarsHeight(gameKey);
   const accent = levelAccent;
 
   return (
@@ -629,7 +658,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <div
             className="absolute left-1/2 flex flex-col gap-1 px-3 py-2 rounded-lg shadow-lg"
             style={{
-              bottom: BOTTOM_BARS_PX + 8, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
+              bottom: bottomBars + 8, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
               backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
