@@ -49,6 +49,7 @@ import { queryWallsNear } from "@/lib/physics/wallGrid";
 import { runStream } from "@/lib/runRng";
 import { ballMayPass } from "@/lib/physics/obstacleRules";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
+import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
 
 /** Slack added to the wall-index query radius (world units). Comfortably
  *  covers the "+2" collision margin plus any small push-out drift within the
@@ -767,6 +768,11 @@ export function updateBall(
     // Register wall impact for visual effect
     if (impactPoint) {
       surfaceHit = true;
+      // Ice takes speed off, flare puts it on (FENCE_TYPES_PLAN.md). Applied
+      // HERE, on the wall that was actually struck, rather than after the loop
+      // from a remembered id: a ball can touch two fences in one step, and the
+      // one that changes its speed has to be one it really hit.
+      applyFenceSpeedStep(ball, wall, now);
       // The same dent from the edge as from the face. `wall.deformable` is the
       // very object the polygon map holds, so the two paths cannot disagree.
       // Read the normal off the wall BEFORE the dent moves it.

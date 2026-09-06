@@ -14,6 +14,7 @@ import { getWallSpeedBase } from "@/lib/gameUtils";
 import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityEffects";
 import { MINIMUM_WALL_TIME } from "@/lib/gameConstants";
 import { cutSpeedFactor } from "@/lib/physics/fenceZones";
+import { getFenceType } from "@/lib/fences";
 
 export { clearFreeze, FREEZE_MAX_MS };
 
@@ -61,8 +62,17 @@ export function updateFenceWallFn(
   // change the SHAPE of the build and not its duration - the one thing a slow
   // zone exists to change. Computed over the longer half's whole path, once.
   const terrain = cutSpeedFactor(game.fenceZones, wall.startWaypoints, wall.endWaypoints);
+  // What the fence TYPE costs (FENCE_TYPES_PLAN.md). This is the whole price of
+  // every special fence: unlimited once owned, and paid for in the race between
+  // the cut finishing and something hitting it.
+  //
+  // MULTIPLIED in with the rest, never added. A sum would make an exotic fence
+  // on slow ground merely slow instead of doubly so, and the mistake would be
+  // invisible - the fence would still build, just not at the price it names.
+  const fenceType = getFenceType(wall.fenceTypeId).buildSpeed;
   const wallSpeedEffective =
-    wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * rush * terrain;
+    wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier
+    * lockTempo * rush * terrain * fenceType;
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {

@@ -65,6 +65,14 @@ export interface Ball {
   speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
   speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
   lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
+  /**
+   * Debounce for an ice/flare fence's speed step (FENCE_TYPES_PLAN.md).
+   *
+   * Its OWN timestamp rather than sharing the yellow ball's: a yellow ball
+   * bouncing off ice must get both effects, and one shared debounce would have
+   * whichever fired first silently eating the other.
+   */
+  lastFenceStepAt?: number;
   /** Lodestone: how hard, and how far, it pulls the other balls. */
   attractTurnRate?: number;
   attractRadius?: number;
