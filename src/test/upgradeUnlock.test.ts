@@ -23,7 +23,12 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { prerequisitesMet, choiceGroupTaken, choiceGroups } from "@/lib/upgradeUnlock";
+import {
+  prerequisitesMet, choiceGroupTaken, choiceGroups, familyOfChoiceGroup,
+  unlockRequirements,
+} from "@/lib/upgradeUnlock";
+import { hasFreeFenceSlot, fenceOfferIsEmpty, ACQUIRABLE_SLOTS } from "@/lib/fenceOwnership";
+import { getAllFenceTypes, STANDARD_FENCE_ID } from "@/lib/fences";
 import { buildUpgradeGraph } from "@/lib/upgradeGraph";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 
@@ -168,5 +173,96 @@ describe("the fences the catalogue gates this way", () => {
     for (const u of gated) {
       expect(u.prerequisites ?? [], `${u.id} is gated twice`).toEqual([]);
     }
+  });
+});
+
+describe("a locked card says WHY it is locked", () => {
+  /**
+   * The screens that answer "what do I need for this" all read `prerequisites`,
+   * and a family-gated fence has none at all. So the day the fences moved:
+   *
+   *   the shop's locked tooltip printed "Requires" and then nothing;
+   *   the shop's detail card said "Nothing required" on a card it refuses to
+   *     sell;
+   *   the Atlas said "Nothing. This is a chain head." about the four
+   *     most-gated upgrades in the catalogue.
+   *
+   * An unbuyable card that claims to need nothing is worse than an unexplained
+   * one - it reads as the shop being broken rather than as a locked upgrade.
+   */
+  it("names the family a gated upgrade is waiting on", () => {
+    const ice = CATALOGUE.find(u => u.id === "cold_storage_ice")!;
+    const need = unlockRequirements(ice, CATALOGUE);
+    expect(need.prereqs, "ice grew a prerequisite as well").toEqual([]);
+    expect(need.maxedFamily).toBe("Feature Freeze");
+  });
+
+  it("reads the family name off the group's own members", () => {
+    expect(familyOfChoiceGroup("feature_freeze_principal", CATALOGUE))
+      .toBe("Feature Freeze");
+    expect(familyOfChoiceGroup("no_such_group", CATALOGUE)).toBeNull();
+  });
+
+  it("leaves an ordinary chained upgrade reading exactly as before", () => {
+    const chained = CATALOGUE.find(u => (u.prerequisites ?? []).length > 0)!;
+    const need = unlockRequirements(chained, CATALOGUE);
+    expect(need.prereqs.map(p => p.id)).toEqual(chained.prerequisites);
+    expect(need.maxedFamily).toBeNull();
+  });
+
+  for (const [file, path] of [
+    ["the shop", "src/components/game/UpgradeShop.tsx"],
+    ["the Atlas", "src/components/admin/UpgradeAtlasScreen.tsx"],
+  ] as const) {
+    it(`${file} asks about both gates, not just prerequisites`, () => {
+      const src = readFileSync(resolve(process.cwd(), path), "utf8");
+      expect(src).toMatch(/unlockRequirements\(|familyOfChoiceGroup\(/);
+    });
+  }
+});
+
+describe("the shelf knows the fence bar can be full", () => {
+  /**
+   * SIX acquirable types against FOUR slots. fenceSlotsFrom caps silently, so a
+   * fence card offered into a full bar takes the player's hours and grants
+   * nothing - which fenceOwnership's own comment calls the one outcome a store
+   * must never have. It had the guard from the day it was written and NOTHING
+   * CALLED IT, and the rewrite is what made hitting the cap ordinary: the open
+   * shelf plus the account-scoped drill are two slots before a single family is
+   * maxed.
+   */
+  it("has more acquirable types than slots, which is why this matters", () => {
+    const acquirable = getAllFenceTypes().filter(f => f.id !== STANDARD_FENCE_ID);
+    expect(acquirable.length).toBeGreaterThan(ACQUIRABLE_SLOTS);
+  });
+
+  it("stops offering a NEW fence type once the bar is full", () => {
+    const room = ["ice", "flare", "redeploy"];
+    const full = [...room, "drill"];
+    expect(hasFreeFenceSlot(room)).toBe(true);
+    expect(hasFreeFenceSlot(full)).toBe(false);
+    expect(fenceOfferIsEmpty("tripwire", room)).toBe(false);
+    expect(fenceOfferIsEmpty("tripwire", full)).toBe(true);
+  });
+
+  it("stops offering one the bar already holds, which grants nothing either", () => {
+    expect(fenceOfferIsEmpty("ice", ["ice"])).toBe(true);
+  });
+
+  it("says nothing about a card that grants no fence at all", () => {
+    expect(fenceOfferIsEmpty(undefined, ["ice", "flare", "redeploy", "drill"])).toBe(false);
+  });
+
+  it("is the rule the shelf actually filters on", () => {
+    // Not "the module is imported": the guard was importable and dead for the
+    // whole of its life, which is the bug this section is about.
+    const src = readFileSync(
+      resolve(process.cwd(), "src/components/game/UpgradeShop.tsx"), "utf8");
+    expect(src).toMatch(/!fenceOfferIsEmpty\(u\.grantsFenceType, heldFenceTypeIds\)/);
+    // Against the list the BAR is drawn from, not a second derivation: the held
+    // set comes from three economies and two readings of it would be free to
+    // disagree with what the player is looking at.
+    const wiring = readFileSync(resolve(process.cwd(), "src/pages/Index.tsx"), "utf8");
+    expect(wiring).toMatch(/heldFenceTypeIds=\{session\.fenceSlotIds\}/);
   });
 });

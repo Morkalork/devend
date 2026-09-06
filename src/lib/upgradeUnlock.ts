@@ -77,3 +77,40 @@ export function choiceGroups(
   }
   return out;
 }
+
+/**
+ * The family a choice group belongs to, by name, or null for an unknown group.
+ *
+ * Members of a group share a `name` - that is what makes them a family - so the
+ * first member's name IS the family's. Named here rather than derived at each
+ * screen because three of them ask the question and a screen that answered it
+ * differently would tell the player to max a family that does not exist.
+ */
+export function familyOfChoiceGroup(
+  group: string, upgrades: readonly UpgradeConfig[],
+): string | null {
+  return upgrades.find(u => u.choiceGroup === group)?.name ?? null;
+}
+
+/**
+ * Why an upgrade is locked, in the terms the player is shown.
+ *
+ * Both gates, because a screen that showed only `prerequisites` would say
+ * "Nothing. This is a chain head." over a card it then refuses to sell - which
+ * is what the Atlas and the shop's detail card both did the day the fences
+ * moved onto `unlockAfterChoice`. An unbuyable card that claims to need nothing
+ * is worse than an unexplained one: it reads as the shop being broken.
+ */
+export function unlockRequirements(
+  upgrade: UpgradeConfig, upgrades: readonly UpgradeConfig[],
+): { prereqs: UpgradeConfig[]; maxedFamily: string | null } {
+  const byId = new Map(upgrades.map(u => [u.id, u]));
+  return {
+    prereqs: (upgrade.prerequisites ?? [])
+      .map(id => byId.get(id))
+      .filter((u): u is UpgradeConfig => !!u),
+    maxedFamily: upgrade.unlockAfterChoice
+      ? familyOfChoiceGroup(upgrade.unlockAfterChoice, upgrades)
+      : null,
+  };
+}

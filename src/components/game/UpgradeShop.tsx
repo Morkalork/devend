@@ -20,7 +20,8 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { prerequisitesMet } from '@/lib/upgradeUnlock';
+import { prerequisitesMet, unlockRequirements } from '@/lib/upgradeUnlock';
+import { fenceOfferIsEmpty } from '@/lib/fenceOwnership';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
@@ -63,6 +64,15 @@ interface UpgradeShopProps {
   newlyUnlockedCerts?: Certificate[];
   /** Certificate catalogue, for the "counts toward a certificate" card note. */
   certificates?: Certificate[];
+  /**
+   * The fence types the run already holds, from useGameSession's own
+   * `fenceSlotIds` - the list the bar under the board is drawn from.
+   *
+   * Passed in rather than re-derived here. The held set comes from three
+   * economies (certificates, upgrades, the dev flag) and a second derivation
+   * would be free to disagree with the bar the player is looking at.
+   */
+  heldFenceTypeIds?: string[];
   /** certKey -> runs already credited, for that note's progress fraction. */
   maxTierCounts?: Record<string, number>;
   /** Already-unlocked cert ids; their chase note is done and is hidden. */
@@ -151,6 +161,7 @@ export function UpgradeShop({
   onTutorialDismiss,
   newlyUnlockedCerts = [],
   certificates = [],
+  heldFenceTypeIds = [],
   maxTierCounts = {},
   unlockedCertIds = [],
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
@@ -241,9 +252,16 @@ export function UpgradeShop({
   const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
     // Filter out owned, upgrades not yet unlocked by level progression, and any
     // choice group whose pick is already made (a sibling owned).
+    // The fence bar holds four types and the catalogue has six, so "all of
+    // them" and "what a run can hold" stopped being the same answer the day a
+    // fence became findable without commitment. A fence-granting card offered
+    // into a full bar takes the player's hours and grants nothing -
+    // fenceSlotsFrom caps silently - which is the one outcome a store must
+    // never have. fenceOwnership has always had the guard; nothing called it.
     const available = upgrades.filter(u =>
       !ownedUpgradeIds.includes(u.id) &&
       completedLevel >= (u.unlockLevel ?? 1) &&
+      !fenceOfferIsEmpty(u.grantsFenceType, heldFenceTypeIds) &&
       !(u.choiceGroup && upgrades.some(o => o.choiceGroup === u.choiceGroup && ownedUpgradeIds.includes(o.id)))
     );
     // Collapse a choice group to ONE representative card (the chooser expands the
@@ -960,10 +978,20 @@ export function UpgradeShop({
                 )}
                 {locked && !owned && lockedInfoId === upgrade.id && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-xs text-muted-foreground shadow-md">
-                    {t('upgradeShop.requires')} {(upgrade.prerequisites || []).filter(p => !effectiveOwned.includes(p)).map(p => {
-                      const prereq = upgrades.find(u => u.id === p);
-                      return prereq ? contentText.upgradeName(t, prereq) : p;
-                    }).join(', ')}
+                    {/* Both gates. A card locked only by a family gate has NO
+                        prerequisites, so listing those alone printed "Requires"
+                        and then nothing at all - a refusal with no reason on
+                        it, which reads as the shop being broken. */}
+                    {t('upgradeShop.requires')} {(() => {
+                      const need = unlockRequirements(upgrade, upgrades);
+                      const parts = need.prereqs
+                        .filter(p => !effectiveOwned.includes(p.id))
+                        .map(p => contentText.upgradeName(t, p));
+                      if (need.maxedFamily) {
+                        parts.push(t('upgradeShop.requiresMaxedFamily', { family: need.maxedFamily }) as string);
+                      }
+                      return parts.join(', ');
+                    })()}
                   </div>
                 )}
 
@@ -1084,9 +1112,11 @@ export function UpgradeShop({
           if (!u) return null;
           const DetailIcon = getUpgradeIcon(u, upgrades);
           const tc = TIER_COLORS[u.tier];
-          const prereqs = (u.prerequisites ?? [])
-            .map(id => upgrades.find(x => x.id === id))
-            .filter((x): x is UpgradeConfig => Boolean(x));
+          // Both gates, for the reason the locked tooltip above takes both:
+          // this section said "Nothing required" over a card the shop refuses
+          // to sell the moment a fence moved onto a family gate.
+          const need = unlockRequirements(u, upgrades);
+          const prereqs = need.prereqs;
           const dependents = dependentsById.get(u.id) ?? [];
           const detailCert = certChaseByKey.get(u.choiceGroup ?? u.id);
 
@@ -1161,8 +1191,15 @@ export function UpgradeShop({
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
                       {t('upgradeShop.detailUnlockedBy')}
                     </div>
-                    {prereqs.length > 0 ? (
-                      <ul className="space-y-1.5">{prereqs.map(relRow)}</ul>
+                    {prereqs.length > 0 || need.maxedFamily ? (
+                      <ul className="space-y-1.5">
+                        {prereqs.map(relRow)}
+                        {need.maxedFamily && (
+                          <li className="text-xs text-muted-foreground">
+                            {t('upgradeShop.requiresMaxedFamily', { family: need.maxedFamily })}
+                          </li>
+                        )}
+                      </ul>
                     ) : (
                       <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoPrereqs')}</p>
                     )}

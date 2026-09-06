@@ -2141,7 +2141,7 @@ upgrades:
   - id: set_a_breakpoint
     name: Set A Breakpoint
     tier: Junior
-    description: "Adds the Breakpoint fence: once a map, the first ball to touch one is held still for 2s."
+    description: "Adds the Breakpoint fence: once a map it holds the first ball to touch it, 2s. Builds 15% slower."
     unlockLevel: 4
     icon: pause
     tags: [safety]

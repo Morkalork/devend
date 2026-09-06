@@ -23,10 +23,12 @@ import fencesYamlRaw from "../../public/fences.yml?raw";
  *
  * "store" is deliberately absent. The plan named the store and the upgrade
  * chains as separate channels, and in this game they are one: the upgrade shop
- * IS the store, so four types are ordinary chain entries in upgrades.yml and
- * inventing a parallel shelf mechanism would have been a second way to buy the
- * same thing. The certificate store is genuinely separate, because what it
- * sells outlives the run.
+ * IS the store, so five types are entries in upgrades.yml and inventing a
+ * parallel shelf mechanism would have been a second way to buy the same thing.
+ * "Openly in the store" is therefore a ROOT upgrade rather than a new
+ * mechanism, and "earned by staying the course" is `unlockAfterChoice` on a
+ * family's top tier. The certificate store is genuinely separate, because what
+ * it sells outlives the run.
  */
 export type FenceSource = "always" | "upgrade" | "certificate";
 

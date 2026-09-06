@@ -884,7 +884,8 @@
     "abilityKicker": "Förmåga",
     "abilityEveryMap": "En per bana, {{count}} kvar",
     "abilitySlotClosed": "Förmågeplatsen är stängd: din rad är full",
-    "freeAbilityGranted": "{{name}} lades till i din rad"
+    "freeAbilityGranted": "{{name}} lades till i din rad",
+    "requiresMaxedFamily": "{{family}}, fullt uppgraderad"
   },
   "upgradeConditions": {
     "liveNow": "Aktiv på nästa uppdrag",

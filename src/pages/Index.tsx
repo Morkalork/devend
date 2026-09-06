@@ -380,6 +380,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
                 certificates={session.certificates}
+                // What the fence bar already holds, so the shelf stops offering
+                // a fence type the bar has no room for. Same list the bar is
+                // drawn from; a second derivation here would be free to
+                // disagree with what the player is looking at.
+                heldFenceTypeIds={session.fenceSlotIds}
                 maxTierCounts={session.maxTierCounts}
                 unlockedCertIds={session.unlockedCertIds}
                 tagSetThreshold={session.tagSetThreshold}

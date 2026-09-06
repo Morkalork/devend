@@ -899,7 +899,8 @@
     "abilityKicker": "Ability",
     "abilityEveryMap": "One every map, {{count}} left",
     "abilitySlotClosed": "Ability slot closed: your bar is full",
-    "freeAbilityGranted": "{{name}} added to your bar"
+    "freeAbilityGranted": "{{name}} added to your bar",
+    "requiresMaxedFamily": "{{family}}, fully upgraded"
   },
   "upgradeConditions": {
     "liveNow": "Live on the next assignment",

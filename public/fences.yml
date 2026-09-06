@@ -36,9 +36,11 @@
 #   anchorOnBreakable  true = a cut may START on a breakable. Only the drill.
 #   drillDamage   damage per second dealt to a breakable this fence touches.
 #   source        where it comes from: always | upgrade | certificate.
-#                 Four types hang off upgrade chains in upgrades.yml, and the
-#                 drill is a certificate - the only ACCOUNT-scoped one, so it is
-#                 in the bar from map one of every run.
+#                 Five come from upgrades.yml: `breakpoint` is a ROOT, the open
+#                 shelf anyone can be offered, and the other four are the crown
+#                 of a MAXED family (unlockAfterChoice). The drill is a
+#                 certificate - the only ACCOUNT-scoped one, so it is in the bar
+#                 from map one of every run.
 #   description   info modal: one-line "what it does"
 #   howTo         info modal: one-line "how to use it"
 

@@ -884,7 +884,8 @@
     "abilityKicker": "Habilidad",
     "abilityEveryMap": "Una por mapa, quedan {{count}}",
     "abilitySlotClosed": "Ranura de habilidad cerrada: tu barra esta llena",
-    "freeAbilityGranted": "{{name}} anadida a tu barra"
+    "freeAbilityGranted": "{{name}} anadida a tu barra",
+    "requiresMaxedFamily": "{{family}}, al máximo"
   },
   "upgradeConditions": {
     "liveNow": "Activa en la próxima misión",

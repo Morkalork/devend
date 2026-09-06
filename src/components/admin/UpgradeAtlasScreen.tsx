@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import yaml from 'js-yaml';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
+import { familyOfChoiceGroup } from '@/lib/upgradeUnlock';
 import { UpgradeTag, UpgradeTier, TIER_COLORS } from '@/types/upgrade';
 import { LevelData } from '@/types/level';
 import {
@@ -629,14 +630,32 @@ export function UpgradeAtlasScreen({ onBack }: UpgradeAtlasScreenProps) {
                 ))}
               </Section>
 
-              <Section title={`Requires (${selected.prerequisites.length})`}>
-                {selected.prerequisites.length === 0 && (
-                  <p className="text-muted-foreground">Nothing. This is a chain head.</p>
-                )}
-                {selected.prerequisites.map(id => (
-                  <NodeLink key={id} node={graph.byId.get(id)!} onClick={focusNode} />
-                ))}
-              </Section>
+              {/* Both gates. `prerequisites` alone printed "Nothing. This is a
+                  chain head." over the four most-gated upgrades in the
+                  catalogue, because a family gate carries no prerequisites at
+                  all - and the Atlas is the screen whose whole job is being
+                  right about the shape of the tree. */}
+              {(() => {
+                const gate = selected.upgrade.unlockAfterChoice;
+                const family = gate ? familyOfChoiceGroup(gate, upgrades) : null;
+                const count = selected.prerequisites.length + (family ? 1 : 0);
+                return (
+                  <Section title={`Requires (${count})`}>
+                    {count === 0 && (
+                      <p className="text-muted-foreground">Nothing. This is a chain head.</p>
+                    )}
+                    {selected.prerequisites.map(id => (
+                      <NodeLink key={id} node={graph.byId.get(id)!} onClick={focusNode} />
+                    ))}
+                    {family && (
+                      <p className="text-muted-foreground">
+                        <span className="font-mono text-[11px]">{gate}</span>
+                        {` — the whole ${family} family, either branch`}
+                      </p>
+                    )}
+                  </Section>
+                );
+              })()}
 
               <Section title={`Leads to (${selected.dependents.length})`}>
                 {selected.dependents.length === 0 && (
