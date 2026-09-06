@@ -230,6 +230,20 @@ export interface CanvasGameState {
   swipePointerId: number | null;
   /** Last completed cut gesture, rendered as a brief fading afterglow (issue #35). */
   swipeTrail: { start: Vector2; end: Vector2; createdAt: number } | null;
+  /**
+   * A Redeploy fence being pulled back right now (slingFence.ts).
+   *
+   * Board state rather than React state: the drag starts on the canvas, from
+   * the same pointerdown that would otherwise have started a cut, so there is
+   * no overlay to mount and nothing to mount it from. The renderer reads this
+   * to draw the stretched band and to ring what the throw would catch.
+   */
+  slingDrag?: {
+    wallId: string;
+    start: Vector2;
+    current: Vector2;
+    pointerId: number;
+  } | null;
 
   // ── Timing / loop ──────────────────────────────────────────────────────
   lastTime: number;

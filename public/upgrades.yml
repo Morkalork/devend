@@ -2122,16 +2122,20 @@ upgrades:
     grantsFenceType: ice
     modifiers: {}
 
-  - id: hardened_rebar
-    name: Hardened Rebar
+  # Redeploy comes out of Free Fall, the line about balls under force and about
+  # being paid for taking one on. That is the deal here too: the throw leaves
+  # you a ball at up to three times its speed for the rest of the map, and
+  # nothing in the engine slows it down again.
+  - id: rolling_redeploy
+    name: Rolling Redeploy
     tier: Senior
-    description: "Adds the Rebar fence: it takes far more punishment before it shatters. It builds 40% slower."
-    unlockLevel: 7
-    icon: shield
+    description: "Adds the Redeploy fence: grab it once and fling the balls in front of it. Builds 40% slower."
+    unlockLevel: 13
+    icon: spline
     prerequisites:
-      - defensive_programming_junior
-    tags: [safety]
-    grantsFenceType: rebar
+      - free_fall_junior
+    tags: [risk]
+    grantsFenceType: redeploy
     modifiers: {}
 
   - id: incident_flare

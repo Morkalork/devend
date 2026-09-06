@@ -72,6 +72,24 @@ export interface Wall {
    * map whatever the bar says afterwards.
    */
   fenceTypeId?: string;
+  /**
+   * The cut this segment came from. Shared by every segment of one gesture.
+   *
+   * One cut is several walls whenever it bounces, and there are rules that are
+   * about the FENCE rather than about a straight run of it - the Redeploy
+   * throw is spent once per cut, not once per segment. Absent on board edges,
+   * obstacle boundaries and anything from before this field existed.
+   */
+  cutId?: string;
+  /**
+   * A Redeploy fence that has already been thrown (slingFence.ts).
+   *
+   * One throw per cut. Recorded on the wall rather than counted somewhere else
+   * because the fence is the thing that was spent, and a fence that breaks
+   * takes its throw with it - which is correct, and would need remembering if
+   * the count lived anywhere but here.
+   */
+  slingSpent?: boolean;
 }
 
 /** Fences the player drew: not board edges, not obstacle boundaries. */

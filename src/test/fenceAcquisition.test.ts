@@ -34,7 +34,7 @@ describe("the slot list", () => {
   it("keeps acquisition order", () => {
     // The bar must not rearrange itself when a type arrives: the slot a player
     // has learned to reach for has to stay where it was.
-    expect(fenceSlotsFrom(["rebar", "ice", "flare"])).toEqual(["rebar", "ice", "flare"]);
+    expect(fenceSlotsFrom(["redeploy", "ice", "flare"])).toEqual(["redeploy", "ice", "flare"]);
   });
 
   it("drops standard, unknowns and duplicates", () => {

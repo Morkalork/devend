@@ -176,9 +176,19 @@ describe("what a special fence costs", () => {
     expect(t.maxHits, "the fast fence is not the fragile one").toBe(1);
   });
 
-  it("makes rebar the durable one", () => {
-    const rebar = getFenceType("rebar");
-    expect(rebar.maxHits ?? 0).toBeGreaterThan(3);
-    expect(rebar.buildSpeed).toBeLessThan(1);
+  it("charges the slingshot fence in build speed like every other special", () => {
+    // Redeploy's effect is a gesture rather than a collision rule, which makes
+    // it the type most likely to be quietly handed out for free. It pays the
+    // same price as the rest: it builds slower.
+    const r = getFenceType("redeploy");
+    expect(r.slingshot).toBe(true);
+    expect(r.buildSpeed).toBeLessThan(1);
+  });
+
+  it("has exactly one slingshot type", () => {
+    // A second one would need its own reason to exist, and the grab would have
+    // to choose between them.
+    const slings = getAllFenceTypes().filter(f => f.slingshot).map(f => f.id);
+    expect(slings).toEqual(["redeploy"]);
   });
 });

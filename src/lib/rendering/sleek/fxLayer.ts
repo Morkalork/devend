@@ -23,6 +23,8 @@ import {
   trajectoryTurnsFor,
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
+import { isLoadedSling, slingShape, slingCatches } from "@/lib/physics/slingFence";
+import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -91,6 +93,7 @@ export class FxLayer {
     this.over.clear();
 
     this.drawCutPreview(game, w2s, scale);
+    this.drawSlings(game, w2s, scale, now);
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
@@ -103,6 +106,83 @@ export class FxLayer {
     this.drawLockMarkers(game, w2s, scale);
     this.drawBallPops(game, w2s, scale, now);
     this.drawTrajectory(game, mods, w2s, scale);
+  }
+
+  /**
+   * The Redeploy fences: the grip on a loaded one, and the stretch on the one
+   * being pulled.
+   *
+   * Drawn here rather than in the wall layer because neither is a fence. The
+   * grip is a control, and the stretched band is a projection of intent - the
+   * same category as the cut preview, and drawn beside it for the same reason:
+   * a player has to be able to see what to grab before they have grabbed it,
+   * and what they will throw before they let go.
+   *
+   * A spent fence gets no grip. That is the whole of the "once per fence" UI:
+   * the affordance disappears when the throw does, so there is nothing to count
+   * and no meter to read.
+   */
+  private drawSlings(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const drag = game.slingDrag;
+    const dragWall = drag ? game.walls.find(w => w.id === drag.wallId) : undefined;
+
+    // Grips, on every loaded fence except the one in hand (which is drawn as a
+    // band below, and would otherwise carry a grip at a place it no longer is).
+    for (const wall of game.walls) {
+      if (!isLoadedSling(wall)) continue;
+      if (dragWall && wall === dragWall) continue;
+      const colour = parseColor(getFenceType(wall.fenceTypeId).color, PALETTE.accent);
+      const mid = w2s((wall.start.x + wall.end.x) / 2, (wall.start.y + wall.end.y) / 2);
+      // A slow breathe, so a loaded fence reads as waiting rather than as a
+      // decoration somebody painted on it.
+      const pulse = 0.75 + 0.25 * Math.sin(now / 420);
+      this.over.circle(mid.x, mid.y, 9 * scale * pulse)
+        .stroke({ width: Math.max(1.5, 2 * scale), color: colour, alpha: 0.85 });
+      this.over.circle(mid.x, mid.y, 3.5 * scale).fill({ color: colour, alpha: 0.9 });
+    }
+
+    if (!drag || !dragWall) return;
+    const shape = slingShape(dragWall, {
+      x: drag.current.x - drag.start.x,
+      y: drag.current.y - drag.start.y,
+    });
+    if (!shape) return;
+
+    const colour = parseColor(getFenceType(dragWall.fenceTypeId).color, PALETTE.accent);
+    const a = w2s(shape.a.x, shape.a.y);
+    const b = w2s(shape.b.x, shape.b.y);
+    // The bow: the band's midpoint dragged back OPPOSITE the throw, by the pull
+    // that was actually made. A quadratic through it, so it stretches the way a
+    // band does instead of hinging like a lever.
+    const pullLen = Math.hypot(drag.current.x - drag.start.x, drag.current.y - drag.start.y);
+    const mid = w2s(
+      (shape.a.x + shape.b.x) / 2 - shape.heading.x * pullLen,
+      (shape.a.y + shape.b.y) / 2 - shape.heading.y * pullLen,
+    );
+    const quad = (width: number, color: number, alpha: number) => {
+      this.over.moveTo(a.x, a.y).quadraticCurveTo(mid.x, mid.y, b.x, b.y)
+        .stroke({ width, color, alpha, cap: "round" });
+    };
+    quad((WALL_THICKNESS + 6) * scale, 0x000000, 0.5);
+    quad((WALL_THICKNESS + 2) * scale * (0.6 + 0.4 * shape.powerT), colour, 0.95);
+
+    // Where it will throw, from the fence's resting line: the aim, not the pull.
+    const c = w2s(shape.centre.x, shape.centre.y);
+    const tip = w2s(
+      shape.centre.x + shape.heading.x * 70,
+      shape.centre.y + shape.heading.y * 70,
+    );
+    dashedLine(this.over, c.x, c.y, tip.x, tip.y, 6 * scale, 7 * scale);
+    this.over.stroke({ width: Math.max(1.5, 2 * scale), color: colour, alpha: 0.6 });
+
+    // Everything it would catch, ringed LIVE. The throw cannot be taken back,
+    // so letting go has to be a confirmation rather than a guess - the same
+    // promise the Rubber Band overlay makes, kept by the same sweep function.
+    for (const ball of slingCatches(game, shape)) {
+      const p = w2s(ball.position.x, ball.position.y);
+      this.over.circle(p.x, p.y, (ball.radius + 8) * scale)
+        .stroke({ width: Math.max(2, 2.5 * scale), color: colour, alpha: 0.9 });
+    }
   }
 
   /**

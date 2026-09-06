@@ -87,7 +87,7 @@ describe("chewing", () => {
   it("does nothing for any other fence type", () => {
     // The whole point of the type: an ordinary fence resting on a slab is just
     // a fence resting on a slab.
-    for (const type of ["standard", "ice", "flare", "rebar", "tripwire"]) {
+    for (const type of ["standard", "ice", "flare", "redeploy", "tripwire"]) {
       const game = board();
       const d = game.destructibles!.find(x => x.kind === "breakable")!;
       fenceAgainstSlab(game, type);
@@ -243,7 +243,7 @@ describe("anchoring", () => {
   });
 
   it("is the only type in the catalogue allowed to", () => {
-    const drills = ["standard", "ice", "flare", "rebar", "tripwire", "drill"]
+    const drills = ["standard", "ice", "flare", "redeploy", "tripwire", "drill"]
       .filter(id => getFenceType(id).anchorOnBreakable);
     expect(drills).toEqual(["drill"]);
   });

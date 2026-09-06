@@ -24,16 +24,31 @@ import { SpaceGrid, isPositionActive } from "@/lib/spaceGrid";
 import { pointToSegmentDistance, closestPointOnSegment } from "@/lib/polygon";
 import { Vector2 } from "@/types/game";
 
+/**
+ * Does this wall border LIVE space on the side the point is on?
+ *
+ * The ghost-wall question, split out from the cut refusal because it is asked
+ * at two different reaches. A cut is refused within two wall-thicknesses; a
+ * Redeploy fence is grabbed from a fingertip's distance (slingFence.ts), which
+ * is further. Both need the same answer to "is this fence really here", and two
+ * copies of that sampling rule would be free to drift into disagreeing about
+ * which walls exist.
+ */
+export function wallBordersActiveSpaceAt(
+  worldPos: Vector2, wall: Wall, grid: SpaceGrid,
+): boolean {
+  const cp = closestPointOnSegment(worldPos, wall.start, wall.end);
+  const dx = worldPos.x - cp.x, dy = worldPos.y - cp.y;
+  const len = Math.hypot(dx, dy);
+  if (len <= 0.001) return true;   // basically on the wall -> it is here
+  const step = grid.cellSize || 15;
+  const sample = { x: cp.x + (dx / len) * step, y: cp.y + (dy / len) * step };
+  // Active border cell -> real boundary. Removed -> ghost stranded in dead space.
+  return isPositionActive(grid, sample);
+}
+
 export function wallBlocksCutStart(worldPos: Vector2, wall: Wall, grid: SpaceGrid): boolean {
   const dist = pointToSegmentDistance(worldPos, wall.start, wall.end);
   if (dist >= wall.thickness * 2) return false; // not close enough to matter
-  if (dist <= 0.001) return true;               // basically on the wall -> block
-
-  const cp = closestPointOnSegment(worldPos, wall.start, wall.end);
-  const dx = worldPos.x - cp.x, dy = worldPos.y - cp.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const step = grid.cellSize || 15;
-  const sample = { x: cp.x + (dx / len) * step, y: cp.y + (dy / len) * step };
-  // Active border cell -> real boundary, block. Removed -> ghost wall, ignore.
-  return isPositionActive(grid, sample);
+  return wallBordersActiveSpaceAt(worldPos, wall, grid);
 }

@@ -506,6 +506,9 @@ export function GameCanvas({
       game.swipeRegionId = null;
       game.currentSwipePos = null;
       game.swipePointerId = null;
+      // ... and any half-drawn Redeploy pull, for the same reason: a throw
+      // resumed across a pause would be aimed at a board that has moved.
+      game.slingDrag = null;
     } else {
       game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
       // A run-intro assemble armed while paused (e.g. behind the "How to win"
@@ -1135,6 +1138,7 @@ export function GameCanvas({
       game.swipeRegionId = null;
       game.currentSwipePos = null;
       game.swipePointerId = null;
+      game.slingDrag = null;
       game.lastTime = 0;
       game.accumulator = 0;
       game.lastAutoFreezeAt = 0; // Cron Job: restart the auto-freeze clock each map

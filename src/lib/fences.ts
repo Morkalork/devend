@@ -68,6 +68,15 @@ export interface FenceTypeDef {
   ballSpeedStep: number;
   /** Ball hits this fence survives before fracturing. Undefined = the default. */
   maxHits?: number;
+  /**
+   * Can a finished fence of this type be grabbed and thrown with?
+   *
+   * The one property that is not about what happens when a ball ARRIVES. A
+   * slingshot fence sits there finished until the player pulls it back and lets
+   * go, once, so it is the only type whose effect the player has to spend a
+   * gesture on rather than a cut.
+   */
+  slingshot: boolean;
   /** May a cut START on a breakable? Only the drill. */
   anchorOnBreakable: boolean;
   /** Damage per second dealt to a breakable this fence is touching. */
@@ -102,6 +111,7 @@ function parseEntry(raw: unknown): FenceTypeDef | null {
     buildSpeed,
     ballSpeedStep: num(r.ballSpeedStep, 0),
     maxHits,
+    slingshot: r.slingshot === true,
     anchorOnBreakable: r.anchorOnBreakable === true,
     drillDamage: Math.max(0, num(r.drillDamage, 0)),
     source: typeof r.source === "string" && VALID_SOURCES.has(r.source)
@@ -132,6 +142,7 @@ const LAST_RESORT: FenceTypeDef = {
   color: "#00ff88",
   buildSpeed: 1,
   ballSpeedStep: 0,
+  slingshot: false,
   anchorOnBreakable: false,
   drillDamage: 0,
   source: "always",

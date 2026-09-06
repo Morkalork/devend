@@ -23,6 +23,14 @@ Three departures, all in step 7:
    change their mind, which is the trade.
 3. **Ice and rebar moved from "store" to upgrade chains** for reason 1, so all
    four run-scoped types hang off lines the player already knows.
+4. **Rebar was replaced by `redeploy` before either shipped to players.**
+   Durability was the weakest entry in the table: `maxHits` is a number the
+   player cannot see, on a fence they are already trying not to have hit, so a
+   rebar fence that survived a ball felt like nothing happening. Redeploy is
+   the same slot spent on a VERB instead - the one type whose effect the player
+   performs rather than waits for. It is also the only one whose price is paid
+   twice: 40% slower to build, and a ball left travelling at up to three times
+   its speed for the rest of the map, which nothing in the engine damps.
 
 ---
 
@@ -99,7 +107,7 @@ the roster of four is a real choice from the moment the second is owned.
 | `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds 30% slower | upgrade chain (Feature Freeze) **[CHANGED]** |
 | `flare` | red, hot | a ball bouncing off it gains a speed step | builds 30% slower, and a faster ball is more dangerous to *you* | upgrade chain (Breaking Change) |
 | `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds 50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
-| `rebar` | heavy grey | survives more ball hits before fracturing (`maxHits`) | builds 40% slower | upgrade chain (Defensive Programming) **[CHANGED]** |
+| `redeploy` | rubber pink | a FINISHED one can be grabbed once, pulled back like a rubber band, aimed and released, and it flings the balls in front of it at up to 3x | builds 40% slower, and the ball it throws stays fast for the rest of the map | upgrade chain (Free Fall) **[CHANGED]** |
 | `tripwire` | thin yellow | builds 40% FASTER | fractures on the first hit | upgrade chain (Fast Compile) |
 
 `tripwire` is deliberately the inverse of the others: it proves the axis runs
@@ -168,6 +176,27 @@ whole system free.
 Cheap once step 3 and 4 exist: flare is ice with the sign flipped, rebar sets
 `maxHits`, tripwire sets it to 1 and takes a speed factor above 1.
 
+### Step 8 - Redeploy replaces rebar  **[CHANGED]**
+
+`slingFence.ts`, and it borrows rather than invents. The Rubber Band ability is
+already a band the player stretches, aims and releases; this is that band with
+the placement taken away, because the band is a fence you drew earlier. So it
+takes the ability's dead zone, full-pull length, power curve and sweep, and
+supplies only the two things that are its own: the SPAN (the fence's own length,
+which is why `BandShape.halfWidth` moved onto the shape) and the ANCHOR (the
+sweep is measured from the fence's resting line, not from the finger).
+
+- **The gesture** lives in `useGameInput`, ahead of the cut path. A press on a
+  fence is already refused as "wall in the way", so the grab replaces a refusal
+  rather than competing with a cut.
+- **Once per CUT**, not per segment: `Wall.cutId` is stamped by `applyCut` so a
+  cut that bounced is one fence with one throw.
+- **A throw that catches nothing spends nothing**, and the rings drawn during
+  the drag are what makes that a change of mind rather than a miss.
+- **No destructible damage**, deliberately. The ability does that, and an
+  unlimited fence type that also did would make a charged ability pointless and
+  hand every smash map a free second answer.
+
 ### Step 6 - The drill
 
 The only genuinely new physics, and it gets its own step for that reason.
@@ -192,8 +221,8 @@ The only genuinely new physics, and it gets its own step for that reason.
 
 ### Step 7 - Acquisition  **[CHANGED]**
 
-- **Upgrades**: `ice`, `rebar`, `flare` and `tripwire`, each a leaf on a chain
-  the player already knows - Feature Freeze, Defensive Programming, Breaking
+- **Upgrades**: `ice`, `redeploy`, `flare` and `tripwire`, each a leaf on a
+  chain the player already knows - Feature Freeze, Free Fall, Breaking
   Change, Fast Compile. A fence type is a change of VERB and worth walking to;
   a root would put it on the shelf of a player who has shown no interest in
   the line it belongs to.

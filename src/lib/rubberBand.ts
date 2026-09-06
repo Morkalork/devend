@@ -74,6 +74,16 @@ export interface BandShape {
   /** The band's two ends, perpendicular to the heading. */
   a: Vector2;
   b: Vector2;
+  /**
+   * Half the band's span, in world units.
+   *
+   * On the SHAPE rather than read from BAND_HALF_WIDTH inside inBandSweep,
+   * because the Redeploy fence is a band too and its span is the fence's own
+   * length. Two sweep functions that differed only in this number would be two
+   * rules for one word, and the fence's highlight would be free to disagree
+   * with its throw.
+   */
+  halfWidth: number;
   /** 0..1 of full stretch, for the visuals and for damage. */
   powerT: number;
   /** Multiple of base speed a caught ball leaves at. */
@@ -106,6 +116,7 @@ export function bandShape(start: Vector2, current: Vector2): BandShape | null {
     heading,
     a: { x: current.x - px * BAND_HALF_WIDTH, y: current.y - py * BAND_HALF_WIDTH },
     b: { x: current.x + px * BAND_HALF_WIDTH, y: current.y + py * BAND_HALF_WIDTH },
+    halfWidth: BAND_HALF_WIDTH,
     powerT: t,
     power: BAND_MIN_POWER + t * (BAND_MAX_POWER - BAND_MIN_POWER),
   };
@@ -126,7 +137,7 @@ export function inBandSweep(p: Vector2, shape: BandShape): boolean {
   const along = dx * shape.heading.x + dy * shape.heading.y;
   if (along < 0 || along > BAND_REACH) return false;
   const across = Math.abs(dx * -shape.heading.y + dy * shape.heading.x);
-  return across <= BAND_HALF_WIDTH;
+  return across <= shape.halfWidth;
 }
 
 /**

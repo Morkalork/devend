@@ -231,6 +231,10 @@ export function applyCutFn(
   // Each segment keeps the cell indices its rasterization removed, plus an
   // Ascension durability budget — both needed if the fence later breaks
   // (see breakFenceWall.ts).
+  // One id for the whole gesture, shared by every segment it lays down. A cut
+  // that bounces is several walls and one fence, and the Redeploy throw is
+  // spent per FENCE.
+  const cutId = generateWallId();
   const addSegmentWalls = (waypoints: Vector2[]) => {
     const now = performance.now();
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -244,6 +248,7 @@ export function applyCutFn(
         // segment rather than per cut because a fence is only ever read as
         // walls after this point - the GrowingWall is gone.
         fenceTypeId: wall.fenceTypeId ?? STANDARD_FENCE_ID,
+        cutId,
       };
       if (game.spaceGrid) {
         segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);

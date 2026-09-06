@@ -27,6 +27,9 @@
 #                 to a ceiling; debounced, so one contact counts once.
 #   maxHits       ball hits this fence survives before it fractures. Absent =
 #                 the game's default (FENCE_FRACTURE_HITS).
+#   slingshot     true = a finished fence of this type can be grabbed and
+#                 pulled back once, like a rubber band, to fling the balls in
+#                 front of it. Only the redeploy fence.
 #   anchorOnBreakable  true = a cut may START on a breakable. Only the drill.
 #   drillDamage   damage per second dealt to a breakable this fence touches.
 #   source        where it comes from: always | upgrade | certificate.
@@ -67,14 +70,18 @@ fences:
     description: "Balls bouncing off it speed up. Faster balls are worth more, and more dangerous."
     howTo: "Line it where you want a ball moving, and stay out of its way."
 
-  - id: rebar
-    name: Rebar
-    color: "#b9c4cf"
+  # The only fence that is also a GESTURE. Every other type changes what
+  # happens when a ball meets it; this one waits, finished, until the player
+  # grabs it and throws something. Once per fence, and then it is an ordinary
+  # fence forever - which is why it needs no meter: a spent one loses its grip.
+  - id: redeploy
+    name: Redeploy
+    color: "#ff8fd0"
     buildSpeed: 0.6
-    maxHits: 6
+    slingshot: true
     source: upgrade
-    description: "Takes far more punishment before it shatters."
-    howTo: "Spend it on the one cut you cannot afford to lose."
+    description: "A finished one is a slingshot, once: pull it back, aim, and it flings the balls in front of it."
+    howTo: "Build it across a lane, then press on it and drag back. What it catches leaves at up to 3x speed."
 
   # The only entry that is faster than standard, and the only one that is more
   # fragile. It exists so the WIP-limit maps have an answer that is not simply

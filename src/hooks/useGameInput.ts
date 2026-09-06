@@ -25,6 +25,7 @@ import {
   SUPERIOR_LOCK_DURATION,
 } from "@/lib/gameConstants";
 import { fencesBlockedByLauncher } from "@/lib/physics/launcher";
+import { loadedSlingAt, slingShape, fireSlingFence } from "@/lib/physics/slingFence";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -138,6 +139,15 @@ export function useGameInput(
       const game = gameRef.current;
       if (!game) return;
 
+      // Second-finger cancel, for a Redeploy pull. The same meaning the second
+      // finger already has for a cut, and it must come first: a throw that
+      // cannot be called off is a throw nobody dares start.
+      if (game.slingDrag && e.pointerId !== game.slingDrag.pointerId) {
+        game.slingDrag = null;
+        if (navigator.vibrate) navigator.vibrate(30);
+        return;
+      }
+
       // Second-finger cancel: if a swipe is in progress and a different pointer comes down, cancel it
       if (game.swipeStart && game.swipePointerId !== null && e.pointerId !== game.swipePointerId) {
         game.swipeStart       = null;
@@ -215,6 +225,29 @@ export function useGameInput(
         }
       }
 
+      // A press on a loaded Redeploy fence GRABS it instead of starting a cut.
+      //
+      // Deliberately before the fence-limit check: pulling a fence back is not
+      // drawing one, and refusing the throw because a fence happens to be
+      // growing elsewhere would be a rule about the wrong thing. It is also
+      // ahead of the cut path because that path would refuse this press
+      // anyway - a press on a fence is "wall in the way" - so the gesture
+      // replaces a refusal rather than competing with a cut.
+      {
+        const c = getCanvasCoords(e);
+        if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
+          const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+          const sling = loadedSlingAt(game, w);
+          if (sling) {
+            clearHold();
+            game.slingDrag = {
+              wallId: sling.id, start: w, current: w, pointerId: e.pointerId,
+            };
+            return;
+          }
+        }
+      }
+
       // At the concurrent-fence limit, no new cut can start.
       if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) {
         onMessageRef?.current?.("fenceLimit");
@@ -273,6 +306,15 @@ export function useGameInput(
         if (dx * dx + dy * dy > HOLD_MOVE_SLOP * HOLD_MOVE_SLOP) clearHold();
       }
 
+      // A Redeploy fence being pulled back. Unclamped to the board on purpose:
+      // the pull is a direction and a length, and clamping it at the edge would
+      // silently cap the power of a throw aimed from near the frame.
+      if (game.slingDrag && e.pointerId === game.slingDrag.pointerId) {
+        const c = getCanvasCoords(e);
+        game.slingDrag.current = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+        return;
+      }
+
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
       if (e.pointerId !== game.swipePointerId) return;
 
@@ -291,6 +333,23 @@ export function useGameInput(
       // Releasing before the hold fires cancels the star explainer (a star press
       // never set swipeStart, so the cut block below is a no-op for it).
       clearHold();
+
+      // Let go of a Redeploy fence: it snaps forward and throws.
+      const drag = game.slingDrag;
+      if (drag) {
+        game.slingDrag = null;
+        const wall = game.walls.find(w => w.id === drag.wallId);
+        const shape = wall
+          ? slingShape(wall, { x: drag.current.x - drag.start.x, y: drag.current.y - drag.start.y })
+          : null;
+        // A tap on the fence, or a throw that caught nothing, spends nothing:
+        // the player could see the rings while they dragged, so an empty
+        // release is a change of mind rather than a miss to charge them for.
+        if (wall && shape && fireSlingFence(game, wall, shape)) {
+          if (navigator.vibrate) navigator.vibrate(25);
+        }
+        return;
+      }
 
       if (
         game.swipeStart &&
