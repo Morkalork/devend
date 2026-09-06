@@ -2108,13 +2108,19 @@ upgrades:
   # is three or four upgrades of one tag, so the tag set bonus and the fence
   # land in the same purchase: commit to a line and it crowns itself twice.
   #
-  # The family is chosen for what it DOES, not for where the fence used to sit.
-  # Ice comes out of Load Balancer, the line that takes speed off balls, because
-  # that is ice's whole job. Flare comes out of Technical Debt - more overtime,
-  # faster balls, your problem - which is flare's deal word for word. Tripwire
-  # comes out of Runway, the line about fences finishing sooner. Redeploy comes
-  # out of Severance Package, which pays you per lock, crowned by the tool that
-  # manufactures one.
+  # The family is chosen for what it DOES - except where that would fight what
+  # the player already expects, and then expectation wins. Flare comes out of
+  # Technical Debt (more overtime, faster balls, your problem), which is flare's
+  # deal word for word. Tripwire comes out of Runway, the line about fences
+  # finishing sooner. Redeploy comes out of Severance Package, which pays you
+  # per lock, crowned by the tool that manufactures one.
+  #
+  # Ice stays on FEATURE FREEZE, and that is a deliberate override. On the
+  # mechanics Load Balancer is the better fit - ice takes a speed step per
+  # bounce and Load Balancer is the line that slows balls, while Feature Freeze
+  # stops them dead - but an ice fence that is not on the freeze line reads as a
+  # mistake before anyone gets far enough to notice it is not. A player looking
+  # for the cold thing looks under the cold build.
   #
   # And each carries its family's TAG. That is not decoration: shop weight is
   # 1 + owned upgrades sharing a tag, so a player who just maxed Technical Debt
@@ -2146,10 +2152,10 @@ upgrades:
     name: Cold Storage
     tier: Principal
     description: "Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower."
-    unlockLevel: 13
+    unlockLevel: 14
     icon: snowflake
-    unlockAfterChoice: load_balancer_architect
-    tags: [safety, freeze]
+    unlockAfterChoice: feature_freeze_principal
+    tags: [freeze]
     grantsFenceType: ice
     modifiers: {}
 

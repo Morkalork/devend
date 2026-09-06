@@ -306,14 +306,22 @@ can never be bought (the graph validator says so), and naming one makes a
 reward a coin flip deletes. `unlockAfterChoice` is eligible once ANY member is
 owned. See `lib/upgradeUnlock.ts`.
 
-**The family is chosen for what it does**, not for where the fence used to sit:
+**The family is chosen for what it does** - except where that would fight what
+the player already expects, and then expectation wins:
 
 | Fence | Family maxed | Because |
 |---|---|---|
-| Ice | Load Balancer (L13) | the line that takes speed off balls |
 | Tripwire | Runway (L11) | the line about fences finishing sooner |
+| Ice | Feature Freeze (L14) | where a player looks for the cold thing |
 | Flare | Technical Debt (L14) | "more overtime, faster balls" is flare's deal word for word |
 | Redeploy | Severance Package (L18) | paid per lock, crowned by the tool that manufactures one |
+
+Ice is the deliberate override. On the mechanics Load Balancer is the better
+fit - ice takes a speed step per bounce and that is the line that slows balls,
+while Feature Freeze stops them dead - but an ice fence that is not on the
+freeze line reads as a mistake before anyone gets far enough to notice it is
+not. A rule about what a mechanic IS loses to a rule about where a player will
+go looking for it.
 
 Top tiers across the catalogue land anywhere from L5 to L32; these are picked
 from the L11-L18 band so there is half a run left to play with the fence.
