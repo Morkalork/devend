@@ -23,6 +23,7 @@ import {
   Ball,
 } from "@/types/game";
 import { getBallType } from "@/lib/ballTypes";
+import { resumeDrillThrough } from "@/lib/physics/drill";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { getRunRng } from "@/lib/runRng";
 import { makeChestLoot } from "@/lib/chests";
@@ -762,6 +763,14 @@ export function processDestroysFn(
     wasteCapturedPickups(game);
     callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
   }
+
+  // A drill that was eating one of these carries on through the gap it just
+  // made (FENCE_TYPES_PLAN.md). LAST, and after the region rebuild above, for
+  // one reason: the continuation casts a ray against the board as it is NOW,
+  // and cast a moment earlier it would stop dead on the obstacle that is no
+  // longer there. Spawned as an ordinary growing fence, so it can be cut by a
+  // ball and runs every check a normal cut runs.
+  for (const d of pending) resumeDrillThrough(game, d);
 
   callbacks.onObjectDestroyed?.();
 }

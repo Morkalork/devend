@@ -16,7 +16,7 @@ import {
   vec2Length,
   vec2Normalize,
 } from "@/lib/polygon";
-import { STANDARD_FENCE_ID } from "@/lib/fences";
+import { STANDARD_FENCE_ID, getFenceType } from "@/lib/fences";
 import { WALL_THICKNESS, castRayWithReflections } from "@/lib/wallGeometry";
 import {
   BASE_SWIPE_MIN_DISTANCE,
@@ -402,7 +402,11 @@ export function useGameInput(
 
             // Issue #38: you can't fence against a breakable structure — if the
             // cut would anchor on one, it "duds" (no wall, brief feedback).
-            if (cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
+            // ...unless the selected fence type is allowed to. The drill is
+            // the only one, and it is what turns this refusal from an
+            // arbitrary rule into "only the drill bites into slabs".
+            const mayAnchor = getFenceType(game.selectedFenceTypeId).anchorOnBreakable;
+            if (!mayAnchor && cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
               game.lastDudAt = performance.now();
               // The buzz and the flash say "no" without saying why, and this is
               // the refusal the player is most likely to read as a bug: the

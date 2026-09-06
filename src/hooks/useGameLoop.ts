@@ -22,6 +22,7 @@ import { tickChains } from "@/lib/physics/chain";
 import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
 import { tickCages } from "@/lib/physics/cage";
 import { tickCharges } from "@/lib/physics/charge";
+import { tickDrills } from "@/lib/physics/drill";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -520,6 +521,14 @@ export function createGameLoop(
     // its target slab onto pendingDestroys and shredded fences onto
     // pendingWallBreaks, and we want both applied this same frame.
     tickCharges(game, { onChargeBlown: callbacks.onChargeBlown });
+    // A drill fence eats whatever slab it is resting against.
+    //
+    // `dt`, the FRAME's own elapsed seconds - not PHYSICS_STEP. This block runs
+    // once per frame, outside the fixed-step loop above, so a fixed step here
+    // would be the exact bug the per-second rate exists to avoid: a 120Hz phone
+    // would chew twice as fast as a 60Hz one, and it would only ever show up on
+    // somebody else's device.
+    tickDrills(game, dt);
 
     // Break any Ascension fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)

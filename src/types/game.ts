@@ -332,6 +332,15 @@ export interface DestructibleState {
   objective?: boolean;         // breakable: smashing it awards more bonus
   dents?: ImpactDent[];        // world-space impact points — rendered as inward dents
   fenceStyle?: boolean;        // breakable: render as a barrier/fence line, not a block
+  /**
+   * The drill fence that was eating this slab when it died, so the fence can
+   * resume growing through the gap (FENCE_TYPES_PLAN.md).
+   *
+   * On the DESTRUCTIBLE rather than the wall because the slab is the thing
+   * about to disappear, and because a slab can only ever be continued through
+   * once - clearing it is how that is guaranteed.
+   */
+  drilledByWallId?: string;
   sealedCells?: number[];      // breakable gate: grid cells of the sealed area to reopen on break
   chest?: boolean;             // treasure chest (#38): smashing it grants a run bonus
   chestRewards?: string[];     // chest: hybrid reward pool (empty/absent = full default pool)

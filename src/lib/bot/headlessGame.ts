@@ -35,6 +35,7 @@ import { applyCutFn, checkSpaceWin } from "@/lib/physics/applyCut";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { tickCharges } from "@/lib/physics/charge";
+import { tickDrills } from "@/lib/physics/drill";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
@@ -288,6 +289,11 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // onto pendingDestroys and shredded fences onto pendingWallBreaks and both
   // should land the same frame.
   tickCharges(game, {});
+  // The drill chews here too. The bot never selects one, so this is dead on
+  // every sweep today - and it is here anyway, because the harness exists to
+  // run the same loop the browser runs, and a pass it silently omits is how
+  // three end-of-frame passes came to be missing from it before.
+  tickDrills(game, dt);
   if (game.pendingWallBreaks.length > 0) processWallBreaksFn(game, callbacks);
   if (game.pendingDestroys.length > 0) {
     processDestroysFn(game, callbacks, levelNumber, modifiers);
