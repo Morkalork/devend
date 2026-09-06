@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { LAUNCHER_SEEN_KEY, BOX_SEEN_KEY, CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
-import { FENCE_TYPES_SEEN_KEY } from '@/lib/fenceSeen';
+import { FENCE_TYPES_SEEN_KEY, FENCE_SWITCHING_SEEN_KEY } from '@/lib/fenceSeen';
 import { ABILITIES_SEEN_KEY } from '@/lib/abilitySeen';
 
 /**
@@ -152,6 +152,7 @@ export function useTutorialManager() {
       // only explanation either system has. Same failure as the circuit hint
       // above, twice more.
       localStorage.removeItem(FENCE_TYPES_SEEN_KEY);
+      localStorage.removeItem(FENCE_SWITCHING_SEEN_KEY);
       localStorage.removeItem(ABILITIES_SEEN_KEY);
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith(CIRCUIT_SEEN_PREFIX)) localStorage.removeItem(key);

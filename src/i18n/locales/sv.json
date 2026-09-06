@@ -287,7 +287,7 @@
     "bottomBarTutorialTitle": "Dina specs",
     "bottomBarTutorialBody": "Tryck på Specs när som helst för varje värde som formar din runda, förklarat enkelt.",
     "fenceSlotsTutorialTitle": "Stängselplatser",
-    "fenceSlotsTutorialBody": "Raden under brädet avgör vilken SORTS stängsel ditt nästa snitt ritar. Plats 1 är standardstängslet och tar aldrig slut; de fyra tomma fylls med specialstängsel du låser upp senare. Tryck på en plats för att välja den, håll inne för att läsa vad den gör.",
+    "fenceSlotsTutorialBody": "Raden under brädet väljer vilken SORTS stängsel ditt nästa snitt ritar. Plats 1 är standardstängslet och tar aldrig slut; de andra fyra rymmer de special du låser upp. Tryck på en plats så blir varje snitt den typen tills du väljer en annan. Håll inne en plats för att läsa vad den gör.",
     "timeLimitTutorialTitle": "Tidsgräns",
     "timeLimitTutorialBody": "Nu har varje karta en tidsgräns. Klara den innan baren tar slut annars är rundan över; liv räddar dig inte. Bli klar tidigt för bonusövertid.",
     "infoUnlocked": "Info upplåst",

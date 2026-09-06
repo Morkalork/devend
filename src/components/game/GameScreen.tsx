@@ -18,6 +18,7 @@ import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
+import { hasSeenFenceSwitching, markFenceSwitchingSeen } from '@/lib/fenceSeen';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
@@ -424,6 +425,32 @@ export function GameScreen({
   // day and the ability row wraps, so no constant survives contact.
   const bottomBarsPx = useBottomBarsHeight();
 
+  /**
+   * The first special fence a player ever owns, and the thing nobody told them.
+   *
+   * Acquiring one auto-opens that TYPE's card, which says what that fence does.
+   * Nothing said the bar is a CHOOSER: that a cut now comes in kinds, that the
+   * choice is a mode which stays until changed, and that standard is still
+   * there in slot 1. The card mentions selection in a footer line, which is
+   * where a reader who already knows looks and a reader who does not never
+   * does.
+   *
+   * Shown BEFORE the type's own card, not after, for two reasons. The card's
+   * footer would otherwise repeat what was just read, and the order matches
+   * what is being learned: here is the row, then here is the thing you just put
+   * in it.
+   */
+  const ownsSpecialFence =
+    (gameState.fenceSlotIds ?? []).some(id => id !== STANDARD_FENCE_ID);
+  const [fenceSwitchIntro, setFenceSwitchIntro] = useState(false);
+  useEffect(() => {
+    if (!ownsSpecialFence || hasSeenFenceSwitching()) return;
+    // Marked on ARMING, not on dismiss: dying on the map that granted the fence
+    // would otherwise re-arm it on the retry, and again on the next run.
+    markFenceSwitchingSeen();
+    setFenceSwitchIntro(true);
+  }, [ownsSpecialFence]);
+
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
     onGameStateChange?.(state); // forward to a parent (Playground ability tester)
@@ -797,7 +824,7 @@ export function GameScreen({
   const anyExplainerModal =
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
     || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro
-    || showCircuitOverlay;
+    || showCircuitOverlay || fenceSwitchIntro;
 
 
   // Mechanics the player has just met. These used to stop the game to deliver a
@@ -1140,6 +1167,7 @@ export function GameScreen({
                 accentColor={accentColor}
                 onSelect={gameState.onSelectFenceType ?? (() => {})}
                 onInfoOpenChange={setFenceInfoOpen}
+                deferAutoInfo={fenceSwitchIntro}
               />
             </div>
           )}
@@ -1405,7 +1433,12 @@ export function GameScreen({
           first, then the per-map "how to win", then one-time teaching overlays,
           and finally the Draw-A-Fence coach (#62). */}
       {anyExplainerModal && (() => {
-        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void; graphic?: React.ReactNode; align?: "center" | "left" };
+        type Explainer = {
+          show: boolean; accentColor: string; title: string; body: string;
+          onDismiss: () => void; graphic?: React.ReactNode; align?: "center" | "left";
+          /** Cut a hole in the scrim over the thing being talked about. */
+          spotlightArea?: 'top' | 'bottom'; spotlightHeightPx?: number;
+        };
         const queue: Explainer[] = [
           ...(level.boss ? [{
             show: showBossOverlay,
@@ -1475,6 +1508,19 @@ export function GameScreen({
             onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
           },
           {
+            // The same words the Manual files under `fenceSlots`, deliberately:
+            // one statement of how the bar works, read here the first time and
+            // available from Specs forever after.
+            show: fenceSwitchIntro, accentColor,
+            title: t('game.fenceSlotsTutorialTitle'), body: t('game.fenceSlotsTutorialBody'),
+            // Over the bar itself, which is the whole point: the scrim leaves
+            // the slots lit so the player reads the sentence and the row it is
+            // about at the same time. The height is the measured stack, so the
+            // hole cannot drift from what it is cutting around.
+            spotlightArea: 'bottom' as const, spotlightHeightPx: bottomBarsPx,
+            onDismiss: () => { fileManualEntry('fenceSlots'); setFenceSwitchIntro(false); },
+          },
+          {
             show: fenceIntroOpen, accentColor,
             title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'), graphic: <FenceArt />,
             // Dismissing marks it seen. The modal IS the explanation; the guided
@@ -1496,6 +1542,8 @@ export function GameScreen({
             body={active.body}
             align={active.align}
             graphic={active.graphic}
+            spotlightArea={active.spotlightArea}
+            spotlightHeightPx={active.spotlightHeightPx}
           />
         ) : null;
       })()}

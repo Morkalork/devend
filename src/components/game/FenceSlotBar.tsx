@@ -50,13 +50,25 @@ interface FenceSlotBarProps {
   onSelect: (fenceTypeId: string) => void;
   /** Signals when the explainer opens/closes, so the shell can pause the game. */
   onInfoOpenChange?: (open: boolean) => void;
+  /**
+   * Hold the first-acquire explainer back for now.
+   *
+   * GameScreen shows a one-time "this bar is a chooser" overlay the first time
+   * the player owns any special, and that overlay is z-[60] while this card is
+   * z-[80] - so without this the card lands on top of the thing explaining the
+   * bar it belongs to. The card is not dropped, only queued: it opens the
+   * moment this goes false.
+   */
+  deferAutoInfo?: boolean;
 }
 
 export function FenceSlotBar({
-  slotIds, selectedId, accentColor, onSelect, onInfoOpenChange,
+  slotIds, selectedId, accentColor, onSelect, onInfoOpenChange, deferAutoInfo = false,
 }: FenceSlotBarProps) {
   const { t } = useTranslation();
   const [info, setInfo] = useState<FenceTypeDef | null>(null);
+  // A type whose card is owed but not yet shown; see deferAutoInfo.
+  const [pendingInfoId, setPendingInfoId] = useState<string | null>(null);
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heldRef = useRef(false);
@@ -88,7 +100,9 @@ export function FenceSlotBar({
   const ownedKey = owned.map(f => f.id).join(',');
   useEffect(() => {
     const fresh = owned.find(f => f.id !== STANDARD_FENCE_ID && !hasSeenFenceType(f.id));
-    if (fresh) { markFenceTypeSeen(fresh.id); setInfo(fresh); }
+    // Marked seen HERE rather than when the card opens, so a card held back by
+    // deferAutoInfo cannot be re-armed by a remount in between and shown twice.
+    if (fresh) { markFenceTypeSeen(fresh.id); setPendingInfoId(fresh.id); }
     // Owning one is meeting the system, whether or not this particular type is
     // new. GameScreen files it at level 3 with the rest of the bottom strip,
     // but a Head Start certificate can start a run past level 3 entirely, and
@@ -96,6 +110,13 @@ export function FenceSlotBar({
     if (owned.length > 1) fileManualEntry('fenceSlots');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownedKey]);
+
+  // Release the owed card once nothing is in front of it.
+  useEffect(() => {
+    if (!pendingInfoId || deferAutoInfo) return;
+    setInfo(getFenceType(pendingInfoId));
+    setPendingInfoId(null);
+  }, [pendingInfoId, deferAutoInfo]);
 
   useEffect(() => {
     onInfoOpenChange?.(!!info);

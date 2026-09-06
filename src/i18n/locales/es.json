@@ -287,7 +287,7 @@
     "bottomBarTutorialTitle": "Tu ficha",
     "bottomBarTutorialBody": "Toca Specs cuando quieras para ver cada estadistica de tu partida, explicada con claridad.",
     "fenceSlotsTutorialTitle": "Ranuras de valla",
-    "fenceSlotsTutorialBody": "La fila bajo el tablero decide QUE TIPO de valla dibuja tu proximo corte. La ranura 1 es la valla estandar y nunca se agota; las cuatro vacias se llenan con vallas especiales que desbloqueas mas adelante. Toca una ranura para elegirla, manten pulsada para leer que hace.",
+    "fenceSlotsTutorialBody": "La fila bajo el tablero elige QUE TIPO de valla dibuja tu proximo corte. La ranura 1 es la valla estandar y nunca se agota; las otras cuatro guardan las especiales que desbloqueas. Toca una ranura y cada corte es de ese tipo hasta que elijas otra. Manten pulsada una ranura para leer que hace.",
     "timeLimitTutorialTitle": "Límite de tiempo",
     "timeLimitTutorialBody": "Ahora cada mapa tiene limite de tiempo. Complétalo antes de que la barra se vacie o la partida termina; las vidas no te salvan. Termina pronto para horas extra.",
     "infoUnlocked": "Información desbloqueada",

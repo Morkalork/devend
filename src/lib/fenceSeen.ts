@@ -43,3 +43,34 @@ export function markFenceTypeSeen(id: string): void {
     /* ignore storage failures */
   }
 }
+
+/**
+ * Whether the player has been shown how the SLOT BAR works, once ever.
+ *
+ * A separate one-shot from the per-type explainers above, because it answers a
+ * different question. A type's card says what that fence does; nothing said
+ * that the bar is a chooser at all, so the first special arrived and the
+ * player was told about a fence without being told they now had to pick
+ * between fences. The card's own footer mentions it in a line at the bottom,
+ * which is where a reader who already knows looks and a reader who does not
+ * never does.
+ */
+export const FENCE_SWITCHING_SEEN_KEY = "devend:fenceSwitchingSeen";
+
+export function hasSeenFenceSwitching(): boolean {
+  try {
+    return localStorage.getItem(FENCE_SWITCHING_SEEN_KEY) === "1";
+  } catch {
+    // Blocked storage costs a repeated explainer, never a crash on the path
+    // that draws the bar.
+    return false;
+  }
+}
+
+export function markFenceSwitchingSeen(): void {
+  try {
+    localStorage.setItem(FENCE_SWITCHING_SEEN_KEY, "1");
+  } catch {
+    /* ignore storage failures */
+  }
+}

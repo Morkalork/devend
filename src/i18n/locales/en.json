@@ -289,7 +289,7 @@
     "bottomBarTutorialTitle": "Your Specs",
     "bottomBarTutorialBody": "Tap Specs any time for every stat that shapes your run, explained plainly.",
     "fenceSlotsTutorialTitle": "Fence Slots",
-    "fenceSlotsTutorialBody": "The row under the board is which KIND of fence your next cut draws. Slot 1 is the standard fence and never runs out; the four empties fill with special fences you unlock later. Tap a slot to select it, press and hold one to read what it does.",
+    "fenceSlotsTutorialBody": "The row under the board picks which KIND of fence your next cut draws. Slot 1 is the standard fence and never runs out; the other four hold the specials you unlock. Tap a slot and every cut is that type until you pick another. Press and hold a slot to read what it does.",
     "timeLimitTutorialTitle": "Time Limit",
     "timeLimitTutorialBody": "Every map now has a time limit. Clear it before the bar empties or the run ends, lives won't save you. Finish early for bonus overtime.",
     "infoUnlocked": "Info Unlocked",

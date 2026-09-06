@@ -94,7 +94,7 @@ fences:
     buildSpeed: 0.6
     slingshot: true
     source: upgrade
-    description: "A finished one is a slingshot, once: pull it back, aim, and it flings the balls in front of it."
+    description: "A finished fence is a slingshot, once: pull it back, aim, and it flings the balls in front of it."
     howTo: "Build it across a lane, then press on it and drag back. What it catches leaves at up to 3x speed."
 
   # The one you can find without committing to anything (upgrades.yml: Set A
@@ -112,7 +112,7 @@ fences:
     holdMs: 2000
     holdsPerMap: 1
     source: upgrade
-    description: "Once a map, the first ball to bounce off a finished one is held still for 2 seconds."
+    description: "Once a map, the first ball to bounce off a finished fence is held still for 2 seconds."
     howTo: "Build it in a lane you need to stop using, and let a ball find it."
 
   # ── The two lock-band fences ───────────────────────────────────────────────
