@@ -40,6 +40,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Wall } from "@/lib/wallGeometry";
 import { pointToSegmentDistance, type Vector2 } from "@/lib/polygon";
 import { getFenceType } from "@/lib/fences";
+import { BASE_BALL_RADIUS, FREEZE_TAP_SLOP } from "@/lib/gameConstants";
 import { wallBordersActiveSpaceAt } from "@/lib/physics/cutStart";
 import {
   BAND_DEAD_PULL, BAND_FULL_PULL, BAND_MIN_POWER, BAND_MAX_POWER,
@@ -49,12 +50,31 @@ import {
 /**
  * How far from a fence a press still counts as grabbing it, in world units.
  *
- * Generous, and on purpose: a fence is six units thick and a fingertip covers
- * far more of the board than that. Missing the grab does not merely fail, it
- * falls through to the cut path and gets refused as "wall in the way", so a
- * near miss reads as the game not understanding the gesture.
+ * Sized against the game's OTHER touch targets rather than picked. Tapping a
+ * ball reaches BASE_BALL_RADIUS + FREEZE_TAP_SLOP, and a superior-lock star
+ * reaches 28; a fence is six units thick, so unlike a ball it brings almost
+ * nothing of its own and the slop has to be the whole target. Reusing the ball
+ * tap's 22 was exactly that mistake: it made the grab a 25-unit reach against
+ * the ball tap's 40, roughly eleven CSS pixels on a phone, and the first thing
+ * that happened was a cut drawn where a throw was meant.
+ *
+ * The asymmetry says be generous. A grab that should have been a cut costs the
+ * gesture and nothing else - release without catching anything and the fence is
+ * not even spent. A cut that should have been a grab costs a fence out of the
+ * map's budget and cannot be taken back.
  */
-export const SLING_GRAB_SLOP = 22;
+export const SLING_GRAB_SLOP = BASE_BALL_RADIUS + FREEZE_TAP_SLOP + 8;
+
+/**
+ * The whole reach, fence thickness included: what the grip is drawn at.
+ *
+ * Exported so the renderer draws the circle it actually tests. A grip drawn
+ * smaller than the target teaches the player to aim more precisely than they
+ * need to; drawn larger, it promises a grab that will not happen.
+ */
+export function slingGrabReach(wall: Wall): number {
+  return wall.thickness / 2 + SLING_GRAB_SLOP;
+}
 
 /** True when this fence is a slingshot that has not been thrown yet. */
 export function isLoadedSling(wall: Wall): boolean {
@@ -81,7 +101,7 @@ export function loadedSlingAt(
   let bestDist = Infinity;
   for (const wall of game.walls) {
     if (!isLoadedSling(wall)) continue;
-    const reach = wall.thickness / 2 + SLING_GRAB_SLOP;
+    const reach = slingGrabReach(wall);
     const d = pointToSegmentDistance(point, wall.start, wall.end);
     if (d > reach || d >= bestDist) continue;
     // No grid is not a ghost: unknown must not refuse a grab that is probably

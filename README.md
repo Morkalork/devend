@@ -84,6 +84,31 @@ client bundle: the bundle is public, so a secret shipped in it would gate
 nothing. It is compared in constant time, so it cannot be found a character at
 a time by timing the reply.
 
+### Which server answers, and what Save therefore does
+
+`PUT /api/map` is answered by whichever server is listening, and the two do
+completely different things. Both save buttons - the MapBuilder's and the
+Playground level panel's - go through `src/lib/mapSave.ts`, so they behave
+identically; only the server differs.
+
+| Running | What Save does | Secret needed |
+|---|---|---|
+| `npm run dev` | Vite plugin **writes `public/map.yml` on your disk**. No git at all: you commit and push it yourself. | no |
+| `npm start` (after `npm run build`) | `server/index.js` **commits to GitHub**, branch `MAP_COMMIT_BRANCH` (default `dev`). Never touches disk. | yes |
+| a static host | Rewrites the PUT to `index.html`. The save is refused rather than believed. | n/a |
+
+The commit route works locally too, if you want a save to land on `dev` without
+a manual commit:
+
+```sh
+npm run build
+GITHUB_TOKEN=github_pat_... MAP_EDIT_SECRET=anything npm start
+```
+
+It prints which mode it is in on boot, and the commit goes **straight to GitHub**
+rather than through your checkout - so `git pull` afterwards or your local copy
+is behind.
+
 > **The token is the thing to be careful with.** Anyone holding it can commit to
 > the repo. Scope it to contents-write on this repo alone, and rotate it if the
 > app is ever shared. `MAP_EDIT_SECRET` is what stops a player who finds the

@@ -10,6 +10,7 @@ import {
 import type { AddEntityType } from './EntityPanel';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
+import { saveMapYaml, mapSaveMessage, promptForMapSecret } from '@/lib/mapSave';
 import yaml from 'js-yaml';
 import { spliceYamlEntries } from '@/lib/yamlSplice';
 import {
@@ -24,15 +25,6 @@ import { MechanicSpreadPanel } from './MechanicSpreadPanel';
 interface MapBuilderProps {
   onBack: () => void;
 }
-
-/**
- * Where the editor secret lives.
- *
- * localStorage, never the bundle: the map builder is reachable on the deployed
- * build, and anything compiled into the client is readable by anyone who opens
- * it - so a secret shipped that way would gate nothing.
- */
-const MAP_SECRET_KEY = 'devend:mapEditSecret';
 
 export function MapBuilder({ onBack }: MapBuilderProps) {
   const [levels, setLevels] = useState<LevelConfig[]>([]);
@@ -762,49 +754,32 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const saveToServer = useCallback(async () => {
     setSaveStatus('saving');
     const yamlContent = saveYaml();
-    try {
-      let secret = '';
-      try { secret = localStorage.getItem(MAP_SECRET_KEY) ?? ''; } catch { /* private mode */ }
-      const res = await fetch('/api/map', {
-        method: 'PUT',
-        body: yamlContent,
-        headers: {
-          'Content-Type': 'text/yaml',
-          ...(secret ? { 'X-Map-Secret': secret } : {}),
-        },
-      });
 
-      // 401 means the server IS configured and did not like the secret, which
-      // is the one error worth interrupting for: ask, keep it, and try again.
-      if (res.status === 401) {
-        const given = window.prompt(
-          'Editor secret for saving to the repo (MAP_EDIT_SECRET):', '');
-        if (given) {
-          try { localStorage.setItem(MAP_SECRET_KEY, given); } catch { /* private mode */ }
-          setSaveStatus('idle');
-          return;
-        }
-      }
+    let result = await saveMapYaml(yamlContent);
+    // A 401 means the endpoint IS there and configured and did not like the
+    // secret, which is the one failure the author can fix from here. Ask, then
+    // RETRY rather than making them press Save a second time - the old code
+    // dropped back to idle after the prompt and the second press was the part
+    // people forgot.
+    if (!result.ok && result.reason === 'auth' && promptForMapSecret()) {
+      result = await saveMapYaml(yamlContent);
+    }
 
-      if (!res.ok) {
-        // The server sends a sentence saying what to go and do - a missing
-        // config var, a stale file, a token without write access. A deployed
-        // build has no console to read, so it goes on screen.
-        const why = await res.json().then(j => j.error).catch(() => '');
-        setSaveError(why || `Save failed (${res.status}).`);
-        setSaveStatus('error');
-      } else {
-        setSaveError(null);
-        setSaveStatus('saved');
-        // The file on disk is now what we just wrote, so a second save splices
-        // against it rather than against the version we first loaded.
-        rawMapYaml.current = yamlContent;
-        originalLevels.current = JSON.parse(JSON.stringify(levels)) as LevelConfig[];
-        setDirty(false);
-      }
-    } catch {
-      setSaveError('Could not reach the server.');
+    if (!result.ok) {
+      // The server sends a sentence saying what to go and do - a missing config
+      // var, a stale file, a token without write access - and mapSaveMessage
+      // prefers it over anything written here. A deployed build has no console
+      // to read it in, so it goes on screen.
+      setSaveError(mapSaveMessage(result.reason ?? 'server', result.detail));
       setSaveStatus('error');
+    } else {
+      setSaveError(null);
+      setSaveStatus('saved');
+      // The file on disk is now what we just wrote, so a second save splices
+      // against it rather than against the version we first loaded.
+      rawMapYaml.current = yamlContent;
+      originalLevels.current = JSON.parse(JSON.stringify(levels)) as LevelConfig[];
+      setDirty(false);
     }
     setTimeout(() => setSaveStatus('idle'), 2500);
   }, [levels, saveYaml]);

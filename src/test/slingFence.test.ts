@@ -22,8 +22,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   isLoadedSling, loadedSlingAt, slingShape, slingCatches, fireSlingFence,
-  SLING_GRAB_SLOP,
+  SLING_GRAB_SLOP, slingGrabReach,
 } from "@/lib/physics/slingFence";
+import { BASE_BALL_RADIUS, FREEZE_TAP_SLOP } from "@/lib/gameConstants";
 import { BAND_DEAD_PULL, BAND_HALF_WIDTH, BAND_MAX_POWER, bandShape, inBandSweep } from "@/lib/rubberBand";
 import { getFenceType, getAllFenceTypes } from "@/lib/fences";
 import type { Wall } from "@/lib/wallGeometry";
@@ -86,6 +87,30 @@ describe("grabbing one", () => {
     // units of fence.
     expect(loadedSlingAt(g, { x: 400, y: 400 + SLING_GRAB_SLOP })).toBe(w);
     expect(loadedSlingAt(g, { x: 400, y: 400 + SLING_GRAB_SLOP + 30 })).toBeNull();
+  });
+
+  it("is at least as easy to hit as tapping a ball", () => {
+    // Reported: "I accidentally drew a fence instead of pulling it back."
+    // The slop was copied from the ball tap, which is wrong twice over - a ball
+    // brings 18 units of its own radius to that target and a fence brings 3, so
+    // copying the SLOP gave a 25-unit reach against the ball's 40.
+    //
+    // Pinned as a comparison rather than a number, because what matters is that
+    // this is not the tightest target on the board.
+    const ballTap = BASE_BALL_RADIUS + FREEZE_TAP_SLOP;
+    expect(slingGrabReach(fence())).toBeGreaterThan(ballTap);
+    // And the asymmetry that justifies being generous: a wrong grab costs the
+    // gesture, a wrong cut costs a fence out of the map's budget.
+    expect(SLING_GRAB_SLOP).toBeGreaterThan(FREEZE_TAP_SLOP);
+  });
+
+  it("draws the grip at the radius it tests", () => {
+    // A grip smaller than the target teaches the player to aim finer than they
+    // need to, which is the bug above; larger, it promises a grab that misses.
+    const src = readFileSync(
+      resolve(process.cwd(), "src/lib/rendering/sleek/fxLayer.ts"), "utf8");
+    expect(src, "the grip is drawn at some other radius")
+      .toMatch(/slingGrabReach\(wall\) \* scale/);
   });
 
   it("ignores every other kind of fence", () => {

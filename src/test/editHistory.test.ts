@@ -300,11 +300,12 @@ describe("the builder says when it has unsaved work", () => {
     // sits AFTER the response has been checked, since a failed write reporting
     // the file as up to date is worse than no indicator at all.
     //
-    // Matched on `res.ok` rather than on one spelling of the branch. This read
-    // `if (res.ok)` and broke when the handler grew an error path and became
-    // `if (!res.ok) { ... } else { ... }` - the same guard, inverted. The test
-    // was pinning the syntax rather than the rule.
-    const ok = save.search(/if \(!?res\.ok\)/);
+    // Matched on ANY `<something>.ok` check rather than on one spelling. This
+    // has now broken twice on the same guard wearing different clothes: first
+    // `if (res.ok)` becoming `if (!res.ok) { ... } else { ... }`, then `res`
+    // becoming `result` when both editors moved onto saveMapYaml. Neither
+    // changed the rule, which is that the clear sits after the check.
+    const ok = save.search(/if \(!?\w+\.ok\)/);
     expect(ok, "the save must check its response").toBeGreaterThan(-1);
     expect(save.indexOf("setDirty(false)")).toBeGreaterThan(ok);
   });

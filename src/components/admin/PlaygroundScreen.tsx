@@ -17,7 +17,7 @@ import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { isPerfHudEnabled, setPerfHudEnabled, isStaticBgEnabled, setStaticBgEnabled } from '@/lib/rendering/perfStats';
-import { saveMapYaml, mapSaveMessage, type MapSaveFailure } from '@/lib/mapSave';
+import { saveMapYaml, mapSaveMessage, promptForMapSecret, type MapSaveFailure } from '@/lib/mapSave';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -331,6 +331,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   /** Why the last save failed, so the button can say something useful. */
   const [saveError, setSaveError] = useState<MapSaveFailure | null>(null);
+  // The server's own sentence, when it sent one: it names the config var to set
+  // or the conflict to resolve, and a deployed build has no console to read.
+  const [saveDetail, setSaveDetail] = useState<string | null>(null);
 
   // Sync draft whenever the selected level changes (new level picked)
   useEffect(() => {
@@ -502,16 +505,26 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     const updated = editDraft;
     const nextLevels = allLevels.map(l => l.id === updated.id ? updated : l);
 
-    const result = await saveMapYaml(draftYaml());
+    const yamlContent = draftYaml();
+    let result = await saveMapYaml(yamlContent);
+    // The same 401 retry the MapBuilder does, through the same helper. This
+    // button used to send no secret at all, so against the production server it
+    // could only ever fail - and it reported the failure as "the dev server
+    // could not write map.yml", which was wrong twice over.
+    if (!result.ok && result.reason === 'auth' && promptForMapSecret()) {
+      result = await saveMapYaml(yamlContent);
+    }
     if (!result.ok) {
       // Deliberately does NOT update the in-memory levels: showing the edit as
       // applied after a failed write is what made the deployed build look like
       // it had saved.
       setSaveError(result.reason ?? 'server');
+      setSaveDetail(result.detail ?? null);
       setEditSaveStatus('error');
       setTimeout(() => setEditSaveStatus('idle'), 4000);
       return;
     }
+    setSaveDetail(null);
     setSelectedLevel(updated);
     setAllLevels(nextLevels);
     setGameKey(k => k + 1);
@@ -870,9 +883,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               }}
             >
               {editSaveStatus === 'saved'  ? <><Check className="w-4 h-4" /> Saved!</> :
-               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> {mapSaveMessage(saveError ?? 'server')}</> :
+               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> {mapSaveMessage(saveError ?? 'server', saveDetail ?? undefined)}</> :
                editSaveStatus === 'saving' ? 'Saving…' :
-               <><Save className="w-4 h-4" /> Save to disk</>}
+               <><Save className="w-4 h-4" /> Save map</>}
             </button>
             {saveError === 'unavailable' && (
               <button

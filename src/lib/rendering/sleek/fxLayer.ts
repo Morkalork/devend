@@ -23,7 +23,7 @@ import {
   trajectoryTurnsFor,
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
-import { isLoadedSling, slingShape, slingCatches } from "@/lib/physics/slingFence";
+import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
@@ -133,12 +133,19 @@ export class FxLayer {
       if (dragWall && wall === dragWall) continue;
       const colour = parseColor(getFenceType(wall.fenceTypeId).color, PALETTE.accent);
       const mid = w2s((wall.start.x + wall.end.x) / 2, (wall.start.y + wall.end.y) / 2);
+      // The grab target, drawn at the radius the grab actually tests. A grip
+      // drawn smaller than the target teaches the player to aim finer than they
+      // need to, which is how a throw came out as a cut; drawn larger it would
+      // promise a grab that does not happen. Faint, because it is a hint about
+      // where to press rather than a thing on the board.
+      this.over.circle(mid.x, mid.y, slingGrabReach(wall) * scale)
+        .fill({ color: colour, alpha: 0.07 });
       // A slow breathe, so a loaded fence reads as waiting rather than as a
       // decoration somebody painted on it.
       const pulse = 0.75 + 0.25 * Math.sin(now / 420);
-      this.over.circle(mid.x, mid.y, 9 * scale * pulse)
+      this.over.circle(mid.x, mid.y, 11 * scale * pulse)
         .stroke({ width: Math.max(1.5, 2 * scale), color: colour, alpha: 0.85 });
-      this.over.circle(mid.x, mid.y, 3.5 * scale).fill({ color: colour, alpha: 0.9 });
+      this.over.circle(mid.x, mid.y, 4 * scale).fill({ color: colour, alpha: 0.9 });
     }
 
     if (!drag || !dragWall) return;

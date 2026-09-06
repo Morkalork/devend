@@ -20,7 +20,12 @@
  * served as application/json.
  */
 import { describe, it, expect, vi } from "vitest";
-import { saveMapYaml, mapSaveMessage, MAP_API_URL } from "@/lib/mapSave";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  saveMapYaml, mapSaveMessage, promptForMapSecret, mapEditSecret,
+  MAP_API_URL, MAP_SECRET_KEY,
+} from "@/lib/mapSave";
 
 const respond = (
   body: string,
@@ -87,13 +92,69 @@ describe("failures are told apart, so the button can explain itself", () => {
     expect(result.reason).toBe("network");
   });
 
+  it("calls a 401 an auth failure, which is the one the author can fix", async () => {
+    // Distinguished from every other refusal because it is the only one that
+    // can be answered from here, by being asked for the secret. It used to fall
+    // into "server" and report "the dev server could not write map.yml" - wrong
+    // twice over, since the write was never attempted and it is not a dev server.
+    const result = await saveMapYaml(
+      YAML, respond('{"error":"Wrong or missing editor secret."}', { status: 401 }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("auth");
+  });
+
   it("has a distinct message for every failure, and none of them lie", async () => {
-    const messages = (["unavailable", "server", "network"] as const).map(mapSaveMessage);
-    expect(new Set(messages).size).toBe(3);
+    const kinds = ["unavailable", "auth", "server", "network"] as const;
+    const messages = kinds.map(k => mapSaveMessage(k));
+    expect(new Set(messages).size).toBe(kinds.length);
     for (const m of messages) {
       expect(m.length).toBeGreaterThan(0);
       expect(m.toLowerCase()).not.toContain("saved");
     }
+  });
+
+  it("prefers the server's own sentence to anything written here", async () => {
+    // server/index.js answers a refusal with the thing the author has to go and
+    // do. A deployed build has no console to read it in, so replacing it with a
+    // generic message would throw away the only useful part of the reply.
+    const why = "Saving is not configured. GITHUB_TOKEN is not set on this app.";
+    const result = await saveMapYaml(YAML, respond(JSON.stringify({ error: why }), { status: 503 }));
+    expect(result.detail).toBe(why);
+    expect(mapSaveMessage(result.reason ?? "server", result.detail)).toBe(why);
+  });
+});
+
+describe("the editor secret", () => {
+  it("is sent when there is one, and omitted when there is not", async () => {
+    // Omitted rather than sent empty: an empty header is a claim to have a
+    // secret, and the Playground's copy of this sent NO header at all - which
+    // is why its Save could only ever reach the Vite dev plugin.
+    const spy = vi.fn(async () =>
+      new Response('{"ok":true}', { headers: { "Content-Type": "application/json" } }));
+    await saveMapYaml(YAML, spy as unknown as typeof fetch, "hunter2");
+    let init = (spy.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect((init.headers as Record<string, string>)["X-Map-Secret"]).toBe("hunter2");
+
+    await saveMapYaml(YAML, spy as unknown as typeof fetch, "");
+    init = (spy.mock.calls[1] as unknown as [string, RequestInit])[1];
+    expect((init.headers as Record<string, string>)["X-Map-Secret"]).toBeUndefined();
+  });
+
+  it("is read from storage by default, so both save buttons send the same one", () => {
+    localStorage.setItem(MAP_SECRET_KEY, "from-storage");
+    expect(mapEditSecret()).toBe("from-storage");
+    localStorage.removeItem(MAP_SECRET_KEY);
+    expect(mapEditSecret()).toBe("");
+  });
+
+  it("is kept when the prompt is answered, and not when it is dismissed", () => {
+    localStorage.removeItem(MAP_SECRET_KEY);
+    expect(promptForMapSecret(() => null)).toBe(false);
+    expect(mapEditSecret()).toBe("");
+    expect(promptForMapSecret(() => "typed-in")).toBe(true);
+    expect(mapEditSecret()).toBe("typed-in");
+    localStorage.removeItem(MAP_SECRET_KEY);
   });
 });
 
@@ -110,4 +171,27 @@ describe("the request itself", () => {
     expect(init.method).toBe("PUT");
     expect(init.body).toBe(YAML);
   });
+});
+
+describe("both editors save through the same path", () => {
+  // They did not, and the copies had drifted: the MapBuilder sent the editor
+  // secret and prompted for it, the Playground sent no header at all. One of
+  // the two buttons could therefore never reach the committing server, and
+  // said so in words that described neither the server nor the failure.
+  const read = (p: string) =>
+    readFileSync(resolve(process.cwd(), p), "utf8");
+
+  for (const file of [
+    "src/components/admin/MapBuilder.tsx",
+    "src/components/admin/PlaygroundScreen.tsx",
+  ]) {
+    it(`${file.split("/").pop()} goes through saveMapYaml`, () => {
+      const src = read(file);
+      expect(src, "it PUTs /api/map by hand again").not.toMatch(/fetch\('\/api\/map'/);
+      expect(src).toMatch(/saveMapYaml\(/);
+      // And answers a 401 by asking, rather than reporting it as a write that
+      // failed - which is the failure this file exists for.
+      expect(src).toMatch(/reason === 'auth' && promptForMapSecret\(\)/);
+    });
+  }
 });
