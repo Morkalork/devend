@@ -787,7 +787,6 @@
     "targetBoss": "the boss",
     "targetBall": "a ball",
     "areaWin": "Lock {{target}} inside the {{area}} area for a {{mult}}x payout.",
-    "areaFail": "You trap {{target}} outside the area.",
     "boss": "Defeat the boss to ship it.",
     "clear": "Clear {{percent}}% of the board.",
     "time": "The {{seconds}}s clock runs out.",
@@ -835,7 +834,11 @@
     "delivered_one": "Deliver {{count}} ball into a box.",
     "delivered_other": "Deliver {{count}} balls into a box.",
     "areaWinMany_one": "Lock {{count}} ball inside the {{area}} area for a {{mult}}x payout.",
-    "areaWinMany_other": "Lock {{count}} balls inside the {{area}} area for a {{mult}}x payout."
+    "areaWinMany_other": "Lock {{count}} balls inside the {{area}} area for a {{mult}}x payout.",
+    "areaFail_one": "You lock every ball without getting one into the area.",
+    "areaFail_other": "You lock every ball without getting {{count}} of them into the area.",
+    "areaFailBoss_one": "You trap the boss outside the area.",
+    "areaFailBoss_other": "You trap the bosses outside the area."
   },
   "upgradeShop": {
     "storeLabel": "Store",

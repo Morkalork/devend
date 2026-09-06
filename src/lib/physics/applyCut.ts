@@ -54,6 +54,7 @@ import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 import {
   resolveWinSpec, isWinMet, winReasonFor, winBonusPercent, metAlternative, requirementsMet,
+  evaluateWinCondition,
 } from "@/lib/winSpec";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 import { deliveredCount } from "@/lib/physics/deliveryBox";
@@ -608,7 +609,15 @@ export function evaluateWinConditions(
   // reach a zone, the map is lost rather than merely unfinished. That is a
   // property of the board, not of the spec, so it is checked whenever the win
   // actually depends on an area.
-  if (spec.require.some(c => c.kind === "area") && !isWinMet(spec, snap)) {
+  //
+  // Against the AREA CLAUSE, not against the whole win. Level 8 asks for a ball
+  // in the zone AND an 81% clear, and this used to fire whenever any part of
+  // that was outstanding - so a player who landed the zone and fell short on
+  // the clear was told "The zone can no longer be reached" about a zone they
+  // had already reached. The truthful reason there is the lock-out below, and
+  // this is the same guard the smash check right after it already applies.
+  const areaClause = spec.require.find(c => c.kind === "area");
+  if (areaClause && !evaluateWinCondition(areaClause, snap).met) {
     // Dormant and frozen targets count as live - a dormant ball has not entered
     // play yet, a frozen one will thaw. See anyGateTargetInPlay for why the old
     // `speed > 0` test made a gate-area circuit map lose on its first frame.

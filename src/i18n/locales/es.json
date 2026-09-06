@@ -772,7 +772,6 @@
     "targetBoss": "al jefe",
     "targetBall": "una bola",
     "areaWin": "Encierra {{target}} dentro del área {{area}} para un pago de {{mult}}x.",
-    "areaFail": "Encierras {{target}} fuera del área.",
     "boss": "Derrota al jefe para lanzarlo.",
     "clear": "Despeja el {{percent}}% del tablero.",
     "time": "Se acaban los {{seconds}}s del reloj.",
@@ -820,7 +819,11 @@
     "delivered_one": "Entrega {{count}} bola en una caja.",
     "delivered_other": "Entrega {{count}} bolas en una caja.",
     "areaWinMany_one": "Encierra {{count}} bola en el área {{area}} para cobrar {{mult}}x.",
-    "areaWinMany_other": "Encierra {{count}} bolas en el área {{area}} para cobrar {{mult}}x."
+    "areaWinMany_other": "Encierra {{count}} bolas en el área {{area}} para cobrar {{mult}}x.",
+    "areaFail_one": "Encierras todas las bolas sin meter ninguna en la zona.",
+    "areaFail_other": "Encierras todas las bolas sin meter {{count}} de ellas en la zona.",
+    "areaFailBoss_one": "Atrapas al jefe fuera de la zona.",
+    "areaFailBoss_other": "Atrapas a los jefes fuera de la zona."
   },
   "upgradeShop": {
     "storeLabel": "Tienda",

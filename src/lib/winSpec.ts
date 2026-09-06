@@ -302,6 +302,20 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
     if (c.kind === "space" && (c.threshold < 0 || c.threshold >= 100)) {
       problems.push("The space threshold is outside 0..99 percent.");
     }
+    // The clear percentage is stated TWICE on an authored map - here and in
+    // `sizeThreshold` - and the two are read by different screens. The win gate
+    // and the Acceptance Criteria read this clause; the top bar's "X% to go",
+    // the CLEAR state, the score preview and the door-draft screen all read
+    // sizeThreshold. Let them drift and the map shows a finished progress bar
+    // over a map that refuses to end, with nothing anywhere to say why.
+    //
+    // Refused rather than reconciled: which of the two the author meant is not
+    // something this can know, and picking one would silently move a map's
+    // difficulty.
+    if (c.kind === "space" && c.threshold !== level.sizeThreshold) {
+      problems.push(
+        `The win asks to clear down to ${c.threshold}% but sizeThreshold says ${level.sizeThreshold}%. The HUD reads sizeThreshold and the win reads the clause, so they have to agree.`);
+    }
   }
 
   // A premium far outside the range the economy is tuned for is almost always a

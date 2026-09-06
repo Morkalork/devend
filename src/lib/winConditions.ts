@@ -120,7 +120,16 @@ function winConditionParts(
         // "you lose a life if ..." - the first cut of this shipped headed
         // "COSTS A LIFE" over the bullet "Finish within 60s.", which reads as
         // though finishing on time is what costs you the life.
-        say("fail", t("winConditions.areaFail", { target }));
+        //
+        // And it says what the RULE is, which is not "one ball ends up outside".
+        // The map is lost when no target is left that could still reach the
+        // zone (anyGateTargetInPlay), which on a three-ball map asking for one
+        // ball in the zone means locking ALL THREE without landing one. The old
+        // wording - "You trap a ball outside the area." - was read as "every
+        // ball has to end up in the coloured area", which is what level 8 does
+        // NOT ask, and it disagreed with mapFailure's own "The zone can no
+        // longer be reached" for the same rule.
+        say("fail", t("winConditions.areaFail", { count: c.count }));
         break;
       }
       case "lockType":
@@ -140,7 +149,14 @@ function winConditionParts(
         if (zone) {
           const mult = AREA_KINDS[zone]?.multiplier ?? 1;
           must(t("winConditions.areaWin", { target, area: zone, mult }));
-          say("fail", t("winConditions.areaFail", { target }));
+          // Its OWN string, because on a boss map the rule really is "trap it
+          // outside and you lose": anyGateTargetInPlay counts only the boss, so
+          // one target locked in the wrong place ends the map. That is exactly
+          // what the shared string used to claim on every gate map, which is
+          // why it had to stop being shared.
+          say("fail", t("winConditions.areaFailBoss", {
+            count: level.boss?.bossBall?.count ?? 1,
+          }));
         }
         // Two chained bosses are ONE win and neither trap ends the map alone,
         // which is not something the board tells you.

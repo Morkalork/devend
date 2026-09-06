@@ -42,7 +42,9 @@ describe("winConditionsBody", () => {
     expect(body).toContain("winConditions.areaWin");
     expect(body).toContain('"area":"var"');
     expect(body).toContain('"mult":1.5');
-    expect(body).toContain("winConditions.areaFail");
+    // The BOSS wording, which is the one map shape where "trap it outside and
+    // you lose" is true: anyGateTargetInPlay counts only the boss there.
+    expect(body).toContain("winConditions.areaFailBoss");
     expect(body).toContain("winConditions.targetBoss"); // t() of the target key
     expect(body).toContain("winConditions.boss");
     expect(body).not.toContain("winConditions.clear");

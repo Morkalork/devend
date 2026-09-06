@@ -289,12 +289,12 @@ describe("flagging a map that can never be won", () => {
     // underPar and speedClear are met until they are blown, so as an
     // alternative they fire before a single cut. The map ends instantly and
     // the author has no way to tell why.
-    const spec = { require: [{ kind: "space", threshold: 40 }], alsoWinIf: [{ kind: "underPar", delta: 0 }], authored: true } as WinSpec;
+    const spec = { require: [{ kind: "space", threshold: 20 }], alsoWinIf: [{ kind: "underPar", delta: 0 }], authored: true } as WinSpec;
     expect(winSpecProblems(spec, level()).join(" ")).toMatch(/win instantly/);
-    const speed = { require: [{ kind: "space", threshold: 40 }], alsoWinIf: [{ kind: "speedClear", seconds: 60 }], authored: true } as WinSpec;
+    const speed = { require: [{ kind: "space", threshold: 20 }], alsoWinIf: [{ kind: "speedClear", seconds: 60 }], authored: true } as WinSpec;
     expect(winSpecProblems(speed, level()).join(" ")).toMatch(/win instantly/);
     // The same clauses as REQUIREMENTS are correct and must stay unflagged.
-    const req = { require: [{ kind: "space", threshold: 40 }, { kind: "underPar", delta: 0 }], alsoWinIf: [], authored: true } as WinSpec;
+    const req = { require: [{ kind: "space", threshold: 20 }, { kind: "underPar", delta: 0 }], alsoWinIf: [], authored: true } as WinSpec;
     expect(winSpecProblems(req, level())).toEqual([]);
   });
 
@@ -415,4 +415,37 @@ describe("pricing a win condition", () => {
       expect(winBonusPercent(resolveWinSpec(l), won)).toBe(0);
     }
   });
+});
+
+describe("the clear percentage, which every authored map states twice", () => {
+  /**
+   * `sizeThreshold` and the authored `space` clause are the same number in two
+   * places, and different screens read different copies: the top bar's "X% to
+   * go", the CLEAR state, the score preview and the door-draft screen all read
+   * sizeThreshold, while the win gate and the Acceptance Criteria read the
+   * clause. Let them drift and the map shows a finished progress bar over a map
+   * that refuses to end, with nothing anywhere to say why.
+   *
+   * Refused rather than reconciled: which one the author meant is not knowable
+   * here, and picking one would silently move a map's difficulty.
+   */
+  it("refuses a clause that disagrees with sizeThreshold", () => {
+    const spec = {
+      require: [{ kind: "space", threshold: 30 }], alsoWinIf: [], authored: true,
+    } as WinSpec;
+    expect(winSpecProblems(spec, level({ sizeThreshold: 20 })).join(" "))
+      .toMatch(/sizeThreshold/);
+  });
+
+  it("says nothing when they agree", () => {
+    const spec = {
+      require: [{ kind: "space", threshold: 20 }], alsoWinIf: [], authored: true,
+    } as WinSpec;
+    expect(winSpecProblems(spec, level({ sizeThreshold: 20 }))).toEqual([]);
+  });
+
+  // No "every shipped map agrees" test here: "flags no shipped map as
+  // unwinnable" above already runs winSpecProblems over the whole ladder, so a
+  // map that drifted would fail there. A second sweep would be a second place
+  // to update when the guard list changes.
 });

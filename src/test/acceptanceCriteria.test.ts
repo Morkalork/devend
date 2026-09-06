@@ -100,10 +100,26 @@ describe("a heading and its bullets read as one sentence", () => {
       .toMatch(/lose a life/i);
   });
 
+  /**
+   * Every fail bullet's key.
+   *
+   * Enumerated rather than written as three literals in three places, because
+   * the gate fail SPLIT - one string could not be true for both a boss map
+   * (where trapping the single target outside really does end it) and a
+   * three-ball map (where the map is lost only once every ball is locked with
+   * none in the zone) - and a list that named only the old key would have gone
+   * on passing while checking nothing.
+   */
+  const FAIL_KEYS = [
+    "time", "fences",
+    "areaFail_one", "areaFail_other",
+    "areaFailBoss_one", "areaFailBoss_other",
+  ];
+
   it("states the life cost in the heading and NOWHERE else", () => {
     // A bullet that repeats it is a bullet that was written to stand alone,
     // which is how the instruction phrasing got in.
-    for (const key of ["time", "fences", "areaFail"]) {
+    for (const key of FAIL_KEYS) {
       expect(EN[key], `winConditions.${key} restates the penalty`)
         .not.toMatch(/lose a life|costs a life/i);
     }
@@ -112,7 +128,7 @@ describe("a heading and its bullets read as one sentence", () => {
   it("phrases every fail bullet as a condition, not an instruction", () => {
     // "Finish within 60s" and "Trap the boss outside the area" are things to
     // DO. Under this heading they have to be things that HAPPEN.
-    for (const key of ["time", "fences", "areaFail"]) {
+    for (const key of FAIL_KEYS) {
       expect(EN[key], `winConditions.${key} opens with an imperative`)
         .not.toMatch(/^(Finish|Trap|Lock|Clear|Smash|Deliver|Light|Harvest|Land)\b/);
     }
@@ -126,7 +142,7 @@ describe("a heading and its bullets read as one sentence", () => {
       for (const g of CRITERION_GROUPS) {
         expect(node.group[g], `${lang} is missing winConditions.group.${g}`).toBeTruthy();
       }
-      for (const key of ["time", "fences", "areaFail"]) {
+      for (const key of FAIL_KEYS) {
         expect(node[key], `${lang} is missing winConditions.${key}`).toBeTruthy();
       }
     }
@@ -223,5 +239,60 @@ describe("the rendered block", () => {
       .toContain("winConditions.groupRequiredAll");
     expect(renderCriteria(t, winConditions(t, at(34), 34)))
       .toContain("winConditions.group.required");
+  });
+});
+
+describe("the gate-area fail says what the rule actually is", () => {
+  /**
+   * Reported after a play: "I thought I saw a map say that all balls had to be
+   * locked in a Colored area to win, when just 1 ball was enough."
+   *
+   * They had. Level 8 spawns three balls and asks for ONE in the zone, and the
+   * criteria said "You trap a ball outside the area." under LOSE A LIFE IF -
+   * which reads as "any ball outside is fatal", so as "all of them have to go
+   * in". The engine loses the map only when NO target is left that could still
+   * reach the zone (anyGateTargetInPlay), i.e. when every ball has been locked
+   * without one landing in it.
+   *
+   * One string was doing two jobs. On a BOSS map "trap it outside and you lose"
+   * is exactly right, because the boss is the only target that counts - which
+   * is how a wrong sentence stayed plausible on four of the six maps that
+   * showed it.
+   */
+  const areaMaps = LEVELS.filter(l =>
+    l.level != null && !l.boss &&
+    (l.win?.require ?? []).some((c: { kind: string }) => c.kind === "area"));
+  const bossMaps = LEVELS.filter(l => l.level != null && l.boss);
+
+  it("covers the maps this is about", () => {
+    // If the ladder stops having either shape, the tests below start passing
+    // vacuously and should be re-read rather than trusted.
+    expect(areaMaps.map(l => l.level)).toContain(8);
+    expect(bossMaps.map(l => l.level)).toContain(10);
+  });
+
+  it("never tells a multi-ball map that one ball outside is fatal", () => {
+    for (const l of areaMaps) {
+      const fails = winConditions(t, l, l.level!).filter(c => c.group === "fail");
+      const gate = fails.filter(f => f.text.startsWith("winConditions.areaFail"));
+      expect(gate.length, `${l.id} lost its gate fail line`).toBe(1);
+      expect(gate[0].text, `${l.id} still uses the boss wording`)
+        .not.toContain("areaFailBoss");
+      // Carries the COUNT the map asks for, so the sentence can say "without
+      // getting one/two of them in" rather than implying all of them.
+      const asked = (l.win!.require as Array<{ kind: string; count?: number }>)
+        .find(c => c.kind === "area")!.count ?? 1;
+      expect(gate[0].text).toContain(`"count":${asked}`);
+    }
+  });
+
+  it("keeps the trap-it-outside wording where it is TRUE: boss maps", () => {
+    for (const l of bossMaps) {
+      const fails = winConditions(t, l, l.level!).filter(c => c.group === "fail");
+      const gate = fails.filter(f => f.text.startsWith("winConditions.areaFailBoss"));
+      // Only the boss maps that actually have a zone say anything about one.
+      if ((l.coloredAreas ?? []).length === 0) continue;
+      expect(gate.length, `${l.id} lost the boss gate fail line`).toBe(1);
+    }
   });
 });
