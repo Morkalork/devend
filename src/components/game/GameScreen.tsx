@@ -17,6 +17,7 @@ import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditi
 import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
+import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
@@ -416,6 +417,13 @@ export function GameScreen({
   const [boardTopPct, setBoardTopPct] = useState(5);
   const handleBoardTopPct = useCallback((pct: number) => setBoardTopPct(pct), []);
 
+  // How much of the bottom of the canvas the pinned bars are sitting on. They
+  // are opaque and they take taps, so a board drawn underneath them could not
+  // be cut along its bottom edge at all (issue #78). Measured off the live
+  // stack rather than reserved as a percentage: it is five rows deep on a bad
+  // day and the ability row wraps, so no constant survives contact.
+  const bottomBarsPx = useBottomBarsHeight();
+
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
     onGameStateChange?.(state); // forward to a parent (Playground ability tester)
@@ -781,7 +789,15 @@ export function GameScreen({
     if (showTopBarOverlay) { fileManualEntry('topBar'); onTopBarTutorialSeen?.(); }
   }, [showTopBarOverlay, onTopBarTutorialSeen]);
   useEffect(() => {
-    if (showBottomBarOverlay) { fileManualEntry('bottomBar'); onBottomBarTutorialSeen?.(); }
+    // The fence slots are filed alongside it. Both are about the strip under
+    // the board, level 3 is where that strip gets explained, and level 4 is the
+    // earliest the shop can offer a fence type - so this lands one map before
+    // the player can own something to put in a slot.
+    if (showBottomBarOverlay) {
+      fileManualEntry('bottomBar');
+      fileManualEntry('fenceSlots');
+      onBottomBarTutorialSeen?.();
+    }
   }, [showBottomBarOverlay, onBottomBarTutorialSeen]);
   useEffect(() => {
     if (showPickupOverlay) { fileManualEntry('pickup'); setPickupIntroSeen(true); try { localStorage.setItem('devend_pickup_intro_seen', '1'); } catch { /* ignore */ } }
@@ -1014,6 +1030,7 @@ export function GameScreen({
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
             onCanvasReady={handleCanvasReady}
             onBoardTopPct={handleBoardTopPct}
+            bottomInsetPx={bottomBarsPx}
             introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}

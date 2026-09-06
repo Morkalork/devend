@@ -293,6 +293,15 @@ interface GameCanvasProps {
    * gutter instead of guessing. Fires on resize, not per frame.
    */
   onBoardTopPct?: (pct: number) => void;
+  /**
+   * Height at the bottom of this surface the board must keep off, in CSS px.
+   *
+   * GameScreen pins a stack of bars there and MEASURES it (see
+   * useBottomBarsHeight); the board is centred in what is left rather than in
+   * the whole frame. Those bars take taps, so board drawn under them cannot be
+   * cut at all - which is what issue #78 was.
+   */
+  bottomInsetPx?: number;
 }
 
 /**
@@ -371,6 +380,7 @@ export function GameCanvas({
   freezeOnComplete = false,
   onCanvasReady,
   onBoardTopPct,
+  bottomInsetPx = 0,
 }: GameCanvasProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -409,6 +419,14 @@ export function GameCanvas({
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
   useEffect(() => { showBallSpeedsRef.current = showBallSpeeds; }, [showBallSpeeds]);
+
+  // The reserved bottom strip, and the resize that acts on it. Both live in
+  // refs because the setup effect below builds the whole game - renderer, loop,
+  // level - and re-running it every time a bar wraps would restart the map.
+  const bottomInsetRef = useRef(bottomInsetPx);
+  bottomInsetRef.current = bottomInsetPx;
+  const resizeCanvasRef = useRef<(() => void) | null>(null);
+  useEffect(() => { resizeCanvasRef.current?.(); }, [bottomInsetPx]);
   // Read once per mount: flipped in the admin screen, which can only be reached
   // by leaving the game, so it cannot change mid-map.
   const [perfHudPersisted] = useState(isPerfHudEnabled);
@@ -1209,7 +1227,8 @@ export function GameCanvas({
       }
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
       game.screenSize = { width: physW, height: physH };
-      game.boardRect = computeBoardRect(physW, physH);
+      // The inset is in CSS pixels; computeBoardRect works in physical ones.
+      game.boardRect = computeBoardRect(physW, physH, bottomInsetRef.current * dpr);
       clearBallRenderCache();
       clearBallSphereCache();
       clearRainGlyphCache();
@@ -1527,6 +1546,7 @@ export function GameCanvas({
     game.gameLoopFn = gameLoop;
 
     resizeCanvas();
+    resizeCanvasRef.current = resizeCanvas;
     window.addEventListener("resize", resizeCanvas);
     let disposed = false;
     if (introPendingRef.current) {
@@ -1572,6 +1592,7 @@ export function GameCanvas({
 
     return () => {
       disposed = true;
+      resizeCanvasRef.current = null;
       window.removeEventListener("resize", resizeCanvas);
       if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
       if (readyTimer !== undefined) window.clearTimeout(readyTimer);

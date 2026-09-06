@@ -286,6 +286,8 @@
     "topBarTutorialBody": "Tu nivel, vidas y objetivos estan arriba. Tocala, o Specs, para ver tu hoja de partida completa.",
     "bottomBarTutorialTitle": "Tu ficha",
     "bottomBarTutorialBody": "Toca Specs cuando quieras para ver cada estadistica de tu partida, explicada con claridad.",
+    "fenceSlotsTutorialTitle": "Ranuras de valla",
+    "fenceSlotsTutorialBody": "La fila bajo el tablero decide QUE TIPO de valla dibuja tu proximo corte. La ranura 1 es la valla estandar y nunca se agota; las cuatro vacias se llenan con vallas especiales que desbloqueas mas adelante. Toca una ranura para elegirla, manten pulsada para leer que hace.",
     "timeLimitTutorialTitle": "Límite de tiempo",
     "timeLimitTutorialBody": "Ahora cada mapa tiene limite de tiempo. Complétalo antes de que la barra se vacie o la partida termina; las vidas no te salvan. Termina pronto para horas extra.",
     "infoUnlocked": "Información desbloqueada",
@@ -737,6 +739,10 @@
       "winCondition": {
         "title": "Condición de victoria",
         "description": "Reduce la arena a menos del 25% de su tamaño original para ganar. ¡La velocidad aumenta con cada corte!"
+      },
+      "fenceTypes": {
+        "title": "Tipos de valla",
+        "description": "Bajo el tablero hay una fila de cinco ranuras que decide que tipo de valla dibuja tu proximo corte. La ranura 1 es la valla estandar, siempre esta y nunca se gasta. Las otras cuatro empiezan vacias y se llenan con especiales compradas con mejoras: una detiene una bola, otra solo cierra una zona con el numero correcto de bolas dentro, otra se estira y se dispara como un tirachinas. Toda especial se construye mas lenta que la estandar, y eso es lo que te cuesta. Toca una ranura para elegirla, manten pulsada para ver los detalles."
       },
       "lives": {
         "title": "Vidas",

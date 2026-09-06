@@ -288,6 +288,8 @@
     "topBarTutorialBody": "Your level, lives and objectives sit up top. Tap it, or Specs, for your full run sheet.",
     "bottomBarTutorialTitle": "Your Specs",
     "bottomBarTutorialBody": "Tap Specs any time for every stat that shapes your run, explained plainly.",
+    "fenceSlotsTutorialTitle": "Fence Slots",
+    "fenceSlotsTutorialBody": "The row under the board is which KIND of fence your next cut draws. Slot 1 is the standard fence and never runs out; the four empties fill with special fences you unlock later. Tap a slot to select it, press and hold one to read what it does.",
     "timeLimitTutorialTitle": "Time Limit",
     "timeLimitTutorialBody": "Every map now has a time limit. Clear it before the bar empties or the run ends, lives won't save you. Finish early for bonus overtime.",
     "infoUnlocked": "Info Unlocked",
@@ -752,6 +754,10 @@
       "breakObstacles": {
         "title": "Breaking Obstacles",
         "description": "Later levels add amber breakable blocks. Guide balls into them to smash them for bonus overtime - stacked pieces fall when their support breaks. You still win by shrinking the board; breaking is extra. You can't fence against a breakable (it fizzles), and the black ball breaks things in half the hits."
+      },
+      "fenceTypes": {
+        "title": "Fence Types",
+        "description": "Under the board sits a row of five slots that decides which kind of fence your next cut draws. Slot 1 is the standard fence, always there and never spent. The other four start empty and fill with specials bought through upgrades: one holds a ball still, one only seals a pocket with the right number of balls in it, one you pull back and fire like a slingshot. Every special builds slower than standard, and that is what it costs you. Tap a slot to select it, press and hold for details."
       },
       "lives": {
         "title": "Lives",

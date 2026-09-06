@@ -59,9 +59,13 @@ describe("the Playground offers every fence type", () => {
     // fence slots, and so did 104. The stack is up to five rows deep and the
     // ability row wraps, so no constant survives - the height is a fact the
     // layout already knows, and the tester has to read it.
-    expect(src, "the height is measured from the live element")
-      .toMatch(/querySelector\('\[data-bottom-bars\]'\)/);
-    expect(src).toMatch(/getBoundingClientRect\(\)\.height/);
+    //
+    // The reading itself now lives in a shared hook, because the board reserves
+    // the same height and two measurements would be two chances to disagree.
+    // How it measures is pinned in bottomBarsHeight.test.tsx; what this cares
+    // about is that the tester uses it instead of a number.
+    expect(src, "the tester stopped measuring the stack")
+      .toContain("from '@/hooks/useBottomBarsHeight'");
     expect(src, "a tester is pinned to a hard-coded band again")
       .not.toMatch(/bottom: (96|104|112),/);
 

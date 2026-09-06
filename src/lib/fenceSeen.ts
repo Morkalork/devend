@@ -11,11 +11,16 @@
  * cleared store or a browser blocking site data must cost the player a repeated
  * explainer, never a crash on the path that draws the bar.
  */
-const KEY = "devend:fenceTypesSeen";
+/**
+ * Exported so "Re-enable All Tutorials" can clear it. A one-time explainer
+ * whose key only that file knows is a tutorial the reset button silently
+ * skips, which is exactly how the circuit explainer became unrecoverable.
+ */
+export const FENCE_TYPES_SEEN_KEY = "devend:fenceTypesSeen";
 
 function load(): Set<string> {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(FENCE_TYPES_SEEN_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? new Set(arr.filter((x): x is string => typeof x === "string")) : new Set();
@@ -33,7 +38,7 @@ export function markFenceTypeSeen(id: string): void {
     const seen = load();
     if (seen.has(id)) return;
     seen.add(id);
-    localStorage.setItem(KEY, JSON.stringify([...seen]));
+    localStorage.setItem(FENCE_TYPES_SEEN_KEY, JSON.stringify([...seen]));
   } catch {
     /* ignore storage failures */
   }

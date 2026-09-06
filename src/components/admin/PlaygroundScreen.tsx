@@ -9,6 +9,7 @@ import type { GameStateInfo } from '@/components/game/GameCanvas';
 import { getAllAbilities, loadAbilities } from '@/lib/abilities';
 import { getAllFenceTypes, loadFenceTypes, STANDARD_FENCE_ID } from '@/lib/fences';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
@@ -112,44 +113,6 @@ const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
 const ADDITIVE_KEYS = Object.entries(MODIFIER_META)
   .filter(([, m]) => m.kind === 'additive')
   .map(([k]) => k as keyof GameModifiers);
-
-/**
- * Clearance to assume for GameScreen's bottom stack before it has been measured.
- *
- * Only ever used for the first frame and for a GameScreen that somehow has no
- * bottom stack. The real number is measured below, because every attempt to
- * state it as a constant has been wrong: the stack is up to five rows deep
- * (fence slots, abilities, the context lane, the push-exit bar, the map's own
- * control row) and the ability row wraps, so its height depends on how many
- * abilities are banked and how wide the phone is.
- */
-const BOTTOM_BARS_FALLBACK_PX = 200;
-
-/**
- * The measured height of GameScreen's fixed bottom stack, in CSS pixels.
- *
- * The Playground floats dev testers over the board, and they have to clear the
- * player's own bars. Two guesses have now been wrong - 96 put the ability
- * tester straight across the fence slots, and 104 put it across them again -
- * which is the whole argument for measuring: the height is a fact the layout
- * already knows, and every copy of it in a constant is a copy free to be wrong.
- *
- * Re-queried on `gameKey` because a remount replaces the node.
- */
-function useBottomBarsHeight(gameKey: number): number {
-  const [height, setHeight] = useState(BOTTOM_BARS_FALLBACK_PX);
-  useEffect(() => {
-    const el = document.querySelector('[data-bottom-bars]');
-    if (!(el instanceof HTMLElement)) return;
-    const read = () => setHeight(el.getBoundingClientRect().height);
-    read();
-    if (typeof ResizeObserver === 'undefined') return;   // jsdom, old webviews
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [gameKey]);
-  return height;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

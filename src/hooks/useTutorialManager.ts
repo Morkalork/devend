@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { LAUNCHER_SEEN_KEY, BOX_SEEN_KEY, CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
+import { FENCE_TYPES_SEEN_KEY } from '@/lib/fenceSeen';
+import { ABILITIES_SEEN_KEY } from '@/lib/abilitySeen';
 
 /**
  * Tracks which one-time tutorials the player has already seen, persisted in
@@ -144,6 +146,13 @@ export function useTutorialManager() {
       // this list for months and "Re-enable All Tutorials" silently skipped it.
       localStorage.removeItem(BOX_SEEN_KEY);
       localStorage.removeItem(LAUNCHER_SEEN_KEY);
+      // The per-thing explainers that auto-open once on first acquire: a fence
+      // type's, and an ability's. Both sat outside this list, so the one button
+      // whose whole job is bringing tutorials back could not bring back the
+      // only explanation either system has. Same failure as the circuit hint
+      // above, twice more.
+      localStorage.removeItem(FENCE_TYPES_SEEN_KEY);
+      localStorage.removeItem(ABILITIES_SEEN_KEY);
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith(CIRCUIT_SEEN_PREFIX)) localStorage.removeItem(key);
       }

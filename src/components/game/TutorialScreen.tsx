@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer } from 'lucide-react';
+import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer, Fence } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { getImplementedBallTypes } from '@/lib/ballTypes';
 import { BallMark } from '@/components/game/BallMark';
@@ -23,6 +23,11 @@ const tutorialSteps = [
   { icon: AlertTriangle, key: 'avoidTheBall' },
   { icon: Target, key: 'winCondition' },
   { icon: Hammer, key: 'breakObstacles' },
+  // Last of the board steps: the slot bar is on screen from map one but stays
+  // empty until an upgrade fills it, so it reads as decoration until something
+  // says what it is. This screen is the only place that says so before the
+  // player owns one.
+  { icon: Fence, key: 'fenceTypes' },
 ];
 
 const lifeCycleSteps = [

@@ -34,6 +34,11 @@ export interface ManualEntry {
 export const MANUAL_ENTRIES: ManualEntry[] = [
   { id: 'topBar', titleKey: 'game.topBarTutorialTitle', bodyKey: 'game.topBarTutorialBody', color: '#00ff88' },
   { id: 'bottomBar', titleKey: 'game.bottomBarTutorialTitle', bodyKey: 'game.bottomBarTutorialBody', color: '#00ff88' },
+  // The five slots under the board. The ONLY explanation they had was the
+  // first-acquire modal, which fires after the player already owns a type -
+  // level 4 at the very earliest, and never at all for a player who does not
+  // buy one. Until then the bar is four empty boxes that nothing accounts for.
+  { id: 'fenceSlots', titleKey: 'game.fenceSlotsTutorialTitle', bodyKey: 'game.fenceSlotsTutorialBody', color: '#00ff88' },
   { id: 'mover', titleKey: 'game.moverTutorialTitle', bodyKey: 'game.moverTutorialBody', color: '#ff8800' },
   { id: 'break', titleKey: 'game.breakTutorialTitle', bodyKey: 'game.breakTutorialBody', color: '#ffb454' },
   { id: 'box', titleKey: 'game.boxTutorialTitle', bodyKey: 'game.boxTutorialBody', color: '#ffb347' },

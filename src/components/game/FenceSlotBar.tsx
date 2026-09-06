@@ -31,6 +31,7 @@ import {
   type FenceTypeDef,
 } from '@/lib/fences';
 import { hasSeenFenceType, markFenceTypeSeen } from '@/lib/fenceSeen';
+import { fileManualEntry } from '@/lib/manual';
 import { FenceTypeInfoModal } from './FenceTypeInfoModal';
 
 const LONG_PRESS_MS = 450;
@@ -88,6 +89,11 @@ export function FenceSlotBar({
   useEffect(() => {
     const fresh = owned.find(f => f.id !== STANDARD_FENCE_ID && !hasSeenFenceType(f.id));
     if (fresh) { markFenceTypeSeen(fresh.id); setInfo(fresh); }
+    // Owning one is meeting the system, whether or not this particular type is
+    // new. GameScreen files it at level 3 with the rest of the bottom strip,
+    // but a Head Start certificate can start a run past level 3 entirely, and
+    // this modal is otherwise the only explanation the slots ever get.
+    if (owned.length > 1) fileManualEntry('fenceSlots');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownedKey]);
 

@@ -61,25 +61,59 @@ export interface BoardRect {
 }
 
 /**
+ * The most of the surface a bottom inset may ever claim.
+ *
+ * The inset is MEASURED from the live DOM, and a measurement can be wrong in
+ * ways a constant cannot: a mid-layout read, a bar that has not collapsed yet,
+ * a browser reporting a stale rect. Without a ceiling, one bad number shrinks
+ * the board to a few pixels or inverts it entirely. Half the surface is far
+ * more than the real stack has ever needed, so this only ever catches a fault.
+ */
+export const MAX_BOTTOM_INSET_PERCENT = 0.5;
+
+/**
  * Compute the board rectangle in screen pixels.
  * The square board spans BOARD_SIZE_PERCENT (~95%) of the shortest viewport
  * side, but is never taller than the board band reserved between the top/bottom
  * UI strips, so it can't overlap the HUD on short/wide screens.
+ *
+ * `bottomInset` is height at the bottom of the surface the board must keep off,
+ * in the same (physical) pixels as the rest of the arguments. GameScreen pins a
+ * stack of bars down there - fence slots, abilities, the context lane, the
+ * push-exit bar, the map's own control row - and they take taps, so board drawn
+ * underneath them is not merely hidden, it cannot be cut (issue #78).
+ *
+ * It is passed in rather than derived from BOTTOM_UI_PERCENT because the stack
+ * has no fixed height: the ability row wraps, and how many rows exist depends on
+ * what the player has banked. A percentage that was right for four rows is the
+ * thing that let the fifth grow over the board.
  */
-export function computeBoardRect(screenWidth: number, screenHeight: number): BoardRect {
-  // Target: 95% of the shortest side (width on a portrait phone).
-  const shortestSide = Math.min(screenWidth, screenHeight);
+export function computeBoardRect(
+  screenWidth: number, screenHeight: number, bottomInset = 0,
+): BoardRect {
+  // The band the board actually gets. Clamped rather than trusted: see
+  // MAX_BOTTOM_INSET_PERCENT.
+  const inset = Math.min(
+    Math.max(0, bottomInset || 0), screenHeight * MAX_BOTTOM_INSET_PERCENT,
+  );
+  const usableHeight = Math.max(1, screenHeight - inset);
+
+  // Target: 95% of the shortest side (width on a portrait phone). Measured
+  // against the usable height rather than the whole surface for consistency
+  // with the band clamp below; the clamp is stricter and so always wins when
+  // the two would disagree.
+  const shortestSide = Math.min(screenWidth, usableHeight);
   let boardWidth = shortestSide * BOARD_SIZE_PERCENT;
 
   // Clamp so the board fits inside the vertical band reserved for it.
-  const availableHeight = screenHeight * BOARD_BAND_PERCENT;
+  const availableHeight = usableHeight * BOARD_BAND_PERCENT;
   boardWidth = Math.min(boardWidth, availableHeight * BOARD_ASPECT);
 
   const boardHeight = boardWidth / BOARD_ASPECT;
 
   // Calculate positions
-  const topUIHeight = screenHeight * TOP_UI_PERCENT;
-  const boardBandHeight = screenHeight * BOARD_BAND_PERCENT;
+  const topUIHeight = usableHeight * TOP_UI_PERCENT;
+  const boardBandHeight = usableHeight * BOARD_BAND_PERCENT;
 
   // Center horizontally in screen
   const left = (screenWidth - boardWidth) / 2;

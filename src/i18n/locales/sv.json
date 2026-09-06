@@ -286,6 +286,8 @@
     "topBarTutorialBody": "Din nivå, dina liv och mål finns högst upp. Tryck på den, eller Specs, för hela ditt spelblad.",
     "bottomBarTutorialTitle": "Dina specs",
     "bottomBarTutorialBody": "Tryck på Specs när som helst för varje värde som formar din runda, förklarat enkelt.",
+    "fenceSlotsTutorialTitle": "Stängselplatser",
+    "fenceSlotsTutorialBody": "Raden under brädet avgör vilken SORTS stängsel ditt nästa snitt ritar. Plats 1 är standardstängslet och tar aldrig slut; de fyra tomma fylls med specialstängsel du låser upp senare. Tryck på en plats för att välja den, håll inne för att läsa vad den gör.",
     "timeLimitTutorialTitle": "Tidsgräns",
     "timeLimitTutorialBody": "Nu har varje karta en tidsgräns. Klara den innan baren tar slut annars är rundan över; liv räddar dig inte. Bli klar tidigt för bonusövertid.",
     "infoUnlocked": "Info upplåst",
@@ -737,6 +739,10 @@
       "winCondition": {
         "title": "Vinstvillkor",
         "description": "Minska arenan till under 25% av sin ursprungliga storlek för att vinna. Hastigheten ökar med varje snitt!"
+      },
+      "fenceTypes": {
+        "title": "Stängseltyper",
+        "description": "Under brädet sitter en rad med fem platser som avgör vilken sorts stängsel ditt nästa snitt ritar. Plats 1 är standardstängslet, alltid där och aldrig förbrukat. De andra fyra börjar tomma och fylls med special som köps via uppgraderingar: en håller en boll stilla, en låser bara en ficka med rätt antal bollar i, en drar du tillbaka och skjuter iväg som en slangbella. Varje special byggs långsammare än standard, och det är vad den kostar dig. Tryck på en plats för att välja den, håll inne för detaljer."
       },
       "lives": {
         "title": "Liv",
