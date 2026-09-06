@@ -48,6 +48,7 @@ import {
   Hammer,
   Ghost,
   Spline,
+  Pause,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -95,6 +96,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   'life-buoy': LifeBuoy,
   hammer: Hammer,
   spline: Spline,
+  pause: Pause,
 };
 
 /**

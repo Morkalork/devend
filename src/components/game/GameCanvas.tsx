@@ -1011,6 +1011,12 @@ export function GameCanvas({
       // Feature Freeze tap-freezes refill to the owned per-map allowance.
       game.freezeUsesRemaining = Math.max(0, Math.round(activeModifiers.freezeUsesPerMap));
       setFreezeUsesRemaining(game.freezeUsesRemaining);
+      // ...and so does the Breakpoint fence's hold, which is per MAP. Reset in
+      // this block for the reason its own comment gives: a field this block
+      // forgets is a field that is never set at all, and a hold budget that
+      // carried over would give map two no Breakpoint and no sign of why.
+      game.breakpointHoldsUsed = 0;
+      game.breakpointFlash = null;
       // Cryo Protocol: freeze pickup tokens so they never expire this run.
       game.freezePickups = activeModifiers.freezePickups > 0;
       // Free Fall (Escape Velocity): soften how hard wells and gravity maps

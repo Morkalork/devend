@@ -2110,6 +2110,23 @@ upgrades:
   # No costMultiplier. That surcharge is for DOORS - upgrades whose value is
   # opening a line the formula cannot see - and these open nothing: they are
   # leaves, and the level x tier price is exactly what they are worth.
+  # THE OPEN SHELF. A root: no prerequisites, so it is eligible from level 4
+  # in any shop, for any build. Every other fence type is the crown of a maxed
+  # family, and this exists so a player who spreads their buys still MEETS the
+  # system rather than finishing a run with a bar of empty slots they were
+  # never told how to fill.
+  #
+  # Junior, so it is cheap. It is the introduction, not the reward.
+  - id: set_a_breakpoint
+    name: Set A Breakpoint
+    tier: Junior
+    description: "Adds the Breakpoint fence: once a map, the first ball to touch one is held still for 2s."
+    unlockLevel: 4
+    icon: pause
+    tags: [safety]
+    grantsFenceType: breakpoint
+    modifiers: {}
+
   - id: cold_storage_ice
     name: Cold Storage
     tier: Senior

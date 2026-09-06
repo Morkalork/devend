@@ -231,6 +231,16 @@ export interface CanvasGameState {
   /** Last completed cut gesture, rendered as a brief fading afterglow (issue #35). */
   swipeTrail: { start: Vector2; end: Vector2; createdAt: number } | null;
   /**
+   * Breakpoint holds spent on this map (breakpointFence.ts).
+   *
+   * On the MAP rather than on the walls: the budget is a property of the map,
+   * so it survives the fence that spent it being broken - which is correct.
+   * Spending your hold and then losing the fence must not refund it.
+   */
+  breakpointHoldsUsed?: number;
+  /** Where the map's Breakpoint fired, for the renderer's flash. */
+  breakpointFlash?: { x: number; y: number; startTime: number } | null;
+  /**
    * A Redeploy fence being pulled back right now (slingFence.ts).
    *
    * Board state rather than React state: the drag starts on the canvas, from

@@ -76,6 +76,13 @@ const EXPECTED_ROOTS = [
   // then sell them its own deletion.
   "talent_scout",
   "open_source_contribution",
+  // THE OPEN SHELF. Every other fence type is the crown of a maxed family
+  // (unlockAfterChoice), which is what makes staying the course with a build
+  // worth something - and would leave a player who spreads their buys finishing
+  // a run with a bar of empty slots and no idea what fills them. This is the
+  // one that needs no commitment, so it has to be a root: a root is exactly
+  // "can turn up in any shop for any build", which is what open means here.
+  "set_a_breakpoint",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

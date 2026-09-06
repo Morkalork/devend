@@ -24,6 +24,7 @@ import {
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
 import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
+import { isArmedBreakpoint } from "@/lib/physics/breakpointFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
@@ -68,6 +69,10 @@ function parseColor(c: string, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** How long the Breakpoint's "held it" ring burns. Nothing else reads this:
+ *  the physics clears no flash, so the fade below is the whole lifetime. */
+const BREAKPOINT_FLASH_MS = 650;
+
 /** Must match CLAIM_FLASH_MS in applyCut, which stamps the flashes. */
 const CLAIM_FLASH_MS = 420;
 
@@ -94,6 +99,7 @@ export class FxLayer {
 
     this.drawCutPreview(game, w2s, scale);
     this.drawSlings(game, w2s, scale, now);
+    this.drawBreakpoints(game, w2s, scale, now);
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
@@ -106,6 +112,51 @@ export class FxLayer {
     this.drawLockMarkers(game, w2s, scale);
     this.drawBallPops(game, w2s, scale, now);
     this.drawTrajectory(game, mods, w2s, scale);
+  }
+
+  /**
+   * The Breakpoint fences: a mark while the map's hold is still there.
+   *
+   * The budget is per MAP, so every Breakpoint on the board is armed or none
+   * of them is, and they all go dark together the moment one fires. That is
+   * the whole of the UI it needs: no counter, no meter, just a fence that
+   * looks live and then does not.
+   *
+   * Drawn as a bracket rather than a dot - the grip idiom belongs to Redeploy,
+   * and two different mechanics wearing one mark would be worse than either
+   * being unmarked.
+   */
+  private drawBreakpoints(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    for (const wall of game.walls) {
+      if (!isArmedBreakpoint(game, wall)) continue;
+      const colour = parseColor(getFenceType(wall.fenceTypeId).color, PALETTE.accent);
+      const a = w2s(wall.start.x, wall.start.y);
+      const b = w2s(wall.end.x, wall.end.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      // Across the fence, not along it: the mark has to read at a glance on a
+      // fence drawn at any angle.
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const arm = 9 * scale;
+      const pulse = 0.6 + 0.4 * Math.sin(now / 380);
+      this.over
+        .moveTo(mid.x - nx * arm, mid.y - ny * arm)
+        .lineTo(mid.x + nx * arm, mid.y + ny * arm)
+        .stroke({ width: Math.max(2, 3 * scale), color: colour, alpha: 0.9 * pulse });
+      this.over.circle(mid.x, mid.y, 3 * scale).fill({ color: colour, alpha: 0.95 });
+    }
+
+    // The moment it fires, where it fired. A ring rather than a label: the ball
+    // stopping is the message, and this only has to say WHICH stop that was.
+    const flash = game.breakpointFlash;
+    if (!flash) return;
+    const elapsed = now - flash.startTime;
+    if (elapsed < 0 || elapsed >= BREAKPOINT_FLASH_MS) return;
+    const t = elapsed / BREAKPOINT_FLASH_MS;
+    const p = w2s(flash.x, flash.y);
+    this.over.circle(p.x, p.y, (18 + 34 * t) * scale)
+      .stroke({ width: Math.max(2, 3 * scale), color: 0xb8a1ff, alpha: (1 - t) * 0.9 });
   }
 
   /**

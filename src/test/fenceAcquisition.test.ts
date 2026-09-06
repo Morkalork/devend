@@ -131,14 +131,28 @@ describe("what the catalogue actually sells", () => {
     expect(certTypes).toEqual(["drill"]);
   });
 
-  it("hangs every upgrade grant off a real chain", () => {
-    // A fence type is a change of VERB, worth walking to. A root would put it
-    // on the shelf of a player who has shown no interest in the line it
-    // belongs to.
+  it("keeps ONE open shelf and gates the rest", () => {
+    // This used to read "hangs every upgrade grant off a real chain", and that
+    // rule was half right. A fence type is a change of VERB and worth walking
+    // to - but with every one of them gated, a player who spread their buys
+    // finished a run with a bar of empty slots and no idea what filled them.
+    // They never met the system at all.
+    //
+    // So exactly one is open: a root, eligible in any shop for any build, which
+    // is what "open" means in a game whose store IS the upgrade tree. Every
+    // other one is earned, and the count is pinned because "one" is the whole
+    // design - two would make the gated ones optional, none takes the
+    // introduction away again.
     const ids = new Set(upgrades.map(u => u.id));
-    for (const u of upgrades) {
-      if (!u.grantsFenceType) continue;
-      expect(u.prerequisites?.length, `${u.id} is a root, not a leaf`).toBeGreaterThan(0);
+    const grants = upgrades.filter(u => u.grantsFenceType);
+    const open = grants.filter(u =>
+      (u.prerequisites ?? []).length === 0 && !u.unlockAfterChoice);
+    expect(open.map(u => u.id)).toEqual(["set_a_breakpoint"]);
+
+    for (const u of grants) {
+      if (open.includes(u)) continue;
+      const gated = (u.prerequisites ?? []).length > 0 || !!u.unlockAfterChoice;
+      expect(gated, `${u.id} is a second open shelf`).toBe(true);
       for (const p of u.prerequisites ?? []) {
         expect(ids.has(p), `${u.id} requires ${p}, which does not exist`).toBe(true);
       }

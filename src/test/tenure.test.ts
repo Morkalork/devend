@@ -387,7 +387,14 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 18/16/15: the head rule now admits a Junior gated behind another
+    // 18/15/14: Set A Breakpoint, the open-shelf fence upgrade, is a Junior
+    // root with no siblings, so it resolves as a chain at the SHALLOWEST
+    // threshold only - one step is one rung. At 20 and 30 the walk needs a
+    // Senior and a Principal to continue into and finds none, so it drops out.
+    // That is the right shape: a one-rung family is a head start you can be
+    // given, not a ladder you can be handed the top of.
+    //
+    // Before that, 18/16/15: the head rule now admits a Junior gated behind another
     // family's JUNIOR - a doorstep - which recovers Deadline Extension. It had
     // been silently unofferable since it was gated behind Padded Estimate, a
     // complete ladder Tenure simply stopped mentioning.
@@ -436,7 +443,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // so the family is no longer a Tenure head - the same reading that keeps
     // Budget Cycle, Procurement and Total Compensation out. It is still buyable
     // in the shop; it is just not a whole chain Tenure will hand over.
-    expect(counts).toEqual([17, 15, 14]);
+    expect(counts).toEqual([18, 15, 14]);
   });
 });
 

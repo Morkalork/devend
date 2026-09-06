@@ -27,6 +27,9 @@
 #                 to a ceiling; debounced, so one contact counts once.
 #   maxHits       ball hits this fence survives before it fractures. Absent =
 #                 the game's default (FENCE_FRACTURE_HITS).
+#   holdMs        milliseconds the first ball to bounce off a FINISHED fence of
+#                 this type is held still. Spent once per MAP, not per fence.
+#   holdsPerMap   how many of those a map gets. Only meaningful with holdMs.
 #   slingshot     true = a finished fence of this type can be grabbed and
 #                 pulled back once, like a rubber band, to fling the balls in
 #                 front of it. Only the redeploy fence.
@@ -82,6 +85,24 @@ fences:
     source: upgrade
     description: "A finished one is a slingshot, once: pull it back, aim, and it flings the balls in front of it."
     howTo: "Build it across a lane, then press on it and drag back. What it catches leaves at up to 3x speed."
+
+  # The one you can find without committing to anything (upgrades.yml: Set A
+  # Breakpoint is a root). Every other special is the crown of a maxed family;
+  # this exists so a player who spreads their buys still meets the system.
+  #
+  # Once per MAP rather than once per fence, and that is the whole balance of
+  # it: a fence type is unlimited once owned, so per-fence would let a player
+  # chain-hold one ball across a whole board - stronger than the Cron Job line
+  # costs twenty-four levels to reach.
+  - id: breakpoint
+    name: Breakpoint
+    color: "#b8a1ff"
+    buildSpeed: 0.85
+    holdMs: 2000
+    holdsPerMap: 1
+    source: upgrade
+    description: "Once a map, the first ball to bounce off a finished one is held still for 2 seconds."
+    howTo: "Build it in a lane you need to stop using, and let a ball find it."
 
   # The only entry that is faster than standard, and the only one that is more
   # fragile. It exists so the WIP-limit maps have an answer that is not simply
