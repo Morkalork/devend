@@ -835,8 +835,8 @@
     "delivered_other": "Deliver {{count}} balls into a box.",
     "areaWinMany_one": "Lock {{count}} ball inside the {{area}} area for a {{mult}}x payout.",
     "areaWinMany_other": "Lock {{count}} balls inside the {{area}} area for a {{mult}}x payout.",
-    "areaFail_one": "You lock every ball without getting one into the area.",
-    "areaFail_other": "You lock every ball without getting {{count}} of them into the area.",
+    "areaFail_one": "You don't lock at least one ball in the {{area}} area.",
+    "areaFail_other": "You don't lock at least {{count}} balls in the {{area}} area.",
     "areaFailBoss_one": "You trap the boss outside the area.",
     "areaFailBoss_other": "You trap the bosses outside the area."
   },

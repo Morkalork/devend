@@ -121,15 +121,16 @@ function winConditionParts(
         // "COSTS A LIFE" over the bullet "Finish within 60s.", which reads as
         // though finishing on time is what costs you the life.
         //
-        // And it says what the RULE is, which is not "one ball ends up outside".
-        // The map is lost when no target is left that could still reach the
-        // zone (anyGateTargetInPlay), which on a three-ball map asking for one
-        // ball in the zone means locking ALL THREE without landing one. The old
-        // wording - "You trap a ball outside the area." - was read as "every
-        // ball has to end up in the coloured area", which is what level 8 does
-        // NOT ask, and it disagreed with mapFailure's own "The zone can no
-        // longer be reached" for the same rule.
-        say("fail", t("winConditions.areaFail", { count: c.count }));
+        // Stated as the requirement GOING UNMET rather than as the mechanism
+        // that makes it final. Two earlier cuts said the mechanism: "You trap a
+        // ball outside the area." was read as "every ball has to end up in the
+        // coloured area" (which level 8, with three balls and a count of one,
+        // does not ask), and "You lock every ball without getting one into the
+        // area" was true but made the reader reconstruct the requirement from
+        // the failure. This names the count and the zone, which is what the
+        // player is actually deciding about, and the heading supplies the
+        // consequence.
+        say("fail", t("winConditions.areaFail", { count: c.count, area: kind }));
         break;
       }
       case "lockType":

@@ -820,8 +820,8 @@
     "delivered_other": "Leverera {{count}} bollar i en låda.",
     "areaWinMany_one": "Lås in {{count}} boll i {{area}}-området för {{mult}}x betalning.",
     "areaWinMany_other": "Lås in {{count}} bollar i {{area}}-området för {{mult}}x betalning.",
-    "areaFail_one": "Du låser in alla bollar utan att få in någon i zonen.",
-    "areaFail_other": "Du låser in alla bollar utan att få in {{count}} av dem i zonen.",
+    "areaFail_one": "Du låser inte in minst en boll i {{area}}-zonen.",
+    "areaFail_other": "Du låser inte in minst {{count}} bollar i {{area}}-zonen.",
     "areaFailBoss_one": "Du fångar bossen utanför zonen.",
     "areaFailBoss_other": "Du fångar bossarna utanför zonen."
   },

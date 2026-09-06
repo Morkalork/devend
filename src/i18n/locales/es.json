@@ -820,8 +820,8 @@
     "delivered_other": "Entrega {{count}} bolas en una caja.",
     "areaWinMany_one": "Encierra {{count}} bola en el área {{area}} para cobrar {{mult}}x.",
     "areaWinMany_other": "Encierra {{count}} bolas en el área {{area}} para cobrar {{mult}}x.",
-    "areaFail_one": "Encierras todas las bolas sin meter ninguna en la zona.",
-    "areaFail_other": "Encierras todas las bolas sin meter {{count}} de ellas en la zona.",
+    "areaFail_one": "No encierras al menos una bola en la zona {{area}}.",
+    "areaFail_other": "No encierras al menos {{count}} bolas en la zona {{area}}.",
     "areaFailBoss_one": "Atrapas al jefe fuera de la zona.",
     "areaFailBoss_other": "Atrapas a los jefes fuera de la zona."
   },
