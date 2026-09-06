@@ -4,11 +4,27 @@ import { GameModifiers } from '@/hooks/useActiveModifiers';
  * Effect types: all GameModifiers keys, plus the special 'startingLevelBonus'
  * which is handled separately in Index.tsx (takes the max, not sum).
  */
-export type CertEffectType = keyof GameModifiers | 'startingLevelBonus';
+export type CertEffectType =
+  | keyof GameModifiers
+  | 'startingLevelBonus'
+  /**
+   * Puts a fence type in the player's slots from the start of every run
+   * (FENCE_TYPES_PLAN.md). The only ACCOUNT-scoped grant: store and upgrade
+   * grants live and die with a run, and this one is why the drill is in the
+   * bar on map one for a player who owns it.
+   */
+  | 'grantsFenceType';
 
 export interface CertEffect {
   type: CertEffectType;
   value: number;
+  /**
+   * For 'grantsFenceType': which type. A separate field rather than widening
+   * `value` to a string, because every other effect in the store sums or maxes
+   * a number and a union there would make all of them check their own type
+   * before doing arithmetic.
+   */
+  fenceType?: string;
 }
 
 export interface CertLevel {

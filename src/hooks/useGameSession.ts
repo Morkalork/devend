@@ -60,6 +60,8 @@ import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth, debugMu
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
+import { fenceSlotsFrom } from "@/lib/fenceOwnership";
+import { devFenceSlots } from "@/lib/devFlags";
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
 import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish';
@@ -508,6 +510,31 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     return bonuses;
   }, [activeTagSets]);
+
+  /**
+   * The fence types in the player's slots (FENCE_TYPES_PLAN.md step 7).
+   *
+   * Three sources, one list. Certificates come FIRST because they are
+   * account-scoped: the drill is in the bar from map one for a player who owns
+   * it, and putting it first also means a run that then buys three more never
+   * pushes it out. Upgrade grants follow in catalogue order, and the dev flag
+   * last, as an override for testing a loadout without shopping for it.
+   *
+   * fenceSlotsFrom does the deduping, the cap and the unknown-id filtering, so
+   * none of the three economies has to know what a slot is.
+   */
+  const fenceSlotIds = useMemo(() => {
+    const fromCerts = certificates.flatMap(c =>
+      (c.levels ?? [])
+        .slice(0, certLevelsOwned[c.id] ?? 0)
+        .filter(l => l.effect.type === "grantsFenceType")
+        .map(l => l.effect.fenceType ?? ""),
+    );
+    const fromUpgrades = ownedUpgradeIds
+      .map(id => upgrades.find(u => u.id === id)?.grantsFenceType ?? "")
+      .filter(Boolean);
+    return fenceSlotsFrom([...fromCerts, ...fromUpgrades, ...devFenceSlots()]);
+  }, [certificates, certLevelsOwned, ownedUpgradeIds, upgrades]);
 
   /**
    * Build scaling: upgrades whose effect grows with how committed the run is to
@@ -2218,6 +2245,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     totalScore,
     currentLives,
     ownedUpgradeIds,
+    fenceSlotIds,
     showLevelComplete,
     pendingLevelScore,
     cumulativeLockedBalls,

@@ -7,6 +7,7 @@ import type { AchievementConfig } from "@/types/achievement";
 import type { UpgradeData } from "@/types/upgrade";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { certEffectLabel } from "@/lib/certEffectLabel";
+import { isKnownFenceType } from "@/lib/fences";
 
 // Read straight from the YAML sources of truth so this suite guards the data,
 // not a hand-maintained copy of it (same approach as upgrades.test.ts).
@@ -64,7 +65,14 @@ describe("certificate catalogue integrity", () => {
   // An effect naming a modifier that no longer exists is dropped on merge, so
   // the level costs real Certificate Hours and then does nothing at all.
   it("only grants effects the modifier pipeline actually reads", () => {
-    const known = new Set([...Object.keys(DEFAULT_MODIFIERS), "startingLevelBonus"]);
+    // Two effects are deliberately NOT modifiers, and each is listed by name
+    // rather than the set being loosened: startingLevelBonus is taken as a max
+    // at run start, and grantsFenceType puts a fence type in a slot
+    // (FENCE_TYPES_PLAN.md). Anything else that is not a GameModifiers key is
+    // a cert that silently does nothing, which is what this guards.
+    const known = new Set([
+      ...Object.keys(DEFAULT_MODIFIERS), "startingLevelBonus", "grantsFenceType",
+    ]);
     const unknown: string[] = [];
     for (const c of certificates)
       for (const l of c.levels) if (!known.has(l.effect.type)) unknown.push(`${c.id} -> ${l.effect.type}`);
@@ -93,6 +101,31 @@ const fakeT = ((key: string, opts?: Record<string, unknown>) => {
   if (typeof hit !== "string") return (opts?.defaultValue as string) ?? "";
   return hit.replace(/\{\{(\w+)\}\}/g, (_, name) => String(opts?.[name] ?? `{{${name}}}`));
 }) as unknown as Parameters<typeof certEffectLabel>[0];
+
+describe("a fence-type certificate", () => {
+  const fenceCerts = certificates.flatMap(c =>
+    c.levels.filter(l => l.effect.type === "grantsFenceType").map(l => ({ c, l })));
+
+  it("names a fence type the catalogue has", () => {
+    // The whole effect is the id. A typo would sell a certificate that grants
+    // nothing, at a price, forever - and nothing else would ever say.
+    expect(fenceCerts.length, "the fence-type certificate is gone").toBeGreaterThan(0);
+    for (const { c, l } of fenceCerts) {
+      expect(l.effect.fenceType, `${c.id} grants no fence type at all`).toBeTruthy();
+      expect(isKnownFenceType(l.effect.fenceType), `${c.id} grants an unknown fence type`)
+        .toBe(true);
+    }
+  });
+
+  it("is bought once, not levelled", () => {
+    // A fence type is owned or it is not; a second level would take hours for
+    // nothing.
+    for (const { c } of fenceCerts) {
+      expect(c.levels.filter(l => l.effect.type === "grantsFenceType"),
+        `${c.id} sells the same fence type twice`).toHaveLength(1);
+    }
+  });
+});
 
 describe("certificate effect labels", () => {
   // The store shows one description for the whole certificate, so the only

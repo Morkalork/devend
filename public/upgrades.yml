@@ -2082,3 +2082,78 @@ upgrades:
     tags: [safety]
     modifiers:
       fastestBallSlowPercent: 1
+
+  # ===============================
+  # FENCE TYPES (FENCE_TYPES_PLAN.md)
+  # ===============================
+  #
+  # Two of the six live here, at the top of short chains, because a fence type
+  # is a change of VERB rather than a change of number and that is worth
+  # walking to. The chain below each is what the player already knows: flare
+  # comes out of the line that speeds things up, tripwire out of the line that
+  # makes fences finish sooner.
+  #
+  # `grantsFenceType` puts it straight into a slot (see fenceOwnership.ts).
+  # There is no separate inventory and no swap screen: five acquirable types
+  # against four slots means a swap would matter exactly once per run, and only
+  # for a player who bought all five. So a purchase is a decision, and the
+  # store stops offering once the four are full.
+
+  # Each hangs off the line it belongs to rather than starting a root of its
+  # own. That is not bookkeeping: the chain below is the argument for the type.
+  # Flare comes out of Breaking Change, the line about making things break
+  # sooner - a faster ball hits harder. Tripwire comes out of Fast Compile, the
+  # line about fences finishing sooner, which is exactly what it does and what
+  # it charges for. A player who took neither line has not been told
+  # this is a thing they want.
+  #
+  # No costMultiplier. That surcharge is for DOORS - upgrades whose value is
+  # opening a line the formula cannot see - and these open nothing: they are
+  # leaves, and the level x tier price is exactly what they are worth.
+  - id: cold_storage_ice
+    name: Cold Storage
+    tier: Senior
+    description: "Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower."
+    unlockLevel: 6
+    icon: snowflake
+    prerequisites:
+      - feature_freeze_junior
+    tags: [freeze]
+    grantsFenceType: ice
+    modifiers: {}
+
+  - id: hardened_rebar
+    name: Hardened Rebar
+    tier: Senior
+    description: "Adds the Rebar fence: it takes far more punishment before it shatters. It builds 40% slower."
+    unlockLevel: 7
+    icon: shield
+    prerequisites:
+      - defensive_programming_junior
+    tags: [safety]
+    grantsFenceType: rebar
+    modifiers: {}
+
+  - id: incident_flare
+    name: Incident Flare
+    tier: Senior
+    description: "Adds the Flare fence: balls bouncing off it speed up. It builds 30% slower."
+    unlockLevel: 8
+    icon: flame
+    prerequisites:
+      - breaking_change_junior
+    tags: [risk]
+    grantsFenceType: flare
+    modifiers: {}
+
+  - id: hotfix_tripwire
+    name: Hotfix Tripwire
+    tier: Senior
+    description: "Adds the Tripwire fence: builds 40% faster, and the first ball to touch it breaks it."
+    unlockLevel: 10
+    icon: zap
+    prerequisites:
+      - fast_compile_junior
+    tags: [tempo]
+    grantsFenceType: tripwire
+    modifiers: {}

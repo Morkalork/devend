@@ -29,8 +29,10 @@
 #                 the game's default (FENCE_FRACTURE_HITS).
 #   anchorOnBreakable  true = a cut may START on a breakable. Only the drill.
 #   drillDamage   damage per second dealt to a breakable this fence touches.
-#   source        where it comes from: always | store | upgrade | certificate.
-#                 Documentation for now; the acquisition wiring is step 7.
+#   source        where it comes from: always | upgrade | certificate.
+#                 Four types hang off upgrade chains in upgrades.yml, and the
+#                 drill is a certificate - the only ACCOUNT-scoped one, so it is
+#                 in the bar from map one of every run.
 #   description   info modal: one-line "what it does"
 #   howTo         info modal: one-line "how to use it"
 
@@ -52,7 +54,7 @@ fences:
     color: "#7fd4ff"
     buildSpeed: 0.7
     ballSpeedStep: -22
-    source: store
+    source: upgrade
     description: "Balls bouncing off it lose speed, down to their floor."
     howTo: "Build it where balls bounce most. It grows slower, so pick your moment."
 
@@ -70,7 +72,7 @@ fences:
     color: "#b9c4cf"
     buildSpeed: 0.6
     maxHits: 6
-    source: store
+    source: upgrade
     description: "Takes far more punishment before it shatters."
     howTo: "Spend it on the one cut you cannot afford to lose."
 

@@ -1116,7 +1116,8 @@
     "showHighscoreProgress": "Adds the map highscore bar to the HUD",
     "startingOvertime": "Start with +{{hours}}h overtime",
     "storeLockReliefOne": "The store never asks for more than one lock",
-    "storeLockReliefFull": "The store never asks for locks at all"
+    "storeLockReliefFull": "The store never asks for locks at all",
+    "grantsFenceType": "Adds the {{fence}} fence to every run."
   },
   "boardInfo": {
     "hint": "Hold anything on the board to see what it is.",

@@ -104,6 +104,8 @@ interface GameScreenProps {
   abilityCharges?: Record<string, number>;
   /** Distinct abilities holdable at once (ascension can tighten it). */
   abilitySlots?: number;
+  /** The fence types in the player's slots (FENCE_TYPES_PLAN.md). */
+  fenceSlotIds?: string[];
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives left: restart the current level (session remount). */
   /** Dismissing the failure overlay is what triggers this: the session
@@ -211,6 +213,7 @@ export function GameScreen({
   onSpendAbility,
   abilityCharges,
   abilitySlots,
+  fenceSlotIds,
   onGameEnd,
   onMapTimedOut,
   onLevelComplete,
@@ -1000,6 +1003,7 @@ export function GameScreen({
             onGrantAbility={onGrantAbility}
             abilityCharges={abilityCharges ?? {}}
             abilitySlots={abilitySlots}
+            fenceSlotIds={fenceSlotIds}
             onSpendAbility={onSpendAbility}
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onRequestEntityInfo={setEntityInfo}

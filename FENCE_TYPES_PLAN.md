@@ -3,9 +3,26 @@
 The plan for **fence types**: a row of five slots beneath the board that decides
 what kind of fence the next cut draws.
 
-Status: **design agreed, not built.** Every decision below that could have gone
-another way is recorded with the reason, so the build can be argued with rather
-than guessed at.
+Status: **BUILT**, all seven steps. The plan below is kept as written, with the
+places the build departed from it marked **[CHANGED]** and the reason given -
+a plan quietly edited to match what happened is a plan that never taught
+anybody anything.
+
+Three departures, all in step 7:
+
+1. **"The store" and "the upgrade chains" turned out to be one channel.** The
+   upgrade shop IS the store in this game, so four types are ordinary chain
+   entries in `upgrades.yml` and a parallel shelf mechanism would have been a
+   second way to buy the same thing. The certificate store is genuinely
+   separate, because what it sells outlives the run.
+2. **No swap screen, and no inventory.** Owning a type IS holding a slot. Five
+   acquirable types against four slots means a swap would matter exactly once
+   per run and only for a player who bought all five, so a purchase goes
+   straight into a slot and the shop stops offering once the four are full.
+   That makes the purchase a decision; it costs the player the ability to
+   change their mind, which is the trade.
+3. **Ice and rebar moved from "store" to upgrade chains** for reason 1, so all
+   four run-scoped types hang off lines the player already knows.
 
 ---
 
@@ -79,11 +96,11 @@ the roster of four is a real choice from the moment the second is owned.
 | id | look | what it does | drawback | source |
 |---|---|---|---|---|
 | `standard` | the current green | the fence as it is today | none | always in slot 1, cannot be unequipped |
-| `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds ~30% slower | store |
-| `flare` | red, hot | a ball bouncing off it gains a speed step | builds ~30% slower, and a faster ball is more dangerous to *you* | upgrade chain |
-| `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds ~50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
-| `rebar` | heavy grey | survives more ball hits before fracturing (`maxHits`) | builds ~40% slower | store |
-| `tripwire` | thin yellow | builds ~40% FASTER | fractures on the first hit | upgrade chain |
+| `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds 30% slower | upgrade chain (Feature Freeze) **[CHANGED]** |
+| `flare` | red, hot | a ball bouncing off it gains a speed step | builds 30% slower, and a faster ball is more dangerous to *you* | upgrade chain (Breaking Change) |
+| `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds 50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
+| `rebar` | heavy grey | survives more ball hits before fracturing (`maxHits`) | builds 40% slower | upgrade chain (Defensive Programming) **[CHANGED]** |
+| `tripwire` | thin yellow | builds 40% FASTER | fractures on the first hit | upgrade chain (Fast Compile) |
 
 `tripwire` is deliberately the inverse of the others: it proves the axis runs
 both ways, and it gives the WIP-limit maps (17, 18, 32) something to think about
@@ -173,12 +190,18 @@ The only genuinely new physics, and it gets its own step for that reason.
 
 **The test is the chain**: two slabs in a line, one drill, and both fall.
 
-### Step 7 - Acquisition
+### Step 7 - Acquisition  **[CHANGED]**
 
-- Store: a fence-type card on the same shelf as the ability card
-  (`abilityOffer.ts` is the model), plus a swap UI for slots 2-5.
-- Upgrades: `flare` and `tripwire` as the top level of two chains.
-- Certificates: `drill`, account-scoped, so it is in the roster at run start.
+- **Upgrades**: `ice`, `rebar`, `flare` and `tripwire`, each a leaf on a chain
+  the player already knows - Feature Freeze, Defensive Programming, Breaking
+  Change, Fast Compile. A fence type is a change of VERB and worth walking to;
+  a root would put it on the shelf of a player who has shown no interest in
+  the line it belongs to.
+- **Certificates**: `drill`, account-scoped, one level. It earns the only
+  account-scoped slot because it is the only type that changes what a cut can
+  be AIMED at, and because a mechanic you meet once per run and then lose is a
+  mechanic nobody learns.
+- **No separate store card and no swap UI**, for the reasons at the top.
 
 Deliberately LAST. Every step before it is playable with types granted by a dev
 flag, and wiring three economies into an unfinished mechanic is how a feature

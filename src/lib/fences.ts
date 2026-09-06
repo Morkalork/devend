@@ -18,10 +18,20 @@ import yaml from "js-yaml";
 import fencesYamlRaw from "../../public/fences.yml?raw";
 
 /** Where a fence type comes from. Documentation until step 7 wires acquisition. */
-export type FenceSource = "always" | "store" | "upgrade" | "certificate";
+/**
+ * Where a type comes from.
+ *
+ * "store" is deliberately absent. The plan named the store and the upgrade
+ * chains as separate channels, and in this game they are one: the upgrade shop
+ * IS the store, so four types are ordinary chain entries in upgrades.yml and
+ * inventing a parallel shelf mechanism would have been a second way to buy the
+ * same thing. The certificate store is genuinely separate, because what it
+ * sells outlives the run.
+ */
+export type FenceSource = "always" | "upgrade" | "certificate";
 
 const ALL_SOURCES: Record<FenceSource, true> = {
-  always: true, store: true, upgrade: true, certificate: true,
+  always: true, upgrade: true, certificate: true,
 };
 export const FENCE_SOURCES = Object.keys(ALL_SOURCES) as FenceSource[];
 const VALID_SOURCES = new Set<string>(FENCE_SOURCES);
@@ -96,7 +106,7 @@ function parseEntry(raw: unknown): FenceTypeDef | null {
     drillDamage: Math.max(0, num(r.drillDamage, 0)),
     source: typeof r.source === "string" && VALID_SOURCES.has(r.source)
       ? (r.source as FenceSource)
-      : "store",
+      : "upgrade",
     description: typeof r.description === "string" ? r.description : undefined,
     howTo: typeof r.howTo === "string" ? r.howTo : undefined,
   };

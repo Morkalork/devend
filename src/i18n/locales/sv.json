@@ -1649,7 +1649,8 @@
     "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en",
     "startingOvertime": "Börja med +{{hours}}h övertid",
     "storeLockReliefOne": "Butiken kräver aldrig mer än en inlåsning",
-    "storeLockReliefFull": "Butiken kräver inga inlåsningar alls"
+    "storeLockReliefFull": "Butiken kräver inga inlåsningar alls",
+    "grantsFenceType": "Lägger till {{fence}}-staketet i varje körning."
   },
   "boardInfo": {
     "hint": "Håll in vad som helst på brädet för att se vad det är.",

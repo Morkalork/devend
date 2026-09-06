@@ -258,3 +258,24 @@ certificates:
         effect: { type: pushBonusMultiplier, value: 1.5 }
       - cost: 14
         effect: { type: pushBonusMultiplier, value: 1.3 }
+
+  # The drill is the one ACCOUNT-scoped fence type (FENCE_TYPES_PLAN.md): a
+  # certificate, so it is in the bar from map one of every run rather than
+  # bought again each time. It earns that because it is the only type that
+  # changes what a cut can be aimed at - every other fence still has to start
+  # on open ground - and because a mechanic you meet once per run and then lose
+  # is a mechanic nobody learns.
+  #
+  # One level. A fence type is owned or it is not; there is nothing to buy
+  # twice.
+  - id: demolition-certified
+    name: Demolition Certified
+    description: Adds the Drill fence to every run. It can be anchored on a breakable and eats through it.
+    unlockType: hours-spent
+    # Late, deliberately. The drill is the strongest answer in the game to "I
+    # cannot reach that", and handing it over before a player has met the
+    # problem would take the problem away rather than solve it.
+    requiredHoursSpent: 40
+    levels:
+      - cost: 18
+        effect: { type: grantsFenceType, value: 1, fenceType: drill }

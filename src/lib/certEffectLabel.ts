@@ -15,6 +15,7 @@
  */
 import type { TFunction } from 'i18next';
 import type { CertEffect } from '@/types/certificate';
+import { getFenceType } from '@/lib/fences';
 import { MULTIPLICATIVE_KEYS, type GameModifiers } from '@/hooks/useActiveModifiers';
 
 /** `1.05` -> `+5`, `0.93` -> `-7`. Rounded: 0.93 - 1 is -0.07000000000000006. */
@@ -62,6 +63,15 @@ const ADDITIVE_KEYS = new Set([
 ]);
 
 export function certEffectLabel(t: TFunction, effect: CertEffect): string {
+  // A fence-type grant is the one effect that is not a number at all, so it
+  // reads its own field and names the TYPE. Taken from the catalogue rather
+  // than written into the label, so the store cannot end up advertising a name
+  // the bar does not use.
+  if (effect.type === 'grantsFenceType') {
+    const fence = getFenceType(effect.fenceType);
+    return t('certificateEffects.grantsFenceType', { fence: fence.name }) as string;
+  }
+
   const special = SPECIAL[effect.type];
   if (special) return special(t, effect.value);
 

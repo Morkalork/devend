@@ -1,5 +1,6 @@
 import { engagementProgress } from '@/lib/scoreEngagement';
 import { devFenceSlots } from "@/lib/devFlags";
+import { resolveSelection } from "@/lib/fenceOwnership";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
 /**
  * GameCanvas — the playable game board.
@@ -16,7 +17,7 @@ import { STANDARD_FENCE_ID } from "@/lib/fences";
  *   - level init src/lib/initGame.ts (board, obstacles, balls, regions)
  *   - rendering: src/lib/rendering/sleek/SleekRenderer.ts
  */
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { pendingLauncher, fireLauncher, type LauncherState } from "@/lib/physics/launcher";
@@ -219,6 +220,8 @@ interface GameCanvasProps {
   abilityCharges?: Record<string, number>;
   /** Distinct abilities holdable at once. */
   abilitySlots?: number;
+  /** The fence types in the player's slots, from the run (FENCE_TYPES_PLAN.md). */
+  fenceSlotIds?: string[];
   /** The player spent one ability charge (pressed the ability button). */
   onSpendAbility?: (abilityId: string) => void;
   /** Press-and-hold on a superior-lock star: open the lock explainer modal. */
@@ -330,6 +333,7 @@ export function GameCanvas({
   onGrantAbility,
   abilityCharges,
   abilitySlots,
+  fenceSlotIds: fenceSlotIdsProp,
   onSpendAbility,
   onRequestSuperiorInfo,
   onRequestEntityInfo,
@@ -1701,16 +1705,29 @@ export function GameCanvas({
    * (the cut records its type at swipe time) and the physics has no React.
    */
   const [selectedFenceTypeId, setSelectedFenceTypeId] = useState<string>(STANDARD_FENCE_ID);
-  const [fenceSlotIds] = useState<string[]>(() => devFenceSlots());
+  // The roster comes from the run now (certificates, upgrades, then the dev
+  // flag), not from the dev flag alone. Falls back to the flag when the prop is
+  // absent, which is what keeps the map builder's playtest and the tests able
+  // to drive the bar without a session behind them.
+  const fenceSlotIds = useMemo(
+    () => (fenceSlotIdsProp && fenceSlotIdsProp.length > 0 ? fenceSlotIdsProp : devFenceSlots()),
+    [fenceSlotIdsProp],
+  );
 
   const handleSelectFenceType = useCallback((fenceTypeId: string) => {
     // Refuse a type that is not actually in a slot. The bar cannot produce one,
     // but a stale save or a dev flag can, and a selection the player cannot see
     // would draw fences they never chose.
-    const allowed = fenceTypeId === STANDARD_FENCE_ID || fenceSlotIds.includes(fenceTypeId);
-    const next = allowed ? fenceTypeId : STANDARD_FENCE_ID;
+    const next = resolveSelection(fenceTypeId, fenceSlotIds);
     setSelectedFenceTypeId(next);
     gameRef.current.selectedFenceTypeId = next;
+  }, [fenceSlotIds]);
+
+  // A roster change can take the selected type away - the run ends, a save
+  // loads, a dev flag is edited. Fall back rather than leave the player drawing
+  // with a fence no button on the bar is lit for.
+  useEffect(() => {
+    setSelectedFenceTypeId(prev => resolveSelection(prev, fenceSlotIds));
   }, [fenceSlotIds]);
 
   useEffect(() => {

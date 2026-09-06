@@ -70,6 +70,14 @@ export interface UpgradeConfig {
   /** Ability retainer card: the effect kind, so the card draws the same glyph
    *  the ability bar and the fire animation use. */
   abilityKind?: string;
+  /**
+   * A fence type this upgrade puts in the player's slots (FENCE_TYPES_PLAN.md).
+   *
+   * Unlike `grantsAbility` above, this DOES appear in upgrades.yml: a fence
+   * type is authored content with a place in a chain, not a card the shop
+   * synthesises. Run-scoped, like every other upgrade.
+   */
+  grantsFenceType?: string;
   modifiers: Record<string, number>;
   /**
    * Build scaling: this effect grows with how committed the run is to an
@@ -142,6 +150,14 @@ export interface TagSetBonus {
   tag: UpgradeTag;
   name: string;
   description: string;
+  /**
+   * A fence type this upgrade puts in the player's slots (FENCE_TYPES_PLAN.md).
+   *
+   * Unlike `grantsAbility` above, this DOES appear in upgrades.yml: a fence
+   * type is authored content with a place in a chain, not a card the shop
+   * synthesises. Run-scoped, like every other upgrade.
+   */
+  grantsFenceType?: string;
   modifiers: Record<string, number>;
 }
 

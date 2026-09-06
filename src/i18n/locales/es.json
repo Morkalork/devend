@@ -1649,7 +1649,8 @@
     "showHighscoreProgress": "Añade la barra de récord del mapa al HUD",
     "startingOvertime": "Empieza con +{{hours}}h de horas extra",
     "storeLockReliefOne": "La tienda nunca pide más de un encierro",
-    "storeLockReliefFull": "La tienda deja de pedir encierros"
+    "storeLockReliefFull": "La tienda deja de pedir encierros",
+    "grantsFenceType": "Añade la valla {{fence}} a cada partida."
   },
   "boardInfo": {
     "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",
