@@ -21,6 +21,7 @@ import { OptionsScreen } from '@/components/game/OptionsScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { GameErrorBoundary } from '@/components/GameErrorBoundary';
 import { flushRunSave } from '@/lib/runSaveFlush';
+import { adminOnHere } from '@/lib/adminAccess';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
@@ -72,10 +73,13 @@ type Session = ReturnType<typeof useGameSession>;
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
-  // Admin is on automatically in local dev; on the deployed build it's unlocked
-  // by a secret gesture (tap the welcome-screen ball 10 times), so the Playground
-  // is reachable on dev without shipping an admin button to real players.
-  const [adminUnlocked, setAdminUnlocked] = useState(import.meta.env.DEV);
+  // Admin is on automatically where the game is being BUILT rather than played:
+  // the local dev server, and the staging deploy. Everywhere else it is still
+  // unlocked by the secret gesture (tap the welcome-screen ball 10 times), so no
+  // admin button ships to a real player. See lib/adminAccess for why this asks
+  // the host - and for the Capacitor trap that makes "localhost" the wrong
+  // question.
+  const [adminUnlocked, setAdminUnlocked] = useState(adminOnHere);
   const handleSecretAdminUnlock = useCallback(() => {
     setAdminUnlocked(true);
     navigation.goToAdmin();
