@@ -375,6 +375,7 @@ levels:
         'y': 600
         width: 225
         height: 250
+        required: false
     beats:
       - id: deadline
         atSpaceRemaining: 45

@@ -559,6 +559,52 @@ long-run boredom across 31 maps.
 
 ### 6.4 The map states its own win  *(Convention 4)*
 
+> **Write this rationale HERE, not in `map.yml`.** The builder splices only the
+> level it edited, re-dumping that entry from the parsed object - so any comment
+> inside a level's own body is deleted the moment that level is touched from the
+> editor, silently, because the game loads a comment-free map perfectly well.
+> 319 comment lines currently sit inside level bodies and are exposed that way;
+> the block below was one of them until a phone edit to level 5 ate it. File
+> level comments at the top of `map.yml` are safe. Per-map reasoning belongs in
+> this document, which no tool rewrites.
+
+#### The shape every content map uses
+
+**Space, plus one clause a lock cannot produce, and no lock count beside it.**
+
+Sealing every ball writes the rest of the board off as unreachable, so a space
+clause is met as a CONSEQUENCE of the last lock - which is why a lock count
+closes nothing on its own, and why the smash is what actually ends the rush.
+Locking everything leaves the smash unmet, and the lockedOut rule takes the
+life.
+
+Leaving the lock count off is deliberate the other way too: the Ship It
+assignment pays for clearing a map without sealing a single ball, and a win that
+demands a lock takes that map away from the mission. Maps 1-4 and the maps with
+nothing operable still ask for locks, because with nothing to smash or light it
+is the only honest ask they have.
+
+#### A gate area on a map that authored its own win
+
+`resolveWinSpec` returns an authored `win:` **before** it looks at gate areas.
+So on a map with a `win:` block, an area left at its default `required: true`
+is a gate that gates nothing - and worse, it is invisible:
+
+| | |
+|---|---|
+| gates the win | no, the authored spec never asked for an `area` clause |
+| pays its multiplier | yes, `areaForLock` does not read the flag |
+| listed as a requirement | no, correctly |
+| listed as a bonus | **no** - the criteria filter bonuses on `required === false` |
+
+A pay pocket the game never mentions, which a player finds only by accident.
+It is also a trap for later: delete that map's `win:` block and the area
+silently becomes the map's SOLE win condition, replacing everything else.
+
+**So on a map with an authored win, every area carries `required: false`
+unless the win block also carries an `area` clause.** Pinned in
+`winSpecAuthoring.test.ts`.
+
 **Every map must ask for something its content can uniquely provide.** A map
 whose win is only "clear to N%" is not a puzzle, it is a stopwatch, and it was
 beatable two ways that ignored the board entirely:
