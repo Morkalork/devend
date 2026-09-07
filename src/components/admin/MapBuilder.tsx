@@ -864,14 +864,14 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           deliberately left alone: it maps clicks to world coordinates
           through getBoundingClientRect, and a zoomed ancestor would put
           every click somewhere other than where it was made. */}
-      <div className="admin-chrome-zoom flex-shrink-0 p-3 bg-card border-b border-border flex items-center gap-3">
+      <div className="admin-chrome-zoom flex-shrink-0 p-3 bg-card border-b border-border flex items-center gap-3 overflow-x-auto scrollbar-hide">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <h1 className="text-lg font-bold text-primary flex-1">Map Builder</h1>
+        <h1 className="text-lg font-bold text-primary flex-1 whitespace-nowrap">Map Builder</h1>
         {/* Undo / redo. Labelled with how deep the stack currently is, because
             the limit is real: at ten actions the oldest falls off silently, and
             a button that looks available but cannot reach what you wanted is
@@ -879,7 +879,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         <button
           onClick={() => applyHistory('undo')}
           disabled={!canUndo(history)}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
           title={canUndo(history)
             ? `Undo (Ctrl+Z) - ${history.past.length} of ${HISTORY_LIMIT} actions kept`
             : 'Nothing to undo'}
@@ -889,7 +889,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         <button
           onClick={() => applyHistory('redo')}
           disabled={!canRedo(history)}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
           title={canRedo(history) ? 'Redo (Ctrl+Shift+Z)' : 'Nothing to redo'}
         >
           <Redo2 className="w-4 h-4" />
@@ -903,7 +903,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
             setPanelSide(next);
             writePanelSide(next);
           }}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
           title={`Move the panel to the ${otherSide(panelSide)}`}
         >
           {panelSide === 'right'
@@ -923,14 +923,14 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         </button>
         <button
           onClick={copyYaml}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
           title="Copy YAML to clipboard"
         >
           <Copy className="w-4 h-4" />
         </button>
         <button
           onClick={exportYaml}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
           title="Download YAML"
         >
           <Download className="w-4 h-4" />
@@ -1029,8 +1029,36 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       {/* Main Content */}
       <div className={`flex-1 flex flex-col ${sideClasses.row} overflow-hidden`}>
         {/* Canvas Area — min-w-0 so the canvas' intrinsic buffer width can't
-            push the side panel off-screen (flex items default to min-width:auto). */}
-        <div className="flex-1 min-h-0 min-w-0 p-2">
+            push the side panel off-screen (flex items default to min-width:auto).
+            `relative` anchors the phone-only undo/redo pair below. */}
+        <div className="relative flex-1 min-h-0 min-w-0 p-2">
+          {/* Undo and redo, where a thumb is.
+              They are in the top toolbar too, and on a phone that is the wrong
+              end of the screen for the two most-used actions in an editor -
+              reachable only by shifting grip, on the row that also holds Save
+              and Delete Level. Mirrored here rather than moved, because a mouse
+              has no reach problem and the keyboard shortcuts point at the
+              toolbar. Bottom LEFT: the zoom cluster already owns the top right,
+              and a right-handed thumb covering the board is worse than one
+              covering its margin. */}
+          <div className="lg:hidden absolute bottom-4 left-4 z-20 flex items-center gap-2">
+            <button
+              onClick={() => applyHistory('undo')}
+              disabled={!canUndo(history)}
+              aria-label="Undo"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/75 border border-white/15 text-white/90 disabled:opacity-30 active:bg-black/90"
+            >
+              <Undo2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => applyHistory('redo')}
+              disabled={!canRedo(history)}
+              aria-label="Redo"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/75 border border-white/15 text-white/90 disabled:opacity-30 active:bg-black/90"
+            >
+              <Redo2 className="w-5 h-5" />
+            </button>
+          </div>
           {currentLevel && (
             <MapCanvas
               level={currentLevel}

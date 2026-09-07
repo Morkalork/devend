@@ -114,6 +114,25 @@ export function MapCanvas({
   viewRef.current = view;
   const sizeRef = useRef({ w: 0, h: 0 });
   const panRef = useRef<{ sx: number; sy: number; panX: number; panY: number } | null>(null);
+  /**
+   * The two-finger gesture: pan and pinch-zoom together.
+   *
+   * Panning was bound to the MIDDLE MOUSE BUTTON alone, which is a control a
+   * phone does not have - so on the device this editor is actually used from
+   * there was no way to move the board at all. Two fingers is what everyone
+   * reaches for, and it did nothing twice over: nothing listened for it, and
+   * without `touch-action: none` on the canvas the browser took the gesture as
+   * page zoom before any handler saw it (the same trap the wheel listener below
+   * documents).
+   *
+   * Live touches are tracked by pointerId because pointer events arrive one per
+   * finger; the gesture starts on the SECOND one.
+   */
+  const touchesRef = useRef(new Map<number, { x: number; y: number }>());
+  const gestureRef = useRef<{
+    startDist: number; startZoom: number;
+    startMid: { x: number; y: number }; panX: number; panY: number;
+  } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>({ type: 'none' });
   
   // Ball positions derived from level config (startX/startY) or default
@@ -1413,6 +1432,30 @@ export function MapCanvas({
 
     // Middle button pans. Left is already spoken for by every editing gesture
     // on the board, so panning needs a button of its own rather than a
+    // A second finger means the player wants the VIEW, not the thing under
+    // their first finger. Whatever that finger had started - a selection, an
+    // entity drag, a resize handle - is abandoned here, because finishing it
+    // while the board moves under it would place the entity somewhere nobody
+    // aimed at.
+    if (e.pointerType === 'touch') {
+      const p = getCanvasCoords(e);
+      touchesRef.current.set(e.pointerId, { x: p.sx, y: p.sy });
+      if (touchesRef.current.size === 2) {
+        setDragMode({ type: 'none' });
+        panRef.current = null;
+        const [a, b] = [...touchesRef.current.values()];
+        gestureRef.current = {
+          // Never zero: a pinch that starts with both fingers on one pixel
+          // would divide by it on the first move.
+          startDist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+          startZoom: viewRef.current.zoom,
+          startMid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          panX: viewRef.current.panX, panY: viewRef.current.panY,
+        };
+        return;
+      }
+    }
+
     // modifier that would collide with multi-select later.
     if (e.button === 1) {
       e.preventDefault();
@@ -1614,6 +1657,32 @@ export function MapCanvas({
   }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, onSelectWell, onSelectZone, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === 'touch' && touchesRef.current.has(e.pointerId)) {
+      const p = getCanvasCoords(e);
+      touchesRef.current.set(e.pointerId, { x: p.sx, y: p.sy });
+    }
+    // Two fingers: pan by how far their midpoint travelled, zoom by how much
+    // their separation changed, both measured from where the gesture STARTED
+    // rather than from the previous frame. Accumulating per-frame deltas drifts
+    // as rounding piles up, and a pinch that ends where it began should leave
+    // the board where it began.
+    const gesture = gestureRef.current;
+    if (gesture && touchesRef.current.size >= 2) {
+      const [a, b] = [...touchesRef.current.values()];
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      setView(v => {
+        const panned = {
+          ...v,
+          panX: gesture.panX + (mid.x - gesture.startMid.x),
+          panY: gesture.panY + (mid.y - gesture.startMid.y),
+        };
+        const { w, h } = sizeRef.current;
+        return zoomAboutPoint(
+          panned, gesture.startZoom * (dist / gesture.startDist), mid.x, mid.y, w, h);
+      });
+      return;
+    }
     // Panning runs before the drag check: it is not an edit, so it has no
     // dragMode, and gating it behind one would make the middle button dead.
     if (panRef.current) {
@@ -1818,6 +1887,12 @@ export function MapCanvas({
     if (canvas && canvas.hasPointerCapture(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
     }
+    // Lifting one of two fingers ends the gesture rather than handing the
+    // remaining finger a half-finished one: the survivor would otherwise carry
+    // a start midpoint and separation measured from a hand that is no longer
+    // there, and the board would leap.
+    touchesRef.current.delete(e.pointerId);
+    if (touchesRef.current.size < 2) gestureRef.current = null;
     panRef.current = null;
     setDragMode({ type: 'none' });
   }, []);
@@ -1891,10 +1966,17 @@ export function MapCanvas({
       <canvas
         ref={canvasRef}
         className="w-full h-full"
-        style={{ cursor: cursorStyle }}
+        // touchAction none is what makes any of the touch handling above reach
+        // a handler at all: the browser claims a two-finger gesture for page
+        // zoom, and a one-finger drag for scrolling, before React sees either.
+        style={{ cursor: cursorStyle, touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMoveWithCursor}
         onPointerUp={handlePointerUp}
+        // A touch the OS takes back - a notification, an edge swipe - fires
+        // cancel and never up, so without this its pointer stays in the map
+        // forever and the next single finger reads as the second of a pair.
+        onPointerCancel={handlePointerUp}
         onPointerLeave={handlePointerUp}
       />
     </div>
