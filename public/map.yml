@@ -323,20 +323,6 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
-    # THE SHAPE EVERY CONTENT MAP USES FROM HERE ON: space plus one clause a
-    # lock cannot produce, and no lock count beside it.
-    #
-    # Sealing every ball writes the rest of the board off as unreachable, so a
-    # space clause is met as a CONSEQUENCE of the last lock - which is why a
-    # lock count closes nothing on its own, and why the smash is what actually
-    # ends the rush here. Locking everything now leaves the smash unmet, and
-    # the lockedOut rule takes the life.
-    #
-    # Leaving the lock count off is deliberate the other way too: the Ship It
-    # assignment pays for clearing a map without sealing a single ball, and a
-    # win that demands a lock takes that map away from the mission. Maps 1-4
-    # and the maps with nothing operable still ask for locks, because with
-    # nothing to smash or light it is the only honest ask they have.
     win:
       require:
         - kind: space
@@ -384,6 +370,11 @@ levels:
         width: 225
         height: 225
         required: false
+      - kind: var
+        x: 50
+        'y': 600
+        width: 225
+        height: 250
     beats:
       - id: deadline
         atSpaceRemaining: 45
