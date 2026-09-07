@@ -1937,7 +1937,18 @@ export function MapCanvas({
   }, [handlePointerMove, dragMode, hitTest, getCanvasCoords]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[400px] bg-black/50 rounded-lg overflow-hidden">
+    /*
+      FLEXED, not `h-full`.
+      `height: 100%` needs a containing block with a definite height, and the
+      parent here is a flex ITEM whose height comes from flexing - against which
+      a percentage resolves to auto. So this box fell back to its min-height of
+      400 while the column around it was 635 tall, and the canvas inside fell
+      back further still, to 216. The remaining 184px was the black band below
+      the board that the map vanished into when it was dragged down.
+      `flex-1` in a flex-column parent takes the height from the layout instead
+      of asking a percentage to resolve, which is the reliable shape.
+    */
+    <div ref={containerRef} className="relative w-full flex-1 min-h-[400px] bg-black/50 rounded-lg overflow-hidden">
       {/* Zoom controls. Buttons as well as the wheel, because the wheel does
           not exist on the phone this editor is used from. */}
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
@@ -1965,7 +1976,10 @@ export function MapCanvas({
       </div>
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        // Absolutely filling the box rather than `h-full` again: the buffer is
+        // sized from this element's own rect, so a height that silently falls
+        // back to an intrinsic default is the whole bug above, one level down.
+        className="absolute inset-0 w-full h-full"
         // touchAction none is what makes any of the touch handling above reach
         // a handler at all: the browser claims a two-finger gesture for page
         // zoom, and a one-finger drag for scrolling, before React sees either.

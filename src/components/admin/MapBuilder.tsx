@@ -1031,7 +1031,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         {/* Canvas Area — min-w-0 so the canvas' intrinsic buffer width can't
             push the side panel off-screen (flex items default to min-width:auto).
             `relative` anchors the phone-only undo/redo pair below. */}
-        <div className="relative flex-1 min-h-0 min-w-0 p-2">
+        <div className="relative flex-1 min-h-0 min-w-0 p-2 flex flex-col">
           {/* Undo and redo, where a thumb is.
               They are in the top toolbar too, and on a phone that is the wrong
               end of the screen for the two most-used actions in an editor -
