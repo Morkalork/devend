@@ -42,6 +42,107 @@ each map:
 **Ball count is the axis of last resort.** If the only difference between map N
 and map N+1 is a ball, one of them should not exist.
 
+### The difficulty contract
+
+Section 1 says what makes a map *good*. This says what a map is allowed to do
+to be *hard*, and it is the rule the built ladder breaks most often - level 9
+passed every other check in this document and is still the worst map on the
+ladder.
+
+> **A map is hard because the board poses a problem with MORE THAN ONE ANSWER,
+> and the player's build decides which answer is CHEAPEST - never whether they
+> can answer at all.**
+
+Three kinds of difficulty are ruled out by that sentence. Each is easy to author
+by accident, and each produces a map that is unpleasant in a different way.
+
+**Not hard by precision.** The core verb is irreversible and partly blind: a
+completed cut permanently removes space, there is no undo, and the player cannot
+see what a cut will cost before committing to it. A map that demands the right
+cut every time is not testing skill, it is charging for a guess. Difficulty has
+to live somewhere the player can *see* at decision time.
+
+**Not hard by build.** If the build decides the outcome, the map was decided in
+the shop, before the player pressed start. Losing then teaches nothing they can
+act on: the fix is not available this run, and the only response is to come back
+better equipped - which is a grind, and it is the thing the meta-progression
+exists to avoid. A build should change *how* a map is solved, never *whether*.
+
+**Not hard by hidden fail state.** A map that can be quietly made unwinnable by
+a legal move is not difficult, it is broken with extra steps. See the slack rule
+below, and anti-pattern *No slack on a counted clause*.
+
+The one legitimate home for build-gating is **ascension**, where the player
+opted into the difficulty. It is fine as an opt-in and wrong as the default
+curve.
+
+#### The slack rule
+
+> Every clause that counts objects must have **more objects on the map than it
+> counts**.
+
+`smashed: 2` needs at least three breakables. `terminals: 2` needs at least
+three terminals. A clause with exactly as many objects as it requires makes
+every one of them load-bearing, so a single cut that buries one ends the map -
+usually with no sign on screen, and often many cuts before the game admits it.
+
+This is not a style preference. Measured across the built ladder:
+
+| slack on `smashed` | maps |
+|---|---|
+| **zero** (needs N, has N) | L5, L6, L7, L9, L12, L18, L19, L25, L29 - **nine** |
+| one spare | L11, L13, L32 - three |
+
+Every map the bot loses to `objectiveBuried` is on that list. Slack is the
+cheapest difficulty repair available: it is one entity per map, it changes no
+code, and it converts *requires perfection* into *requires competence* without
+touching a single threshold.
+
+#### How to give a map a second answer
+
+The answer count is not a mood, it is a property you can count while authoring.
+A map has N answers if there are N independent routes to its hardest clause.
+The three levers, cheapest first:
+
+1. **Slack** - more objects than the clause counts, so no single one is fatal.
+2. **Topology** - at least two approaches to each objective, so walling one off
+   is a cost rather than an ending.
+3. **Build affinity** - at least two archetypes that shortcut the map in
+   *different* ways. If only one build helps, the map is build-gated; if none
+   does, the map has no reason to sit where it does on the ladder.
+
+Write all three down in the map's premise before placing an entity. If you
+cannot name two answers, the map has one, and one answer plus an irreversible
+verb is the definition of *requires perfection*.
+
+### Case study: why level 9 is the worst map on the ladder
+
+Level 9 is the last map before the first boss. It is level 7's map with five
+knobs turned in the same direction, two maps later, with no new mechanic taught
+in between:
+
+| | L7 | L9 |
+|---|---|---|
+| clear target | 22% left | **16%** left (claim 84%, not 78%) |
+| balls | 2 | **3** |
+| obstacles | 4 | **8** |
+| the reachable breakable | `partition`, 26x455, spanning half the board | `seam`, 26x180, tucked at x=130 |
+| the vault | open (`vault-lip` only) | **closed** - `vault-jamb` walls the chest into an alcove |
+| mover | 150, open floor | **175**, patrolling the doorway at x=437 |
+
+Both objectives sit at opposite ends (`seam` at x~130, `chest-9` at x~700-810),
+the clause is `smashed: 2`, and the map carries exactly two breakables. So it
+asks the player to **claim 84% of the board while keeping two far-apart objects
+reachable, with no spare on either** - using a verb whose whole job is claiming
+space. The main action is the thing that loses the map, and nothing on screen
+says which cut did it.
+
+Against the contract: one answer, no slack, and the failure is invisible until
+long after the mistake. The bot goes 0/4 and dies faster here than on any other
+map on the ladder - 7.3 cuts with 66% of the board still standing.
+
+It is not a hard map. It is a map with a hidden fail state.
+
 ---
 
 ## 2. The grammar: 27 mechanics in 5 families
@@ -719,6 +820,35 @@ The bot is a *lead generator*, not a verdict. It cannot tell you a map is fun. I
 can tell you a map is impossible, trivial, or shaped differently from how it
 reads, and it does that across every deal in seconds.
 
+### The measured ladder, as a calibration baseline
+
+A full sweep - all 35 maps, 4 seeds, 7200 frames - reads like this. It is a
+*floor*, not a human difficulty curve (see below), so use the shape and the fail
+kinds, not the absolute rates.
+
+| what killed the bot | maps | count |
+|---|---|---|
+| **stranded the map** (`objectiveBuried`, `lockedOut`, `areaUnreachable`) | L5-9, 11, 13, 19, 23, 25-27, 29, 34 | **15** |
+| fence budget (`outOfFences`) | L17, L18, L32 | 3 |
+| the clock (`timeUp`) | L15, L29, L31 | 3 |
+| **a ball hit a growing fence** | none | **0** |
+
+Two readings, and both matter for the rebuild:
+
+**The ladder's teeth are not the action.** Not one death in 140 runs came from a
+ball cutting a fence. Whatever difficulty the built ladder has is almost
+entirely *you did an irreversible thing*, which is precisely what the difficulty
+contract forbids.
+
+**Maps 1-4 have no pressure at all.** The bot clears them 4/4 using 14-21 cuts
+against a par of 3-5, so the fence budget is not a constraint there in any
+sense. Only three maps on the whole ladder can run out of fences; only four have
+a time limit.
+
+Re-run the sweep after a redesign and compare the *fail-kind distribution*, not
+the win rate: a healthy ladder should move deaths out of the stranding column
+and into the tempo and budget columns.
+
 ### How bad the bot is, in numbers
 
 **The bot spends two to four times par.** Measured over six seeds on maps with
@@ -792,6 +922,20 @@ stays a set-piece.
   mechanic the player has not met. Check the ledger.
 - **A family taught out of order.** A sibling before its family opener costs a
   full teaching instead of a third of one, and the player learns two grammars.
+- **No slack on a counted clause.** `smashed: 2` with exactly two breakables.
+  Every objective is load-bearing, so one legal cut ends the map, usually
+  silently and long before the game says so. Nine of the twelve built smash maps
+  do this. See the slack rule in section 1.
+- **A fail state the board does not show.** The verb is irreversible and the
+  player cannot price a cut before committing to it, so any way of losing that
+  is invisible at decision time is a guess with a penalty, not a difficulty.
+  Either make the consequence visible before the cut, or make the mistake
+  survivable.
+- **One answer.** A map with a single viable line is *requires perfection*
+  wearing a premise. Name two answers before placing an entity.
+- **Build-gated.** A map that cannot be beaten without a particular upgrade,
+  fence type or certificate. That map was decided in the shop; it belongs in
+  ascension, where the difficulty was opted into, or nowhere.
 - **Unfair surprise.** An untelegraphed Turn that wrecks an in-progress fence.
 - **No safe path past the hook.** Greed is only a decision if skipping is viable.
 - **Maze with no drawing room.** Walls so dense a fence cannot be drawn.
@@ -812,6 +956,14 @@ A map is not done until:
 - [ ] It **authors a `win:`** that names its own content, with at least one
       clause a lock cannot produce (section 6.4). A derived spec means the map
       is still beatable by sealing everything or by never sealing anything.
+- [ ] You can name **two answers** to it, by different routes or different
+      builds. One answer plus an irreversible verb is *requires perfection*.
+- [ ] Every clause that counts objects has **slack**: more objects on the map
+      than the clause counts.
+- [ ] Every way of losing is **visible at decision time**, or survivable. No
+      cut may quietly end the map.
+- [ ] It is beatable with **no upgrades and no certificates**. A build makes it
+      cheaper, never possible.
 - [ ] There is **exactly one greed hook** with a real cost AND a safe skip.
 - [ ] There is **one telegraphed Turn**, so the end differs from the start.
 - [ ] At least one pocket is **superior-lock-sized**, measured against the worst

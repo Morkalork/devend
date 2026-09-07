@@ -696,7 +696,7 @@ levels:
   - id: level-9
     level: 9
     sizeThreshold: 16
-    expectedCuts: 6
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0
@@ -748,13 +748,6 @@ levels:
         'y': 270
         width: 270
         height: 24
-      - id: vault-jamb
-        kind: wall
-        shape: rect
-        x: 585
-        'y': 45
-        width: 24
-        height: 141
       - id: chest-9
         kind: wall
         shape: rect
@@ -770,6 +763,15 @@ levels:
         shape: rect
         x: 130
         'y': 300
+        width: 26
+        height: 180
+        breakable: true
+        hitsToBreak: 3
+      - id: strut
+        kind: wall
+        shape: rect
+        x: 660
+        'y': 470
         width: 26
         height: 180
         breakable: true
