@@ -191,10 +191,10 @@ Every mechanic gets a status, and the status decides what it costs.
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
-| launcher | C | Meet | 11 | - | - |
+| launcher | C | Meet | 11 | 12 | - |
 | bumper | C | Compressed | 12 | - | - |
-| deformable | A | Compressed | 12 | - | - |
-| phasing | A | Meet | 12 | 28 | 20 (boss), 35 (boss) |
+| deformable | A | Compressed | 13 | - | - |
+| phasing | A | Meet | 14 | - | - |
 | rotor | C | Compressed | 13 | 22 | - |
 | mirror | B | Meet | 14 | 18 | - |
 | terminals | E | Meet | 15 | 16 | 31 |
@@ -402,7 +402,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11 built, 12-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-12 built, 13-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -461,6 +461,34 @@ own smash maps score 0-2 of 4 on the same bot, so this is the strongest content
 map on the ladder by that measure. The board was flat at first and the bot ran
 out of clock on it; the `rafter` is what fixed that, and it is why an open square
 is not a topology.
+
+#### 12 "Velocity" - Meet bumper, Fight launcher  *(built)*
+
+**The same wager as 11, one layer down: the board will buy your speed back, and
+it has a fixed amount of money.** The launcher returns - this is its Use beat,
+so it is no longer the new thing - and it now fires into bumpers.
+
+A bumper is two machines wearing one coat, and the player can see which is which
+(green with hours, red without):
+
+| | what it does | what it costs |
+|---|---|---|
+| **green** | pays an hour AND takes 5% off the ball | one hour out of a fixed bank |
+| **red** | the pop bumper: kicks the ball FASTER | nothing, and nothing left to pay you |
+
+Five hours a bumper, one per bump. So a hard launch is a *bigger* harvest - the
+faster the ball, the more braking it wants, and every brake is an hour banked -
+right up to the point where the cluster is drained and the same objects start
+accelerating a ball you already made too fast. **The Turn is not scripted here.
+It is the moment the player spends the last hour**, and they choose when it
+happens.
+
+The map asks `space 15` and `smashed 1` against three slabs, so the requirement
+survives wherever the balls end up and no single seal buries it. The `deadline`
+beat breaks the centre slab at 21% remaining, the same low rescue level 11 uses.
+
+**Bot sweep, 8 seeds:** 7 wins, average 19 cuts against par 8. The loss is the
+clock at 2% remaining, not a dead end.
 
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
@@ -1072,6 +1100,36 @@ stays a set-piece.
   count, the map has no premise. Go back to section 4.
 
 ---
+
+### Anything that gathers the balls writes off the rest of the board
+
+Found twice while building act II, from two objects that look unrelated, so it
+belongs here rather than in either map's notes.
+
+`captureUnreachableCells` runs on every cut and removes every cell no live ball
+can reach. A ball-free region is therefore not "the part you have not got to
+yet", it is **board you have already lost**, and anything the win needs that
+sits in it - a slab to smash, a zone to lock in - is buried before the player
+has done anything wrong. The map then keeps running with no way to finish, which
+is the silent failure the whole difficulty contract is written against.
+
+Two drafts hit it from opposite directions:
+
+| draft | what gathered the balls | what it buried |
+|---|---|---|
+| level 11, first pass | a spine with one neck: the launcher fires the WHOLE roster, so whichever half it misses is instantly ball-free | the smash target in that half, before cut one |
+| level 12, first pass | three bumpers in a cluster: balls pinball locally and stop touching the edges | every slab outside the cluster, 3 losses in 8 |
+
+**So: do not concentrate the balls unless the objective is concentrated with
+them.** A launcher, a cluster of bouncers, a gravity well, a portal pair and a
+one-way drain are all ball-gatherers. Either spread them so traffic stays
+board-wide (level 12's fix: the same three bumpers, moved into three different
+regions, took it from 5 of 8 to 7 of 8), or put the objective where the traffic
+is.
+
+Symptom to recognise: `objectiveBuried` early, at a HIGH remaining percent. Late
+and low is a player fencing badly; at 30-45% remaining it is the map's own
+layout doing it to them.
 
 ## 10. Authoring checklist
 

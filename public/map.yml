@@ -957,3 +957,84 @@ levels:
         breakId: slab
         announce: game.beatDeadline
     balls: []
+
+  # 12 "Velocity" - MEET the bumper, FIGHT the launcher.
+  - id: level-12
+    level: 12
+    sizeThreshold: 15
+    expectedCuts: 8
+    points: 20
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue]
+    win:
+      require:
+        - kind: space
+          threshold: 15
+        - kind: smashed
+          count: 1
+    entities:
+      - id: barrel
+        kind: launcher
+        shape: rect
+        x: 105
+        'y': 120
+        width: 240
+        height: 110
+        facing: right
+        angle: 10
+      - id: governor-a
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 250
+        radius: 46
+        bouncer: true
+      - id: governor-b
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 560
+        radius: 46
+        bouncer: true
+      - id: governor-c
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 640
+        radius: 46
+        bouncer: true
+      - id: strut
+        kind: wall
+        shape: rect
+        x: 430
+        'y': 320
+        width: 26
+        height: 170
+        breakable: true
+        hitsToBreak: 3
+      - id: ledge
+        kind: wall
+        shape: rect
+        x: 760
+        'y': 380
+        width: 26
+        height: 180
+        breakable: true
+        hitsToBreak: 3
+      - id: sump
+        kind: wall
+        shape: rect
+        x: 120
+        'y': 760
+        width: 220
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+    beats:
+      - id: deadline
+        atSpaceRemaining: 21
+        breakId: strut
+        announce: game.beatDeadline
+    balls: []
