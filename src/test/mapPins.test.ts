@@ -110,3 +110,31 @@ describe("a pinned ball roster names real ball types", () => {
     }
   });
 });
+
+/**
+ * A pinned roster IS the ball count, and `maxBalls` must not say otherwise.
+ *
+ * `initGame` spawns one ball per entry in `ballTypeIds` and never consults
+ * `maxBalls` when the pin is present. So a map that pins two types and asks for
+ * `maxBalls: 3` ships two balls while every reader of `maxBalls` - the door
+ * draft's intel line, the assignment scaling, this author's own notes - says
+ * three. Levels 11 and 12 did exactly that for a day.
+ *
+ * The rule is not "drop maxBalls": other code reads it, and a map with no pin
+ * needs it. The rule is that when both are present they agree.
+ */
+describe("a pinned roster and maxBalls agree", () => {
+  const pinned = LEVELS.filter(l => l.ballTypeIds?.length);
+
+  it("finds the pinned maps, so this is checking something", () => {
+    expect(pinned.length, "no map pins a roster any more").toBeGreaterThan(0);
+  });
+
+  it.each(pinned.map(l => [l.id, l] as const))("%s spawns what it says", (_id, level) => {
+    const declared = level.maxBalls ?? level.balls?.length;
+    if (declared === undefined) return;   // no second claim to disagree with
+    expect(level.ballTypeIds!.length,
+      `${level.id} pins ${level.ballTypeIds!.length} balls but maxBalls says ${declared}`)
+      .toBe(declared);
+  });
+});

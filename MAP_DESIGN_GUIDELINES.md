@@ -192,11 +192,11 @@ Every mechanic gets a status, and the status decides what it costs.
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | - |
-| bumper | C | Compressed | 12 | - | - |
-| deformable | A | Compressed | 13 | - | - |
-| phasing | A | Meet | 14 | - | - |
-| rotor | C | Compressed | 13 | 22 | - |
-| mirror | B | Meet | 14 | 18 | - |
+| bumper | C | Compressed | 12 | 13 | - |
+| deformable | A | Compressed | 14 | - | - |
+| phasing | A | Meet | 15 | - | - |
+| rotor | C | Compressed | 15 | - | - |
+| mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 15 | 16 | 31 |
 | portal | B | Meet | 17 | - | - |
 | WIP limit | D | Meet | 17 | 18 | 32 |
@@ -402,7 +402,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-12 built, 13-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-13 built, 14-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -489,6 +489,24 @@ beat breaks the centre slab at 21% remaining, the same low rescue level 11 uses.
 
 **Bot sweep, 8 seeds:** 7 wins, average 19 cuts against par 8. The loss is the
 clock at 2% remaining, not a dead end.
+
+#### 13 "Code Review" - Meet mirror, Use bumper  *(built)*
+
+**Someone else decides where your work goes.** Two maps of speed is enough, so
+this one changes the subject entirely: the mirror is the first mechanic on the
+rebuilt ladder that acts on the PLAYER'S TOOL rather than on the balls.
+
+Cuts are free-angle (`vec2Normalize(delta)` off the swipe) and a fence meeting a
+mirror reflects and keeps going, up to three bounces, in both directions from
+the swipe. So one drag becomes an L or a Z, and a pocket that cannot be enclosed
+by any straight line can be enclosed by a bent one. That is the greed hook: the
+`var` pocket sits where the geometry does not offer a straight answer.
+
+The bumper returns as the development beat, which takes it off the single-use
+list one map after arriving - the same rhythm 11 and 12 set. Two bumpers, in two
+different regions, per the ball-gathering rule in section 9.
+
+**Bot sweep, 8 seeds: 7 wins**, average 21 cuts against par 8.
 
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
@@ -980,6 +998,21 @@ the thirty-five maps stranded the bot outright, and the maps that did are spread
 across every act. Kept as the measurement to beat rather than as a description
 of anything currently shipping - a rebuilt act that reproduces this table has
 reproduced the problem.
+
+> **These numbers are pessimistic, and were when they were taken.** The headless
+> bot did not tick `tickMapBeats` - it was wired only into `GameCanvas`, the real
+> render loop - so no scripted beat ever fired in a sweep. A `breakId` beat
+> force-breaks a slab at a space threshold, which is exactly how a map guarantees
+> its smash clause stays reachable, and act I maps 5, 6 and 8 all rely on one. So
+> every sweep played a harsher map than any player gets and then reported
+> `objectiveBuried` or `lockedOut` for it. Level 13 read 3 of 8 before the fix
+> and 7 of 8 after, with no change to the board.
+>
+> Fixed on 2026-09-08. Treat any stranding figure recorded before that date as an
+> upper bound: some part of those fifteen maps was the instrument. The reasons
+> for the rebuild that do NOT depend on the bot - level 34 unwinnable by any
+> route, the difficulty contract, nine of twelve smash maps with zero slack -
+> stand unchanged.
 
 | what killed the bot | maps | count |
 |---|---|---|

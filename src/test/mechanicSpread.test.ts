@@ -82,21 +82,20 @@ describe("no mechanic is introduced and then dropped", () => {
     // Pinned rather than asserted empty, because these are real and known.
     // Each is a decision someone should make, not a bug to fix silently.
     //
-    //   Bouncer   level 12 only, which is where it MEETS. A mechanic on its
+    //   Mirror    level 13 only, which is where it MEETS. A mechanic on its
     //             first map is on this list by definition, and it comes off
     //             when a later map gives it a second.
     //
-    // LAUNCHER CAME OFF, one map after arriving: level 12 fires into the bumper
-    // cluster, which is the whole reason the two were paired. REVEALS came off
-    // on 11 the same way. Both directions of this list are now doing work - a
-    // name arrives when a mechanic debuts and leaves when the ladder develops
-    // it, which is exactly the traffic it was written to show.
+    // BOUNCER CAME OFF on 13, LAUNCHER on 12, REVEALS on 11 - each one map
+    // after arriving. Three in a row is the rebuild's rhythm rather than luck:
+    // every act II map so far Meets one thing and develops the one before it,
+    // so a name is on this list for exactly one map.
     //
     // The rest (box, mutator, portal, thread lock) were single-use on maps
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    expect(singles.map(w => w.key).sort()).toEqual(["bouncer"]);
+    expect(singles.map(w => w.key).sort()).toEqual(["mirror"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -115,12 +114,12 @@ describe("no mechanic is introduced and then dropped", () => {
     //
     // Take a name off when a rebuilt map places the mechanic. When the list is
     // empty the assertion goes back to toEqual([]). LAUNCHER was the first off,
-    // on level 11; BUMPER the second, on level 12.
+    // on level 11; BUMPER the second, on 12; MIRROR the third, on 13.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
         "Ball gate", "Cage", "Charge", "Data stream", "Deformable",
         "Delivery box", "Fence ground", "Gravity well", "Latch",
-        "Mirror", "One-way", "Phasing", "Pinned mutator", "Portal", "Rotor",
+        "One-way", "Phasing", "Pinned mutator", "Portal", "Rotor",
         "Terminals", "Thread lock", "WIP limit",
       ]);
   });

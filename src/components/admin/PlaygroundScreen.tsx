@@ -13,7 +13,7 @@ import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
-import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
+import { BallTypeDef, getAllBallTypes, getBallType, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
@@ -248,15 +248,24 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     ? `L${selectedLevel.level}: ${selectedLevel.id}`
     : 'Sandbox';
 
-  // The balls the game spawns by default for this level (same deterministic
-  // selection the real game uses) — what the picker shows when there's no
-  // explicit override yet, so adding appends instead of replacing.
+  // The balls the game spawns by default for this level - what the picker shows
+  // when there's no explicit override yet, so adding appends instead of
+  // replacing.
+  //
+  // An authored `ballTypeIds` WINS, exactly as it does in initGame. This read
+  // the selector unconditionally, so a map that pins its roster was tested here
+  // against a roster it can never deal: level 12 pins two plain balls and the
+  // Playground dealt it three including the rainbow, which spawns a new ball
+  // every ten seconds. Reported as "one ball too many", and it was the tool
+  // rather than the map - the shipped level spawns exactly what it names.
   const defaultBallIds = useMemo(
-    () => selectBallTypesForMap(
-      baseLevel.id,
-      baseLevel.level,
-      baseLevel.maxBalls ?? baseLevel.balls?.length ?? 1,
-    ).map(t => t.id),
+    () => (baseLevel.ballTypeIds !== undefined
+      ? baseLevel.ballTypeIds.filter(id => !!getBallType(id))
+      : selectBallTypesForMap(
+          baseLevel.id,
+          baseLevel.level,
+          baseLevel.maxBalls ?? baseLevel.balls?.length ?? 1,
+        ).map(t => t.id)),
     // selectBallTypesForMap reads the module-level catalogue, which balls.yml
     // mutates on load; ballCatalog is the render signal that it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps

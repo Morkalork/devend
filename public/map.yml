@@ -876,7 +876,7 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue]
+    ballTypeIds: [red, blue, red]
     win:
       require:
         - kind: space
@@ -967,7 +967,7 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue]
+    ballTypeIds: [red, blue, red]
     win:
       require:
         - kind: space
@@ -1035,6 +1035,94 @@ levels:
     beats:
       - id: deadline
         atSpaceRemaining: 21
+        breakId: strut
+        announce: game.beatDeadline
+    balls: []
+
+  # 13 "Code Review" - MEET the mirror, USE the bumper.
+  - id: level-13
+    level: 13
+    sizeThreshold: 14
+    expectedCuts: 8
+    points: 20
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, yellow]
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: smashed
+          count: 1
+    coloredAreas:
+      - kind: var
+        x: 660
+        'y': 150
+        width: 170
+        height: 160
+        required: false
+    entities:
+      - id: mirror-a
+        kind: wall
+        shape: rect
+        x: 470
+        'y': 200
+        width: 20
+        height: 300
+        mirror: true
+      - id: mirror-b
+        kind: wall
+        shape: rect
+        x: 200
+        'y': 620
+        width: 300
+        height: 20
+        mirror: true
+      - id: governor-a
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 480
+        radius: 46
+        bouncer: true
+      - id: governor-b
+        kind: wall
+        shape: circle
+        cx: 260
+        cy: 300
+        radius: 46
+        bouncer: true
+      - id: strut
+        kind: wall
+        shape: rect
+        x: 120
+        'y': 120
+        width: 26
+        height: 180
+        breakable: true
+        hitsToBreak: 3
+      - id: sump
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 760
+        width: 200
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: ledge
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 660
+        width: 215
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+    beats:
+      - id: deadline
+        atSpaceRemaining: 20
         breakId: strut
         announce: game.beatDeadline
     balls: []

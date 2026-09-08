@@ -47,6 +47,7 @@ import type { LevelConfig } from "@/types/level";
 import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifiers";
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 
+import { tickMapBeats } from "@/lib/physics/mapBeats";
 /**
  * A clock the bot controls.
  *
@@ -245,6 +246,18 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
     ball.prevPosition.x = ball.position.x;
     ball.prevPosition.y = ball.position.y;
   }
+
+  // The map's own scripted beats, BEFORE the ball pass so an effect lands on
+  // the same frame the threshold is crossed.
+  //
+  // Missing here for as long as the bot has existed, and it quietly mis-measured
+  // the whole ladder. A `breakId` beat force-breaks a slab at a space threshold,
+  // which is how a map guarantees its smash clause can always be met - act I
+  // maps 5, 6 and 8 all rely on one. The bot never fired them, so it played a
+  // harsher map than any player gets and then reported `lockedOut` or
+  // `objectiveBuried` on maps that finish perfectly well. Level 13 went from
+  // 3 of 8 to its real number on this line alone, with no change to the board.
+  tickMapBeats(game, level, levelNumber);
 
   applyLodestones(game.balls, dt, game.frozenBallId ?? null);
   updateMoversFn(dt, game);
