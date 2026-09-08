@@ -506,7 +506,23 @@ The bumper returns as the development beat, which takes it off the single-use
 list one map after arriving - the same rhythm 11 and 12 set. Two bumpers, in two
 different regions, per the ball-gathering rule in section 9.
 
-**Bot sweep, 8 seeds: 7 wins**, average 21 cuts against par 8.
+**The map sets its own tempo: `ballSpeedScale: 0.75`.** Playtested as too fast,
+and the fix wanted a dial the ladder did not have - a map's pace could only be
+changed by picking different ball TYPES (blunt: it changes what they do as well
+as how fast they go) or by a mutator (announced to the player as an event rather
+than being the map's own speed). It scales the type's base speed at spawn, so a
+`speedRange` scales with it, and it sits outside the upgrade floor so a slow
+build still means half of what THIS map spawns at. Authorable from the builder's
+Level Settings.
+
+Slowing it made the ball-gathering problem WORSE before it made the map better:
+slow balls cover less board, so more of it goes ball-free and gets captured, and
+the sweep fell to 5 of 8 on three `objectiveBuried`. Pulling the two outlying
+slabs in from the corners into the traffic fixed it. Worth knowing when tuning
+any map's speed down - see the rule in section 9.
+
+**Bot sweep, 8 seeds: 8 wins**, average 21 cuts against par 8. The only map on
+the ladder the bot has never lost.
 
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the

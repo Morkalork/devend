@@ -125,6 +125,28 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               max={100}
             />
           </label>
+
+          {/* The map's tempo. Blank rather than 100 when unset, the same way Map
+              Light is, so "this map does not say" and "this map says normal"
+              stay different things in the file. */}
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Ball Speed % (blank = 100)</span>
+            <input
+              type="number"
+              value={level.ballSpeedScale != null ? Math.round(level.ballSpeedScale * 100) : ''}
+              onChange={(e) => {
+                const next = { ...level };
+                const raw = e.target.value;
+                if (raw === '') delete next.ballSpeedScale;
+                else next.ballSpeedScale = Math.max(0.25, Math.min(2, Number(raw) / 100));
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+              min={25}
+              max={200}
+              step={5}
+            />
+          </label>
         </div>
       </div>
       

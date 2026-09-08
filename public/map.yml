@@ -1049,6 +1049,7 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, yellow]
+    ballSpeedScale: 0.75
     win:
       require:
         - kind: space
@@ -1096,10 +1097,10 @@ levels:
       - id: strut
         kind: wall
         shape: rect
-        x: 120
-        'y': 120
+        x: 250
+        'y': 410
         width: 26
-        height: 180
+        height: 150
         breakable: true
         hitsToBreak: 3
       - id: sump
@@ -1114,9 +1115,9 @@ levels:
       - id: ledge
         kind: wall
         shape: rect
-        x: 640
-        'y': 660
-        width: 215
+        x: 560
+        'y': 700
+        width: 200
         height: 26
         breakable: true
         hitsToBreak: 3

@@ -853,7 +853,12 @@ export function createInitialGameData(
   // Floor the low end so a slow-stacked run never spawns balls below
   // MIN_BALL_SPEED_FACTOR of normal (issue #42); >1 (ascension, Crunch Time)
   // is unaffected.
-  const speedScale = effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier, 1);
+  // The map's own tempo, multiplied OUTSIDE the upgrade floor: the floor stops a
+  // stacked slow build halving a ball, and it should mean half of what THIS map
+  // spawns at rather than half of some other map's speed.
+  const levelSpeedScale = level.ballSpeedScale ?? 1;
+  const speedScale = levelSpeedScale
+    * effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier, 1);
   const maxBalls   = level.maxBalls ?? level.balls?.length ?? 1;
   // Admin override (Playground): when `ballTypeIds` is provided, spawn exactly
   // those types — even an empty list, which means "no balls". Only when the
@@ -894,7 +899,8 @@ export function createInitialGameData(
     i === fastestIdx
       // Floored the same way the global factor is: a stacked slow build must
       // not put a ball under half its normal speed (issue #42).
-      ? effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier * (1 - slowPct / 100), 1)
+      ? levelSpeedScale
+        * effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier * (1 - slowPct / 100), 1)
       : speedScale
   );
 

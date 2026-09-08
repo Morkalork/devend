@@ -310,6 +310,23 @@ export interface LevelConfig {
   variety?: number; // 0-100: controlled randomness for organic variation (default 0)
   randomShapes?: number; // 0-100: percentage of random mini-obstacles added (default 20)
   /**
+   * How fast this map's balls are, as a multiple of their type's base speed.
+   * Absent or 1 is normal; 0.75 is a quarter slower.
+   *
+   * The difficulty spine had no speed dial. A map's pace could only be changed
+   * by picking different ball TYPES, which is a blunt instrument - it changes
+   * what the balls DO as well as how fast they go - or by a mutator, which is
+   * announced to the player as an event rather than being the map's own tempo.
+   *
+   * Applied to the type's base speed at spawn, so it scales a `speedRange` (the
+   * yellow ball's variable pace) by the same factor and the two cannot disagree.
+   * It sits OUTSIDE the upgrade floor deliberately: `effectiveBallSpeedFactor`
+   * exists to stop a stacked slow BUILD dropping a ball below half normal, and
+   * with the map's own scale outside it, "half normal" keeps meaning half of
+   * what this map spawns at rather than half of some other map's speed.
+   */
+  ballSpeedScale?: number;
+  /**
    * How lit this map is: 1 (or absent) is the normal board, lower is darker,
    * down to MIN_MAP_LIGHT. A darkness you author, not a global one.
    *
