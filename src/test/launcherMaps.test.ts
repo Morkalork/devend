@@ -27,6 +27,8 @@ import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 interface Cup {
   id: string; kind: string; facing: LaunchFacing; angle?: number;
   x: number; y: number; width: number; height: number;
@@ -36,9 +38,7 @@ interface Level {
   entities?: Array<Record<string, unknown>>;
 }
 
-const MAP = yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-) as { levels: Level[] };
+const MAP = ({ levels: ENGINE_MAPS } as unknown as { levels: Level[] });
 
 const MARGIN = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
 

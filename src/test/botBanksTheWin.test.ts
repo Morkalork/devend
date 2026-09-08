@@ -23,9 +23,9 @@ import yaml from "js-yaml";
 import { runBot } from "@/lib/bot/runBot";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS as LevelConfig[];
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 
 describe("a prompted map is a won map", () => {

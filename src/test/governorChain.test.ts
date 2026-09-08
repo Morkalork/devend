@@ -46,10 +46,11 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig, LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const level11 = (): LevelConfig => {
-  const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-  const l = doc.levels.find(x => x.level === 11);
-  if (!l) throw new Error("map.yml has no level 11");
+  const l = ENGINE_MAPS.find(x => x.level === 11);
+  if (!l) throw new Error("no level 11");
   return l as unknown as LevelConfig;
 };
 

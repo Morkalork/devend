@@ -25,19 +25,29 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { TFunction } from "i18next";
 import { winConditions, renderCriteria, CRITERION_GROUPS } from "@/lib/winConditions";
-import type { LevelConfig, LevelData } from "@/types/level";
+import type { LevelConfig } from "@/types/level";
+import { LADDER, ENGINE_MAPS } from "./fixtures/maps";
 
 /** Echoes the key, so a test asserts which STRING was chosen, not its English. */
 const t = ((key: string, params?: Record<string, unknown>) =>
   params ? `${key}(${JSON.stringify(params)})` : key) as unknown as TFunction;
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+const LEVELS = LADDER;
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
-const groups = (n: number) => {
+const groups = (n: number) => groupsOf(at(n), n);
+
+/**
+ * A map's criteria by group.
+ *
+ * Takes the level rather than the number so the RENDERER tests can run against
+ * a retired map: whether `winConditions` produces a trade line is a question
+ * about the function, and it needs a map that poses a trade to ask it. The
+ * ladder currently has none, and will not until the fence-budget maps are
+ * rebuilt - see the trade block below.
+ */
+const groupsOf = (level: LevelConfig, n: number) => {
   const out: Record<string, string[]> = {};
-  for (const c of winConditions(t, at(n), n)) (out[c.group] ??= []).push(c.text);
+  for (const c of winConditions(t, level, n)) (out[c.group] ??= []).push(c.text);
   return out;
 };
 
@@ -161,12 +171,13 @@ describe("optional is marked optional", () => {
   });
 
   it("counts a bonus pocket on every map that has one", () => {
-    // 19 of the playable maps carry one, so a rule that quietly stopped firing
-    // would be invisible on any single map.
+    // Three of act I's maps carry one (3, 5 twice, 9). The floor is a guard
+    // against the rule silently ceasing to fire, not a target: it was 10 when
+    // the ladder was 35 maps and comes back up with the rebuild.
     const withBonus = LEVELS.filter(l =>
       l.level != null && (l.coloredAreas ?? []).some(a => a.required === false));
     expect(withBonus.length, "the bonus pockets vanished from the ladder")
-      .toBeGreaterThan(10);
+      .toBeGreaterThanOrEqual(3);
     for (const l of withBonus) {
       const opt = winConditions(t, l, l.level as number).filter(c => c.group === "optional");
       expect(opt.length, `${l.id} carries a bonus pocket it never mentions`).toBeGreaterThan(0);
@@ -177,9 +188,15 @@ describe("optional is marked optional", () => {
     // The opposite mistake, and the expensive one: a gate is the whole win on
     // the maps that have one, and calling it optional would tell the player to
     // skip the map.
-    for (const n of [8, 34]) {
-      expect(groups(n).optional ?? [], `level ${n}'s gate is offered as optional`)
-        .toEqual([]);
+    // Every map with a gate, rather than a list: 34 was the second and it is
+    // retired, and naming them by number means a rebuilt gate map is covered
+    // the day it lands instead of the day someone remembers this file.
+    const gateMaps = LEVELS.filter(l =>
+      l.level != null && (l.coloredAreas ?? []).some(a => a.required !== false));
+    expect(gateMaps.length, "no gate map left to check").toBeGreaterThan(0);
+    for (const l of gateMaps) {
+      expect(groups(l.level as number).optional ?? [],
+        `${l.id}'s gate is offered as optional`).toEqual([]);
     }
   });
 });
@@ -188,7 +205,13 @@ describe("a real either/or is called one", () => {
   it("names the trade on the budgeted map that poses it", () => {
     // 17: ten fences for everything, and a let pocket in the corner. The design
     // guidelines put it as "the bonus is affordable or the map is, not both".
-    expect(groups(17).trade?.join(" "), "level 17 no longer states its trade")
+    //
+    // Level 17 is retired, so this runs against the retired map: the question
+    // is whether `winConditions` RECOGNISES a budget-plus-pocket map, which is
+    // about the function and not about the ladder. Act I poses no trade (see
+    // the next test), so on the ladder alone there would be nothing to ask.
+    const budgeted = ENGINE_MAPS.find(l => l.level === 17)!;
+    expect(groupsOf(budgeted, 17).trade?.join(" "), "a budgeted map states no trade")
       .toContain("winConditions.tradeBudgetBonus");
   });
 
@@ -196,10 +219,15 @@ describe("a real either/or is called one", () => {
     // The rule that keeps this worth reading. Every map past the tutorial band
     // has a clock, so "the pocket costs time" is true everywhere - a trade
     // announced on 30 maps is not a trade, it is wallpaper.
+    //
+    // Empty on today's ladder: no act I map pairs a fence budget with a bonus
+    // pocket. That is the assertion, not a skip - a rebuilt map that starts
+    // announcing a trade shows up here, and the day one legitimately poses one
+    // this list gains its number and says which map.
     const posed = LEVELS.filter(l => l.level != null
       && winConditions(t, l, l.level).some(c => c.group === "trade"))
       .map(l => l.level);
-    expect(posed, "the trade line started firing on maps with no trade").toEqual([17]);
+    expect(posed, "the trade line started firing on maps with no trade").toEqual([]);
   });
 
   it("only calls it a trade when both halves are real", () => {
@@ -218,7 +246,10 @@ describe("a real either/or is called one", () => {
 
 describe("the rendered block", () => {
   it("prints a heading and a bullet per line, groups blank-line separated", () => {
-    const body = renderCriteria(t, winConditions(t, at(17), 17));
+    // The retired budget map again, for the same reason as above: this is a
+    // test of the RENDERER's grouping, and it needs a map with two groups.
+    const budgeted = ENGINE_MAPS.find(l => l.level === 17)!;
+    const body = renderCriteria(t, winConditions(t, budgeted, 17));
     expect(body).toContain("winConditions.group.optional\n  - ");
     expect(body).toContain("winConditions.group.trade\n  - ");
     expect(body).toContain("\n\n");
@@ -237,7 +268,14 @@ describe("the rendered block", () => {
     // Over a single bullet it reads as though something is missing.
     expect(renderCriteria(t, winConditions(t, at(1), 1)))
       .toContain("winConditions.groupRequiredAll");
-    expect(renderCriteria(t, winConditions(t, at(34), 34)))
+
+    // Every act I map states two required clauses (space plus the thing a lock
+    // cannot produce), so the single-clause case comes from a retired map. The
+    // assertion is about the RENDERER's heading, and it needs one of each.
+    const single = ENGINE_MAPS.find(l =>
+      winConditions(t, l, l.level as number).filter(c => c.group === "required").length === 1)!;
+    expect(single, "no map anywhere states a single requirement").toBeTruthy();
+    expect(renderCriteria(t, winConditions(t, single, single.level as number)))
       .toContain("winConditions.group.required");
   });
 });

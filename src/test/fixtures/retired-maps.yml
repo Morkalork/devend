@@ -1,0 +1,2150 @@
+# The ladder maps 11-35 as they stood before the act II-IV rebuild.
+#
+# NOT CONTENT. This file lives in src/test/fixtures, not public/, so the game
+# never loads it: it is not served, not bundled, and not in the level sequence.
+# It exists so the engine tests for portals, gravity wells, launchers, movers,
+# one-way walls, terminals, charges, data streams and the boss phases keep a
+# map to run against while the real ladder is being rebuilt, and as a worked
+# reference for the YAML while authoring the replacements.
+#
+# See src/test/fixtures/README.md, and MAP_DESIGN_GUIDELINES.md section 5 for
+# what the rebuild is meant to do differently.
+#
+# Removed from public/map.yml at commit b08f4ad. Do not add maps here.
+levels:
+  # ===========================================================================
+  # ACT II - THE SPRINT (11-20): pressure and space.
+  #
+  # Receives what act I gave up (chests, reveals, terminals, the WIP limit) and
+  # hands its own gravity, seam and charge work down to act III. Before the
+  # schedule this band opened with four balls and a mirror and then spent one
+  # map each on the seam and the charge, neither of which was ever seen again.
+  #
+  # The procedural band opens here (PROCEDURAL_MIN_LEVEL = 11), along with the
+  # big-ball gift and map mutators, so several maps carry `slots`.
+  # ===========================================================================
+
+  # 11 "Tech Debt" - MEET the chest: the first destruct-up.
+  # A reward you have to BREAK to collect, which is the opposite of everything
+  # act I taught about breakables costing you time for nothing but space. The
+  # cover in front of it means smashing is a two-step commitment, not a reflex.
+  # Rainbow balls unlock here (balls.yml), so the map stays otherwise plain.
+  #
+  # It is also the launcher's debut, and the two share a theme rather than
+  # competing: both are a bet you place before you know how the map goes. The
+  # barrel sits out in the middle of the left half, well clear of every edge,
+  # and is CANTED UP through the gap in the spine (a full-power shot crosses it
+  # around y=505, mid-gap),
+  # so a full-power shot is a clean run into the right half and an over-aimed
+  # one buries the whole roster in the cramped left side with the chest. Base
+  # pay is multiplied by the power fired at, so the wager is priced in before
+  # the first fence.
+  #
+  # The barrel holds every ball on the map, so maxBalls is the real roster
+  # again: nothing moves until the band is released, and then all of it does.
+  # The angle is deliberately not a multiple of 90 - an axis-aligned barrel
+  # reads as another wall, and the whole point of the thing is that it is
+  # pointing somewhere.
+  #
+  # The 110 height is not cosmetic. Reachability is ball-size aware and works on
+  # the rasterised grid, so a turned barrel with a narrow bore rasterises to a
+  # staircase that erodes into disconnected cells: at 84 the balls inside were
+  # sealed off from the board and captureUnreachableCells wrote off everything
+  # outside the barrel. Anything from about 110 up stays connected on every
+  # rotation. See launcherBarrel.test.ts, which pins it.
+  - id: level-11
+    level: 11
+    sizeThreshold: 16
+    expectedCuts: 6
+    points: 20
+    variety: 12
+    randomShapes: 10
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 16
+        - kind: smashed
+          count: 1
+    entities:
+      - id: plunger-11
+        kind: launcher
+        shape: rect
+        x: 290
+        'y': 520
+        width: 240
+        height: 110
+        facing: right
+        angle: -22
+      # Pop bumpers. The launcher fires the roster up through the gap in the
+      # spine into the right half, and this is what it arrives at: three
+      # bumpers, spread so a ball crossing the half meets one but is never
+      # trapped between two. They KICK - the ball leaves faster than it hit -
+      # which is what a pinball table does and no other solid in this game
+      # does. Speed is capped per ball (see physics/bouncer.ts), so a long
+      # rally cannot compound a ball into something that crosses a fence
+      # between two physics steps.
+      - id: bumper-a
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 490
+        radius: 42
+        bouncer: true
+      - id: bumper-b
+        kind: wall
+        shape: circle
+        cx: 720
+        cy: 720
+        radius: 42
+        bouncer: true
+      - id: bumper-c
+        kind: wall
+        shape: circle
+        cx: 720
+        cy: 290
+        radius: 42
+        bouncer: true
+      # The GOVERNOR: two more bumpers, and the map's answer to its own wager.
+      #
+      # A launched ball keeps its speed for the whole map - nothing in the
+      # engine damps one - and a fast ball is a ball you cannot fence. A CHARGED
+      # bumper takes 5% off and pays an hour for it, so the right-hand chamber
+      # is where a player who pulled too hard goes to buy the speed back, and it
+      # costs the bumpers' banks to do it. Run them dry and the same bumpers
+      # start kicking instead, which is the trap.
+      #
+      # Two rather than one because the braking is bank-limited, not
+      # position-limited. Measured over a map, three bumpers put about 15 hours
+      # of brake on the board and five put 19-25; the first crossing of the shot
+      # is unchanged either way, because a ball only meets what it happens to
+      # meet. What these buy is a chamber that keeps braking after the first
+      # pass, rather than one that is spent by the time it matters.
+      #
+      # `kick-in` is a KICKER rather than a bouncer: it fires along a fixed
+      # bearing whatever the approach, so it aims into the chain instead of
+      # scattering off it. A radial bumper is a pinball; a kicker is a plan.
+      # Placed at the bottom of the chain rather than at the mouth: anything
+      # that drifts down the right-hand side is fired back up through it, so
+      # the gauntlet feeds itself. It is deliberately NOT in front of the
+      # muzzle - a bumper there narrows the spine's gap and seals the board.
+      - id: kick-in
+        kind: wall
+        shape: circle
+        cx: 810
+        cy: 600
+        radius: 40
+        bouncer: true
+        bearing: up
+      - id: bumper-d
+        kind: wall
+        shape: circle
+        cx: 800
+        cy: 420
+        radius: 42
+        bouncer: true
+      - id: chest-cover
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 560
+        width: 110
+        height: 22
+        breakable: true
+        hitsToBreak: 2
+      - id: chest-11
+        kind: wall
+        shape: rect
+        x: 160
+        'y': 590
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      # The spine takes the pinball cluster's punishment, so it is the wall
+      # that gives. Everything east of it has been sped up by the plunger and
+      # then by five bumpers; this is the only thing on the map that takes
+      # speed back, and after a long rally its face reads as exactly that.
+      - id: spine-top
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 45
+        width: 24
+        height: 300
+        deformable: true
+      - id: spine-bottom
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 620
+        width: 24
+        height: 235
+        deformable: true
+    slots:
+      - id: pillar-mid
+        candidates:
+          - shape: circle
+            cx: [300, 400]
+            cy: [280, 380]
+            radius: [58, 84]
+
+  # 12 "Hidden Requirement" - MEET `reveals`: a gate that OPENS space.
+  # Until now every breakable has been a wall in the way. This one is holding
+  # back a sealed half of the board that does not exist until you break it, so
+  # the map you are looking at is not the map you have to clear. White balls
+  # unlock here.
+  - id: level-12
+    level: 12
+    sizeThreshold: 14
+    expectedCuts: 6
+    points: 20
+    variety: 12
+    randomShapes: 8
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: smashed
+          count: 1
+    entities:
+      - id: gate-1
+        kind: wall
+        shape: rect
+        x: 40
+        'y': 430
+        width: 820
+        height: 24
+        breakable: true
+        fence: true
+        hitsToBreak: 3
+        reveals:
+          x: 50
+          'y': 55
+          width: 800
+          height: 368
+      - id: anchor
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 650
+        radius: 60
+      # MEET phasing, here rather than where the player used to meet it.
+      #
+      # Phasing shipped on exactly three maps - 20, 28 and 35 - and 20 is a
+      # BOSS. A player's first encounter with a wall that is not always there
+      # was during a boss fight, which is the worst place on the ladder to
+      # learn anything: the map is already asking for everything you have, and
+      # a wall going intangible reads as the game glitching rather than as a
+      # rule.
+      #
+      # 12 takes it because it is the family's home. Phasing is a solid that
+      # changes, like the breakable at 5, the chest at 7, the reveals on the
+      # gate above and the deformable at 11 - so by here the grammar is known
+      # and only the cycle is new. The bar hangs in the lower-left chamber
+      # where it is genuinely in the way: wait for the fade and cut cheaply, or
+      # go round and pay for it.
+      #
+      # Hangs at y 560 rather than the 520 it wanted. 520 left a 66-unit gap to
+      # the gate above, which is a neck on paper and lands anywhere from 45 to
+      # 60 once the board is rotated - the half-fits band the gap rule forbids
+      # (see 7.3: authored coordinates are not runtime coordinates). 106 has
+      # the headroom to survive every deal.
+      - id: flicker
+        kind: wall
+        shape: rect
+        x: 200
+        'y': 560
+        width: 26
+        height: 200
+        isPhasing: true
+        phaseCycleSeconds: 8
+
+  # 13 "Bonus Pool" - USE the chest: it IS the greed hook.
+  # Parked in the open middle with a patrol orbiting it, so cracking it means
+  # committing balls and fence time in the one place you cannot seal from. The
+  # whole outer ring clears the threshold without ever going near it. Green
+  # money balls unlock here, which is the build this map is quietly advertising.
+  - id: level-13
+    level: 13
+    sizeThreshold: 13
+    expectedCuts: 7
+    points: 20
+    variety: 14
+    randomShapes: 10
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 13
+        - kind: smashed
+          count: 1
+    entities:
+      - id: chest-cover
+        kind: wall
+        shape: rect
+        x: 398
+        'y': 380
+        width: 110
+        height: 22
+        breakable: true
+        hitsToBreak: 2
+      - id: chest-13
+        kind: wall
+        shape: rect
+        x: 406
+        'y': 410
+        width: 94
+        height: 76
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      # The guard was a circle shuttling left and right. It is a ROTOR now: a
+      # bar pivoting about its own centre, which is the same family (a machine
+      # on its own schedule) asking a different question.
+      #
+      # A linear patrol has one number - when is it here. A rotor's TIP moves
+      # much faster than its hub, so where you cross it matters as much as
+      # when: cut near the pivot and the bar crawls past your fence, cut at the
+      # arc and it is on you. Nothing else on the ladder prices a cut by
+      # distance from a thing.
+      #
+      # Sat at y 660 rather than 620 so the swept circle clears the chest above
+      # it by 73 units - a neck, not the 33 it would have been.
+      - id: guard
+        kind: mover
+        shape: rect
+        x: 350
+        'y': 648
+        width: 200
+        height: 24
+        axis: horizontal
+        range: 0
+        motion: rotate
+        speed: 50
+      - id: rib-left
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 240
+        width: 24
+        height: 200
+      - id: rib-right
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 460
+        width: 24
+        height: 200
+
+  # 14 "Bent Pipeline" - MEET the mirror.
+  # A fence that reflects off a surface instead of stopping at it, so a cut can
+  # reach round a corner. The two mirrors face different ways on purpose: the
+  # map is about learning to read which way a bounce goes.
+  - id: level-14
+    level: 14
+    sizeThreshold: 12
+    expectedCuts: 7
+    points: 20
+    variety: 14
+    randomShapes: 10
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: locks
+          count: 2
+    coloredAreas:
+      # A first taste of the bonus pocket in a mirror map: the reflected lanes make
+      # the corner easy to reach and hard to hold.
+      - kind: var
+        x: 45
+        'y': 630
+        width: 225
+        height: 225
+        required: false
+    entities:
+      - id: mirror-1
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 300
+        'y': 250
+        width: 20
+        height: 250
+      - id: mirror-2
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 580
+        'y': 400
+        width: 20
+        height: 250
+    slots:
+      - id: pillar-tl
+        candidates:
+          - shape: circle
+            cx: [160, 240]
+            cy: [180, 260]
+            radius: [55, 80]
+      - id: pillar-br
+        candidates:
+          - shape: circle
+            cx: [660, 740]
+            cy: [640, 720]
+            radius: [55, 80]
+
+  # 15 "Integration" - MEET the terminals, and the dormant balls they boot.
+  # A sleeper reserves an uncapturable pocket, so you cannot clear its space
+  # until you wake it and then trap it: the only mechanic in the game that asks
+  # you to CREATE the problem you are about to solve. Terminals are off-set in
+  # both axes so no single straight fence threads both; you boot them one at a
+  # time, at your own pace. Relocated from level 8, where it landed before the
+  # player had met a mover.
+  - id: level-15
+    level: 15
+    sizeThreshold: 12
+    expectedCuts: 7
+    points: 20
+    variety: 5
+    randomShapes: 0   # keep the sleepers' spots clear of stray mini-obstacles
+    maxBalls: 0
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: terminals
+          count: 1
+    circuit:
+      radius: 28
+      announce: game.circuitComplete
+      terminals:
+        - x: 235
+          'y': 250
+          ball: { x: 235, y: 480 }
+        - x: 665
+          'y': 620
+          ball: { x: 665, y: 390 }
+    entities:
+      # A chest away from the terminals, so waking a sleeper and cashing the chest
+      # pull you to opposite ends of the board.
+      - id: chest-15
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 180
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      - id: hub
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 60
+
+  # 16 "Two Environments" - USE the terminals: waking BOTH pays more.
+  # Each sleeper you boot is another ball loose in a shrinking board, and the
+  # chest sits where you would rather be sealing. Booting one and playing safe
+  # is a real line; booting both and cracking the chest is the greedy one.
+  - id: level-16
+    level: 16
+    sizeThreshold: 11
+    expectedCuts: 8
+    points: 20
+    variety: 8
+    randomShapes: 0
+    maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: terminals
+          count: 2
+    circuit:
+      radius: 30
+      announce: game.circuitComplete
+      terminals:
+        - x: 180
+          'y': 700
+          ball: { x: 300, y: 700 }
+        - x: 720
+          'y': 200
+          ball: { x: 600, y: 200 }
+    entities:
+      - id: chest-cover
+        kind: wall
+        shape: rect
+        x: 398
+        'y': 400
+        width: 110
+        height: 22
+        breakable: true
+        hitsToBreak: 2
+      - id: chest-16
+        kind: wall
+        shape: rect
+        x: 406
+        'y': 430
+        width: 94
+        height: 76
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: brace-tl
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 300
+        width: 200
+        height: 22
+      - id: brace-br
+        kind: wall
+        shape: rect
+        x: 550
+        'y': 578
+        width: 200
+        height: 22
+
+  # 17 "WIP Limit" - MEET the fence budget.
+  # Deliberately plain topology: one divider, one pillar, nothing to time. The
+  # constraint IS the map, and burying it under other ideas would teach nothing.
+  # Budget is expectedCuts plus a margin, which is a soft gate rather than a
+  # puzzle: you have to be roughly efficient, not perfect.
+  - id: level-17
+    level: 17
+    sizeThreshold: 11
+    expectedCuts: 7
+    points: 20
+    variety: 10
+    randomShapes: 8
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: locks
+          count: 2
+    coloredAreas:
+      # Opposite the pillar, across the divider: the pocket is cheap to fence and
+      # expensive to reach, which is the trade the map is about.
+      - kind: let
+        x: 655
+        'y': 45
+        width: 200
+        height: 200
+        required: false
+    fenceBudget: 10
+    entities:
+      - id: divider-top
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 45
+        width: 26
+        height: 320
+      - id: divider-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 640
+        width: 26
+        height: 215
+      - id: pillar
+        kind: wall
+        shape: circle
+        cx: 220
+        cy: 620
+        radius: 65
+      # The PORTAL PIPE, and the reason it is on the budget map.
+      #
+      # A portal pair changes what is NEXT TO what without moving a wall: a
+      # ball entering one mouth leaves the other, so the two chambers are
+      # joined without using the neck. On a map where every fence is counted
+      # that is worth something real - a route you did not have to pay for.
+      #
+      # And it cuts the other way, which is the point of putting it in a pipe.
+      # A region holding a live portal CANNOT be locked (see portal.test.ts):
+      # a pocket the ball can leave is not a pocket, and paying out for a seal
+      # it walks out of a second later is the one outcome no screen could
+      # explain. So this corridor is the cheapest-looking pocket on the board -
+      # two short mouths, a quick safe cut - and sealing it pays nothing. On a
+      # budget map that is the most expensive mistake available, which is what
+      # makes it a decision rather than a gotcha: the shortcut and the trap are
+      # the same object, and the player is told so by the mouths glowing.
+      - id: warp-near
+        kind: wall
+        shape: circle
+        cx: 712
+        cy: 290
+        radius: 34
+        portal: wip
+      - id: warp-far
+        kind: wall
+        shape: circle
+        cx: 200
+        cy: 250
+        radius: 34
+        portal: wip
+      - id: wip-pipe-l
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 140
+        width: 24
+        height: 300
+      - id: wip-pipe-r
+        kind: wall
+        shape: rect
+        x: 800
+        'y': 140
+        width: 24
+        height: 300
+
+  # 18 "Sprint Capacity" - FIGHT: the budget crossed with the mirrors.
+  # A bounced fence covers more board per cut, which is exactly what a budget
+  # rewards, so the two ideas pull the same way for once. The catch is that a
+  # misread bounce spends a fence on a cut that seals nothing.
+  - id: level-18
+    level: 18
+    sizeThreshold: 10
+    expectedCuts: 8
+    points: 20
+    variety: 12
+    randomShapes: 8
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 1
+    fenceBudget: 11
+    entities:
+      # A breakable lip under the mirror: smash it and the bottom-right corner
+      # becomes one pocket instead of two.
+      - id: gate-18
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 760
+        width: 130
+        height: 26
+        breakable: true
+        hitsToBreak: 2
+      - id: mirror-v
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 430
+        'y': 140
+        width: 20
+        height: 280
+      - id: mirror-h
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 500
+        'y': 560
+        width: 280
+        height: 20
+      - id: post-left
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 500
+        width: 24
+        height: 200
+      # MEET the cage. Four balls on an eleven-fence budget is the map that
+      # most wants somewhere to PUT one: every other tool here is permanent - a
+      # lock removes a ball for good, a fence divides the board for good - and
+      # this is the only way to say "not this one, not yet" while you deal with
+      # the corner it keeps ruining.
+      #
+      # Tucked against post-left with a 5-unit seam, so the pair reads as one
+      # solid and the only way in is the mouth. Facing up: the mouth looks back
+      # into the chamber the balls are actually in, so a ball can wander in on
+      # its own and the cage is a place rather than a trap you have to aim at.
+      - id: holding-pen
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 620
+        width: 130
+        height: 130
+        facing: up
+        holdSeconds: 7
+
+  # 19 "Regression" - BREAK the lesson: the space you open comes with company.
+  # Twelve maps have taught that a `reveals` gate is a gift. This one hides its
+  # reward behind the same symbol and spills extra balls in the moment the board
+  # opens up, telegraphed a beat ahead so it is a turn and not an ambush. The
+  # thread-lock requirement means you cannot simply wall the mess off either.
+  - id: level-19
+    level: 19
+    sizeThreshold: 9
+    expectedCuts: 9
+    points: 20
+    variety: 14
+    randomShapes: 10
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: smashed
+          count: 1
+    threadLockRequired: 1
+    entities:
+      - id: gate-19
+        kind: wall
+        shape: rect
+        x: 40
+        'y': 620
+        width: 820
+        height: 24
+        breakable: true
+        fence: true
+        hitsToBreak: 3
+        reveals:
+          x: 50
+          'y': 650
+          width: 800
+          height: 195
+      - id: rib-left
+        kind: wall
+        shape: rect
+        x: 220
+        'y': 220
+        width: 24
+        height: 240
+      - id: rib-right
+        kind: wall
+        shape: rect
+        x: 660
+        'y': 220
+        width: 24
+        height: 240
+      - id: hub
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 340
+        radius: 58
+    beats:
+      - id: spill
+        atSpaceRemaining: 45
+        spawnAdds: 1
+        announce: game.beatReorg
+
+  - id: level-20
+    level: 20
+    sizeThreshold: 18
+    expectedCuts: 6
+    points: 20
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    # Four traps (two halves x two hits) plus the ground each break-out
+    # reverts. The old 75s was sized for a single seal per half.
+    timeLimit: 95
+    # Colored Area win gate: fence BOTH chained boss halves into this var area.
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): a chained PAIR. The chain between them shreds any fence it
+    # sweeps and snags on the phasing pillars (pinning the pair); a pillar's
+    # phase-out shoves them loose again. Introduces chained balls + phasing objects.
+    boss:
+      name: Merge Conflict
+      intro: >-
+        Two commits tangled by a chain that shreds every fence it sweeps. Neither
+        resolves on the first try: trap a half anywhere on the board and it tears
+        free, faster and smaller, taking your biggest fence with it. Wear both
+        halves down, then fence them into the pink var area. The chain snags on the
+        phasing pillars, and a freeze buys you a clean window.
+      creepFromStart: true
+      objective:
+        id: defeat-merge
+        name: Resolve the Merge Conflict
+        description: Wear both chained halves down, then fence them into the var area.
+        clarify: >-
+          Each half takes TWO traps. The first can be anywhere on the board and
+          costs you no life: the half breaks out faster and smaller, and one of your
+          fences is reverted. The second must be inside the pink var area, and both
+          halves must end up there. Their chain breaks any fence it sweeps across
+          and snags on the phasing pillars; when a pillar phases out it shoves the
+          pair free. Running out of time fails the map.
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        # Two traps per half. The fight is ATTRITION, which is what tells it apart
+        # from the level 10 boss: that one is a single precise seal, this is a war
+        # you are losing ground in. Every non-final trap reverts your biggest
+        # fence, so the board you finish on is not the board you built.
+        hp: 2
+        count: 2
+        chained: true
+        radiusScale: 1.6
+        speedScale: 1.1
+        color: "#ff7a3d"
+        spitIntervalSeconds: 0
+        maxMinions: 0
+    entities:
+      - id: phase-pillar-l
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: phase-pillar-r
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 12
+  # ===========================================================================
+  # ACT III - LEGACY CODE (21-30): the board fights back.
+  #
+  # The act that had nothing of its own. Eight of its ten maps were a mover and
+  # a mirror at a slightly smaller threshold, and the only genuinely new thing
+  # in the whole band was the black ball at 25. It now owns every gravity idea
+  # in the game, plus the three mechanics that used to appear exactly once.
+  #
+  # Each mechanic gets beats rather than a debut (see MAP_DESIGN_GUIDELINES.md):
+  #   Meet  - alone and legible, nothing else on the map is new
+  #   Use   - the mechanic IS the greed hook
+  #   Fight - the mechanic as a hazard, crossed with something older
+  #   Break - the mechanic inverted against the lesson it taught
+  # ===========================================================================
+
+  # 21 "Gravity" - MEET the well.
+  # Deliberately plain topology: two chambers and one generous neck, so the
+  # pull is the only thing to learn. The well hangs over the neck, which is the
+  # whole lesson in one picture - the route between chambers is also the place
+  # your ball stops going where you aimed it.
+  - id: level-21
+    level: 21
+    sizeThreshold: 14
+    expectedCuts: 6
+    points: 20
+    variety: 12
+    randomShapes: 8
+    maxBalls: 2
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: locks
+          count: 1
+    coloredAreas:
+      # Act III opens the board up again. The spine keeps this corner honest: you
+      # have to commit to the left half to bank it.
+      - kind: let
+        x: 45
+        'y': 45
+        width: 200
+        height: 200
+        required: false
+    gravityWells:
+      - x: 345
+        'y': 250
+        width: 210
+        height: 170
+        turnRate: 2.8
+    entities:
+      - id: spine-top
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 45
+        width: 26
+        height: 290
+      - id: spine-bottom
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 565
+        width: 26
+        height: 290
+      # The greed hook, kept simple for a Meet map: a corner shelf making one
+      # small chamber that grades superior. Reaching it means crossing under the
+      # well, so the pull is what you have to plan around to get paid.
+      - id: corner-shelf
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 640
+        width: 165
+        height: 24
+    beats:
+      - id: pressure
+        atSpaceRemaining: 50
+        speedSpike: 0.15
+        announce: game.beatCrunchTime
+
+  # 22 "Slingshot" - USE the well as a tool.
+  # The paying pocket sits behind a mouth you cannot reach on a straight line.
+  # A ball fed into the well from the left arcs down and arrives at the opening,
+  # so the well stops being terrain and becomes the aiming device. The whole
+  # left half is an ordinary map, which is the safe skip the hook needs.
+  - id: level-22
+    level: 22
+    sizeThreshold: 12
+    expectedCuts: 7
+    points: 20
+    variety: 10
+    randomShapes: 0
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: locks
+          count: 2
+    gravityWells:
+      # Fierce and narrow: a gentle wide well is a nudge nobody can aim with.
+      - x: 520
+        'y': 250
+        width: 170
+        height: 200
+        turnRate: 3.2
+    coloredAreas:
+      - kind: let
+        x: 630
+        'y': 625
+        width: 220
+        height: 220
+        required: false
+    entities:
+      - id: pocket-shelf
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 596
+        width: 235
+        height: 24
+      # Narrows the way in to an 80-tall mouth, so the pocket is reachable by a
+      # bent path and awkward by a straight one.
+      - id: pocket-lip
+        kind: wall
+        shape: rect
+        x: 596
+        'y': 700
+        width: 24
+        height: 155
+      # USE the rotor, in the open half, where the well can hand it a ball.
+      # Faster than 13's and in a chamber with nothing to hide behind, so the
+      # arc is the obstacle rather than a thing you time around.
+      - id: roamer
+        kind: mover
+        shape: rect
+        x: 160
+        'y': 438
+        width: 180
+        height: 24
+        axis: horizontal
+        range: 0
+        motion: rotate
+        speed: 55
+
+  # 23 "No Rollback" - MEET the one-way membrane, and the box it feeds.
+  # The two dividers already made a neck; now the neck only works downwards.
+  # Balls fall through it and cannot come back, so the bottom of the board is a
+  # basin that fills and never empties. Every other mechanic so far changes
+  # where a ball GOES; this is the first one that lets you decide where a ball
+  # STAYS, and the map is built so that the decision is the whole difficulty:
+  # send a ball down early and the top clears easily but the basin gets crowded,
+  # hold them up top and you are sealing around traffic.
+  #
+  # Took act III's slot from the inverted well, which had four beats to itself
+  # (21, 22, 23, 24) on a ten-map act. The well keeps its MEET and its USE.
+  - id: level-23
+    level: 23
+    sizeThreshold: 11
+    expectedCuts: 7
+    points: 20
+    variety: 14
+    randomShapes: 8
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: delivered
+          count: 1
+    entities:
+      # The membrane fills the 150-wide gap the two dividers leave. Down only.
+      - id: one-way-neck
+        kind: wall
+        shape: rect
+        x: 375
+        'y': 430
+        width: 150
+        height: 26
+        oneWay: down
+      # Above the mover's lane. The chest is easy to see and awkward to reach
+      # while the neck guard is sweeping.
+      - id: chest-23
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 120
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      - id: divider-left
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 430
+        width: 330
+        height: 26
+      - id: divider-right
+        kind: wall
+        shape: rect
+        x: 525
+        'y': 430
+        width: 330
+        height: 26
+      # The hook sits in the bottom-left, OUTSIDE the fountain: safe once a ball
+      # is in it, but every route there crosses the updraught.
+      - id: quiet-shelf
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 690
+        width: 205
+        height: 24
+      # The membrane's payoff. Balls that fall through the one-way neck land in
+      # this half; the box is where you put them. It holds its own floor off the
+      # board until it is fed, so the basin cannot simply be cleared around it -
+      # the map's two halves need each other.
+      - id: done-column
+        kind: box
+        shape: rect
+        x: 600
+        'y': 560
+        width: 190
+        height: 190
+        mouth: up
+        capacity: 2
+        reserves: true
+      - id: neck-guard
+        kind: mover
+        shape: rect
+        x: 400
+        'y': 300
+        width: 90
+        height: 26
+        axis: horizontal
+        range: 240
+        speed: 165
+    beats:
+      - id: overflow
+        atSpaceRemaining: 45
+        spawnAdds: 1
+        announce: game.beatReorg
+
+  # 24 "Cold Cache" - MEET fence ground.
+  # The first map where the board changes what a CUT costs rather than what a
+  # ball does. The money sits in the top-right corner and the ground around it
+  # is cold: a fence across it builds at half speed, so the cheapest pocket on
+  # the map is also the longest time spent exposed. Everywhere else runs normal,
+  # which is what makes the corner read as a decision instead of as a tax.
+  #
+  # Took the well's fourth beat. The deferred-wake Turn it used to carry was the
+  # well's own trick told a second time; the slow corner is a standing cost that
+  # is legible from frame one, which suits a MEET better than an ambush does.
+  - id: level-24
+    level: 24
+    sizeThreshold: 10
+    expectedCuts: 8
+    points: 20
+    variety: 16
+    randomShapes: 10
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: locks
+          count: 2
+    coloredAreas:
+      # Above the catch shelf, where the pillars cannot help you. Taking it means
+      # working the top of the board while the shelf collects everything else.
+      - kind: let
+        x: 655
+        'y': 45
+        width: 200
+        height: 200
+        required: false
+    fenceZones:
+      # Over the let-zone corner: taking the money means a cut that crawls.
+      - x: 610
+        'y': 20
+        width: 270
+        height: 265
+        speed: 0.5
+        name: cold cache
+    entities:
+      - id: catch-shelf
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 560
+        width: 270
+        height: 24
+    slots:
+      - id: pillar-left
+        candidates:
+          - shape: circle
+            cx: [150, 240]
+            cy: [380, 480]
+            radius: [58, 82]
+      - id: pillar-right
+        candidates:
+          - shape: circle
+            cx: [660, 750]
+            cy: [380, 480]
+            radius: [58, 82]
+
+  # 25 "Demolition" - MEET the charge, and the black ball (unlockLevel 25).
+  # A hardened slab plugs the only neck. Balls will not casually crack it, so
+  # the fuse is the way through: route a fence past it, then live with the
+  # blast, which flings loose balls and shreds your own fences in the radius.
+  # The black ball arrives on the same map on purpose - it is the one ball that
+  # can chew the slab down by force, so the map has two answers to one wall.
+  - id: level-25
+    level: 25
+    sizeThreshold: 10
+    expectedCuts: 8
+    points: 20
+    variety: 12
+    randomShapes: 10
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 1
+    entities:
+      # Both rails of the mid-board alley give. The charge blows the plug
+      # between them and the balls pour through at whatever the blast left
+      # them; these are what the map has to take that back with, and the
+      # dents afterwards say how much traffic the alley actually saw.
+      - id: bar-left
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 430
+        width: 300
+        height: 32
+        deformable: true
+      - id: bar-right
+        kind: wall
+        shape: rect
+        x: 555
+        'y': 430
+        width: 300
+        height: 32
+        deformable: true
+      - id: slab-plug
+        kind: wall
+        shape: rect
+        x: 345
+        'y': 420
+        width: 210
+        height: 52
+        breakable: true
+        hitsToBreak: 40
+      - id: anchor-tl
+        kind: wall
+        shape: circle
+        cx: 240
+        cy: 220
+        radius: 52
+      - id: anchor-br
+        kind: wall
+        shape: circle
+        cx: 660
+        cy: 680
+        radius: 52
+    charges:
+      - fuse: { x: 450, y: 560 }
+        radius: 32
+        targetId: slab-plug
+        delaySeconds: 1.4
+        blastRadius: 220
+        announce: game.chargeBlown
+
+  # 26 "Data Migration" - MEET the seam.
+  # A vein across the board that pays for being TRACED, not crossed. Drawing a
+  # fence along it means a long, loose, badly-placed cut, which is the cost: the
+  # seam runs where you would never choose to seal.
+  - id: level-26
+    level: 26
+    sizeThreshold: 9
+    expectedCuts: 8
+    points: 20
+    variety: 18
+    randomShapes: 12
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 1
+    coloredAreas:
+      # Far from the core and both nodes, so the greedy line is the long one.
+      - kind: let
+        x: 45
+        'y': 45
+        width: 200
+        height: 200
+        required: false
+    dataStream:
+      path:
+        - { x: 200, y: 300 }
+        - { x: 450, y: 360 }
+        - { x: 700, y: 300 }
+      width: 40
+      reward: { kind: overtime, value: 34 }
+      announce: game.streamHarvested
+    entities:
+      - id: core
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 560
+        radius: 110
+      - id: node-l
+        kind: wall
+        shape: circle
+        cx: 200
+        cy: 620
+        radius: 58
+      - id: node-r
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 620
+        radius: 58
+      # MEET the latch. Phasing walls open on a clock; this is the only thing
+      # on the board that opens because of something the PLAYER did, and it
+      # stays open once it has.
+      #
+      # One lock. That is deliberately cheap: the point of the first latch is
+      # that the board answers you, not that it is a second puzzle. What it
+      # buys is a map with two acts - the stream above the curtain is simply
+      # not available until you have put a ball away, so the harvest cannot be
+      # the opening move on the map that teaches harvesting.
+      - id: curtain
+        kind: wall
+        shape: rect
+        x: 330
+        'y': 150
+        width: 240
+        height: 26
+        latchAfter: 1
+
+  # 27 "Bandwidth" - FIGHT: the seam against fence ground.
+  # Same greed, and now the pipe is narrow. Tracing the vein spends a cut that
+  # seals almost nothing, and the ground the vein runs through builds fences at
+  # 45%, so the greedy line is not just wasteful, it is the longest you will
+  # ever stand still. The seam runs vertically, so following it splits the board
+  # the long way - the worst possible partition, taken slowly.
+  #
+  # Crossed with the ground rather than the budget it used to carry: a budget
+  # and slow ground are the same idea twice (the cut is scarce), and a fight
+  # between two versions of one idea is not a fight. The WIP limit keeps 17, 18
+  # and 32.
+  - id: level-27
+    level: 27
+    sizeThreshold: 9
+    expectedCuts: 9
+    points: 20
+    variety: 15
+    randomShapes: 10
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 2
+    fenceZones:
+      # A band straddling the seam for the full height of the board, so any cut
+      # that follows the vein pays for the whole run of it.
+      - x: 380
+        'y': 45
+        width: 160
+        height: 810
+        speed: 0.45
+        name: the narrow pipe
+    dataStream:
+      path:
+        - { x: 450, y: 120 }
+        - { x: 470, y: 450 }
+        - { x: 450, y: 780 }
+      width: 38
+      reward: { kind: overtime, value: 38 }
+      announce: game.streamHarvested
+    entities:
+      # Dead centre, between the four racks: the map's one focal reward, and every
+      # route to it crosses a lane.
+      - id: chest-27
+        kind: wall
+        shape: rect
+        x: 406
+        'y': 415
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      # The zone below is called "the narrow pipe" and until now it was only
+      # ground: a colour on the floor with nothing to bump into. These are its
+      # walls, so the metaphor is geometry.
+      #
+      # A corridor is normally the CHEAPEST lock on a board - short mouths, two
+      # quick safe cuts - which would be a gift on a map about greed. Here the
+      # whole corridor stands on ground that builds fences at 45%, so the
+      # cheapest pocket is also the longest you will ever stand still, and the
+      # chest is inside it. Open at both ends, so nothing is sealed for free.
+      - id: pipe-left
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 180
+        width: 24
+        height: 540
+      - id: pipe-right
+        kind: wall
+        shape: rect
+        x: 554
+        'y': 180
+        width: 24
+        height: 540
+      - id: rack-tl
+        kind: wall
+        shape: rect
+        x: 170
+        'y': 200
+        width: 150
+        height: 34
+      - id: rack-bl
+        kind: wall
+        shape: rect
+        x: 170
+        'y': 660
+        width: 150
+        height: 34
+      - id: rack-tr
+        kind: wall
+        shape: rect
+        x: 580
+        'y': 200
+        width: 150
+        height: 34
+      - id: rack-br
+        kind: wall
+        shape: rect
+        x: 580
+        'y': 660
+        width: 150
+        height: 34
+
+  # 28 "Flaky" - MEET phasing, off a boss map for the first time.
+  # The pillars are the roof over a well. While they are solid they shield it
+  # and the top half plays normally; when they phase out the shield is gone and
+  # anything crossing above drops straight into the pull. The hazard is not the
+  # pillar, it is the pillar's absence, which is the opposite of what an
+  # obstacle has meant for 27 levels.
+  - id: level-28
+    level: 28
+    sizeThreshold: 8
+    expectedCuts: 8
+    points: 20
+    variety: 14
+    randomShapes: 8
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: locks
+          count: 2
+    coloredAreas:
+      # Small, high, and on the far side of the phasing roof: reachable only in the
+      # window where the roof is out.
+      - kind: const
+        x: 685
+        'y': 45
+        width: 170
+        height: 170
+        required: false
+    gravityWells:
+      - x: 340
+        'y': 470
+        width: 220
+        height: 170
+        turnRate: 3.0
+    entities:
+      - id: phase-roof-l
+        kind: wall
+        shape: circle
+        cx: 390
+        cy: 300
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 9
+      - id: phase-roof-r
+        kind: wall
+        shape: circle
+        cx: 560
+        cy: 330
+        radius: 50
+        isPhasing: true
+        phaseCycleSeconds: 11
+      - id: ledge-left
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 520
+        width: 240
+        height: 26
+      - id: ledge-right
+        kind: wall
+        shape: rect
+        x: 615
+        'y': 520
+        width: 240
+        height: 26
+
+  # 29 "Incident" - the act's SKILL CHECK. Nothing new, and the board turns.
+  # An authored tilt chance rather than the usual 5-10%: this is the one map
+  # built around the turn instead of merely eligible for it, so it has to
+  # actually happen. At 0.35 a tier, a full map turns at least once about four
+  # times in five, and the well that was safely mid-board is somewhere else.
+  - id: level-29
+    level: 29
+    sizeThreshold: 7
+    expectedCuts: 9
+    points: 20
+    variety: 16
+    randomShapes: 10
+    maxBalls: 4
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: smashed
+          count: 1
+    tiltChance: 0.35
+    gravityWells:
+      - x: 300
+        'y': 250
+        width: 200
+        height: 180
+        turnRate: 2.9
+    coloredAreas:
+      - kind: let
+        x: 610
+        'y': 610
+        width: 210
+        height: 200
+        required: false
+    entities:
+      - id: vault-lip-h
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 586
+        width: 255
+        height: 24
+      - id: vault-lip-v
+        kind: wall
+        shape: rect
+        x: 576
+        'y': 700
+        width: 24
+        height: 155
+      - id: shield
+        kind: wall
+        shape: rect
+        x: 250
+        'y': 560
+        width: 190
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      # USE the cage, on the far side of the board from everything it helps
+      # with. The map wants a ball parked while you work the shield and the
+      # vault, and the walk to the pen costs you the tempo it buys - which is
+      # the decision, and is why it sits in the corner rather than next to the
+      # work.
+      - id: holding-pen
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 45
+        width: 120
+        height: 120
+        facing: right
+        holdSeconds: 8
+      - id: patrol
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 760
+        radius: 42
+        axis: horizontal
+        range: 340
+        speed: 170
+    beats:
+      - id: escalate
+        atSpaceRemaining: 40
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+
+
+  - id: level-30
+    level: 30
+    sizeThreshold: 12
+    expectedCuts: 9
+    points: 20
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 80
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): a fast, heavy BLACK boss that periodically wipes every
+    # fence. Introduces black balls (which fracture your fences in 3 hits) already
+    # foreshadowed from ~L25. Its stop-and-vibrate wind-up is the fence window.
+    boss:
+      name: Force Push
+      intro: >-
+        A heavy black build that wrecks your work: every 20 seconds it stops,
+        vibrates, and shatters EVERY fence you have drawn. Nothing you build
+        outlives the next push, so this is not a boss you grind down. It is one
+        clean run at the pink var area, start to finish, between two wipes. The
+        wind-up is when it stands still. A freeze holds it right there.
+      creepFromStart: false
+      objective:
+        id: defeat-force-push
+        name: Contain the Force Push
+        description: Fence the black boss into the var area, between two wipes.
+        clarify: >-
+          Trap the black boss inside the pink var area to win, in ONE trap. Every 20
+          seconds it stops and vibrates, then destroys every fence you have drawn,
+          finished or not; that stationary wind-up is your chance to fence it.
+          Trapping it outside the area fails the map, and so does running out of
+          time.
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        # One trap, like level 10, but the clock is on YOUR BUILD rather than on
+        # the boss: the wipe is frequent enough that no fence survives two of them,
+        # so the whole job has to fit inside one window. Slower than it was (1.45
+        # was a fast boss AND a short window, which reads as unfair rather than
+        # tense); the pressure now comes from the wipe, which is this fight's idea.
+        hp: 1
+        radiusScale: 2.2
+        speedScale: 1.25
+        color: "#2b2f3a"
+        fenceWipeSeconds: 20
+        spitIntervalSeconds: 0
+        maxMinions: 0
+    entities:
+      - id: pillar-a
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 500
+        radius: 60
+      - id: pillar-b
+        kind: wall
+        shape: circle
+        cx: 620
+        cy: 560
+        radius: 55
+  # ===========================================================================
+  # ACT IV - CRUNCH (31-35): everything at once.
+  #
+  # The act that was never migrated, and it showed. It sat at 70-72% clear with
+  # 4-5 cuts while act III asked for 86-93% and 9: level 31 demanded LESS of the
+  # player than level 4 did. Its five maps between them put 8 balls on the board
+  # against act III's 15, which also gave the assignment block spanning it the
+  # thinnest targets on the ladder.
+  #
+  # It owns no new primitives, by design (MAP_DESIGN_GUIDELINES.md): this is where the
+  # vocabulary the other acts taught gets combined and then turned around. What
+  # IS new is that these maps state their own win conditions rather than leaning
+  # on the implicit clear, and PRICE them: a map that asks for something harder
+  # than emptying the board pays for it.
+  # ===========================================================================
+
+  # 31 "Oncall" - FIGHT: terminals crossed with the one-way membrane.
+  # The post-boss breather that is not one. A sleeper reserves space you cannot
+  # capture, so you have to wake it - and the neck it wakes above only works
+  # downwards. Page yourself and the problem goes to the lower chamber, where
+  # the const pocket is, and it does not come back up. The decision is the
+  # ORDER: bank the pocket first and wake it into a half you have finished with,
+  # or wake it early for the space and spend the rest of the map working around
+  # it downstairs. Act IV opens on rules the player already knows, on purpose.
+  # The gates on 32-34 only land if the first map plays straight.
+  - id: level-31
+    level: 31
+    sizeThreshold: 8
+    expectedCuts: 8
+    points: 20
+    variety: 12
+    randomShapes: 8
+    maxBalls: 3
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: locks
+          count: 2
+        # The terminal is the only thing on this map a lock cannot produce, so
+        # it is what stops "seal everything" from being a win on its own.
+        - kind: terminals
+          count: 1
+    coloredAreas:
+      # Act IV: a const pocket tucked under the right shelf. Worth 3x, and the
+      # shelf is in the way of every comfortable cut to it.
+      - kind: const
+        x: 685
+        'y': 685
+        width: 170
+        height: 170
+        required: false
+    circuit:
+      radius: 28
+      announce: game.circuitComplete
+      terminals:
+        - x: 180
+          'y': 200
+          ball: { x: 450, y: 430 }
+    entities:
+      # Two chambers over a 220-wide neck. Wide enough to be a corridor rather
+      # than a seal, so the neck is where you fight, not where you finish.
+      - id: shelf-left
+        kind: wall
+        shape: rect
+        x: -20
+        'y': 330
+        width: 360
+        height: 26
+      - id: shelf-right
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 330
+        width: 320
+        height: 26
+      # The 220-wide neck between the shelves, now one-way. This is what turns
+      # waking the sleeper from a chore into a choice.
+      - id: escalation
+        kind: wall
+        shape: rect
+        x: 340
+        'y': 330
+        width: 220
+        height: 26
+        oneWay: down
+      # The greed hook: a tight corner pocket hanging off the top right, whose
+      # only approach runs back over the well's mouth.
+      # Lifted so the way in is a 70-wide neck rather than the 50 it was: a gap
+      # a ball only half-fits through is the one thing MAP_DESIGN_GUIDELINES.md forbids, and
+      # 50 against a 36 diameter is precisely that.
+      - id: hook-lip
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 110
+        width: 26
+        height: 150
+      - id: pillar
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 640
+        radius: 54
+      # USE the latch, crossed with the terminal this map already asks for.
+      # The bar sits over the upper-left chamber and opens on the SECOND lock,
+      # not the first: by act IV the answer-back is known, so what is being
+      # asked is whether you spend two locks before the clock rather than
+      # whether you noticed the wall moved.
+      - id: shutter
+        kind: wall
+        shape: rect
+        x: 120
+        'y': 180
+        width: 200
+        height: 26
+        latchAfter: 2
+      # The DRAIN: a pipe under the neck, and the map's second decision.
+      #
+      # The shelf above already only works downwards, so the lower half fills
+      # and never empties. This is the same rule turned into a place rather
+      # than a floor: its lid is one-way too, so a ball that drops in cannot
+      # climb back out, but the pipe is OPEN AT THE BOTTOM, so it leaves the
+      # ordinary way unless you close it.
+      #
+      # That is the whole of it. One short cut across the bottom turns a pocket
+      # that filled itself into a lock, and the cut is cheap - the mouth is 92
+      # units, the narrowest seal on the map. What it costs is timing: cut it
+      # empty and you have spent a fence on nothing, cut it late and the ball
+      # has already wandered out the bottom.
+      #
+      # Sitting under the escalation neck on purpose. Paging yourself does not
+      # only move the problem downstairs now, it feeds this.
+      - id: drain-lid
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 470
+        width: 140
+        height: 26
+        oneWay: down
+      - id: drain-left
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 496
+        width: 24
+        height: 264
+      - id: drain-right
+        kind: wall
+        shape: rect
+        x: 496
+        'y': 496
+        width: 24
+        height: 264
+
+  # 32 "Controlled Burn" - FIGHT: the chest crossed with the charge, under a WIP
+  # limit. Every fence is rationed, the chest is behind a slab, and the charge
+  # that opens the slab costs one of the twelve. The map asks for a SUPERIOR
+  # lock on top of the clear, which is the squeeze: a tight pocket wants cuts
+  # you have already spent on the burn. The nook that can grade sits at the far
+  # corner from the vault, so the map will not let you do both cheaply.
+  - id: level-32
+    level: 32
+    sizeThreshold: 7
+    expectedCuts: 9
+    points: 20
+    variety: 14
+    randomShapes: 10
+    maxBalls: 3
+    fenceBudget: 12
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: superiorLocks
+          count: 1
+          bonusPercent: 20
+        # The burn. Without this the vault is optional, and a map whose entire
+        # shape is a slab, a charge and a chest behind them can be finished
+        # without touching any of the three.
+        - kind: smashed
+          count: 1
+    entities:
+      - id: vault-slab
+        kind: wall
+        shape: rect
+        x: 340
+        'y': 250
+        width: 220
+        height: 28
+        breakable: true
+        hitsToBreak: 4
+      # Sized to FILL the vault rather than sit in the middle of it: at 80 wide
+      # it left 44 either side and 20 above the slab, three gaps a ball
+      # half-fits through. Now every gap around it is a seam.
+      - id: chest-32
+        kind: wall
+        shape: rect
+        x: 372
+        'y': 150
+        width: 156
+        height: 92
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      - id: vault-wall-l
+        kind: wall
+        shape: rect
+        x: 340
+        'y': 45
+        width: 26
+        height: 210
+      - id: vault-wall-r
+        kind: wall
+        shape: rect
+        x: 534
+        'y': 45
+        width: 26
+        height: 210
+      - id: nook-lip
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 700
+        width: 160
+        height: 24
+      - id: baffle
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 520
+        width: 26
+        height: 240
+    charges:
+      - fuse: { x: 450, y: 330 }
+        radius: 32
+        targetId: vault-slab
+        delaySeconds: 1.4
+        blastRadius: 200
+        announce: game.chargeBlown
+
+  # 33 "Code Freeze" - FIGHT: the 6x stacked hook crossed with a mover, and the
+  # second ball you still have to answer for.
+  #
+  # Relocated from level 22 intact, and its geometry stays exactly as it was:
+  # the alcove and nook margins are pinned against the lock-grade denominator
+  # swing (codeFreezeMap.test.ts), so a stray obstacle or a moved lip would cost
+  # the superior grade the whole map is built around. randomShapes stays 0.
+  #
+  # The win NAMES the compass. Only one ball can take the nook that is this
+  # map's prize, so naming the other one means the map is not finished when the
+  # greedy line pays out: the compass still has to be put away on the safe,
+  # roomy lower line, and the map pays 30% for closing that out. The const box
+  # stays a BONUS, not a gate: making it mandatory would delete the choice the
+  # whole map exists to pose.
+  #
+  # The roster is pinned because the win names a ball. Left to the usual roll
+  # the compass might not spawn at all, and a map whose win condition depends on
+  # a ball that is not there is unwinnable through no fault of the player.
+  - id: level-33
+    level: 33
+    sizeThreshold: 6
+    expectedCuts: 9
+    points: 20
+    variety: 0
+    # A stray mini-obstacle inside the nook would change its cell count and cost
+    # the superior grade, so this map has to stay deterministic.
+    randomShapes: 0
+    # TWO balls, not three. The nook's superior grade is pinned against the
+    # lock-grade denominator, which is max(active cells, initial / ACTIVE
+    # BALLS): a third ball lowers that floor enough that the nook stops grading,
+    # and the 6x hook this map exists for quietly becomes a 3x one. Raising it
+    # was the first thing I tried and codeFreezeMap.test.ts caught it.
+    maxBalls: 2
+    # Yellow FIRST. The named ball is the one left over once the hook is taken,
+    # so it must not be the ball a player instinctively herds into the nook, and
+    # the map's own payout test seals the first ball into that nook to check the
+    # 6x stack.
+    ballTypeIds: [yellow, compass]
+    win:
+      require:
+        - kind: space
+          threshold: 6
+        - kind: lockType
+          ballType: compass
+          count: 1
+          bonusPercent: 30
+    coloredAreas:
+      - kind: const
+        x: 630
+        'y': 45
+        width: 225
+        height: 205
+        required: false
+    entities:
+      # The alcove: a vertical lip hanging off the top edge and a horizontal lip
+      # running to the right edge, overlapping in neither axis, so the way in is
+      # a 60x60 corner gap that ONE short axis-aligned fence closes (the L1
+      # vault pattern, mirrored into the top-right).
+      - id: alcove-lip-v
+        kind: wall
+        shape: rect
+        x: 604
+        'y': -20
+        width: 26
+        height: 205
+      - id: alcove-lip-h
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 245
+        width: 190
+        height: 26
+      # The shelf that makes the greedy line exist: it carves a 120x85 nook off
+      # the back of the alcove, sealed by an 85-long fence at x=735.
+      - id: nook-shelf
+        kind: wall
+        shape: rect
+        x: 735
+        'y': 130
+        width: 140
+        height: 24
+      # The safe line has to be real or the hook is not a choice: the lower half
+      # is an ordinary chamber behind a 100-wide neck, playable start to finish
+      # without ever going near the const box. It is where the named ball gets
+      # put away.
+      - id: divider-left
+        kind: wall
+        shape: rect
+        x: -20
+        'y': 600
+        width: 400
+        height: 26
+      - id: divider-right
+        kind: wall
+        shape: rect
+        x: 480
+        'y': 600
+        width: 400
+        height: 26
+      # MEET the ball gate. The 100-wide neck into the safe lower line now
+      # admits the compass and nothing else - which is the map's own thesis made
+      # literal, because the compass is the ball the win names and the lower
+      # line is where it has to be put away. Yellow is locked out of the safe
+      # half, so the two balls can no longer be solved in the same place.
+      #
+      # Met inside a cross rather than on a map of its own: act IV is
+      # combination-land and the gate is simple enough to read in one, and the
+      # black ball it would most obviously pair with does not arrive until 25 -
+      # which leaves no clean MEET slot that does not cost the seam or phasing
+      # its only introduction.
+      - id: compass-gate
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 600
+        width: 100
+        height: 26
+        passTypes: [compass]
+      - id: sweeper
+        kind: mover
+        shape: circle
+        cx: 430
+        cy: 520
+        radius: 42
+        axis: horizontal
+        range: 380
+        speed: 140
+        phase: 0.5
+
+  # 34 "Crunch" - BREAK: the act's inversion, and the last playable map.
+  #
+  # Gravity is act III's signature and the player has spent ten maps learning to
+  # read a pull and seal against it. Here the pull is pinned on for the whole
+  # map and the win is not only the clear: TWO balls have to end up inside one
+  # const box. Every instinct the ladder trained - split the board, seal each
+  # ball where it happens to be, take the tightest pocket - is wrong. You have
+  # to herd, on a board that is pulling, and the box pays 30% for it.
+  #
+  # The clear is still required alongside it, so herding is not a way to skip
+  # the map: it is a second thing to do while doing the first.
+  - id: level-34
+    level: 34
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 20
+    variety: 16
+    randomShapes: 10
+    maxBalls: 4
+    # Pinned because the map now names a ball type. Same rule as a win that
+    # names a ball: a gate whose type never spawns is not a gate, it is a wall,
+    # and nothing anywhere would say so. Grey is the one the gate admits.
+    ballTypeIds: [grey, blue, yellow, purple]
+    # No threadLockRequired. The win is the ZONE, and a lock count sitting
+    # beside it is a second objective the win does not read: with an authored
+    # `win:` block resolveWinSpec ignores this field entirely, so it only ever
+    # reached the HUD, where it drew a Thread Locks card for a requirement that
+    # could not affect the outcome.
+    # Pinned, not hoped for. The whole map is authored around a live pull; a
+    # gravity map that only sometimes pulls is a different map most of the time.
+    mutator: gravity_well
+    coloredAreas:
+      - kind: const
+        x: 350
+        'y': 330
+        width: 220
+        height: 210
+        required: true
+    # Two balls in the box. That is the whole win.
+    #
+    # It used to ALSO require clearing to 5% remaining, and the two together
+    # asked for something quite different from what either says. Getting to 5%
+    # on a four-ball map means sealing every ball into a sliver, so the real
+    # demand was "lock all four, and make two of them land in the zone" - and
+    # since an authored spec carries no all-locked alternative, locking the last
+    # ball with only one in the box did not merely fail to win, it tripped the
+    # area fail check and lost the map outright.
+    #
+    # The zone is 220x210, a little over 7% of the arena, so the space clause
+    # also asked the player to capture ground the win wanted them to be aiming
+    # balls into. Under a live pull, with no aiming, that is not a hard map, it
+    # is an incoherent one.
+    win:
+      require:
+        - kind: area
+          count: 2
+          bonusPercent: 30
+    entities:
+      # A funnel either side of the box: under a live pull you cannot aim, so
+      # the only way to steer a second ball in is to use the walls.
+      - id: funnel-l
+        kind: wall
+        shape: rect
+        x: 190
+        'y': 300
+        width: 26
+        height: 200
+      - id: funnel-r
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 300
+        width: 26
+        height: 200
+      - id: cap-l
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 274
+        width: 170
+        height: 26
+      - id: cap-r
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 274
+        width: 165
+        height: 26
+      - id: floor-post
+        kind: wall
+        shape: circle
+        cx: 460
+        cy: 700
+        radius: 58
+      # The gate, inverted - the act's BREAK applied to the newest mechanic.
+      # On 33 the gate let the ball you needed through. Here it stands between
+      # the box's right side and the right funnel, and it admits the GREY ball
+      # only: the slow one, the one you least want taking up a place in a box
+      # that needs two. The lane is open to exactly the wrong ball, and closed
+      # to the three you would rather steer through it.
+      - id: wrong-lane
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 330
+        width: 24
+        height: 210
+        passTypes: [grey]
+
+  # 35 "End of Life" - BOSS: the finale, unchanged in what it asks and raised to
+  # the act it now sits in. It was the one act IV map already pulling its
+  # weight; it was still scored against the old, softer band.
+  - id: level-35
+    level: 35
+    sizeThreshold: 14
+    expectedCuts: 8
+    points: 20
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    # Four traps under a wipe and live minions: the longest fight in the
+    # game, and the only one that has to survive two wipes on purpose.
+    timeLimit: 115
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): all three gimmicks at once. A chained pair (fence-shredding
+    # chain + phasing arena) that also wipes every fence on a timer and spits
+    # OVERSIZED hotfixes. The capstone boss.
+    boss:
+      name: Production Outage
+      intro: >-
+        Everything at once, and everything you have learned. A chained pair that
+        takes two traps each like the Merge Conflict, wipes the board every 25
+        seconds like the Force Push, and spits oversized hotfixes like the Release
+        Candidate. Wear both halves down, then fence them into the pink var area.
+        Snag them on a pillar, save a freeze for the wipe, and ship it.
+      creepFromStart: true
+      objective:
+        id: defeat-outage
+        name: Resolve the Outage
+        description: Wear both chained halves down, then fence them into the var area.
+        clarify: >-
+          Each half takes TWO traps. The first can be anywhere and costs nothing but
+          the fence it reverts; the second must be inside the pink var area, and both
+          halves must end up there. Their chain breaks fences and snags on the
+          phasing pillars; every 25 seconds the boss wipes every fence (telegraphed
+          by a stop and a vibrate), and it spits oversized minions throughout.
+          Running out of time fails.
+        kind: defeatBoss
+        reward: 24
+      bossBall:
+        # The finale is the only fight carrying all three ideas at once: the
+        # attrition of level 20 (hp on a pair), the wipe of level 30, and the
+        # minions of level 10. Act IV's brief is combination rather than new
+        # primitives, so nothing here is unfamiliar - there is just no longer a
+        # moment when only one of them is happening.
+        hp: 2
+        count: 2
+        chained: true
+        radiusScale: 1.7
+        speedScale: 1.15
+        color: "#ff3b30"
+        fenceWipeSeconds: 25
+        spitIntervalSeconds: 9
+        maxMinions: 3
+        spawnEnlargedMinions: true
+    entities:
+      - id: phase-pillar-a
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: phase-pillar-b
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 13

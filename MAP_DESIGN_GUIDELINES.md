@@ -348,6 +348,25 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 
 ## 5. The ladder
 
+> **Acts II, III and IV were deleted and are being rebuilt one map at a time.**
+> `public/map.yml` is ten maps. What follows still describes the whole plan,
+> including three acts that currently have no maps in them, because the plan is
+> what the rebuild is being written against - but read every row below act I as
+> a **brief, not a description**. The tables for 11-35 are what those maps used
+> to be; they are kept as a record of what was tried and where it went wrong
+> (see the difficulty contract in section 1 and the case study on level 9), not
+> as a specification to reproduce.
+>
+> The old maps themselves are in `src/test/fixtures/retired-maps.yml`, where
+> they serve as engine-test fixtures and as worked YAML examples. They are not
+> loaded by the game and nothing in them is owed a place on the new ladder.
+>
+> Two things track the rebuild automatically. `mechanicSpread.test.ts` pins the
+> twenty mechanics the engine has and the ladder no longer places - that list is
+> the rebuild's checklist, and a name comes off it when a map places it.
+> `featureSchedule.test.ts` keeps `MIGRATED_ACTS`, which is back to act I alone
+> and may only grow.
+
 Space demanded is `100 - sizeThreshold`. It climbs within an act and may only
 fall on the map straight after a boss, which is the breather. Bosses sit below
 the map before them: a boss is about its objective, not about the clear.
@@ -383,12 +402,12 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(built)*
+### Act II - The Sprint (11-20)  *(deleted, to rebuild)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
 
-**These rows describe the maps that SHIPPED, not a plan.** They used to describe
+**These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
 act was built to a different order. Both tables read as authoritative and
 neither said which was stale, which nearly cost act II a ground-up rebuild to
@@ -408,7 +427,7 @@ these numbers against `map.yml` so this cannot happen twice.
 | 19 | **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
 
-### Act III - Legacy Code (21-30)  *(built)*
+### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 
 *Owns: the board acting on its own schedule.*
 Board tilt unlocks at 21. Lodestone 21, black 25.
@@ -426,7 +445,7 @@ Board tilt unlocks at 21. Lodestone 21, black 25.
 | 29 | - | Use cage + breakable, Fight mover | Four balls, seven percent, a shield in the way and a pen in the far corner. |
 | 30 | BOSS | - | *(the fence wipe)* |
 
-### Act IV - Crunch (31-35)  *(built)*
+### Act IV - Crunch (31-35)  *(deleted, to rebuild)*
 
 *Combination set-pieces. Meant to introduce no new primitives, and it introduces
 two: the ball gate at 33 and the pinned mutator at 34. Recorded rather than
@@ -707,6 +726,7 @@ previously spread across a dozen test files and comment blocks.
 | Self-overlap | nothing a map authors may sit on top of anything else it authors | `mapHookPlacement.test.ts` |
 | Launcher runway | **>= 225** units (25% of the board) clear ahead of a muzzle; breakables do not count as blocking | `MIN_LAUNCH_RUNWAY_FRACTION` |
 | Reachability | **> 90%** of open cells must stay reachable with every ball loaded, across all deals | `launcherBarrel.test.ts` |
+| Launcher bore | a turned barrel needs a bore of **~110 or more**. Reachability is ball-size aware and works on the rasterised grid, so a narrow bore at an angle rasterises to a staircase that erodes into disconnected cells: at 84 the balls inside were sealed off from the board and `captureUnreachableCells` wrote off everything outside the barrel. From about 110 up it stays connected on every rotation. | `launcherBarrel.test.ts` |
 | Tunnelling ceiling | ~5520 units/s; past it an 18-unit ball crosses a 6-unit fence between physics steps | `bouncer.ts` |
 
 **The gap rule is the one that catches people.** A 26-unit slot looks like a way
@@ -871,6 +891,12 @@ reads, and it does that across every deal in seconds.
 A full sweep - all 35 maps, 4 seeds, 7200 frames - reads like this. It is a
 *floor*, not a human difficulty curve (see below), so use the shape and the fail
 kinds, not the absolute rates.
+
+**This is the ladder that was deleted**, and it is the reason it was: fifteen of
+the thirty-five maps stranded the bot outright, and the maps that did are spread
+across every act. Kept as the measurement to beat rather than as a description
+of anything currently shipping - a rebuilt act that reproduces this table has
+reproduced the problem.
 
 | what killed the bot | maps | count |
 |---|---|---|

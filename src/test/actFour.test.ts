@@ -22,9 +22,9 @@ import { parseMutatorEntry } from "@/lib/mapMutators";
 import type { MapMutator } from "@/types/mapMutator";
 import type { LevelConfig } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-) as { levels: LevelConfig[] }).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS;
 
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 const ACT_IV = [31, 32, 33, 34, 35].map(at);

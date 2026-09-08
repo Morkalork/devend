@@ -29,9 +29,9 @@ import { selectBallTypesForMap } from "@/lib/ballTypes";
 import type { AssignmentConfig, AssignmentMapResult } from "@/types/assignment";
 import type { LevelData } from "@/types/level";
 
-const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const levels = ENGINE_MAPS;
 
 /** The blocks a real run actually drafts over: every 5th level. */
 const BLOCK_STARTS = [6, 11, 16, 21, 26, 31];

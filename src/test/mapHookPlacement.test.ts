@@ -330,8 +330,13 @@ describe("the ladder actually carries these hooks", () => {
     // Reported as "there need to be more breakable items and coloured areas".
     // Before this, 18 of 40 map entries had neither and the two mechanics were
     // rare enough that a player could finish an act without meeting either.
+    //
+    // Stated as a PROPORTION rather than the old count of 27, so it means the
+    // same thing on a ladder that is being rebuilt a map at a time: the count
+    // was two thirds of 40, and two thirds is the actual rule.
     const ids = new Set([...withArea, ...withBreak].map(l => l.id));
-    expect(ids.size).toBeGreaterThanOrEqual(27);
+    expect(ids.size, `${ids.size} of ${LEVELS.length} maps carry either`)
+      .toBeGreaterThanOrEqual(Math.ceil(LEVELS.length * 2 / 3));
   });
 
   it("keeps a win GATE out of the tutorial band, and allows a bonus", () => {
@@ -352,11 +357,12 @@ describe("the ladder actually carries these hooks", () => {
     // map and costs a life. Adding those wholesale would silently rewrite what
     // a dozen maps ask for, which is a design change nobody asked for.
     //
-    // The gates that legitimately exist are the four boss maps (fence the boss
-    // into the pink box) and level 34, whose whole premise is the box. Listing
-    // them by name rather than by a rule is the point: a new one appearing here
-    // should be a decision someone made, not something an edit did quietly.
-    // This list moves in both directions, which is the point of it being a list.
+    // The gates that legitimately exist are the boss maps (fence the boss into
+    // the pink box) and level 8. Listing them by name rather than by a rule is
+    // the point: a new one appearing here should be a decision someone made,
+    // not something an edit did quietly. This list moves in both directions,
+    // which is the point of it being a list - it caught a second area added to
+    // level 5 from the phone builder, which defaulted to a gate.
     //
     // level-5 came OFF when act I was reauthored: a gate is the LATE form of a
     // colored area, and teaching it on map 5 inverted the order the primitive
@@ -365,7 +371,11 @@ describe("the ladder actually carries these hooks", () => {
     // reasoning: by then the bonus form has been met on 3 and charged for on 5,
     // and 8 is the map where the box stops being optional. It is the first
     // non-boss gate on the ladder, and deliberate.
-    const GATE_MAPS = ["level-10", "level-20", "level-30", "level-34", "level-35", "level-8"];
+    //
+    // Levels 20, 30, 34 and 35 came off with the act II-IV rebuild. Each boss
+    // rejoins as its map is authored, and a gate is expected on every one of
+    // them: fencing the boss into the zone is what a boss map asks for.
+    const GATE_MAPS = ["level-10", "level-8"];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);

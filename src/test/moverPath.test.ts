@@ -22,6 +22,8 @@ import {
 } from "@/lib/moverPath";
 import type { LevelMoverEntity } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const rect = (over: Partial<LevelMoverEntity> = {}): LevelMoverEntity => ({
   id: "m", kind: "mover", shape: "rect",
   x: 400, y: 437, width: 100, height: 26,
@@ -178,11 +180,7 @@ describe("the footprint at each end", () => {
  * the game rather than like something a tool invented.
  */
 describe("the shipped maps agree with the builder's defaults", () => {
-  const MAPS = yaml.load(
-    readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-  ) as { levels: { level?: number; entities?: Record<string, unknown>[] }[] };
-
-  const allMovers = MAPS.levels.flatMap(l =>
+  const allMovers = ENGINE_MAPS.flatMap(l =>
     (l.entities ?? []).filter(e => e.kind === "mover") as unknown as LevelMoverEntity[]);
 
   /**

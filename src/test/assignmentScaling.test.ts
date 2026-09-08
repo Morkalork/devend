@@ -28,9 +28,9 @@ import {
 import type { LevelConfig } from "@/types/level";
 import type { AssignmentConfig } from "@/types/assignment";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-) as { levels: LevelConfig[] }).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS;
 
 const ASSIGNMENTS = (yaml.load(
   readFileSync(resolve(__dirname, "../../public/assignments.yml"), "utf8"),

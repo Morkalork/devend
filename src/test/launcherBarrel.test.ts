@@ -37,6 +37,8 @@ import {
 import { fanDirections } from "@/lib/physics/launcher";
 import type { LaunchAim, LaunchFacing } from "@/lib/launcher";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const FACINGS: LaunchFacing[] = ["up", "down", "left", "right"];
 const angleOf = (v: { x: number; y: number }) => Math.atan2(v.y, v.x);
 /** Signed smallest angle between two headings. */
@@ -242,9 +244,7 @@ describe("the pull is unchanged in the ways that matter", () => {
  * single constant is the rule.
  */
 describe("the loaded barrel stays part of the board", () => {
-  const MAP = yaml.load(
-    readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-  ) as { levels: LevelConfig[] };
+  const MAP = ({ levels: ENGINE_MAPS } as unknown as { levels: LevelConfig[] });
   const launcherMaps = MAP.levels.filter(
     l => ((l as unknown as { entities?: Array<{ kind: string }> }).entities ?? [])
       .some(e => e.kind === "launcher"),

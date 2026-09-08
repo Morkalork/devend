@@ -15,6 +15,7 @@ import { CapstoneConfig } from "@/types/capstone";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
 
+import { LADDER_END } from "./fixtures/maps";
 afterEach(cleanup);
 
 const door: AssignmentConfig = {
@@ -110,7 +111,15 @@ describe("contract stats accumulate across the block (session integration)", () 
     return { nav, session: useGameSession(nav) };
   }
 
-  it("the second assignment draft reports the first contract's block", async () => {
+  // Needs ELEVEN maps: the contract runs over the block 6-10 and its summary is
+  // read on the draft that follows map 10. On today's ten-map ladder map 10 is
+  // the last one, so finishing it ends the run into the ascension draft and
+  // there is no next assignment to report into - which is correct behaviour,
+  // and leaves this with nothing to assert.
+  //
+  // Skipped rather than rewritten: what it covers (contract stats surviving a
+  // block boundary) is real, and it comes back by itself with map 11.
+  it.runIf(LADDER_END >= 11)("the second assignment draft reports the first contract's block", async () => {
     const { result } = renderHook(() => useSession());
     await act(async () => { await result.current.session.handleStartGame(undefined, true); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));

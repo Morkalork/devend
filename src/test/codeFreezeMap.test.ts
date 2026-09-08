@@ -49,6 +49,8 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
 import type { LevelConfig, LevelData, WallRectEntity } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const MODS = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, fenceGenerationSpeedMultiplier: 1,
   scoreMultiplier: 1, shopDiscountMultiplier: 1, pushBonusMultiplier: 1,
@@ -69,9 +71,7 @@ const MODS = {
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 } as unknown as GameModifiers;
 
-const MAP = yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-) as LevelData;
+const MAP = ({ levels: ENGINE_MAPS } as unknown as LevelData);
 const LEVEL = MAP.levels.find(l => l.id === "level-33") as LevelConfig;
 
 if (!LEVEL) throw new Error("level-33 (Code Freeze) is missing from map.yml");

@@ -14,17 +14,29 @@
  *
  * When a mechanic moves, the map and this table change together. That is the
  * whole point: the cost of moving one is having to say so.
+ *
+ * THE LADDER IS BEING REBUILT, so most of the table is currently a promise
+ * rather than a description: maps 11-35 were removed and are being reauthored
+ * one at a time. That does not make the ledger unfalsifiable, it splits it in
+ * two, and both halves are checked below against `LADDER_END`:
+ *
+ *   meet <= LADDER_END   the map exists, so the number must be exactly right
+ *   meet >  LADDER_END   the map does not exist, so the mechanic must be on NO
+ *                        map at all
+ *
+ * The second half is not a placeholder. It catches a mechanic quietly landing
+ * on an act I map ahead of its scheduled debut, which is the thing act I was
+ * just rebuilt to stop, and it re-arms into the first half by itself as each
+ * map lands.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { MECHANICS } from "@/lib/admin/mechanicSpread";
-import type { LevelConfig, LevelData } from "@/types/level";
+import { LADDER, LADDER_END } from "./fixtures/maps";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+const LEVELS = LADDER;
 const DOC = readFileSync(resolve(process.cwd(), "MAP_DESIGN_GUIDELINES.md"), "utf8");
 
 /** Every map a mechanic appears on, lowest first. */
@@ -87,11 +99,20 @@ describe("the ledger describes the maps that exist", () => {
         expect(on, `${row.mechanic} is on maps but the ledger says none`).toEqual([]);
         return;
       }
+      if (Number(row.meet) > LADDER_END) {
+        // Scheduled for a map that has not been rebuilt yet. Being on a map
+        // anyway means it debuted early, on a map act I owns.
+        expect(on, `${row.mechanic} is scheduled for ${row.meet} but already on `
+          + `${on.join(", ")}, which is ahead of its debut`).toEqual([]);
+        return;
+      }
       expect(on[0], `${row.mechanic} first appears on ${on[0] ?? "no map"}`)
         .toBe(Number(row.meet));
     });
 
-  it.each(checkable.filter(r => /^\d+$/.test(r.use)).map(r => [r.mechanic, r] as const))(
+  it.each(checkable
+    .filter(r => /^\d+$/.test(r.use) && Number(r.use) <= LADDER_END)
+    .map(r => [r.mechanic, r] as const))(
     "%s is used again where the ledger says", (_m, row) => {
       expect(mapsFor(LABEL[row.mechanic]), `${row.mechanic}'s second map`)
         .toContain(Number(row.use));
@@ -123,7 +144,7 @@ describe("nobody meets a mechanic during a boss fight", () => {
       if (!debuts.has(first)) debuts.set(first, []);
       debuts.get(first)!.push(m.label);
     }
-    for (const boss of [10, 20, 30, 35]) {
+    for (const boss of [10, 20, 30, 35].filter(b => b <= LADDER_END)) {
       expect(debuts.get(boss) ?? [], `level ${boss} is a boss and teaches something new`)
         .toEqual([]);
     }

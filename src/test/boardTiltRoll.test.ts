@@ -29,6 +29,8 @@ import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import type { GravityWell, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const WELL: GravityWell = { x: 300, y: 300, width: 200, height: 170 };
 const QUARTER = Math.PI / 2;
 /** A level that tilts. Derived from the gate: hard-coding it is what broke
@@ -55,9 +57,7 @@ describe("which maps tilt at all", () => {
    * than against a number, because the number is the thing that drifts.
    */
   it("opens exactly where the authored wells start", () => {
-    const MAPS = (yaml.load(
-      readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-    ) as { levels: { level: number; gravityWells?: unknown[] }[] }).levels;
+    const MAPS = ENGINE_MAPS;
     const withWells = MAPS.filter(l => (l.gravityWells?.length ?? 0) > 0);
     expect(withWells.length, "no map has a well at all").toBeGreaterThan(0);
     const firstWellLevel = Math.min(...withWells.map(l => l.level));

@@ -15,6 +15,8 @@ import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { GrowingWall, Vector2 } from "@/types/game";
 import type { LevelData } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 // A fence whose ONE grown half is the polyline `pts` (the other half is empty).
 function fence(...pts: Vector2[]): GrowingWall {
   return { startWaypoints: pts, endWaypoints: [pts[pts.length - 1]] } as unknown as GrowingWall;
@@ -97,8 +99,7 @@ describe("freeze-charge reward", () => {
 
 describe("config + rotation", () => {
   it("the pilot map ships a well-formed data stream", () => {
-    const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const withStream = doc.levels.find(l => l.dataStream);
+    const withStream = ENGINE_MAPS.find(l => l.dataStream);
     expect(withStream, "a map should author a data stream").toBeDefined();
     const ds = withStream!.dataStream!;
     expect(ds.path.length).toBeGreaterThanOrEqual(2);

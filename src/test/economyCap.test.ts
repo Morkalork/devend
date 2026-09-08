@@ -25,15 +25,15 @@ import yaml from "js-yaml";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { LevelConfig } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const UPGRADES = (yaml.load(
   readFileSync(resolve(__dirname, "../../public/upgrades.yml"), "utf8"),
 ) as { upgrades: UpgradeConfig[] }).upgrades;
 const SCORING = (yaml.load(
   readFileSync(resolve(__dirname, "../../public/scoring-config.yml"), "utf8"),
 ) as { scoring: { overtimeCapHeadroom: number; lockValue: number } }).scoring;
-const LEVELS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-) as { levels: LevelConfig[] }).levels.filter(l => typeof l.level === "number");
+const LEVELS = ENGINE_MAPS.filter(l => typeof l.level === "number");
 
 /**
  * The most scoreMultiplier a run can buy from the shop.

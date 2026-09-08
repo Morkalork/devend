@@ -25,9 +25,9 @@ import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState"
 import type { Ball } from "@/types/game";
 import type { BossBall, LevelConfig } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as { levels: LevelConfig[] }).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS;
 
 const BOSSES = LEVELS.filter(l => l.boss);
 const at = (level: number) => BOSSES.find(l => l.level === level)!;

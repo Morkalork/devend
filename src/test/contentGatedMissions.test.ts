@@ -31,9 +31,9 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { AssignmentConfig, AssignmentMapResult } from "@/types/assignment";
 import type { LevelData } from "@/types/level";
 
-const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const levels = ENGINE_MAPS;
 const pool = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/assignments.yml"), "utf8"),
 ) as { assignments: AssignmentConfig[] }).assignments;

@@ -32,6 +32,8 @@ import {
 import type { AssignmentConfig, AssignmentMapResult } from "@/types/assignment";
 import type { LevelConfig } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const DOC = yaml.load(
   readFileSync(resolve(process.cwd(), "public/assignments.yml"), "utf8"),
 ) as { assignments: AssignmentConfig[] };
@@ -180,9 +182,7 @@ describe("every constraint names a modifier that exists", () => {
  * what these avoid by not being one.
  */
 describe("a mission bound to a map feature needs an eligibility rule", () => {
-  const LEVELS = (yaml.load(
-    readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-  ) as { levels: LevelConfig[] }).levels;
+  const LEVELS = ENGINE_MAPS;
 
   it("smashCount is the only feature-bound contract left", () => {
     const featureBound = DOC.assignments.filter(a => a.mission.track.kind === "smashCount");

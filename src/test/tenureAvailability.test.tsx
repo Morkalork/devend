@@ -132,16 +132,19 @@ async function endRunOn(level: number, isWin: boolean) {
 }
 
 describe("the shop level a run records", () => {
+  // Level 8 rather than 12: `handleStartGame` clamps the jump to the ladder,
+  // and the ladder is ten maps while acts II-IV are rebuilt. Any level that is
+  // neither the first nor the last says the same thing here.
   it("stops one short of the level it died on", async () => {
-    const stats = await endRunOn(12, false);
-    expect(stats.lastRunDepth).toBe(12);
-    expect(stats.lastRunShopLevel).toBe(11);
+    const stats = await endRunOn(8, false);
+    expect(stats.lastRunDepth).toBe(8);
+    expect(stats.lastRunShopLevel).toBe(7);
   });
 
   it("includes the level it cleared before retiring", async () => {
-    const stats = await endRunOn(12, true);
-    expect(stats.lastRunDepth).toBe(12);
-    expect(stats.lastRunShopLevel).toBe(12);
+    const stats = await endRunOn(8, true);
+    expect(stats.lastRunDepth).toBe(8);
+    expect(stats.lastRunShopLevel).toBe(8);
   });
 
   it("never goes negative when the very first level is lost", async () => {

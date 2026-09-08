@@ -124,9 +124,12 @@ describe("starting a run at depth", () => {
   });
 
   it("combines with a level jump as one instruction", async () => {
-    const hook = await startWith("ascension=3&level=12");
+    // Level 9, not 12: the jump is clamped to the ladder, which is ten maps
+    // while acts II-IV are rebuilt, so 12 would land on 10 and the test would
+    // pass for the wrong reason.
+    const hook = await startWith("ascension=3&level=9");
     expect(hook.result.current.session.ascensionDepth).toBe(3);
-    expect(hook.result.current.session.currentLevelIndex).toBe(11);
+    expect(hook.result.current.session.currentLevelIndex).toBe(8);
   });
 
   it("carries no drafted loadouts, so a rung is seen on its own", async () => {

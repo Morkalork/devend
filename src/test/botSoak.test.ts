@@ -37,9 +37,9 @@ import { runBot, type BotRunResult } from "@/lib/bot/runBot";
 import { HARD_RULES } from "@/lib/bot/invariants";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS as LevelConfig[];
 
 /** A spread across the acts rather than the first N: late maps differ in kind. */
 const SAMPLE = [1, 5, 10, 16, 22, 28, 34];

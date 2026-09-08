@@ -38,6 +38,8 @@ import { BOARD_WIDTH } from "@/lib/boardConstants";
 import type { GravityWell, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const WELL: GravityWell = { x: 300, y: 300, width: 200, height: 200, turnRate: 2.8 };
 const len = (v: { x: number; y: number }) => Math.hypot(v.x, v.y);
 
@@ -382,9 +384,7 @@ describe("a ball crossing a real well", () => {
 // ── As authored ─────────────────────────────────────────────────────────────
 
 describe("the wells in map.yml", () => {
-  const LEVELS = (yaml.load(
-    readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-  ) as { levels: LevelConfig[] }).levels;
+  const LEVELS = ENGINE_MAPS;
   const withWells = LEVELS.filter(l => (l.gravityWells ?? []).length > 0);
 
   it("has at least one map using them", () => {

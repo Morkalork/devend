@@ -29,13 +29,13 @@ import { setRunSeedText } from "@/lib/runRng";
 import type { LevelConfig, LevelData } from "@/types/level";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 const MODS = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, startingCapturePercent: 0,
 } as unknown as GameModifiers;
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+const LEVELS = ENGINE_MAPS as LevelConfig[];
 const CIRCUIT_MAPS = LEVELS.filter(l => l.circuit);
 
 afterEach(() => setRunSeedText(null));

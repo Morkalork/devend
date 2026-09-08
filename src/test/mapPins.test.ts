@@ -27,9 +27,9 @@ import { getBallType } from "@/lib/ballTypes";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { MapMutator } from "@/types/mapMutator";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS;
 
 /**
  * The catalogue as the GAME would load it: the live pool is fetched at runtime

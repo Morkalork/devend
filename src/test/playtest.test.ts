@@ -23,9 +23,9 @@ import { getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { ROTATION_MIN_LEVEL } from "@/lib/mapRotation";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS as LevelConfig[];
 const lvl = (n: number) => LEVELS.find(l => l.level === n)!;
 
 describe("covering the four orientations", () => {

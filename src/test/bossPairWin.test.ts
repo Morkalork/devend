@@ -25,9 +25,9 @@ import { resolveWinSpec, requirementsMet } from "@/lib/winSpec";
 import type { WinSnapshot } from "@/types/winSpec";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const LEVELS = ENGINE_MAPS as LevelConfig[];
 const BOSSES = LEVELS.filter(l => l.boss);
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 

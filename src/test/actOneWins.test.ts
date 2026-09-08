@@ -217,11 +217,12 @@ describe("act I breakables stay inside three solid hits", () => {
       .toBeLessThan(Math.max(...fight));
   });
 
-  it("leaves the late-ladder set-pieces alone", () => {
-    // The cap is an ACT I rule, not a ladder-wide nerf. Level 25's 40-hit plug
-    // is a set-piece the black ball exists for, and flattening it here would be
-    // a silent balance change nobody asked for.
-    const plug = breakables(at(25)).find(e => e.id === "slab-plug");
-    expect(plug?.hitsToBreak, "the act III set-piece was nerfed too").toBe(40);
-  });
+  // "leaves the late-ladder set-pieces alone" used to live here, pinning level
+  // 25's 40-hit slab plug as proof that the three-hit cap is an ACT I rule and
+  // not a ladder-wide nerf. Map 25 is retired, so there is no deep set-piece to
+  // point at and the assertion had nothing left to say.
+  //
+  // The rule it guarded is unchanged: the cap applies to act I, and a rebuilt
+  // map is free to author a slab that takes forty hits if the build by then can
+  // answer it. Re-add the check against the first deep map that does.
 });

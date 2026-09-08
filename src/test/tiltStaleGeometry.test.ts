@@ -44,6 +44,8 @@ import { traceActiveContours } from "@/lib/rendering/regionContour";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 /**
  * The real contour tracer, wrapped so the bake can be COUNTED.
  *
@@ -57,9 +59,7 @@ vi.mock("@/lib/rendering/regionContour", async (importOriginal) => {
   return { ...actual, traceActiveContours: vi.fn(actual.traceActiveContours) };
 });
 
-const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+const levels = ENGINE_MAPS;
 
 const BOARD_RECT = { left: 0, top: 0, width: 900, height: 900, scale: 1 };
 

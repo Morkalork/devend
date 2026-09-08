@@ -16,6 +16,13 @@
  * The numbers here are the current state, pinned. When a count changes the test
  * fails, and that is the point: the failure is the conversation about whether
  * the change was intended.
+ *
+ * THE LADDER IS TEN MAPS while acts II-IV are rebuilt, so the pinned numbers
+ * describe act I on its own and the unused list below is twenty names long.
+ * That list is not a backlog of bugs, it is the rebuild's checklist: every
+ * mechanic the engine has and the ladder has not placed yet. A name coming off
+ * it is a rebuilt map landing, which is exactly the conversation this file was
+ * written to force - so it stays pinned rather than being softened to "> 0".
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -24,23 +31,29 @@ import yaml from "js-yaml";
 import {
   MECHANICS, ACTS, mechanicSpread, spreadWarnings, actOf, MIN_HEADLINE_MAPS,
 } from "@/lib/admin/mechanicSpread";
-import type { LevelConfig, LevelData } from "@/types/level";
+import type { LevelConfig } from "@/types/level";
+import { LADDER, LADDER_END, ENGINE_MAPS } from "./fixtures/maps";
 
-const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels as LevelConfig[];
+const LEVELS = LADDER;
 
 const use = (key: string) => mechanicSpread(LEVELS).find(m => m.key === key)!;
 
 describe("the ladder itself", () => {
-  it("is 35 maps, one per level number", () => {
+  it("is one map per level number, with no gap in the middle", () => {
     // The b-variants were retired on 2026-08-31. Everything below assumes one
     // map per number, so this is the assumption stated out loud.
-    expect(LEVELS).toHaveLength(35);
+    //
+    // The LENGTH is no longer pinned - the ladder grows a map at a time while
+    // acts II-IV are rebuilt - but its SHAPE is: 1 to LADDER_END with nothing
+    // missing and nothing doubled. A rebuilt map landing as 12 while 11 is
+    // still unwritten would leave a hole a run walks straight into.
     const numbers = LEVELS.map(l => l.level);
-    expect(new Set(numbers).size).toBe(35);
+    expect(new Set(numbers).size, "two maps share a level number")
+      .toBe(LEVELS.length);
     expect(Math.min(...numbers)).toBe(1);
-    expect(Math.max(...numbers)).toBe(35);
+    expect(Math.max(...numbers)).toBe(LADDER_END);
+    expect(LEVELS.length, `a level number is missing below ${LADDER_END}`)
+      .toBe(LADDER_END);
   });
 
   it("puts every level in exactly one act", () => {
@@ -49,7 +62,17 @@ describe("the ladder itself", () => {
     }
     const total = ACTS.reduce((n, a) =>
       n + LEVELS.filter(l => l.level >= a.from && l.level <= a.to).length, 0);
-    expect(total, "the acts overlap or leave a gap").toBe(35);
+    expect(total, "the acts overlap or leave a gap").toBe(LEVELS.length);
+  });
+
+  it("leaves the unbuilt acts empty rather than half-populated", () => {
+    // The acts still describe the whole plan, so acts II-IV are declared and
+    // hold nothing. Naming that here means a map appearing in an act before
+    // the act is designed shows up as a failure rather than as a surprise.
+    for (const a of ACTS.filter(a => a.from > LADDER_END)) {
+      expect(LEVELS.filter(l => l.level >= a.from && l.level <= a.to),
+        `act ${a.name} is not built yet but has maps in it`).toEqual([]);
+    }
   });
 });
 
@@ -57,68 +80,55 @@ describe("no mechanic is introduced and then dropped", () => {
   it("has no headline mechanic sitting on a single map", () => {
     const singles = spreadWarnings(LEVELS).filter(w => w.kind === "single-use");
     // Pinned rather than asserted empty, because these are real and known.
-    // Each is a decision someone should make, not a bug to fix silently:
+    // Each is a decision someone should make, not a bug to fix silently.
     //
-    //   Thread lock    level 19 only, and it is act II's whole Break beat
-    //   Pinned mutator level 34 only, the one map that pins a mutator
+    //   Reveals   level 8 only. Act I introduces it as the map that hides its
+    //             own board, and nothing on the ten maps develops it. It is the
+    //             one name here that act I owns outright, so it is act I's to
+    //             answer rather than something the rebuild will fix.
     //
-    // Bent shape came OFF this list when the designer bent walls on 2, 6 and 7.
-    // That is the intended direction of travel for every name here.
-    //
-    //   Bumper         level 11 only, placed with the launcher
-    //   Delivery box   level 23 only
-    //
-    // Launcher came off when a barrel was placed on level 6, which is the
-    // second time this list has shrunk the way it is supposed to.
-    //
-    //   Portal         level 17 only, and NEW here rather than forgotten: it
-    //                  came off the unused list below in the same change that
-    //                  put it on the budget map, and it is the next name that
-    //                  should earn a second one.
-    //
-    // When one of these gains a second map the test fails and the line comes
-    // out. When a NEW name appears here, something was introduced once and
-    // forgotten - which is the failure this file exists to catch. A name that
-    // arrives on its way OFF the unused list is the other direction, and only
-    // means anything while somebody is still counting: if Portal is still
-    // alone in a month it means the same as the rest of them.
-    //
-    //   Launcher      NEW here, and transitional: act I was reauthored to the
-    //                 mechanic ledger, which puts the launcher's Meet on level
-    //                 16, so it came OFF level 6 and is waiting on act II with
-    //                 only level 11 to stand on. It comes back to two the
-    //                 moment act II is built. If act II lands and it is still
-    //                 alone, this line means what every other line here means.
-    expect(singles.map(w => w.key).sort())
-      .toEqual(["bouncer", "box", "launcher", "mutator", "portal", "threadLock"]);
+    // The list used to hold six names; the other five (bouncer, box, launcher,
+    // mutator, portal, thread lock) were single-use on maps 11-35 and are now
+    // on the UNUSED list below with everything else acts II-IV carried. They
+    // come back to this list the day one rebuilt map places them, and off it
+    // the day a second does.
+    expect(singles.map(w => w.key).sort()).toEqual(["reveals"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
     const unused = spreadWarnings(LEVELS).filter(w => w.kind === "unused");
-    // The list is EMPTY, and that is the whole point of the rule rather than a
-    // milestone worth softening it for.
+    // THE REBUILD'S CHECKLIST, and the reason this file is worth keeping while
+    // the ladder is short. Every name is a mechanic the engine implements, the
+    // map builder can place, and no shipped map uses - so nothing in the game
+    // teaches it and nothing exercises it in play.
     //
-    // One-way, ball gates and fence ground spent a day here between shipping
-    // as engine + editor and being placed on maps 23/31, 33/34 and 24/27 -
-    // exactly the window this exists to make visible rather than permanent.
-    // The portal came off onto level 17. The cage, the latch and the rotor
-    // were the last three and stayed for longer than a day: cage on 18 and 29,
-    // latch on 26 and 31, rotor on 13 and 22.
+    // The rule this list serves is unchanged: a mechanic the engine supports
+    // and no map uses is dead weight, and the honest ways off the list are to
+    // place it or to mark it `headline: false`. What is different is that all
+    // twenty went unused in one edit rather than by drifting, so the list is
+    // pinned as a target instead of asserted empty. Softening it to "> 0" would
+    // delete the only record of what acts II-IV owe the player.
     //
-    // Bent shape briefly appeared here when act I was reauthored without bent
-    // obstacles. It was never a mechanic a map could be ABOUT - it is a shape
-    // modifier on a wall that is already something else - so it was demoted to
-    // seasoning rather than scattered back onto maps to satisfy this list. That
-    // is the only honest way off it that is not "place it somewhere", and it
-    // stays available: a mechanic that genuinely cannot carry a map should be
-    // marked `headline: false`, not given a token home.
-    expect(unused.map(w => w.label).sort(), "a supported mechanic is on no map at all")
-      .toEqual([]);
+    // Take a name off when a rebuilt map places the mechanic. When the list is
+    // empty the assertion goes back to toEqual([]).
+    expect(unused.map(w => w.label).sort(), "the unplaced list changed")
+      .toEqual([
+        "Ball gate", "Bumper", "Cage", "Charge", "Data stream", "Deformable",
+        "Delivery box", "Fence ground", "Gravity well", "Latch", "Launcher",
+        "Mirror", "One-way", "Phasing", "Pinned mutator", "Portal", "Rotor",
+        "Terminals", "Thread lock", "WIP limit",
+      ]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {
-    for (const key of ["mover", "breakable", "chest", "gravityWell", "coloredArea", "reveals", "mirror",
-                       "oneWay", "gate", "fenceGround"]) {
+    // Act I's five. The other five this listed (gravity well, mirror, one-way,
+    // ball gate, fence ground) were developed on maps that no longer exist and
+    // are on the unused list above; naming them here as well would report the
+    // same gap twice and make this test fail for a reason it does not own.
+    //
+    // Reveals is deliberately absent: it is on one map, which is the finding
+    // the single-use test states, not a second failure.
+    for (const key of ["mover", "breakable", "chest", "coloredArea", "pickupSpots"]) {
       expect(use(key).levels.length, `${key} fell below the floor`)
         .toBeGreaterThanOrEqual(MIN_HEADLINE_MAPS);
     }
@@ -131,20 +141,17 @@ describe("no single idea owns an act", () => {
       .filter(w => w.kind === "act-monopoly")
       .map(w => `${w.label}: ${w.detail}`)
       .sort();
-    // Act I is six maps of mover, act II six of breakable, act III seven
-    // colored areas, act IV four of five. Pinned so the number moving is
-    // visible in either direction.
+    // Empty, and for once that is not an achievement: act I is the only act
+    // with maps in it, and its heaviest ideas (mover and colored area, five of
+    // ten each) sit under the threshold. The three entries this pinned were
+    // breakable in act II and colored areas in acts III and IV, on maps that no
+    // longer exist.
     //
-    // Gravity well used to be on this list at 6 of act III's 10. Giving 23 and
-    // 24 to the membrane and to fence ground took it to 4, which is the first
-    // time one of these warnings has been cleared rather than added to - and it
-    // was cleared as a side effect of having somewhere to put new mechanics,
-    // not by trimming the well for its own sake.
-    expect(monopolies).toEqual([
-      "Breakable: on 6 of act II's 10 maps",
-      "Colored area: on 4 of act IV's 5 maps",
-      "Colored area: on 7 of act III's 10 maps",
-    ]);
+    // Left asserted rather than deleted because the rule is about the acts
+    // being written NOW: the first rebuilt act that leans on one idea reports
+    // it here while it is still cheap to spread, which is the whole reason the
+    // warning was written after act III had already drifted.
+    expect(monopolies).toEqual([]);
   });
 
   it("does not complain about furniture", () => {
@@ -192,6 +199,14 @@ describe("the detectors themselves", () => {
     // `maxFenceBudget` for `fenceBudget` - and a wrong name does not throw, it
     // silently reports zero. A mechanic that is quietly invisible to the very
     // tool meant to find quiet mechanics is the worst possible failure here.
+    //
+    // Read against ENGINE_MAPS, not the ladder. This asks whether the DETECTOR
+    // matches the schema, so it needs a board that carries each mechanic; the
+    // ladder currently carries none of them, and a zero here would then mean
+    // "no map has a charge" rather than "the detector is looking at the wrong
+    // field" - the exact confusion the test exists to prevent.
+    const use = (key: string) =>
+      mechanicSpread(ENGINE_MAPS).find(m => m.key === key)!;
     expect(use("charge").levels.length).toBeGreaterThan(0);
     expect(use("fenceBudget").levels.length).toBeGreaterThan(0);
     expect(use("dataStream").levels.length).toBeGreaterThan(0);

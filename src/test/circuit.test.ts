@@ -20,6 +20,8 @@ import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { GrowingWall, Vector2, Ball } from "@/types/game";
 import type { LevelData, LevelConfig } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 // Zeroed modifiers: enough to init a real map (see superiorLock.test.ts).
 const MODS = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, fenceGenerationSpeedMultiplier: 1,
@@ -137,8 +139,7 @@ describe("booting dormant balls", () => {
 
 describe("config + rotation", () => {
   it("the level-15 pilot ships terminals that each boot a dormant ball", () => {
-    const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const l8 = doc.levels.find(l => l.id === "level-15")!;
+    const l8 = ENGINE_MAPS.find(l => l.id === "level-15")!;
     expect(l8, "level-15 (Integration) is missing from map.yml").toBeDefined();
     expect(l8.circuit).toBeDefined();
     expect(l8.circuit!.terminals.length).toBeGreaterThanOrEqual(1);
@@ -159,8 +160,7 @@ describe("config + rotation", () => {
   });
 
   it("every circuit map spawns its sleepers dormant, in OPEN space (not in a wall)", () => {
-    const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const circuitLevels = doc.levels.filter(l => l.circuit) as LevelConfig[];
+    const circuitLevels = ENGINE_MAPS.filter(l => l.circuit) as LevelConfig[];
     expect(circuitLevels.length).toBeGreaterThan(0);
     for (const level of circuitLevels) {
       // A few inits to cover different random rotations / decorations.

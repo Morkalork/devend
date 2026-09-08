@@ -45,9 +45,9 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const levels = ENGINE_MAPS;
 
 const PHYSICS_STEP = 1 / 120;
 /**

@@ -23,6 +23,8 @@ import type { Wall } from "@/lib/wallGeometry";
 import type { DestructibleState } from "@/types/game";
 import type { LevelData } from "@/types/level";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 // A fence whose ONE grown half is the polyline `pts` (the other half is empty).
 function fence(...pts: Vector2[]): GrowingWall {
   return { startWaypoints: pts, endWaypoints: [pts[pts.length - 1]] } as unknown as GrowingWall;
@@ -134,8 +136,7 @@ describe("detonation", () => {
 
 describe("config + rotation", () => {
   it("the pilot map ships a well-formed charge referencing a breakable slab", () => {
-    const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const withCharge = doc.levels.find(l => Array.isArray(l.charges) && l.charges.length > 0);
+    const withCharge = ENGINE_MAPS.find(l => Array.isArray(l.charges) && l.charges.length > 0);
     expect(withCharge, "a map should author a charge").toBeDefined();
     const charge = withCharge!.charges![0];
     expect(charge.radius).toBeGreaterThan(0);

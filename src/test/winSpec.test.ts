@@ -23,6 +23,7 @@ import { WIN_CONDITION_KINDS } from "@/types/winSpec";
 import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 
+import { LADDER } from "./fixtures/maps";
 const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
   id: "l", level: 5, sizeThreshold: 20, expectedCuts: 6, points: 20,
   balls: [], maxBalls: 3,
@@ -99,13 +100,12 @@ describe("deriving a spec reproduces the old chain exactly", () => {
 });
 
 describe("every shipped map still means what it meant", () => {
-  const MAPS = (yaml.load(
-    readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-  ) as { levels: LevelConfig[] }).levels;
+  const MAPS = LADDER;
 
   /**
-   * EVERY non-boss map states its own win now. Pinned as a LIST rather than a
-   * count so a map dropping back to the derivation shows up here.
+   * EVERY non-boss map states its own win now, checked as the rule "derived
+   * exactly equals boss" rather than as a list of ids, so it holds over a
+   * ladder that is being rebuilt a map at a time.
    *
    * A derived spec asks for space and carries the free `allLocked`
    * alternative, which is the lock rush: seal every ball and the map is over,
@@ -125,13 +125,16 @@ describe("every shipped map still means what it meant", () => {
    * boss, and the derivation says exactly that.
    */
   it("authors a win on every playable map, and leaves the bosses deriving", () => {
-    expect(MAPS.length).toBeGreaterThan(30);
+    // Stated as the RULE rather than as the four ids it used to list. The
+    // ladder is being rebuilt a map at a time, and a hardcoded id list would
+    // have to be edited on every one of them - which is an edit that says
+    // nothing, so it would eventually be made without reading it.
+    expect(MAPS.length, "no maps loaded: is this reading the right file?")
+      .toBeGreaterThanOrEqual(10);
     const derived = MAPS.filter(m => !resolveWinSpec(m).authored).map(m => String(m.id));
-    expect(derived.sort()).toEqual(["level-10", "level-20", "level-30", "level-35"]);
-    for (const id of derived) {
-      expect(MAPS.find(m => String(m.id) === id)?.boss, `${id} derives but is no boss`)
-        .toBeTruthy();
-    }
+    const bosses = MAPS.filter(m => m.boss).map(m => String(m.id));
+    expect(derived.sort(), "a non-boss map is back on the derivation")
+      .toEqual(bosses.sort());
   });
 
   it("still derives a working spec for every other map", () => {
@@ -158,7 +161,10 @@ describe("every shipped map still means what it meant", () => {
 
   it("keeps the space clause on every ordinary map", () => {
     const ordinary = MAPS.filter(m => !m.boss && !(m.coloredAreas ?? []).some(a => a.required !== false));
-    expect(ordinary.length).toBeGreaterThan(20);
+    // Most of the ladder is ordinary maps whatever its length, so half is a
+    // floor that survives the rebuild without being retuned per map.
+    expect(ordinary.length, "nothing ordinary left to check")
+      .toBeGreaterThan(MAPS.length / 2);
     for (const m of ordinary) {
       expect(resolveWinSpec(m).require.some(c => c.kind === "space"), String(m.id)).toBe(true);
     }

@@ -48,6 +48,8 @@ import type { LevelConfig, LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { SpaceGrid } from "@/lib/spaceGrid";
 
+import { ENGINE_MAPS } from "./fixtures/maps";
+
 /** A tiny grid, all open, so the predicate can be read rather than inferred. */
 function grid(w = 9, h = 9): SpaceGrid {
   return {
@@ -91,8 +93,7 @@ describe("level 17: a ball warped into a chamber that was already taken", () => 
   /** Build the real map, claim the far mouth's ground, and send a ball through. */
   function warpIntoClaimedGround() {
     setRunSeedText("deal-a");
-    const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const lvl = doc.levels.find(l => l.level === 17) as unknown as LevelConfig;
+    const lvl = ENGINE_MAPS.find(l => l.level === 17) as unknown as LevelConfig;
     const d = createInitialGameData(lvl, 17, DEFAULT_MODIFIERS);
     const game = {
       ...d, objectDebris: [], pendingDestroys: [], bouncerFlashes: [], assimilations: new Map(),

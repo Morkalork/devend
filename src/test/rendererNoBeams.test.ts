@@ -41,9 +41,9 @@ import type { Ball } from "@/types/game";
 import { boardAngleFor } from "@/lib/boardTilt";
 import { tiltWorldPoint } from "@/lib/boardConstants";
 
-const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
-) as LevelData).levels;
+import { ENGINE_MAPS } from "./fixtures/maps";
+
+const levels = ENGINE_MAPS;
 
 /**
  * The transform, chosen so the origin is a TELL.
