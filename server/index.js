@@ -98,9 +98,15 @@ async function handleMapSave(req, res) {
   }
 
   const who = String(req.headers["x-map-author"] || "the map builder").slice(0, 60);
+  // The git blob sha of the file as the EDITOR loaded it. Passed straight
+  // through: it is what turns the commit below into a compare-and-swap instead
+  // of a last-writer-wins overwrite. Absent on an editor that predates it, or
+  // one running without Web Crypto, and commitMapYaml says so in its reply.
+  const baseSha = String(req.headers["x-map-base-sha"] || "").trim();
   const result = await commitMapYaml({
     cfg,
     content: body,
+    baseSha,
     message: `chore(map): save from ${who}\n\nCommitted by the in-browser map builder.`,
   });
   return json(res, result.ok ? 200 : result.status, result.ok

@@ -25,6 +25,7 @@ import { resolve } from "node:path";
 import {
   saveMapYaml, mapSaveMessage, promptForMapSecret, mapEditSecret,
   MAP_API_URL, MAP_SECRET_KEY,
+  gitBlobSha,
 } from "@/lib/mapSave";
 
 const respond = (
@@ -194,4 +195,50 @@ describe("both editors save through the same path", () => {
       expect(src).toMatch(/reason === 'auth' && promptForMapSecret\(\)/);
     });
   }
+});
+
+/**
+ * Naming the version being replaced, from the client side.
+ *
+ * `gitBlobSha` is the same hash GitHub reports for a file - sha1 over
+ * `blob <length>\0<bytes>` - so an editor can say which version it loaded
+ * without asking GitHub anything, and the server can hand that straight to the
+ * Contents API as a compare-and-swap.
+ */
+describe("the base sha a save carries", () => {
+  it("matches git's own object id for a blob", async () => {
+    // `printf 'hello' | git hash-object --stdin` -> this exact value. Pinned
+    // against the real algorithm rather than against our own output, which
+    // would agree with any bug in it.
+    expect(await gitBlobSha("hello")).toBe("b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0");
+    expect(await gitBlobSha("")).toBe("e69de29bb2d1d6434b8b29ae775ad8c2e48c5391");
+  });
+
+  it("counts BYTES, not characters", async () => {
+    // The header is the byte length, and map.yml's comment blocks are full of
+    // box drawing and dashes. A length in UTF-16 code units would hash every
+    // one of those files wrongly and turn every save into a false conflict.
+    const sha = await gitBlobSha("é");
+    expect(sha).toBe("4b04fff51468d8ab5201ab02b725dc477bc7cb45");
+  });
+
+  it("sends it as a header, and only when there is one", async () => {
+    const seen: RequestInit[] = [];
+    const fetchImpl = (async (_u: string, init?: RequestInit) => {
+      seen.push(init!);
+      return {
+        status: 200, ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ ok: true }),
+        text: async () => "",
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    await saveMapYaml("levels: []", fetchImpl, "s", "abc123");
+    expect((seen[0].headers as Record<string, string>)["X-Map-Base-Sha"]).toBe("abc123");
+
+    // An empty header is a claim to have checked something, so it is omitted.
+    await saveMapYaml("levels: []", fetchImpl, "s", "");
+    expect((seen[1].headers as Record<string, string>)["X-Map-Base-Sha"]).toBeUndefined();
+  });
 });

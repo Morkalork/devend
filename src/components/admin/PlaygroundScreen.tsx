@@ -18,7 +18,7 @@ import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { isPerfHudEnabled, setPerfHudEnabled, isStaticBgEnabled, setStaticBgEnabled } from '@/lib/rendering/perfStats';
-import { saveMapYaml, mapSaveMessage, promptForMapSecret, type MapSaveFailure } from '@/lib/mapSave';
+import { saveMapYaml, mapSaveMessage, promptForMapSecret, mapEditSecret, gitBlobSha, type MapSaveFailure } from '@/lib/mapSave';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -469,13 +469,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     const nextLevels = allLevels.map(l => l.id === updated.id ? updated : l);
 
     const yamlContent = draftYaml();
-    let result = await saveMapYaml(yamlContent);
+    // The version this panel loaded, so a save cannot overwrite a map.yml that
+    // moved underneath it. Same guard as the MapBuilder's, same helper.
+    const baseSha = await gitBlobSha(rawMapYaml.current ?? '');
+    let result = await saveMapYaml(yamlContent, fetch, mapEditSecret(), baseSha);
     // The same 401 retry the MapBuilder does, through the same helper. This
     // button used to send no secret at all, so against the production server it
     // could only ever fail - and it reported the failure as "the dev server
     // could not write map.yml", which was wrong twice over.
     if (!result.ok && result.reason === 'auth' && promptForMapSecret()) {
-      result = await saveMapYaml(yamlContent);
+      result = await saveMapYaml(yamlContent, fetch, mapEditSecret(), baseSha);
     }
     if (!result.ok) {
       // Deliberately does NOT update the in-memory levels: showing the edit as

@@ -99,13 +99,46 @@ export function promptForMapSecret(
 }
 
 /**
+ * The git object id of a blob holding `text`.
+ *
+ * Git hashes `blob <byte length>\0<bytes>`, which is exactly the `sha` the
+ * GitHub Contents API reports for a file - so an editor can name the version it
+ * loaded without having asked GitHub anything.
+ *
+ * Returns "" wherever Web Crypto is unavailable (an insecure origin, an
+ * embedded webview). The save then proceeds unguarded, as it did before this
+ * existed: refusing to save at all would be a worse failure than the one this
+ * prevents, and the server says in its reply whether a base was checked.
+ */
+export async function gitBlobSha(text: string): Promise<string> {
+  try {
+    const body = new TextEncoder().encode(text);
+    const header = new TextEncoder().encode(`blob ${body.length}\0`);
+    const buf = new Uint8Array(header.length + body.length);
+    buf.set(header);
+    buf.set(body, header.length);
+    const digest = await crypto.subtle.digest("SHA-1", buf);
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return "";
+  }
+}
+
+/**
  * PUT the YAML. Resolves with a verdict rather than throwing, so the caller can
  * render a specific reason and decide whether to ask for the secret.
+ *
+ * `baseSha` is the git blob sha of the file as the editor LOADED it, and it is
+ * what makes a stale editor safe. Without it the server reads the current sha
+ * moments before writing, which is last-writer-wins: a builder tab opened
+ * before the ladder changed would quietly commit its own copy over the top,
+ * and on this file that is the entire game's content.
  */
 export async function saveMapYaml(
   yamlContent: string,
   fetchImpl: typeof fetch = fetch,
   secret: string = mapEditSecret(),
+  baseSha = "",
 ): Promise<MapSaveResult> {
   let res: Response;
   try {
@@ -117,6 +150,9 @@ export async function saveMapYaml(
         // Omitted rather than sent empty: the dev plugin ignores it either way,
         // and an empty header is a claim to have a secret.
         ...(secret ? { "X-Map-Secret": secret } : {}),
+        // Same rule as the secret: sent only when we have one, because an
+        // empty header is a claim to have checked something.
+        ...(baseSha ? { "X-Map-Base-Sha": baseSha } : {}),
       },
     });
   } catch {

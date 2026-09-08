@@ -150,3 +150,69 @@ describe("the editor secret", () => {
     expect(fn).toContain("diff |=");
   });
 });
+
+/**
+ * The stale-editor overwrite, and why the old conflict check could not fire.
+ *
+ * Found the day the ladder went from 35 maps to 10: a builder tab opened before
+ * that change still held all 35, and its Save would have committed them back
+ * over the top. Nothing in the flow said no.
+ *
+ * The check was documented as one and was not. `commitMapYaml` read the file's
+ * current sha and immediately PUT with it, and a sha read moments before the
+ * write is fresh by construction - GitHub had nothing to reject. So every save
+ * was last-writer-wins on the file that is the whole game's content.
+ *
+ * The editor's own sha closes it: the version it LOADED is the version it is
+ * allowed to replace.
+ */
+describe("a save names the version it is replacing", () => {
+  const ok = { status: 200, body: { content: { sha: "put" }, commit: { sha: "c0ffee" } } };
+
+  it("sends the EDITOR's sha, not the one it just read", async () => {
+    const { impl, calls } = fakeFetch({ status: 200, body: { sha: "same" } }, ok);
+    const r = await commitMapYaml({
+      cfg: cfg(), content: "levels: []", message: "m", baseSha: "same", fetchImpl: impl,
+    });
+    expect(r.ok).toBe(true);
+    const put = calls.find(c => c.init?.method === "PUT")!;
+    expect(JSON.parse(String(put.init!.body)).sha).toBe("same");
+  });
+
+  it("refuses when the file moved under the editor", async () => {
+    // The 25 deleted maps coming back, stopped. `baseSha` is what the tab
+    // loaded; `head` is what is on the branch now.
+    const { impl, calls } = fakeFetch({ status: 200, body: { sha: "head" } }, ok);
+    const r = await commitMapYaml({
+      cfg: cfg(), content: "levels: []", message: "m", baseSha: "loaded", fetchImpl: impl,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.status).toBe(409);
+    expect(r.error, "the refusal has to say what to do about it").toMatch(/Reload the builder/);
+    expect(calls.some(c => c.init?.method === "PUT"), "it wrote anyway").toBe(false);
+  });
+
+  it("still saves for an editor that sends no base, rather than locking it out", async () => {
+    // An older client, or one with no Web Crypto (an insecure origin, some
+    // embedded webviews). Refusing every one of those would be a worse failure
+    // than the one this prevents, so the old behaviour stands: read, then write.
+    const { impl, calls } = fakeFetch({ status: 200, body: { sha: "head" } }, ok);
+    const r = await commitMapYaml({
+      cfg: cfg(), content: "levels: []", message: "m", fetchImpl: impl,
+    });
+    expect(r.ok).toBe(true);
+    const put = calls.find(c => c.init?.method === "PUT")!;
+    expect(JSON.parse(String(put.init!.body)).sha).toBe("head");
+  });
+
+  it("creates the file when there is none, base or no base", async () => {
+    // A 404 on the path is legitimate, and there is no version to conflict
+    // with, so a baseSha cannot make it a conflict.
+    const { impl, calls } = fakeFetch({ status: 404 }, ok);
+    const r = await commitMapYaml({
+      cfg: cfg(), content: "levels: []", message: "m", baseSha: "loaded", fetchImpl: impl,
+    });
+    expect(r.ok).toBe(true);
+    expect(calls.some(c => c.init?.method === "PUT")).toBe(true);
+  });
+});

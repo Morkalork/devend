@@ -10,7 +10,7 @@ import {
 import type { AddEntityType } from './EntityPanel';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
-import { saveMapYaml, mapSaveMessage, promptForMapSecret } from '@/lib/mapSave';
+import { saveMapYaml, mapSaveMessage, promptForMapSecret, mapEditSecret, gitBlobSha } from '@/lib/mapSave';
 import yaml from 'js-yaml';
 import { spliceYamlEntries } from '@/lib/yamlSplice';
 import {
@@ -768,15 +768,19 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const saveToServer = useCallback(async () => {
     setSaveStatus('saving');
     const yamlContent = saveYaml();
+    // The version this editor is editing. Without it the server reads the
+    // current sha and writes over whatever is there, so a tab left open across
+    // a change to the ladder commits its own stale copy silently.
+    const baseSha = await gitBlobSha(rawMapYaml.current ?? '');
 
-    let result = await saveMapYaml(yamlContent);
+    let result = await saveMapYaml(yamlContent, fetch, mapEditSecret(), baseSha);
     // A 401 means the endpoint IS there and configured and did not like the
     // secret, which is the one failure the author can fix from here. Ask, then
     // RETRY rather than making them press Save a second time - the old code
     // dropped back to idle after the prompt and the second press was the part
     // people forgot.
     if (!result.ok && result.reason === 'auth' && promptForMapSecret()) {
-      result = await saveMapYaml(yamlContent);
+      result = await saveMapYaml(yamlContent, fetch, mapEditSecret(), baseSha);
     }
 
     if (!result.ok) {

@@ -58,13 +58,20 @@ const headers = (token) => ({
 /**
  * Commit `content` over the configured path on the configured branch.
  *
- * Reads the file's current sha first, because the Contents API needs it to
- * replace a file. That read is also the conflict check: GitHub rejects a stale
- * sha with a 409, and this reports that rather than retrying with the fresh one.
- * Retrying would be a silent overwrite of whatever landed in between, which on
- * a file that is the whole game's content is the worst possible default.
+ * `baseSha` is the git blob sha of the file the EDITOR loaded, and it is what
+ * makes this a compare-and-swap. Reading the current sha here and PUTting with
+ * it cannot conflict - it is fresh by construction - so on its own that is
+ * last-writer-wins: a builder tab opened before the ladder changed commits its
+ * own copy straight over the top, silently, on the file that is the whole
+ * game's content. This is exactly how twenty-five deleted maps could come back.
+ *
+ * So the sha sent to GitHub is the editor's, and the fresh read is compared
+ * against it first, which lets the refusal name the file rather than relaying
+ * a 409 from the API. An editor that sends no baseSha still saves, unguarded,
+ * the way it did before: refusing every save from an older client would be a
+ * worse failure than the one this prevents.
  */
-export async function commitMapYaml({ cfg, content, message, fetchImpl = fetch }) {
+export async function commitMapYaml({ cfg, content, message, baseSha = "", fetchImpl = fetch }) {
   const problem = configProblem(cfg);
   if (problem) return { ok: false, status: 503, error: problem };
 
@@ -86,6 +93,16 @@ export async function commitMapYaml({ cfg, content, message, fetchImpl = fetch }
     };
   }
 
+  // The editor is editing a version. If the file has moved since, nothing here
+  // can merge the two, and picking either loses work that was already committed.
+  if (baseSha && sha && baseSha !== sha) {
+    return {
+      ok: false, status: 409,
+      error: `${cfg.path} changed on ${cfg.branch} since this editor loaded it.`
+        + " Reload the builder so you are editing the current file, then save again.",
+    };
+  }
+
   const put = await fetchImpl(url, {
     method: "PUT",
     headers: { ...headers(cfg.token), "Content-Type": "application/json" },
@@ -97,7 +114,10 @@ export async function commitMapYaml({ cfg, content, message, fetchImpl = fetch }
       // lines.
       content: Buffer.from(content, "utf-8").toString("base64"),
       branch: cfg.branch,
-      ...(sha ? { sha } : {}),
+      // The EDITOR's sha, not the one just read, so GitHub refuses a write
+      // aimed at a version that is no longer there. Falls back to the fresh
+      // read only for a client that sent none.
+      ...((baseSha || sha) ? { sha: baseSha || sha } : {}),
     }),
   });
 
