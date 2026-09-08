@@ -189,11 +189,11 @@ Every mechanic gets a status, and the status decides what it costs.
 | mover | C | Meet | 4 | 5 | 7, 9, 13, 22, 23, 29, 33 |
 | breakable | A | Meet | 5 | 6 | 7-9, 11-13, 16, 18, 19, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 23, 27, 32 |
-| reveals | A | Compressed | 8 | 12 | 19 |
+| reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | - | - |
-| bumper | C | Compressed | 11 | - | - |
-| deformable | A | Compressed | 11 | 25 | - |
+| bumper | C | Compressed | 12 | - | - |
+| deformable | A | Compressed | 12 | - | - |
 | phasing | A | Meet | 12 | 28 | 20 (boss), 35 (boss) |
 | rotor | C | Compressed | 13 | 22 | - |
 | mirror | B | Meet | 14 | 18 | - |
@@ -402,10 +402,65 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(deleted, to rebuild)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11 built, 12-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
+
+#### 11 "Sprint Planning" - Meet launcher, Use reveals  *(built)*
+
+**You commit to a scope before you know how the sprint goes.** The barrel holds
+the whole roster and is the first thing you touch, and the pull sets two numbers
+for the rest of the map: the launch power multiplies the map's base pay AND the
+ball speed, one to three times. There is no safe default. Fire hard for the
+money and play a fast map, fire soft for a calm map at base pay, and you choose
+before a single fence exists - you cannot even cut until the barrel is empty.
+
+The aim is the second half of the same decision. The barrel sits in one corner
+and the curtain over the paying pocket is in the far one, inside the aim cone
+(LAUNCH_SPREAD is 35 degrees either side, and the curtain is 3 degrees off the
+axis). So the shot can be spent opening the pocket, or spent putting the roster
+somewhere useful, and it cannot be spent on both.
+
+**The greed hook is the reveal, and it is the Use beat it was owed.** Level 8
+met `reveals` as the map that hides its own board; here it is the thing you
+operate to get paid. The cells behind the curtain start REMOVED - already
+counted as cleared - so breaking it *adds* board and the space target gets
+harder, while the `var` pocket inside pays 1.5x on a lock. That is the trade
+stated in one object: pay in board to be paid in multiplier.
+
+| | opening the curtain | leaving it shut |
+|---|---|---|
+| space to clear | more, by the whole corner | less |
+| the pocket | lockable, pays 1.5x | never |
+| what the shot bought | the pocket | position and tempo |
+
+Three breakables (`slab` centre, `sump` lower right, `curtain` top right) against
+`smashed: 1`, so the requirement has slack two ways: it can be answered wherever
+the roster ends up, and no single seal can bury it. The `deadline` beat breaks
+the slab at 22% remaining rather than the 45% act I uses - low enough that a
+player who engages with the map never sees it, and high enough that a board
+cleared without smashing anything cannot end in silence.
+
+**The Turn** is the `crunch` spike at 30% remaining: the map takes back some of
+the calm a soft shot bought. It is the map's own idea turned on the player,
+which is what a Turn is for.
+
+**What it does NOT do**, deliberately: no procedural `slots`, though the gate
+opens at 11 - a partly random board is the wrong ground for a Meet. No rainbow
+ball, though `balls.yml` unlocks it at 11: rainbow spits out a new ball every
+ten seconds, which is a second thing to learn arriving by accident, so the
+roster is pinned to `[red, blue]`, the two types with no ability at all, and the
+speed the player sees is the speed they chose. And one Meet only - the map it
+replaces debuted launcher, bumper and deformable at once, against the one-Meet
+rule, and is the only map that ever did.
+
+**Bot sweep, 8 seeds:** 7 wins, average 17 cuts against par 7. The loss is an
+`objectiveBuried` at 45% remaining, which takes burying all three slabs. Act I's
+own smash maps score 0-2 of 4 on the same bot, so this is the strongest content
+map on the ladder by that measure. The board was flat at first and the bot ran
+out of clock on it; the `rafter` is what fixed that, and it is why an open square
+is not a topology.
 
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the

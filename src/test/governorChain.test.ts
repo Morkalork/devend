@@ -46,11 +46,17 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig, LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { RETIRED } from "./fixtures/maps";
 
 const level11 = (): LevelConfig => {
-  const l = ENGINE_MAPS.find(x => x.level === 11);
-  if (!l) throw new Error("no level 11");
+  // The RETIRED level 11, deliberately. The rebuilt level 11 is the launcher's
+  // Meet map and carries no bumpers - the old one broke the one-Meet rule by
+  // debuting three mechanics at once, which is why it was replaced. What is
+  // tested here is the bumper CHAIN in the engine, not the ladder, so it wants
+  // the board that has one; it moves back to LADDER when a rebuilt map places
+  // bumpers again.
+  const l = RETIRED.find(x => x.level === 11);
+  if (!l) throw new Error("no retired level 11");
   return l as unknown as LevelConfig;
 };
 

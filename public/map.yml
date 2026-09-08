@@ -859,3 +859,101 @@ levels:
         range: 500
         speed: 120
         phase: 0
+  # ===========================================================================
+  # ACT II - THE SPRINT (11-20): pressure and space.
+  #
+  # Being rebuilt one map at a time. See MAP_DESIGN_GUIDELINES.md section 5 for
+  # what each map is FOR; per-map rationale lives there and not here, because
+  # the builder splices a level it edits and eats any comment inside its body.
+  # ===========================================================================
+
+  # 11 "Sprint Planning" - MEET the launcher, USE reveals.
+  - id: level-11
+    level: 11
+    sizeThreshold: 16
+    expectedCuts: 7
+    points: 20
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue]
+    win:
+      require:
+        - kind: space
+          threshold: 16
+        - kind: smashed
+          count: 1
+    coloredAreas:
+      - kind: var
+        x: 640
+        'y': 90
+        width: 170
+        height: 160
+        required: false
+    entities:
+      - id: barrel
+        kind: launcher
+        shape: rect
+        x: 105
+        'y': 640
+        width: 240
+        height: 110
+        facing: right
+        angle: -36
+      - id: rafter
+        kind: wall
+        shape: rect
+        x: 250
+        'y': 45
+        width: 26
+        height: 230
+      - id: slab
+        kind: wall
+        shape: rect
+        x: 470
+        'y': 560
+        width: 26
+        height: 200
+        breakable: true
+        hitsToBreak: 3
+      - id: sump
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 620
+        width: 155
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: curtain-jamb
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 45
+        width: 24
+        height: 255
+      - id: curtain
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 300
+        width: 295
+        height: 24
+        breakable: true
+        fence: true
+        hitsToBreak: 3
+        reveals:
+          x: 590
+          'y': 51
+          width: 262
+          height: 243
+    beats:
+      - id: crunch
+        atSpaceRemaining: 30
+        speedSpike: 0.15
+        announce: game.beatCrunchTime
+      - id: deadline
+        atSpaceRemaining: 22
+        breakId: slab
+        announce: game.beatDeadline
+    balls: []

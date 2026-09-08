@@ -92,8 +92,16 @@ describe("the block's ball roster", () => {
     for (let n = start; n < start + BLOCK_SIZE; n++) {
       const map = levels.find(l => l.level === n);
       if (!map) continue;
+      // A map may PIN its roster, and then the selector's answer is not what
+      // it spawns. Level 11 is the first on the ladder to do it - the launcher's
+      // Meet map holds the roster to two plain types so the only new thing is
+      // the barrel - and building the expectation from the selector alone made
+      // this test claim a purple ball on a map that can never deal one.
       const ids = new Set(
-        selectBallTypesForMap(map.id, n, map.maxBalls ?? map.balls?.length ?? 1).map(t => t.id),
+        map.ballTypeIds !== undefined
+          ? map.ballTypeIds
+          : selectBallTypesForMap(map.id, n, map.maxBalls ?? map.balls?.length ?? 1)
+              .map(t => t.id),
       );
       for (const term of map.circuit?.terminals ?? []) {
         if (term.ball?.typeId) ids.add(term.ball.typeId);

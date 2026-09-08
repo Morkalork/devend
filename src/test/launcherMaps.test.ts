@@ -20,7 +20,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
-  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
+  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION, LAUNCH_SPREAD,
   type LaunchFacing, type Blocker,
 } from "@/lib/launcher";
 import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
@@ -131,39 +131,62 @@ describe("level 11 pays for the launcher it gained", () => {
     expect(l11.maxBalls).toBe(3);
   });
 
-  it("aims through the gap in the spine rather than into it", () => {
-    // The map's shape IS the shot: the spine has a gap, and a full-power run
-    // through it is the reward for pulling hard. Firing into the spine instead
-    // would make the wager pointless.
+  it("puts the curtain inside the cone the player can actually aim in", () => {
+    // The map's shape IS the shot. The barrel sits in one corner and the thing
+    // worth shooting at - the curtain over the paying pocket - is in the far
+    // one, so opening it with the launch is a line the player can take, and
+    // every other aim in the cone is them choosing not to.
     //
-    // Traced along the muzzle rather than read off the cup's y. The barrel is
-    // canted, so its middle sits nowhere near the height it fires at - the old
-    // check only worked while every launcher was axis-aligned, and it would
-    // have gone on passing for a barrel turned to point at the floor.
+    // Checked against LAUNCH_SPREAD rather than against the barrel's centre
+    // line, because the cone is what the player has: a drag is aimed anywhere
+    // within it, and an assertion on the axis alone would demand the map be
+    // built for the one shot nobody has to take. Measured from the MUZZLE - the
+    // barrel is canted, so its middle sits nowhere near the height it fires at.
     const cup = cupsOf(l11)[0];
-    const spineTop = (l11.entities ?? []).find(e => e.id === "spine-top") as
-      unknown as { x: number; y: number; height: number };
-    const spineBottom = (l11.entities ?? []).find(e => e.id === "spine-bottom") as
-      unknown as { y: number };
-    const gapFrom = spineTop.y + spineTop.height;
-    const gapTo = spineBottom.y;
+    const curtain = (l11.entities ?? []).find(e => e.id === "curtain") as
+      unknown as { x: number; y: number; width: number; height: number };
+    expect(curtain, "level 11 lost its curtain").toBeTruthy();
 
     expect(cup.facing).toBe("right");
     const dir = muzzleVector(cup.facing, cup.angle);
-    const cx = cup.x + cup.width / 2;
-    const cy = cup.y + cup.height / 2;
-    // From the muzzle, straight down the barrel, to the spine's x.
     const reach = (Math.abs(dir.x) > Math.abs(dir.y) ? cup.width : cup.height) / 2;
-    const muzzleX = cx + dir.x * reach;
-    const muzzleY = cy + dir.y * reach;
-    const t = (spineTop.x - muzzleX) / dir.x;
-    const crossesAt = muzzleY + dir.y * t;
+    const mx = cup.x + cup.width / 2 + dir.x * reach;
+    const my = cup.y + cup.height / 2 + dir.y * reach;
 
-    expect(t, "the barrel does not point at the spine at all").toBeGreaterThan(0);
-    expect(crossesAt, `a straight shot hits the spine at y=${crossesAt.toFixed(0)}`)
-      .toBeGreaterThan(gapFrom);
-    expect(crossesAt, `a straight shot hits the spine at y=${crossesAt.toFixed(0)}`)
-      .toBeLessThan(gapTo);
+    const toTarget = Math.atan2(
+      curtain.y + curtain.height / 2 - my, curtain.x + curtain.width / 2 - mx);
+    const axis = Math.atan2(dir.y, dir.x);
+    let off = Math.abs(toTarget - axis);
+    if (off > Math.PI) off = 2 * Math.PI - off;
+
+    expect(off, `the curtain is ${(off * 180 / Math.PI).toFixed(0)} degrees off the barrel`)
+      .toBeLessThan(LAUNCH_SPREAD);
+  });
+
+  it("leaves the centre line clear all the way there", () => {
+    // A solid in the way turns the aimed shot into a bounce, and the whole
+    // point of the barrel on its Meet map is that what you aim at is what you
+    // get. Breakables do not block - hitting one is a legitimate use of the
+    // shot - so only the solid walls are checked.
+    const cup = cupsOf(l11)[0];
+    const dir = muzzleVector(cup.facing, cup.angle);
+    const reach = (Math.abs(dir.x) > Math.abs(dir.y) ? cup.width : cup.height) / 2;
+    const mx = cup.x + cup.width / 2 + dir.x * reach;
+    const my = cup.y + cup.height / 2 + dir.y * reach;
+
+    const solids = (l11.entities ?? []).filter(e =>
+      e.kind === "wall" && !(e as unknown as { breakable?: boolean }).breakable,
+    ) as unknown as Array<{ id: string; x: number; y: number; width: number; height: number }>;
+    expect(solids.length, "no solid walls to check against").toBeGreaterThan(0);
+
+    for (let d = 0; d <= 600; d += 5) {
+      const px = mx + dir.x * d;
+      const py = my + dir.y * d;
+      for (const w of solids) {
+        const hit = px >= w.x && px <= w.x + w.width && py >= w.y && py <= w.y + w.height;
+        expect(hit, `${w.id} sits on the centre line, ${d} units out`).toBe(false);
+      }
+    }
   });
 
   it("is a barrel rather than a cup: long, and turned off the axis", () => {

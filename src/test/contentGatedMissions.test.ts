@@ -29,9 +29,9 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import type { CanvasGameState } from "@/types/gameState";
 import type { AssignmentConfig, AssignmentMapResult } from "@/types/assignment";
-import type { LevelData } from "@/types/level";
+import type { LevelConfig, LevelData } from "@/types/level";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 const levels = ENGINE_MAPS;
 const pool = (yaml.load(
@@ -220,8 +220,8 @@ describe("the shipped pair", () => {
 describe("counting what was actually destroyed", () => {
   const CB = { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} };
 
-  function build(levelNumber: number): CanvasGameState {
-    const level = levels.find(l => l.level === levelNumber)!;
+  function build(levelNumber: number, from: readonly LevelConfig[] = levels): CanvasGameState {
+    const level = from.find(l => l.level === levelNumber)!;
     const game = createInitialGameData(level, level.level, DEFAULT_MODIFIERS) as unknown as CanvasGameState;
     const g = game as unknown as Record<string, unknown>;
     for (const k of [
@@ -232,8 +232,17 @@ describe("counting what was actually destroyed", () => {
     return game;
   }
 
-  /** A level in the Writedown's own band, so this tests a real board. */
+  /**
+   * A level in the Writedown's own band, so this tests a real board.
+   *
+   * Read from the RETIRED set: toppling needs one breakable standing ON
+   * another, and the rebuilt level 11 spreads its three slabs apart so the
+   * smash requirement cannot be buried in one cut. What is tested here is
+   * `completeBreakable` handling a toppled slab, which is engine behaviour and
+   * does not care which file the board came from.
+   */
   const LEVEL = 11;
+  const LEVEL_MAPS = RETIRED;
 
   function seedRandom(seed: number): () => number {
     let a = seed >>> 0;
@@ -248,11 +257,11 @@ describe("counting what was actually destroyed", () => {
   afterEach(() => { vi.restoreAllMocks(); });
 
   it("starts a map at zero", () => {
-    expect(build(LEVEL).breakablesSmashed).toBe(0);
+    expect(build(LEVEL, LEVEL_MAPS).breakablesSmashed).toBe(0);
   });
 
   it("counts every breakable the map loses", () => {
-    const game = build(LEVEL);
+    const game = build(LEVEL, LEVEL_MAPS);
     const breakables = game.destructibles.filter(d => d.kind === "breakable" && d.obstaclePolygon);
     expect(breakables.length, "level 11 has no breakables to count").toBeGreaterThan(0);
 
@@ -273,7 +282,7 @@ describe("counting what was actually destroyed", () => {
     let tested = 0;
     for (let seed = 1; seed <= 8 && tested === 0; seed++) {
       vi.spyOn(Math, "random").mockImplementation(seedRandom(seed));
-      const game = build(LEVEL);
+      const game = build(LEVEL, LEVEL_MAPS);
       const supporters = new Set(
         game.stackObjects.filter(so => so.supporterId).map(so => so.supporterId as string),
       );

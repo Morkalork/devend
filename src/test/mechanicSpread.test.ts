@@ -82,17 +82,21 @@ describe("no mechanic is introduced and then dropped", () => {
     // Pinned rather than asserted empty, because these are real and known.
     // Each is a decision someone should make, not a bug to fix silently.
     //
-    //   Reveals   level 8 only. Act I introduces it as the map that hides its
-    //             own board, and nothing on the ten maps develops it. It is the
-    //             one name here that act I owns outright, so it is act I's to
-    //             answer rather than something the rebuild will fix.
+    //   Launcher  level 11 only, which is where it MEETS. A mechanic on its
+    //             first map is on this list by definition, and it comes off
+    //             when act II gives it a second - the ledger schedules that,
+    //             and until then the name here is the reminder.
     //
-    // The list used to hold six names; the other five (bouncer, box, launcher,
-    // mutator, portal, thread lock) were single-use on maps 11-35 and are now
-    // on the UNUSED list below with everything else acts II-IV carried. They
-    // come back to this list the day one rebuilt map places them, and off it
-    // the day a second does.
-    expect(singles.map(w => w.key).sort()).toEqual(["reveals"]);
+    // REVEALS CAME OFF. It sat here alone after act II-IV were deleted, because
+    // both maps that developed it went with them; the rebuilt level 11 uses it
+    // as its greed hook, which is the Use beat it was owed. That is this list
+    // working in the direction it is supposed to.
+    //
+    // The rest (bouncer, box, mutator, portal, thread lock) were single-use on
+    // maps 11-35 and are on the UNUSED list below with everything else acts
+    // II-IV carried. They come back to this list the day one rebuilt map places
+    // them, and off it the day a second does.
+    expect(singles.map(w => w.key).sort()).toEqual(["launcher"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -110,11 +114,12 @@ describe("no mechanic is introduced and then dropped", () => {
     // delete the only record of what acts II-IV owe the player.
     //
     // Take a name off when a rebuilt map places the mechanic. When the list is
-    // empty the assertion goes back to toEqual([]).
+    // empty the assertion goes back to toEqual([]). LAUNCHER was the first off,
+    // on level 11.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
         "Ball gate", "Bumper", "Cage", "Charge", "Data stream", "Deformable",
-        "Delivery box", "Fence ground", "Gravity well", "Latch", "Launcher",
+        "Delivery box", "Fence ground", "Gravity well", "Latch",
         "Mirror", "One-way", "Phasing", "Pinned mutator", "Portal", "Rotor",
         "Terminals", "Thread lock", "WIP limit",
       ]);
