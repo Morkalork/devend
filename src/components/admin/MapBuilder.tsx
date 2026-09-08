@@ -190,6 +190,20 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     ), key);
   }, [selectedLevelIndex, commitLevels]);
 
+  /**
+   * Move to a level, and forget what was selected on the last one.
+   *
+   * Shared by the phone's select and the desktop chip strip so the two cannot
+   * drift: an entity index left over from another map is a panel editing
+   * something that is no longer on the board.
+   */
+  const selectLevel = useCallback((index: number) => {
+    setSelectedLevelIndex(index);
+    setSelectedEntityId(null);
+    setSelectedBallId(null);
+    setSelectedAreaIndex(null);
+  }, []);
+
   // Create new level
   const createNewLevel = useCallback(() => {
     const newLevel: LevelConfig = {
@@ -976,37 +990,61 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         </div>
       )}
 
-      {/* Level Selector */}
-      <div className="admin-chrome-zoom flex-shrink-0 p-2 bg-muted/50 border-b border-border overflow-x-auto">
-        <div className="flex gap-2 items-center min-w-max">
+      {/* Level Selector
+          Two presentations of one list, and the split is not cosmetic. The chip
+          strip is the whole ladder laid out at once, which is the right thing on
+          a desktop and unusable on a phone: at 448px only four chips fit, the
+          scrollbar is hidden, and there is nothing to say the other six exist -
+          so the builder reads as though it failed to load the file. On the same
+          screen Add Level sat 326px past the right edge, behind a horizontal
+          scroll of all ten chips, so a new map could not be started at all.
+
+          The phone gets a native select instead: it opens the OS picker, it
+          scrolls to any length the ladder reaches, and it names the count out
+          loud so "did it load?" has an answer on the face of the control.
+
+          The level ACTIONS are outside the scroller at every size. They used to
+          be the last children of it, which is why they were the first things to
+          go off-screen, and the ladder is about to grow back towards 35 maps -
+          at which point the desktop strip would hide them the same way. */}
+      <div className="admin-chrome-zoom flex-shrink-0 flex items-center gap-2 p-2 bg-muted/50 border-b border-border">
+        <select
+          value={selectedLevelIndex}
+          onChange={e => selectLevel(Number(e.target.value))}
+          aria-label="Level"
+          className="lg:hidden flex-1 min-w-0 px-2 py-1.5 rounded text-sm font-medium bg-card border border-border"
+        >
           {levels.map((level, index) => (
-            <div key={level.id} className="flex items-center gap-0.5">
-              <button
-                onClick={() => {
-                  setSelectedLevelIndex(index);
-                  setSelectedEntityId(null);
-                  setSelectedBallId(null);
-                  setSelectedAreaIndex(null);
-                }}
-                className={`px-3 py-1.5 rounded-l text-sm font-medium transition-colors ${
-                  index === selectedLevelIndex
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card hover:bg-card/80'
-                }`}
-              >
-                {level.id}
-              </button>
-              {index === selectedLevelIndex && (
-                <button
-                  onClick={() => duplicateLevel(index)}
-                  className="px-1.5 py-1.5 rounded-r bg-primary/80 text-primary-foreground hover:bg-primary/60 transition-colors"
-                  title="Duplicate level"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              )}
-            </div>
+            <option key={level.id} value={index}>
+              {level.id} ({index + 1} of {levels.length})
+            </option>
           ))}
+        </select>
+
+        <div className="hidden lg:flex gap-2 items-center min-w-0 overflow-x-auto">
+          {levels.map((level, index) => (
+            <button
+              key={level.id}
+              onClick={() => selectLevel(index)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                index === selectedLevelIndex
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card hover:bg-card/80'
+              }`}
+            >
+              {level.id}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-shrink-0 flex items-center gap-1">
+          <button
+            onClick={() => duplicateLevel(selectedLevelIndex)}
+            className="p-1.5 rounded bg-primary/80 text-primary-foreground hover:bg-primary/60 transition-colors"
+            title="Duplicate level"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
           <button
             onClick={createNewLevel}
             className="p-1.5 rounded bg-card hover:bg-card/80 transition-colors"
