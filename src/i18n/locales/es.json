@@ -1771,7 +1771,9 @@
     "delivered": "Entregado",
     "atRisk": "Ultima bola: falta {{label}}",
     "terminals": "Conectado",
-    "harvested": "Cosechado"
+    "harvested": "Cosechado",
+    "space": "Despejado",
+    "locks": "Sellados"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",
@@ -1787,5 +1789,8 @@
     "buildsFaster": "Se construye un {{percent}}% más rápido que una valla normal.",
     "staysSelected": "Toca una ranura para seleccionarla. Sigue activa hasta que la cambies y nunca se agota.",
     "emptySlot": "Ranura de valla vacía"
+  },
+  "goal": {
+    "par": "Vallas"
   }
 }

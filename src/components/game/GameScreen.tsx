@@ -68,7 +68,7 @@ import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 import { PushExitBar } from '@/components/game/PushExitBar';
 import { canStopPushing } from '@/lib/pushLuck';
 import { WinGateFrame } from '@/components/game/WinGateFrame';
-import { gateSatisfied } from '@/lib/winHud';
+import { extraGoals, outstandingGoals } from '@/lib/goalTracker';
 import { BoardAlert } from '@/components/game/BoardAlert';
 import { pickContext } from '@/lib/hudContext';
 import { unreadManualCount } from '@/lib/manual';
@@ -379,7 +379,7 @@ export function GameScreen({
     pickupPresent: false,
     onBankAndContinue: undefined,
     pushBonusSoFar: 0,
-    winGates: [],
+    goals: [],
     ballsInPlay: 0,
     gameMessage: null,
   });
@@ -942,7 +942,7 @@ export function GameScreen({
             spaceRequired={level.sizeThreshold}
             lockedBalls={mapLockedBalls}
             threadLockRequired={level.threadLockRequired}
-            winGates={gameState.winGates}
+            goals={gameState.goals}
             ballsInPlay={gameState.ballsInPlay}
             onExplainWin={() => setWinModalOpen(true)}
             scopeCreepPercent={gameState.creepPercent}
@@ -1109,8 +1109,11 @@ export function GameScreen({
               a colour per kind: see WinGateFrame for why a border language does
               not survive being seen three times in a run. */}
           <WinGateFrame
-            present={gameState.winGates.length > 0 && !mapComplete}
-            outstanding={gameState.winGates.some(g => !gateSatisfied(g))}
+            // The frame is about the UNUSUAL part of a map, so it reads the
+            // extras rather than every goal: space and locks are on every map
+            // and a frame that lit for them would light on all forty.
+            present={extraGoals(gameState.goals).length > 0 && !mapComplete}
+            outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
           />
           {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
               `fixed`: the page-transition transform breaks fixed positioning. */}

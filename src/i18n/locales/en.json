@@ -1238,7 +1238,9 @@
     "delivered": "Delivered",
     "atRisk": "Last ball: {{label}} still outstanding",
     "terminals": "Wired",
-    "harvested": "Harvested"
+    "harvested": "Harvested",
+    "space": "Cleared",
+    "locks": "Locked"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",
@@ -1254,5 +1256,8 @@
     "buildsFaster": "Builds {{percent}}% faster than a standard fence.",
     "staysSelected": "Tap a slot to select it. It stays selected until you change it, and never runs out.",
     "emptySlot": "Empty fence slot"
+  },
+  "goal": {
+    "par": "Fences"
   }
 }

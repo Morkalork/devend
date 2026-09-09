@@ -19,9 +19,8 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
-import { gateAtRisk } from "@/lib/winHud";
+import { goalAtRisk, type Goal } from "@/lib/goalTracker";
 import type { LevelConfig, LevelData } from "@/types/level";
-import type { WinConditionProgress } from "@/types/winSpec";
 
 const LEVELS = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
@@ -140,31 +139,31 @@ describe("the lock rush is closed where it can be", () => {
  * on that ball and locking it ends the map for good.
  */
 describe("the last ball is flagged before it strands the map", () => {
-  const gate = (met: boolean): WinConditionProgress => ({
-    condition: { kind: "smashed", count: 1 },
-    current: met ? 1 : 0, target: 1, met, mode: "accumulate",
+  const gate = (met: boolean): Goal => ({
+    key: "smashed", kind: "smashed", tier: "requirement", labelKey: "winGate.smashed",
+    current: met ? 1 : 0, target: 1, done: met, over: false, progress: null,
   });
 
   it("warns once one ball is left and the gate is outstanding", () => {
-    expect(gateAtRisk(gate(false), 1)).toBe(true);
+    expect(goalAtRisk(gate(false), 1)).toBe(true);
   });
 
   it("stays quiet while there is still a ball to spare", () => {
     // Two balls is a choice, not a trap: seal one and break with the other.
     // Crying wolf here would make the warning worth ignoring at one.
-    expect(gateAtRisk(gate(false), 2)).toBe(false);
-    expect(gateAtRisk(gate(false), 3)).toBe(false);
+    expect(goalAtRisk(gate(false), 2)).toBe(false);
+    expect(goalAtRisk(gate(false), 3)).toBe(false);
   });
 
   it("stays quiet once the gate is satisfied", () => {
-    expect(gateAtRisk(gate(true), 1)).toBe(false);
+    expect(goalAtRisk(gate(true), 1)).toBe(false);
   });
 
   it("still warns on an empty board, where the map is already lost", () => {
     // Not a live warning so much as a guard against reading `=== 1`: the state
     // it describes is strictly worse, and a chip that went calm at zero would
     // say the map was fine at the moment it became unwinnable.
-    expect(gateAtRisk(gate(false), 0)).toBe(true);
+    expect(goalAtRisk(gate(false), 0)).toBe(true);
   });
 
   /**
@@ -174,11 +173,11 @@ describe("the last ball is flagged before it strands the map", () => {
    * under, and it is not something the last ball can strand.
    */
   it("treats a limit clause as outstanding, the way the chip does", () => {
-    const underPar: WinConditionProgress = {
-      condition: { kind: "underPar", delta: 0 },
-      current: 0, target: 6, met: true, mode: "limit",
+    const underPar: Goal = {
+      key: "underPar", kind: "underPar", tier: "requirement", labelKey: "winGate.underPar",
+      current: 0, target: 6, done: false, over: false, progress: null,
     };
-    expect(gateAtRisk(underPar, 1)).toBe(true);
+    expect(goalAtRisk(underPar, 1)).toBe(true);
   });
 });
 

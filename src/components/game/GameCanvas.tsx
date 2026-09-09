@@ -129,7 +129,7 @@ import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import { pushBonusEarned } from "@/lib/pushLuck";
-import { extraGates } from "@/lib/winHud";
+import { mapGoals, type Goal } from "@/lib/goalTracker";
 import { winHighlightRects } from "@/lib/winHighlight";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
@@ -173,7 +173,7 @@ export interface GameStateInfo {
    * Read through the same evaluator the win check uses, so a chip cannot claim
    * a requirement the gate disagrees with.
    */
-  winGates: WinConditionProgress[];
+  goals: Goal[];
   /**
    * Balls still in play. The top bar turns an outstanding gate into a warning
    * at one, because from there a lock strands the map and costs a life.
@@ -1898,7 +1898,7 @@ export function GameCanvas({
   // The unusual win requirements, recomputed each render off the live game.
   // resolveWinSpec + readWinSnapshot are exactly what applyCut's win check
   // calls, so there is one reading of the map's win, not two.
-  const winGates = extraGates(resolveWinSpec(level), readWinSnapshot(gameRef.current, level));
+  const goals = mapGoals(resolveWinSpec(level), readWinSnapshot(gameRef.current, level));
   // Same counter the win check uses for "every ball is locked", so the warning
   // cannot claim a last ball on a board the gate thinks still has two.
   const ballsInPlay = countBallsInPlay(gameRef.current.balls);
@@ -1925,7 +1925,7 @@ export function GameCanvas({
         pickupPresent,
         onBankAndContinue: handleBankAndContinue,
         pushBonusSoFar,
-        winGates,
+        goals,
         ballsInPlay,
         gameMessage,
         onUseAbility: handleUseAbility,
@@ -1936,7 +1936,7 @@ export function GameCanvas({
         onSelectFenceType: handleSelectFenceType,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

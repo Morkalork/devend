@@ -8,9 +8,8 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
-import { WinGateChip } from '@/components/game/WinGateChip';
-import { gateAtRisk } from '@/lib/winHud';
-import type { WinConditionProgress } from '@/types/winSpec';
+import { GoalChip } from '@/components/game/GoalChip';
+import { goalAtRisk, type Goal } from '@/lib/goalTracker';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -31,10 +30,11 @@ interface GameTopBarProps {
   lockedBalls: number;
   threadLockRequired?: number;
   /**
-   * The map's unusual win requirements with live progress. Empty on an ordinary
-   * space-and-locks map, which is most of them.
+   * Every goal this map has, with live progress, in authored order: the win
+   * clauses, plus the space and lock readouts on maps that do not require them,
+   * plus the fence budget. See lib/goalTracker.ts for what the tiers mean.
    */
-  winGates?: WinConditionProgress[];
+  goals?: Goal[];
   /** Balls still in play; at one, an outstanding gate becomes a warning. */
   ballsInPlay?: number;
   /** Opens the "How to win" text, which carries the full wording. */
@@ -66,7 +66,7 @@ export function GameTopBar({
   spaceRequired,
   lockedBalls,
   threadLockRequired,
-  winGates,
+  goals,
   ballsInPlay = 99,
   onExplainWin,
   scopeCreepPercent = 0,
@@ -248,9 +248,17 @@ export function GameTopBar({
         )}
       </div>
 
-      {/* Row 2: Objectives — cuts/par, space, thread locks */}
+      {/* Row 2: the goal tracker.
+          One row, one notation. It used to be four: cuts against par in bespoke
+          markup, space as a percentage counting DOWN, locks as a bare tally,
+          and only the unusual clauses rendered as "x of y" - so answering "what
+          does this map want" meant decoding four things, with the part that
+          made the map different sitting last. It is now the win spec, in the
+          order the Acceptance Criteria modal states it, and the budget after.
+          Scrolls rather than wraps: a map can carry four requirements and this
+          is one line on a phone. */}
       <div
-        className={`px-3 py-1.5 flex items-center justify-around gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        className={`px-3 py-1.5 flex items-center gap-4 overflow-x-auto no-scrollbar${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
         onTouchStart={handleSwipeTouchStart}
         onTouchEnd={handleSwipeTouchEnd}
@@ -259,75 +267,20 @@ export function GameTopBar({
           borderBottom: `2px solid ${accentColor}44`,
         }}
       >
-        {/* Cuts / Par */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Scissors className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
-          <span
-            className="font-display text-sm font-bold tabular-nums"
-            style={{
-              color: cutsUsed > parCuts ? '#ff6b6b' : accentColor,
-              textShadow: `0 0 10px ${cutsUsed > parCuts ? '#ff6b6b' : accentColor}88`,
-            }}
-          >
-            {cutsUsed}/{parCuts}
-          </span>
-        </div>
-
-        {/* Space — hold or tap for exact remaining/cleared numbers */}
-        <button
-          className="relative flex items-center gap-1.5 min-w-0 bg-transparent border-0 p-0 focus:outline-none"
-          onPointerDown={startSpaceHold}
-          onPointerUp={cancelSpaceHold}
-          onPointerLeave={cancelSpaceHold}
-          onPointerCancel={cancelSpaceHold}
-          onClick={(e) => { e.stopPropagation(); setSpaceDetail(true); }}
-          onContextMenu={(e) => e.preventDefault()}
-          aria-label={t('topBar.spaceTitle')}
-        >
-          <Target className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
-          <span
-            key={spaceFlashKey}
-            className={`font-display text-sm font-bold tabular-nums${spaceFlashKey > 0 ? ' animate-stat-flash' : ''}`}
-            style={{
-              color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
-              textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
-            }}
-          >
-            {spaceRemaining <= spaceRequired
-              ? t('topBar.clear')
-              : t('topBar.percentToGo', { percent: displaySpace - spaceRequired })}
-          </span>
-          <Info className="w-3 h-3 flex-shrink-0 opacity-50" style={{ color: accentColor }} />
-        </button>
-
-        {/* Thread Locks */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Lock
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: lockColor, filter: lockMet && lockReq > 0 ? `drop-shadow(0 0 6px ${accentColor}aa)` : 'none' }}
-          />
-          <span
-            key={locksFlashKey}
-            className={`font-display text-sm font-bold tabular-nums${locksFlashKey > 0 ? ' animate-stat-flash' : ''}`}
-            style={{
-              color: lockColor,
-              textShadow: lockMet && lockReq > 0 ? `0 0 10px ${accentColor}88` : 'none',
-            }}
-          >
-            {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
-          </span>
-        </div>
-
-        {/* The unusual requirement, where the player already looks to find out
-            where they stand. Only ever rendered on the few maps that have one:
-            a chip on every map is chrome the eye learns to skip. */}
-        {(winGates ?? []).map(g => (
-          <WinGateChip
-            key={g.condition.kind + ('ballType' in g.condition ? g.condition.ballType : '')}
-            gate={g}
+        {(goals ?? []).map(g => (
+          <GoalChip
+            key={g.key}
+            goal={g}
             accentColor={accentColor}
-            atRisk={gateAtRisk(g, ballsInPlay)}
-            onExplain={onExplainWin}
+            atRisk={goalAtRisk(g, ballsInPlay)}
+            flashKey={g.kind === 'space' ? spaceFlashKey : g.kind === 'locks' ? locksFlashKey : 0}
+            // Space keeps its own hold-for-detail readout (exact remaining and
+            // cleared numbers, useful mid Push Your Luck when the chip just
+            // reads CLEAR). Everything else taps straight to "How to win",
+            // which now carries the wording for every goal on the bar.
+            onExplain={g.kind === 'space' ? () => setSpaceDetail(true) : onExplainWin}
+            onHoldStart={g.kind === 'space' ? startSpaceHold : undefined}
+            onHoldEnd={g.kind === 'space' ? cancelSpaceHold : undefined}
           />
         ))}
 

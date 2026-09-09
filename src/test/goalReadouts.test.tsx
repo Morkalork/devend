@@ -19,29 +19,30 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import "@/i18n";
-import { WinGateChip } from "@/components/game/WinGateChip";
+import { GoalChip } from "@/components/game/GoalChip";
 import { WinGateFrame } from "@/components/game/WinGateFrame";
-import type { WinConditionProgress } from "@/types/winSpec";
+import type { Goal } from "@/lib/goalTracker";
 
 afterEach(cleanup);
 
 const ACCENT = "#00ff88";
 
-const gate = (over: Partial<WinConditionProgress> = {}): WinConditionProgress => ({
-  condition: { kind: "superiorLocks", count: 1 },
-  current: 0, target: 1, met: false, mode: "accumulate", ...over,
+const gate = (over: Partial<Goal> = {}): Goal => ({
+  key: "superiorLocks", kind: "superiorLocks", tier: "requirement",
+  labelKey: "winGate.superiorLocks", current: 0, target: 1,
+  done: false, over: false, progress: null, ...over,
 });
 
 describe("the requirement chip", () => {
   it("says how far along you are, not merely that a rule exists", () => {
     // THE thing a border could never carry, and the reason the chip exists
     // alongside the frame rather than instead of it.
-    render(<WinGateChip gate={gate({ current: 1, target: 3 })} accentColor={ACCENT} />);
+    render(<GoalChip goal={gate({ current: 1, target: 3 })} accentColor={ACCENT} />);
     expect(screen.getByText("1/3")).toBeTruthy();
   });
 
   it("names the requirement in words", () => {
-    render(<WinGateChip gate={gate()} accentColor={ACCENT} />);
+    render(<GoalChip goal={gate()} accentColor={ACCENT} />);
     expect(screen.getAllByText(/Superior/i).length).toBeGreaterThan(0);
   });
 
@@ -49,8 +50,8 @@ describe("the requirement chip", () => {
     // "Seal a ball" and "seal a LODESTONE" are different maps, and the type is
     // the entire requirement on level 33.
     render(
-      <WinGateChip
-        gate={gate({ condition: { kind: "lockType", ballType: "Lodestone", count: 1 } })}
+      <GoalChip
+        goal={gate({ kind: "lockType", labelKey: "winGate.lockType", ballType: "Lodestone" })}
         accentColor={ACCENT}
       />,
     );
@@ -60,7 +61,7 @@ describe("the requirement chip", () => {
   it("lights up the moment it is satisfied", () => {
     // Follows the lock chip's existing states so it reads as part of that row.
     const { container } = render(
-      <WinGateChip gate={gate({ current: 1, met: true })} accentColor={ACCENT} />,
+      <GoalChip goal={gate({ current: 1, done: true })} accentColor={ACCENT} />,
     );
     const value = screen.getByText("1/1");
     expect(value.getAttribute("style")).toContain("rgb(0, 255, 136)");
@@ -72,19 +73,59 @@ describe("the requirement chip", () => {
     // completion colour would tell the player they had banked something they
     // have not started earning.
     render(
-      <WinGateChip
-        gate={gate({ condition: { kind: "underPar", delta: 0 }, met: true, mode: "limit" })}
+      <GoalChip
+        goal={gate({ kind: "underPar", labelKey: "winGate.underPar", done: false })}
         accentColor={ACCENT}
       />,
     );
     expect(screen.getByText("0/1").getAttribute("style")).not.toContain("rgb(0, 255, 136)");
   });
 
+  it("shows a budget over par in amber, not in the red that means a lost map", () => {
+    // Going over par costs SCORE. Red is reserved for the one state that costs
+    // a life, and spending it here would teach a player to fear a full run.
+    render(<GoalChip goal={gate({
+      kind: "par", tier: "budget", labelKey: "goal.par",
+      current: 9, target: 8, over: true,
+    })} accentColor={ACCENT} />);
+    const style = screen.getByText("9/8").getAttribute("style") ?? "";
+    expect(style).toContain("255, 176, 32");
+    expect(style).not.toContain("255, 107, 107");
+  });
+
+  it("shows a tally as a bare number, never as a fraction over zero", () => {
+    // Locks on a map that does not require them. "2/0" would invent a rule.
+    render(<GoalChip goal={gate({
+      kind: "locks", tier: "tally", labelKey: "winGate.locks",
+      current: 2, target: null,
+    })} accentColor={ACCENT} />);
+    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.queryByText("2/0")).toBeNull();
+  });
+
+  it("says CLEAR rather than a fraction once space is satisfied", () => {
+    // The one readout with a word instead of a number, kept from the old bar
+    // because "CLEAR" is what a player looks for.
+    render(<GoalChip goal={gate({
+      kind: "space", tier: "requirement", labelKey: "winGate.space",
+      unit: "percent", current: 88, target: 85, done: true,
+    })} accentColor={ACCENT} />);
+    expect(screen.getByText("CLEAR")).toBeTruthy();
+  });
+
+  it("marks a percent goal as a percentage", () => {
+    render(<GoalChip goal={gate({
+      kind: "space", labelKey: "winGate.space",
+      unit: "percent", current: 60, target: 85,
+    })} accentColor={ACCENT} />);
+    expect(screen.getByText("60/85%")).toBeTruthy();
+  });
+
   it("opens the how-to-win text when tapped", () => {
     // The chip is the short form; the full wording already exists and was only
     // ever reachable through the menu.
     let opened = 0;
-    render(<WinGateChip gate={gate()} accentColor={ACCENT} onExplain={() => { opened++; }} />);
+    render(<GoalChip goal={gate()} accentColor={ACCENT} onExplain={() => { opened++; }} />);
     fireEvent.click(screen.getByRole("button"));
     expect(opened).toBe(1);
   });

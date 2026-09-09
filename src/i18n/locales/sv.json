@@ -1771,7 +1771,9 @@
     "delivered": "Levererat",
     "atRisk": "Sista bollen: {{label}} aterstar",
     "terminals": "Kopplat",
-    "harvested": "Skordat"
+    "harvested": "Skordat",
+    "space": "Rensat",
+    "locks": "Låsta"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",
@@ -1787,5 +1789,8 @@
     "buildsFaster": "Byggs {{percent}}% snabbare än ett vanligt staket.",
     "staysSelected": "Tryck på en plats för att välja den. Den förblir vald tills du byter, och tar aldrig slut.",
     "emptySlot": "Tom staketplats"
+  },
+  "goal": {
+    "par": "Staket"
   }
 }
