@@ -47,6 +47,29 @@ mutators:
       sequence: [down]
     overtimePremium: 4
 
+  # The room turned, on a clock, with no quiet stretches.
+  #
+  # gravity_well is "a pull that moves", with `none` phases between so the map
+  # reads as being pushed around occasionally. This one is the OTHER half of
+  # that idea: the pull never stops and never eases, it just gets a quarter turn
+  # every ten seconds. What the player is reading is not the pull, it is the
+  # eight settled seconds between turns, which is exactly as long as it takes to
+  # pick a cut and commit to it.
+  #
+  # Ten rather than nine, so a turn lands on a beat the player can count.
+  - id: tipping
+    name: Standup
+    description: The room turns a quarter every ten seconds, and down goes with it.
+    clarify: The pull never stops, it just changes which wall it points at, a quarter turn at a time. Nothing you have already fenced is at risk. What the turn takes from you is your plan, so read where the balls are going next, not where they are.
+    behavior: gravity
+    weight: 0
+    minLevel: 15
+    gravity:
+      turnRate: 1.1
+      period: 10
+      sequence: [down, right, up, left]
+    overtimePremium: 4
+
   - id: gravity_well
     name: Technical Gravity
     description: Everything is pulled one way, and the way keeps changing.

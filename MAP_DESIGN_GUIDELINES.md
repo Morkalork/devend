@@ -193,11 +193,11 @@ Every mechanic gets a status, and the status decides what it costs.
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | - |
 | bumper | C | Compressed | 12 | 13 | - |
-| deformable | A | Compressed | 15 | - | - |
+| deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 15 | 16 | 31 |
+| terminals | E | Meet | 17 | 18 | 31 |
 | portal | B | Meet | 17 | - | - |
 | WIP limit | D | Meet | 17 | 18 | 32 |
 | cage | E | Compressed | 18 | 29 | - |
@@ -210,7 +210,8 @@ Every mechanic gets a status, and the status decides what it costs.
 | latch | A | Compressed | 26 | 31 | - |
 | data stream | E | Meet | 26 | 27 | - |
 | ball gate | B | Compressed | 33 | 34 | - |
-| pinned mutator | D | Seasoning | 14 | - | - |
+| pinned mutator | D | Seasoning | 14 | 15 | - |
+| live outer walls | D | Meet | 14 | 15 | - |
 | colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
@@ -402,7 +403,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-14 built, 15-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-15 built, 16-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -579,12 +580,64 @@ these numbers against `map.yml` so this cannot happen twice.
 | 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
 | 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
 | 14 | **Meet** mirror | Fight topology | Fences bend off a mirror wall: the first map where the cut you drew is not the cut you get. |
-| 15 | **Meet** terminals | Use chest | No balls of its own. They arrive by booting sleepers, and the win asks for the terminal rather than a lock. |
-| 16 | - | Use terminals + mirror | Two terminals behind a mirrored lane. |
+| 15 | **Meet** live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls and a pull that turns a quarter every ten seconds. *(built)* |
+| 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
 | 19 | **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
+
+#### 15 "Standup" - Meet live outer walls (symmetric), Use pinned mutator  *(built)*
+
+**The room turns a quarter every ten seconds, and every wall throws you back.**
+No obstacles at all: an empty board, three balls, four identical bouncy walls
+and a pull that never stops and only ever changes which wall it points at. This
+is a MEET in the strict sense, one idea with nothing on the board to read it
+against, and it is easy on purpose (8/8, about 13 seconds of a 50 second map).
+
+**The premise it was designed from turned out to be false, and the map is better
+for knowing that.** The idea was that you would fence the balls into a pocket
+and the tilt would then drop them somewhere that ruined it. It cannot: a
+completed fence is a permanent wall and captured space never comes back (only
+`reveals` returns board), so a turn slides the balls to a different side of the
+SAME pocket and takes nothing. Measured three ways, all agreeing:
+
+- level 14's board, tipping vs its shipped steady pull: 8/8 against 7/8, so
+  tipping is slightly EASIER.
+- a bare board across nine variants (no gravity / steady / tipping, crossed with
+  kick 1.00 to 1.30): every one 8/8, ~15 cuts, indistinguishable.
+- a bare board turned hard (7 balls, clear 92%): no gravity 0/8 and 16.3% left,
+  steady 2/8 and 9.6%, tipping 2/8 and 9.4%. **The board with no gravity is the
+  hardest one.**
+
+Gravity pools the balls, and a pooled ball is a ball that is not near your
+fence: section 9 arriving from the other side. So a tilt is a PERCEPTION
+mechanic, not a difficulty one. What it takes is your PLAN, in the eight settled
+seconds you had to pick a cut, and it should never be tuned as though it takes
+anything else.
+
+**What four bouncy walls really are on this engine: an accelerando.** Gravity
+only steers, so nothing ever takes speed off a ball, so a bouncy wall cannot
+give back what it took and can only add. That makes the kick the map's tempo
+dial, and it saturates:
+
+- plain walls: 1.00x forever.
+- **1.05: 1.10x at 10s, 1.28x at 20s, 1.48x at 30s, and it never arrives.**
+- 1.12: 1.26x, 1.77x, 2.20x, with every ball pinned at the cap from 27s.
+- 1.25: 1.59x, 2.20x, 2.20x, pinned from 18s.
+
+1.05 rises across the whole map and never arrives, so a cut that was safe early
+is not safe late. 1.12 and 1.25 spend their back half at a flat maximum, where
+the walls have stopped being a variable. **Author the ramp, not the ceiling.**
+
+**Symmetry is the other half of the design, and it is free.** Because
+`boardEdges` are world space and do not turn with the pull (7.3b), any asymmetry
+on a tipping map is correct one phase in four. Four identical walls have no
+preferred direction to lose, so this is the first live-edge map that needs no
+`neverRotates` and can be dealt in all four orientations. It also wins on
+`space` alone - no obstacles means no breakables means nothing to smash - which
+makes it the one map in act II that does not ask for `space + smashed`.
+
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 

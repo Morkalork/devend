@@ -140,10 +140,14 @@ describe("the maps with nothing a lock cannot produce", () => {
       breakables(l) === 0 && gateAreas(l.coloredAreas ?? []).length === 0
       && terminals(l) === 0 && seams(l) === 0 && boxes(l) === 0
     ).map(l => l.level as number);
-    // Act I's four teaching maps. The list held seven more from acts II-IV,
-    // and those maps are gone: a rebuilt map joins this list only by being
-    // authored with nothing operable, which is the decision the list exists to
-    // make visible.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
+    // Act I's four teaching maps, and now level 15. The list held seven more
+    // from acts II-IV and those maps are gone: a rebuilt map joins only by
+    // being authored with nothing operable, which is the decision the list
+    // exists to make visible. So, said out loud: 15 is an empty board on
+    // purpose. It is a MEET map for live outer walls, and emptiness is what
+    // makes one idea legible with nothing else on the board to read it
+    // against. It asks for `space + locks`, which is exactly what the note
+    // above says a map with nothing operable may honestly ask.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 15]);
   });
 });

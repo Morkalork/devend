@@ -31,7 +31,10 @@ import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { tickPhasing } from "@/lib/physics/phasing";
 import { updateBall } from "@/lib/physics/updateBall";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
-import { applyCutFn, checkSpaceWin } from "@/lib/physics/applyCut";
+import {
+  applyCutFn, checkSpaceWin,
+  evaluateWinConditions as evaluateWinConditionsFn,
+} from "@/lib/physics/applyCut";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { tickCharges } from "@/lib/physics/charge";
@@ -337,6 +340,25 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
     // and take the remaining space past the goal with no fence involved, and
     // without this the map shows CLEAR and never ends.
     checkSpaceWin(game, level, callbacks, levelNumber, modifiers);
+  }
+
+  // The loop's own safety net, and the MAP DEADLINE that rides in it.
+  //
+  // useGameLoop calls checkWinCondition every active frame, and
+  // evaluateWinConditions opens by failing the map once activePlaySeconds has
+  // reached getMapTimeLimit. The bot called it only in reaction to a cut or a
+  // destroy, so between cuts the clock did not exist: every sweep this harness
+  // has ever run played a map with NO TIME LIMIT and reported the result as if
+  // it had one. A level-15 seed came back a win at 53.2s on a 50s map, which is
+  // how it was found.
+  //
+  // That is the third time this file has diverged from the loop in the same
+  // shape (map beats, the end-of-frame passes, now this), and the header's rule
+  // is the one that keeps catching it: the harness exists to run the same loop
+  // the browser runs, and a pass it silently omits is a measurement of a
+  // different game.
+  if (!game.levelComplete && !game.gameOver) {
+    evaluateWinConditionsFn(game, level, levelNumber, modifiers, callbacks);
   }
 
   ctx.frames += 1;

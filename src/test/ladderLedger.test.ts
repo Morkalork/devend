@@ -53,7 +53,19 @@ const ROWS: Row[] = DOC
   .slice(DOC.indexOf("| mechanic | family | status |"))
   .split("\n")
   .slice(2)                                  // header + separator
-  .filter(l => l.startsWith("|"))
+  // takeWhile, NOT filter. Filtering collected every pipe-delimited line in the
+  // REST OF THE DOCUMENT, so any later table with seven or more cells was read
+  // as ledger rows: a four-row table of kick values in the level 15 entry
+  // arrived here as mechanics called "1.05" and "1.25" and failed this file
+  // with "the ledger names a mechanic the engine does not". The ledger is one
+  // contiguous table and stops at the first line that is not part of it.
+  .reduce<string[]>((rows, line) => {
+    if (rows.at(-1) === null as unknown as string) return rows;
+    if (!line.startsWith("|")) { rows.push(null as unknown as string); return rows; }
+    rows.push(line);
+    return rows;
+  }, [])
+  .filter((l): l is string => l !== null)
   .map(l => l.split("|").map(c => c.trim()))
   .filter(c => c.length >= 7)
   .map(c => ({ mechanic: c[1], status: c[3], meet: c[4], use: c[5] }));
@@ -71,6 +83,7 @@ const LABEL: Record<string, string> = {
   "data stream": "Data stream", "ball gate": "Ball gate",
   "pinned mutator": "Pinned mutator", "bent shape": "Bent shape",
   "polygon shape": "Polygon",
+  "live outer walls": "Live outer walls",
 };
 
 describe("the ledger describes the maps that exist", () => {

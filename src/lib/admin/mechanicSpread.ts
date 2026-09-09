@@ -75,6 +75,14 @@ export const MECHANICS: Mechanic[] = [
   { key: "latch", label: "Latch", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && e.latchAfter !== undefined) },
   { key: "rotor", label: "Rotor", headline: true, detect: l => anyEntity(l, e => e.kind === "mover" && e.motion === "rotate") },
   { key: "gravityWell", label: "Gravity well", headline: true, detect: l => !!l.gravityWells?.length },
+  // Live outer walls: a board edge that kicks or aims instead of reflecting.
+  // Terrain rather than an object, like a fence ground, so it has no entity to
+  // find and no win clause of its own - but it changes every path on the board,
+  // and a mechanic the spread analysis cannot see is one the ledger cannot be
+  // held to. It was invisible here for the whole of levels 14 and 15.
+  { key: "boardEdges", label: "Live outer walls", headline: true,
+    detect: l => Object.values(l.boardEdges ?? {}).some(
+      e => !!e && (e.bearing !== undefined || (e.kick !== undefined && e.kick !== 1))) },
   { key: "coloredArea", label: "Colored area", headline: true, detect: l => !!l.coloredAreas?.length },
   { key: "circuit", label: "Terminals", headline: true, detect: l => !!l.circuit },
   { key: "charge", label: "Charge", headline: true, detect: l => !!l.charges?.length },

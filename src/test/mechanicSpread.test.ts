@@ -100,7 +100,11 @@ describe("no mechanic is introduced and then dropped", () => {
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    expect(singles.map(w => w.key).sort()).toEqual(["mirror", "mutator"]);
+    // `mutator` came off this list the way the note above says it would: level
+    // 15 is the second map to pin one, so it is developed rather than a
+    // one-off. Live outer walls never appear here because they debut on 14 and
+    // are used on 15, which is the pattern the rule is asking for.
+    expect(singles.map(w => w.key).sort()).toEqual(["mirror"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -166,9 +170,14 @@ describe("no single idea owns an act", () => {
     //
     // Take these off when act II is finished and the fractions have settled. If
     // they are still here at ten maps, they mean what the warning says.
+    // Both denominators moved with level 15, which is the sampling effect the
+    // note predicts working: 4 of 4 became 4 of 5 without a slab being touched,
+    // because the act got a map that has none. The numerators are frozen until
+    // an act II map wins on something other than `space + smashed`, and 15 is
+    // the first that does not (`space + locks`, having nothing to smash).
     expect(monopolies).toEqual([
-      "Breakable: on 4 of act II's 4 maps",
-      "Colored area: on 3 of act II's 4 maps",
+      "Breakable: on 4 of act II's 5 maps",
+      "Colored area: on 3 of act II's 5 maps",
     ]);
   });
 

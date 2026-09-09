@@ -20,7 +20,7 @@ import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { GrowingWall, Vector2, Ball } from "@/types/game";
 import type { LevelData, LevelConfig } from "@/types/level";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 // Zeroed modifiers: enough to init a real map (see superiorLock.test.ts).
 const MODS = {
@@ -138,9 +138,18 @@ describe("booting dormant balls", () => {
 });
 
 describe("config + rotation", () => {
-  it("the level-15 pilot ships terminals that each boot a dormant ball", () => {
-    const l8 = ENGINE_MAPS.find(l => l.id === "level-15")!;
-    expect(l8, "level-15 (Integration) is missing from map.yml").toBeDefined();
+  it("the retired terminals pilot ships terminals that each boot a dormant ball", () => {
+    // RETIRED, not ENGINE_MAPS. The terminals pilot was the OLD level 15, and
+    // the rebuilt level 15 is a bare tipping board with no circuit on it - so
+    // the id "level-15" now names two different maps and ENGINE_MAPS holds
+    // both, ladder first. A `find` by id therefore silently returned the wrong
+    // map and this test failed describing a level it was not written about.
+    //
+    // Addressed by SET rather than by id: this file is about the circuit
+    // engine, and the map that exercises it is the retired one until a rebuilt
+    // map places terminals again (the ledger says 17).
+    const l8 = RETIRED.find(l => l.id === "level-15")!;
+    expect(l8, "the retired terminals pilot is missing from retired-maps.yml").toBeDefined();
     expect(l8.circuit).toBeDefined();
     expect(l8.circuit!.terminals.length).toBeGreaterThanOrEqual(1);
     expect(l8.circuit!.radius).toBeGreaterThan(0);

@@ -1210,3 +1210,73 @@ levels:
         breakId: strut
         announce: game.beatDeadline
     balls: []
+
+  # Level 15 "Standup": the room turns, and every wall throws you back.
+  #
+  # A MEET map (MAP_DESIGN_GUIDELINES.md section 5): one idea, nothing else on
+  # the board to read it against. No obstacles at all, which is deliberate and
+  # is the reason this one is easy: emptiness is what makes the idea legible.
+  # The bite comes on the maps after it.
+  #
+  # SYMMETRIC EDGES, unlike 14. Every side does the same thing, so the map does
+  # not care which way it is pointing: it needs no neverRotates, and it is the
+  # first live-edge map that can be dealt in all four orientations. That
+  # symmetry is also what makes the mechanic honest under a turning pull, since
+  # boardEdges are world space and do NOT rotate with the pull. On 14 that had
+  # to be solved with a fixed pull; here it is solved by the map having no
+  # preferred direction to lose.
+  #
+  # 1.05 AND NOT MORE. Gravity here only steers, so it never takes speed off a
+  # ball, so a bouncy wall cannot "give it back": all it can do is add. Measured
+  # on this board with nothing else to hit, 1.12 has every ball pinned at the
+  # BOUNCER_MAX_SPEED_SCALE ceiling from 27s and 1.25 from 18s, and a map whose
+  # back half is a flat maximum has stopped saying anything. 1.05 climbs
+  # 1.00x -> 1.48x over 30s and never saturates, which turns the whole map into
+  # one long accelerando: a cut that was safe early is not safe late.
+  #
+  # SPACE PLUS A LOCK, which is the house convention for a map with nothing
+  # operable on it. ladderWins pins the maps whose content is terrain only -
+  # 1 to 4, and now this one - and its note says what such a map may honestly
+  # ask: "they ask for locks, which closes blind clearing, and that is all a map
+  # with nothing operable can honestly ask." Act I's four teaching maps all do
+  # exactly this. It also gives the tilt something to land on: trapping a ball
+  # while the pull keeps changing which wall it is heading for is the one thing
+  # here that a turn can genuinely spoil, because a fence in progress is the
+  # only thing on this board that is not already permanent.
+  #
+  # And it is still not `space + smashed`, which 11 through 14 all are: no
+  # obstacles means no breakables means nothing to smash.
+  - id: level-15
+    level: 15
+    sizeThreshold: 15
+    # 8, not the 6 this was authored with. Par is set from the bot's cut count
+    # divided by the ~2.8x it runs over par on every built map (it cuts on a
+    # timer, a player does not): 11 is 20.8/7, 12 is 22.5/8, 13 is 21.5/8, 14 is
+    # 22.3/8, and this map is 21.9. At 6 it was the one map in the act whose par
+    # did not describe it. The lock clause is what moved it, from 16.3 cuts to
+    # 21.9: trapping a ball while the pull keeps changing which wall it heads
+    # for costs fences.
+    expectedCuts: 8
+    points: 20
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, red]
+    mutator: tipping
+    boardEdges:
+      top:
+        kick: 1.05
+      bottom:
+        kick: 1.05
+      left:
+        kick: 1.05
+      right:
+        kick: 1.05
+    win:
+      require:
+        - kind: space
+          threshold: 15
+        - kind: locks
+          count: 1
+    entities: []
+    balls: []

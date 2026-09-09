@@ -89,20 +89,26 @@ describe("counting a block's clean-clearable maps", () => {
     expect(blockSpaceWinnableMaps(clean, 11)).toBe(BLOCK_SIZE);
   });
 
-  it("counts the real block 11, where nothing prices a lock at all", () => {
+  it("counts the real block 11, where one of the five prices a lock", () => {
     // Read off the LADDER rather than the engine set: block 11 is the one being
-    // rebuilt, and mixing four authored maps with a retired fifth measures a
-    // block nobody plays.
+    // rebuilt, and mixing authored maps with retired ones measures a block
+    // nobody plays.
     //
-    // Every act II map so far wins on space plus a smash, so none of them
-    // prices a lock and the whole block is clean-clearable - which is what
-    // keeps Ship It offerable here. The retired 14 was the exception (nothing
-    // operable on it, so a lock count was its only ask) and its replacement
-    // carries three slabs.
+    // 11 through 14 win on space plus a smash, which prices no lock. 15 is the
+    // exception and does it for a structural reason rather than a stylistic
+    // one: it is a bare board, so it has nothing to smash, and `space + locks`
+    // is what ladderWins says a map with nothing operable may honestly ask.
+    //
+    // Four is not a problem for Ship It, and this test is where that is
+    // checked rather than assumed: capOrRefuse drops a noLocks mission only
+    // below MIN_TOP_TIER, so a block with four clean maps still offers one,
+    // capped at four instead of five.
     const built = LADDER.filter(l => (l.level ?? 0) >= 11 && (l.level ?? 0) <= 15);
-    expect(built.length, "block 11 is empty: is this reading the ladder?")
-      .toBeGreaterThanOrEqual(4);
-    expect(blockSpaceWinnableMaps(LADDER, 11)).toBe(built.length);
+    expect(built.length, "block 11 is empty: is this reading the ladder?").toBe(5);
+    expect(blockSpaceWinnableMaps(LADDER, 11)).toBe(4);
+    const pricesALock = built.filter(l =>
+      (l.win?.require ?? []).some(c => c.kind === "locks"));
+    expect(pricesALock.map(l => l.level)).toEqual([15]);
   });
 });
 
