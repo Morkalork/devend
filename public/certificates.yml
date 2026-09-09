@@ -13,9 +13,17 @@ certificates:
     name: Signing Bonus
     description: Start every run with overtime hours already banked.
     unlockType: always
-    # Three levels of +10. The first is the one that matters: 10h is most of a
-    # first upgrade, so the opening shop is a real decision instead of a shelf
-    # you cannot afford. Counted in the run score like the Head Start certs.
+    # Three levels of +10, and they no longer buy what this note used to claim.
+    # "10h is most of a first upgrade" was true against a 30h shelf; the pricing
+    # anchor has since been rebuilt against what a map actually pays (see
+    # upgrades.yml `anchorHours`), so a first hire is 35h and a formula Junior
+    # 133h. All three levels together are now less than one first hire.
+    #
+    # Left at 10 on purpose rather than scaled quietly: this is a between-runs
+    # meta effect bought in a DIFFERENT currency (Certificate Hours), so it is
+    # its own balance question rather than part of the per-map one. Flagged
+    # here so the next person reads a true sentence.
+    # Counted in the run score like the Head Start certs.
     levels:
       - cost: 4
         effect: { type: startingOvertime, value: 10 }

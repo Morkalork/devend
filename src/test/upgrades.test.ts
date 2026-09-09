@@ -5,7 +5,7 @@ import { calculateScore } from "@/lib/scoring";
 import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelData } from "@/types/level";
-import { buildLevelPoints, mergePricing, computeUpgradeCost, inflationForLevel } from "@/lib/upgradePricing";
+import { mergePricing, computeUpgradeCost, inflationForLevel } from "@/lib/upgradePricing";
 
 // Read the upgrade catalogue straight from the YAML source of truth so this
 // suite guards the data, not a hand-maintained copy.
@@ -14,16 +14,11 @@ const upgradeDoc = yaml.load(
 ) as UpgradeData;
 const upgrades = upgradeDoc.upgrades;
 
-// Pricing is derived from level points + tier factors (see upgradePricing.ts),
-// so recompute effective costs the same way the loader does to guard them.
+// A price is a fraction of what one good map pays (see upgradePricing.ts), so
+// recompute effective costs the same way the loader does to guard them.
 const pricing = mergePricing(upgradeDoc.pricing);
-const levelPoints = buildLevelPoints(
-  (yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData).levels,
-);
 const effectiveCost = (u: UpgradeConfig): number | null =>
-  typeof u.cost === "number"
-    ? u.cost
-    : computeUpgradeCost(u.unlockLevel ?? 1, u.tier, levelPoints, pricing);
+  typeof u.cost === "number" ? u.cost : computeUpgradeCost(u.tier, pricing);
 
 const byId = new Map(upgrades.map(u => [u.id, u] as const));
 const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
@@ -216,33 +211,6 @@ describe("pricing", () => {
     expect(unpriced).toEqual([]);
   });
 
-  it("keeps the catalogue scarce: total cost exceeds a perfect run's income", () => {
-    // Issue #43: per-map overtime is flat and hard-capped at basePoints ×
-    // overtimeCapHeadroom (lock/push bonuses fold in under that cap). So the
-    // most a flawless ace can earn is levels × cap. The catalogue must cost more
-    // than that, so no one can ever buy it all. This auto-scales with the level
-    // count and the flat base, so it never needs a manual bump.
-    const OVERTIME_CAP_HEADROOM = 4.0; // mirrors scoring-config.yml
-    const flatBase = [...levelPoints.values()][0];
-    const perMapCap = flatBase * OVERTIME_CAP_HEADROOM;
-    const aceFullRunIncome = levelPoints.size * perMapCap;
-    const total = upgrades
-      .filter(u => !u.ascensionOnly)
-      .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
-    expect(total).toBeGreaterThan(aceFullRunIncome);
-  });
-
-  it("keeps Golden Parachute the single most expensive upgrade", () => {
-    // Runs start with no free Continue; the buyable one must stay the priciest
-    // offer in the catalogue (design decision, not formula-derived).
-    const parachute = effectiveCost(byId.get("golden_parachute")!)!;
-    const pricier = upgrades
-      .filter(u => u.id !== "golden_parachute" && !u.ascensionOnly)
-      .filter(u => (effectiveCost(u) ?? 0) >= parachute)
-      .map(u => u.id);
-    expect(pricier).toEqual([]);
-  });
-
   it("is monotonic within each family: later tiers never cost less", () => {
     const families = new Map<string, UpgradeConfig[]>();
     for (const u of upgrades) {
@@ -263,72 +231,128 @@ describe("pricing", () => {
   });
 });
 
-describe("lock-centric economy", () => {
-  // The economy's core rule: locking balls is the income. A clear that locks
-  // nothing must not fund even the cheapest shop offer that round (unless the
-  // player had hours saved), while lockValue makes locking close that gap.
+/**
+ * What a map pays, against what the shop charges.
+ *
+ * Reported as "I could afford way too much during the first maps", and the
+ * cause was a whole block of tests below this line agreeing with the wrong
+ * model. They priced a map as `flatBase + lockValue` - the flat base plus a
+ * lock bonus - which is what income WAS before the Performance Review. Income
+ * is now six axes paid in absolute hours, `points: 20` is a rounding error
+ * beside them, and prices were still derived from it. Every assertion passed
+ * the whole time, because they were checking the formula against itself.
+ *
+ * So income here is measured by running calculateScore, the function the game
+ * actually pays out with. If the scoring model changes again, these numbers
+ * move with it and the pricing has to follow - which is the property the old
+ * block did not have.
+ */
+describe("what a map pays against what the shop charges", () => {
   const scoringDoc = yaml.load(
     readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
   ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; shipEarly: { maxPercent: number } } };
   const scoring = scoringDoc.scoring;
 
-  it("a flawless no-lock clear cannot afford the cheapest FORMULA-PRICED upgrade", () => {
-    const flatBase = [...levelPoints.values()][0];
-    // Under the axis economy this is the whole of it. Delivery gates Tempo,
-    // Thrift and Greed, so a clear that seals nothing banks no axis at all and
-    // takes home its flat base, exactly as the lock-centric rule requires.
-    const bestNoLockIncome = calculateScore(1, 8, 0, 30, flatBase, {
-      shipEarlyPercent: scoring.shipEarly.maxPercent, greedBonus: 100,
-      locks: { totalCapacity: 48, lockedCapacity: 0, premiumEarned: 0, premiumAvailable: 48 },
-    }).levelScore;
-    expect(bestNoLockIncome, "a bare clear must be worth its base alone").toBe(flatBase);
-    // The guardrail is on the lock-priced economy proper. The three level-1
-    // "first hire" Juniors carry an explicit discounted cost as a deliberate
-    // on-ramp (a great clear, lock or not, can grab one); they're excluded here.
-    const cheapestFormula = Math.min(
-      ...upgrades
-        .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
-        .map(u => effectiveCost(u) ?? Infinity),
-    );
-    expect(bestNoLockIncome).toBeLessThan(cheapestFormula);
+  /** A map's payout at a given play quality, through the real scoring path. */
+  const income = (o: {
+    cuts: number; par: number; remaining: number; threshold: number;
+    capacity: number; locked: number; premium: number;
+    engagement: number; shipEarly: number;
+  }): number => calculateScore(o.cuts, o.par, o.remaining, o.threshold, 20, {
+    locks: {
+      totalCapacity: o.capacity, lockedCapacity: o.locked,
+      premiumEarned: o.premium, premiumAvailable: o.capacity,
+    },
+    engagement: { ratio: o.engagement, offered: o.engagement > 0 },
+    shipEarlyPercent: o.shipEarly,
+  }).levelScore;
+
+  // Four runs of the same map, from flawless to hopeless. Level 1's shape (par
+  // 3, clear to 40%, one x1 ball) but the numbers barely move across the
+  // ladder: the axes are absolute, so every map's ceiling is the same.
+  const FLAWLESS = income({ cuts: 1, par: 3, remaining: 0, threshold: 40, capacity: 12, locked: 12, premium: 12, engagement: 1, shipEarly: 30 });
+  const GOOD     = income({ cuts: 2, par: 3, remaining: 30, threshold: 40, capacity: 12, locked: 12, premium: 7, engagement: 0.7, shipEarly: 20 });
+  const ORDINARY = income({ cuts: 3, par: 3, remaining: 40, threshold: 40, capacity: 12, locked: 12, premium: 0, engagement: 0.3, shipEarly: 0 });
+  const SCRAPPY  = income({ cuts: 5, par: 3, remaining: 40, threshold: 40, capacity: 12, locked: 6, premium: 0, engagement: 0, shipEarly: 0 });
+
+  const cheapestFormula = Math.min(
+    ...upgrades
+      .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
+      .map(u => effectiveCost(u) ?? Infinity),
+  );
+
+  it("has the four play qualities in the order they should be", () => {
+    // The guard on the guard: if these ever collapse together, every threshold
+    // below becomes vacuous and would keep passing.
+    expect(FLAWLESS).toBeGreaterThan(GOOD);
+    expect(GOOD).toBeGreaterThan(ORDINARY);
+    expect(ORDINARY).toBeGreaterThan(SCRAPPY);
   });
 
-  it("locking pays enough to matter: one plain lock covers most of the base", () => {
-    const flatBase = [...levelPoints.values()][0];
-    expect(scoring.lockValue).toBeGreaterThanOrEqual(flatBase / 2);
+  it("prices the cheapest formula tier at about one good map", () => {
+    // THE ratio the complaint was about. It was 40h against a 124h flawless
+    // map: three cards a map, so the shop was a formality rather than a choice.
+    // A band rather than a number, because the anchor is a design dial and this
+    // should fail when it drifts, not when it is tuned.
+    expect(cheapestFormula / GOOD).toBeGreaterThan(0.8);
+    expect(cheapestFormula / GOOD).toBeLessThan(1.4);
   });
 
-  // The map-1 teaching beat: a single normal lock opens the store. A sloppy
-  // (roomy-pocket) x1 lock plus the flat base must afford a discounted level-1
-  // "first hire", while the FORMULA-priced Juniors still need a SUPERIOR lock -
-  // so the sloppy-vs-tight skill gap persists for the economy proper.
-  it("map 1: a normal lock buys a discounted first-hire; formula Juniors still need a superior lock", () => {
-    const flatBase = [...levelPoints.values()][0];
-    const sloppyClear = flatBase + scoring.lockValue;
-    const superiorClear = flatBase + Math.round(scoring.lockValue * scoring.lockQuality.superiorMultiplier);
+  it("makes a scrappy map buy nothing and a flawless one buy one thing", () => {
+    expect(SCRAPPY, "a bad map still opens the shop").toBeLessThan(cheapestFormula);
+    expect(ORDINARY, "an ordinary clear buys a formula card outright").toBeLessThan(cheapestFormula);
+    expect(FLAWLESS, "a flawless map cannot afford anything").toBeGreaterThan(cheapestFormula);
+    // One thing and change toward the next, not two things. This is the line
+    // the complaint was about: at the old prices a flawless map bought four.
+    expect(FLAWLESS, "a flawless map buys two of the cheapest").toBeLessThan(cheapestFormula * 2);
+  });
 
-    // The discounted on-ramp: cheapest explicit-cost Junior unlocking at level 1.
-    const cheapestFirstHire = Math.min(
-      ...upgrades
-        .filter(u => !u.ascensionOnly && typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1)
-        .map(u => u.cost as number),
-    );
-    expect(sloppyClear).toBeGreaterThanOrEqual(cheapestFirstHire);
+  it("keeps the level-1 first hires openable on an ordinary map", () => {
+    // The opening shop should not be empty. These four are the weakest
+    // upgrades in the game and the only discounted ones, so they are the
+    // on-ramp rather than a hole in the economy.
+    const firstHires = upgrades.filter(u =>
+      !u.ascensionOnly && typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1);
+    expect(firstHires.length, "the level-1 on-ramp is gone").toBeGreaterThan(0);
+    const cheapestHire = Math.min(...firstHires.map(u => u.cost as number));
+    expect(ORDINARY).toBeGreaterThanOrEqual(cheapestHire);
+    expect(cheapestHire, "the on-ramp is priced like the rest of the shelf")
+      .toBeLessThan(cheapestFormula / 2);
+  });
 
-    // The lock-priced economy still gates on quality.
-    const cheapestFormula = Math.min(
-      ...upgrades
-        .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
-        .map(u => effectiveCost(u) ?? Infinity),
-    );
-    expect(sloppyClear).toBeLessThan(cheapestFormula);
-    expect(superiorClear).toBeGreaterThanOrEqual(cheapestFormula);
+  it("keeps the catalogue unaffordable in full, even for an ace", () => {
+    // No run may buy everything. Measured against a flawless run on every map
+    // rather than against the old cap, which no longer binds anything.
+    const maps = (yaml.load(
+      readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+    ) as LevelData).levels.length;
+    const total = upgrades
+      .filter(u => !u.ascensionOnly)
+      .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
+    expect(total).toBeGreaterThan(FLAWLESS * maps);
+  });
+
+  it("keeps Golden Parachute the single most expensive upgrade", () => {
+    // Runs start with no free Continue; the buyable one must stay the priciest
+    // offer in the catalogue (design decision, not formula-derived). It is an
+    // explicit cost, so it does NOT move with the anchor and has to be re-set
+    // by hand whenever the anchor is - which is what this catches.
+    const parachute = effectiveCost(byId.get("golden_parachute")!)!;
+    const pricier = upgrades
+      .filter(u => u.id !== "golden_parachute" && !u.ascensionOnly)
+      .filter(u => (effectiveCost(u) ?? 0) >= parachute)
+      .map(u => u.id);
+    expect(pricier).toEqual([]);
   });
 
   it("superior-lock tuning is sane: a real bar and a real payoff", () => {
     expect(scoring.lockQuality.superiorThresholdFraction).toBeGreaterThan(0);
     expect(scoring.lockQuality.superiorThresholdFraction).toBeLessThan(1);
     expect(scoring.lockQuality.superiorMultiplier).toBeGreaterThanOrEqual(1.5);
+  });
+
+  it("still pays enough per lock for locking to be the income", () => {
+    expect(scoring.lockValue).toBeGreaterThanOrEqual(10);
   });
 });
 

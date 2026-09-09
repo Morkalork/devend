@@ -40,13 +40,16 @@ const LEVEL_POINTS = new Map(
   UPGRADES.map(u => [u.unlockLevel ?? 1, 20] as const),
 );
 const effective = (u: Upgrade) =>
-  resolveUpgradeCost(u as never, LEVEL_POINTS, DEFAULT_UPGRADE_PRICING)!;
+  resolveUpgradeCost(u as never, DEFAULT_UPGRADE_PRICING)!;
 
 describe("the surcharge on the opening pick", () => {
   it("charges 20% more for Runtime Optimisation", () => {
     const ro = byId.get("runtime_optimisation_junior")!;
     expect(ro.costMultiplier).toBe(1.2);
-    expect(effective(ro)).toBe(36);
+    // Derived from the first-hire price rather than hardcoded: the surcharge is
+    // the claim, and a literal here would have to be re-typed every time the
+    // on-ramp moves (it just went 30 -> 35 with the pricing anchor).
+    expect(effective(ro)).toBe(Math.round((ro.cost as number) * 1.2));
   });
 
   it("leaves the rest of the opening shelf alone", () => {
@@ -75,7 +78,7 @@ describe("the surcharge on the opening pick", () => {
     // tier formula gives a level-1 Junior. It should read as "this one is
     // dearer", not as an outlier from a different economy.
     const levelPoints = new Map([[1, 20]]);
-    const formula = computeUpgradeCost(1, "Junior" as never, levelPoints, DEFAULT_UPGRADE_PRICING)!;
+    const formula = computeUpgradeCost("Junior" as never, DEFAULT_UPGRADE_PRICING)!;
     expect(effective(byId.get("runtime_optimisation_junior")!)).toBeLessThan(formula);
   });
 });

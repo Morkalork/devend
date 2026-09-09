@@ -1,10 +1,7 @@
 # Upgrade pricing (overtime economy rebalance).
-# Base-game costs are computed at load time from the unlock level's base
-# points x a tier factor (see src/lib/upgradePricing.ts):
-#   cost = max(minCost, round(basePoints(unlockLevel) * tierFactor[tier]))
-# Prices therefore scale automatically as new maps/upgrades are added.
-# An explicit `cost:` on an upgrade overrides the formula (used for the
-# ascension trio, whose post-L30 economy is tuned separately).
+# A price is a FRACTION OF WHAT ONE GOOD MAP PAYS (see src/lib/upgradePricing.ts):
+#   cost = max(minCost, round(anchorHours * tierFactor[tier]))
+# An explicit `cost:` on an upgrade overrides the formula.
 #
 # Build archetypes (`tags`): every upgrade carries one or two tags — lock,
 # freeze, bank, tempo, risk, safety. The shop weights its random offers toward
@@ -12,22 +9,45 @@
 # as chips. See UpgradeTag in src/types/upgrade.ts.
 pricing:
   minCost: 8
+  # What one GOOD map pays, in overtime hours: the yardstick every price below
+  # is a fraction of.
+  #
+  # Measured through calculateScore itself, per play quality, and the same on
+  # every map because the six scoring axes are absolute hours rather than a
+  # multiple of `points`:
+  #
+  #   flawless and blazing                                             184h
+  #   good (all locked, mostly tight, quick, most of the map operated)  136h
+  #   ordinary clear                                                     61h
+  #   scrappy, over par                                                  23h
+  #
+  # 190 puts the cheapest tier (0.70 of it, 133h) at almost exactly a good map:
+  # a good map buys one thing, a flawless map buys one thing and banks half of
+  # the next, an ordinary clear buys nothing but a first hire, and a scrappy one
+  # buys nothing at all. It replaces an anchor of 20 (a map's `points`), which
+  # is the flat base the scoring model stopped paying with when the Performance
+  # Review landed: price was pinned to 20 while income ran past 130, and the
+  # whole act I shelf cost less than one map.
+  anchorHours: 190
   # Market rates: effective prices multiply by this per completed 5-level
-  # assignment block (levels 1-5 at face value, 6-10 x1.35, 11-15 x1.82...).
-  # Keeps the flat per-map income scarce late-run. 1 disables inflation.
-  blockInflation: 1.35
-  # Factors are tuned against the lock-centric economy: base points is 20, so
-  # a formula-priced Junior costs 40h. A no-lock clear (20h) can never afford
-  # one. EXCEPTION: the three level-1 "first hire" Juniors carry an explicit
-  # cost: 30 so a single normal lock on map 1 (20 + 12 = 32h) can buy one -
-  # the opening store shouldn't require a superior lock. The sloppy-vs-superior
-  # gap still gates the pricier (formula-40h+) hires on later maps.
+  # assignment block (levels 1-5 at face value, 6-10 x1.15, 11-15 x1.32...).
+  # Softer than the 1.35 it replaces because the base prices it compounds on are
+  # now ~4.5x larger: 1.35 reached x2.46 by level 15, which would have put the
+  # cheapest card past what any map can pay. 1 disables inflation.
+  blockInflation: 1.15
+  # Fractions of one good map. The cheapest tier IS a good map, so a shop visit
+  # is a choice between buying one thing and saving for a better one.
+  #
+  # EXCEPTION: the four level-1 "first hire" Juniors carry an explicit cost: 35
+  # so an ORDINARY map-1 clear still opens the store. The opening shop should
+  # not be empty, and they are the weakest upgrades in the game, capped at four
+  # for the whole run.
   tierFactor:
-    Junior: 2.0
-    Senior: 2.7
-    Principal: 3.7
-    Architect: 4.8
-    Wizard: 6.0
+    Junior: 0.70
+    Senior: 0.95
+    Principal: 1.30
+    Architect: 1.70
+    Wizard: 2.10
 
 # Set bonuses: auto-granted for free while the player owns `threshold`
 # upgrades of a tag. One per archetype, giving every build direction a goal.
@@ -78,7 +98,7 @@ upgrades:
     description: Reduce ball speed by 5%.
     # First-hire discount: the level-1 Juniors are priced so a single normal
     # lock on map 1 (32h) can afford one, instead of needing a superior lock.
-    cost: 30
+    cost: 35
     unlockLevel: 1
     icon: clock
     # +20%: it is the best opening buy in the game AND the door to Load
@@ -142,7 +162,7 @@ upgrades:
     description: Reduce ball size by 5%.
     # First-hire discount (see runtime_optimisation_junior): affordable with a
     # single normal lock on map 1.
-    cost: 30
+    cost: 35
     unlockLevel: 1
     icon: memory
     tags: [safety]
@@ -204,7 +224,7 @@ upgrades:
     description: Increase fence generation speed by 10%.
     # First-hire discount (see runtime_optimisation_junior): affordable with a
     # single normal lock on map 1.
-    cost: 30
+    cost: 35
     unlockLevel: 1
     icon: fast-forward
     tags: [tempo]
@@ -465,7 +485,11 @@ upgrades:
   # GOLDEN PARACHUTE (Continue)
   # Runs no longer start with a free Continue - this is the buyable one.
   # Deliberately the single most expensive upgrade in the game (explicit cost
-  # override; the runner-up is MicroManager at 200). A free Continue is also
+  # override; the runner-up is MicroManager at 540). Both were re-scaled with
+  # the anchor: they sat at 250 and 200 against a formula ceiling of 180, and
+  # that ceiling is now 485 (a choiceGroup Architect), so keeping the numbers
+  # would have quietly demoted the two upgrades that exist to be the priciest.
+  # Same ratios to the ceiling as before: x1.39 and x1.11. A free Continue is also
   # granted on completing level 20 (see useGameSession FREE_CONTINUE_LEVEL);
   # the Insurance Policy set bonus and certificates remain the other sources.
   # ===============================
@@ -476,7 +500,7 @@ upgrades:
     description: "Start each run with an extra Continue, and another at six other safety upgrades."
     unlockLevel: 7
     icon: life-buoy
-    cost: 250
+    cost: 670
     # A golden parachute IS a severance package, so you do not get one without
     # the other. This was a Wizard-tier root reachable from nothing at all -
     # the capstone tier hanging off no ladder - and its unlock moved 5 -> 7 so
@@ -628,7 +652,7 @@ upgrades:
       - runtime_optimisation_senior
     icon: sliders
     tags: [lock]
-    cost: 200
+    cost: 540
     modifiers:
       microManagerPerLock: 0.01
 
@@ -1967,7 +1991,7 @@ upgrades:
     # level x tier formula prices a level-1 Junior at 40; those four are set to
     # 30 so the first shop is affordable at all, and a new arrival on that shelf
     # has to join them or it is simply the expensive one for no stated reason.
-    cost: 30
+    cost: 35
     icon: rocket
     tags: [tempo]
     modifiers:

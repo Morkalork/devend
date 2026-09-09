@@ -142,11 +142,21 @@ export interface UpgradeScaling {
 }
 
 /**
- * Pricing config for the formula that derives upgrade costs from level points.
+ * Pricing config for the formula that derives upgrade costs.
  * Lives under `pricing:` in public/upgrades.yml; see src/lib/upgradePricing.ts.
  */
 export interface UpgradePricing {
   minCost: number;
+  /**
+   * What one good map pays, in overtime hours: the yardstick every price is a
+   * fraction of.
+   *
+   * Prices used to be derived from a level's `points`, which is 20 on every
+   * map and is now a rounding error beside the six scoring axes that actually
+   * pay a player (up to 164h). See upgradePricing.ts.
+   */
+  anchorHours: number;
+  /** Price as a fraction of `anchorHours`: 1.0 is one good map's income. */
   tierFactor: Record<UpgradeTier, number>;
   /** Price multiplier applied per completed 5-level assignment block ("market
    *  rates rise each contract"). 1 disables inflation. */

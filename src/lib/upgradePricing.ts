@@ -1,34 +1,58 @@
 /**
- * Upgrade pricing — derives an upgrade's overtime cost from the base points of
- * the level it unlocks at, times a per-tier factor:
+ * Upgrade pricing — an upgrade's cost is a fraction of what one good map pays:
  *
- *   cost = max(minCost, round(basePoints(unlockLevel) * tierFactor[tier]))
+ *   cost = max(minCost, round(anchorHours * tierFactor[tier]))
  *
- * Because both player income and upgrade cost scale with a level's `points`,
- * the scarcity ratio stays constant as maps are added — new upgrades only need
- * an `unlockLevel` + `tier` and get priced automatically (no re-tuning). The
- * factors live in public/upgrades.yml under `pricing:` so they're designer-
- * tunable; the defaults below are the fallback if that block is absent.
+ * ── Why this stopped being derived from level points ───────────────────────
  *
- * An explicit `cost:` on an upgrade overrides this formula entirely (used for
- * the ascension trio, whose post-L30 economy is tuned separately).
+ * It used to be `basePoints(unlockLevel) * tierFactor`, on the stated reasoning
+ * that "both player income and upgrade cost scale with a level's `points`, so
+ * the scarcity ratio stays constant". That was true when income was the flat
+ * map base plus a lock bonus. It stopped being true the day the Performance
+ * Review landed: income is now six axes paid in ABSOLUTE hours (delivery 30,
+ * craft 30, engagement 35, tempo 24, greed 25, thrift 20), and the flat base is
+ * a rounding error beside them. `points` is 20 on all 15 maps; a strong run
+ * banks 124h through the axes alone, and more with the win premium on top.
+ *
+ * So price was pinned to 20 while income ran at 120+, and the whole act I shelf
+ * cost less than one map. Reported as "I could afford way too much during the
+ * first maps"; measured at 39-88h per map from the bot and 159h from a player
+ * on map 1, against a 30h cheapest card.
+ *
+ * The axes are absolute, which is what makes ONE anchor correct: every map's
+ * ceiling is the same at levels 1, 5, 10 and 15 alike, so a per-level
+ * price would be a distinction the scoring model does not make. Depth is priced
+ * by `blockInflation` below instead, which is the honest place for it.
+ *
+ * ANCHORED ON A GOOD RUN, not a perfect one. Measured through calculateScore
+ * itself: flawless 184h, good 136h, ordinary 61h, scrappy 23h. 190 puts the
+ * cheapest tier at 133h, so a good map buys one thing and a flawless one buys
+ * one thing and banks half the next. Anchoring on the ceiling would price out
+ * everyone who is not perfect; anchoring on an ordinary clear is what produced
+ * the complaint.
+ *
+ * An explicit `cost:` on an upgrade overrides the formula entirely (the four
+ * level-1 first hires, the two hand-priced specials, and the ascension trio
+ * whose post-L30 economy is tuned separately).
  */
 import { UpgradeTier, UpgradePricing } from '@/types/upgrade';
-import { LevelConfig } from '@/types/level';
 
 export const DEFAULT_UPGRADE_PRICING: UpgradePricing = {
   minCost: 8,
-  // Mirrors public/upgrades.yml: factors are tuned against the lock-centric
-  // economy (base points 20), so a Junior costs 40h - more than a no-lock
-  // clear pays, about what a well-locked map pays.
+  anchorHours: 190,
+  // Mirrors public/upgrades.yml. Fractions of one good map: the cheapest tier
+  // is a map, the top tier a little over two.
   tierFactor: {
-    Junior: 2.0,
-    Senior: 2.7,
-    Principal: 3.7,
-    Architect: 4.8,
-    Wizard: 6.0,
+    Junior: 0.70,
+    Senior: 0.95,
+    Principal: 1.30,
+    Architect: 1.70,
+    Wizard: 2.10,
   },
-  blockInflation: 1.35,
+  // Softer than the 1.35 it replaces, because the base prices it compounds on
+  // are now ~3x what they were: 1.35 reached x2.46 by level 15 and would have
+  // put the cheapest card past what any map can pay.
+  blockInflation: 1.15,
 };
 
 /** Merge a parsed `pricing:` block over the defaults (per-field, tier-by-tier). */
@@ -36,6 +60,10 @@ export function mergePricing(parsed?: Partial<UpgradePricing>): UpgradePricing {
   return {
     minCost:
       typeof parsed?.minCost === 'number' ? parsed.minCost : DEFAULT_UPGRADE_PRICING.minCost,
+    anchorHours:
+      typeof parsed?.anchorHours === 'number' && parsed.anchorHours > 0
+        ? parsed.anchorHours
+        : DEFAULT_UPGRADE_PRICING.anchorHours,
     tierFactor: { ...DEFAULT_UPGRADE_PRICING.tierFactor, ...(parsed?.tierFactor ?? {}) },
     blockInflation:
       typeof parsed?.blockInflation === 'number' && parsed.blockInflation > 0
@@ -78,57 +106,22 @@ export function inflationForLevel(
   return Math.pow(rate, blocks);
 }
 
-/** Build a logical-level -> base points lookup (first variant per level wins). */
-export function buildLevelPoints(
-  levels: Pick<LevelConfig, 'level' | 'points'>[],
-): Map<number, number> {
-  const points = new Map<number, number>();
-  for (const lvl of levels) {
-    if (typeof lvl?.level === 'number' && typeof lvl?.points === 'number' && !points.has(lvl.level)) {
-      points.set(lvl.level, lvl.points);
-    }
-  }
-  return points;
-}
-
 /**
- * Base points for an unlock level, clamping out-of-range levels to the nearest
- * defined one (so a future upgrade gated past the last map still prices off the
- * highest level, and any below the first prices off the lowest). Returns null
- * only when no level points are known at all.
- */
-export function basePointsForLevel(
-  levelPoints: Map<number, number>,
-  unlockLevel: number,
-): number | null {
-  if (levelPoints.size === 0) return null;
-  if (levelPoints.has(unlockLevel)) return levelPoints.get(unlockLevel)!;
-  const levels = [...levelPoints.keys()].sort((a, b) => a - b);
-  let chosen: number | null = null;
-  for (const lvl of levels) {
-    if (lvl <= unlockLevel) chosen = lvl;
-    else break;
-  }
-  if (chosen === null) chosen = levels[0]; // unlockLevel below the lowest defined level
-  return levelPoints.get(chosen)!;
-}
-
-/**
- * Compute the formula cost for an upgrade. Returns null when it can't be priced
- * (no level points known, or the tier has no factor) so the caller can surface
- * a clear configuration error instead of silently using a wrong number.
+ * The formula cost for a tier. Returns null when the tier has no factor, so the
+ * caller can surface a configuration error instead of silently charging wrong.
+ *
+ * No level argument any more, and that is the change rather than a tidy-up: the
+ * scoring axes are absolute, so every map's ceiling is identical and a price
+ * that varied by unlock level would be asserting a difference the economy does
+ * not have. Depth is priced by inflation at purchase time.
  */
 export function computeUpgradeCost(
-  unlockLevel: number,
   tier: UpgradeTier,
-  levelPoints: Map<number, number>,
   pricing: UpgradePricing = DEFAULT_UPGRADE_PRICING,
 ): number | null {
-  const base = basePointsForLevel(levelPoints, unlockLevel);
-  if (base === null) return null;
   const factor = pricing.tierFactor[tier];
   if (typeof factor !== 'number') return null;
-  return Math.max(pricing.minCost, Math.round(base * factor));
+  return Math.max(pricing.minCost, Math.round(pricing.anchorHours * factor));
 }
 
 /**
@@ -146,13 +139,12 @@ export function computeUpgradeCost(
  * left every assertion green. One reading, or the guard is decorative.
  */
 export function resolveUpgradeCost(
-  upgrade: { cost?: number; unlockLevel?: number; tier: UpgradeTier; costMultiplier?: number; choiceGroup?: string },
-  levelPoints: Map<number, number>,
+  upgrade: { cost?: number; tier: UpgradeTier; costMultiplier?: number; choiceGroup?: string },
   pricing: UpgradePricing = DEFAULT_UPGRADE_PRICING,
 ): number | null {
   let cost = typeof upgrade.cost === 'number'
     ? upgrade.cost
-    : computeUpgradeCost(upgrade.unlockLevel ?? 1, upgrade.tier, levelPoints, pricing);
+    : computeUpgradeCost(upgrade.tier, pricing);
   if (cost === null) return null;
   if (typeof upgrade.costMultiplier === 'number') cost = Math.round(cost * upgrade.costMultiplier);
   if (upgrade.choiceGroup) cost = Math.round(cost * 1.5);

@@ -11,7 +11,7 @@ import { UpgradeConfig, UpgradeData, UpgradeTier, TagSetsConfig } from '@/types/
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { prerequisitesMet, choiceGroups } from '@/lib/upgradeUnlock';
 import { LevelData } from '@/types/level';
-import { buildLevelPoints, mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
+import { mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -94,7 +94,6 @@ export function useUpgradeManager() {
       }
 
       const mapData = yaml.load(mapText) as LevelData;
-      const levelPoints = buildLevelPoints(mapData?.levels ?? []);
       const pricing = mergePricing(data.pricing);
       // Publish for inflationForLevel (the shop's market-rate multiplier).
       setLivePricing(pricing);
@@ -114,7 +113,7 @@ export function useUpgradeManager() {
         // One reading of the price, shared with everything that quotes it.
         // See resolveUpgradeCost: explicit or derived, then the deliberate
         // costMultiplier, then the choice surcharge.
-        const resolved = resolveUpgradeCost(upgrade, levelPoints, pricing);
+        const resolved = resolveUpgradeCost(upgrade, pricing);
         if (resolved === null) {
           throw new Error(
             `Upgrade "${upgrade.id}" has no explicit cost and could not be priced (missing level points or tier factor).`,
