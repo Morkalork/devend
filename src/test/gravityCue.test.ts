@@ -220,6 +220,9 @@ function pathPoints(node: Container): number[] {
 
 const BOARD = { left: 100, top: 200, width: 800, height: 800, scale: 1 };
 
+/** The renderer's own untilted world-to-screen, so the layer draws where it would. */
+const W2S = (x: number, y: number) => ({ x: BOARD.left + x, y: BOARD.top + y });
+
 function state(seconds: number, withGravity: boolean): CanvasGameState {
   return {
     boardRect: { ...BOARD },
@@ -238,7 +241,7 @@ describe("the cue reaches the screen", () => {
 
   function ops(seconds: number, withGravity: boolean): number {
     const layer = new ChromeLayer();
-    layer.sync(state(seconds, withGravity), light, 1, 1000, 20);
+    layer.sync(state(seconds, withGravity), light, W2S, 1, 1000, 20);
     return drawnOps(layer.container);
   }
 
@@ -254,7 +257,7 @@ describe("the cue reaches the screen", () => {
     // The whole feature has to be free on every map that is not a gravity map.
     expect(ops(5, true)).toBeGreaterThan(ops(5, false));
     const bare = new ChromeLayer();
-    bare.sync(state(5, false), light, 1, 1000, 20);
+    bare.sync(state(5, false), light, W2S, 1, 1000, 20);
     // Its own Graphics exists but issued nothing.
     expect(cueOps(5)).toBeGreaterThan(0);
   });
@@ -287,7 +290,7 @@ describe("the cue reaches the screen", () => {
     // that forgets to open its own subpath draws a beam from (0,0) across the
     // whole board. That has happened in this renderer before.
     const layer = new ChromeLayer();
-    layer.sync(state(5, true), light, 1, 1000, 20);
+    layer.sync(state(5, true), light, W2S, 1, 1000, 20);
     const pts = pathPoints(layer.container);
     expect(pts.length, "no path geometry to check").toBeGreaterThan(0);
     for (let i = 0; i + 1 < pts.length; i += 2) {

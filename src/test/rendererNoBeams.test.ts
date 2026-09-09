@@ -222,7 +222,7 @@ describe("no layer of the renderer draws across the board", () => {
       run("walls", () => walls.sync(game, light, shadowPlane, w2s, 1));
       run("fx", () => fx.sync(game, light, PREDICTING, w2s, 1, 0));
       run("balls", () => balls.sync(game, light, shadowPlane, w2s, 1, 0));
-      run("chrome", () => chrome.sync(game, light, 1, 0, 9));
+      run("chrome", () => chrome.sync(game, light, w2s, 1, 0, 9));
 
       const named: Array<[string, Container | Graphics]> = [
         ["shadowPlane", shadowPlane],
@@ -312,7 +312,7 @@ describe("no layer of the renderer draws across the board", () => {
       run("walls", () => walls.sync(game, light, shadowPlane, w2s, 1));
       run("fx", () => fx.sync(game, light, PREDICTING, w2s, 1, 0));
       run("balls", () => balls.sync(game, light, shadowPlane, w2s, 1, 0));
-      run("chrome", () => chrome.sync(game, light, 1, 0, 9));
+      run("chrome", () => chrome.sync(game, light, w2s, 1, 0, 9));
       expect(failed.join(",") || "none", `sync failures @${seconds}s`).toBe("none");
 
       const named: Array<[string, Container | Graphics]> = [

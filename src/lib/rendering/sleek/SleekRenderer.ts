@@ -291,7 +291,7 @@ export class SleekRenderer {
     this.walls.sync(game, light, this.shadowPlane, w2s, scale);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
     this.balls.sync(game, light, this.shadowPlane, w2s, scale, now);
-    this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
+    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 
     // Composed after the layers so it sees this frame's walls, and committed

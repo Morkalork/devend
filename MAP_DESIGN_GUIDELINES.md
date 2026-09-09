@@ -981,6 +981,23 @@ board, so any map whose edges answer a pull needs `neverRotates: true` or it is
 correct in one deal out of four. Nothing enforces the pairing automatically -
 `boardEdges.test.ts` pins it for level 14 by name.
 
+**A live wall says so on the board.** `chromeLayer.drawEdges` gives every side
+that actually does something a coloured rail where the ordinary green hairline
+would be, a band, and chevrons pointing the way it throws - warm orange for a
+side that gives speed (two chevrons), cool grey for one that takes it, mirror
+cyan for one that only aims. Each side brightens as a ball comes at it and
+flares as it is struck, which is the pass that teaches the rule: the band says a
+wall is live, the flare says THIS wall is what just happened to your ball. What
+follows from that, for an author:
+
+- **A side that does nothing draws nothing.** `kick: 1` and an empty spec are
+  both "ordinary", and a band on either teaches a rule the map does not have.
+- **Loudness tracks the kick**, saturating a quarter off 1 (a bumper's own
+  1.25). A floor at 1.02 is nearly invisible, correctly: it nearly does nothing.
+- **Colour is the SPEED verdict, arrows are the direction.** A side that both
+  aims and kicks takes its colour from the kick, because speed is the part the
+  player cannot see happening.
+
 ### 7.4 The content gates
 
 A mechanic debuting at level N needs its gate at or below N. **A gate below its

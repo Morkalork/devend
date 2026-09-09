@@ -1,6 +1,6 @@
 /**
- * Board chrome: the perimeter rim, the speed-danger frame, the gravity cue and
- * the space bar.
+ * Board chrome: the perimeter rim, the live outer walls, the speed-danger
+ * frame, the gravity cue and the space bar.
  *
  * This is the frame AROUND the play surface, so it plays by different rules to
  * everything else. It is UI, not scenery: it does not sit in the scene, so it
@@ -21,12 +21,29 @@ import { PALETTE } from "./palette";
 import type { LightScope } from "./light";
 import { snapRect, snapStroke, snapWidth, snapEdge, hairline } from "./pixelGrid";
 import { boardAngleFor } from "@/lib/boardTilt";
+import { polygonBounds } from "@/lib/polygon";
+import { BOARD_SIDES } from "@/lib/physics/boardEdges";
 import { gravityCue, pullEdge, URGENT_SECONDS } from "./gravityCue";
+import { edgeGeometry, edgeLook, edgeWake, type Vec } from "./edgeCue";
 
 /** Ball speed (as a fraction of the danger threshold) before the frame shows. */
 const DANGER_FLOOR = 0.55;
 /** The space bar fades out over this long once the map is won. */
 const BAR_FADE_MS = 600;
+
+/**
+ * A world-space direction, in screen space. Taken as the difference between two
+ * projected points rather than by rotating by the tilt angle, so it stays
+ * correct however w2s is built - including the fit scale a mid-turn board is
+ * shrunk by, which a hand-rolled rotation would quietly ignore.
+ */
+function screenDir(w2s: (x: number, y: number) => Vec, at: Vec, d: Vec): Vec {
+  const a = w2s(at.x, at.y);
+  const b = w2s(at.x + d.x * 20, at.y + d.y * 20);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: dx / len, y: dy / len };
+}
 
 export class ChromeLayer {
   /**
@@ -41,23 +58,28 @@ export class ChromeLayer {
   readonly outer = new Container();
 
   private rim = new Graphics();
+  private edges = new Graphics();
   private danger = new Graphics();
   private gravity = new Graphics();
   private bar = new Graphics();
 
   constructor() {
-    this.container.addChild(this.rim, this.danger, this.gravity);
+    // Live edges sit over the rim (they REPLACE what it says about those
+    // sides) and under the danger frame, which outranks everything.
+    this.container.addChild(this.rim, this.edges, this.danger, this.gravity);
     this.outer.addChild(this.bar);
   }
 
   sync(
     game: CanvasGameState,
     light: LightScope,
+    w2s: (x: number, y: number) => Vec,
     scale: number,
     now: number,
     spaceThreshold: number,
   ): void {
     this.drawRim(game, light, scale, now);
+    this.drawEdges(game, w2s, scale, now);
     this.drawDanger(game, scale, now);
     this.drawGravity(game, scale, now);
     this.drawBar(game, scale, now, spaceThreshold);
@@ -93,6 +115,146 @@ export class ChromeLayer {
     ] as [number, number][]) {
       const q = snapRect(cx - size / 2, cy - size / 2, size, size);
       g.rect(q.x, q.y, q.width, q.height).fill({ color: PALETTE.accent, alpha: 0.9 * level });
+    }
+  }
+
+  /**
+   * The four outer walls, when a map has made them live.
+   *
+   * Reported as "the player must see that the outer edges aren't normal, that
+   * they are bouncers". Level 14's floor kicks, its lid damps and its side
+   * walls fire a ball back across, and every one of them rendered as the same
+   * green hairline the other thirteen maps have.
+   *
+   * Three passes per side, loudest last: two stacked bands standing in for a
+   * glow, a coloured rail ON the boundary where the ordinary green hairline
+   * would be, and chevrons pointing the way that wall throws. See edgeCue.ts
+   * for what each side is allowed to say and why.
+   *
+   * Everything here is scaled by `wake`, the nearest ball's closeness to that
+   * side, so a wall brightens as a ball comes at it and flares as it is struck.
+   * That is the pass that actually teaches the rule: the band says a wall is
+   * live, the flare says THIS wall is what just happened to your ball.
+   *
+   * Costs nothing on a map that authors no edges: `boardEdges` is absent and
+   * this returns before touching a Graphics.
+   */
+  private drawEdges(
+    game: CanvasGameState,
+    w2s: (x: number, y: number) => Vec,
+    scale: number,
+    now: number,
+  ): void {
+    const g = this.edges;
+    g.clear();
+
+    const specs = game.boardEdges;
+    if (!specs || !game.boardPolygon) return;
+
+    // The PLAY area, not the board rect: see edgeGeometry. Under a tilt the
+    // corners come back through the same w2s every other layer uses, so the
+    // bands ride round with the board rather than staying stuck to the screen.
+    const bounds = polygonBounds(game.boardPolygon);
+    const band = Math.max(3, 9 * scale);
+    const breathe = 0.85 + 0.15 * Math.sin(now * 0.0018);
+
+    for (const side of BOARD_SIDES) {
+      const look = edgeLook(side, specs[side]);
+      if (!look) continue;
+
+      const geo = edgeGeometry(side, bounds);
+      const a = w2s(geo.start.x, geo.start.y);
+      const c = w2s(geo.end.x, geo.end.y);
+      const inward = screenDir(w2s, geo.start, geo.inward);
+      const thrown = screenDir(w2s, geo.start, look.direction);
+
+      const wake = edgeWake(side, bounds, game.balls);
+      const level = look.strength * (0.62 + 0.38 * wake) * breathe;
+
+      this.bandQuad(a, c, inward, band * 2.4, look.colour, (0.05 + 0.09 * wake) * look.strength);
+      this.bandQuad(a, c, inward, band, look.colour, (0.13 + 0.22 * wake) * look.strength);
+      // The rail. One coloured line where every other map has one green one is
+      // the whole cue at a glance, before any of the rest is read.
+      this.bandQuad(a, c, inward, snapWidth(Math.max(2, 3 * scale)), look.colour,
+        Math.min(0.95, 0.45 + 0.5 * level));
+
+      this.drawEdgeArrows(a, c, inward, thrown, look.colour, look.arrows, scale, now, level, wake);
+    }
+  }
+
+  /**
+   * One band hugging a side, `t` thick, drawn inward from the boundary.
+   *
+   * Snapped when it is axis-aligned, which is every frame of a map that does
+   * not tilt: an unsnapped 3px rail is exactly the 2px grey smear pixelGrid
+   * exists to prevent. Mid-tilt the quad is rotated and is left alone, on the
+   * same rule the rest of this renderer follows for diagonals.
+   */
+  private bandQuad(a: Vec, c: Vec, inward: Vec, t: number, colour: number, alpha: number): void {
+    if (alpha <= 0.005 || t <= 0) return;
+    const g = this.edges;
+    const pts: Vec[] = [
+      a, c,
+      { x: c.x + inward.x * t, y: c.y + inward.y * t },
+      { x: a.x + inward.x * t, y: a.y + inward.y * t },
+    ];
+    if (Math.abs(a.x - c.x) < 0.5 || Math.abs(a.y - c.y) < 0.5) {
+      const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+      const x0 = Math.min(...xs), y0 = Math.min(...ys);
+      const r = snapRect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+      g.rect(r.x, r.y, r.width, r.height).fill({ color: colour, alpha });
+      return;
+    }
+    g.poly(pts.flatMap(p => [p.x, p.y])).fill({ color: colour, alpha });
+  }
+
+  /**
+   * Chevrons along a live side, pointing the way it throws.
+   *
+   * They breathe along that direction rather than marching along the wall: a
+   * row of marks crawling sideways reads as a conveyor, which is the one thing
+   * these walls do not do. The breath doubles as the contact cue - `wake`
+   * shoves them a further half-length out as a ball arrives, so the wall visibly
+   * pushes.
+   */
+  private drawEdgeArrows(
+    a: Vec, c: Vec, inward: Vec, dir: Vec,
+    colour: number, arrows: number,
+    scale: number, now: number, level: number, wake: number,
+  ): void {
+    const g = this.edges;
+    const len = Math.hypot(c.x - a.x, c.y - a.y);
+    if (len <= 0) return;
+    const ux = (c.x - a.x) / len, uy = (c.y - a.y) / len;   // along the wall
+    const px = -dir.y, py = dir.x;                          // the chevron's arms
+    // Few and large rather than many and small: at 7px a chevron read as part
+    // of the grid lattice on a phone, and a run of twenty of them read as a
+    // texture rather than as an instruction.
+    const size = Math.max(5, 10 * scale);
+    const gap = Math.max(34, 72 * scale);
+    const stand = Math.max(9, 19 * scale) + (Math.sin(now * 0.0045) * 0.25 + wake * 0.6) * size;
+    // Against hairline() rather than a flat 2, for the reason pixelGrid gives:
+    // a width tuned in device pixels on a desktop vanishes on a 3x phone.
+    const width = Math.max(1.5 * hairline(), 2.4 * scale);
+
+    for (let s = gap * 0.5; s < len; s += gap) {
+      // Fade the ends so the run dissolves into the corners rather than
+      // stopping dead in them, where two live sides would otherwise collide.
+      const fade = Math.min(1, Math.min(s, len - s) / (gap * 1.2));
+      const alpha = 0.8 * level * fade;
+      if (alpha <= 0.02) continue;
+      const bx = a.x + ux * s + inward.x * stand;
+      const by = a.y + uy * s + inward.y * stand;
+      for (let n = 0; n < arrows; n++) {
+        // A second chevron stacked behind the first is how a side says "and
+        // faster": one mark is a direction, two is a shove.
+        const tipX = bx + dir.x * (size - n * size * 1.15);
+        const tipY = by + dir.y * (size - n * size * 1.15);
+        g.moveTo(tipX - dir.x * size + px * size, tipY - dir.y * size + py * size)
+          .lineTo(tipX, tipY)
+          .lineTo(tipX - dir.x * size - px * size, tipY - dir.y * size - py * size)
+          .stroke({ width, color: colour, alpha: n === 0 ? alpha : alpha * 0.55, cap: "round", join: "round" });
+      }
     }
   }
 
