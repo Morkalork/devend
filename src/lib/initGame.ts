@@ -41,6 +41,7 @@ import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline }
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { type LauncherState } from "@/lib/physics/launcher";
+import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
 import { inwardMitres, subdivideOutline, type DeformState } from "@/lib/physics/deformable";
@@ -160,6 +161,8 @@ export interface InitialGameData {
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
+  /** Behaviour for the four outer walls, from the level. Absent on most maps. */
+  boardEdges?: BoardEdgeSpecs;
   originalArea: number;
   basePlayableArea: number;
   balls: Ball[];
@@ -287,7 +290,7 @@ export function createInitialGameData(
   // authored + slot geometry before random shapes are placed, so everything
   // downstream (walls, obstacles, movers, spawns) lives in the rotated frame.
   // L1-3 stay standard. Pick once; pickup spots reuse `mapRotation` (below).
-  const mapRotation: MapRotation = pickMapRotation(level.id, levelNumber);
+  const mapRotation: MapRotation = pickMapRotation(level.id, levelNumber, level.neverRotates);
   const authoredEntities = rotateEntities(
     [...(level.entities || []), ...slotEntities],
     mapRotation,
@@ -1367,6 +1370,9 @@ export function createInitialGameData(
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
     mirrorPolygons,
     boardPolygon,
+    // Screen space, and only meaningful because a map that authors these
+    // also pins `neverRotates` - see the field's own note on LevelConfig.
+    boardEdges: level.boardEdges,
     originalArea:        initialEstimatedArea,
     basePlayableArea:    initialEstimatedArea,
     balls,

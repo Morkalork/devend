@@ -61,8 +61,19 @@ describe("what a block can actually give", () => {
   it("finds the small blocks that made this bite", () => {
     // 6-10 and 31-35 are the thin ones, and they are where an absolute target
     // was furthest out of reach.
+    //
+    // Measured, not assumed. The capacities run 9, 11, 14, 16, 14, 15, 14, so
+    // the genuinely thin ones are the EARLY blocks - act I spawns one and two
+    // balls - and 31-35 is thin only against the fattest block rather than
+    // against the middle of the ladder.
+    //
+    // Block 11 used to be the second yardstick and cannot be one any more: it
+    // is half rebuilt, so its capacity moves with every map authored. Level 14
+    // alone took it from 12 to 14 and made "31 is thinner than 11" false. What
+    // is being tested is the measurement, not the state of a ladder mid-rebuild.
     expect(blockLockCapacity(LEVELS, 6)).toBeLessThan(blockLockCapacity(LEVELS, 26));
-    expect(blockLockCapacity(LEVELS, 31)).toBeLessThan(blockLockCapacity(LEVELS, 11));
+    expect(blockLockCapacity(LEVELS, 1)).toBeLessThan(blockLockCapacity(LEVELS, 6));
+    expect(blockLockCapacity(LEVELS, 31)).toBeLessThan(blockLockCapacity(LEVELS, 16));
   });
 });
 

@@ -49,7 +49,7 @@ import { contentText } from '@/i18n/content';
 import { playHeartbeatSound } from '@/lib/gameAudio';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
-import { selectMapMutator, getMapMutators } from '@/lib/mapMutators';
+import { selectMapMutator, getMapMutators, mutatorById } from '@/lib/mapMutators';
 import { debugMutatorId } from '@/lib/devFlags';
 import type { MapMutator } from '@/types/mapMutator';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
@@ -174,25 +174,6 @@ interface GameScreenProps {
   introAssemble?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
-}
-
-/**
- * A mutator by `id`, or null when the catalogue has no such entry.
- *
- * Every pinned mutator goes through here: an unknown id leaves the map vanilla
- * rather than handing the UI a half-object. map.yml pinned `gravity` for a
- * while, which is the BEHAVIOR name and not any entry's id, and because the pin
- * used to be dropped straight into `mapMutator` unresolved, the map showed an
- * empty rule card and never actually pulled. mapPins.test.ts refuses a pin that
- * names nothing now.
- *
- * At module scope because it closes over nothing: declared inside the component
- * it is a new function every render, which the mutator useMemo would then have
- * to list as a dependency and re-roll on.
- */
-function mutatorById(id: string | undefined | null): MapMutator | null {
-  if (!id) return null;
-  return getMapMutators().find(m => m.id === id) ?? null;
 }
 
 /** The mutator named by ?mutator=<id>, if it is in the catalogue. */

@@ -20,6 +20,7 @@ export interface BallConfig {
 export type { BendAxis, BendFields } from "@/lib/bend";
 export type { FenceZone } from "@/lib/physics/fenceZones";
 import type { FenceZone } from "@/lib/physics/fenceZones";
+import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 
 export interface RectShape {
   shape: "rect";
@@ -326,6 +327,34 @@ export interface LevelConfig {
    * what this map spawns at rather than half of some other map's speed.
    */
   ballSpeedScale?: number;
+  /**
+   * Behaviour for the four OUTER walls, in screen space.
+   *
+   * Terrain, not a mechanic: like a mirror or a one-way it changes HOW you
+   * satisfy the win rather than adding a clause of its own, so it gets no
+   * detector and no beat. See physics/boardEdges.ts for what a side may do and
+   * why the axis is direction rather than elasticity.
+   *
+   * SCREEN space is the load-bearing word. Gravity does not rotate with the
+   * board (section 7.3), so a map whose edges answer a pull must not rotate
+   * either - pair this with `neverRotates` or the design holds in one deal out
+   * of four.
+   */
+  boardEdges?: BoardEdgeSpecs;
+  /**
+   * Deal this map upright, always, whatever its level number.
+   *
+   * For maps whose design is tied to SCREEN direction rather than to board
+   * geometry. Gravity is the case that needs it: it pulls screen-down and does
+   * not turn with the board, so a map that answers the pull with a live floor
+   * is correct in one rotation and nonsense in the other three - the floor
+   * becomes a wall and the wall becomes a floor.
+   *
+   * Deliberately narrow. Rotation is most of this game's replay value, and a
+   * map that opts out is spending that to buy something specific; a map that
+   * merely finds rotation inconvenient should be built to survive it instead.
+   */
+  neverRotates?: boolean;
   /**
    * How lit this map is: 1 (or absent) is the normal board, lower is darker,
    * down to MIN_MAP_LIGHT. A darkness you author, not a global one.

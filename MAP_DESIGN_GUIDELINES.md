@@ -193,9 +193,9 @@ Every mechanic gets a status, and the status decides what it costs.
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | - |
 | bumper | C | Compressed | 12 | 13 | - |
-| deformable | A | Compressed | 14 | - | - |
-| phasing | A | Meet | 15 | - | - |
-| rotor | C | Compressed | 15 | - | - |
+| deformable | A | Compressed | 15 | - | - |
+| phasing | A | Meet | 16 | - | - |
+| rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 15 | 16 | 31 |
 | portal | B | Meet | 17 | - | - |
@@ -210,7 +210,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | latch | A | Compressed | 26 | 31 | - |
 | data stream | E | Meet | 26 | 27 | - |
 | ball gate | B | Compressed | 33 | 34 | - |
-| pinned mutator | D | Seasoning | 34 | - | - |
+| pinned mutator | D | Seasoning | 14 | - | - |
 | colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
@@ -402,7 +402,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-13 built, 14-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-14 built, 15-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -523,6 +523,48 @@ any map's speed down - see the rule in section 9.
 
 **Bot sweep, 8 seeds: 8 wins**, average 21 cuts against par 8. The only map on
 the ladder the bot has never lost.
+
+#### 14 "Downtime" - Meet gravity. The board itself is the mechanic  *(built)*
+
+**Everything falls, the floor throws it back, and the side walls will not let a
+ball hide in a corner.** Asked for as "gravity on the whole board, with bouncy
+outer walls". Two things had to change on the way in, and both are worth reading
+before authoring another map like it.
+
+**"Bouncier" cannot mean what it usually means.** Gravity here is a STEERING
+force: the heading bends toward the pull and the magnitude is never touched, so
+a ball loses nothing on a bounce and can never come to rest. Nothing was taken,
+so nothing can be given back - a livelier wall can only mean a FASTER ball. The
+axis that carries the idea is therefore **direction**, and the four edges read:
+
+| edge | behaviour | why |
+|---|---|---|
+| bottom | `kick: 1.15` | a trampoline that keeps the sideways component, so a ball leaves still travelling across the board |
+| left / right | `bearing: right` / `left` | anything that reaches a side is thrown back across, so no corner is a hiding place |
+| top | `kick: 0.85` | a lid. The floor's kick has to go somewhere, and a damping ceiling is what stops the map ending at the speed cap |
+
+**A pure `bearing: up` on the floor would have been the bug.** It reads like the
+obvious way to say "bouncy" and produces a ball in a vertical orbit inside one
+column: it stops touching the board, and a board the balls do not touch is
+captured wholesale. The floor takes a kick, the SIDES take bearings. That is the
+section 9 rule again, from a fourth direction.
+
+**It never rotates, and that is not a shortcut.** Gravity pulls screen-down and
+does not turn with the board (section 7.3), so a dealt-sideways version has its
+trampoline on a side wall and its lid on the floor: correct in one deal out of
+four. `neverRotates` is new and deliberately narrow - rotation is most of this
+game's replay value, and a map that opts out is spending it to buy something
+specific.
+
+It pins `steady_gravity`, a new pin-only mutator (`weight: 0`) whose sequence is
+just `[down]`. The shipped `gravity_well` turns the pull through all four
+directions, which is the right feel for a map about being pushed around and the
+wrong one for a map whose floor answers the pull.
+
+The greed hook is the `var` pocket in the TOP left: under a downward pull, high
+ground is the expensive ground.
+
+**Bot sweep, 8 seeds: 7 wins**, average 22 cuts against par 8.
 
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
@@ -910,6 +952,34 @@ From **level 4** up, a map is dealt in one of four rotations
 - **Any test that asserts a coordinate must pin the deal**, either by using a
   level number below 4 or by seeding the rotation rng. This has caused two
   separate ~1-in-4 CI flakes; see `corridorNoFalseLock.test.ts`.
+
+### 7.3b Live outer walls, and the two ways they go wrong
+
+A map may give each of the four board edges a behaviour (`boardEdges`, in SCREEN
+space). Terrain, not a mechanic: no clause, no detector, no beat, it changes HOW
+you satisfy the win the way a mirror or a one-way does.
+
+| field | what it does |
+|---|---|
+| `bearing` | fire the ball along a fixed heading, keeping its speed |
+| `kick` | multiply the speed, clamped up at `BOUNCER_MAX_SPEED_SCALE` |
+
+**The clamp matters more here than on a bumper.** A bumper is met when a path
+happens to cross one; a board edge is met constantly and cannot be avoided, so
+the same multiplier compounds far faster. 1.25 on a floor under gravity pins
+every ball at the ceiling within about ten bounces. Keep a floor near 1.15 and
+put a damping lid opposite it.
+
+**A `bearing` on the edge a pull points at is a trap.** `bearing: up` on the
+floor of a gravity map gives a vertical orbit in one column, the ball stops
+touching the rest of the board, and section 9's rule does the rest. The edge
+FACING the pull wants a `kick` (which keeps the sideways component); the edges
+ACROSS it want bearings.
+
+**Screen space, so the map must not rotate.** Gravity does not turn with the
+board, so any map whose edges answer a pull needs `neverRotates: true` or it is
+correct in one deal out of four. Nothing enforces the pairing automatically -
+`boardEdges.test.ts` pins it for level 14 by name.
 
 ### 7.4 The content gates
 

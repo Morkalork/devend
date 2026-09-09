@@ -16,6 +16,7 @@ import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
 import type { GravityWell } from "@/types/level";
 import type { GravityConfig } from "@/lib/physics/gravity";
+import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import type { TiltState } from "@/lib/boardTilt";
 import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
@@ -301,6 +302,12 @@ export interface CanvasGameState {
   /** Resolved gravity schedule while a `gravity` mutator is active (issue #77).
    *  Null on every other map. See src/lib/physics/gravity.ts. */
   gravityConfig?: GravityConfig | null;
+  /**
+   * Behaviour for the four outer walls, in screen space, from the level.
+   * Absent on every map that does not author one, and then the board edges
+   * reflect the way they always have.
+   */
+  boardEdges?: BoardEdgeSpecs;
   /** Active per-map objective (issue #55), or null. Optional/non-failing goal
    *  read at clear to award a bonus under the per-map cap (evaluated purely from
    *  existing counters). On a boss map (issue #56) this same field holds the

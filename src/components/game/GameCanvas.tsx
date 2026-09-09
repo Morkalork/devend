@@ -49,6 +49,7 @@ import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
+import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -722,6 +723,7 @@ export function GameCanvas({
     fenceZones: [] as import('@/lib/physics/fenceZones').FenceZone[],
     mirrorPolygons: [] as Polygon[],
     boardPolygon: null as Polygon | null,
+    boardEdges: undefined as BoardEdgeSpecs | undefined,
     originalArea: 0,
     basePlayableArea: 0,
     balls: [],
@@ -1105,6 +1107,11 @@ export function GameCanvas({
       game.obstaclePolygons   = data.obstaclePolygons;
       game.mirrorPolygons     = data.mirrorPolygons;
       game.boardPolygon       = data.boardPolygon;
+      // The four outer walls' behaviour, from the level. Copied here like every
+      // other built field: initGame returning it is not the same as the running
+      // game having it, and a live floor that never reached the game would be a
+      // map whose whole premise silently did nothing.
+      game.boardEdges         = data.boardEdges;
       game.originalArea       = data.originalArea;
       game.basePlayableArea   = data.basePlayableArea;
       game.balls              = data.balls;

@@ -1127,3 +1127,86 @@ levels:
         breakId: strut
         announce: game.beatDeadline
     balls: []
+
+  # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
+  - id: level-14
+    level: 14
+    sizeThreshold: 13
+    expectedCuts: 8
+    points: 20
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, red]
+    mutator: steady_gravity
+    neverRotates: true
+    boardEdges:
+      bottom:
+        kick: 1.15
+      left:
+        bearing: right
+      right:
+        bearing: left
+      top:
+        kick: 0.85
+    win:
+      require:
+        - kind: space
+          threshold: 13
+        - kind: smashed
+          count: 1
+    coloredAreas:
+      - kind: var
+        x: 120
+        'y': 150
+        width: 180
+        height: 170
+        required: false
+    entities:
+      - id: shelf-a
+        kind: wall
+        shape: rect
+        x: 200
+        'y': 480
+        width: 240
+        height: 26
+      - id: shelf-b
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 620
+        width: 295
+        height: 26
+      - id: strut
+        kind: wall
+        shape: rect
+        x: 500
+        'y': 200
+        width: 26
+        height: 170
+        breakable: true
+        hitsToBreak: 3
+      - id: slab
+        kind: wall
+        shape: rect
+        x: 140
+        'y': 700
+        width: 200
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: ledge
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 330
+        width: 215
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+    beats:
+      - id: deadline
+        atSpaceRemaining: 19
+        breakId: strut
+        announce: game.beatDeadline
+    balls: []

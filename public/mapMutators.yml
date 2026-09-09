@@ -29,6 +29,24 @@ mutators:
       factor: 1.18
     overtimePremium: 2
 
+  # Steady down, with no rotating sequence and no quiet stretches, for the map
+  # whose FLOOR answers the pull. gravity_well turns the pull through all four
+  # directions, which is the right feel for a map about being pushed around and
+  # the wrong one for a map with a live floor: three quarters of the cycle the
+  # trampoline would be a side wall. Same turnRate, so the arc reads the same.
+  - id: steady_gravity
+    name: Downtime
+    description: Everything falls, and it keeps falling.
+    clarify: A constant pull downward. Balls arc toward the floor and gather along it, but they never slow down, so they never stop bouncing. Fence where the fall is taking them.
+    behavior: gravity
+    weight: 0
+    minLevel: 14
+    gravity:
+      turnRate: 1.1
+      period: 9
+      sequence: [down]
+    overtimePremium: 4
+
   - id: gravity_well
     name: Technical Gravity
     description: Everything is pulled one way, and the way keeps changing.

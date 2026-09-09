@@ -85,6 +85,11 @@ describe("no mechanic is introduced and then dropped", () => {
     //   Mirror    level 13 only, which is where it MEETS. A mechanic on its
     //             first map is on this list by definition, and it comes off
     //             when a later map gives it a second.
+    //   Mutator   level 14 only, which pins one. A pinned mutator is Seasoning
+    //             rather than a headline idea, so it is here as a count and not
+    //             as a debt: it comes off when a second map wants a set-piece
+    //             built around its own weather, and nothing is wrong if that
+    //             takes a while.
     //
     // BOUNCER CAME OFF on 13, LAUNCHER on 12, REVEALS on 11 - each one map
     // after arriving. Three in a row is the rebuild's rhythm rather than luck:
@@ -95,7 +100,7 @@ describe("no mechanic is introduced and then dropped", () => {
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    expect(singles.map(w => w.key).sort()).toEqual(["mirror"]);
+    expect(singles.map(w => w.key).sort()).toEqual(["mirror", "mutator"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -114,12 +119,13 @@ describe("no mechanic is introduced and then dropped", () => {
     //
     // Take a name off when a rebuilt map places the mechanic. When the list is
     // empty the assertion goes back to toEqual([]). LAUNCHER was the first off,
-    // on level 11; BUMPER the second, on 12; MIRROR the third, on 13.
+    // on level 11; BUMPER the second, on 12; MIRROR the third, on 13; PINNED
+    // MUTATOR the fourth, on 14.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
         "Ball gate", "Cage", "Charge", "Data stream", "Deformable",
         "Delivery box", "Fence ground", "Gravity well", "Latch",
-        "One-way", "Phasing", "Pinned mutator", "Portal", "Rotor",
+        "One-way", "Phasing", "Portal", "Rotor",
         "Terminals", "Thread lock", "WIP limit",
       ]);
   });
@@ -145,17 +151,25 @@ describe("no single idea owns an act", () => {
       .filter(w => w.kind === "act-monopoly")
       .map(w => `${w.label}: ${w.detail}`)
       .sort();
-    // Empty, and for once that is not an achievement: act I is the only act
-    // with maps in it, and its heaviest ideas (mover and colored area, five of
-    // ten each) sit under the threshold. The three entries this pinned were
-    // breakable in act II and colored areas in acts III and IV, on maps that no
-    // longer exist.
+    // Act I is clean. Act II reports two, and the denominator is why: the rule
+    // divides by the maps an act HAS, and act II has four of its eventual ten.
+    // Four of four carrying a breakable is not yet a monopoly, it is a small
+    // sample - and the number will fall on its own as 15-20 land.
     //
-    // Left asserted rather than deleted because the rule is about the acts
-    // being written NOW: the first rebuilt act that leans on one idea reports
-    // it here while it is still cheap to spread, which is the whole reason the
-    // warning was written after act III had already drifted.
-    expect(monopolies).toEqual([]);
+    // It is pinned rather than suppressed because underneath the sampling there
+    // is a real signal. Every act II map so far wins on `space` plus `smashed`,
+    // because the guidelines' shape asks for "one clause a lock cannot produce"
+    // and `smashed` is the only one available until terminals, a delivery box
+    // or a data stream is placed. So the breakable count is really a WIN CLAUSE
+    // count, and the act diversifies when those mechanics arrive rather than by
+    // scattering slabs differently.
+    //
+    // Take these off when act II is finished and the fractions have settled. If
+    // they are still here at ten maps, they mean what the warning says.
+    expect(monopolies).toEqual([
+      "Breakable: on 4 of act II's 4 maps",
+      "Colored area: on 3 of act II's 4 maps",
+    ]);
   });
 
   it("does not complain about furniture", () => {

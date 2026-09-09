@@ -76,7 +76,7 @@ export function rotationForSeed(level: LevelConfig, levelNumber: number, seed: n
   const previous = getRunSeedText();
   setRunSeedText(`bot-${seed}`);
   try {
-    return pickMapRotation(level.id, levelNumber);
+    return pickMapRotation(level.id, levelNumber, level.neverRotates);
   } finally {
     setRunSeedText(previous);
   }

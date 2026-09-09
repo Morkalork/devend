@@ -52,6 +52,7 @@ import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
 import { holdOnBreakpoint } from "@/lib/physics/breakpointFence";
 
+import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
 /** Slack added to the wall-index query radius (world units). Comfortably
  *  covers the "+2" collision margin plus any small push-out drift within the
  *  wall loop, so the queried candidate set is never missing a reachable wall. */
@@ -573,6 +574,14 @@ export function updateBall(
       ball.position = boardResult.position;
       ball.velocity = boardResult.velocity;
       if (boardResult.collided) surfaceHit = true;
+
+      // A live outer wall: redirect or rescale what the reflection produced.
+      // BEFORE the impact effect below reads the velocity, so the bulge and the
+      // sound describe the bounce the player actually gets.
+      if (boardResult.collided && boardResult.impactEdge && game.boardEdges) {
+        const side = sideOfEdge(boardResult.impactEdge, bb);
+        if (side) applyBoardEdge(ball, game.boardEdges[side]);
+      }
 
       // Register wall impact for visual effect
       if (boardResult.collided && boardResult.impactEdge) {

@@ -232,11 +232,33 @@ describe("the Technical Gravity mutator", () => {
     readFileSync(resolve(__dirname, "../../public/mapMutators.yml"), "utf8"),
   ) as { mutators: { id: string; behavior: string; name: string; description: string;
         clarify?: string; gravity?: RawGravityConfig }[] }).mutators;
-  const entry = MUTATORS.find(m => m.behavior === "gravity")!;
+  // BY ID. This read `find(behavior === "gravity")` and so described whichever
+  // gravity mutator happened to be first in the file - which stopped being this
+  // one the day a second was added, and the assertions below (it shifts, it has
+  // quiet stretches) are true of Technical Gravity and deliberately false of
+  // the steady pull level 14 pins.
+  const entry = MUTATORS.find(m => m.id === "gravity_well")!;
+  const steady = MUTATORS.find(m => m.id === "steady_gravity")!;
 
   it("exists and carries a gravity block", () => {
     expect(entry, "no gravity mutator authored").toBeTruthy();
     expect(entry.gravity).toBeTruthy();
+  });
+
+  it("has a STEADY sibling, and the two say different things", () => {
+    // Level 14 answers a downward pull with a live floor, and a pull that
+    // rotates would put the trampoline on a side wall three quarters of the
+    // time. So the steady one exists, and it is pin-only: weight 0 keeps it out
+    // of the procedural roll, where "everything falls forever" is not a
+    // surprise anybody asked for.
+    expect(steady, "the steady pull is gone").toBeTruthy();
+    expect(steady.behavior).toBe("gravity");
+    expect(steady.gravity?.sequence).toEqual(["down"]);
+    expect((steady as { weight?: number }).weight,
+      "a steady pull turning up as a random visitor").toBe(0);
+    expect(entry.gravity?.sequence!.length,
+      "the two mutators have collapsed into the same thing")
+      .toBeGreaterThan(steady.gravity!.sequence!.length);
   });
 
   it("survives the normaliser, so the map actually pulls", () => {

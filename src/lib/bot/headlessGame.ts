@@ -48,6 +48,8 @@ import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifier
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 
 import { tickMapBeats } from "@/lib/physics/mapBeats";
+import { mutatorById } from "@/lib/mapMutators";
+import { normaliseGravity } from "@/lib/physics/gravity";
 /**
  * A clock the bot controls.
  *
@@ -200,6 +202,11 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
 export function createBotGame(
   level: LevelConfig, levelNumber: number, modifiers: GameModifiers = plainModifiers(),
 ): BotGame {
+  // The map's own pull comes from the mutator it PINS. The procedural roll is
+  // deliberately not consulted: an unpinned mutator is a random visitor, and a
+  // sweep should report on the map rather than on the weather.
+  const pinnedMutator = level.mutator ? mutatorById(level.mutator) : null;
+
   const events: BotEvents = {
     levelComplete: false, gameOver: false, livesLost: 0,
     cutsMade: 0, locks: 0, remainingPercent: 100,
@@ -211,8 +218,24 @@ export function createBotGame(
   const game = {
     ...runtimeDefaults(),
     creepConfig: DEFAULT_SCOPE_CREEP,
-    mapMutator: null,
-    gravityConfig: null,
+    // The map's own pull, from the mutator it PINS. Left null for every map
+    // that pins none, which is all but one of them.
+    //
+    // Read here rather than left to the caller for the same reason tickMapBeats
+    // is ticked in stepBot: a sweep has to play the map the player gets. A
+    // gravity map measured without gravity is not a pessimistic reading of that
+    // map, it is a reading of a different map - and the procedural roll is
+    // deliberately NOT consulted, because an unpinned mutator is a visitor the
+    // sweep should not be reporting on.
+    // BOTH fields, and that is not belt and braces: `mapGravityActive` reads
+    // `mapMutator.behavior === "gravity" && !!gravityConfig`, so a config
+    // without the mutator beside it is inert. Set separately they went out of
+    // step immediately - the sweep reported a gravity map whose cut counts were
+    // identical to the same map with no gravity, which is what gave it away.
+    mapMutator: pinnedMutator,
+    gravityConfig: pinnedMutator?.behavior === "gravity"
+      ? normaliseGravity(pinnedMutator.gravity)
+      : null,
     objective: null,
     ...createInitialGameData(level, levelNumber, modifiers),
   } as unknown as CanvasGameState;

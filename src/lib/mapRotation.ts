@@ -328,7 +328,13 @@ export function rotateDataStream(ds: DataStreamConfig, r: MapRotation): DataStre
  * shares it) and random otherwise; the tutorial band (L1-3) stays standard.
  * Call ONCE per level init and reuse the result for every consumer.
  */
-export function pickMapRotation(levelId: string, levelNumber: number): MapRotation {
+export function pickMapRotation(
+  levelId: string, levelNumber: number, neverRotates = false,
+): MapRotation {
+  // A map may opt out entirely. Only for designs tied to SCREEN direction -
+  // gravity pulls screen-down and does not turn with the board, so a map whose
+  // floor answers the pull is correct in one deal out of four without this.
+  if (neverRotates) return 0;
   if (levelNumber < ROTATION_MIN_LEVEL) return 0;
   const roll = getRunRng(`rotation:${levelId}`)();
   return (Math.min(3, Math.floor(roll * 4)) % 4) as MapRotation;

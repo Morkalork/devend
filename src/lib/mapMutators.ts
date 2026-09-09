@@ -10,6 +10,8 @@
  * Math.random here (the selector's rng is injected), so a Daily seed makes the
  * rotation identical for every player.
  */
+import yaml from "js-yaml";
+import mutatorsYamlRaw from "../../public/mapMutators.yml?raw";
 import { MapMutator, ActiveMapMutator } from "@/types/mapMutator";
 import { fetchYamlCatalogue } from "@/lib/yamlCatalogue";
 import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
@@ -21,13 +23,58 @@ import type { Rng } from "@/lib/runRng";
 // than half-applying.
 const VALID_BEHAVIORS = new Set(["crunch", "overclock", "gravity", "none"]);
 
-let liveMutators: MapMutator[] = [];
+/**
+ * The catalogue as it is on disk, read at BUILD time.
+ *
+ * `loadMapMutators` fetches the same file at runtime and replaces this, which
+ * is what lets the deployed build pick up an edited mapMutators.yml without a
+ * rebuild. The seed is what makes the pool correct everywhere the fetch cannot
+ * run: node (every test, and the headless bot) and any code path that reads the
+ * catalogue before the load resolves.
+ *
+ * Without it `getMapMutators()` was simply empty under vitest, so a map that
+ * PINS a mutator was swept with the mutator absent - and a gravity map measured
+ * without gravity is not a harsh reading of that map, it is a reading of a
+ * different one. Same shape ballTypes.ts has always used for balls.yml.
+ */
+function seedFromDisk(): { entries: MapMutator[]; noneWeight: number } {
+  try {
+    const doc = yaml.load(mutatorsYamlRaw) as { mutators?: unknown[]; noneWeight?: unknown };
+    const entries = (doc?.mutators ?? [])
+      .map(parseMutatorEntry)
+      .filter((m): m is MapMutator => !!m);
+    const none = finiteOrUndefined(doc?.noneWeight);
+    return { entries, noneWeight: none ?? 1 };
+  } catch {
+    return { entries: [], noneWeight: 1 };
+  }
+}
+
+const SEED = seedFromDisk();
+let liveMutators: MapMutator[] = SEED.entries;
 /** Odds weight of "no mutator this map", so some eligible maps stay vanilla. */
-let liveNoneWeight = 1;
+let liveNoneWeight = SEED.noneWeight;
 
 export function getMapMutators(): MapMutator[] {
   return liveMutators;
 }
+/**
+ * A mutator by its catalogue id, or null.
+ *
+ * The lookup an AUTHORED pin needs, and it deliberately ignores `weight` and
+ * `minLevel`: those govern the procedural roll, and a map that names a mutator
+ * has already made the decision the roll exists to make. That is what lets a
+ * set-piece mutator ship at weight 0 - pinnable, never a random visitor.
+ *
+ * Shared rather than local because two callers need the same answer: the game
+ * screen, and the headless bot (which must play the map the player gets, or a
+ * sweep of a gravity map reports on a map with no gravity in it).
+ */
+export function mutatorById(id: string | undefined | null): MapMutator | null {
+  if (!id) return null;
+  return getMapMutators().find(m => m.id === id) ?? null;
+}
+
 export function getMutatorNoneWeight(): number {
   return liveNoneWeight;
 }

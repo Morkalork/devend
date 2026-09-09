@@ -31,7 +31,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { AssignmentConfig, AssignmentMapResult } from "@/types/assignment";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED, LADDER } from "./fixtures/maps";
 
 const levels = ENGINE_MAPS;
 const pool = (yaml.load(
@@ -89,12 +89,20 @@ describe("counting a block's clean-clearable maps", () => {
     expect(blockSpaceWinnableMaps(clean, 11)).toBe(BLOCK_SIZE);
   });
 
-  it("counts the real block 11, which prices one lock", () => {
-    // 14 is the block's one map with nothing operable on it, so a lock count
-    // is the only ask it has (see ladderWins.test.ts). The other four close
-    // the lock rush with content and leave the clean clear available, which is
-    // what keeps Ship It alive here.
-    expect(blockSpaceWinnableMaps(levels, 11)).toBe(BLOCK_SIZE - 1);
+  it("counts the real block 11, where nothing prices a lock at all", () => {
+    // Read off the LADDER rather than the engine set: block 11 is the one being
+    // rebuilt, and mixing four authored maps with a retired fifth measures a
+    // block nobody plays.
+    //
+    // Every act II map so far wins on space plus a smash, so none of them
+    // prices a lock and the whole block is clean-clearable - which is what
+    // keeps Ship It offerable here. The retired 14 was the exception (nothing
+    // operable on it, so a lock count was its only ask) and its replacement
+    // carries three slabs.
+    const built = LADDER.filter(l => (l.level ?? 0) >= 11 && (l.level ?? 0) <= 15);
+    expect(built.length, "block 11 is empty: is this reading the ladder?")
+      .toBeGreaterThanOrEqual(4);
+    expect(blockSpaceWinnableMaps(LADDER, 11)).toBe(built.length);
   });
 });
 
