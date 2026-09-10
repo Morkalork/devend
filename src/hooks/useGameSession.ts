@@ -25,7 +25,7 @@ import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useRunSave, RunSave } from './useRunSave';
 import { useHallOfFame } from './useHallOfFame';
-import { paceDelta, aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
+import { aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
 import { useCertificateManager, getLoadedCertBonuses, getLoadedCertStartingLevel } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
@@ -372,8 +372,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const recordEligibleRef = useRef(true);
   // The mid-run "new personal best" banner fires once per run.
   const pbCelebratedRef = useRef(false);
-  // Record Pace payload for the current level-complete overlay.
-  const [levelPace, setLevelPace] = useState<{ delta: number | null; newPersonalBest: boolean } | null>(null);
+  // Personal-best banner payload for the current level-complete overlay.
+  const [levelPace, setLevelPace] = useState<{ newPersonalBest: boolean } | null>(null);
   // Where the just-finished run landed on the ladder (for the result screen).
   const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null; monthBest: boolean; dayBest?: boolean; dailyStreak?: number }) | null>(null);
   // Daily Stand-up (HIGHSCORES.md Phase D): non-null = this run is the seeded
@@ -1553,18 +1553,29 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setBlockResults(prev => [...prev, mapResult]);
     }
 
-    // Record Pace (HIGHSCORES.md): extend this run's trajectory and race the
-    // best run at the same maps-completed point. The PB banner fires once, the
-    // moment the cumulative total passes the all-time best mid-run.
+    // Extend this run's trajectory, and fire the personal-best banner once, the
+    // moment the total passes the all-time best mid-run.
+    //
+    // RECORD PACE IS OUT. It showed this run's total minus the best run's at the
+    // same maps-completed point, on the level-complete card and as a live chip.
+    // Taken out as confusing, and it was: the number it compared is `totalScore`,
+    // which is the WALLET - buying an upgrade subtracts from it - so the row read
+    // as a performance gap while actually measuring how much you had spent. The
+    // shop repricing made that plain, every run sitting near -100h because the
+    // ghost run was recorded when the cheapest card was 30h.
+    //
+    // The trajectory is still recorded (the ledger stores it, and the result
+    // screen's "ahead through N maps" epitaph reads it), so bringing the row
+    // back is re-rendering `paceDelta`, which is still in lib/runLedger with its
+    // tests. Fix what it compares first: HIGHSCORES.md says the score is
+    // CUMULATIVE overtime, and a wallet is not cumulative.
     const cumulative = totalScore + levelOvertime;
-    const mapsCompleted = runTrajectoryRef.current.length + 1;
     runTrajectoryRef.current = [...runTrajectoryRef.current, cumulative];
-    let pace: { delta: number | null; newPersonalBest: boolean } | null = null;
-    if (recordEligibleRef.current) {
-      const delta = paceDelta(cumulative, mapsCompleted, bestRunTrajectory, bestScore);
-      const newPersonalBest = bestScore !== null && cumulative > bestScore && !pbCelebratedRef.current;
-      if (newPersonalBest) pbCelebratedRef.current = true;
-      if (delta !== null || newPersonalBest) pace = { delta, newPersonalBest };
+    let pace: { newPersonalBest: boolean } | null = null;
+    if (recordEligibleRef.current && bestScore !== null
+        && cumulative > bestScore && !pbCelebratedRef.current) {
+      pbCelebratedRef.current = true;
+      pace = { newPersonalBest: true };
     }
     setLevelPace(pace);
 

@@ -7,7 +7,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, ClipboardList, Info, X } from 'lucide-react';
 import { GoalChip } from '@/components/game/GoalChip';
 import { goalAtRisk, type Goal } from '@/lib/goalTracker';
 
@@ -49,9 +49,6 @@ interface GameTopBarProps {
   showHighscoreBar?: boolean;
   highscoreCurrent?: number;
   highscoreTarget?: number;
-  // Record Pace (HIGHSCORES.md): the run's overtime delta vs the best run as
-  // of the last completed map. Rides Benchmarking too; null = nothing to race.
-  runPaceDelta?: number | null;
   /** Opens the Specs panel (TopBarDetailsPanel). */
   onExpand?: () => void;
 }
@@ -76,7 +73,6 @@ export function GameTopBar({
   showHighscoreBar = false,
   highscoreCurrent = 0,
   highscoreTarget = 0,
-  runPaceDelta = null,
   onExpand,
 }: GameTopBarProps) {
   // Recomputed per render rather than held in state: the count only changes
@@ -334,20 +330,6 @@ export function GameTopBar({
           </div>
         );
       })()}
-
-      {/* Run-pace chip (HIGHSCORES.md): with Benchmarking, keep the delta vs
-          your best run visible while playing, not just on the score overlay. */}
-      {showHighscoreBar && runPaceDelta !== null && (
-        <div className="mt-1 flex items-center justify-end gap-1.5">
-          <Medal className="w-3.5 h-3.5 flex-shrink-0" style={{ color: runPaceDelta >= 0 ? '#4ade80' : '#ff6b6b' }} />
-          <span
-            className="font-display text-[10px] font-bold tabular-nums"
-            style={{ color: runPaceDelta >= 0 ? '#4ade80' : '#ff6b6b' }}
-          >
-            {t('topBar.runPace', { delta: runPaceDelta >= 0 ? `+${runPaceDelta}h` : `${runPaceDelta}h` })}
-          </span>
-        </div>
-      )}
 
       {/* Row 3: Specs — opens the full run sheet (build, upgrades, assignment,
           attributes). Replaces the old per-upgrade icon row (#61). */}

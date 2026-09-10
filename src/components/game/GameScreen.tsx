@@ -139,8 +139,6 @@ interface GameScreenProps {
   ascensionDepth?: number;
   /** Best score per map id, for the Benchmarking highscore bar (#45). */
   mapHighscores?: Record<string, number>;
-  /** Run-pace delta vs the best run (HIGHSCORES.md); rides Benchmarking. */
-  runPaceDelta?: number | null;
   /** Active assignment + Promotion, for the top bar's contract chips (#49). */
   activeDoor?: AssignmentConfig | null;
   /** Per-map mission results this block (#60), for live progress in the Specs panel. */
@@ -221,7 +219,6 @@ export function GameScreen({
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
   mapHighscores,
-  runPaceDelta = null,
   activeDoor = null,
   blockResults = [],
   capstone = null,
@@ -952,7 +949,6 @@ export function GameScreen({
             showHighscoreBar={showHighscoreBar}
             highscoreCurrent={projectedScore}
             highscoreTarget={highscoreTarget}
-            runPaceDelta={runPaceDelta}
             // Opened to BROWSE, so nothing leads. Clearing here as well as on
             // close means this does not depend on the panel having been closed
             // the tidy way to behave correctly.

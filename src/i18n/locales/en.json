@@ -496,11 +496,6 @@
         "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
         "tip": "Spending buys power and charges Budget Cycle boons, while a fat bank feeds Runway perks and War Chest. Your build decides which way to lean."
       },
-      "recordPace": {
-        "title": "Record Pace",
-        "body": "Compares your total overtime right now with your best run at the same point (same number of maps completed). Past your best run's end it compares against its final score.",
-        "tip": "Behind pace? Take more risks: lock greedily and push your luck. Ahead? Protect the lead."
-      },
       "axis_delivery": {
         "title": "Delivery",
         "body": "The share of the map's balls you actually sealed away. It is the baseline, not a tactic: it ignores how tight the pockets were, and it gates the other three style lanes, so a clear that locks nothing is worth its flat base and no more.",
@@ -537,7 +532,6 @@
         "tip": "The premium is set per condition by the map, so it is the same for every route. It scales what you earned, which means playing a hard map well is worth more than scraping through it."
       }
     },
-    "recordPace": "Record Pace",
     "newPersonalBest": "New personal best, and you are still going!",
     "breakdownTitle": "Score breakdown",
     "winReason": {
@@ -645,7 +639,6 @@
     "lives_other": "{{count}} lives remaining",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster",
-    "runPace": "{{delta}} vs best run",
     "contractAssignment": "Active assignment",
     "contractPromotion": "Promotion",
     "contractRisk": "Risk:",

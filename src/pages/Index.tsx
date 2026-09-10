@@ -334,7 +334,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
-                runPaceDelta={session.levelPace?.delta ?? null}
                 activeDoor={session.activeDoor}
                 blockResults={session.blockResults}
                 capstone={session.capstone}

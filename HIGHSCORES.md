@@ -35,18 +35,25 @@ totals reward grinding, not playing well, and stay as flavor stats only.
 
 ## Components
 
-### 1. Record Pace — race your best run's ghost (Phase A, shipped)
+### 1. Racing your best run's ghost (Phase A, partly shipped)
 
 The best run persists its **trajectory**: cumulative banked overtime after each
 completed map (`bestRunTrajectory`, indexed by maps-completed so it extends
-through ascension). Every level-complete overlay shows a pace row comparing the
-current run's cumulative overtime against the best run at the same point:
-`Record Pace  +12h` (ahead, green) or `-8h` (behind, red). Past the best run's
-length, pace compares against its final score.
+through ascension). It is still recorded on every completion, and the result
+screen's "you were ahead through map N" epitaph reads it.
 
-The moment a run's cumulative overtime passes the all-time best, the overlay
-fires a one-time **"New personal best, and you're still going"** banner — from
-then on every map is bonus territory.
+The moment a run's total passes the all-time best, the overlay fires a one-time
+**"New personal best, and you're still going"** banner — from then on every map
+is bonus territory. That banner is the whole of what the overlay shows today.
+
+**Record Pace is OUT.** The level-complete row (`Record Pace  +12h` / `-8h`) and
+the Benchmarking top-bar chip that carried the same delta are removed: the row
+read as a performance gap while actually measuring how much you had spent, since
+the number it compared is `totalScore`, which is the WALLET (buying an upgrade
+subtracts from it). Every run sat near -100h once the shop was repriced.
+`paceDelta` stays in `src/lib/runLedger.ts` with its tests, so bringing the row
+back is re-rendering it — but fix its input first: a run's score is CUMULATIVE
+banked overtime, and a wallet is not cumulative.
 
 Trajectory comparison is indexed by maps-completed (not level number) so runs
 using Certificate Head Starts compare fairly: both sides had N maps of income.
@@ -86,10 +93,10 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
 - **Deepest Ascension** — tracked today, shown nowhere.
 - **Map records** — the 35 `mapHighscores` as a browsable list. The existing
   1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
-Also shipped: the **Benchmarking** certificate shows a persistent top-bar chip
-with the run-pace delta as of the last completed map, next to its per-map
-record bar, and the screen carries a lifetime-stats flavor footer (highest
-level, fences drawn, perfect maps, lives lost).
+Also shipped: the **Benchmarking** certificate shows a persistent top-bar
+per-map record bar, and the screen carries a lifetime-stats flavor footer
+(highest level, fences drawn, perfect maps, lives lost). The run-pace delta
+chip that sat next to that bar went out with Record Pace (see §1).
 
 ### 5. Employee of the Month (Phase C, shipped)
 
@@ -144,8 +151,8 @@ small API on the web — strictly opt-in if ever.
 
 | Phase | Contents | Status |
 |---|---|---|
-| A | Ledger + trajectory, Record Pace row, PB banner, rank/gap + epitaph on result | **shipped** |
-| B | Performance Review screen + Benchmarking run-pace chip + lifetime footer | **shipped** |
+| A | Ledger + trajectory, PB banner, rank/gap + epitaph on result | **shipped** (Record Pace row pulled, see §1) |
+| B | Performance Review screen + Benchmarking record bar + lifetime footer | **shipped** (run-pace chip pulled with the row) |
 | C | Employee of the Month | **shipped** |
 | D | Daily Stand-up (seeded runs, daily ledger, attendance streak) | **shipped** |
 | E | Share card | **shipped** (real leaderboards remain optional) |

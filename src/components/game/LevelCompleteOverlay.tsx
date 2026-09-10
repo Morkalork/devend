@@ -29,7 +29,6 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   totalBonus: { icon: Sparkles, color: 'text-success' },
   overtimeEarned: { icon: Clock, color: 'text-primary' },
   totalOvertime: { icon: Clock, color: 'text-accent-foreground' },
-  recordPace: { icon: TrendingUp, color: 'text-success' },
   // The Performance Review lanes. Holding a bar explains what that lane
   // pays for and, more usefully, what it costs you on the others.
   axis_delivery: { icon: Lock, color: 'text-cyan-400' },
@@ -53,7 +52,9 @@ interface LevelCompleteOverlayProps {
    * Record Pace (HIGHSCORES.md): cumulative-overtime delta vs the best run at
    * the same maps-completed point, plus the once-per-run PB banner flag.
    */
-  pace?: { delta: number | null; newPersonalBest: boolean } | null;
+  /** The one-time personal-best banner. Record Pace used to ride in here
+   *  too; see useGameSession for why it was taken out. */
+  pace?: { newPersonalBest: boolean } | null;
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pace }: LevelCompleteOverlayProps) {
@@ -583,22 +584,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 {displayTotalScore}h
               </span>
             </div>
-
-            {/* Record Pace: this run vs your best run at the same point. Ahead
-                is a lead to defend, behind is a licence to take risks. */}
-            {pace && pace.delta !== null && (
-              <div {...hold('recordPace')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border px-2">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  {pace.delta >= 0
-                    ? <TrendingUp className="w-3 h-3 text-success" />
-                    : <TrendingDown className="w-3 h-3 text-destructive" />}
-                  {t('levelComplete.recordPace')}
-                </span>
-                <span className={`font-bold ${pace.delta >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {pace.delta >= 0 ? `+${pace.delta}h` : `${pace.delta}h`}
-                </span>
-              </div>
-            )}
 
             {/* Once per run: the moment the total passes the all-time best. */}
             {pace?.newPersonalBest && (

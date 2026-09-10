@@ -493,11 +493,6 @@
         "body": "Las horas extra de toda tu partida hasta ahora. Son la moneda que gastas en la tienda de mejoras entre niveles, y lo que se asegura cuando termina la partida.",
         "tip": "Gastar compra poder y carga el ciclo presupuestario, mientras que un banco abultado alimenta los beneficios de Runway y War Chest. Tu build decide hacia dónde inclinarte."
       },
-      "recordPace": {
-        "title": "Ritmo de récord",
-        "body": "Compara tus horas extra acumuladas ahora con tu mejor partida en el mismo punto (mismo número de mapas completados). Más allá del final de tu mejor partida, compara con su puntuación final.",
-        "tip": "¿Vas por detrás? Arriesga más: encierra bolas con avaricia y fuerza tu suerte. ¿Vas por delante? Protege la ventaja."
-      },
       "axis_delivery": {
         "title": "Entrega",
         "body": "La parte de las bolas del mapa que realmente encerraste. Es la base, no una tactica: ignora lo ajustados que fueran los bolsillos y condiciona las otras tres vias de estilo. Un despeje sin cierres vale su base fija y nada mas.",
@@ -534,7 +529,6 @@
         "tip": "La prima la fija el mapa por condicion, asi que es igual para cualquier ruta. Escala lo que ganaste, de modo que jugar bien un mapa dificil vale mas que pasarlo por los pelos."
       }
     },
-    "recordPace": "Ritmo de récord",
     "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
     "breakdownTitle": "Desglose de puntuación",
     "winReason": {
@@ -642,7 +636,6 @@
     "lives_other": "{{count}} vidas restantes",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas",
-    "runPace": "{{delta}} vs. tu mejor partida",
     "contractAssignment": "Encargo activo",
     "contractPromotion": "Ascenso",
     "contractRisk": "Riesgo:",

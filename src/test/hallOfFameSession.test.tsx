@@ -69,18 +69,17 @@ describe("Hall of Fame session integration", () => {
     expect(hall.topRuns[0].levelsCompleted).toBe(2);
     expect(hall.bestRunTrajectory).toEqual([30, 60]);
 
-    // Run 2: the first map completion now carries a Record Pace delta
-    // (30 cumulative vs 30 at the same point in the best run = 0).
+    // Run 2: matching the ghost is not a personal best, so the overlay gets
+    // nothing. It used to get a Record Pace delta of 0 here; that row is out
+    // (see useGameSession), and the payload is now the PB banner alone.
     await act(async () => { await result.current.session.handleStartGame(undefined, true); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
-    await act(async () => {
-      result.current.session.handleLevelComplete({
-        levelId: result.current.session.currentLevel!.id,
-        levelScore: 30, cutCount: 10, expectedCuts: 10, remainingPercent: 30,
-        lockedBallsCount: 2,
-      } as never);
-    });
-    expect(result.current.session.levelPace).toEqual({ delta: 0, newPersonalBest: false });
+    await finishMap(result, 30); // cumulative 30, level with the ghost
+    expect(result.current.session.levelPace).toBeNull();
+
+    // Passing the all-time best mid-run still fires the banner, once.
+    await finishMap(result, 40); // cumulative 70, past the recorded 60
+    expect(result.current.session.levelPace).toEqual({ newPersonalBest: true });
   });
 
   it("debug-started runs never file on the ledger", async () => {
