@@ -301,3 +301,39 @@ loadouts:
       extraLives: -1
       ballSpeedMultiplier: 1.2
       pushBonusMultiplier: 3.0
+
+  # Time buyer: the first loadout to touch the freeze family at all, which was
+  # eight modifier keys and a whole shop archetype that no card could reach.
+  # Curse and blessing are the same sentence read twice: the curse is not having
+  # time, the blessing is buying it back, twice a map, on your terms.
+  #
+  # frozenLockBonus is what makes it a build rather than a panic button. Spent
+  # on escaping a mistake the freeze is worth three seconds; spent setting up a
+  # lock it is worth double the lock, so the card teaches its own best line.
+  - id: code_freeze
+    name: Code Freeze
+    curse: Fences grow 25% slower.
+    blessing: Tap a ball to freeze it, twice a map, and a lock taken on a frozen ball pays double.
+    uniqueWinsRequired: 3
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.75
+      ballFreezeDuration: 3
+      freezeUsesPerMap: 2
+      frozenLockBonus: 1
+
+  # Engine: the only card in the catalogue with a feedback loop. Beat the
+  # tightened par and the next map starts two fences up, which makes the next
+  # one easier to beat; miss once and the engine stops until you rebuild it.
+  #
+  # Deep gate because it is the most demanding card here: it makes CUT COUNT
+  # the resource, and a player who has not internalised par will read the curse
+  # as small and the blessing as free.
+  - id: definition_of_ready
+    name: Definition of Ready
+    curse: Every map is scored against one fence FEWER of par.
+    blessing: Beat par and the next map starts with two fences already drawn. Under-par bonuses pay 2.5x.
+    uniqueWinsRequired: 5
+    modifiers:
+      parBonus: -1
+      underParInstantFence: 2
+      underParBonusMultiplier: 2.5
