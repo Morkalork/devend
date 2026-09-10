@@ -307,17 +307,40 @@ describe("what a map pays against what the shop charges", () => {
     expect(FLAWLESS, "a flawless map buys two of the cheapest").toBeLessThan(cheapestFormula * 2);
   });
 
-  it("keeps the level-1 first hires openable on an ordinary map", () => {
-    // The opening shop should not be empty. These four are the weakest
-    // upgrades in the game and the only discounted ones, so they are the
-    // on-ramp rather than a hole in the economy.
+  it("discounts the level-1 first hires by a RATIO, not by a number", () => {
+    // The on-ramp exists so the opening shop is not a shelf you cannot afford,
+    // and it reopened the whole problem once already. They were 30h against a
+    // 40h Junior - a 25% discount on one tier - and survived an anchor change
+    // as 35h against a 133h Junior, which is 74% off. Every level-1 upgrade is
+    // a first hire, so that was not an exception, it was the entire opening
+    // shelf at a quarter price: 125h bought all three cards it shows.
+    //
+    // The ratio is the claim, so the ratio is what is pinned. A future anchor
+    // change fails here rather than quietly making the first shop free again.
     const firstHires = upgrades.filter(u =>
       !u.ascensionOnly && typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1);
     expect(firstHires.length, "the level-1 on-ramp is gone").toBeGreaterThan(0);
     const cheapestHire = Math.min(...firstHires.map(u => u.cost as number));
-    expect(ORDINARY).toBeGreaterThanOrEqual(cheapestHire);
-    expect(cheapestHire, "the on-ramp is priced like the rest of the shelf")
-      .toBeLessThan(cheapestFormula / 2);
+    const ratio = cheapestHire / cheapestFormula;
+    expect(ratio, "the on-ramp is discounted to the point of being free").toBeGreaterThan(0.6);
+    expect(ratio, "the on-ramp is not a discount at all").toBeLessThan(0.9);
+  });
+
+  it("lets a good first map buy one thing from the opening shelf, not three", () => {
+    // The complaint, stated as a test. Every upgrade the first shop can offer
+    // unlocks at level 1, so this IS the opening shelf rather than a sample of
+    // it, and the shop shows three of them.
+    const openingShelf = upgrades
+      .filter(u => !u.ascensionOnly && (u.unlockLevel ?? 1) === 1 && !(u.prerequisites ?? []).length)
+      .map(u => effectiveCost(u) ?? Infinity)
+      .sort((a, b) => a - b);
+    expect(openingShelf.length, "nothing is offerable at level 1").toBeGreaterThanOrEqual(3);
+    expect(GOOD, "a good first map cannot open the store at all")
+      .toBeGreaterThanOrEqual(openingShelf[0]);
+    expect(GOOD, "a good first map buys two of the opening shelf")
+      .toBeLessThan(openingShelf[0] + openingShelf[1]);
+    expect(FLAWLESS, "even a flawless first map buys two")
+      .toBeLessThan(openingShelf[0] + openingShelf[1]);
   });
 
   it("keeps the catalogue unaffordable in full, even for an ace", () => {

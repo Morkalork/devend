@@ -23,11 +23,12 @@ pricing:
   #
   # 190 puts the cheapest tier (0.70 of it, 133h) at almost exactly a good map:
   # a good map buys one thing, a flawless map buys one thing and banks half of
-  # the next, an ordinary clear buys nothing but a first hire, and a scrappy one
-  # buys nothing at all. It replaces an anchor of 20 (a map's `points`), which
-  # is the flat base the scoring model stopped paying with when the Performance
-  # Review landed: price was pinned to 20 while income ran past 130, and the
-  # whole act I shelf cost less than one map.
+  # the next, and an ordinary clear buys nothing at all.
+  #
+  # It replaces an anchor of 20 (a map's `points`), which is the flat base the
+  # scoring model stopped paying with when the Performance Review landed: price
+  # was pinned to 20 while income ran past 130, and the whole act I shelf cost
+  # less than one map.
   anchorHours: 190
   # Market rates: effective prices multiply by this per completed 5-level
   # assignment block (levels 1-5 at face value, 6-10 x1.15, 11-15 x1.32...).
@@ -38,10 +39,20 @@ pricing:
   # Fractions of one good map. The cheapest tier IS a good map, so a shop visit
   # is a choice between buying one thing and saving for a better one.
   #
-  # EXCEPTION: the four level-1 "first hire" Juniors carry an explicit cost: 35
-  # so an ORDINARY map-1 clear still opens the store. The opening shop should
-  # not be empty, and they are the weakest upgrades in the game, capped at four
-  # for the whole run.
+  # EXCEPTION: the four level-1 "first hire" Juniors are discounted, because the
+  # opening shop should not be a shelf you cannot afford.
+  #
+  # They were 30h against a 40h formula Junior: a 25% discount on ONE tier. When
+  # the anchor moved they were nudged to 35 against a 133h Junior, which is a
+  # 74% discount - and since all four level-1 upgrades ARE first hires, that is
+  # not an exception, it is the whole opening shelf at a quarter price. Reported
+  # as "I still get 125 oh for the first map, with an item costing less than
+  # 40": three cards for 112h, with change.
+  #
+  # 100h is about three quarters of a formula Junior, so a first map buys ONE
+  # thing and banks a little toward the next. The relationship is what matters
+  # rather than the number, and upgrades.test.ts pins it: preserving the number
+  # through an anchor change is exactly how this hole reopened.
   tierFactor:
     Junior: 0.70
     Senior: 0.95
@@ -98,7 +109,7 @@ upgrades:
     description: Reduce ball speed by 5%.
     # First-hire discount: the level-1 Juniors are priced so a single normal
     # lock on map 1 (32h) can afford one, instead of needing a superior lock.
-    cost: 35
+    cost: 100
     unlockLevel: 1
     icon: clock
     # +20%: it is the best opening buy in the game AND the door to Load
@@ -162,7 +173,7 @@ upgrades:
     description: Reduce ball size by 5%.
     # First-hire discount (see runtime_optimisation_junior): affordable with a
     # single normal lock on map 1.
-    cost: 35
+    cost: 100
     unlockLevel: 1
     icon: memory
     tags: [safety]
@@ -224,7 +235,7 @@ upgrades:
     description: Increase fence generation speed by 10%.
     # First-hire discount (see runtime_optimisation_junior): affordable with a
     # single normal lock on map 1.
-    cost: 35
+    cost: 100
     unlockLevel: 1
     icon: fast-forward
     tags: [tempo]
@@ -1991,7 +2002,7 @@ upgrades:
     # level x tier formula prices a level-1 Junior at 40; those four are set to
     # 30 so the first shop is affordable at all, and a new arrival on that shelf
     # has to join them or it is simply the expensive one for no stated reason.
-    cost: 35
+    cost: 100
     icon: rocket
     tags: [tempo]
     modifiers:
