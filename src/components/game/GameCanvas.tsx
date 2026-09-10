@@ -797,7 +797,7 @@ export function GameCanvas({
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
     lockedByType: {},
-    lockedBySide: { left: 0, right: 0 },
+    lockPoints: [],
     superiorLockCount: 0,
     superiorLockBonus: 0,
     breakablesSmashed: 0,

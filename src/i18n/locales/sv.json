@@ -824,7 +824,10 @@
     "areaFailBoss_other": "Du fångar bossarna utanför zonen.",
     "splitLocks_one": "Lås in en boll på varje sida av planen.",
     "splitLocks_other": "Lås in {{count}} bollar på varje sida av planen.",
-    "shortSplitLocks": "lås {{count}} på varje sida"
+    "shortSplitLocks": "lås {{count}} på varje sida",
+    "splitLocksHorizontal_one": "Lås in en boll i varje halva, uppe och nere.",
+    "splitLocksHorizontal_other": "Lås in {{count}} bollar i varje halva, uppe och nere.",
+    "shortSplitLocksHorizontal": "lås {{count}} uppe och {{count}} nere"
   },
   "upgradeShop": {
     "storeLabel": "Butik",
@@ -1771,7 +1774,8 @@
     "harvested": "Skordat",
     "space": "Rensat",
     "locks": "Låsta",
-    "splitLocks": "Båda sidor"
+    "splitLocks": "Båda sidor",
+    "splitLocksHorizontal": "Uppe och nere"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",

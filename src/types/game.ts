@@ -502,11 +502,12 @@ export interface LevelScoreData {
    */
   lockedByType?: Record<string, number>;
   /**
-   * Locked balls by which half of the board sealed them, for the `splitLocks`
-   * win clause. Split at the board midline, credited where the ball was when
-   * its pocket closed.
+   * Where each locked ball was when its pocket closed, for the `splitLocks`
+   * win clause. Positions rather than per-side counts: the clause chooses which
+   * way and where the board is divided, and the runtime cannot tally against a
+   * line it does not know yet.
    */
-  lockedBySide?: { left: number; right: number };
+  lockPoints?: { x: number; y: number }[];
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
   /** Hours the simultaneous-lock multiplier added (see CanvasGameState). */

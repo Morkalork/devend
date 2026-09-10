@@ -80,6 +80,19 @@ const ALWAYS_SHOWN: WinConditionKind[] = ["space", "locks"];
 const labelKeyFor = (kind: WinConditionKind | "par"): string =>
   kind === "par" ? "goal.par" : `winGate.${kind}`;
 
+/**
+ * The row's label key for a clause.
+ *
+ * Usually the kind alone, but `splitLocks` names the halves it is asking about
+ * and those depend on how the map is divided: "Both sides" is wrong on a board
+ * cut into a top and a bottom. The row and the "how to win" sentence read the
+ * same field, so they cannot end up describing different halves.
+ */
+const clauseLabelKey = (c: WinCondition): string =>
+  c.kind === "splitLocks" && c.axis === "horizontal"
+    ? "winGate.splitLocksHorizontal"
+    : labelKeyFor(c.kind);
+
 const keyFor = (c: WinCondition): string =>
   c.kind === "lockType" ? `lockType:${c.ballType}` : c.kind;
 
@@ -88,7 +101,7 @@ function requirementGoal(c: WinCondition, snap: WinSnapshot): Goal {
   const p = evaluateWinCondition(c, snap);
   const base = {
     key: keyFor(c), kind: c.kind, tier: "requirement" as const,
-    labelKey: labelKeyFor(c.kind), progress: p, over: false,
+    labelKey: clauseLabelKey(c), progress: p, over: false,
     ...(c.kind === "lockType" ? { ballType: c.ballType } : {}),
   };
   if (c.kind === "space") {

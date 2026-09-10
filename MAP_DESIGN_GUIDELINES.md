@@ -864,7 +864,7 @@ produce**.
 | a delivery box | `delivered` |
 | a circuit | `terminals` |
 | a data stream | `harvested` |
-| nothing but walls | `locks` (closes blind clearing), or `splitLocks` if the map has a real left and right |
+| nothing but walls | `locks` (closes blind clearing), or `splitLocks` if the map has a real division |
 
 The five clause families are exactly the five the Engagement axis measures, and
 that is the rule for adding a sixth: **a clause must read a counter the game
@@ -874,13 +874,33 @@ already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
 `splitLocks` is the one clause that does not name a piece of content, and it is
 the exception that shows what the rule is really for. It reads the lock event
 every other lock clause reads and adds one thing the game was throwing away:
-which half of the board the ball was in when its pocket closed. That is not a
-sixth mechanic needing sixth-mechanic content, it is a second question about the
-oldest one, which is why a bare map can ask it when a bare map can ask nothing
-else. Use it on a map with a genuine left and right (the opening maps' jamb
-column sits on the midline it splits at); on an open board it is `locks` with
-extra steps and a worse failure mode, because a player can pay one side twice
-and only find out when the last ball is gone. Mirrors, portals, gravity wells and one-ways get no clause
+WHERE the ball was when its pocket closed. That is not a sixth mechanic needing
+sixth-mechanic content, it is a second question about the oldest one, which is
+why a bare map can ask it when a bare map can ask nothing else.
+
+The clause carries its own division, so it is not tied to any one map's shape:
+
+| field | means | default |
+|---|---|---|
+| `count` | locks needed on **each** side | required |
+| `axis` | `vertical` (a left and a right) or `horizontal` (a top and a bottom) | `vertical` |
+| `at` | where the line sits, in world units along that axis | the board's centre, 450 |
+
+Level 2 sets `count` alone, because its jamb column is already centred on 450.
+A map divided by a shelf asks for `axis: horizontal`; a map whose divider is
+off-centre puts its own coordinate in `at` rather than being told its geometry
+is wrong. `winSpecProblems` rejects a line outside the play area, which is the
+one way to author this clause so it can never be met.
+
+Two rules for using it:
+
+- **The map has to be visibly divided.** On an open board this is `locks` with
+  extra steps and a worse failure mode: a player can pay one side twice and only
+  find out when the last ball is gone. The "how to win" sentence deliberately
+  does not state where the line is, which only works if the board shows it.
+- **The line goes where the map's own divider is.** The clause will happily
+  split empty space, and a division the player cannot see is a rule they can
+  only learn by losing. Mirrors, portals, gravity wells and one-ways get no clause
 on purpose - they are terrain, there is no state saying whether you "engaged"
 with a wall that bounced a ball, and they earn their keep by changing HOW you
 satisfy `space`, `locks` or `area`.

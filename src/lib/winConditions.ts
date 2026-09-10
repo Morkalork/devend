@@ -139,10 +139,14 @@ function winConditionParts(
         }));
         break;
       case "splitLocks":
-        // Says the shape rather than the arithmetic. "Lock 1 on each side of
-        // the board" is the whole rule, and the player does not need to be told
-        // where the midline is: the maps that ask for this are divided down it.
-        must(t("winConditions.splitLocks", { count: c.count }));
+        // Says the shape rather than the arithmetic, and names the halves the
+        // way the player sees them: a left and a right, or a top and a bottom.
+        // The line's position is deliberately NOT stated. A map that asks this
+        // is visibly divided, and "either side of x = 437" is a worse sentence
+        // than "each side" for someone looking at the board it describes.
+        must(t(c.axis === "horizontal"
+          ? "winConditions.splitLocksHorizontal"
+          : "winConditions.splitLocks", { count: c.count }));
         break;
       case "boss": {
         // Say WHERE, when there is a where. Every boss on the ladder is beaten
@@ -273,7 +277,9 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
     case "area": return t("winConditions.shortArea", { count: c.count });
     case "lockType": return t("winConditions.shortLockType", {
       count: c.count, ball: ballName(c.ballType) });
-    case "splitLocks": return t("winConditions.shortSplitLocks", { count: c.count });
+    case "splitLocks": return t(c.axis === "horizontal"
+      ? "winConditions.shortSplitLocksHorizontal"
+      : "winConditions.shortSplitLocks", { count: c.count });
     case "boss": return t("winConditions.shortBoss");
     case "allLocked": return t("winConditions.shortAllLocked");
     case "smashed": return t("winConditions.shortSmashed", { count: c.count });

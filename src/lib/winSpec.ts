@@ -20,6 +20,8 @@ import type {
 } from "@/types/winSpec";
 import type { WinReason } from "@/types/game";
 import { gateAreas } from "@/lib/coloredAreas";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
+import { ARENA_MARGIN } from "@/lib/gameConstants";
 
 /** The alternative win every non-boss, non-gate map has always had. */
 const ALL_LOCKED: WinCondition = { kind: "allLocked" };
@@ -79,6 +81,45 @@ export function resolveWinSpec(level: LevelConfig): WinSpec {
 }
 
 /**
+ * Where a `splitLocks` clause's dividing line sits, in world units.
+ *
+ * Defaulted rather than required so the common case stays a one-line clause:
+ * the board's own centre on the chosen axis is where a map that divides itself
+ * down the middle already puts its divider.
+ */
+export function splitLine(c: Extract<WinCondition, { kind: "splitLocks" }>): number {
+  if (typeof c.at === "number") return c.at;
+  return (c.axis === "horizontal" ? BOARD_HEIGHT : BOARD_WIDTH) / 2;
+}
+
+/**
+ * The locks either side of a clause's line: [before, after].
+ *
+ * Exported because the runtime records positions and every reader of them has
+ * to divide those points the same way. A second copy of "which side is this"
+ * living in the HUD or the admin preview is how a goal row ends up disagreeing
+ * with the gate it is reporting on.
+ *
+ * A point exactly ON the line counts as the far side. The choice matters less
+ * than its being made once: a ball has a radius and a divider has a thickness,
+ * so a lock landing on the centreline is a map with no real division rather
+ * than a case to tune for.
+ */
+export function splitLockCounts(
+  c: Extract<WinCondition, { kind: "splitLocks" }>,
+  points: { x: number; y: number }[],
+): [number, number] {
+  const line = splitLine(c);
+  const along = (p: { x: number; y: number }) => (c.axis === "horizontal" ? p.y : p.x);
+  let before = 0, after = 0;
+  for (const p of points) {
+    if (along(p) < line) before += 1;
+    else after += 1;
+  }
+  return [before, after];
+}
+
+/**
  * Evaluate one clause against a snapshot.
  *
  * `limit` clauses (underPar, speedClear) are the awkward ones: they are met
@@ -111,12 +152,12 @@ export function evaluateWinCondition(
     case "splitLocks": {
       // Counted in SIDES DONE, not in balls. `current` has to be a number the
       // player can watch move, and the balls they have locked is not it: with
-      // count 1, two locks on the left is no closer to the win than one, so a
+      // count 1, two locks on one side is no closer to the win than one, so a
       // ball tally would show 2/2 on a map that cannot now be finished. Sides
       // is the honest measure and it reads directly - "1 of 2" after the first
-      // pocket, whichever half it was in.
-      const { left, right } = snap.lockedBySide;
-      const done = (left >= condition.count ? 1 : 0) + (right >= condition.count ? 1 : 0);
+      // pocket, whichever side it was in.
+      const [near, far] = splitLockCounts(condition, snap.lockPoints);
+      const done = (near >= condition.count ? 1 : 0) + (far >= condition.count ? 1 : 0);
       return accumulate(done, 2);
     }
     case "boss":
@@ -263,12 +304,24 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       problems.push(
         `Asks for ${c.count} ${c.kind === "locks" ? "locks" : "superior locks"}, but the map spawns at most ${level.maxBalls ?? 1} balls.`);
     }
-    if (c.kind === "splitLocks" && c.count * 2 > (level.maxBalls ?? 1)) {
-      // Both halves have to be payable at once. The balls are never returned,
-      // so a map that spawns fewer than two sides' worth can satisfy one half
-      // and then has nothing left to satisfy the other with.
-      problems.push(
-        `Asks for ${c.count} locked on each side, needing ${c.count * 2} balls, but the map spawns at most ${level.maxBalls ?? 1}.`);
+    if (c.kind === "splitLocks") {
+      // Both sides have to be payable at once. The balls are never returned, so
+      // a map that spawns fewer than two sides' worth can satisfy one side and
+      // then has nothing left to satisfy the other with.
+      if (c.count * 2 > (level.maxBalls ?? 1)) {
+        problems.push(
+          `Asks for ${c.count} locked on each side, needing ${c.count * 2} balls, but the map spawns at most ${level.maxBalls ?? 1}.`);
+      }
+      // A line outside the play area puts every lock on one side of it, so the
+      // clause can never be met and the board gives no hint why. Silent in
+      // exactly the way the mover-path guard exists to prevent.
+      const span = c.axis === "horizontal" ? BOARD_HEIGHT : BOARD_WIDTH;
+      const margin = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
+      const line = splitLine(c);
+      if (line <= margin || line >= span - margin) {
+        problems.push(
+          `The ${c.axis === "horizontal" ? "horizontal" : "vertical"} split at ${Math.round(line)} is outside the play area (${Math.round(margin)} to ${Math.round(span - margin)}), so every lock lands on the same side of it.`);
+      }
     }
     if (c.kind === "lockType") {
       if (c.count > (level.maxBalls ?? 1)) {

@@ -824,7 +824,10 @@
     "areaFailBoss_other": "Atrapas a los jefes fuera de la zona.",
     "splitLocks_one": "Encierra una bola en cada lado del tablero.",
     "splitLocks_other": "Encierra {{count}} bolas en cada lado del tablero.",
-    "shortSplitLocks": "encierra {{count}} en cada lado"
+    "shortSplitLocks": "encierra {{count}} en cada lado",
+    "splitLocksHorizontal_one": "Encierra una bola en cada mitad, arriba y abajo.",
+    "splitLocksHorizontal_other": "Encierra {{count}} bolas en cada mitad, arriba y abajo.",
+    "shortSplitLocksHorizontal": "encierra {{count}} arriba y {{count}} abajo"
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
@@ -1771,7 +1774,8 @@
     "harvested": "Cosechado",
     "space": "Despejado",
     "locks": "Sellados",
-    "splitLocks": "Ambos lados"
+    "splitLocks": "Ambos lados",
+    "splitLocksHorizontal": "Arriba y abajo"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

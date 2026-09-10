@@ -34,7 +34,7 @@ const at = (n: number) => LEVELS.find(l => l.level === n)!;
 /** A board where one target is sitting in the zone and the boss is not beaten. */
 const oneInTheZone = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 100, lockedBalls: 1, superiorLocks: 0, delivered: 0,
-  smashed: 0, terminals: 0, harvested: 0, areaTargets: 1, lockedByType: {}, lockedBySide: { left: 0, right: 0 },
+  smashed: 0, terminals: 0, harvested: 0, areaTargets: 1, lockedByType: {}, lockPoints: [],
   bossDefeated: false, allLocked: false, cuts: 1, par: 9, activeSeconds: 10,
   ...over,
 });

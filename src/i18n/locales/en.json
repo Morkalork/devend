@@ -839,7 +839,10 @@
     "areaFailBoss_other": "You trap the bosses outside the area.",
     "splitLocks_one": "Lock a ball on each side of the board.",
     "splitLocks_other": "Lock {{count}} balls on each side of the board.",
-    "shortSplitLocks": "lock {{count}} on each side"
+    "shortSplitLocks": "lock {{count}} on each side",
+    "splitLocksHorizontal_one": "Lock a ball in each half, top and bottom.",
+    "splitLocksHorizontal_other": "Lock {{count}} balls in each half, top and bottom.",
+    "shortSplitLocksHorizontal": "lock {{count}} in each of the top and bottom"
   },
   "upgradeShop": {
     "storeLabel": "Store",
@@ -1238,7 +1241,8 @@
     "harvested": "Harvested",
     "space": "Cleared",
     "locks": "Locked",
-    "splitLocks": "Both sides"
+    "splitLocks": "Both sides",
+    "splitLocksHorizontal": "Top and bottom"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",

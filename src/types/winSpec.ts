@@ -39,6 +39,9 @@ export interface WinBonus {
   bonusPercent?: number;
 }
 
+/** Which way a `splitLocks` clause cuts the board. */
+export type SplitAxis = "vertical" | "horizontal";
+
 export type WinCondition = (
   /** Clear down to at most `threshold` percent of the board remaining. */
   | { kind: "space"; threshold: number }
@@ -57,7 +60,7 @@ export type WinCondition = (
   /** Lock at least `count` balls whose ball type is `ballType`. */
   | { kind: "lockType"; ballType: string; count: number }
   /**
-   * Lock at least `count` balls on EACH side of the board's midline.
+   * Lock at least `count` balls on EACH side of a dividing line.
    *
    * The clause that asks WHERE rather than how many. Every other lock condition
    * counts balls and is satisfied wherever they were sealed, so on a two-ball
@@ -65,18 +68,36 @@ export type WinCondition = (
    * large part of why the opening maps play alike whatever furniture they carry.
    * This one cannot be met by taking the pocket that happens to be convenient
    * twice: a side already paid for is worth nothing, so the second lock has to
-   * be set up on the far half while the first is still standing.
+   * be set up on the far side while the first is still standing.
    *
-   * Sides are the board's own midline (x = BOARD_WIDTH / 2), not the map's
-   * geometry, so the answer does not move when an author drags a wall. A map
-   * asking for this should put whatever divides it on that line - the opening
-   * maps' jamb column already sits there.
+   * The line is the map's to choose, because the division it tests has to be
+   * the one the map actually has. `axis` picks which way the board is cut and
+   * `at` picks where, defaulting to the board's own centre on that axis - which
+   * is where the opening maps' jamb column already sits. A map divided by a
+   * horizontal shelf asks for `axis: horizontal` and gets top and bottom; a map
+   * whose divider is off-centre says so in `at` rather than being told its
+   * geometry is wrong.
    *
-   * Counted where the ball WAS at the moment it was sealed, which is inside the
-   * pocket that caught it, so a ball cannot be credited to a side it only
-   * passed through.
+   * Which side a lock counted for is worked out HERE, from the position the
+   * lock was recorded at, rather than tallied into two counters while the map
+   * is played. The runtime cannot know where an author will draw the line, and
+   * a tally taken against the wrong line is not recoverable afterwards.
    */
-  | { kind: "splitLocks"; count: number }
+  | {
+      kind: "splitLocks";
+      /** How many locks each side needs. Both sides need the same number. */
+      count: number;
+      /**
+       * Which way the board is divided. `vertical` gives a left and a right
+       * (a line running up the board); `horizontal` gives a top and a bottom.
+       */
+      axis?: SplitAxis;
+      /**
+       * Where the dividing line sits, in world units along the axis: an x for
+       * `vertical`, a y for `horizontal`. Defaults to the board's centre.
+       */
+      at?: number;
+    }
   /** Defeat the boss ball. */
   | { kind: "boss" }
   /** Lock every ball that is still in play. */
@@ -168,10 +189,16 @@ export interface WinSnapshot {
   /** Locked balls by their ball-type id, for `lockType`. */
   lockedByType: Record<string, number>;
   /**
-   * Locked balls by which half of the board caught them, for `splitLocks`.
-   * Split at the board midline; a ball is credited where it was sealed.
+   * Where each locked ball was at the moment its pocket closed, for
+   * `splitLocks` and anything later that asks a question about position.
+   *
+   * Positions rather than a per-side tally, because the runtime taking the
+   * tally does not know where the clause will draw its line: a map may divide
+   * the board the other way round, or off-centre, and two counters added up
+   * against the wrong line cannot be un-added. Bounded by the map's ball count,
+   * so this is a handful of points at most.
    */
-  lockedBySide: { left: number; right: number };
+  lockPoints: { x: number; y: number }[];
   /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
   delivered: number;
   /** The map's breakable obstacles that have been destroyed. */

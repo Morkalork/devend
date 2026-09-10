@@ -23,7 +23,8 @@ import { Plus, Trash2, Trophy, AlertTriangle, Eye, RotateCcw } from 'lucide-reac
 import type { LevelConfig } from '@/types/level';
 import type { WinCondition, WinConditionKind } from '@/types/winSpec';
 import { WIN_CONDITION_KINDS } from '@/types/winSpec';
-import { resolveWinSpec, winSpecProblems, areasGatingWin } from '@/lib/winSpec';
+import type { SplitAxis } from '@/types/winSpec';
+import { resolveWinSpec, winSpecProblems, areasGatingWin, splitLine } from '@/lib/winSpec';
 import { winConditionsBody } from '@/lib/winConditions';
 import { getAllBallTypes } from '@/lib/ballTypes';
 
@@ -35,7 +36,7 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   superiorLocks: 'Land N superior locks',
   area: 'N balls in the coloured area',
   lockType: 'Lock a specific ball',
-  splitLocks: 'Lock N on each side',
+  splitLocks: 'Lock N on each side of a line',
   boss: 'Defeat the boss',
   allLocked: 'Lock every ball',
   delivered: 'Deliver N balls into a box',
@@ -309,6 +310,34 @@ function ConditionParams({ condition, onChange }: {
             ))}
           </select>
           {num(condition.count, n => onChange({ ...condition, count: n }), 'How many')}
+        </>
+      );
+    case 'splitLocks':
+      // Three controls, because the clause is about the map's OWN division:
+      // how many per side, which way the board is cut, and where the line sits.
+      // The line defaults to the board's centre and the field shows that
+      // default rather than an empty box, so an author editing it is moving a
+      // line they can see rather than discovering one.
+      return (
+        <>
+          {num(condition.count, n => onChange({ ...condition, count: n }), 'How many on EACH side')}
+          <select
+            value={condition.axis ?? 'vertical'}
+            title="Which way the board is divided"
+            onChange={(e) => onChange({
+              ...condition,
+              axis: e.target.value as SplitAxis,
+              // The old line belongs to the old axis, so drop it: keeping an x
+              // as a y is how a clause ends up split outside the play area.
+              at: undefined,
+            })}
+            className="w-24 px-1.5 py-1 rounded bg-background border border-border text-[11px] shrink-0"
+          >
+            <option value="vertical">left / right</option>
+            <option value="horizontal">top / bottom</option>
+          </select>
+          {num(splitLine(condition), n => onChange({ ...condition, at: n }),
+               'Where the dividing line sits, in world units', 'w-16')}
         </>
       );
     case 'underPar':
