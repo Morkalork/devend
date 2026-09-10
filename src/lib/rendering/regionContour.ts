@@ -124,6 +124,34 @@ export interface WallSegment {
  * line it stops at; the wall's own stroke (drawn over the tint) then covers
  * the boundary completely. Points near no wall (interior lattice detail) are
  * untouched. Runs at repaint/lock time only, never per frame.
+ *
+ * ── Why the pull has to FADE (`fullDist`) ───────────────────────────────────
+ *
+ * An all-or-nothing projection tears the outline it is supposed to tidy. The
+ * contour arrives from Chaikin with its points a quarter of a cell apart, and
+ * two neighbours that close together can still straddle the `maxDist` cutoff:
+ * one is displaced by nearly the whole reach, the other not at all, and the
+ * edge between them becomes a notch as long as the reach itself. Reported as
+ * "artifacts on the board" after a diagonal cut on level 6, where a contour
+ * with no raw gap wider than 3.8 came out with four gaps of 14 to 30.
+ *
+ * Diagonal fences show it worst, and that is not a coincidence: `maxDist` was
+ * widened to 1.8 cells precisely to catch the corners a diagonal cut leaves
+ * behind, and the notch a straddling pair produces is exactly that reach.
+ * Every widening of the reach to fix teeth was also a widening of the tear.
+ *
+ * So the pull is full strength only within `fullDist` and smoothsteps to
+ * nothing at `maxDist`. Neighbours that sit either side of a threshold now get
+ * near-identical treatment, because the treatment no longer has a step in it.
+ * `fullDist` still has to cover the points that genuinely belong on the wall -
+ * half a fence's thickness plus the lattice's own half-diagonal, ~0.9 cells -
+ * or the teeth come straight back.
+ *
+ * Defaults to `maxDist`, which collapses the fade and reproduces the hard
+ * cutoff exactly. That default is deliberate: three of the four callers feed
+ * these loops to GAME LOGIC (lock polygons, sealed-region tests, ability
+ * sweeps), and moving their geometry moves what the rules decide. Only the
+ * renderer, whose loops are looked at rather than reasoned about, opts in.
  */
 export function snapContoursToWalls(
   loops: ContourPoint[][],
@@ -145,22 +173,47 @@ export function snapContoursToWalls(
    * small pocket does, which is why it only bit there.
    */
   endpoints: "clamp" | "segment" = "clamp",
+  /**
+   * Distance within which a point is projected ALL the way onto the wall.
+   * Between here and `maxDist` the pull smoothsteps to nothing. Defaulting to
+   * `maxDist` leaves no room to fade, i.e. the original hard cutoff.
+   */
+  fullDist: number = maxDist,
 ): ContourPoint[][] {
   if (walls.length === 0 || maxDist <= 0) return loops;
   const maxSq = maxDist * maxDist;
+  // A caller that left `fullDist` alone gets the original hard tests, exactly.
+  const fading = fullDist < maxDist;
   return loops.map(loop =>
     loop.map(p => {
       let best: ContourPoint | null = null;
       let bestSq = maxSq;
+      let bestFade = 1;
       for (const w of walls) {
         const dx = w.end.x - w.start.x;
         const dy = w.end.y - w.start.y;
         const lenSq = dx * dx + dy * dy;
         if (lenSq === 0) continue;
         let t = ((p.x - w.start.x) * dx + (p.y - w.start.y) * dy) / lenSq;
+        // How much of this wall's pull survives the point sitting past an end.
+        let endFade = 1;
         if (t < 0 || t > 1) {
-          if (endpoints === "segment") continue;
-          t = t < 0 ? 0 : 1;
+          if (endpoints !== "segment") {
+            t = t < 0 ? 0 : 1;
+          } else if (!fading) {
+            continue;
+          } else {
+            // The second hard switch, and the one left over after the distance
+            // fade went in: a point whose foot lands a hair past the end got
+            // nothing while its neighbour a quarter cell along got the lot.
+            // Fade over the OVERSHOOT too, and keep the foot on the wall's
+            // infinite line rather than clamping it - clamping is what
+            // collapses a neighbourhood onto one endpoint, which is the whole
+            // reason "segment" exists.
+            const over = (t < 0 ? -t : t - 1) * Math.sqrt(lenSq);
+            if (over >= fullDist) continue;
+            endFade = snapPull(over, 0, fullDist);
+          }
         }
         const qx = w.start.x + t * dx;
         const qy = w.start.y + t * dy;
@@ -168,11 +221,36 @@ export function snapContoursToWalls(
         if (dSq < bestSq) {
           bestSq = dSq;
           best = { x: qx, y: qy };
+          bestFade = endFade;
         }
       }
-      return best ?? p;
+      if (!best) return p;
+      const pull = snapPull(Math.sqrt(bestSq), fullDist, maxDist) * bestFade;
+      if (pull >= 1) return best;
+      if (pull <= 0) return p;
+      return {
+        x: p.x + (best.x - p.x) * pull,
+        y: p.y + (best.y - p.y) * pull,
+      };
     }),
   );
+}
+
+/**
+ * How hard a point `d` from its wall is pulled onto it: 1 inside `full`,
+ * smoothstepped to 0 at `max`.
+ *
+ * Smoothstep rather than a straight ramp because what has to stay small is the
+ * DIFFERENCE between neighbours, and a linear fade still has a corner at each
+ * end where two points a quarter-cell apart get visibly different pulls.
+ */
+export function snapPull(d: number, full: number, max: number): number {
+  // `max` first, so `full === max` (no fade band) reads as the hard cutoff it
+  // is meant to reproduce rather than as "everything is inside".
+  if (d >= max) return 0;
+  if (d <= full) return 1;
+  const t = (max - d) / (max - full);
+  return t * t * (3 - 2 * t);
 }
 
 function smooth(loop: ContourPoint[]): ContourPoint[] {
