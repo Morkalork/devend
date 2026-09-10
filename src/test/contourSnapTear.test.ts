@@ -34,6 +34,21 @@ function cutBoard() {
   return grid;
 }
 
+const FENCE_DX = FENCE.end.x - FENCE.start.x;
+const FENCE_DY = FENCE.end.y - FENCE.start.y;
+const FENCE_LEN_SQ = FENCE_DX * FENCE_DX + FENCE_DY * FENCE_DY;
+
+/** Where a point sits relative to the fence: `t` along it, `d` away from it. */
+function footOnFence(p: ContourPoint): { t: number; d: number } {
+  const t = ((p.x - FENCE.start.x) * FENCE_DX + (p.y - FENCE.start.y) * FENCE_DY)
+    / FENCE_LEN_SQ;
+  return {
+    t,
+    d: Math.hypot(p.x - (FENCE.start.x + t * FENCE_DX),
+                  p.y - (FENCE.start.y + t * FENCE_DY)),
+  };
+}
+
 function worstGap(loops: ContourPoint[][]): number {
   let worst = 0;
   for (const loop of loops) {
@@ -101,29 +116,103 @@ describe("a diagonal cut's outline", () => {
 
   it("still lands flush on the fence, which is what the snap is for", () => {
     const faded = snapContoursToWalls(raw, [FENCE], REACH, "segment", FULL);
-    const dx = FENCE.end.x - FENCE.start.x, dy = FENCE.end.y - FENCE.start.y;
-    const lenSq = dx * dx + dy * dy;
-    const distToFence = (p: ContourPoint) => {
-      const t = Math.max(0, Math.min(1,
-        ((p.x - FENCE.start.x) * dx + (p.y - FENCE.start.y) * dy) / lenSq));
-      return Math.hypot(p.x - (FENCE.start.x + t * dx), p.y - (FENCE.start.y + t * dy));
-    };
-    // Every raw point that genuinely sat against the fence - inside the
-    // full-strength band AND alongside it rather than past an end - is
-    // projected exactly onto it, teeth and all. Points past an end are the
-    // overshoot fade's business and are checked by the smoothness test above.
-    const alongside = (p: ContourPoint) => {
-      const t = ((p.x - FENCE.start.x) * dx + (p.y - FENCE.start.y) * dy) / lenSq;
-      return t >= 0 && t <= 1;
-    };
-    const flush = raw.flat().filter(p => alongside(p) && distToFence(p) <= FULL);
-    expect(flush.length).toBeGreaterThan(20);
-    const after = snapContoursToWalls([flush], [FENCE], REACH, "segment", FULL)[0];
-    for (const p of after) expect(distToFence(p)).toBeLessThan(1e-6);
+    // The teeth: how far a point that sits ALONGSIDE the fence ends up from it.
+    // The lattice leaves them up to a cell out, and flattening that is the
+    // whole reason the snap exists, so it has to survive the fade.
+    let rawTooth = 0, snappedTooth = 0;
+    for (let li = 0; li < raw.length; li++) {
+      for (let i = 0; i < raw[li].length; i++) {
+        const f = footOnFence(raw[li][i]);
+        // Ends are the overshoot fade's business, not the teeth's.
+        if (f.t < 0.05 || f.t > 0.95 || f.d > FULL) continue;
+        rawTooth = Math.max(rawTooth, f.d);
+        snappedTooth = Math.max(snappedTooth, footOnFence(faded[li][i]).d);
+      }
+    }
+    expect(rawTooth).toBeGreaterThan(CELL * 0.9);   // the lattice really is that ragged
+    expect(snappedTooth).toBeLessThan(1);           // and it comes out flat
   });
 
-  it("leaves points beyond the reach exactly where they were", () => {
-    const far = [{ x: 200, y: 700 }, { x: 500, y: 800 }];
-    expect(snapContoursToWalls([far], [FENCE], REACH, "segment", FULL)[0]).toEqual(far);
+  it("keeps a correction local instead of dragging the whole loop", () => {
+    const faded = snapContoursToWalls(raw, [FENCE], REACH, "segment", FULL);
+    // Relaxing the displacement along the loop lets a snapped point tug its
+    // immediate neighbours, which is the point of it. What must not happen is
+    // that tug carrying to points with no business being moved.
+    let worstFar = 0;
+    for (let li = 0; li < raw.length; li++) {
+      for (let i = 0; i < raw[li].length; i++) {
+        if (footOnFence(raw[li][i]).d < REACH * 2) continue;
+        const p = raw[li][i], q = faded[li][i];
+        worstFar = Math.max(worstFar, Math.hypot(p.x - q.x, p.y - q.y));
+      }
+    }
+    expect(worstFar).toBe(0);
+  });
+});
+
+/**
+ * The reported symptom, at the level it was reported: "lines regularly
+ * shooting out from lock areas as they animate".
+ *
+ * Both flashes fill their traced contour directly, so a gap in that contour is
+ * not a subtle seam - it is a filled spike that slams on and fades, which is
+ * exactly what a line shooting out of a pocket looks like. This plays real maps
+ * and watches every flash contour the game actually produces.
+ */
+import { LADDER } from "@/test/fixtures/maps";
+import {
+  createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock,
+} from "@/lib/bot/headlessGame";
+
+function seeded(seed: number) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+describe("flash contours produced in play", () => {
+  it("never spike, on either the claim flash or the lock flash", () => {
+    installClock();
+    let worstClaim = 0, worstLock = 0, claimAt = "", lockAt = "", seen = 0;
+    for (const level of LADDER.slice(0, 12)) {
+      for (let seed = 1; seed <= 3; seed++) {
+        const r = seeded(seed * 104729 + (level.level ?? 1) * 31);
+        const ctx = createBotGame(level, level.level ?? 1, plainModifiers());
+        for (let i = 0; i < 60; i++) stepBot(ctx);
+        for (let c = 0; c < 6; c++) {
+          const g = ctx.game as unknown as {
+            levelComplete: boolean; gameOver: boolean; spaceGrid: unknown;
+            claimFlashes?: { contours: ContourPoint[][] }[];
+            assimilations?: Map<string, { contours?: ContourPoint[][] }>;
+          };
+          if (g.levelComplete || g.gameOver || !g.spaceGrid) break;
+          tryCut(ctx, { x: 60 + r() * 780, y: 60 + r() * 780 },
+                 r() < 0.5 ? { x: 0, y: 1 } : { x: 1, y: 0 });
+          for (let i = 0; i < 300; i++) {
+            stepBot(ctx);
+            for (const f of g.claimFlashes ?? []) {
+              const w = worstGap(f.contours);
+              seen += f.contours.length;
+              if (w > worstClaim) { worstClaim = w; claimAt = `L${level.level} seed ${seed}`; }
+            }
+            for (const a of g.assimilations?.values() ?? []) {
+              if (!a.contours) continue;
+              const w = worstGap(a.contours);
+              seen += a.contours.length;
+              if (w > worstLock) { worstLock = w; lockAt = `L${level.level} seed ${seed}`; }
+            }
+          }
+        }
+      }
+    }
+    releaseClock();
+    // The sweep has to have actually seen flashes, or this passes by doing nothing.
+    expect(seen).toBeGreaterThan(100);
+    // A gap this size is a filled spike, not a seam. Before the fade and the
+    // relax pass these ran to 33 (claim) and 31 (lock) on contours whose raw
+    // gaps were 3.8.
+    expect({ worstClaim: worstClaim < CELL, where: claimAt || "none" })
+      .toEqual({ worstClaim: true, where: claimAt || "none" });
+    expect({ worstLock: worstLock < CELL, where: lockAt || "none" })
+      .toEqual({ worstLock: true, where: lockAt || "none" });
   });
 });

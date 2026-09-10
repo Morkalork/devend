@@ -161,7 +161,10 @@ describe("claiming ground gets a beat", () => {
 
   it("traces the claim the same way a lock traces its pocket", () => {
     // One visual language: the lock flash fills smoothed contours, not cells.
-    expect(CUT).toMatch(/snapContoursToWalls\(/);
+    // Literally the same call now - snapOutlineToWalls is the one snap every
+    // looked-at contour shares, so the claim and the lock it may accompany
+    // cannot disagree about where the ground they took ends.
+    expect(CUT).toMatch(/snapOutlineToWalls\(/);
     expect(CUT).toMatch(/traceContours\(/);
   });
 

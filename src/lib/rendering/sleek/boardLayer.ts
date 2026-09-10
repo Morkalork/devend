@@ -14,7 +14,7 @@
 
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { traceActiveContours, snapContoursToWalls, traceLockContours } from "@/lib/rendering/regionContour";
+import { traceActiveContours, snapOutlineToWalls, traceLockContours } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
 import { washSpriteAlpha, washStops } from "./boardWash";
@@ -299,16 +299,12 @@ export class BoardLayer {
     // outline anyway - while doubling the chances of a point being dragged
     // somewhere it does not belong.
     const boundingWalls = game.walls.filter(w => !w.isObstacleBoundary);
-    // The 1.8-cell reach is the OUTER one, where the pull has already faded to
-    // nothing. Full strength stops at one cell, which still covers everything
-    // that genuinely belongs on a fence (half its 6px thickness plus the
-    // lattice's own half-diagonal, ~0.9 cells) while leaving the reach beyond
-    // it to taper. Without that taper this call tore notches the size of the
-    // reach into the outline wherever two neighbouring points straddled it -
-    // the "artifacts" a diagonal cut showed. See snapContoursToWalls.
-    const loops = snapContoursToWalls(
-      raw, boundingWalls, spaceGrid.cellSize * 1.8, "segment", spaceGrid.cellSize,
-    );
+    // The shared outline snap, which every LOOKED-AT contour uses: the pull is
+    // full strength within a cell and fades to nothing by 1.8. Without that
+    // fade this call tore notches the size of its reach into the outline
+    // wherever two neighbouring points straddled the cutoff - the "artifacts"
+    // a diagonal cut showed. See snapOutlineToWalls.
+    const loops = snapOutlineToWalls(raw, boundingWalls, spaceGrid.cellSize);
 
     const screenLoops: Pt[][] = loops.map(loop => loop.map(p => w2s(p.x, p.y)));
 

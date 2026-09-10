@@ -1,5 +1,5 @@
 import { GrowingWall, Ball, Region, Vector2, WinReason } from "@/types/game";
-import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
+import { traceContours, snapOutlineToWalls } from "@/lib/rendering/regionContour";
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -173,10 +173,10 @@ function recordClaimFlash(game: CanvasGameState, before: Uint8Array | null): voi
   if (claimed.size < CLAIM_MIN_CELLS) return;
 
   const gw = grid.width;
-  const contours = snapContoursToWalls(
+  const contours = snapOutlineToWalls(
     traceContours(grid, (col, row) => claimed.has(row * gw + col)),
     game.walls,
-    grid.cellSize * 1.05,
+    grid.cellSize,
   );
   if (contours.length === 0) return;
   (game.claimFlashes ??= []).push({ contours, startTime: performance.now() });

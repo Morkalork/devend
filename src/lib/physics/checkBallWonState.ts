@@ -30,7 +30,7 @@ import {
   CellState,
 } from "@/lib/spaceGrid";
 import { vec2Length, lineSegmentIntersection, pointInPolygon, polygonBounds } from "@/lib/polygon";
-import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
+import { traceContours, snapOutlineToWalls } from "@/lib/rendering/regionContour";
 import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
@@ -712,10 +712,10 @@ export function checkAndUpdateBallWonStates(
       })) cellSet.add(idx);
       // Snap the lattice contour onto the pocket's bounding walls so the flash
       // fills flush with the fence line (same treatment as the persistent tint).
-      const contours = snapContoursToWalls(
+      const contours = snapOutlineToWalls(
         traceContours(grid, (col, row) => cellSet.has(row * gw + col)),
         game.walls,
-        grid.cellSize * 1.05,
+        grid.cellSize,
       );
 
       // Pickups: a token sealed in with this lock is claimed (the whole point

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { WALL_THICKNESS } from "@/lib/wallGeometry";
 vi.mock("@/lib/gameAudio", () => ({
   playBallLockSound: () => {}, playWallHitSound: () => {}, playBallCollideSound: () => {},
   playFenceBreakSound: () => {}, playDeathSound: () => {}, playCutClaimedSound: () => {},
@@ -216,12 +217,23 @@ describe("lock tint covers the whole enclosed pocket", () => {
         // Never deep on the main-board side of the sealing fence (overshoot).
         expect(signedDist(p)).toBeGreaterThan(-20);
         deepestIntoPocket = Math.max(deepestIntoPocket, signedDist(p));
-        // No point stranded in the seam band: after wall-snapping, a contour
-        // point either sits ON a bounding line (fence/board edge) or is well
-        // clear of all of them - the lattice-quantized "fuzzy seam" between the
-        // fill edge and the fence is gone.
+        // No point stranded in the seam band: a contour point either meets a
+        // bounding line (fence/board edge) or is well clear of all of them -
+        // the lattice-quantized "fuzzy seam" between the fill edge and the
+        // fence is gone.
+        //
+        // "Meets" used to mean EXACTLY on the line, because the snap was all or
+        // nothing: a point was either projected the whole way or left alone,
+        // with nothing in between by construction. That is the property that
+        // made the flashes throw spikes - two neighbours a quarter cell apart
+        // could land either side of the cutoff and be treated completely
+        // differently - so the snap now fades, and a point can come to rest
+        // part of the way onto its wall. Under the wall's own stroke is close
+        // enough: that stroke is drawn over the tint and covers the seam, which
+        // was always the actual requirement. In practice this pocket comes out
+        // with most points dead flush and none more than 5 out.
         const nearest = Math.min(...wallSegs.map(([a, b]) => segDist(p, a, b)));
-        expect(nearest < 0.001 || nearest > 15.8).toBe(true);
+        expect(nearest <= WALL_THICKNESS || nearest > 15.8).toBe(true);
       }
     }
     expect(pointCount).toBeGreaterThan(8);       // a real outline, not a stub

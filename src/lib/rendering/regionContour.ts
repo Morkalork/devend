@@ -184,8 +184,8 @@ export function snapContoursToWalls(
   const maxSq = maxDist * maxDist;
   // A caller that left `fullDist` alone gets the original hard tests, exactly.
   const fading = fullDist < maxDist;
-  return loops.map(loop =>
-    loop.map(p => {
+  return loops.map(loop => {
+    const moved = loop.map(p => {
       let best: ContourPoint | null = null;
       let bestSq = maxSq;
       let bestFade = 1;
@@ -232,8 +232,62 @@ export function snapContoursToWalls(
         x: p.x + (best.x - p.x) * pull,
         y: p.y + (best.y - p.y) * pull,
       };
-    }),
-  );
+    });
+    return fading ? relaxAlongLoop(loop, moved) : moved;
+  });
+}
+
+/**
+ * Passes of [1,2,1]/4 over the displacement, around the closed loop.
+ *
+ * Two is enough to average a lone disagreeing point back down into its
+ * neighbours; more starts rounding off the ends of a genuine straight run
+ * against a wall.
+ */
+const RELAX_PASSES = 2;
+
+/**
+ * Smooth the DISPLACEMENT along the loop, not the loop.
+ *
+ * Fading the pull fixes a point disagreeing with its neighbour about how much
+ * of one wall's pull to take. It cannot fix them disagreeing about WHICH wall:
+ * every point takes the nearest, and two neighbours a quarter cell apart can
+ * have different nearest walls and be dragged in opposite directions. That was
+ * the spike left over in the claim flash after the fade went in, and it is why
+ * the flashes showed it worst - they snap to every wall on the board (edges and
+ * obstacles included), so there are far more ways for neighbours to disagree
+ * than the board outline has, snapping to fences alone.
+ *
+ * The correction applied to a smooth outline should itself be smooth, so the
+ * displacement gets averaged along the loop. Where a long run sits against one
+ * wall every point there has the same displacement and this changes nothing, so
+ * flush stays flush; all it softens is the handful of points at a transition,
+ * which is exactly where the spikes were.
+ */
+function relaxAlongLoop(
+  original: ContourPoint[], moved: ContourPoint[],
+): ContourPoint[] {
+  const n = original.length;
+  if (n < 3) return moved;
+  let dx = new Float64Array(n);
+  let dy = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    dx[i] = moved[i].x - original[i].x;
+    dy[i] = moved[i].y - original[i].y;
+  }
+  for (let pass = 0; pass < RELAX_PASSES; pass++) {
+    const nx = new Float64Array(n);
+    const ny = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = i === 0 ? n - 1 : i - 1;
+      const b = i === n - 1 ? 0 : i + 1;
+      nx[i] = (dx[a] + 2 * dx[i] + dx[b]) / 4;
+      ny[i] = (dy[a] + 2 * dy[i] + dy[b]) / 4;
+    }
+    dx = nx;
+    dy = ny;
+  }
+  return original.map((p, i) => ({ x: p.x + dx[i], y: p.y + dy[i] }));
 }
 
 /**
@@ -251,6 +305,52 @@ export function snapPull(d: number, full: number, max: number): number {
   if (d <= full) return 1;
   const t = (max - d) / (max - full);
   return t * t * (3 - 2 * t);
+}
+
+/**
+ * Full-strength reach of the outline snap, in cells.
+ *
+ * Has to cover everything that genuinely belongs on a fence: half its 6px
+ * thickness plus the lattice's own half-diagonal (a contour tracking a
+ * diagonal cut steps through cell CORNERS, up to ~0.7 cells off the line).
+ * Below this, the teeth a diagonal cut leaves behind come back.
+ */
+const OUTLINE_SNAP_FULL_CELLS = 1.0;
+
+/**
+ * Where the outline snap has faded to nothing, in cells.
+ *
+ * The gap between this and the full-strength reach IS the fade, so the two
+ * cannot be tuned apart: narrowing the band makes the pull drop off faster,
+ * and a faster drop-off is a bigger step between neighbouring points. The lock
+ * contours used to ask for 1.05 with no band at all, which is what made their
+ * flashes throw spikes.
+ */
+const OUTLINE_SNAP_REACH_CELLS = 1.8;
+
+/**
+ * The snap every OUTLINE gets: live space, the persistent lock tint, and both
+ * flashes.
+ *
+ * One function because those four are the same picture drawn at different
+ * moments, and they had drifted - the flashes hugged pockets at 1.05 cells in
+ * "clamp" mode while the board outline reached 1.8 in "segment", so a tint and
+ * the flash celebrating it could disagree about where the pocket's edge was.
+ * Anything that is LOOKED at goes through here. Anything the RULES read calls
+ * snapContoursToWalls directly and keeps its own reach, because moving that
+ * geometry moves what the rules decide.
+ */
+export function snapOutlineToWalls(
+  loops: ContourPoint[][],
+  walls: WallSegment[],
+  cellSize: number,
+): ContourPoint[][] {
+  return snapContoursToWalls(
+    loops, walls,
+    cellSize * OUTLINE_SNAP_REACH_CELLS,
+    "segment",
+    cellSize * OUTLINE_SNAP_FULL_CELLS,
+  );
 }
 
 function smooth(loop: ContourPoint[]): ContourPoint[] {
@@ -286,9 +386,13 @@ function chaikin(pts: ContourPoint[]): ContourPoint[] {
  * punching the tiers separately would put the shadows straight back into the
  * pockets that were locked hardest.
  *
- * The 1.05-cell reach is the pocket-shaped one, deliberately tighter than the
- * 1.8 live space uses: these loops hug small pockets, where the wider reach
- * drags contour points into long stray chords.
+ * Contours get the shared outline snap, same as live space and both flashes.
+ * They used to ask for a tighter 1.05-cell reach in "clamp" mode, on the
+ * reasoning that a wide reach drags pocket points into long stray chords. The
+ * dragging was real; the reach was not what caused it. A reach with no fade
+ * band tears an outline wherever two neighbours straddle its cutoff, and the
+ * tighter the reach the LESS room there is to fade across - so tightening it
+ * made the spikes shorter without making them any rarer.
  */
 export function traceLockContours(
   grid: SpaceGrid,
@@ -298,9 +402,9 @@ export function traceLockContours(
   const lock = grid.lockCaptured;
   if (!lock) return [];
   const gw = grid.width;
-  return snapContoursToWalls(
+  return snapOutlineToWalls(
     traceContours(grid, (col, row) => lock[row * gw + col] >= tier),
     walls,
-    grid.cellSize * 1.05,
+    grid.cellSize,
   );
 }
