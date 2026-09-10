@@ -154,16 +154,28 @@ describe("level 14 is the map that asked for this", () => {
     expect(normaliseGravity(m.gravity as never)!.accelerate).toBe(true);
   });
 
-  it("has no kick on its floor, which under real gravity is an energy pump", () => {
-    // The fall puts speed in and a kick adds more, with nothing taking any out,
-    // so balls sat pinned at terminal: measured at 43-57% of samples within 3%
-    // of the cap with the kick, and zero without it. A ball pinned at the cap
-    // is moving at a constant speed again, which is what this map was changed
-    // to stop. The other live edges are deliberately untouched.
+  it("is bare, because a board full of shelves hides the fall", () => {
+    // The map where you MEET real gravity, so it shows nothing but gravity. It
+    // had five obstacles, and on a board like that a ball clips something
+    // within half a second and the arc you were meant to read never finishes:
+    // reported as "still not normal gravity" with the physics already working.
     const level = LADDER.find(l => l.id === "level-14")!;
-    const edges = level.boardEdges as Record<string, { kick?: number }> | undefined;
-    expect(edges?.bottom).toBeUndefined();
-    expect(edges?.top?.kick).toBe(0.85);
+    expect(level.entities ?? []).toEqual([]);
+    expect(level.coloredAreas ?? []).toEqual([]);
+    // And with nothing to break, the clause that named breakables had to go.
+    expect(level.win!.require!.map(c => c.kind)).toEqual(["space", "locks"]);
+  });
+
+  it("bounces off every side, gently", () => {
+    // Four bouncers because gravity trades height for speed and back, and the
+    // walls put back the little each bounce loses. Gentle because the FALL is
+    // what puts speed in now: the floor's old 1.15 was right under a pull that
+    // only steered, and is a pump under one that accelerates.
+    const edges = (LADDER.find(l => l.id === "level-14")!).boardEdges!;
+    for (const side of ["top", "bottom", "left", "right"] as const) {
+      expect(edges[side]?.kick, side).toBeGreaterThan(1);
+      expect(edges[side]?.kick, side).toBeLessThanOrEqual(1.1);
+    }
   });
 
   it("leaves every other gravity map steering", () => {

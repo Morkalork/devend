@@ -172,12 +172,17 @@ describe("no single idea owns an act", () => {
     // they are still here at ten maps, they mean what the warning says.
     // Both denominators moved with level 15, which is the sampling effect the
     // note predicts working: 4 of 4 became 4 of 5 without a slab being touched,
-    // because the act got a map that has none. The numerators are frozen until
-    // an act II map wins on something other than `space + smashed`, and 15 is
-    // the first that does not (`space + locks`, having nothing to smash).
+    // because the act got a map that has none.
+    //
+    // Stripping level 14 to a bare board then moved the NUMERATORS, and down,
+    // which is the first time that has happened here. Breakables went 4 of 5 to
+    // 3 of 5 and colored areas fell off the list entirely. That is a real
+    // improvement rather than a bookkeeping shuffle, and it was not the point
+    // of the change: 14 was emptied so it could teach real gravity, and the act
+    // reading less like one idea repeated is what a MEET map costs when it is
+    // given room to be one.
     expect(monopolies).toEqual([
-      "Breakable: on 4 of act II's 5 maps",
-      "Colored area: on 3 of act II's 5 maps",
+      "Breakable: on 3 of act II's 5 maps",
     ]);
   });
 

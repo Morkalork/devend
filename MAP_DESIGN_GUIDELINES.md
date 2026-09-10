@@ -579,8 +579,8 @@ these numbers against `map.yml` so this cannot happen twice.
 | 11 | **Meet** launcher, **Compressed** bumper + deformable | Fight breakable | The act opens loud: a barrel, bumpers that pay, and a wall that drinks hits instead of breaking. Three at once, against the one-Meet rule, and it is the only map that does it. |
 | 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
 | 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
-| 14 | **Meet** mirror | Fight topology | Fences bend off a mirror wall: the first map where the cut you drew is not the cut you get. |
-| 15 | **Meet** live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls and a pull that turns a quarter every ten seconds. *(built)* |
+| 14 | **Meet** real gravity, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls and a pull that actually accelerates. Things fall, speed up doing it, and you have to catch one in flight. *(built)* |
+| 15 | **Meet** a turning room | Use real gravity, live outer walls | The same empty board as 14, and the room turns a quarter every ten seconds. Exactly one idea more than the map before it. *(built)* |
 | 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
@@ -870,6 +870,20 @@ The five clause families are exactly the five the Engagement axis measures, and
 that is the rule for adding a sixth: **a clause must read a counter the game
 already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
 `harvested` flags.
+
+**A MEET map for a physics change has to be empty.** Level 14 shipped its real
+gravity with five obstacles still on it and was reported as "still not normal
+gravity" with the physics working correctly: a ball on a board full of shelves
+clips something within half a second, so the arc never finishes and there is
+nothing to read. The rule generalises past gravity. A map teaching a change to
+how things MOVE has to give the movement room to be seen, and the furniture that
+makes an ordinary map interesting is exactly what hides it.
+
+Its partner rule: **a live outer wall belongs on every side or none.** The same
+map had a kick on the floor and nothing on the ceiling, and the first thing
+reported after the board was cleared was that the bottom had no bouncers. Three
+marked sides and one bare one tells the player the bare one is different, which
+is a lie the board cannot take back.
 
 `splitLocks` is the one clause that does not name a piece of content, and it is
 the exception that shows what the rule is really for. It reads the lock event

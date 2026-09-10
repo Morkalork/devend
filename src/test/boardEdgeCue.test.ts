@@ -236,18 +236,21 @@ describe("level 14 is legible", () => {
     }
   });
 
-  it("reads as a cushion and two walls that aim, with a plain floor", () => {
-    const look = (side: keyof NonNullable<typeof l14.boardEdges>) =>
-      edgeLook(side, l14.boardEdges![side])!;
-    // No cue on the floor, because there is nothing to cue: the map's gravity
-    // accelerates now and the floor's kick came out (see boardEdges.test.ts).
-    // A cue drawn on an ordinary wall is worse than none, since the whole point
-    // of the cue is that a marked edge is not normal.
-    expect(edgeLook("bottom", l14.boardEdges!.bottom)).toBeNull();
-    expect(look("top").kind).toBe("slower");
-    expect(look("left").kind).toBe("aim");
-    expect(look("right").kind).toBe("aim");
-    expect(look("left").direction).toEqual({ x: 1, y: 0 });
-    expect(look("right").direction).toEqual({ x: -1, y: 0 });
+  it("draws the same cue on all four sides", () => {
+    // The map is symmetrical now, so the cue has to be. The point of the cue is
+    // that a marked edge is not an ordinary wall; four sides that behave alike
+    // and are drawn alike is the honest picture, and the version that left the
+    // floor bare was reported as "the bottom doesn't have bouncers".
+    const sides = ["top", "bottom", "left", "right"] as const;
+    const looks = sides.map(side => edgeLook(side, l14.boardEdges![side]));
+    for (const [i, look] of looks.entries()) {
+      expect(look, `${sides[i]} has no cue`).not.toBeNull();
+      expect(look!.kind, sides[i]).toBe("faster");
+    }
+    // And each points into the board, which is the one thing that must differ.
+    expect(looks[0]!.direction).toEqual({ x: 0, y: 1 });
+    expect(looks[1]!.direction).toEqual({ x: 0, y: -1 });
+    expect(looks[2]!.direction).toEqual({ x: 1, y: 0 });
+    expect(looks[3]!.direction).toEqual({ x: -1, y: 0 });
   });
 });

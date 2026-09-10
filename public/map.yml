@@ -1137,7 +1137,19 @@ levels:
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
   - id: level-14
     level: 14
-    sizeThreshold: 13
+    # The board where you MEET real gravity, so the board shows you nothing but
+    # gravity. It was a five-obstacle map, and on a board full of shelves a ball
+    # never gets a fall long enough to look like one: it clips something within
+    # half a second and the arc you were meant to read never finishes. Reported
+    # as "still not normal gravity" with the physics already in and working.
+    #
+    # Bare, and the same shape as 15 on purpose. 14 is "things fall", 15 is the
+    # same board with the room turning under it, so the second map adds exactly
+    # one idea instead of two.
+    sizeThreshold: 14
+    # Between 13 (this map with obstacles to hide behind) and 15's bare board.
+    # Losing the shelves cuts both ways: nothing blocks a fence, and nothing
+    # subdivides the board for you either.
     expectedCuts: 8
     points: 20
     maxBalls: 3
@@ -1145,118 +1157,40 @@ levels:
     randomShapes: 0
     ballTypeIds: [red, blue, red]
     mutator: steady_gravity
+    # Gravity pulls screen-down and does not turn with the board, so a map dealt
+    # sideways would have its floor on a wall.
     neverRotates: true
-    # The floor was a 1.15 kick, and under REAL gravity that is an energy pump
-    # rather than a trampoline: the fall puts speed in, the kick adds more, and
-    # nothing takes any out, so balls sat pinned at terminal for half the map.
-    # Measured over 30s of play, the floor kick put 43-57% of samples within 3%
-    # of the speed cap; without it, zero. A ball pinned at the cap is moving at
-    # a constant speed again, which is the thing this map was changed to stop.
-    # The other three live edges are untouched.
+    # All four, and all the same. A bouncer per side is what keeps a falling
+    # board alive: gravity trades height for speed and back, and the walls are
+    # what put back the little that each bounce loses. It also has to READ as
+    # symmetrical, since a player who can see chevrons on three sides and a bare
+    # floor on the fourth has been told the floor is different when it is not.
+    #
+    # 1.05, not the 1.15 the floor used to carry. Under a pull that only steered
+    # the floor had to supply the speed; under one that accelerates, the fall
+    # supplies it and a heavy kick just pumps every ball to terminal, where it
+    # is moving at a constant speed again.
     boardEdges:
-      left:
-        bearing: right
-      right:
-        bearing: left
       top:
-        kick: 0.85
+        kick: 1.05
+      bottom:
+        kick: 1.05
+      left:
+        kick: 1.05
+      right:
+        kick: 1.05
+    # No breakables left to smash, so the clause that named them had to go. A
+    # bare board can ask for a lock and nothing else: "catch one in flight",
+    # which is the whole skill this map teaches.
     win:
       require:
         - kind: space
-          threshold: 13
-        - kind: smashed
+          threshold: 14
+        - kind: locks
           count: 1
-    coloredAreas:
-      - kind: var
-        x: 120
-        'y': 150
-        width: 180
-        height: 170
-        required: false
-    entities:
-      - id: shelf-a
-        kind: wall
-        shape: rect
-        x: 200
-        'y': 480
-        width: 240
-        height: 26
-      - id: shelf-b
-        kind: wall
-        shape: rect
-        x: 560
-        'y': 620
-        width: 295
-        height: 26
-      - id: strut
-        kind: wall
-        shape: rect
-        x: 500
-        'y': 200
-        width: 26
-        height: 170
-        breakable: true
-        hitsToBreak: 3
-      - id: slab
-        kind: wall
-        shape: rect
-        x: 140
-        'y': 700
-        width: 200
-        height: 26
-        breakable: true
-        hitsToBreak: 3
-      - id: ledge
-        kind: wall
-        shape: rect
-        x: 640
-        'y': 330
-        width: 215
-        height: 26
-        breakable: true
-        hitsToBreak: 3
-    beats:
-      - id: deadline
-        atSpaceRemaining: 19
-        breakId: strut
-        announce: game.beatDeadline
+    entities: []
     balls: []
 
-  # Level 15 "Standup": the room turns, and every wall throws you back.
-  #
-  # A MEET map (MAP_DESIGN_GUIDELINES.md section 5): one idea, nothing else on
-  # the board to read it against. No obstacles at all, which is deliberate and
-  # is the reason this one is easy: emptiness is what makes the idea legible.
-  # The bite comes on the maps after it.
-  #
-  # SYMMETRIC EDGES, unlike 14. Every side does the same thing, so the map does
-  # not care which way it is pointing: it needs no neverRotates, and it is the
-  # first live-edge map that can be dealt in all four orientations. That
-  # symmetry is also what makes the mechanic honest under a turning pull, since
-  # boardEdges are world space and do NOT rotate with the pull. On 14 that had
-  # to be solved with a fixed pull; here it is solved by the map having no
-  # preferred direction to lose.
-  #
-  # 1.05 AND NOT MORE. Gravity here only steers, so it never takes speed off a
-  # ball, so a bouncy wall cannot "give it back": all it can do is add. Measured
-  # on this board with nothing else to hit, 1.12 has every ball pinned at the
-  # BOUNCER_MAX_SPEED_SCALE ceiling from 27s and 1.25 from 18s, and a map whose
-  # back half is a flat maximum has stopped saying anything. 1.05 climbs
-  # 1.00x -> 1.48x over 30s and never saturates, which turns the whole map into
-  # one long accelerando: a cut that was safe early is not safe late.
-  #
-  # SPACE PLUS A LOCK, which is the house convention for a map with nothing
-  # operable on it. ladderWins pins the maps whose content is terrain only -
-  # 1 to 4, and now this one - and its note says what such a map may honestly
-  # ask: "they ask for locks, which closes blind clearing, and that is all a map
-  # with nothing operable can honestly ask." Act I's four teaching maps all do
-  # exactly this. It also gives the tilt something to land on: trapping a ball
-  # while the pull keeps changing which wall it is heading for is the one thing
-  # here that a turn can genuinely spoil, because a fence in progress is the
-  # only thing on this board that is not already permanent.
-  #
-  # And it is still not `space + smashed`, which 11 through 14 all are: no
-  # obstacles means no breakables means nothing to smash.
   - id: level-15
     level: 15
     sizeThreshold: 15

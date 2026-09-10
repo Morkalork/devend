@@ -117,46 +117,46 @@ describe("what an edge does to a ball", () => {
 describe("level 14 holds together", () => {
   const l14 = LADDER.find(l => l.level === 14)!;
 
-  it("authors edges at all", () => {
+  it("authors edges at all, and the same one on every side", () => {
     expect(l14.boardEdges, "level 14 lost its live walls").toBeTruthy();
-    // Three, not four: the floor gave up its kick when this map's gravity
-    // started actually accelerating. See the floor test below.
-    expect(Object.keys(l14.boardEdges!).sort()).toEqual(["left", "right", "top"]);
+    const edges = l14.boardEdges!;
+    expect(Object.keys(edges).sort()).toEqual(["bottom", "left", "right", "top"]);
+    // Identical, not merely present. A falling board needs a bouncer per side
+    // because gravity trades height for speed and back and the walls put back
+    // the little each bounce loses; and it has to READ symmetrical, because a
+    // player who sees chevrons on three sides and a bare floor on the fourth
+    // has been told the floor is different when it is not. It shipped that way
+    // once and was reported as "the bottom doesn't have bouncers".
+    const kicks = (["top", "bottom", "left", "right"] as const).map(k => edges[k]?.kick);
+    expect(new Set(kicks).size, `sides disagree: ${kicks.join(", ")}`).toBe(1);
+    expect(kicks[0]).toBeGreaterThan(1);
   });
 
   it("never rotates, because gravity does not", () => {
-    // The one that would ruin it silently. Gravity pulls screen-down and does
-    // not turn with the board, so a dealt-sideways level 14 has its trampoline
-    // on a side wall and its ceiling on the floor. Three deals in four.
+    // Gravity pulls screen-down and does not turn with the board, so a map
+    // dealt sideways has its floor on a wall. Three deals in four.
     expect(l14.neverRotates, "level 14 may be dealt sideways").toBe(true);
     for (const seed of ["a", "b", "c", "d", "e", "f"]) {
       expect(pickMapRotation(`${l14.id}:${seed}`, 14, l14.neverRotates)).toBe(0);
     }
   });
 
-  it("leaves the floor plain, because the fall is what puts speed in now", () => {
-    // It used to kick at 1.15, which was right while gravity only STEERED: the
-    // pull never added speed, so the floor had to. Once the pull accelerates,
-    // the same kick is a pump - the fall adds speed, the floor adds more, and
-    // nothing takes any out. Measured over 30s, it held 43-57% of samples
-    // within 3% of terminal; without it, zero. A ball pinned at terminal is
-    // moving at a constant speed again, which is the thing this map's gravity
-    // was changed to stop.
-    const edges = l14.boardEdges!;
-    expect(edges.bottom, "a floor kick pumps a map that already falls").toBeUndefined();
-    // Still true if anyone puts one back: `bearing: up` on the floor is the
-    // tempting way to say "bouncy" and it produces a vertical orbit in one
-    // column, where the ball stops touching the board and the board the balls
-    // do not touch is captured wholesale.
-    expect(edges.bottom?.bearing, "the floor never fires a fixed heading").toBeUndefined();
-    expect(edges.left?.bearing).toBe("right");
-    expect(edges.right?.bearing).toBe("left");
+  it("keeps the kick gentle, because the fall is what puts speed in now", () => {
+    // The floor carried 1.15 while the pull only STEERED: the pull added no
+    // speed, so the walls had to. Under a pull that accelerates, the fall
+    // supplies it and a heavy kick is a pump - each landing adds what the fall
+    // added and nothing takes any out, so balls sit at terminal moving at a
+    // constant speed again, which is the thing this map was changed to stop.
+    expect(l14.boardEdges!.bottom!.kick).toBeLessThanOrEqual(1.1);
   });
 
-  it("puts a lid on, so the fall has somewhere to spend itself", () => {
-    // The lid's job survives the change and is if anything plainer: it takes
-    // energy OUT, which is the one direction a map that accelerates can afford.
-    expect(l14.boardEdges!.top?.kick ?? 1).toBeLessThan(1);
+  it("fires no fixed heading off any wall", () => {
+    // `bearing: up` on the floor is the tempting way to say "bouncy" and it
+    // produces a vertical orbit in one column: the ball stops touching the
+    // board, and a board the balls do not touch is captured wholesale.
+    for (const side of ["top", "bottom", "left", "right"] as const) {
+      expect(l14.boardEdges![side]?.bearing, `${side} aims instead of bouncing`).toBeUndefined();
+    }
   });
 
   it("pins a gravity mutator that actually pulls one way", () => {

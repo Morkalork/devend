@@ -71,7 +71,7 @@ mutators:
       # so a fall down the full height lands well short of terminal, and `topSpeedScale` is the ceiling fenceTouch and the bouncers
       # already use rather than a new number.
       accelerate: true
-      strength: 150
+      strength: 280
       topSpeedScale: 2.2
       period: 9
       sequence: [down]

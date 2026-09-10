@@ -93,14 +93,24 @@ describe("level 15 holds together", () => {
     expect(kinds).toEqual(["locks", "space"]);
   });
 
-  it("is the first map in act II that does not ask for a smash", () => {
-    // 11 through 14 all require `space + smashed`, because `smashed` was the
-    // only clause available that a lock cannot produce. This one gets out of
-    // that by having nothing to smash rather than by being given a mechanic it
-    // does not need.
+  it("closes act II with the second of two bare boards", () => {
+    // 11 through 13 all require `space + smashed`, because `smashed` was the
+    // only clause available that a lock cannot produce. The last two get out of
+    // that by having nothing to smash rather than by being given a mechanic
+    // they do not need.
+    //
+    // 14 joined this pair when it was stripped: it is the MEET map for real
+    // gravity and could not teach it with five obstacles in the way. So the act
+    // ends on two empty boards that differ by exactly one idea, which is the
+    // point - 14 is "things fall", 15 is the same board with the room turning
+    // under it.
     const actII = LADDER.filter(l => (l.level ?? 0) >= 11 && (l.level ?? 0) <= 15);
     const noSmash = actII.filter(l => !(l.win?.require ?? []).some(c => c.kind === "smashed"));
-    expect(noSmash.map(l => l.level)).toEqual([15]);
+    expect(noSmash.map(l => l.level)).toEqual([14, 15]);
+    // And they are not the same map twice: only one of them turns.
+    const l14 = LADDER.find(l => l.level === 14)!;
+    expect(l14.mutator).toBe("steady_gravity");
+    expect(l15.mutator).toBe("tipping");
   });
 
   it("draws all four walls as the same live wall", () => {

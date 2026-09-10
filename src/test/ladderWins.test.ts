@@ -148,6 +148,14 @@ describe("the maps with nothing a lock cannot produce", () => {
     // makes one idea legible with nothing else on the board to read it
     // against. It asks for `space + locks`, which is exactly what the note
     // above says a map with nothing operable may honestly ask.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 15]);
+    //
+    // 14 joined it deliberately, and the reason is the same one: it is the MEET
+    // map for real gravity, and it was reported as not reading like gravity at
+    // all while it still carried five obstacles. A ball on a board full of
+    // shelves clips something within half a second, so the arc never finishes
+    // and there is nothing to learn from. Emptiness is what makes one idea
+    // legible. It asks for `space + locks`, and the lock is the whole lesson:
+    // you have to catch one in flight.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15]);
   });
 });
