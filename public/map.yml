@@ -1146,9 +1146,14 @@ levels:
     ballTypeIds: [red, blue, red]
     mutator: steady_gravity
     neverRotates: true
+    # The floor was a 1.15 kick, and under REAL gravity that is an energy pump
+    # rather than a trampoline: the fall puts speed in, the kick adds more, and
+    # nothing takes any out, so balls sat pinned at terminal for half the map.
+    # Measured over 30s of play, the floor kick put 43-57% of samples within 3%
+    # of the speed cap; without it, zero. A ball pinned at the cap is moving at
+    # a constant speed again, which is the thing this map was changed to stop.
+    # The other three live edges are untouched.
     boardEdges:
-      bottom:
-        kick: 1.15
       left:
         bearing: right
       right:

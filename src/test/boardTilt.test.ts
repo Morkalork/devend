@@ -26,6 +26,7 @@ import type { GravityConfig } from "@/lib/physics/gravity";
 const CFG: GravityConfig = {
   turnRate: 1.1, period: 9,
   sequence: ["down", "none", "left", "none", "up", "none", "right", "none"],
+  accelerate: false, strength: 300, topSpeedScale: 2.2,
 };
 const DEG = (d: number) => (d * Math.PI) / 180;
 const HALF = BOARD_WIDTH / 2;

@@ -5,6 +5,25 @@
 # displayed strings (name / description / clarify), per project rule.
 #
 # noneWeight: relative odds of "no mutator this map", so some maps stay vanilla.
+#
+# ── gravity: two models, per mutator ──────────────────────────────────────────
+#
+#   turnRate            STEERING (the default). The pull bends a heading and
+#                       never touches the magnitude, so a ball falls at exactly
+#                       the speed it climbed at. Every speed rule in updateBall
+#                       keeps working untouched and a ball can never come to
+#                       rest, which is why the model exists.
+#   accelerate: true    FALLING. `strength` (world units per second squared) is
+#   strength            added along the pull each frame and the speed goes where
+#   topSpeedScale       it goes, clamped at `topSpeedScale` x the ball's own base
+#                       speed. Reads as real gravity; costs the constant-speed
+#                       invariant, which is a per-map decision and not a global
+#                       one. Only steady_gravity (level 14) uses it.
+#
+# An accelerating map's `strength` is not just a feel knob. Heavier gravity packs
+# every ball into a thin band along the floor, everything above them captures
+# freely, and anything the win needs up there gets buried. Sweep the bot before
+# changing it; see the note on steady_gravity below.
 noneWeight: 2
 
 mutators:
@@ -37,12 +56,23 @@ mutators:
   - id: steady_gravity
     name: Downtime
     description: Everything falls, and it keeps falling.
-    clarify: A constant pull downward. Balls arc toward the floor and gather along it, but they never slow down, so they never stop bouncing. Fence where the fall is taking them.
+    clarify: "A constant pull downward, and things really fall: a ball picks up speed on the way down and sheds it on the way up. They gather along the floor and keep bouncing off it. Fence where the fall is taking them, not where they are."
     behavior: gravity
     weight: 0
     minLevel: 14
     gravity:
-      turnRate: 1.1
+      # Real falling, not a steered heading. Reported from play as "clearly
+      # doesn't have normal gravity, feels super weird", which is what a
+      # constant-speed pull looks like to anyone who has seen a ball fall:
+      # the arc is right and the pace never changes, so it reads as a ball on a
+      # string rather than a ball dropping.
+      #
+      # `strength` is world units per second squared against an 810-unit board,
+      # so a fall down the full height lands well short of terminal, and `topSpeedScale` is the ceiling fenceTouch and the bouncers
+      # already use rather than a new number.
+      accelerate: true
+      strength: 150
+      topSpeedScale: 2.2
       period: 9
       sequence: [down]
     overtimePremium: 4

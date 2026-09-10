@@ -461,6 +461,9 @@ export function updateBall(
   if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
     const steered = steerHeading(
       ball.position, ball.velocity, steerWorldOf(game), game.activePlaySeconds, dt,
+      // Its own base speed, so terminal velocity scales with the ball rather
+      // than being one number every type falls to.
+      ball.baseSpeed,
     );
     if (steered) { ball.velocity.x = steered.x; ball.velocity.y = steered.y; }
   }

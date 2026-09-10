@@ -338,7 +338,7 @@ export class FxLayer {
         // blind to gravity wells on six authored maps, ignoring the Free Fall
         // bend multiplier, and deciding "is gravity on" from a different
         // expression than the physics used.
-        { world: steerWorldOf(game), atSeconds: game.activePlaySeconds },
+        { world: steerWorldOf(game), atSeconds: game.activePlaySeconds, baseSpeed: ball.baseSpeed },
         { bounceAt: marks },
         // The compass turn is EXACT and telegraphed a whole cycle ahead, so the
         // preview puts it where it really lands. Drawing straight through a

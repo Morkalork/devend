@@ -36,7 +36,10 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-const CFG: GravityConfig = { turnRate: 1.2, period: 8, sequence: ["down", "none", "left", "none"] };
+const CFG: GravityConfig = {
+  turnRate: 1.2, period: 8, sequence: ["down", "none", "left", "none"],
+  accelerate: false, strength: 300, topSpeedScale: 2.2,
+};
 const len = (v: { x: number; y: number }) => Math.hypot(v.x, v.y);
 
 describe("the phase schedule", () => {
@@ -193,7 +196,12 @@ describe("the per-frame step", () => {
 describe("reading an authored config", () => {
   it("takes a well-formed one", () => {
     const c = normaliseGravity({ turnRate: 2, period: 5, sequence: ["down", "up"] })!;
-    expect(c).toEqual({ turnRate: 2, period: 5, sequence: ["down", "up"] });
+    // The accelerating fields default OFF, so every map authored before they
+    // existed still resolves to the steering model exactly as it did.
+    expect(c).toEqual({
+      turnRate: 2, period: 5, sequence: ["down", "up"],
+      accelerate: false, strength: 300, topSpeedScale: 2.2,
+    });
   });
 
   it("disables gravity rather than half-applying a broken config", () => {

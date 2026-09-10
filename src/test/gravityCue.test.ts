@@ -46,7 +46,7 @@ describe("a board that does not pull", () => {
   });
 
   it("has no cue for a config with an empty sequence", () => {
-    expect(gravityCue({ turnRate: 1, period: 5, sequence: [] }, 5, 0)).toBeNull();
+    expect(gravityCue({ turnRate: 1, period: 5, sequence: [], accelerate: false, strength: 300, topSpeedScale: 2.2 }, 5, 0)).toBeNull();
   });
 });
 

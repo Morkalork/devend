@@ -1,5 +1,5 @@
 import { Region, Ball } from "@/types/game";
-import { gravityVectorAt, steerToward } from "@/lib/physics/gravity";
+import { gravityVectorAt, steerToward, accelTurnRate } from "@/lib/physics/gravity";
 import { DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
 import { DEFAULT_ATTRACT_TURN_RATE, DEFAULT_ATTRACT_RADIUS } from "@/lib/physics/lodestone";
 import {
@@ -465,7 +465,12 @@ export function computeBallTrajectory(
    * Omitted, or on a board where nothing pulls, the fast analytic path is
    * unchanged and nothing pays for this.
    */
-  steer?: { world: SteerWorld; atSeconds: number } | null,
+  steer?: {
+    world: SteerWorld;
+    atSeconds: number;
+    /** The predicted ball's base speed, for an accelerating map's terminal. */
+    baseSpeed?: number;
+  } | null,
   /**
    * Filled with the waypoint index of each BOUNCE, in order.
    *
@@ -520,6 +525,10 @@ export function computeBallTrajectory(
     let chordDist = Infinity;
     let pull: Vector2 | null = null;
     let turnRate = 0;
+    // Which model owns the pull this chord. A WELL and a lodestone still steer
+    // at constant speed even on an accelerating map, so only a pull that came
+    // from map gravity may be integrated as an acceleration.
+    let pullAccelerates = false;
 
     // A LODESTONE bends the path toward itself wherever the predicted ball is,
     // so it decides the chord the same way a well does. Summed with the board's
@@ -549,8 +558,17 @@ export function computeBallTrajectory(
         pull = wellPull;
         turnRate = wellTurnRateAt(here, steer.world);
       } else if (mapGravityActive(steer.world)) {
-        pull = gravityVectorAt(steer.atSeconds + tNow, steer.world.gravityConfig!);
-        turnRate = steer.world.gravityConfig!.turnRate;
+        pullAccelerates = steer.world.gravityConfig!.accelerate;
+        const g = steer.world.gravityConfig!;
+        pull = gravityVectorAt(steer.atSeconds + tNow, g);
+        // An accelerating pull has no turn RATE of its own: it bends a path by
+        // its component across the heading, so how sharply depends on how fast
+        // the ball is going and which way. Chords sized off the authored
+        // turnRate would be far too long on a slow ball and the arc would be
+        // drawn as a polygon.
+        turnRate = g.accelerate && pull
+          ? accelTurnRate({ x: dx * speed, y: dy * speed }, pull, g.strength)
+          : g.turnRate;
       }
       // The Free Fall line softens every bend, and the preview ignoring it made
       // the forecast wrong in proportion to how much the player had spent on it.
@@ -560,6 +578,9 @@ export function computeBallTrajectory(
     }
 
     if (attractRate > 0) {
+      // A lodestone in range makes the blend a STEER again: its pull is an
+      // angular rate, and there is no honest way to add one to an acceleration.
+      pullAccelerates = false;
       // Blend the board's pull with the lodestone's, weighted by how hard each
       // is pulling, so a strong well and a weak lodestone read as the well.
       const px = (pull ? pull.x * turnRate : 0) + attractX;
@@ -637,9 +658,26 @@ export function computeBallTrajectory(
       const nx2 = ox + dx * chordDist, ny2 = oy + dy * chordDist;
       points.push({ x: nx2, y: ny2 });
       if (pull) {
-        const steered = steerToward({ x: dx, y: dy }, pull, turnRate, chordTime);
-        const sl = Math.hypot(steered.x, steered.y) || 1;
-        dx = steered.x / sl; dy = steered.y / sl;
+        const g = steer && mapGravityActive(steer.world) ? steer.world.gravityConfig! : null;
+        if (g?.accelerate && pullAccelerates) {
+          // The same sum the ball gets, over the chord: add the pull, then read
+          // the heading AND the speed back off the result. Doing only the
+          // heading here is what would make the forecast a constant-speed arc
+          // over a path that is visibly accelerating.
+          const bend = steer!.world.gravityBendMultiplier ?? 1;
+          const scale = Number.isFinite(bend) && bend > 0 ? bend : 1;
+          const dv = g.strength * scale * chordTime;
+          let vx = dx * speed + pull.x * dv;
+          let vy = dy * speed + pull.y * dv;
+          let ns = Math.hypot(vx, vy);
+          const terminal = (steer!.baseSpeed ?? 0) * g.topSpeedScale;
+          if (terminal > 0 && ns > terminal) { const r = terminal / ns; vx *= r; vy *= r; ns = terminal; }
+          if (ns > 1e-9) { speed = ns; dx = vx / ns; dy = vy / ns; }
+        } else {
+          const steered = steerToward({ x: dx, y: dy }, pull, turnRate, chordTime);
+          const sl = Math.hypot(steered.x, steered.y) || 1;
+          dx = steered.x / sl; dy = steered.y / sl;
+        }
       }
       if (turnEndsLeg && turns) {
         // Exactly ninety degrees, in the direction the ring has been showing

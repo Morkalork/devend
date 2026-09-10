@@ -210,8 +210,22 @@ describe("neither side is allowed its own copy of the rule", () => {
   });
 
   it("has the preview take a SteerWorld, not a bare gravity config", () => {
-    expect(UTILS).toMatch(/steer\?: \{ world: SteerWorld; atSeconds: number \}/);
+    expect(UTILS).toMatch(/steer\?: \{[\s\S]*?world: SteerWorld;/);
     expect(UTILS).toMatch(/wellPullAt\(/);
+  });
+
+  it("gives the preview what an ACCELERATING map needs, or it draws the wrong arc", () => {
+    // A steered path keeps its speed, so a heading was all the preview ever
+    // needed. An accelerating one changes speed as it falls, and a forecast
+    // that only bent the heading would draw a constant-speed arc over a path
+    // that visibly speeds up - wrong in exactly the way this file exists to
+    // stop, on the maps where the player most wants to look ahead.
+    expect(UTILS, "the preview must size its chords by the real curvature")
+      .toMatch(/accelTurnRate\(/);
+    expect(UTILS, "and carry the terminal clamp's base speed")
+      .toMatch(/baseSpeed\?: number/);
+    expect(FX, "which the renderer has to supply from the ball")
+      .toMatch(/baseSpeed: ball\.baseSpeed/);
   });
 
   it("has the renderer build that world from the same adapter", () => {

@@ -119,7 +119,9 @@ describe("level 14 holds together", () => {
 
   it("authors edges at all", () => {
     expect(l14.boardEdges, "level 14 lost its live walls").toBeTruthy();
-    expect(Object.keys(l14.boardEdges!).sort()).toEqual(["bottom", "left", "right", "top"]);
+    // Three, not four: the floor gave up its kick when this map's gravity
+    // started actually accelerating. See the floor test below.
+    expect(Object.keys(l14.boardEdges!).sort()).toEqual(["left", "right", "top"]);
   });
 
   it("never rotates, because gravity does not", () => {
@@ -132,18 +134,28 @@ describe("level 14 holds together", () => {
     }
   });
 
-  it("gives the floor a kick and the sides a bearing, not the other way round", () => {
-    // `bearing: up` on the floor is the tempting way to say "bouncy" and it
-    // produces a vertical orbit in one column: the ball stops touching the
-    // board, and a board the balls do not touch is captured wholesale.
+  it("leaves the floor plain, because the fall is what puts speed in now", () => {
+    // It used to kick at 1.15, which was right while gravity only STEERED: the
+    // pull never added speed, so the floor had to. Once the pull accelerates,
+    // the same kick is a pump - the fall adds speed, the floor adds more, and
+    // nothing takes any out. Measured over 30s, it held 43-57% of samples
+    // within 3% of terminal; without it, zero. A ball pinned at terminal is
+    // moving at a constant speed again, which is the thing this map's gravity
+    // was changed to stop.
     const edges = l14.boardEdges!;
-    expect(edges.bottom?.bearing, "the floor fires a fixed heading").toBeUndefined();
-    expect(edges.bottom?.kick ?? 1).toBeGreaterThan(1);
+    expect(edges.bottom, "a floor kick pumps a map that already falls").toBeUndefined();
+    // Still true if anyone puts one back: `bearing: up` on the floor is the
+    // tempting way to say "bouncy" and it produces a vertical orbit in one
+    // column, where the ball stops touching the board and the board the balls
+    // do not touch is captured wholesale.
+    expect(edges.bottom?.bearing, "the floor never fires a fixed heading").toBeUndefined();
     expect(edges.left?.bearing).toBe("right");
     expect(edges.right?.bearing).toBe("left");
   });
 
-  it("puts a lid on, so the floor's kick has somewhere to go", () => {
+  it("puts a lid on, so the fall has somewhere to spend itself", () => {
+    // The lid's job survives the change and is if anything plainer: it takes
+    // energy OUT, which is the one direction a map that accelerates can afford.
     expect(l14.boardEdges!.top?.kick ?? 1).toBeLessThan(1);
   });
 

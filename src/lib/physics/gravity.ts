@@ -40,11 +40,35 @@ export interface GravityConfig {
   period: number;
   /** Phases, cycled in order. Include "none" for ordinary stretches. */
   sequence: GravityDirection[];
+  /**
+   * Pull by ACCELERATING instead of steering: real falling, reported as weird
+   * without it (see the "what it is NOT" note at the top of this file).
+   *
+   * Off by default, and every existing map leaves it off, because the steering
+   * model is what the speed rescalers were built around. Turning it on is a
+   * different physics with a different set of things that can go wrong, so it
+   * is a per-map decision rather than a global one.
+   */
+  accelerate: boolean;
+  /** World units per second squared, when accelerating. */
+  strength: number;
+  /**
+   * Terminal speed, as a multiple of the ball's own base speed.
+   *
+   * Freefall needs a ceiling or a bouncy floor turns into a pump: each landing
+   * adds what the fall added and nothing ever takes it out. 2.2 is not a new
+   * number, it is the ceiling fenceTouch and the bouncers already use, so a
+   * ball on a gravity map tops out where a ball off one does.
+   */
+  topSpeedScale: number;
 }
 
 export const DEFAULT_GRAVITY: GravityConfig = {
   turnRate: 1.2,
   period: 8,
+  accelerate: false,
+  strength: 300,
+  topSpeedScale: 2.2,
   // Interleaved "none" phases are what make the map READ as shifting rather
   // than as permanently tilted: the contrast between falling and not falling is
   // the effect, and a map that always pulls one way is just a slanted board.
@@ -67,6 +91,9 @@ export interface RawGravityConfig {
   turnRate?: number;
   period?: number;
   sequence?: string[];
+  accelerate?: boolean;
+  strength?: number;
+  topSpeedScale?: number;
 }
 
 /** Sanitise an authored config; a malformed one simply disables gravity. */
@@ -79,8 +106,17 @@ export function normaliseGravity(raw?: RawGravityConfig | null): GravityConfig |
     ? raw.sequence.filter((d): d is GravityDirection =>
         d === "none" || Object.prototype.hasOwnProperty.call(UNIT, d))
     : [...DEFAULT_GRAVITY.sequence];
-  if (seq.length === 0 || turnRate <= 0) return null;
-  return { turnRate, period, sequence: seq };
+  const accelerate = raw.accelerate === true;
+  const strength = Number.isFinite(raw.strength) && (raw.strength as number) > 0
+    ? (raw.strength as number) : DEFAULT_GRAVITY.strength;
+  const topSpeedScale = Number.isFinite(raw.topSpeedScale) && (raw.topSpeedScale as number) > 1
+    ? (raw.topSpeedScale as number) : DEFAULT_GRAVITY.topSpeedScale;
+  // turnRate gates the STEERING model only. An accelerating map does not use it,
+  // and demanding one anyway would make `turnRate: 0` silently disable a pull
+  // that has nothing to do with turning.
+  if (seq.length === 0) return null;
+  if (!accelerate && turnRate <= 0) return null;
+  return { turnRate, period, sequence: seq, accelerate, strength, topSpeedScale };
 }
 
 /**
@@ -169,9 +205,12 @@ export function steerToward(
 export function gravityStep(
   velocity: Vector2, activeSeconds: number, cfg: GravityConfig, dt: number,
   bendMultiplier = 1,
+  /** The ball's own base speed, for the terminal clamp. Accelerating maps only. */
+  baseSpeed = 0,
 ): Vector2 | null {
   const pull = gravityVectorAt(activeSeconds, cfg);
   if (!pull) return null;
+  if (cfg.accelerate) return accelerateToward(velocity, pull, cfg, dt, bendMultiplier, baseSpeed);
   // Free Fall (Escape Velocity) can soften the bend. Guarded rather than
   // trusted: a zero or negative multiplier would stall the steer or invert the
   // pull, and gravity that quietly pushes the wrong way is worse than none.
@@ -179,4 +218,67 @@ export function gravityStep(
   const rate = cfg.turnRate * scale;
   if (rate <= 0) return null;
   return steerToward(velocity, pull, rate, dt);
+}
+
+/**
+ * Real falling: add `strength * dt` along the pull and let the magnitude go
+ * where it goes, clamped at terminal.
+ *
+ * The opposite trade from steerToward, and worth stating plainly because the
+ * top of this file spends thirty lines arguing for the other one. Steering
+ * keeps every speed rescaler in updateBall working by never touching the
+ * magnitude; accelerating touches nothing BUT the magnitude, so those rescalers
+ * are now in the loop. That is survivable and mostly desirable:
+ *
+ *   - The universal minimum-speed floor still applies, so a ball at the top of
+ *     its arc is nudged along rather than hanging. Freefall would have it pause
+ *     there; this game's "no ball may come to rest" rule outranks that, and the
+ *     nudge is small next to a fall.
+ *   - Grey's wind-down and yellow's re-roll still rescale on contact. A ball
+ *     with a speed ABILITY on an accelerating map is having two things done to
+ *     its magnitude, and the ability wins on the frames it fires. Level 14
+ *     spawns red and blue, neither of which does this.
+ *
+ * The terminal clamp is what stops a bouncy floor becoming a pump. It scales
+ * the whole vector rather than the added component, so a ball at terminal still
+ * steers into the fall instead of freezing its heading.
+ */
+function accelerateToward(
+  velocity: Vector2, pull: Vector2, cfg: GravityConfig, dt: number,
+  bendMultiplier: number, baseSpeed: number,
+): Vector2 | null {
+  if (!(dt > 0)) return null;
+  // Free Fall softens a bend; on an accelerating map the same line softens the
+  // pull, which is the same promise ("gravity affects you less") kept in the
+  // model that map is actually running.
+  const scale = Number.isFinite(bendMultiplier) && bendMultiplier > 0 ? bendMultiplier : 1;
+  const dv = cfg.strength * scale * dt;
+  if (!(dv > 0)) return null;
+
+  const next = { x: velocity.x + pull.x * dv, y: velocity.y + pull.y * dv };
+  const speed = Math.hypot(next.x, next.y);
+  const terminal = baseSpeed > 0 ? baseSpeed * cfg.topSpeedScale : 0;
+  if (terminal > 0 && speed > terminal) {
+    const r = terminal / speed;
+    return { x: next.x * r, y: next.y * r };
+  }
+  return next;
+}
+
+/**
+ * How sharply an accelerating pull is bending a path RIGHT NOW, in radians per
+ * second, for anything that has to reason about curvature rather than apply it.
+ *
+ * Only the component of the pull across the heading turns it; the component
+ * along it just changes speed. Exported because the path preview marches in
+ * chords sized by exactly this, and a preview that guessed at the number would
+ * be the drifted forecast that steerHeading exists to prevent.
+ */
+export function accelTurnRate(
+  velocity: Vector2, pull: Vector2, strength: number,
+): number {
+  const speed = Math.hypot(velocity.x, velocity.y);
+  if (!(speed > 1e-6) || !(strength > 0)) return 0;
+  const cross = Math.abs(velocity.x * pull.y - velocity.y * pull.x) / speed;
+  return (strength * cross) / speed;
 }

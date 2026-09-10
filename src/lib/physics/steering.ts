@@ -98,12 +98,19 @@ export function steerHeading(
   world: SteerWorld,
   activeSeconds: number,
   dt: number,
+  /**
+   * The ball's base speed, which an ACCELERATING map needs for its terminal
+   * clamp. Zero (the default) leaves a falling ball uncapped, so every caller
+   * on such a map has to supply it; the steering model ignores it entirely.
+   */
+  baseSpeed = 0,
 ): Vector2 | null {
   let out: Vector2 | null = null;
   const bend = world.gravityBendMultiplier ?? 1;
 
   if (mapGravityActive(world)) {
-    const steered = gravityStep(velocity, activeSeconds, world.gravityConfig!, dt, bend);
+    const steered = gravityStep(
+      velocity, activeSeconds, world.gravityConfig!, dt, bend, baseSpeed);
     if (steered) out = steered;
   }
 
