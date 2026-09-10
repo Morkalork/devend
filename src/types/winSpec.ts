@@ -56,6 +56,27 @@ export type WinCondition = (
   | { kind: "area"; count: number }
   /** Lock at least `count` balls whose ball type is `ballType`. */
   | { kind: "lockType"; ballType: string; count: number }
+  /**
+   * Lock at least `count` balls on EACH side of the board's midline.
+   *
+   * The clause that asks WHERE rather than how many. Every other lock condition
+   * counts balls and is satisfied wherever they were sealed, so on a two-ball
+   * map "lock 2" and "lock them anywhere" are the same sentence - which is a
+   * large part of why the opening maps play alike whatever furniture they carry.
+   * This one cannot be met by taking the pocket that happens to be convenient
+   * twice: a side already paid for is worth nothing, so the second lock has to
+   * be set up on the far half while the first is still standing.
+   *
+   * Sides are the board's own midline (x = BOARD_WIDTH / 2), not the map's
+   * geometry, so the answer does not move when an author drags a wall. A map
+   * asking for this should put whatever divides it on that line - the opening
+   * maps' jamb column already sits there.
+   *
+   * Counted where the ball WAS at the moment it was sealed, which is inside the
+   * pocket that caught it, so a ball cannot be credited to a side it only
+   * passed through.
+   */
+  | { kind: "splitLocks"; count: number }
   /** Defeat the boss ball. */
   | { kind: "boss" }
   /** Lock every ball that is still in play. */
@@ -110,7 +131,7 @@ export type WinConditionKind = WinCondition["kind"];
 
 /** Every kind, in the order the admin panel and the modal list them. */
 export const WIN_CONDITION_KINDS: WinConditionKind[] = [
-  "space", "locks", "superiorLocks", "area", "lockType",
+  "space", "locks", "superiorLocks", "area", "lockType", "splitLocks",
   "boss", "allLocked", "smashed", "delivered", "terminals", "harvested",
   "underPar", "speedClear",
 ];
@@ -146,6 +167,11 @@ export interface WinSnapshot {
   areaTargets: number;
   /** Locked balls by their ball-type id, for `lockType`. */
   lockedByType: Record<string, number>;
+  /**
+   * Locked balls by which half of the board caught them, for `splitLocks`.
+   * Split at the board midline; a ball is credited where it was sealed.
+   */
+  lockedBySide: { left: number; right: number };
   /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
   delivered: number;
   /** The map's breakable obstacles that have been destroyed. */

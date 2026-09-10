@@ -227,6 +227,7 @@ describe("every reason has words in every language", () => {
       superiorLocks: { kind: "superiorLocks", count: 1 },
       area: { kind: "area", count: 1 },
       lockType: { kind: "lockType", ballType: "black", count: 1 },
+      splitLocks: { kind: "splitLocks", count: 1 },
       boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
       smashed: { kind: "smashed", count: 1 },

@@ -836,7 +836,10 @@
     "areaFail_one": "You don't lock at least one ball in the {{area}} area.",
     "areaFail_other": "You don't lock at least {{count}} balls in the {{area}} area.",
     "areaFailBoss_one": "You trap the boss outside the area.",
-    "areaFailBoss_other": "You trap the bosses outside the area."
+    "areaFailBoss_other": "You trap the bosses outside the area.",
+    "splitLocks_one": "Lock a ball on each side of the board.",
+    "splitLocks_other": "Lock {{count}} balls on each side of the board.",
+    "shortSplitLocks": "lock {{count}} on each side"
   },
   "upgradeShop": {
     "storeLabel": "Store",
@@ -1217,7 +1220,8 @@
     "moverHitFence": "A moving block cut through your fence",
     "needTerminals": "Light {{target}} terminals (you had {{current}})",
     "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})",
-    "objectiveBuried": "You fenced off a breakable you still had to smash"
+    "objectiveBuried": "You fenced off a breakable you still had to smash",
+    "needSplitLocks": "Lock {{each}} on each side of the board (you covered {{current}} of {{target}} sides)"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1233,7 +1237,8 @@
     "terminals": "Wired",
     "harvested": "Harvested",
     "space": "Cleared",
-    "locks": "Locked"
+    "locks": "Locked",
+    "splitLocks": "Both sides"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",

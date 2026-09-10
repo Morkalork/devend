@@ -35,6 +35,7 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   superiorLocks: 'Land N superior locks',
   area: 'N balls in the coloured area',
   lockType: 'Lock a specific ball',
+  splitLocks: 'Lock N on each side',
   boss: 'Defeat the boss',
   allLocked: 'Lock every ball',
   delivered: 'Deliver N balls into a box',
@@ -53,6 +54,7 @@ function blankCondition(kind: WinConditionKind, level: LevelConfig): WinConditio
     case 'superiorLocks': return { kind, count: 1 };
     case 'area': return { kind, count: 1 };
     case 'lockType': return { kind, ballType: 'black', count: 1 };
+    case 'splitLocks': return { kind, count: 1 };
     case 'boss': return { kind };
     case 'allLocked': return { kind };
     // `delivered` was a clause the runtime understood and the panel could not

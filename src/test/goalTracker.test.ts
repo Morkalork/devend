@@ -23,7 +23,7 @@ import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 40, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, delivered: 0, smashed: 0, terminals: 0, harvested: 0,
+  lockedByType: {}, lockedBySide: { left: 0, right: 0 }, delivered: 0, smashed: 0, terminals: 0, harvested: 0,
   bossDefeated: false, allLocked: false, cuts: 0, par: 6, activeSeconds: 0, ...over,
 });
 

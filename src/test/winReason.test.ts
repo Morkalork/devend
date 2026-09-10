@@ -38,7 +38,7 @@ describe("win reason reaches the results screen", () => {
   it("maps every win condition kind to a reason", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: { black: 9 }, delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
+      lockedByType: { black: 9 }, lockedBySide: { left: 9, right: 9 }, delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const sample: Record<WinConditionKind, WinCondition> = {
@@ -47,6 +47,7 @@ describe("win reason reaches the results screen", () => {
       superiorLocks: { kind: "superiorLocks", count: 1 },
       area: { kind: "area", count: 1 },
       lockType: { kind: "lockType", ballType: "black", count: 1 },
+      splitLocks: { kind: "splitLocks", count: 1 },
       boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
     delivered: { kind: "delivered", count: 1 },
@@ -66,7 +67,7 @@ describe("win reason reaches the results screen", () => {
   it("uses every reason somewhere", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: {}, delivered: 9, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
+      lockedByType: {}, lockedBySide: { left: 0, right: 0 }, delivered: 9, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const reasonOf = (c: WinCondition) =>

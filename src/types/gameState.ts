@@ -375,6 +375,12 @@ export interface CanvasGameState {
    * updated, and the first thing to touch it throws.
    */
   lockedByType?: Record<string, number>;
+  /**
+   * Locked balls by which half of the board sealed them, for the `splitLocks`
+   * win clause. Split at the board midline, credited where the ball was when
+   * its pocket closed.
+   */
+  lockedBySide?: { left: number; right: number };
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
   circuit: CircuitRuntime | null;
   /** "Deploy Charge" fuses for this map (empty = none). */

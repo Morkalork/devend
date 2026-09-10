@@ -821,7 +821,10 @@
     "areaFail_one": "Du låser inte in minst en boll i {{area}}-zonen.",
     "areaFail_other": "Du låser inte in minst {{count}} bollar i {{area}}-zonen.",
     "areaFailBoss_one": "Du fångar bossen utanför zonen.",
-    "areaFailBoss_other": "Du fångar bossarna utanför zonen."
+    "areaFailBoss_other": "Du fångar bossarna utanför zonen.",
+    "splitLocks_one": "Lås in en boll på varje sida av planen.",
+    "splitLocks_other": "Lås in {{count}} bollar på varje sida av planen.",
+    "shortSplitLocks": "lås {{count}} på varje sida"
   },
   "upgradeShop": {
     "storeLabel": "Butik",
@@ -1750,7 +1753,8 @@
     "moverHitFence": "Ett rorligt block gick rakt genom ditt staket",
     "needTerminals": "Tand {{target}} terminaler (du hade {{current}})",
     "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})",
-    "objectiveBuried": "Du stängde in ett förstörbart objekt du fortfarande måste krossa"
+    "objectiveBuried": "Du stängde in ett förstörbart objekt du fortfarande måste krossa",
+    "needSplitLocks": "Lås in {{each}} på varje sida av planen (du klarade {{current}} av {{target}} sidor)"
   },
   "winGate": {
     "superiorLocks": "Perfekt",
@@ -1766,7 +1770,8 @@
     "terminals": "Kopplat",
     "harvested": "Skordat",
     "space": "Rensat",
-    "locks": "Låsta"
+    "locks": "Låsta",
+    "splitLocks": "Båda sidor"
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",

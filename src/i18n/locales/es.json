@@ -821,7 +821,10 @@
     "areaFail_one": "No encierras al menos una bola en la zona {{area}}.",
     "areaFail_other": "No encierras al menos {{count}} bolas en la zona {{area}}.",
     "areaFailBoss_one": "Atrapas al jefe fuera de la zona.",
-    "areaFailBoss_other": "Atrapas a los jefes fuera de la zona."
+    "areaFailBoss_other": "Atrapas a los jefes fuera de la zona.",
+    "splitLocks_one": "Encierra una bola en cada lado del tablero.",
+    "splitLocks_other": "Encierra {{count}} bolas en cada lado del tablero.",
+    "shortSplitLocks": "encierra {{count}} en cada lado"
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
@@ -1750,7 +1753,8 @@
     "moverHitFence": "Un bloque movil atraveso tu valla",
     "needTerminals": "Enciende {{target}} terminales (tenias {{current}})",
     "needHarvested": "Cosecha {{target}} tramos del flujo (tenias {{current}})",
-    "objectiveBuried": "Has cercado un objeto destructible que aún tenías que romper"
+    "objectiveBuried": "Has cercado un objeto destructible que aún tenías que romper",
+    "needSplitLocks": "Encerrar {{each}} en cada lado del tablero (cubriste {{current}} de {{target}} lados)"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1766,7 +1770,8 @@
     "terminals": "Conectado",
     "harvested": "Cosechado",
     "space": "Despejado",
-    "locks": "Sellados"
+    "locks": "Sellados",
+    "splitLocks": "Ambos lados"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

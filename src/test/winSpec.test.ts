@@ -20,6 +20,7 @@ import {
   winSpecProblems, winReasonFor, winBonusPercent,
 } from "@/lib/winSpec";
 import { WIN_CONDITION_KINDS } from "@/types/winSpec";
+import type { WinConditionKind } from "@/types/winSpec";
 import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 
@@ -32,7 +33,7 @@ const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 100, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, delivered: 0, smashed: 0, terminals: 0, harvested: 0, bossDefeated: false, allLocked: false,
+  lockedByType: {}, lockedBySide: { left: 0, right: 0 }, delivered: 0, smashed: 0, terminals: 0, harvested: 0, bossDefeated: false, allLocked: false,
   cuts: 0, par: 6, activeSeconds: 0,
   ...over,
 });
@@ -256,14 +257,19 @@ describe("deciding the win", () => {
 describe("reporting the reason", () => {
   const won = snap({
     remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-    lockedByType: { black: 9 }, delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true, par: 9,
+    lockedByType: { black: 9 }, lockedBySide: { left: 9, right: 9 },
+    delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true, par: 9,
   });
 
   it("maps every condition kind to a stored reason", () => {
-    const sample: Record<string, WinCondition> = {
+    // Keyed by WinConditionKind, not by string: as a loose Record a new kind
+    // slipped past the compiler and failed here as `undefined.kind`, which
+    // reads like a bug in the reason mapping rather than a missing sample.
+    const sample: Record<WinConditionKind, WinCondition> = {
       space: { kind: "space", threshold: 50 }, locks: { kind: "locks", count: 1 },
       superiorLocks: { kind: "superiorLocks", count: 1 }, area: { kind: "area", count: 1 },
-      lockType: { kind: "lockType", ballType: "black", count: 1 }, boss: { kind: "boss" },
+      lockType: { kind: "lockType", ballType: "black", count: 1 },
+      splitLocks: { kind: "splitLocks", count: 1 }, boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
     delivered: { kind: "delivered", count: 1 },
       smashed: { kind: "smashed", count: 1 },

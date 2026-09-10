@@ -393,7 +393,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | L | new | develops | premise |
 |---|---|---|---|
 | 1 | - (the doorway) | - | Two rooms, one doorway, one ball. Locking every ball wins outright, so the corner nook is a button marked "finish now". |
-| 2 | the second ball | topology | The same doorway, two schedules. A lock is a decision now rather than an ending. |
+| 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
 | 3 | **Meet** colored area (bonus) | topology | A pink box that pays 1.5x and costs nothing to ignore. |
 | 4 | **Meet** mover | Fight topology | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". |
 | 5 | **Meet** breakable | Use mover, Use colored area | Six hits buy a second doorway the patrol never reaches. |
@@ -864,12 +864,23 @@ produce**.
 | a delivery box | `delivered` |
 | a circuit | `terminals` |
 | a data stream | `harvested` |
-| nothing but walls | `locks` (closes blind clearing; that is all a bare map can ask) |
+| nothing but walls | `locks` (closes blind clearing), or `splitLocks` if the map has a real left and right |
 
 The five clause families are exactly the five the Engagement axis measures, and
 that is the rule for adding a sixth: **a clause must read a counter the game
 already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
-`harvested` flags. Mirrors, portals, gravity wells and one-ways get no clause
+`harvested` flags.
+
+`splitLocks` is the one clause that does not name a piece of content, and it is
+the exception that shows what the rule is really for. It reads the lock event
+every other lock clause reads and adds one thing the game was throwing away:
+which half of the board the ball was in when its pocket closed. That is not a
+sixth mechanic needing sixth-mechanic content, it is a second question about the
+oldest one, which is why a bare map can ask it when a bare map can ask nothing
+else. Use it on a map with a genuine left and right (the opening maps' jamb
+column sits on the midline it splits at); on an open board it is `locks` with
+extra steps and a worse failure mode, because a player can pay one side twice
+and only find out when the last ball is gone. Mirrors, portals, gravity wells and one-ways get no clause
 on purpose - they are terrain, there is no state saying whether you "engaged"
 with a wall that bounced a ball, and they earn their keep by changing HOW you
 satisfy `space`, `locks` or `area`.

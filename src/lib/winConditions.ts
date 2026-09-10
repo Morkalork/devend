@@ -138,6 +138,12 @@ function winConditionParts(
           count: c.count, ball: ballName(c.ballType),
         }));
         break;
+      case "splitLocks":
+        // Says the shape rather than the arithmetic. "Lock 1 on each side of
+        // the board" is the whole rule, and the player does not need to be told
+        // where the midline is: the maps that ask for this are divided down it.
+        must(t("winConditions.splitLocks", { count: c.count }));
+        break;
       case "boss": {
         // Say WHERE, when there is a where. Every boss on the ladder is beaten
         // by fencing it into a var zone, and the map used to derive an `area`
@@ -267,6 +273,7 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
     case "area": return t("winConditions.shortArea", { count: c.count });
     case "lockType": return t("winConditions.shortLockType", {
       count: c.count, ball: ballName(c.ballType) });
+    case "splitLocks": return t("winConditions.shortSplitLocks", { count: c.count });
     case "boss": return t("winConditions.shortBoss");
     case "allLocked": return t("winConditions.shortAllLocked");
     case "smashed": return t("winConditions.shortSmashed", { count: c.count });

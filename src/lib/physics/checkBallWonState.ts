@@ -1,4 +1,5 @@
 import { Ball, Vector2 } from "@/types/game";
+import { BOARD_WIDTH } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
 import {
   areaForLock,
@@ -859,6 +860,14 @@ export function checkAndUpdateBallWonStates(
         const byType = (game.lockedByType ??= {});
         byType[b.typeId] = (byType[b.typeId] ?? 0) + 1;
       }
+      // And by which half of the board caught it, so a win can ask WHERE.
+      // Read here rather than from the pocket's centroid: this is the ball's
+      // position at the moment it was sealed, which is by definition inside the
+      // pocket, and a pocket that straddles the midline should be credited to
+      // the side the ball is actually sitting in.
+      const side = (game.lockedBySide ??= { left: 0, right: 0 });
+      if (b.position.x < BOARD_WIDTH / 2) side.left += 1;
+      else side.right += 1;
       const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult * lampMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }

@@ -755,6 +755,7 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     harvested: (game.dataStream?.harvested ?? []).filter(Boolean).length,
     areaTargets: game.coloredAreaTargets ?? 0,
     lockedByType: game.lockedByType ?? {},
+    lockedBySide: game.lockedBySide ?? { left: 0, right: 0 },
     bossDefeated: game.bossDefeated,
     allLocked: areAllBallsWon(game),
     cuts: game.wallCount,

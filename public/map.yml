@@ -101,12 +101,18 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    # Both balls still have to be sealed, but now one has to go in each half.
+    # `locks: 2` is not kept alongside it: on a two-ball map "one on each side"
+    # already means both, and a second clause saying so would just be the same
+    # requirement twice in the goal list. The jamb column at x=437 sits on the
+    # midline this splits at, and the two nook lips are one per side, so the map
+    # already had the shape - it was only ever asking for the easier thing.
     win:
       require:
         - kind: space
           threshold: 37
-        - kind: locks
-          count: 2
+        - kind: splitLocks
+          count: 1
     entities:
       - id: jamb-top
         kind: wall

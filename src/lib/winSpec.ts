@@ -108,6 +108,17 @@ export function evaluateWinCondition(
       return accumulate(snap.areaTargets, condition.count);
     case "lockType":
       return accumulate(snap.lockedByType[condition.ballType] ?? 0, condition.count);
+    case "splitLocks": {
+      // Counted in SIDES DONE, not in balls. `current` has to be a number the
+      // player can watch move, and the balls they have locked is not it: with
+      // count 1, two locks on the left is no closer to the win than one, so a
+      // ball tally would show 2/2 on a map that cannot now be finished. Sides
+      // is the honest measure and it reads directly - "1 of 2" after the first
+      // pocket, whichever half it was in.
+      const { left, right } = snap.lockedBySide;
+      const done = (left >= condition.count ? 1 : 0) + (right >= condition.count ? 1 : 0);
+      return accumulate(done, 2);
+    }
     case "boss":
       return accumulate(snap.bossDefeated ? 1 : 0, 1);
     case "allLocked":
@@ -192,9 +203,12 @@ export function winningCondition(spec: WinSpec, snap: WinSnapshot): WinCondition
     // plain lock count does.
     // A smash ranks with the "you did a specific thing" group: on a map whose
     // win is "clear the board AND break the slab", the slab is the story.
+    // splitLocks outranks a plain lock count and sits with lockType: both are
+    // "you locked the RIGHT ball", which is the story of the map, where "you
+    // locked two" is just the tally.
     boss: 0, area: 1, delivered: 2, smashed: 3, terminals: 4, harvested: 5,
-    lockType: 6, superiorLocks: 7, allLocked: 8, locks: 9, speedClear: 10,
-    underPar: 11, space: 12,
+    splitLocks: 6, lockType: 7, superiorLocks: 8, allLocked: 9, locks: 10,
+    speedClear: 11, underPar: 12, space: 13,
   };
   return [...spec.require].sort((a, b) => rank[a.kind] - rank[b.kind])[0];
 }
@@ -248,6 +262,13 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
     if ((c.kind === "locks" || c.kind === "superiorLocks") && c.count > (level.maxBalls ?? 1)) {
       problems.push(
         `Asks for ${c.count} ${c.kind === "locks" ? "locks" : "superior locks"}, but the map spawns at most ${level.maxBalls ?? 1} balls.`);
+    }
+    if (c.kind === "splitLocks" && c.count * 2 > (level.maxBalls ?? 1)) {
+      // Both halves have to be payable at once. The balls are never returned,
+      // so a map that spawns fewer than two sides' worth can satisfy one half
+      // and then has nothing left to satisfy the other with.
+      problems.push(
+        `Asks for ${c.count} locked on each side, needing ${c.count * 2} balls, but the map spawns at most ${level.maxBalls ?? 1}.`);
     }
     if (c.kind === "lockType") {
       if (c.count > (level.maxBalls ?? 1)) {
@@ -367,6 +388,7 @@ export function winReasonFor(spec: WinSpec, snap: WinSnapshot): WinReason {
     // finished because of what you trapped, not because the board ran out.
     case "locks":
     case "superiorLocks":
+    case "splitLocks":
     case "lockType": return "allLocked";
     // These only ever gate a clear, never finish one on their own.
     case "space":

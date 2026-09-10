@@ -164,6 +164,8 @@ export function failLines(t: TFunction, failure: MapFailure): string[] {
       case "superiorLocks": return t("mapFailure.needSuperior", v) as string;
       case "area": return t("mapFailure.needArea", v) as string;
       case "lockType": return t("mapFailure.needLockType", { ...v, ball: c.ballType }) as string;
+      // `current`/`target` are sides here, not balls - see evaluateWinCondition.
+      case "splitLocks": return t("mapFailure.needSplitLocks", { ...v, each: c.count }) as string;
       case "boss": return t("mapFailure.needBoss") as string;
       case "allLocked": return t("mapFailure.needAllLocked") as string;
       case "smashed": return t("mapFailure.needSmashed", v) as string;

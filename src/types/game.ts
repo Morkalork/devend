@@ -501,6 +501,12 @@ export interface LevelScoreData {
    * same kind of bounty across a block.
    */
   lockedByType?: Record<string, number>;
+  /**
+   * Locked balls by which half of the board sealed them, for the `splitLocks`
+   * win clause. Split at the board midline, credited where the ball was when
+   * its pocket closed.
+   */
+  lockedBySide?: { left: number; right: number };
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
   /** Hours the simultaneous-lock multiplier added (see CanvasGameState). */
