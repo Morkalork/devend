@@ -148,8 +148,8 @@ describe("level 14 is the map that asked for this", () => {
 
   it("pins a mutator that accelerates", () => {
     const level = LADDER.find(l => l.id === "level-14")!;
-    expect(level.mutator).toBe("steady_gravity");
-    const m = mutators.find(x => x.id === "steady_gravity")!;
+    expect(level.mutator).toBe("tipping");
+    const m = mutators.find(x => x.id === "tipping")!;
     expect(m.gravity!.accelerate).toBe(true);
     expect(normaliseGravity(m.gravity as never)!.accelerate).toBe(true);
   });
@@ -178,10 +178,16 @@ describe("level 14 is the map that asked for this", () => {
     }
   });
 
-  it("leaves every other gravity map steering", () => {
+  it("accelerates on both pinned mutators, and neither of the rolled ones", () => {
+    // `steady_gravity` and `tipping` are the two a map pins by name, and both
+    // fall for real. `gravity_well` is rolled at random onto maps that were not
+    // designed around it, so it keeps the steering model until a map asks for
+    // it: a rolled visitor that changes the physics is a different map than the
+    // one the author tuned.
+    const pinned = new Set(["steady_gravity", "tipping"]);
     for (const m of mutators) {
-      if (m.id === "steady_gravity" || !m.gravity) continue;
-      expect(m.gravity.accelerate ?? false, m.id).toBe(false);
+      if (!m.gravity) continue;
+      expect(m.gravity.accelerate ?? false, m.id).toBe(pinned.has(m.id));
     }
   });
 });

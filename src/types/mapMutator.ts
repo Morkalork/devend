@@ -15,6 +15,8 @@
  * - `gravity`   the board turns and the pull bends every heading (issue #77).
  * - `none`      no effect (a defined "breather" entry; also see noneWeight).
  */
+import type { RawGravityConfig } from "@/lib/physics/gravity";
+
 export type MutatorBehavior = "crunch" | "overclock" | "gravity" | "none";
 
 /** One authored mutator entry (public/mapMutators.yml). English source of truth. */
@@ -35,15 +37,17 @@ export interface MapMutator {
   /** Overtime hours awarded on clear, folded UNDER the per-map cap (issue #43). */
   overtimePremium?: number;
   /**
-   * Shifting gravity (issue #77), for `behavior: gravity`. Authored as a
-   * sequence of cardinal phases plus a turn rate; see src/lib/physics/gravity.ts
-   * for why this steers the heading rather than accelerating the ball.
+   * Shifting gravity (issue #77), for `behavior: gravity`. A sequence of
+   * cardinal phases, and either a turn rate (the heading STEERS at constant
+   * speed) or `accelerate` (things really fall). See src/lib/physics/gravity.ts
+   * for what each buys and costs.
+   *
+   * The authoring shape itself, rather than a copy of it. It was restated here
+   * and drifted the moment gravity learned to accelerate: the YAML carried
+   * fields this type had never heard of, and a test reading them off a mutator
+   * could not compile.
    */
-  gravity?: {
-    turnRate?: number;
-    period?: number;
-    sequence?: string[];
-  };
+  gravity?: RawGravityConfig;
 }
 
 /**

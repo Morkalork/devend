@@ -95,7 +95,12 @@ mutators:
     weight: 0
     minLevel: 15
     gravity:
-      turnRate: 1.1
+      # Real falling, same as steady_gravity: the map this pairs with teaches
+      # that things accelerate, and a turning room whose balls did NOT would
+      # undo the lesson one map later.
+      accelerate: true
+      strength: 280
+      topSpeedScale: 2.2
       period: 10
       sequence: [down, right, up, left]
     overtimePremium: 4

@@ -100,11 +100,17 @@ describe("no mechanic is introduced and then dropped", () => {
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    // `mutator` came off this list the way the note above says it would: level
-    // 15 is the second map to pin one, so it is developed rather than a
-    // one-off. Live outer walls never appear here because they debut on 14 and
-    // are used on 15, which is the pattern the rule is asking for.
-    expect(singles.map(w => w.key).sort()).toEqual(["mirror"]);
+    // `mutator` and `boardEdges` are BACK on this list, and the honest reason is
+    // that the ladder got shorter rather than that a map went wrong. 14 and 15
+    // were one design split into two maps; merging them back left 14 as the only
+    // map pinning a mutator and the only map with live outer walls, so both
+    // count as single-use again by the rule's own arithmetic.
+    //
+    // This is what the rule is FOR and it is being read correctly: a mechanic
+    // introduced on the last map of a ladder is on this list until the ladder
+    // grows past it. It is a debt against level 15's replacement, not a defect
+    // in 14, and the fix is the next map rather than an edit to this one.
+    expect(singles.map(w => w.key).sort()).toEqual(["boardEdges", "mirror", "mutator"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -175,14 +181,16 @@ describe("no single idea owns an act", () => {
     // because the act got a map that has none.
     //
     // Stripping level 14 to a bare board then moved the NUMERATORS, and down,
-    // which is the first time that has happened here. Breakables went 4 of 5 to
-    // 3 of 5 and colored areas fell off the list entirely. That is a real
-    // improvement rather than a bookkeeping shuffle, and it was not the point
-    // of the change: 14 was emptied so it could teach real gravity, and the act
-    // reading less like one idea repeated is what a MEET map costs when it is
-    // given room to be one.
+    // which is the first time that has happened here. Colored areas fell off
+    // the list entirely and breakables went 4 of 5 to 3 of 5, then to 3 of 4
+    // when the ladder stopped at 14 and the denominator shrank with it.
+    //
+    // The fraction going UP while the count goes down is the sampling effect
+    // the note above warns about, seen from the other side: three of four is a
+    // worse-looking number than three of five and describes the same three
+    // maps. Nothing was authored differently to cause it.
     expect(monopolies).toEqual([
-      "Breakable: on 3 of act II's 5 maps",
+      "Breakable: on 3 of act II's 4 maps",
     ]);
   });
 

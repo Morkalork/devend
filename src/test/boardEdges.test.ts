@@ -159,13 +159,27 @@ describe("level 14 holds together", () => {
     }
   });
 
-  it("pins a gravity mutator that actually pulls one way", () => {
-    // The shipped gravity_well rotates through all four directions, which is
-    // the wrong partner for a map with a live floor: three quarters of the
-    // cycle the trampoline is a side wall.
+  it("only turns its pull because every wall is the same wall", () => {
+    // This used to demand a pull that never turned, and the reason was sound at
+    // the time: the map had a trampoline floor and a damping lid, and
+    // boardEdges are WORLD space and do not rotate with the pull, so three
+    // quarters of a turning cycle would have had the trampoline on a side wall.
+    //
+    // The map answered that by losing the asymmetry rather than the turn. So
+    // the rule is a COUPLING, not a ban, and it is worth stating that way
+    // because it is the one an author can break from either side: turn the pull
+    // on a map with a special floor, or give a special floor to a map whose
+    // pull turns, and the result is a wall that means something different
+    // depending on when you look at it.
     const m = mutatorById(l14.mutator);
     expect(m, `level 14 pins "${l14.mutator}", which is not in the catalogue`).toBeTruthy();
     expect(m!.behavior).toBe("gravity");
-    expect(m!.gravity?.sequence).toEqual(["down"]);
+    const turns = new Set(m!.gravity?.sequence ?? ["down"]).size > 1;
+    if (turns) {
+      const kicks = (["top", "bottom", "left", "right"] as const)
+        .map(side => l14.boardEdges?.[side]?.kick);
+      expect(new Set(kicks).size,
+        `the pull turns but the walls differ: ${kicks.join(", ")}`).toBe(1);
+    }
   });
 });

@@ -94,25 +94,25 @@ describe("counting a block's clean-clearable maps", () => {
     // rebuilt, and mixing authored maps with retired ones measures a block
     // nobody plays.
     //
-    // 11 through 13 win on space plus a smash, which prices no lock. 14 and 15
-    // are the exceptions and both for a structural reason rather than a
-    // stylistic one: they are bare boards, so they have nothing to smash, and
-    // `space + locks` is what ladderWins says a map with nothing operable may
-    // honestly ask. 14 joined them when it was stripped so it could teach real
-    // gravity with nothing in the way.
+    // 11 through 13 win on space plus a smash, which prices no lock. 14 is the
+    // exception, for a structural reason rather than a stylistic one: it is a
+    // bare board, so it has nothing to smash, and `space + locks` is what
+    // ladderWins says a map with nothing operable may honestly ask.
     //
-    // Three is still not a problem for Ship It, and this test is where that is
-    // checked rather than assumed: capOrRefuse drops a noLocks mission only
-    // below MIN_TOP_TIER, which is 2, so a block with three clean maps still
-    // offers one, capped at three instead of five. The number to watch is 1.
+    // The block holds FOUR maps, not five, because the ladder currently ends at
+    // 14. That is the case worth having a test for: blockSpaceWinnableMaps
+    // counts what exists rather than assuming a full block, and Ship It is
+    // unbothered either way. capOrRefuse drops a noLocks mission only below
+    // MIN_TOP_TIER, which is 2, so three clean maps still offers one, capped at
+    // three. The number to watch is 1.
     const built = LADDER.filter(l => (l.level ?? 0) >= 11 && (l.level ?? 0) <= 15);
-    expect(built.length, "block 11 is empty: is this reading the ladder?").toBe(5);
+    expect(built.length, "block 11 is empty: is this reading the ladder?").toBe(4);
     const clean = blockSpaceWinnableMaps(LADDER, 11);
     expect(clean).toBe(3);
     expect(clean, "below two, Ship It stops offering here at all").toBeGreaterThanOrEqual(2);
     const pricesALock = built.filter(l =>
       (l.win?.require ?? []).some(c => c.kind === "locks"));
-    expect(pricesALock.map(l => l.level)).toEqual([14, 15]);
+    expect(pricesALock.map(l => l.level)).toEqual([14]);
   });
 });
 

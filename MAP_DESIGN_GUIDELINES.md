@@ -579,8 +579,8 @@ these numbers against `map.yml` so this cannot happen twice.
 | 11 | **Meet** launcher, **Compressed** bumper + deformable | Fight breakable | The act opens loud: a barrel, bumpers that pay, and a wall that drinks hits instead of breaking. Three at once, against the one-Meet rule, and it is the only map that does it. |
 | 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
 | 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
-| 14 | **Meet** real gravity, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls and a pull that actually accelerates. Things fall, speed up doing it, and you have to catch one in flight. *(built)* |
-| 15 | **Meet** a turning room | Use real gravity, live outer walls | The same empty board as 14, and the room turns a quarter every ten seconds. Exactly one idea more than the map before it. *(built)* |
+| 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built, ladder ends here)* |
+| 15 | - | - | Was the board above without its turn, which is a split of one design into two maps that nobody asked for. Folded back into 14; the rung is open. |
 | 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
@@ -870,6 +870,14 @@ The five clause families are exactly the five the Engagement axis measures, and
 that is the rule for adding a sixth: **a clause must read a counter the game
 already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
 `harvested` flags.
+
+**Do not split one design across two rungs to keep "one new idea per map".**
+The rule is a good default and it cost a map here. Level 14 was asked for in one
+sentence - bare board, four bouncy sides, real gravity, a recurring tilt - and
+got built as 14 without the turn and 15 with it, on the reasoning that a MEET
+map should introduce one thing. The player met 14, found it was not the map they
+had described, and reported the missing tilt. Splitting a design is a decision
+about someone else's design, so it belongs to whoever asked for it.
 
 **A MEET map for a physics change has to be empty.** Level 14 shipped its real
 gravity with five obstacles still on it and was reported as "still not normal

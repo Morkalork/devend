@@ -1,7 +1,8 @@
 /**
  * The bot plays on the map's clock, like a player does.
  *
- * Found while sweeping level 15: a seed came back a WIN at 53 seconds on a map
+ * Found while sweeping the bare gravity board (level 15 at the time, level 14
+ * since the two were merged): a seed came back a WIN at 53 seconds on a map
  * whose deadline is 50. useGameLoop calls `checkWinCondition` every active
  * frame and `evaluateWinConditions` opens by failing the map once
  * activePlaySeconds reaches getMapTimeLimit; the harness called it only in
@@ -43,21 +44,21 @@ function livesDockedAt(level: LevelConfig, levelNumber: number, seconds: number)
   } finally { releaseClock(); }
 }
 
-const l15 = LADDER.find(l => l.level === 15)!;
+const board = LADDER.find(l => l.level === 14)!;
 
 describe("the map deadline reaches the harness", () => {
   it("docks a life the moment an authored timer runs out", () => {
-    const at = livesDockedAt({ ...l15, timeLimit: 5 } as LevelConfig, 15, 12);
+    const at = livesDockedAt({ ...board, timeLimit: 5 } as LevelConfig, 14, 12);
     expect(at.length, "the deadline never fired: the bot is playing without a clock").toBeGreaterThan(0);
     expect(at[0]).toBeGreaterThanOrEqual(5);
     expect(at[0], "the deadline fired late").toBeLessThan(5.2);
   });
 
   it("uses the ladder's own ramp when a map authors no timer", () => {
-    // 60s minus 10 per ten levels: level 15 gets 50. A map left to idle must
+    // 60s minus 10 per ten levels: level 14 gets 50. A map left to idle must
     // fail there, not run forever.
-    expect(getMapTimeLimit(l15, 15)).toBe(50);
-    const at = livesDockedAt(l15, 15, 53);
+    expect(getMapTimeLimit(board, 14)).toBe(50);
+    const at = livesDockedAt(board, 14, 53);
     expect(at.some(s => s >= 50 && s < 50.2), `expected a life at 50s, got ${JSON.stringify(at)}`).toBe(true);
   });
 

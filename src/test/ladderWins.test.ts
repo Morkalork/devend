@@ -150,12 +150,16 @@ describe("the maps with nothing a lock cannot produce", () => {
     // above says a map with nothing operable may honestly ask.
     //
     // 14 joined it deliberately, and the reason is the same one: it is the MEET
-    // map for real gravity, and it was reported as not reading like gravity at
-    // all while it still carried five obstacles. A ball on a board full of
-    // shelves clips something within half a second, so the arc never finishes
-    // and there is nothing to learn from. Emptiness is what makes one idea
-    // legible. It asks for `space + locks`, and the lock is the whole lesson:
-    // you have to catch one in flight.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15]);
+    // map for real gravity and a turning room, and it was reported as not
+    // reading like gravity at all while it still carried five obstacles. A ball
+    // on a board full of shelves clips something within half a second, so the
+    // arc never finishes and there is nothing to learn from. Emptiness is what
+    // makes one idea legible. It asks for `space + locks`, and the lock is the
+    // whole lesson: you have to catch one in flight, on a floor that will be a
+    // wall ten seconds later.
+    //
+    // 15 was on this list too and is not on the ladder any more: it was this
+    // same board minus the turn, which is a split nobody asked for.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14]);
   });
 });

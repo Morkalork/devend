@@ -1156,9 +1156,20 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, red]
-    mutator: steady_gravity
-    # Gravity pulls screen-down and does not turn with the board, so a map dealt
-    # sideways would have its floor on a wall.
+    # The room turns a quarter every ten seconds and down goes with it. This is
+    # the map as it was described: no obstacles, four bouncy sides, real gravity
+    # and a recurring tilt. It shipped briefly as `steady_gravity`, which is the
+    # same board with the turn taken out, because I split one design into two
+    # maps that nobody asked to be split.
+    #
+    # The turn is what makes a fence a decision rather than a shape. You draw
+    # one to catch a ball against the floor, and ten seconds later the floor is
+    # a wall and the ball is falling somewhere else.
+    mutator: tipping
+    # Gravity is screen-relative: it starts pulling screen-down whatever
+    # orientation the map was dealt in. The board here is bare and symmetric so
+    # a deal rotation changes nothing you can see, but the flag is already right
+    # for whoever puts the first entity on it.
     neverRotates: true
     # All four, and all the same. A bouncer per side is what keeps a falling
     # board alive: gravity trades height for speed and back, and the walls are
@@ -1191,37 +1202,3 @@ levels:
     entities: []
     balls: []
 
-  - id: level-15
-    level: 15
-    sizeThreshold: 15
-    # 8, not the 6 this was authored with. Par is set from the bot's cut count
-    # divided by the ~2.8x it runs over par on every built map (it cuts on a
-    # timer, a player does not): 11 is 20.8/7, 12 is 22.5/8, 13 is 21.5/8, 14 is
-    # 22.3/8, and this map is 21.9. At 6 it was the one map in the act whose par
-    # did not describe it. The lock clause is what moved it, from 16.3 cuts to
-    # 21.9: trapping a ball while the pull keeps changing which wall it heads
-    # for costs fences.
-    expectedCuts: 8
-    points: 20
-    maxBalls: 3
-    variety: 0
-    randomShapes: 0
-    ballTypeIds: [red, blue, red]
-    mutator: tipping
-    boardEdges:
-      top:
-        kick: 1.05
-      bottom:
-        kick: 1.05
-      left:
-        kick: 1.05
-      right:
-        kick: 1.05
-    win:
-      require:
-        - kind: space
-          threshold: 15
-        - kind: locks
-          count: 1
-    entities: []
-    balls: []
