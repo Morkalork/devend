@@ -22,7 +22,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
+import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import type { LevelConfig } from "@/types/level";
 import { LADDER } from "./fixtures/maps";
@@ -49,20 +49,20 @@ describe("no map is left on the derivation", () => {
 
   it.each(PLAYABLE.map(l => [l.level as number, l] as const))(
     "level %i authors its own win", (_n, level) => {
-      expect(resolveWinSpec(level).authored, `${level.id} still derives its win`).toBe(true);
+      expect(resolveWinSpec(level, NO_RUN_RULES).authored, `${level.id} still derives its win`).toBe(true);
     });
 
   it.each(PLAYABLE.map(l => [l.level as number, l] as const))(
     "level %i keeps no free all-locked shortcut", (_n, level) => {
       // THE shortcut. An authored spec keeps no alternative unless it asks for
       // one, which is why authoring is the fix rather than a tidy-up.
-      expect(resolveWinSpec(level).alsoWinIf, `${level.id} still offers a shortcut`)
+      expect(resolveWinSpec(level, NO_RUN_RULES).alsoWinIf, `${level.id} still offers a shortcut`)
         .toEqual([]);
     });
 
   it.each(PLAYABLE.map(l => [l.level as number, l] as const))(
     "level %i passes the authoring guard", (_n, level) => {
-      expect(winSpecProblems(resolveWinSpec(level), level), level.id).toEqual([]);
+      expect(winSpecProblems(resolveWinSpec(level, NO_RUN_RULES), level), level.id).toEqual([]);
     });
 });
 
@@ -80,7 +80,7 @@ describe("the lock rush is closed everywhere it can be", () => {
         breakables(level) > 0 || gateAreas(level.coloredAreas ?? []).length > 0
         || terminals(level) > 0 || seams(level) > 0 || boxes(level) > 0;
       if (!offers) return;
-      const uses = resolveWinSpec(level).require.some(c =>
+      const uses = resolveWinSpec(level, NO_RUN_RULES).require.some(c =>
         c.kind === "smashed" || c.kind === "area"
         || c.kind === "terminals" || c.kind === "harvested" || c.kind === "delivered");
       expect(uses, `${level.id} carries content its win never mentions`).toBe(true);
@@ -111,7 +111,7 @@ describe("the lock rush is closed everywhere it can be", () => {
       // deleting it would quietly turn the rule on for maps it was never meant
       // to govern the day map 31 lands.
       if ((level.level as number) >= 31) return;
-      const spec = resolveWinSpec(level);
+      const spec = resolveWinSpec(level, NO_RUN_RULES);
       const closesTheRush = spec.require.some(c =>
         c.kind === "smashed" || c.kind === "terminals" || c.kind === "harvested");
       if (!closesTheRush) return;

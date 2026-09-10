@@ -7,7 +7,7 @@ import {
   ballStruckFence, moverStruckFence, clearFreeze, FREEZE_MAX_MS,
 } from "./fenceStrike";
 import { readWinSnapshot } from "./applyCut";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, type RunWinRules } from "@/lib/winSpec";
 import { mapFailure, type MapFailKind } from "@/lib/mapFailure";
 import { circleCapsuleCollision, lineSegmentIntersection, pointInPolygon, vec2Distance, vec2Normalize, vec2Sub, vec2Add, vec2Scale } from "@/lib/polygon";
 import { getWallSpeedBase } from "@/lib/gameUtils";
@@ -25,8 +25,9 @@ export { clearFreeze, FREEZE_MAX_MS };
  */
 function fenceDeath(
   kind: MapFailKind, game: CanvasGameState, level: LevelConfig,
+  rules: RunWinRules,
 ) {
-  return mapFailure(kind, resolveWinSpec(level), readWinSnapshot(game, level));
+  return mapFailure(kind, resolveWinSpec(level, rules), readWinSnapshot(game, level));
 }
 
 export function updateFenceWallFn(
@@ -192,7 +193,7 @@ export function updateFenceWallFn(
     if (!moverHit) continue;
 
     moverStruckFence(game, level, levelNumber, activeModifiers, callbacks,
-      fenceDeath("moverHitFence", game, level));
+      fenceDeath("moverHitFence", game, level, activeModifiers));
     return;
   }
 
@@ -226,7 +227,7 @@ export function updateFenceWallFn(
     if (!hit) continue;
 
     ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
-      fenceDeath("ballHitFence", game, level));
+      fenceDeath("ballHitFence", game, level, activeModifiers));
     return;
   }
 }

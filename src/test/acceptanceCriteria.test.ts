@@ -1,3 +1,4 @@
+import { NO_RUN_RULES } from "@/lib/winSpec";
 /**
  * The Acceptance Criteria are a LIST, and the list says what is optional.
  *
@@ -47,7 +48,7 @@ const groups = (n: number) => groupsOf(at(n), n);
  */
 const groupsOf = (level: LevelConfig, n: number) => {
   const out: Record<string, string[]> = {};
-  for (const c of winConditions(t, level, n)) (out[c.group] ??= []).push(c.text);
+  for (const c of winConditions(t, level, n, NO_RUN_RULES)) (out[c.group] ??= []).push(c.text);
   return out;
 };
 
@@ -55,7 +56,7 @@ describe("every line lands in a named list", () => {
   it("puts nothing in a group that does not exist", () => {
     for (const l of LEVELS) {
       if (l.level == null) continue;
-      for (const c of winConditions(t, l, l.level)) {
+      for (const c of winConditions(t, l, l.level, NO_RUN_RULES)) {
         expect(CRITERION_GROUPS, `${l.id} used the group ${c.group}`).toContain(c.group);
       }
     }
@@ -66,7 +67,7 @@ describe("every line lands in a named list", () => {
     // it says the map wants nothing.
     for (const l of LEVELS) {
       if (l.level == null) continue;
-      const req = winConditions(t, l, l.level).filter(c => c.group === "required");
+      const req = winConditions(t, l, l.level, NO_RUN_RULES).filter(c => c.group === "required");
       expect(req.length, `${l.id} lists nothing to do`).toBeGreaterThan(0);
     }
   });
@@ -76,7 +77,7 @@ describe("every line lands in a named list", () => {
     // in one paragraph, where it read as an instruction. It is a FAIL.
     for (const l of LEVELS) {
       if (l.level == null) continue;
-      for (const c of winConditions(t, l, l.level)) {
+      for (const c of winConditions(t, l, l.level, NO_RUN_RULES)) {
         if (c.text.startsWith("winConditions.areaFail")) {
           expect(c.group, `${l.id} files the area penalty as ${c.group}`).toBe("fail");
         }
@@ -179,7 +180,7 @@ describe("optional is marked optional", () => {
     expect(withBonus.length, "the bonus pockets vanished from the ladder")
       .toBeGreaterThanOrEqual(3);
     for (const l of withBonus) {
-      const opt = winConditions(t, l, l.level as number).filter(c => c.group === "optional");
+      const opt = winConditions(t, l, l.level as number, NO_RUN_RULES).filter(c => c.group === "optional");
       expect(opt.length, `${l.id} carries a bonus pocket it never mentions`).toBeGreaterThan(0);
     }
   });
@@ -225,7 +226,7 @@ describe("a real either/or is called one", () => {
     // announcing a trade shows up here, and the day one legitimately poses one
     // this list gains its number and says which map.
     const posed = LEVELS.filter(l => l.level != null
-      && winConditions(t, l, l.level).some(c => c.group === "trade"))
+      && winConditions(t, l, l.level, NO_RUN_RULES).some(c => c.group === "trade"))
       .map(l => l.level);
     expect(posed, "the trade line started firing on maps with no trade").toEqual([]);
   });
@@ -235,7 +236,7 @@ describe("a real either/or is called one", () => {
     // fences is not a cost.
     for (const l of LEVELS) {
       if (l.level == null) continue;
-      const hasTrade = winConditions(t, l, l.level).some(c => c.group === "trade");
+      const hasTrade = winConditions(t, l, l.level, NO_RUN_RULES).some(c => c.group === "trade");
       if (!hasTrade) continue;
       expect(l.fenceBudget, `${l.id} claims a trade with no budget`).not.toBeUndefined();
       expect((l.coloredAreas ?? []).some(a => a.required === false),
@@ -249,7 +250,7 @@ describe("the rendered block", () => {
     // The retired budget map again, for the same reason as above: this is a
     // test of the RENDERER's grouping, and it needs a map with two groups.
     const budgeted = ENGINE_MAPS.find(l => l.level === 17)!;
-    const body = renderCriteria(t, winConditions(t, budgeted, 17));
+    const body = renderCriteria(t, winConditions(t, budgeted, 17, NO_RUN_RULES));
     expect(body).toContain("winConditions.group.optional\n  - ");
     expect(body).toContain("winConditions.group.trade\n  - ");
     expect(body).toContain("\n\n");
@@ -258,7 +259,7 @@ describe("the rendered block", () => {
   it("prints no heading for a group with nothing in it", () => {
     // "Optional: none" costs a reader attention to learn something they did
     // not ask about.
-    const body = renderCriteria(t, winConditions(t, at(1), 1));
+    const body = renderCriteria(t, winConditions(t, at(1), 1, NO_RUN_RULES));
     expect(body, "an empty group printed its heading anyway")
       .not.toContain("winConditions.group.optional");
     expect(body).not.toContain("winConditions.group.fail");
@@ -266,16 +267,16 @@ describe("the rendered block", () => {
 
   it("says ALL OF THESE only when there is more than one", () => {
     // Over a single bullet it reads as though something is missing.
-    expect(renderCriteria(t, winConditions(t, at(1), 1)))
+    expect(renderCriteria(t, winConditions(t, at(1), 1, NO_RUN_RULES)))
       .toContain("winConditions.groupRequiredAll");
 
     // Every act I map states two required clauses (space plus the thing a lock
     // cannot produce), so the single-clause case comes from a retired map. The
     // assertion is about the RENDERER's heading, and it needs one of each.
     const single = ENGINE_MAPS.find(l =>
-      winConditions(t, l, l.level as number).filter(c => c.group === "required").length === 1)!;
+      winConditions(t, l, l.level as number, NO_RUN_RULES).filter(c => c.group === "required").length === 1)!;
     expect(single, "no map anywhere states a single requirement").toBeTruthy();
-    expect(renderCriteria(t, winConditions(t, single, single.level as number)))
+    expect(renderCriteria(t, winConditions(t, single, single.level as number, NO_RUN_RULES)))
       .toContain("winConditions.group.required");
   });
 });
@@ -311,7 +312,7 @@ describe("the gate-area fail says what the rule actually is", () => {
 
   it("never tells a multi-ball map that one ball outside is fatal", () => {
     for (const l of areaMaps) {
-      const fails = winConditions(t, l, l.level!).filter(c => c.group === "fail");
+      const fails = winConditions(t, l, l.level!, NO_RUN_RULES).filter(c => c.group === "fail");
       const gate = fails.filter(f => f.text.startsWith("winConditions.areaFail"));
       expect(gate.length, `${l.id} lost its gate fail line`).toBe(1);
       expect(gate[0].text, `${l.id} still uses the boss wording`)
@@ -326,7 +327,7 @@ describe("the gate-area fail says what the rule actually is", () => {
 
   it("keeps the trap-it-outside wording where it is TRUE: boss maps", () => {
     for (const l of bossMaps) {
-      const fails = winConditions(t, l, l.level!).filter(c => c.group === "fail");
+      const fails = winConditions(t, l, l.level!, NO_RUN_RULES).filter(c => c.group === "fail");
       const gate = fails.filter(f => f.text.startsWith("winConditions.areaFailBoss"));
       // Only the boss maps that actually have a zone say anything about one.
       if ((l.coloredAreas ?? []).length === 0) continue;

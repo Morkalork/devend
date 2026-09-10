@@ -26,7 +26,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import type { LevelConfig, LevelData } from "@/types/level";
 
@@ -62,7 +62,7 @@ describe("an area on a map that states its own win", () => {
     // whose areas are all `required: false` can never be met and the map is
     // unwinnable. Levels 8 and 34 are the two that state an area clause.
     for (const lv of LEVELS) {
-      if (!resolveWinSpec(lv).require.some(c => c.kind === "area")) continue;
+      if (!resolveWinSpec(lv, NO_RUN_RULES).require.some(c => c.kind === "area")) continue;
       expect(gateAreas(lv.coloredAreas ?? []).length, lv.id).toBeGreaterThan(0);
     }
   });
@@ -77,10 +77,10 @@ describe("an area on a map that states its own win", () => {
     expect(gateAreas(l8.coloredAreas ?? []).length, "level 8 lost its gate area")
       .toBeGreaterThan(0);
 
-    const authored = resolveWinSpec(l8);
+    const authored = resolveWinSpec(l8, NO_RUN_RULES);
     expect(authored.require.map(c => c.kind)).toEqual(["space", "area"]);
 
-    const derived = resolveWinSpec({ ...l8, win: undefined });
+    const derived = resolveWinSpec({ ...l8, win: undefined }, NO_RUN_RULES);
     expect(derived.authored).toBe(false);
     expect(derived.require).toEqual([{ kind: "area", count: 1 }]);
   });
@@ -92,13 +92,13 @@ describe("an area on a map that states its own win", () => {
     // won through `area count 1` - which counts ANY target locked inside, not
     // the boss being beaten.
     for (const lv of LEVELS.filter(l => l.boss)) {
-      expect(resolveWinSpec(lv).require.some(c => c.kind === "boss"), lv.id).toBe(true);
+      expect(resolveWinSpec(lv, NO_RUN_RULES).require.some(c => c.kind === "boss"), lv.id).toBe(true);
     }
   });
 
   it("keeps an authored win authoritative, which is why the rule is needed", () => {
     const l5 = LEVELS.find(lv => lv.id === "level-5")!;
-    const spec = resolveWinSpec(l5);
+    const spec = resolveWinSpec(l5, NO_RUN_RULES);
     expect(spec.authored).toBe(true);
     expect(spec.require.some(c => c.kind === "area"), "level 5 grew an area clause").toBe(false);
   });

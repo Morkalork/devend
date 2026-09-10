@@ -34,7 +34,7 @@ import type { TFunction } from "i18next";
 import type { LevelConfig } from "@/types/level";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { AREA_KINDS, gateAreas } from "@/lib/coloredAreas";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, type RunWinRules } from "@/lib/winSpec";
 import type { WinCondition } from "@/types/winSpec";
 import { getBallType } from "@/lib/ballTypes";
 
@@ -77,10 +77,11 @@ function winConditionParts(
   t: TFunction,
   level: LevelConfig,
   levelNumber: number,
+  rules: RunWinRules,
 ): { criteria: Criterion[]; noteworthy: boolean } {
   const criteria: Criterion[] = [];
   let noteworthy = false;
-  const spec = resolveWinSpec(level);
+  const spec = resolveWinSpec(level, rules);
   const isBoss = !!level.boss;
   const target = t(isBoss ? "winConditions.targetBoss" : "winConditions.targetBall");
   const areas = gateAreas(level.coloredAreas ?? []);
@@ -295,15 +296,16 @@ export function winConditionsBody(
   t: TFunction,
   level: LevelConfig,
   levelNumber: number,
+  rules: RunWinRules,
 ): string {
-  return renderCriteria(t, winConditions(t, level, levelNumber));
+  return renderCriteria(t, winConditions(t, level, levelNumber, rules));
 }
 
 /** The grouped criteria, for anything that wants to lay them out itself. */
 export function winConditions(
-  t: TFunction, level: LevelConfig, levelNumber: number,
+  t: TFunction, level: LevelConfig, levelNumber: number, rules: RunWinRules,
 ): Criterion[] {
-  return winConditionParts(t, level, levelNumber).criteria;
+  return winConditionParts(t, level, levelNumber, rules).criteria;
 }
 
 /**
@@ -348,6 +350,7 @@ export function shouldAnnounceWinConditions(
   t: TFunction,
   level: LevelConfig,
   levelNumber: number,
+  rules: RunWinRules,
 ): boolean {
-  return winConditionParts(t, level, levelNumber).noteworthy;
+  return winConditionParts(t, level, levelNumber, rules).noteworthy;
 }

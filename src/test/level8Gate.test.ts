@@ -30,7 +30,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import { CellState } from "@/lib/spaceGrid";
 import { rotateColoredArea } from "@/lib/mapRotation";
@@ -44,7 +44,7 @@ const L8 = MAPS.find(l => l.level === 8)!;
 
 describe("level 8 asks for the box, and can be given it", () => {
   it("requires the clear AND the lock, never one instead of the other", () => {
-    const spec = resolveWinSpec(L8);
+    const spec = resolveWinSpec(L8, NO_RUN_RULES);
     expect(spec.authored, "a bare gate would drop the space clause").toBe(true);
     const kinds = spec.require.map(c => c.kind).sort();
     expect(kinds).toEqual(["area", "space"]);

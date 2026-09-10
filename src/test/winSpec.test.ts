@@ -17,8 +17,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
   resolveWinSpec, evaluateWinCondition, isWinMet, winningCondition,
-  winSpecProblems, winReasonFor, winBonusPercent,
-} from "@/lib/winSpec";
+  winSpecProblems, winReasonFor, winBonusPercent, NO_RUN_RULES } from "@/lib/winSpec";
 import { WIN_CONDITION_KINDS } from "@/types/winSpec";
 import type { WinConditionKind } from "@/types/winSpec";
 import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
@@ -44,14 +43,14 @@ const gateArea = { kind: "const", x: 0, y: 0, width: 100, height: 100, required:
 
 describe("deriving a spec reproduces the old chain exactly", () => {
   it("makes an ordinary map a space clear with the all-locked shortcut", () => {
-    const spec = resolveWinSpec(level({ sizeThreshold: 20 }));
+    const spec = resolveWinSpec(level({ sizeThreshold: 20 }), NO_RUN_RULES);
     expect(spec.authored).toBe(false);
     expect(spec.require).toEqual([{ kind: "space", threshold: 20 }]);
     expect(spec.alsoWinIf).toEqual([{ kind: "allLocked" }]);
   });
 
   it("carries threadLockRequired alongside the clear, not instead of it", () => {
-    const spec = resolveWinSpec(level({ threadLockRequired: 2 }));
+    const spec = resolveWinSpec(level({ threadLockRequired: 2 }), NO_RUN_RULES);
     expect(spec.require).toEqual([
       { kind: "space", threshold: 20 },
       { kind: "locks", count: 2 },
@@ -64,13 +63,13 @@ describe("deriving a spec reproduces the old chain exactly", () => {
    * AND clear 85% of the board", which is a different and much harder map.
    */
   it("makes a gate area the sole win, with no space clause at all", () => {
-    const spec = resolveWinSpec(level({ coloredAreas: [gateArea] } as Partial<LevelConfig>));
+    const spec = resolveWinSpec(level({ coloredAreas: [gateArea] } as Partial<LevelConfig>), NO_RUN_RULES);
     expect(spec.require).toEqual([{ kind: "area", count: 1 }]);
     expect(spec.alsoWinIf, "locking everything must not walk around the gate").toEqual([]);
   });
 
   it("makes a boss the sole win, so space never applies", () => {
-    const spec = resolveWinSpec(level({ boss: { objective: {} } } as unknown as Partial<LevelConfig>));
+    const spec = resolveWinSpec(level({ boss: { objective: {} } } as unknown as Partial<LevelConfig>), NO_RUN_RULES);
     expect(spec.require).toEqual([{ kind: "boss" }]);
     expect(spec.alsoWinIf).toEqual([]);
   });
@@ -78,7 +77,7 @@ describe("deriving a spec reproduces the old chain exactly", () => {
   it("derives count 1 for an area, matching the old boolean", () => {
     // coloredAreaSatisfied was set by the FIRST target in, so the equivalent
     // count is one; anything higher would silently make level 10 harder.
-    const spec = resolveWinSpec(level({ coloredAreas: [gateArea] } as Partial<LevelConfig>));
+    const spec = resolveWinSpec(level({ coloredAreas: [gateArea] } as Partial<LevelConfig>), NO_RUN_RULES);
     expect(spec.require[0]).toEqual({ kind: "area", count: 1 });
   });
 
@@ -86,7 +85,7 @@ describe("deriving a spec reproduces the old chain exactly", () => {
     const spec = resolveWinSpec(level({
       threadLockRequired: 9,
       win: { require: [{ kind: "superiorLocks", count: 2 }] },
-    } as Partial<LevelConfig>));
+    } as Partial<LevelConfig>), NO_RUN_RULES);
     expect(spec.authored).toBe(true);
     expect(spec.require).toEqual([{ kind: "superiorLocks", count: 2 }]);
   });
@@ -95,7 +94,7 @@ describe("deriving a spec reproduces the old chain exactly", () => {
   it("gives an authored spec no alternatives it did not ask for", () => {
     const spec = resolveWinSpec(level({
       win: { require: [{ kind: "area", count: 2 }] },
-    } as Partial<LevelConfig>));
+    } as Partial<LevelConfig>), NO_RUN_RULES);
     expect(spec.alsoWinIf).toEqual([]);
   });
 });
@@ -132,7 +131,7 @@ describe("every shipped map still means what it meant", () => {
     // nothing, so it would eventually be made without reading it.
     expect(MAPS.length, "no maps loaded: is this reading the right file?")
       .toBeGreaterThanOrEqual(10);
-    const derived = MAPS.filter(m => !resolveWinSpec(m).authored).map(m => String(m.id));
+    const derived = MAPS.filter(m => !resolveWinSpec(m, NO_RUN_RULES).authored).map(m => String(m.id));
     const bosses = MAPS.filter(m => m.boss).map(m => String(m.id));
     expect(derived.sort(), "a non-boss map is back on the derivation")
       .toEqual(bosses.sort());
@@ -140,8 +139,8 @@ describe("every shipped map still means what it meant", () => {
 
   it("still derives a working spec for every other map", () => {
     for (const m of MAPS) {
-      if (resolveWinSpec(m).authored) continue;
-      expect(resolveWinSpec(m).require.length, String(m.id)).toBeGreaterThan(0);
+      if (resolveWinSpec(m, NO_RUN_RULES).authored) continue;
+      expect(resolveWinSpec(m, NO_RUN_RULES).require.length, String(m.id)).toBeGreaterThan(0);
     }
   });
 
@@ -149,13 +148,13 @@ describe("every shipped map still means what it meant", () => {
     // An empty require list is treated as unwinnable, so a derivation that
     // produced one would strand the map forever.
     for (const m of MAPS) {
-      expect(resolveWinSpec(m).require.length, `${m.id} has no win`).toBeGreaterThan(0);
+      expect(resolveWinSpec(m, NO_RUN_RULES).require.length, `${m.id} has no win`).toBeGreaterThan(0);
     }
   });
 
   it("flags no shipped map as unwinnable", () => {
     const broken = MAPS
-      .map(m => [m.id, winSpecProblems(resolveWinSpec(m), m)] as const)
+      .map(m => [m.id, winSpecProblems(resolveWinSpec(m, NO_RUN_RULES), m)] as const)
       .filter(([, p]) => p.length > 0);
     expect(broken.map(([id, p]) => `${id}: ${p.join(" ")}`)).toEqual([]);
   });
@@ -167,7 +166,7 @@ describe("every shipped map still means what it meant", () => {
     expect(ordinary.length, "nothing ordinary left to check")
       .toBeGreaterThan(MAPS.length / 2);
     for (const m of ordinary) {
-      expect(resolveWinSpec(m).require.some(c => c.kind === "space"), String(m.id)).toBe(true);
+      expect(resolveWinSpec(m, NO_RUN_RULES).require.some(c => c.kind === "space"), String(m.id)).toBe(true);
     }
   });
 });
@@ -424,7 +423,7 @@ describe("pricing a win condition", () => {
   it("prices nothing on a derived spec", () => {
     for (const l of [level(), level({ threadLockRequired: 2 }),
                      level({ coloredAreas: [gateArea] } as Partial<LevelConfig>)]) {
-      expect(winBonusPercent(resolveWinSpec(l), won)).toBe(0);
+      expect(winBonusPercent(resolveWinSpec(l, NO_RUN_RULES), won)).toBe(0);
     }
   });
 });

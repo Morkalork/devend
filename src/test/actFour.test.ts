@@ -15,7 +15,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
+import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { blockLockCapacity } from "@/lib/assignmentScaling";
 import { getBallType } from "@/lib/ballTypes";
 import { parseMutatorEntry } from "@/lib/mapMutators";
@@ -78,13 +78,13 @@ describe("the win conditions it states", () => {
     // terminal the win never mentioned - so the act opened on the one map in
     // it that could be finished by sealing three balls and touching nothing.
     for (const n of [31, 32, 33, 34]) {
-      expect(resolveWinSpec(at(n)).authored, `level ${n}`).toBe(true);
+      expect(resolveWinSpec(at(n), NO_RUN_RULES).authored, `level ${n}`).toBe(true);
     }
   });
 
   it("flags none of them as unwinnable", () => {
     for (const l of ACT_IV) {
-      expect(winSpecProblems(resolveWinSpec(l), l), `level ${l.level}`).toEqual([]);
+      expect(winSpecProblems(resolveWinSpec(l, NO_RUN_RULES), l), `level ${l.level}`).toEqual([]);
     }
   });
 
@@ -92,7 +92,7 @@ describe("the win conditions it states", () => {
     // 32 and 33 hang their gate off a map that is otherwise won by clearing, so
     // the gate is extra credit and the clear still has to happen.
     for (const n of [32, 33]) {
-      expect(resolveWinSpec(at(n)).require.some(c => c.kind === "space"), `level ${n}`).toBe(true);
+      expect(resolveWinSpec(at(n), NO_RUN_RULES).require.some(c => c.kind === "space"), `level ${n}`).toBe(true);
     }
   });
 
@@ -114,7 +114,7 @@ describe("the win conditions it states", () => {
    * incoherent long one.
    */
   it("makes 34's gate the whole win, with no clear beside it", () => {
-    const spec = resolveWinSpec(at(34));
+    const spec = resolveWinSpec(at(34), NO_RUN_RULES);
     expect(spec.require.map(c => c.kind)).toEqual(["area"]);
     const area = spec.require.find(c => c.kind === "area");
     expect(area?.kind === "area" && area.count).toBe(2);
@@ -139,13 +139,13 @@ describe("the win conditions it states", () => {
    */
   it("gives no gate in the act an all-locked back door", () => {
     for (const n of [31, 32, 33, 34]) {
-      expect(resolveWinSpec(at(n)).alsoWinIf, `level ${n}`).toEqual([]);
+      expect(resolveWinSpec(at(n), NO_RUN_RULES).alsoWinIf, `level ${n}`).toEqual([]);
     }
   });});
 
 describe("what the act charges for its gates", () => {
   const premiums = ACT_IV.flatMap(l =>
-    resolveWinSpec(l).require.map(c => ({ level: l.level, kind: c.kind, pct: c.bonusPercent ?? 0 })));
+    resolveWinSpec(l, NO_RUN_RULES).require.map(c => ({ level: l.level, kind: c.kind, pct: c.bonusPercent ?? 0 })));
 
   it("prices every extra ask, and nothing else", () => {
     const priced = premiums.filter(p => p.pct > 0);
@@ -162,7 +162,7 @@ describe("what the act charges for its gates", () => {
 
   it("pays more for the harder ask", () => {
     const pct = (n: number, kind: string) =>
-      resolveWinSpec(at(n)).require.find(c => c.kind === kind)?.bonusPercent ?? 0;
+      resolveWinSpec(at(n), NO_RUN_RULES).require.find(c => c.kind === kind)?.bonusPercent ?? 0;
     // One superior lock is the gentlest gate; herding two balls into one box
     // under a live pull is the hardest.
     expect(pct(32, "superiorLocks")).toBeLessThan(pct(34, "area"));
@@ -193,7 +193,7 @@ describe("act IV is busy enough for the Lamp to be a choice", () => {
     const thin = ACT_IV
       .filter(l => !l.boss)
       .filter(l => (l.maxBalls ?? 1) < 3)
-      .filter(l => !resolveWinSpec(l).require.some(c => c.kind === "lockType"))
+      .filter(l => !resolveWinSpec(l, NO_RUN_RULES).require.some(c => c.kind === "lockType"))
       .map(l => `${l.id} (${l.maxBalls ?? 1})`);
     expect(thin, "a two-ball act IV map hands the Lamp a coin flip").toEqual([]);
   });
@@ -210,7 +210,7 @@ describe("act IV is busy enough for the Lamp to be a choice", () => {
   it("keeps a named-ball map's pinned roster matching its count", () => {
     // The exception above is only safe while the roster really is pinned: an
     // unpinned one can roll without the named ball and the map is unwinnable.
-    for (const l of ACT_IV.filter(l => resolveWinSpec(l).require.some(c => c.kind === "lockType"))) {
+    for (const l of ACT_IV.filter(l => resolveWinSpec(l, NO_RUN_RULES).require.some(c => c.kind === "lockType"))) {
       expect(l.ballTypeIds, `${l.id} names a ball`).toBeTruthy();
       expect(l.ballTypeIds!.length, `${l.id} roster vs count`).toBe(l.maxBalls);
     }
@@ -241,7 +241,7 @@ describe("naming a ball in a win condition", () => {
    * the one the map's own payout test seals into the nook.
    */
   it("does not put the named ball first", () => {
-    const named = resolveWinSpec(L33).require
+    const named = resolveWinSpec(L33, NO_RUN_RULES).require
       .find(c => c.kind === "lockType") as { ballType: string };
     expect(L33.ballTypeIds![0]).not.toBe(named.ballType);
   });
@@ -258,13 +258,13 @@ describe("naming a ball in a win condition", () => {
   it("would flag the same win with the roster left to the roll", () => {
     const unpinned = { ...L33 };
     delete (unpinned as { ballTypeIds?: string[] }).ballTypeIds;
-    expect(winSpecProblems(resolveWinSpec(unpinned), unpinned).join(" "))
+    expect(winSpecProblems(resolveWinSpec(unpinned, NO_RUN_RULES), unpinned).join(" "))
       .toMatch(/may not spawn/);
   });
 
   it("would flag a ball the pinned roster does not contain", () => {
     const wrong = { ...L33, ballTypeIds: ["red", "blue"] };
-    expect(winSpecProblems(resolveWinSpec(wrong), wrong).join(" "))
+    expect(winSpecProblems(resolveWinSpec(wrong, NO_RUN_RULES), wrong).join(" "))
       .toMatch(/not in this map's pinned roster/);
   });
 });
@@ -280,7 +280,7 @@ describe("34 is built for the gate it sets", () => {
 
   it("spawns more balls than the gate asks for", () => {
     // Asking for two of exactly two would make one bad bounce fatal.
-    const need = resolveWinSpec(L34).require.find(c => c.kind === "area");
+    const need = resolveWinSpec(L34, NO_RUN_RULES).require.find(c => c.kind === "area");
     expect(need?.kind === "area" && need.count).toBe(2);
     expect(L34.maxBalls!).toBeGreaterThan(2);
   });

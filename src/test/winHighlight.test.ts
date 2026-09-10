@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { winHighlightRects } from "@/lib/winHighlight";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinSpec } from "@/types/winSpec";
 import type { LevelConfig, LevelData } from "@/types/level";
@@ -112,7 +112,7 @@ describe("every act I requirement has something to point at", () => {
 
   it.each([5, 6, 7, 8, 9])("level %i announces what its win needs", (n) => {
     const level = at(n);
-    const built = winHighlightRects(resolveWinSpec(level), board({
+    const built = winHighlightRects(resolveWinSpec(level, NO_RUN_RULES), board({
       // The runtime shape, standing in for initGame: one breakable per authored
       // breakable entity, and the map's own areas.
       destructibles: (level.entities ?? [])
@@ -140,7 +140,9 @@ describe("the highlight is wired in, not just computed", () => {
 
   it("is computed when the map is built", () => {
     expect(read("src/components/game/GameCanvas.tsx"), "nothing computes the set")
-      .toContain("game.winHighlights = winHighlightRects(resolveWinSpec(level), game)");
+      // activeModifiers, not NO_RUN_RULES: a run that adds a clause should light
+      // up what that clause is about, same as an authored one.
+      .toContain("game.winHighlights = winHighlightRects(resolveWinSpec(level, activeModifiers), game)");
   });
 
   it("is read by the layer that draws the map-open pulse", () => {

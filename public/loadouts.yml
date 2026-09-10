@@ -337,3 +337,23 @@ loadouts:
       parBonus: -1
       underParInstantFence: 2
       underParBonusMultiplier: 2.5
+
+  # The card that changes what WINNING means, not what a number is worth.
+  #
+  # Every other loadout tunes the run; this one rewrites the objective of every
+  # map you already know. `winRequiresSplitLocks` is appended to a map's own win
+  # by resolveWinSpec, so the goal chips, the "how to win" modal and the failure
+  # screen all pick it up from the one spec they already share.
+  #
+  # Maps that cannot carry it keep their own win untouched: a boss map's ending
+  # is the boss, a gate map's is the zone, and a map that spawns one ball can
+  # never pay two sides. That is the design and not a gap, because the
+  # alternative is a card that makes the boss maps impossible.
+  - id: definition_of_done
+    name: Definition of Done
+    curse: Every map you can do it on also demands a ball locked on each side of the board.
+    blessing: Earn 60% more overtime hours.
+    uniqueWinsRequired: 6
+    modifiers:
+      winRequiresSplitLocks: 1
+      scoreMultiplier: 1.6

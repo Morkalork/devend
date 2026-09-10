@@ -625,8 +625,10 @@ export function GameScreen({
   // "clear X%", which the top bar already shows permanently. Every map still
   // has the menu entry, so this hides an interruption, not information.
   useEffect(() => {
-    setWinModalOpen(shouldAnnounceWinConditions(t, level, levelNumber));
-  }, [level, levelNumber, t]);
+    // The RUN's rules, not the map's: a loadout that adds a clause has made
+    // this map worth announcing even when the map alone was not.
+    setWinModalOpen(shouldAnnounceWinConditions(t, level, levelNumber, activeModifiers));
+  }, [level, levelNumber, t, activeModifiers]);
 
   /**
    * Announce the ascension rules once per DEPTH, not once per map.
@@ -1472,7 +1474,7 @@ export function GameScreen({
           },
           {
             show: showWinModal, accentColor,
-            title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber),
+            title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber, activeModifiers),
             // The one explainer that is a LIST rather than a paragraph.
             align: 'left' as const,
             onDismiss: () => setWinModalOpen(false),

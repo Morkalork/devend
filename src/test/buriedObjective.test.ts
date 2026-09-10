@@ -31,7 +31,7 @@ import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { CellState } from "@/lib/spaceGrid";
-import { resolveWinSpec } from "@/lib/winSpec";
+import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import {
   canStillStrike, smashesStillPossible, smashRequirementLost,
   regionHoldsNeededSlab, requiredSmashes, strikeCells,
@@ -120,7 +120,7 @@ describe("reading whether a slab can still be hit", () => {
       id: "no-shape", kind: "breakable", hits: 0, maxHits: 3,
       lastHitAt: 0, destroyed: false,
     }] as unknown as CanvasGameState["destructibles"];
-    expect(smashRequirementLost(game, resolveWinSpec(level([{ kind: "smashed", count: 1 }]))))
+    expect(smashRequirementLost(game, resolveWinSpec(level([{ kind: "smashed", count: 1 }]), NO_RUN_RULES)))
       .toBe(false);
   });
 
@@ -132,7 +132,7 @@ describe("reading whether a slab can still be hit", () => {
     buryTheSlab(game);
     d.destroyed = true;
     expect(smashesStillPossible(game)).toBe(1);
-    expect(smashRequirementLost(game, resolveWinSpec(level([{ kind: "smashed", count: 1 }]))))
+    expect(smashRequirementLost(game, resolveWinSpec(level([{ kind: "smashed", count: 1 }]), NO_RUN_RULES)))
       .toBe(false);
   });
 });
@@ -148,7 +148,7 @@ describe("the requirement, not any one slab", () => {
     expect(game.destructibles!.filter(d => d.kind === "breakable").length).toBe(2);
     buryTheSlab(game);   // buries whichever comes first
     expect(smashesStillPossible(game)).toBe(1);
-    expect(smashRequirementLost(game, resolveWinSpec(lvl))).toBe(false);
+    expect(smashRequirementLost(game, resolveWinSpec(lvl, NO_RUN_RULES))).toBe(false);
   });
 
   it("fails once the count can no longer be reached", () => {
@@ -156,15 +156,15 @@ describe("the requirement, not any one slab", () => {
     const game = board(lvl);
     buryTheSlab(game);
     expect(smashesStillPossible(game)).toBe(1);
-    expect(smashRequirementLost(game, resolveWinSpec(lvl))).toBe(true);
+    expect(smashRequirementLost(game, resolveWinSpec(lvl, NO_RUN_RULES))).toBe(true);
   });
 
   it("says nothing at all on a map that asks for no smashes", () => {
     const lvl = level([{ kind: "space", threshold: 40 }]);
     const game = board(lvl);
     buryTheSlab(game);
-    expect(requiredSmashes(resolveWinSpec(lvl))).toBe(0);
-    expect(smashRequirementLost(game, resolveWinSpec(lvl))).toBe(false);
+    expect(requiredSmashes(resolveWinSpec(lvl, NO_RUN_RULES))).toBe(0);
+    expect(smashRequirementLost(game, resolveWinSpec(lvl, NO_RUN_RULES))).toBe(false);
   });
 
   it("says nothing when the map carries no breakables to lose", () => {
@@ -174,7 +174,7 @@ describe("the requirement, not any one slab", () => {
     const lvl = level([{ kind: "smashed", count: 1 }], []);
     const game = board(lvl);
     expect(game.destructibles?.filter(d => d.kind === "breakable") ?? []).toEqual([]);
-    expect(smashRequirementLost(game, resolveWinSpec(lvl))).toBe(false);
+    expect(smashRequirementLost(game, resolveWinSpec(lvl, NO_RUN_RULES))).toBe(false);
   });
 });
 
@@ -309,7 +309,7 @@ describe("the lock decision actually asks", () => {
       ball.position.x, ball.position.y);
     const held = region
       ? regionHoldsNeededSlab({ ...game, destructibles: [{ ...d, destroyed: false }] } as CanvasGameState,
-          resolveWinSpec(lvl), region.cellIndices)
+          resolveWinSpec(lvl, NO_RUN_RULES), region.cellIndices)
       : false;
     expect(held, "the fixture sealed a pocket that does not hold the slab").toBe(true);
 
@@ -317,7 +317,7 @@ describe("the lock decision actually asks", () => {
     checkAndUpdateBallWonStates(
       game, DEFAULT_MODIFIERS, 0,
       { setLockedBallsCount: noop, onBallTypeLocked: () => false, onBallCountChanged: noop, onBossState: noop },
-      null, null, resolveWinSpec(lvl),
+      null, null, resolveWinSpec(lvl, NO_RUN_RULES),
     );
     return ball.state;
   };
@@ -344,7 +344,7 @@ describe("a pocket around an unbroken slab is not a pocket", () => {
     const game = board(lvl);
     const d = game.destructibles!.find(x => x.kind === "breakable")!;
     const ring = strikeCells(game.spaceGrid!, d, 18);
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), ring)).toBe(true);
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), ring)).toBe(true);
   });
 
   it("allows a region nowhere near one", () => {
@@ -354,7 +354,7 @@ describe("a pocket around an unbroken slab is not a pocket", () => {
     const ring = new Set(strikeCells(game.spaceGrid!, d, 18));
     const far = [...game.spaceGrid!.cells.keys()].filter(i => !ring.has(i)).slice(0, 40);
     expect(far.length, "the board has no cells away from the slab").toBeGreaterThan(0);
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), far)).toBe(false);
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), far)).toBe(false);
   });
 
   it("stops refusing once the clause is satisfied", () => {
@@ -366,7 +366,7 @@ describe("a pocket around an unbroken slab is not a pocket", () => {
     const d = game.destructibles!.find(x => x.kind === "breakable")!;
     const ring = strikeCells(game.spaceGrid!, d, 18);
     d.destroyed = true;
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), ring)).toBe(false);
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), ring)).toBe(false);
   });
 
   it("frees the OTHER slab once the count is met", () => {
@@ -379,10 +379,10 @@ describe("a pocket around an unbroken slab is not a pocket", () => {
     const game = board(lvl);
     const [first, second] = game.destructibles!.filter(x => x.kind === "breakable");
     const ring = strikeCells(game.spaceGrid!, second, 18);
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), ring),
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), ring),
       "the second slab was not refused while a smash was still owed").toBe(true);
     first.destroyed = true;
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), ring),
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), ring),
       "still refusing a pocket on a map whose smash clause is already met").toBe(false);
   });
 
@@ -391,6 +391,6 @@ describe("a pocket around an unbroken slab is not a pocket", () => {
     const game = board(lvl);
     const d = game.destructibles!.find(x => x.kind === "breakable")!;
     const ring = strikeCells(game.spaceGrid!, d, 18);
-    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl), ring)).toBe(false);
+    expect(regionHoldsNeededSlab(game, resolveWinSpec(lvl, NO_RUN_RULES), ring)).toBe(false);
   });
 });

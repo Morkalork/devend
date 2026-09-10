@@ -24,7 +24,7 @@ import type { LevelConfig } from '@/types/level';
 import type { WinCondition, WinConditionKind } from '@/types/winSpec';
 import { WIN_CONDITION_KINDS } from '@/types/winSpec';
 import type { SplitAxis } from '@/types/winSpec';
-import { resolveWinSpec, winSpecProblems, areasGatingWin, splitLine } from '@/lib/winSpec';
+import { resolveWinSpec, winSpecProblems, areasGatingWin, splitLine, NO_RUN_RULES } from '@/lib/winSpec';
 import { winConditionsBody } from '@/lib/winConditions';
 import { getAllBallTypes } from '@/lib/ballTypes';
 
@@ -77,9 +77,11 @@ interface Props {
 
 export function WinConditionsPanel({ level, onUpdateLevel }: Props) {
   const { t } = useTranslation();
-  const spec = resolveWinSpec(level);
+  // The map's own win, never a run's: the panel edits the document, and a
+  // loadout's extra clause is not part of it.
+  const spec = resolveWinSpec(level, NO_RUN_RULES);
   const problems = winSpecProblems(spec, level);
-  const preview = winConditionsBody(t, level, level.level ?? 1);
+  const preview = winConditionsBody(t, level, level.level ?? 1, NO_RUN_RULES);
   const sumPercent = (cs: WinCondition[]) =>
     cs.reduce((a, c) => a + (c.bonusPercent && c.bonusPercent > 0 ? c.bonusPercent : 0), 0);
   const requiredPremium = sumPercent(spec.require);

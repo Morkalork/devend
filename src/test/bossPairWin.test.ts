@@ -21,7 +21,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { resolveWinSpec, requirementsMet } from "@/lib/winSpec";
+import { resolveWinSpec, requirementsMet, NO_RUN_RULES } from "@/lib/winSpec";
 import type { WinSnapshot } from "@/types/winSpec";
 import type { LevelConfig, LevelData } from "@/types/level";
 
@@ -47,7 +47,7 @@ describe("the boss is the win, not the zone", () => {
 
   it.each(BOSSES.map(l => [l.level as number, l] as const))(
     "level %i states its win as the boss", (_n, level) => {
-      expect(resolveWinSpec(level).require.map(c => c.kind), `${level.id}`).toEqual(["boss"]);
+      expect(resolveWinSpec(level, NO_RUN_RULES).require.map(c => c.kind), `${level.id}`).toEqual(["boss"]);
     });
 
   it.each(BOSSES.map(l => [l.level as number, l] as const))(
@@ -55,7 +55,7 @@ describe("the boss is the win, not the zone", () => {
       // THE bug. Every boss map carries a var zone, so before the ordering fix
       // this snapshot met `area count 1` and shipped the map.
       expect(
-        requirementsMet(resolveWinSpec(level), oneInTheZone()),
+        requirementsMet(resolveWinSpec(level, NO_RUN_RULES), oneInTheZone()),
         `${level.id} ships on a target in the zone with the boss still loose`,
       ).toBe(false);
     });
@@ -63,7 +63,7 @@ describe("the boss is the win, not the zone", () => {
   it("waits for BOTH halves of a pair, and no longer", () => {
     // bossDefeated is the flag checkBallWonState sets only once every boss ball
     // is shipped, so reading it IS reading "both".
-    const spec = resolveWinSpec(at(20));
+    const spec = resolveWinSpec(at(20), NO_RUN_RULES);
     expect(requirementsMet(spec, oneInTheZone({ bossDefeated: false }))).toBe(false);
     expect(requirementsMet(spec, oneInTheZone({ bossDefeated: true }))).toBe(true);
   });
@@ -76,6 +76,6 @@ describe("the boss is the win, not the zone", () => {
       id: "x", level: 1, sizeThreshold: 30, expectedCuts: 5, points: 20,
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var", required: true }],
     } as unknown as LevelConfig;
-    expect(resolveWinSpec(gateOnly).require).toEqual([{ kind: "area", count: 1 }]);
+    expect(resolveWinSpec(gateOnly, NO_RUN_RULES).require).toEqual([{ kind: "area", count: 1 }]);
   });
 });

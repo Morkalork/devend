@@ -1,3 +1,4 @@
+import { NO_RUN_RULES } from "@/lib/winSpec";
 import { describe, it, expect } from "vitest";
 import { winConditionsBody, shouldAnnounceWinConditions } from "@/lib/winConditions";
 import type { LevelConfig } from "@/types/level";
@@ -13,20 +14,20 @@ const base = (over: Partial<LevelConfig>): LevelConfig => ({
 
 describe("winConditionsBody", () => {
   it("normal map: clear percent (from sizeThreshold) + time limit for L4+", () => {
-    const body = winConditionsBody(t, base({ sizeThreshold: 30 }), 5);
+    const body = winConditionsBody(t, base({ sizeThreshold: 30 }), 5, NO_RUN_RULES);
     expect(body).toContain('winConditions.clear({"percent":70}');
     expect(body).toContain("winConditions.time");   // L5 -> default 60s
     expect(body).not.toContain("winConditions.areaWin");
   });
 
   it("tutorial band (L1-3) has no time limit line", () => {
-    const body = winConditionsBody(t, base({}), 2);
+    const body = winConditionsBody(t, base({}), 2, NO_RUN_RULES);
     expect(body).toContain("winConditions.clear");
     expect(body).not.toContain("winConditions.time");
   });
 
   it("normal map with a lock requirement lists it", () => {
-    const body = winConditionsBody(t, base({ threadLockRequired: 3 }), 6);
+    const body = winConditionsBody(t, base({ threadLockRequired: 3 }), 6, NO_RUN_RULES);
     expect(body).toContain('winConditions.lock({"count":3}');
   });
 
@@ -38,7 +39,7 @@ describe("winConditionsBody", () => {
     const body = winConditionsBody(t, base({
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
       boss: {} as LevelConfig["boss"],
-    }), 10);
+    }), 10, NO_RUN_RULES);
     expect(body).toContain("winConditions.areaWin");
     expect(body).toContain('"area":"var"');
     expect(body).toContain('"mult":1.5');
@@ -55,19 +56,19 @@ describe("winConditionsBody", () => {
     const pair = winConditionsBody(t, base({
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
       boss: { bossBall: { count: 2 } } as unknown as LevelConfig["boss"],
-    }), 20);
+    }), 20, NO_RUN_RULES);
     expect(pair).toContain("winConditions.bossPair");
     expect(pair, "a pair is described as a single boss").not.toContain("winConditions.boss ");
   });
 
   it("boss map without an area: defeat the boss", () => {
-    const body = winConditionsBody(t, base({ boss: {} as LevelConfig["boss"] }), 10);
+    const body = winConditionsBody(t, base({ boss: {} as LevelConfig["boss"] }), 10, NO_RUN_RULES);
     expect(body).toContain("winConditions.boss");
     expect(body).not.toContain("winConditions.clear");
   });
 
   it("fence budget adds its fail line", () => {
-    const body = winConditionsBody(t, base({ fenceBudget: 14 }), 5);
+    const body = winConditionsBody(t, base({ fenceBudget: 14 }), 5, NO_RUN_RULES);
     expect(body).toContain('winConditions.fences({"count":14}');
   });
 });
@@ -79,38 +80,38 @@ describe("winConditionsBody", () => {
  */
 describe("shouldAnnounceWinConditions", () => {
   it("stays quiet on an ordinary map", () => {
-    expect(shouldAnnounceWinConditions(t, base({ sizeThreshold: 30 }), 5)).toBe(false);
+    expect(shouldAnnounceWinConditions(t, base({ sizeThreshold: 30 }), 5, NO_RUN_RULES)).toBe(false);
   });
 
   // The default ramp timer applies to every map past the tutorial band, so
   // counting it would mark almost the whole game noteworthy and change nothing.
   it("ignores the default ramp timer but announces an authored one", () => {
-    expect(shouldAnnounceWinConditions(t, base({}), 20)).toBe(false);
-    expect(shouldAnnounceWinConditions(t, base({ timeLimit: 25 }), 20)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({}), 20, NO_RUN_RULES)).toBe(false);
+    expect(shouldAnnounceWinConditions(t, base({ timeLimit: 25 }), 20, NO_RUN_RULES)).toBe(true);
   });
 
   it("announces every genuinely unusual condition", () => {
-    expect(shouldAnnounceWinConditions(t, base({ threadLockRequired: 1 }), 6)).toBe(true);
-    expect(shouldAnnounceWinConditions(t, base({ fenceBudget: 4 }), 6)).toBe(true);
-    expect(shouldAnnounceWinConditions(t, base({ boss: {} as LevelConfig["boss"] }), 10)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({ threadLockRequired: 1 }), 6, NO_RUN_RULES)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({ fenceBudget: 4 }), 6, NO_RUN_RULES)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({ boss: {} as LevelConfig["boss"] }), 10, NO_RUN_RULES)).toBe(true);
     expect(shouldAnnounceWinConditions(t, base({
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
-    }), 10)).toBe(true);
+    }), 10, NO_RUN_RULES)).toBe(true);
   });
 
   // A bonus pocket is upside, not a win condition, and the board already marks it.
   it("does not announce a bonus-only colored area", () => {
     expect(shouldAnnounceWinConditions(t, base({
       coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var", required: false }],
-    }), 10)).toBe(false);
+    }), 10, NO_RUN_RULES)).toBe(false);
   });
 
   // The body must stay complete regardless: opening it from the menu on an
   // ordinary map should still explain the map.
   it("keeps the full body even where it stays quiet", () => {
     const level = base({ sizeThreshold: 30 });
-    expect(shouldAnnounceWinConditions(t, level, 20)).toBe(false);
-    const body = winConditionsBody(t, level, 20);
+    expect(shouldAnnounceWinConditions(t, level, 20, NO_RUN_RULES)).toBe(false);
+    const body = winConditionsBody(t, level, 20, NO_RUN_RULES);
     expect(body).toContain("winConditions.clear");
     expect(body).toContain("winConditions.time");
   });

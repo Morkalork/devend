@@ -111,6 +111,15 @@ export interface GameModifiers {
   // Additive (sum) — Clean Release: instant fences granted on the NEXT map
   // after finishing a map under par (folded per-map by useGameSession)
   underParInstantFence: number;
+  // Additive (sum) — Definition of Done: locks demanded on EACH side of every
+  // eligible map, appended to that map's own win (lib/winSpec resolveWinSpec).
+  //
+  // The only modifier in the game that changes what WINNING MEANS rather than
+  // what a number is worth, which is why resolveWinSpec takes the run's rules
+  // as a required argument: a gate checking a clause the "how to win" modal
+  // never mentioned is the one bug this feature can have. Maps that cannot
+  // carry it keep their own win untouched (see acceptsRunClause).
+  winRequiresSplitLocks: number;
   // Additive (sum) — War Chest: ball-speed reduction per 50h banked at map
   // start, capped in useGameSession (0.02 = 2% per 50h)
   bankedSlowPer50h: number;
@@ -329,6 +338,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   fenceSpeedPerFence: 0,
   fenceSpeedPerMapCleared: 0,
   underParInstantFence: 0,
+  winRequiresSplitLocks: 0,
   bankedSlowPer50h: 0,
   overtimeCapBonus: 0,
   freeCheapestOffer: 0,

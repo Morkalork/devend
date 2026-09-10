@@ -1121,7 +1121,7 @@ export function GameCanvas({
       // What the win actually needs, for the map-open announcement. Computed
       // here because it reads destructibles, coloredAreas and deliveryBoxes,
       // which are all in place by now.
-      game.winHighlights = winHighlightRects(resolveWinSpec(level), game);
+      game.winHighlights = winHighlightRects(resolveWinSpec(level, activeModifiers), game);
       game.objectivesTotal    = data.objectivesTotal;
       game.initialSamplePoints = data.initialSamplePoints;
       game.spaceGrid          = data.spaceGrid;
@@ -1461,7 +1461,7 @@ export function GameCanvas({
 
     // Resolved once: the spec is a property of the level, and re-deriving it
     // every frame to get the same answer is work the loop does not need.
-    const winSpec = resolveWinSpec(level);
+    const winSpec = resolveWinSpec(level, activeModifiers);
 
     const gameLoopCallbacks: GameLoopCallbacks = {
       updateWall: (dt: number) => updateWall(dt),
@@ -1899,7 +1899,7 @@ export function GameCanvas({
   // The unusual win requirements, recomputed each render off the live game.
   // resolveWinSpec + readWinSnapshot are exactly what applyCut's win check
   // calls, so there is one reading of the map's win, not two.
-  const goals = mapGoals(resolveWinSpec(level), readWinSnapshot(gameRef.current, level));
+  const goals = mapGoals(resolveWinSpec(level, activeModifiers), readWinSnapshot(gameRef.current, level));
   // Same counter the win check uses for "every ball is locked", so the warning
   // cannot claim a last ball on a board the gate thinks still has two.
   const ballsInPlay = countBallsInPlay(gameRef.current.balls);

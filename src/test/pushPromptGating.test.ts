@@ -27,7 +27,7 @@ import { resolve } from "node:path";
 import { evaluateWinConditions } from "@/lib/physics/applyCut";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { resolveWinSpec, metAlternative, requirementsMet } from "@/lib/winSpec";
+import { resolveWinSpec, metAlternative, requirementsMet, NO_RUN_RULES } from "@/lib/winSpec";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
@@ -157,7 +157,7 @@ describe("an authored clear with no all-locked shortcut", () => {
   } as unknown as LevelConfig;
 
   it("reaches the space branch with nothing left in play", () => {
-    const spec = resolveWinSpec(AUTHORED);
+    const spec = resolveWinSpec(AUTHORED, NO_RUN_RULES);
     expect(spec.authored).toBe(true);
     expect(spec.alsoWinIf, "no shortcut to short-circuit on").toEqual([]);
   });
@@ -179,7 +179,7 @@ describe("an authored clear with no all-locked shortcut", () => {
  * how to finish from it was wrong.
  */
 describe("an alternative win is not a requirement win", () => {
-  const spec = resolveWinSpec(LEVEL);
+  const spec = resolveWinSpec(LEVEL, NO_RUN_RULES);
   const snap = (over: Record<string, unknown>) => ({
     remainingPercent: 100, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
     lockedByType: {}, bossDefeated: false, allLocked: false,

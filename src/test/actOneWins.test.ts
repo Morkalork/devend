@@ -17,7 +17,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
+import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import { goalAtRisk, type Goal } from "@/lib/goalTracker";
 import type { LevelConfig, LevelData } from "@/types/level";
@@ -37,13 +37,13 @@ describe("every act I map states its own win", () => {
     // A derived spec is the one that carries the free allLocked alternative.
     // Any act I map still on the derivation is still on the old shortcut.
     for (const n of ACT_ONE) {
-      expect(resolveWinSpec(at(n)).authored, `level ${n} has no win: block`).toBe(true);
+      expect(resolveWinSpec(at(n), NO_RUN_RULES).authored, `level ${n} has no win: block`).toBe(true);
     }
   });
 
   it("passes the authoring guard on every map", () => {
     for (const n of ACT_ONE) {
-      expect(winSpecProblems(resolveWinSpec(at(n)), at(n)), `level ${n}`).toEqual([]);
+      expect(winSpecProblems(resolveWinSpec(at(n), NO_RUN_RULES), at(n)), `level ${n}`).toEqual([]);
     }
   });
 
@@ -51,7 +51,7 @@ describe("every act I map states its own win", () => {
     // THE shortcut. An authored spec keeps no alternative unless it asks for
     // one, which is why authoring is the fix rather than a stylistic tidy-up.
     for (const n of ACT_ONE) {
-      expect(resolveWinSpec(at(n)).alsoWinIf, `level ${n} still offers a shortcut`).toEqual([]);
+      expect(resolveWinSpec(at(n), NO_RUN_RULES).alsoWinIf, `level ${n} still offers a shortcut`).toEqual([]);
     }
   });
 
@@ -60,7 +60,7 @@ describe("every act I map states its own win", () => {
     // this is the number most likely to drift when a map is re-cut, and a map
     // that asks for a slab it no longer has can never be finished.
     for (const n of ACT_ONE) {
-      const smash = resolveWinSpec(at(n)).require.find(c => c.kind === "smashed");
+      const smash = resolveWinSpec(at(n), NO_RUN_RULES).require.find(c => c.kind === "smashed");
       if (smash?.kind !== "smashed") continue;
       expect(smash.count, `level ${n} asks for more than it offers`)
         .toBeLessThanOrEqual(breakables(at(n)));
@@ -69,7 +69,7 @@ describe("every act I map states its own win", () => {
 
   it("never asks for more locks than the map spawns balls", () => {
     for (const n of ACT_ONE) {
-      const locks = resolveWinSpec(at(n)).require.find(c => c.kind === "locks");
+      const locks = resolveWinSpec(at(n), NO_RUN_RULES).require.find(c => c.kind === "locks");
       if (locks?.kind !== "locks") continue;
       expect(locks.count, `level ${n} asks for more locks than balls`)
         .toBeLessThanOrEqual(at(n).maxBalls ?? 1);
@@ -99,7 +99,7 @@ describe("the lock rush is closed where it can be", () => {
     // they have no other ask, and the rush stays open on them by admission
     // (see the pinned list in ladderWins.test.ts).
     for (const n of ACT_ONE) {
-      const spec = resolveWinSpec(at(n));
+      const spec = resolveWinSpec(at(n), NO_RUN_RULES);
       const closesTheRush = spec.require.some(c => c.kind === "smashed");
       if (!closesTheRush) continue;
       const pricesALock = spec.require.some(c =>
@@ -123,7 +123,7 @@ describe("the lock rush is closed where it can be", () => {
       const hasFeature =
         breakables(level) > 0 || gateAreas(level.coloredAreas ?? []).length > 0;
       if (!hasFeature) continue;
-      const spec = resolveWinSpec(level);
+      const spec = resolveWinSpec(level, NO_RUN_RULES);
       const usesIt = spec.require.some(c => c.kind === "smashed" || c.kind === "area");
       expect(usesIt, `level ${n} carries a feature its win never mentions`).toBe(true);
     }

@@ -19,8 +19,7 @@ import {
 import { LADDER } from "@/test/fixtures/maps";
 import {
   resolveWinSpec, isWinMet, evaluateWinCondition, winSpecProblems,
-  splitLine, splitLockCounts,
-} from "@/lib/winSpec";
+  splitLine, splitLockCounts, NO_RUN_RULES } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import type { WinCondition, WinSnapshot } from "@/types/winSpec";
@@ -145,7 +144,7 @@ describe("level 2, the first map to ask for it", () => {
   const level = LADDER.find(l => l.id === "level-2")!;
 
   it("authors the clause instead of a plain lock count", () => {
-    const spec = resolveWinSpec(level);
+    const spec = resolveWinSpec(level, NO_RUN_RULES);
     expect(spec.authored).toBe(true);
     expect(spec.require.map(c => c.kind).sort()).toEqual(["space", "splitLocks"]);
     // Not kept alongside `locks`, which on a two-ball map would say the same
@@ -154,7 +153,7 @@ describe("level 2, the first map to ask for it", () => {
   });
 
   it("leans on the default line rather than restating it", () => {
-    const c = resolveWinSpec(level).require.find(x => x.kind === "splitLocks") as Split;
+    const c = resolveWinSpec(level, NO_RUN_RULES).require.find(x => x.kind === "splitLocks") as Split;
     expect(c.axis).toBeUndefined();
     expect(c.at).toBeUndefined();
     // Because the map's own divider is already there: the jamb column at
@@ -166,7 +165,7 @@ describe("level 2, the first map to ask for it", () => {
   });
 
   it("is a map the clause can actually be satisfied on", () => {
-    expect(winSpecProblems(resolveWinSpec(level), level)).toEqual([]);
+    expect(winSpecProblems(resolveWinSpec(level, NO_RUN_RULES), level)).toEqual([]);
   });
 });
 
@@ -217,7 +216,7 @@ describe("the runtime records where a lock happened", () => {
     const [left, right] = splitLockCounts(clause(), snapshot.lockPoints);
     expect(left).toBe(1);
     expect(right).toBe(1);
-    expect(isWinMet(resolveWinSpec(level), snapshot)).toBe(true);
+    expect(isWinMet(resolveWinSpec(level, NO_RUN_RULES), snapshot)).toBe(true);
   });
 
   it("records a point per lock, inside the board, and no more", () => {

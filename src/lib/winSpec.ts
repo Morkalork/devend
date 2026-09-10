@@ -38,7 +38,18 @@ const ALL_LOCKED: WinCondition = { kind: "allLocked" };
  *   otherwise         -> clear to the threshold, and lock threadLockRequired,
  *                        with all-balls-locked as a standing alternative
  */
-export function resolveWinSpec(level: LevelConfig): WinSpec {
+export function resolveWinSpec(level: LevelConfig, rules: RunWinRules): WinSpec {
+  return withRunClauses(baseWinSpec(level), level, rules);
+}
+
+/**
+ * The map's OWN win, before the run has any say in it.
+ *
+ * Split out so the authoring tools have something to check that is not coloured
+ * by whoever happens to be playing: `winSpecProblems` flagging a map because a
+ * loadout made it unwinnable would be blaming the wrong document.
+ */
+export function baseWinSpec(level: LevelConfig): WinSpec {
   if (level.win) {
     return {
       require: level.win.require ?? [],
@@ -78,6 +89,69 @@ export function resolveWinSpec(level: LevelConfig): WinSpec {
     require.push({ kind: "locks", count: level.threadLockRequired! });
   }
   return { require, alsoWinIf: [ALL_LOCKED], authored: false };
+}
+
+/**
+ * The run-level rules that can change what a map's win ASKS FOR.
+ *
+ * Every other modifier in the game tunes a number: how fast a ball moves, what
+ * a lock pays, how many fences you get. These change the objective itself, on
+ * every map you play, which is a different kind of thing and is why they are
+ * named here rather than read loosely off GameModifiers. Structural, so the
+ * live modifiers can be passed straight in.
+ */
+export interface RunWinRules {
+  /** Locks demanded on each side of every eligible map. 0 = the run adds none. */
+  winRequiresSplitLocks: number;
+}
+
+/** For the authoring tools and anything asking what a MAP says on its own. */
+export const NO_RUN_RULES: RunWinRules = { winRequiresSplitLocks: 0 };
+
+/**
+ * May a run clause be appended to this map's win?
+ *
+ * A clause the map did not author can make it unwinnable, and the map has no
+ * way to say so. Three refusals, each of them a map the clause would break:
+ *
+ *   - A spec that is not a plain clear. A boss map's win is the boss and a gate
+ *     map's is the zone, SOLE wins both, and bolting a requirement onto one
+ *     turns a designed ending into a thing you must do twice. Only `space` and
+ *     `locks` requirements qualify, which is exactly the shape that has room
+ *     for another question.
+ *   - Too few balls. Both sides have to be payable at once and the balls are
+ *     never returned, so a map spawning fewer than two sides' worth can pay one
+ *     side and then has nothing left.
+ *   - A map that already asks it. Level 2 authored this clause itself, and
+ *     appending a second copy would put the same requirement in the goal list
+ *     twice and let a run rule quietly overrule the author's count.
+ *
+ * A map that refuses keeps its own win untouched. That IS the design: the card
+ * says what it does to the maps it can, and the alternative - forcing every map
+ * to comply - is a card that makes the boss maps impossible.
+ */
+export function acceptsRunClause(
+  spec: WinSpec, level: LevelConfig, count: number,
+): boolean {
+  // `> 0` rather than `<= 0`, which is not the same test: an absent or
+  // malformed value arrives here as undefined or NaN, and BOTH of those answer
+  // false to `<= 0`. The first version let one through and appended a clause
+  // asking for `undefined` locks a side, which no play can ever satisfy - a map
+  // that simply never completes, with nothing on screen saying why.
+  if (!(count > 0)) return false;
+  if (spec.require.length === 0) return false;
+  if (!spec.require.every(c => c.kind === "space" || c.kind === "locks")) return false;
+  if (!((level.maxBalls ?? 1) >= count * 2)) return false;
+  return true;
+}
+
+/** The map's win with whatever the run adds to it. */
+function withRunClauses(
+  spec: WinSpec, level: LevelConfig, rules: RunWinRules,
+): WinSpec {
+  const count = rules.winRequiresSplitLocks;
+  if (!acceptsRunClause(spec, level, count)) return spec;
+  return { ...spec, require: [...spec.require, { kind: "splitLocks", count }] };
 }
 
 /**

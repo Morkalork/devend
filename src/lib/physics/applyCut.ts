@@ -206,7 +206,7 @@ export function applyCutFn(
       // or a frame after. That is not something a player decides or can even
       // see, so it cannot be something they are charged differently for.
       ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
-        mapFailure("ballHitFence", resolveWinSpec(level), readWinSnapshot(game, level)));
+        mapFailure("ballHitFence", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
       return;
     }
   }
@@ -339,7 +339,7 @@ export function applyCutFn(
   const wonBefore = new Set(game.balls.filter(b => b.state === "won").map(b => b.id));
   const anyBallWon = checkAndUpdateBallWonStates(
     game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions,
-    resolveWinSpec(level),
+    resolveWinSpec(level, activeModifiers),
     // The cut that SEALED it decides the lock band and the qualified pay, not
     // the walls that happen to bound the pocket. "I closed this with a
     // Semaphore" is what the player did; a rule read off the boundary would
@@ -358,7 +358,7 @@ export function applyCutFn(
     if (lockedInsideUnarmedLauncher(game, justWon)) {
       failMapCostingALife(
         game, level, levelNumber, activeModifiers, callbacks,
-        mapFailure("launcherPrematureLock", resolveWinSpec(level), readWinSnapshot(game, level)));
+        mapFailure("launcherPrematureLock", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
       return;
     }
   }
@@ -510,7 +510,7 @@ export function applyCutFn(
     // it with a better opening, which is the same argument the deadline makes,
     // and the deadline has always docked one life.
     failMapCostingALife(game, level, levelNumber, activeModifiers, callbacks,
-      mapFailure("outOfFences", resolveWinSpec(level), readWinSnapshot(game, level)));
+      mapFailure("outOfFences", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
   } else if (budget === "bank") {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
   }
@@ -598,7 +598,7 @@ export function evaluateWinConditions(
     // about to restart from nothing.
     failMapCostingALife(
       game, level, levelNumber, activeModifiers, callbacks,
-      mapFailure("timeUp", resolveWinSpec(level), readWinSnapshot(game, level)));
+      mapFailure("timeUp", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
     return null;
   }
   // ── The win, read from the map's spec rather than from a chain of ifs ────
@@ -607,7 +607,7 @@ export function evaluateWinConditions(
   // has no authored `win:` block, so all 40 existing maps behave exactly as
   // before: a gate area or a boss is still the SOLE win, and the space clear
   // still carries threadLockRequired alongside it.
-  const spec = resolveWinSpec(level);
+  const spec = resolveWinSpec(level, activeModifiers);
   const snap = readWinSnapshot(game, level);
 
   // The area gate has a FAIL state as well as a win: if no target can still
@@ -826,7 +826,7 @@ export function checkSpaceWin(
   // empty map and a spent decision. Guarded here as well as at the call above,
   // because this is the mechanic's own precondition and not a property of any
   // one route into it.
-  if (requirementsMet(resolveWinSpec(level), readWinSnapshot(game, level))
+  if (requirementsMet(resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level))
       && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
     // Push Your Luck is a bet that you can keep clearing while the balls are
     // still loose. With every ball locked there is no bet to make, so the offer
@@ -937,7 +937,7 @@ export function triggerLevelComplete(
   // The map's own win premium: what its conditions said they were worth, for
   // the ones it actually met. Recomputed here rather than passed in, so every
   // caller of triggerLevelComplete gets it without having to remember to.
-  const winSpec = resolveWinSpec(level);
+  const winSpec = resolveWinSpec(level, activeModifiers);
   const winPct = winBonusPercent(winSpec, readWinSnapshot(game, level));
   const { levelScore, breakdown, shipEarlyBonus, winBonus } = calculateScore(
     game.wallCount, effectivePar(level.expectedCuts, activeModifiers), percent, level.sizeThreshold, level.points, {
