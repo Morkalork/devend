@@ -1218,14 +1218,30 @@ levels:
     # each on exactly one map, which the spread rule counts as introduced and
     # dropped. Using both here is what takes them off that list.
     sizeThreshold: 13
-    expectedCuts: 8
+    # 7, not 8. Measured at 19.5 bot cuts against this ladder's 2.8x bot ratio,
+    # down from 22.5 when the map still carried a global pull: a turning room
+    # makes every fence a worse bet, and taking it away gave the cuts back.
+    # Lower than 14's par on a later map, which is correct - par describes the
+    # map, not the rung.
+    expectedCuts: 7
     points: 20
     maxBalls: 3
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, red]
-    mutator: tipping
-    neverRotates: true
+    # NO global pull, and that is the point of the map rather than an omission.
+    # It shipped for a day pinning `tipping` - real gravity plus a turning room
+    # - on the reasoning that the well is best read against a pull that turns.
+    # Played, it reads as two gravities at once: the board is already dragging
+    # everything one way, so a patch that drags things another is a second
+    # helping of the same idea rather than a new one. The well is the ONLY pull
+    # here now, which is what makes it legible and what the mechanic was
+    # designed for (see gravityWells.ts on why local beats global).
+    #
+    # No `neverRotates` either. That flag exists because global gravity is
+    # screen-relative and does not turn with the deal; with no global pull there
+    # is nothing to keep upright, and rotateGravityWell turns a well's position
+    # AND its bearing together, so a rotated deal stays self-consistent.
     boardEdges:
       top:
         kick: 1.05
@@ -1248,26 +1264,28 @@ levels:
     # of this map is that the well's direction does NOT turn with the room, and
     # a field that is invisible in the YAML is one nobody thinks about.
     #
-    # 3.8, which is STRONGER than any well the retired ladder shipped (2.8 to
-    # 3.2) and well past the 2.6 engine default, and that is not a MEET map
-    # being harsh. Those numbers were set on still boards. Here the ambient
-    # pull is already bending every path, so a well has to out-turn the
-    # background to be visible at all: measured as the heading change per frame
-    # inside a well against outside one, 2.6 comes out at 0.98x - literally
-    # indistinguishable - where 3.2 is 1.35x and 3.8 is 1.61x. Past that it
-    # plateaus, so 3.8 is the cheapest number that reads.
+    # 3.0, mid-range of the four wells the retired ladder shipped (2.8 to 3.2)
+    # and a little over the 2.6 engine default, because this is a bare board
+    # where the well is the only thing to read.
+    #
+    # It was 3.8 for a day, and the reason it came back down is the same rule
+    # that put it up: a mechanic's strength is relative to the board under it.
+    # While this map carried a global pull, the well had to out-turn that pull
+    # to be seen at all, and 2.6 measured 0.98x the ambient bend - literally
+    # indistinguishable. With the global pull gone there is nothing to compete
+    # with, so the number the mechanic was designed for is the right one again.
     gravityWells:
       - x: 150
         y: 200
         width: 200
         height: 180
-        turnRate: 3.8
+        turnRate: 3.0
         pull: down
       - x: 550
         y: 520
         width: 200
         height: 180
-        turnRate: 3.8
+        turnRate: 3.0
         pull: down
     # Terrain-only board, so `space + locks` is what it may honestly ask (a well
     # is terrain: there is no state saying whether you engaged with one). Two

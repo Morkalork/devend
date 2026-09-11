@@ -100,17 +100,18 @@ describe("no mechanic is introduced and then dropped", () => {
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    // `mutator` and `boardEdges` came back OFF, which is the rule working end to
-    // end rather than a number being re-pinned. They went single-use when 14
-    // and 15 were merged and 14 was left the only map with either; the new 15
-    // uses both, so both are developed again. That was an explicit reason for
-    // building 15 the way it is, not a side effect.
-    //
     //   Mirror        level 13 only, where it MEETS.
-    //   Gravity well  level 15 only, where it MEETS. Same shape as mirror: a
-    //                 mechanic is on this list from its debut until a second
-    //                 map takes it, and 16 is where that would happen.
-    expect(singles.map(w => w.key).sort()).toEqual(["gravityWell", "mirror"]);
+    //   Gravity well  level 15 only, where it MEETS.
+    //   Mutator       level 14 only, and this one is a DESIGN decision showing
+    //                 up as a count rather than a debt to pay off. 15 used it
+    //                 for a day and gave it back: a map teaching a local pull
+    //                 cannot also carry a global one, or it reads as two
+    //                 gravities instead of one new idea. Paying this debt is
+    //                 worth a map that wants weather, not a map that does not.
+    //
+    // `boardEdges` stays off the list, which is the part that did carry over:
+    // four symmetric live walls need no gravity to earn their keep.
+    expect(singles.map(w => w.key).sort()).toEqual(["gravityWell", "mirror", "mutator"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

@@ -106,7 +106,7 @@ describe("level 14 holds together", () => {
     expect(kinds).toEqual(["locks", "space"]);
   });
 
-  it("is the first of act II's two bare-ish boards", () => {
+  it("is the global pull, where 15 is the local one", () => {
     // 11 through 13 require `space + smashed`, because `smashed` was the only
     // clause available that a lock cannot produce. 14 and 15 get out of that by
     // having nothing to smash rather than by being handed a mechanic they do
@@ -114,13 +114,15 @@ describe("level 14 holds together", () => {
     const band = LADDER.filter(l => (l.level ?? 0) >= 11);
     const noSmash = band.filter(l => !(l.win?.require ?? []).some(c => c.kind === "smashed"));
     expect(noSmash.map(l => l.level)).toEqual([14, 15]);
-    // And they are not the same map twice. 15 is this board plus the mechanic
-    // it exists to teach, which is the Meet-then-Use shape the ladder wants:
-    // 14 is the turning room with nothing in it, 15 puts something in it.
+
+    // And they CONTRAST rather than stack, which took a revision to get right:
+    // 15 first shipped carrying this map's weather as well as its own wells,
+    // and played as two gravities at once. 14 is the pull you cannot escape;
+    // 15 is the pull you can walk around. Exactly one of them pulls globally.
     const l15 = LADDER.find(l => l.level === 15)!;
-    expect(l14.gravityWells ?? []).toHaveLength(0);
+    expect(l14.mutator, "14 is the map with the global pull").toBeTruthy();
+    expect(l15.mutator, "15 must not carry a second gravity").toBeUndefined();
+    expect(l14.gravityWells ?? [], "the local pull belongs to 15").toHaveLength(0);
     expect((l15.gravityWells ?? []).length).toBeGreaterThan(0);
-    expect(l15.mutator, "15 has to keep the room turning or the wells say nothing")
-      .toBe(l14.mutator);
   });
 });

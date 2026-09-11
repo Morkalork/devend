@@ -210,7 +210,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | latch | A | Compressed | 26 | 31 | - |
 | data stream | E | Meet | 26 | 27 | - |
 | ball gate | B | Compressed | 33 | 34 | - |
-| pinned mutator | D | Seasoning | 14 | 15 | - |
+| pinned mutator | D | Seasoning | 14 | - | - |
 | live outer walls | D | Meet | 14 | 15 | - |
 | colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
@@ -580,7 +580,7 @@ these numbers against `map.yml` so this cannot happen twice.
 | 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
 | 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
 | 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built, ladder ends here)* |
-| 15 | **Meet** gravity well | Use turning room, live outer walls | Two wells that pull one fixed way, on a board whose own pull turns a quarter every ten seconds. The same well funnels, brakes or sweeps depending on when the ball reaches it. *(built)* |
+| 15 | **Meet** gravity well | Use live outer walls | Two patches that pull, on a board where nothing else does. 14 is the pull you cannot escape; this is the pull you can walk around, and choose not to. *(built)* |
 | 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
@@ -871,15 +871,31 @@ that is the rule for adding a sixth: **a clause must read a counter the game
 already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
 `harvested` flags.
 
+**Two pulls on one board read as one pull, badly.** Level 15 shipped its
+gravity wells on top of the global accelerating gravity it inherited from 14,
+on the reasoning that a well is best read against a pull that turns. Played, it
+reads as two gravities at once: the board is already dragging everything one
+way, so a patch that drags things another is a second helping of the same idea
+rather than a new one. A well's whole design argument is that it is LOCAL - "a
+ball flies normally, bends while it is inside, and resumes ordinary motion on
+the way out" (gravityWells.ts) - and none of those three phases exists on a
+board that is pulling everywhere. The MEET map for a local pull has to be a
+board with no global one.
+
 **A mechanic's authored strength is relative to the board it sits on.** The
 gravity well's engine default (2.6 rad/s) and every value the retired ladder
-shipped (2.8 to 3.2) were set on STILL boards. Level 15 puts wells on a board
-whose own pull is already bending every path, and at 2.6 the well is literally
-invisible: measured as heading change per frame inside a well against outside
-one, it comes out at 0.98x. 3.2 is 1.35x, 3.8 is 1.61x, and past that it
-plateaus. So the map ships 3.8, ABOVE anything the old ladder used, and that is
-not a difficulty decision - it is the number at which the mechanic can be seen
-at all. Re-check any borrowed constant against the board you are putting it on.
+shipped (2.8 to 3.2) were set on STILL boards. Level 15 first placed its wells
+on a board that also had a global pull, and there 2.6 is literally invisible:
+measured as heading change per frame inside a well against outside one, it comes
+out at 0.98x, where 3.2 is 1.35x and 3.8 is 1.61x before plateauing. So it
+shipped at 3.8, above anything the old ladder used.
+
+Then the global pull came off that map, and the number went **back down to 3.0**
+by the same rule that had pushed it up: with nothing to compete against, the
+value the mechanic was designed for is the right one again. The rule is not "a
+well wants 3.8", it is that a constant borrowed from another map is a guess
+until it is measured against this one - and it can be wrong in either
+direction.
 
 **Do not split one design across two rungs to keep "one new idea per map".**
 The rule is a good default and it cost a map here. Level 14 was asked for in one

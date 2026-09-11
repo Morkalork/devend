@@ -1,19 +1,20 @@
 /**
- * Level 15: MEET the gravity well, USE the turning room and the live walls.
+ * Level 15: MEET the gravity well, on a board where nothing else pulls.
  *
  * Chosen over a third launcher map (the launcher is already met on 11 and used
- * on 12) because the well is the one unplaced mechanic that TALKS to what 14
- * teaches rather than sitting beside it. A well's pull is fixed and absolute;
- * this map's global pull turns a quarter every ten seconds. So one well is a
- * funnel when the two agree, a brake when they oppose and a sideways current
- * between, and which it is depends on when a ball arrives rather than where it
- * is. The renderer had already worked this out: "after a turn the box is
- * somewhere new and the arrow still points down, which is the whole reason the
- * turn matters" (areaLayer).
+ * on 12) because the well was the one unplaced mechanic with something to say
+ * next to what 14 teaches.
  *
- * It also settles what 14 left owing. A pinned mutator and live outer walls
- * were each on exactly one map, which the spread rule counts as introduced and
- * dropped; using both here is what takes them off that list.
+ * It shipped for a day with 14's global pull still on it, on the reasoning that
+ * a fixed local pull is best read against a global one that turns. Played, that
+ * reads as TWO GRAVITIES rather than as one new idea: the board is already
+ * dragging everything one way, so a patch that drags things another is a second
+ * helping. The well's own design argument is that it is local - "a ball flies
+ * normally, bends while it is inside, and resumes ordinary motion on the way
+ * out" (gravityWells.ts) - and not one of those three phases exists on a board
+ * that pulls everywhere. So the global pull came off, and 14 and 15 now
+ * contrast instead of stacking: 14 is the pull you cannot escape, 15 is the
+ * pull you can walk around and choose not to.
  */
 import { describe, it, expect } from "vitest";
 import { LADDER } from "./fixtures/maps";
@@ -48,34 +49,54 @@ describe("level 15 holds together", () => {
     expect(pulls.size, `the wells disagree: ${[...pulls].join(", ")}`).toBe(1);
   });
 
-  it("out-turns the ambient pull, which the engine default does not", () => {
-    // The load-bearing number, and the one a plausible edit would undo by
-    // "restoring the default". The retired ladder's wells ran 2.8 to 3.2 and
-    // the engine default is 2.6, all of them set on STILL boards. Here the
-    // global pull is already bending every path, so a well has to beat the
-    // background to be seen: measured as heading change per frame inside a well
-    // against outside one, 2.6 comes out at 0.98x - indistinguishable - where
-    // 3.2 is 1.35x and 3.8 is 1.61x, and past that it plateaus.
+  it("is strong enough to read on a still board, and no stronger", () => {
+    // This number has been wrong in both directions in two days, which is why
+    // it is pinned as a RANGE with the reason attached rather than as a value.
+    //
+    // While the map still carried a global pull, the well had to out-turn that
+    // pull to be visible at all: 2.6 measured 0.98x the ambient bend, which is
+    // indistinguishable, so it went to 3.8. With the global pull gone there is
+    // nothing to compete with, and the value the mechanic was designed for is
+    // right again - the retired ladder's four wells ran 2.8 to 3.2.
+    //
+    // So: at or above the engine default, because this is a bare board and the
+    // well is the only thing on it to read; and not up in gravity-board
+    // territory, because there is no longer a background to beat.
     for (const w of wells()) {
-      expect(w.turnRate, "a well this gentle is invisible on a gravity map")
-        .toBeGreaterThan(DEFAULT_WELL_TURN_RATE);
-      expect(w.turnRate).toBeGreaterThanOrEqual(3.5);
+      expect(w.turnRate ?? DEFAULT_WELL_TURN_RATE,
+        "gentler than the default on a board with nothing else to read")
+        .toBeGreaterThanOrEqual(DEFAULT_WELL_TURN_RATE);
+      expect(w.turnRate ?? DEFAULT_WELL_TURN_RATE,
+        "tuned for a board that pulls, on a board that does not")
+        .toBeLessThanOrEqual(3.2);
     }
   });
 
-  it("keeps the turning room and the symmetric walls it inherited", () => {
-    // Not decoration: this is what makes the wells mean anything, and it is
-    // what pays off 14's single-use debt on both mechanics.
-    const m = mutatorById(l15.mutator);
-    expect(m, `level 15 pins "${l15.mutator}", which is not in the catalogue`).toBeTruthy();
-    expect(m!.behavior).toBe("gravity");
-    expect(new Set(m!.gravity?.sequence ?? []).size, "the room has to TURN").toBeGreaterThan(1);
-    expect(m!.gravity?.accelerate, "and things have to actually fall").toBe(true);
+  it("pins no mutator, so the wells are the only pull on the board", () => {
+    // The load-bearing decision, and the one a plausible edit undoes by
+    // "putting 14's weather back". A global pull here does not frame the well,
+    // it drowns it: a mechanic defined by bending a ball that was otherwise
+    // flying straight has nothing to bend if nothing flies straight.
+    expect(l15.mutator, "a global pull here reads as a second gravity").toBeUndefined();
+    expect(mutatorById(l15.mutator as unknown as string)).toBeFalsy();
+  });
 
+  it("keeps the symmetric live walls, which need no gravity to earn their keep", () => {
+    // These came from 14 and stay: with no pull at all, a bouncer per side is
+    // what keeps the board's energy up, and the symmetry is what lets the map
+    // be dealt in any orientation.
     const e = l15.boardEdges!;
     expect(Object.keys(e).sort()).toEqual(["bottom", "left", "right", "top"]);
     const kicks = BOARD_SIDES.map(s => e[s]?.kick);
     expect(new Set(kicks).size, `the four sides disagree: ${kicks.join(", ")}`).toBe(1);
+  });
+
+  it("may be dealt in any orientation, which the symmetry buys", () => {
+    // 14 pins neverRotates because global gravity is screen-relative and does
+    // not turn with the deal. There is no global gravity here, and
+    // rotateGravityWell turns a well's position AND its bearing together, so a
+    // rotated deal stays self-consistent and the pin would buy nothing.
+    expect(l15.neverRotates ?? false).toBe(false);
   });
 
   it("asks what a terrain-only board may honestly ask", () => {
