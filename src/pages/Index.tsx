@@ -9,6 +9,7 @@
  * Admin screens are lazy-loaded and only available in dev builds.
  */
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
+import { useZoomGuard } from '@/hooks/useZoomGuard';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
@@ -73,6 +74,11 @@ type Session = ReturnType<typeof useGameSession>;
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
+  // Browser zoom off everywhere the game is PLAYED, on for the admin tools that
+  // manage zoom themselves. Mounted here rather than on the game screen because
+  // it has to be the default: a pinch that lands on the shop or a draft card is
+  // the same accident with the same un-undoable result. See lib/zoomGuard.
+  useZoomGuard(navigation.currentScreen);
   // Admin is on automatically where the game is being BUILT rather than played:
   // the local dev server, and the staging deploy. Everywhere else it is still
   // unlocked by the secret gesture (tap the welcome-screen ball 10 times), so no
