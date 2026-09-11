@@ -42,12 +42,13 @@ describe("the map fixtures", () => {
     // against a set rather than against ENGINE_MAPS.
     const retiredIds = new Set(RETIRED.map(l => l.id));
     const shared = LADDER.filter(l => retiredIds.has(l.id)).map(l => l.id).sort();
-    // level-15 left this list when the ladder stopped at 14: the rebuilt 15 was
-    // the same board as 14 without its turn, so the two were merged rather than
-    // both kept. The RETIRED level-15 is still there and still the wrong map to
-    // find by id, which is exactly why the trap is written down rather than
-    // assumed to have gone away with the overlap.
-    expect(shared).toEqual(["level-11", "level-12", "level-13", "level-14"]);
+    // level-15 left this list when the ladder briefly stopped at 14 and is back
+    // now that the rung is built again. Its round trip is the argument for the
+    // trap rather than against it: the id came back pointing at a completely
+    // different map (a gravity-well board, where the retired level-15 is a
+    // terminals pilot), so anything that had cached a lookup by id across both
+    // sets would have been wrong in a new way without noticing.
+    expect(shared).toEqual(["level-11", "level-12", "level-13", "level-14", "level-15"]);
   });
 
   it("keeps LADDER_END pointing at the last map that actually exists", () => {

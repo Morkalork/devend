@@ -276,17 +276,23 @@ describe("the converted catalogue", () => {
   /**
    * Gates the ladder cannot currently fire, while acts II-IV are rebuilt.
    *
-   * Both are real gates on real mechanics: a gravity well and a level-20 map.
-   * The ladder is ten maps and carries no well, so each is an upgrade the shop
-   * can offer and the run can never cash - which is exactly what the two rules
-   * below exist to catch, and exactly why they are named here instead of the
-   * rules being softened.
+   * Real gates on real mechanics, on a ladder too short to satisfy them: an
+   * upgrade the shop can offer and the run can never cash, which is exactly
+   * what the two rules below exist to catch and exactly why the names are
+   * listed here instead of the rules being softened.
    *
-   * Retuning upgrades.yml to a ten-map ladder would be a balance change nobody
+   * Retuning upgrades.yml to a short ladder would be a balance change nobody
    * asked for, and one to undo twice. A name comes off this list when the map
    * that satisfies its gate is authored; when the list is empty, delete it.
+   *
+   * FREE FALL came off when level 15 placed the ladder's first gravity well,
+   * and it is worth noting what that means: an upgrade nobody could spend was
+   * paid for by a map, not by an edit here. That is the whole point of keeping
+   * this list honest rather than deleting the rule - placing a mechanic is
+   * supposed to bring its shop line back to life, and this is the test that
+   * says whether it did.
    */
-  const PENDING_REBUILD = ["free_fall_principal_b", "hot_start_architect_b"];
+  const PENDING_REBUILD = ["hot_start_architect_b"];
 
   it("never gates on a feature no shipped map has", () => {
     const anywhere = levels.map(mapContextOf);

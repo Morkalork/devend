@@ -158,8 +158,11 @@ describe("the maps with nothing a lock cannot produce", () => {
     // whole lesson: you have to catch one in flight, on a floor that will be a
     // wall ten seconds later.
     //
-    // 15 was on this list too and is not on the ladder any more: it was this
-    // same board minus the turn, which is a split nobody asked for.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14]);
+    // 15 is back and back on this list, for a different reason than before: it
+    // is not a bare board now, it carries two gravity wells. A well is TERRAIN
+    // though - there is no state saying whether you engaged with one - so it
+    // gets no clause of its own and `space + locks` is still the honest ask.
+    // That is the list's own rule doing its job rather than an exception.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15]);
   });
 });

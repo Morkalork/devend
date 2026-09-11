@@ -202,7 +202,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | WIP limit | D | Meet | 17 | 18 | 32 |
 | cage | E | Compressed | 18 | 29 | - |
 | thread lock | D | Compressed | 19 | - | - |
-| gravity well | C | Meet | 21 | 22 | 28, 29 |
+| gravity well | C | Meet | 15 | 21 | 22, 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
 | delivery box | E | Meet | 23 | - | - |
 | fence ground | D | Meet | 24 | 27 | - |
@@ -580,7 +580,7 @@ these numbers against `map.yml` so this cannot happen twice.
 | 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
 | 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
 | 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built, ladder ends here)* |
-| 15 | - | - | Was the board above without its turn, which is a split of one design into two maps that nobody asked for. Folded back into 14; the rung is open. |
+| 15 | **Meet** gravity well | Use turning room, live outer walls | Two wells that pull one fixed way, on a board whose own pull turns a quarter every ten seconds. The same well funnels, brakes or sweeps depending on when the ball reaches it. *(built)* |
 | 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
@@ -646,7 +646,7 @@ Board tilt unlocks at 21. Lodestone 21, black 25.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 21 | **Meet** gravity well | Use bonus pocket | The route between chambers is where your ball stops going where you aimed it. |
+| 21 | **Use** gravity well (first map past the random-tilt gate) | Use bonus pocket | The route between chambers is where your ball stops going where you aimed it. The well MEETS at 15 now; what 21 adds is the sporadic board tilt, which needs both a well and TILT_MIN_LEVEL to fire at all. |
 | 22 | - | Use gravity well + rotor | Slingshot: a paying pocket with a mouth no straight line reaches, and an arm sweeping the open half. |
 | 23 | **Meet** one-way + **Meet** delivery box | Fight mover | A membrane balls fall through and cannot climb, and a lock that only counts inside the box. |
 | 24 | **Meet** fence ground | Break colored area | Ground that builds fences slowly. The cheapest pocket is the longest stand-still. |
@@ -870,6 +870,16 @@ The five clause families are exactly the five the Engagement axis measures, and
 that is the rule for adding a sixth: **a clause must read a counter the game
 already keeps.** `terminals` reads `lit`, `harvested` reads the per-segment
 `harvested` flags.
+
+**A mechanic's authored strength is relative to the board it sits on.** The
+gravity well's engine default (2.6 rad/s) and every value the retired ladder
+shipped (2.8 to 3.2) were set on STILL boards. Level 15 puts wells on a board
+whose own pull is already bending every path, and at 2.6 the well is literally
+invisible: measured as heading change per frame inside a well against outside
+one, it comes out at 0.98x. 3.2 is 1.35x, 3.8 is 1.61x, and past that it
+plateaus. So the map ships 3.8, ABOVE anything the old ladder used, and that is
+not a difficulty decision - it is the number at which the mechanic can be seen
+at all. Re-check any borrowed constant against the board you are putting it on.
 
 **Do not split one design across two rungs to keep "one new idea per map".**
 The rule is a good default and it cost a map here. Level 14 was asked for in one

@@ -110,17 +110,31 @@ describe("no mechanic debuts before its code gate", () => {
     return hits.length ? Math.min(...hits) : null;
   };
 
-  it("gates gravity wells at the tilt gate", () => {
+  it("does not gate a well behind the tilt gate, because nothing does", () => {
+    // This demanded wells only from TILT_MIN_LEVEL, and it was reading the gate
+    // backwards. TILT_MIN_LEVEL gates the SPORADIC board tilt (mapCanTilt: past
+    // the gate AND the map has a well); a well itself has no level gate
+    // anywhere in the physics or the renderer, and level 15 places two that
+    // pull and draw exactly as authored.
+    //
+    // The rule it was serving is still real and now has the right subject: a
+    // map must not rely on a mechanic its level cannot run. Level 15 does not -
+    // it tilts from its gravity mutator's phase schedule, which boardAngleFor
+    // gives priority and which needs no gate. What a pre-21 map gives up is the
+    // RANDOM tilt, which this map would not have used anyway.
     const first = firstLevelWith(has.well);
     if (first === null) {
-      // Wells belong to act III and act III is not rebuilt yet. Asserted as a
-      // bound rather than skipped, so this turns back into a real check the
-      // moment the ladder reaches the act that owes a well.
       expect(LADDER_END, "the ladder reaches act III but has no well anywhere")
         .toBeLessThan(21);
       return;
     }
-    expect(first).toBeGreaterThanOrEqual(TILT_MIN_LEVEL);
+    // A well below the gate must be on a map that turns some other way, or it
+    // is a mechanic placed where half its partner cannot follow.
+    const early = MAPS.filter(l => has.well(l) && l.level < TILT_MIN_LEVEL);
+    for (const l of early) {
+      expect(l.mutator, `level ${l.level} has a well below the tilt gate and no mutator to turn it`)
+        .toBeTruthy();
+    }
   });
 
   it("gates procedural slots at the procedural gate", () => {

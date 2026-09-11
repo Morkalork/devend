@@ -8,7 +8,7 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity } from "@/types/level";
+import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
 import { MoverState, buildMoverPolygon, buildRotorOutline } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
@@ -34,7 +34,10 @@ import {
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
-import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream, MapRotation } from "@/lib/mapRotation";
+import {
+  pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream,
+  rotateGravityWell, rotateColoredArea, rotatePoint, MapRotation,
+} from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
@@ -159,6 +162,24 @@ export interface InitialGameData {
   cages: CageState[];
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
+  /**
+   * Gravity wells, colored areas and pickup anchors, all rotated into this
+   * deal's orientation.
+   *
+   * Returned here rather than left to the caller, and that is a bug fix rather
+   * than tidying. GameCanvas was the only place that built them, so they
+   * existed in the browser and NOWHERE ELSE: every bot sweep of a map with a
+   * well, a gate pocket or a curated token spot was measuring a board that had
+   * none of them. Level 15's first sweep reported a clean 12/12 on a map whose
+   * two wells were not there.
+   *
+   * That is the fourth time this shape of bug has turned up (map beats, the
+   * end-of-frame passes, the map deadline), and the cure is the same each time:
+   * whatever the browser needs, build it where BOTH callers already look.
+   */
+  gravityWells: GravityWell[];
+  coloredAreas: ColoredArea[];
+  pickupSpots: Vector2[];
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
   /** Behaviour for the four outer walls, from the level. Absent on most maps. */
@@ -1368,6 +1389,11 @@ export function createInitialGameData(
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
+    // Authored in the standard orientation, so they turn with the obstacles
+    // they were placed against.
+    gravityWells: (level.gravityWells ?? []).map(w => rotateGravityWell(w, mapRotation)),
+    coloredAreas: (level.coloredAreas ?? []).map(a => rotateColoredArea(a, mapRotation)),
+    pickupSpots: (level.pickupSpots ?? []).map(sp => rotatePoint(sp.x, sp.y, mapRotation)),
     mirrorPolygons,
     boardPolygon,
     // Screen space, and only meaningful because a map that authors these

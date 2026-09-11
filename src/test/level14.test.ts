@@ -106,32 +106,21 @@ describe("level 14 holds together", () => {
     expect(kinds).toEqual(["locks", "space"]);
   });
 
-  it("is where the ladder currently ends", () => {
+  it("is the first of act II's two bare-ish boards", () => {
     // 11 through 13 require `space + smashed`, because `smashed` was the only
-    // clause available that a lock cannot produce. 14 gets out of that by
-    // having nothing to smash rather than by being handed a mechanic it does
-    // not need, and it is the only map in the band that does.
+    // clause available that a lock cannot produce. 14 and 15 get out of that by
+    // having nothing to smash rather than by being handed a mechanic they do
+    // not need.
     const band = LADDER.filter(l => (l.level ?? 0) >= 11);
     const noSmash = band.filter(l => !(l.win?.require ?? []).some(c => c.kind === "smashed"));
-    expect(noSmash.map(l => l.level)).toEqual([14]);
-    // The block is short by one and that is deliberate, not a map that fell out
-    // of the file: 15 was this same board without the turn, and merging the two
-    // left nothing behind it. blockLockCapacity skips a missing level, so a
-    // four-map final block costs the assignment system nothing.
-    expect(Math.max(...LADDER.map(l => l.level ?? 0))).toBe(14);
-  });
-
-  it("draws all four walls as the same live wall", () => {
-    // The cue is what sells the premise before the first ball moves: four
-    // matching rails with chevrons pointing at the middle.
-    const looks = BOARD_SIDES.map(s => edgeLook(s, l14.boardEdges![s]));
-    expect(looks.every(l => l !== null), "a live wall on this map draws nothing").toBe(true);
-    expect(new Set(looks.map(l => l!.colour)).size, "the four walls read as different walls").toBe(1);
-    expect(looks[0]!.kind).toBe("faster");
-    // Each arrow points straight in off its own wall, so the board reads as
-    // "everything is thrown back to the middle" from any orientation.
-    expect(looks.map(l => l!.direction)).toEqual([
-      { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }, { x: 1, y: 0 },
-    ]);
+    expect(noSmash.map(l => l.level)).toEqual([14, 15]);
+    // And they are not the same map twice. 15 is this board plus the mechanic
+    // it exists to teach, which is the Meet-then-Use shape the ladder wants:
+    // 14 is the turning room with nothing in it, 15 puts something in it.
+    const l15 = LADDER.find(l => l.level === 15)!;
+    expect(l14.gravityWells ?? []).toHaveLength(0);
+    expect((l15.gravityWells ?? []).length).toBeGreaterThan(0);
+    expect(l15.mutator, "15 has to keep the room turning or the wells say nothing")
+      .toBe(l14.mutator);
   });
 });

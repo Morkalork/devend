@@ -100,17 +100,17 @@ describe("no mechanic is introduced and then dropped", () => {
     // 11-35 and are on the UNUSED list below with everything else acts II-IV
     // carried. They come back to this list the day one rebuilt map places them,
     // and off it the day a second does.
-    // `mutator` and `boardEdges` are BACK on this list, and the honest reason is
-    // that the ladder got shorter rather than that a map went wrong. 14 and 15
-    // were one design split into two maps; merging them back left 14 as the only
-    // map pinning a mutator and the only map with live outer walls, so both
-    // count as single-use again by the rule's own arithmetic.
+    // `mutator` and `boardEdges` came back OFF, which is the rule working end to
+    // end rather than a number being re-pinned. They went single-use when 14
+    // and 15 were merged and 14 was left the only map with either; the new 15
+    // uses both, so both are developed again. That was an explicit reason for
+    // building 15 the way it is, not a side effect.
     //
-    // This is what the rule is FOR and it is being read correctly: a mechanic
-    // introduced on the last map of a ladder is on this list until the ladder
-    // grows past it. It is a debt against level 15's replacement, not a defect
-    // in 14, and the fix is the next map rather than an edit to this one.
-    expect(singles.map(w => w.key).sort()).toEqual(["boardEdges", "mirror", "mutator"]);
+    //   Mirror        level 13 only, where it MEETS.
+    //   Gravity well  level 15 only, where it MEETS. Same shape as mirror: a
+    //                 mechanic is on this list from its debut until a second
+    //                 map takes it, and 16 is where that would happen.
+    expect(singles.map(w => w.key).sort()).toEqual(["gravityWell", "mirror"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -130,11 +130,11 @@ describe("no mechanic is introduced and then dropped", () => {
     // Take a name off when a rebuilt map places the mechanic. When the list is
     // empty the assertion goes back to toEqual([]). LAUNCHER was the first off,
     // on level 11; BUMPER the second, on 12; MIRROR the third, on 13; PINNED
-    // MUTATOR the fourth, on 14.
+    // MUTATOR the fourth, on 14; GRAVITY WELL the fifth, on 15.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
         "Ball gate", "Cage", "Charge", "Data stream", "Deformable",
-        "Delivery box", "Fence ground", "Gravity well", "Latch",
+        "Delivery box", "Fence ground", "Latch",
         "One-way", "Phasing", "Portal", "Rotor",
         "Terminals", "Thread lock", "WIP limit",
       ]);
@@ -180,17 +180,17 @@ describe("no single idea owns an act", () => {
     // note predicts working: 4 of 4 became 4 of 5 without a slab being touched,
     // because the act got a map that has none.
     //
-    // Stripping level 14 to a bare board then moved the NUMERATORS, and down,
-    // which is the first time that has happened here. Colored areas fell off
-    // the list entirely and breakables went 4 of 5 to 3 of 5, then to 3 of 4
-    // when the ladder stopped at 14 and the denominator shrank with it.
+    // Stripping level 14 to a bare board moved the NUMERATORS, and down, which
+    // was the first time that had happened here: colored areas fell off the
+    // list entirely and breakables went 4 of 5 to 3 of 5. The denominator then
+    // went to 4 when the ladder stopped at 14, and back to 5 when the new 15
+    // arrived, without any of the three breakable maps changing.
     //
-    // The fraction going UP while the count goes down is the sampling effect
-    // the note above warns about, seen from the other side: three of four is a
-    // worse-looking number than three of five and describes the same three
-    // maps. Nothing was authored differently to cause it.
+    // That round trip is the sampling effect the note above warns about, shown
+    // twice in two commits: the same three maps read as 3 of 5, then 3 of 4,
+    // then 3 of 5 again while nothing about them was touched.
     expect(monopolies).toEqual([
-      "Breakable: on 3 of act II's 4 maps",
+      "Breakable: on 3 of act II's 5 maps",
     ]);
   });
 

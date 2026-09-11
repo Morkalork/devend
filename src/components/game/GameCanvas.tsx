@@ -1052,13 +1052,15 @@ export function GameCanvas({
         game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
-      // Pickup spots are authored in the standard orientation; rotate them into
-      // the same frame as the (rotated) obstacles so tokens still land where the
-      // designer intended relative to the layout.
-      game.pickupSpots = (level.pickupSpots ?? []).map(s => rotatePoint(s.x, s.y, data.mapRotation));
-      // Colored Areas (gate + bonus pockets): rotate into the board's frame.
-      game.coloredAreas = (level.coloredAreas ?? []).map(a => rotateColoredArea(a, data.mapRotation));
-      game.gravityWells = (level.gravityWells ?? []).map(w => rotateGravityWell(w, data.mapRotation));
+      // Pickup anchors, colored areas and gravity wells, all authored in the
+      // standard orientation and rotated into this deal's frame. Built by
+      // createInitialGameData rather than here: while this was the only place
+      // that made them, they existed in the browser and nowhere else, so every
+      // bot sweep measured a board with no wells, no gate pockets and no
+      // curated token spots. See InitialGameData.
+      game.pickupSpots = data.pickupSpots;
+      game.coloredAreas = data.coloredAreas;
+      game.gravityWells = data.gravityWells;
       // File the well explainer the first time a map actually has one. Filed
       // rather than shown: a well is visible, quiet and never instantly fatal,
       // so it does not earn an interruption (see manual.ts on what does).
