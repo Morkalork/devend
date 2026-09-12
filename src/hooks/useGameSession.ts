@@ -1601,7 +1601,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     setLevelPace(pace);
 
-    setTotalScore(totalScore + levelOvertime);
+    // Functional, not `totalScore + levelOvertime`. Every other writer of this
+    // state already is (a purchase, an assignment's overtime reward), and a
+    // plain read-then-write here would silently discard anything that landed in
+    // the same React batch. The wallet is the one number a player counts.
+    setTotalScore(prev => prev + levelOvertime);
     setPendingLevelScore({
       ...scoreData, levelScore: levelOvertime, tierMultiplier: 1,
       beatHighscore, previousHighscore, highscoreBonus: highscoreBonusEarned,

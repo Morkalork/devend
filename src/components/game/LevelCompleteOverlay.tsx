@@ -25,6 +25,8 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   winBonus: { icon: Trophy, color: 'text-violet-400' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
   pickupBonus: { icon: Gift, color: 'text-fuchsia-400' },
+  capBonus: { icon: Clock, color: 'text-primary' },
+  qualifiedOvertime: { icon: Lock, color: 'text-emerald-400' },
   newHighscore: { icon: TrendingUp, color: 'text-yellow-400' },
   totalBonus: { icon: Sparkles, color: 'text-success' },
   overtimeEarned: { icon: Clock, color: 'text-primary' },
@@ -159,6 +161,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     multiLockBonus = 0,
     multiLockBest = 1,
     bouncerOvertime = 0,
+    capBonus = 0,
+    qualifiedOvertime = 0,
     pushBonus = 0,
     breakBonus = 0,
     breakMultiplier = 1,
@@ -188,26 +192,20 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const deliveryPay = axes?.delivery ?? Math.max(0, lockBonus - superiorLockBonus);
   const craftPay = axes?.craft ?? superiorLockBonus;
   const standardLockBonus = deliveryPay;
-  const hasLockBonus = standardLockCount > 0 && standardLockBonus > 0;
-  const hasSuperiorLocks = craftPay > 0 && (superiorLockCount > 0 || zoneLockCount > 0);
   // Colored Areas: the zone multiplier is folded into lockBonus, so without its
   // own row a var/let/const lock looked exactly like an ordinary one here and
   // the mechanic was invisible the moment the zone stopped glowing. This row
   // reports what the zones ADDED; it is already inside lockBonus, so it must
   // NOT be added to the total again.
-  const hasZoneLocks = zoneLockCount > 0 && zoneLockBonus > 0;
   // Multi-locks, for exactly the reason the zone row above exists. Sealing
   // three balls in one cut pays triple, and nothing on this screen said so, so
   // a big multi-lock was indistinguishable from three ordinary locks. Like the
   // zone row this reports what the play ADDED and is already inside lockBonus,
   // so it must NOT be added to the total again.
-  const hasMultiLock = multiLockBest > 1 && multiLockBonus > 0;
   // Bumper hours. Unlike the two rows above, these are NOT already inside the
   // lock income: they are paid above the per-map cap with the pickups, so this
   // row reports hours the player would not otherwise see accounted for.
   const hasBouncerHours = bouncerOvertime > 0;
-  const hasBreakBonus = breakBonus > 0;
-  const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
   /**
    * FLAWLESS: every ball on the map locked, and every one of those locks tight.
@@ -240,6 +238,38 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // drift from the numerator.
   const earnedTotal = Math.max(0, Math.round(paidBase + (axes?.total ?? 0) - zonesMissedCost));
   const availableTotal = Math.max(earnedTotal, Math.round(mapCeiling ?? 0));
+  /**
+   * Hours paid OUTSIDE the map's own lanes, each with a row of its own below
+   * the Score line (#79: "it says I got 146 score, but I get 137 overtime").
+   *
+   * The screen used to show the base, the lanes and a Score, then announce a
+   * DIFFERENT "Overtime Earned" with nothing accounting for the gap. Bumper
+   * hours and pickup hours were paid and rendered nowhere at all; the win
+   * premium and the highscore bonus had rows, but ABOVE the Score line that
+   * excludes them, so reading down the column never reached the payout.
+   *
+   * Now every one of them is a row, they sit below the Score they are paid on
+   * top of, and levelCompleteAddsUp.test pins the identity: Score + these =
+   * Overtime Earned. The backstop can still clip the sum on an enormous map,
+   * which is what `clipped` reports rather than leaving the reader to wonder.
+   */
+  const onTopRows: Array<{ key: string; label: string; hours: number; tone: string }> = [
+    { key: 'winBonus', label: t('levelComplete.winBonus', { percent: Math.round(winBonusPercent) }), hours: winBonus, tone: 'text-violet-400' },
+    { key: 'newHighscore', label: t('levelComplete.newHighscore'), hours: beatHighscore ? highscoreBonus : 0, tone: 'text-[#ffd54a]' },
+    { key: 'bouncerHours', label: t('levelComplete.bouncerHours'), hours: bouncerOvertime, tone: 'text-primary' },
+    { key: 'pickupBonus', label: t('levelComplete.pickupHours'), hours: pickupBonus, tone: 'text-fuchsia-400' },
+    { key: 'qualifiedOvertime', label: t('levelComplete.qualifiedOvertime'), hours: qualifiedOvertime, tone: 'text-emerald-400' },
+  ].filter(r => r.hours > 0);
+  const onTopTotal = onTopRows.reduce((sum, r) => sum + r.hours, 0);
+  // Comp Time / Stock Options is NOT income and is deliberately not in the sum
+  // above: it raises this map's ceiling, which is what every card granting it
+  // says it does. It gets a row of its own so the raise is visible, phrased as
+  // a ceiling change rather than as hours earned.
+  const capRaise = Math.max(0, Math.round(capBonus));
+  // What the backstop took off the top, if anything. Never negative: the
+  // qualified channel is added after the clamp, so it can push the payout back
+  // above the sum without meaning the clamp gave hours away.
+  const clipped = Math.max(0, earnedTotal + onTopTotal - levelScore);
   // "Overtime x / y" on the always-visible row. The Score row above says the
   // same thing but lives inside the itemised breakdown, which is collapsed by
   // default, so the fraction only existed for players who opened a panel most
@@ -513,25 +543,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {winBonus > 0 && (
-              <div {...hold('winBonus')} className="flex justify-between items-center py-2 border-b border-violet-500/30 bg-violet-500/10 rounded px-2">
-                <span className="text-violet-400 flex items-center gap-1">
-                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.winBonus', { percent: Math.round(winBonusPercent) })}
-                </span>
-                <span className="font-bold text-violet-400">+{winBonus}h</span>
-              </div>
-            )}
-            {beatHighscore && (
-              <div {...hold('newHighscore')} className="flex justify-between items-center py-2 border-b rounded px-2" style={{ borderColor: '#ffd54a55', background: '#ffd54a1a', touchAction: 'pan-y' }}>
-                <span className="flex items-center gap-1" style={{ color: '#ffd54a' }}>
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.newHighscore')}
-                </span>
-                <span className="font-bold" style={{ color: '#ffd54a' }}>+{highscoreBonus}h</span>
-              </div>
-            )}
-
             {/* Score: x / y - what you took of what this map could pay.
                 Both ends come from the scorer. The overlay adding up its own
                 rows is exactly how the base row came to disagree with the
@@ -543,6 +554,45 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <span className="text-muted-foreground"> / {availableTotal}h</span>
               </span>
             </div>
+
+            {/* Paid ON TOP of the map's own lanes, so below the Score they are
+                paid on top of. Read down the column and you reach the payout;
+                that was the whole of #79. */}
+            {onTopRows.map(row => (
+              <div
+                key={row.key}
+                {...hold(row.key)}
+                className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border"
+              >
+                <span className={`flex items-center gap-1 ${row.tone}`}>
+                  <Clock className="w-3 h-3" />
+                  {row.label}
+                </span>
+                <span className={`font-bold ${row.tone}`}>+{row.hours}h</span>
+              </div>
+            ))}
+
+            {capRaise > 0 && (
+              <div {...hold('capBonus')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {t('levelComplete.capBonus')}
+                </span>
+                <span className="font-bold text-primary">{t('levelComplete.capBonusValue', { hours: capRaise })}</span>
+              </div>
+            )}
+
+            {/* The backstop, when it actually took something. Silent otherwise:
+                a "-0h" row on every map would be noise. */}
+            {clipped > 0 && (
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <TrendingDown className="w-3 h-3" />
+                  {t('levelComplete.overCap')}
+                </span>
+                <span className="font-bold text-destructive">-{clipped}h</span>
+              </div>
+            )}
 
                   </div>
                 </motion.div>

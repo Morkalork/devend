@@ -414,9 +414,21 @@ export interface ScoreOptions {
    *  terminals, data-stream seams and delivery boxes. */
   engagement?: { ratio: number; offered: boolean };
   /** Hours that belong to no axis and are simply owed: the map mutator's
-   *  hazard premium, an objective's reward, and the Stock Options capstone,
-   *  which used to raise a ceiling that no longer binds anything. */
+   *  hazard premium and an objective's clear reward. Ordinary income, so the
+   *  backstop still bounds it. NOT the Stock Options / Comp Time cap raise,
+   *  which shared this option and meant the opposite thing: see `capRaise`. */
   flatBonus?: number;
+  /**
+   * Hours added to the BACKSTOP rather than to the payout: the Stock Options
+   * capstone and the Comp Time pickup token (default 0).
+   *
+   * Split out of `flatBonus`, which was doing both jobs under one name. Every
+   * card that grants this says it "raises the per-map overtime cap", and as
+   * flat income it did the opposite of that twice over: it paid hours on a map
+   * that was nowhere near its ceiling, and on a map pressed against the
+   * ceiling it added the very hours the clamp then removed. See issue #79.
+   */
+  capRaise?: number;
   /** Overdelivery: raises the THRIFT ceiling (default 1). */
   underParBonusMultiplier?: number;
   /** Tech Evangelist: raises the GREED ceiling (default 1). */
@@ -503,6 +515,7 @@ export function calculateScore(
 } {
   const {
     scoreMultiplier = 1, locks, greedBonus = 0, engagement, flatBonus = 0, postCapBonus = 0,
+    capRaise = 0,
     qualifiedOvertime = 0,
     payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
     spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1, winBonusPercent = 0,
@@ -541,6 +554,7 @@ export function calculateScore(
     basePoints * breakdown.performanceMultiplier * safeMultiplier * launchMult,
   );
   const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
+  const safeCapRaise = Number.isFinite(capRaise) && capRaise > 0 ? Math.round(capRaise) : 0;
   const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
 
   // The win premium scales the map's own earned pay. Applied before the
@@ -572,14 +586,28 @@ export function calculateScore(
   const mapPay = grossMapPay - zoneShareWithheld;
   breakdown.zoneShareWithheld = zoneShareWithheld;
   const winBonus = Math.round(mapPay * safeWinPct / 100);
-  const earned = mapPay + winBonus + safeFlat + safePostCap;
+  // `safePostCap` is gone from here, and that is the fix: bumper and power-up
+  // hours are specified as paid ABOVE the cap ("a bumper counts down from five
+  // in front of the player, so one bump must be one hour"), and inside the
+  // clamp a bump was worth an hour only while the map still had headroom. See
+  // issue #79. `safeFlat` stays inside it - a mutator's hazard pay and an
+  // objective's clear reward are ordinary income that the backstop should
+  // still catch if it ever runs away.
+  const earned = mapPay + winBonus + safeFlat;
   // The backstop bounds the BASE and the flat bonuses, never the axes: the five
   // ceilings already bound those, and they are absolute hours while the base is
   // per-map. Clamping the sum against a multiple of basePoints would clip axis
   // income on any map with a low `points:` value, which is precisely the bug
   // this rework exists to remove - a skilled run losing what it earned.
   const backstop = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom)
-    + axisCeilingTotal(loadedConfig);
+    + axisCeilingTotal(loadedConfig)
+    // Stock Options and the Comp Time token, doing what their cards say they
+    // do. They used to arrive as `flatBonus` and be paid as hours instead,
+    // which BOTH overpaid a map nowhere near its ceiling and did nothing at
+    // all on a map that was against it - the exact opposite of "raises the
+    // per-map overtime cap". A separate option because flatBonus is real
+    // income (hazard pay, clear rewards) and the two must not share a name.
+    + safeCapRaise;
   // Qualified overtime is added AFTER the clamp, which nothing else in this
   // function is. That is the whole feature: lock income banks through delivery
   // and craft, sixty hours between them, so the N-squared simultaneous curve is
@@ -591,7 +619,7 @@ export function calculateScore(
   const safeQualified = Number.isFinite(qualifiedOvertime) && qualifiedOvertime > 0
     ? Math.round(qualifiedOvertime)
     : 0;
-  const levelScore = Math.max(0, Math.min(earned, backstop)) + safeQualified;
+  const levelScore = Math.max(0, Math.min(earned, backstop)) + safePostCap + safeQualified;
 
   return {
     levelScore, breakdown, shipEarlyBonus: breakdown.axes.tempo,

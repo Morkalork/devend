@@ -536,6 +536,16 @@
         "title": "Win bonus",
         "body": "Some maps ask for something harder than clearing the board: a ball sealed inside a coloured zone, a tight pocket, a named ball trapped. When a map's win conditions carry a premium, meeting them pays that percent on top of everything the map earned.",
         "tip": "The premium is set per condition by the map, so it is the same for every route. It scales what you earned, which means playing a hard map well is worth more than scraping through it."
+      },
+      "capBonus": {
+        "title": "Comp Time",
+        "body": "Stock Options and Comp Time tokens raise the ceiling on what this map can pay, rather than paying hours themselves. On a map that never reaches its ceiling they change nothing; on a big one they are what lets the last hours through.",
+        "tip": "Worth most on a map you are already clearing well. If the payout is nowhere near the ceiling, a cap raise is dead weight."
+      },
+      "qualifiedOvertime": {
+        "title": "Qualified Overtime",
+        "body": "Paid for sealing several balls in ONE cut. The lock stack is already N-squared, and Delivery and Craft fill up long before a four-ball pass is felt, so this channel pays that curve above the ceiling where it cannot be swallowed.",
+        "tip": "Herd the balls into one pocket and close it with a single fence. Two in a cut pays; four pays far more."
       }
     },
     "newPersonalBest": "New personal best, and you are still going!",
@@ -567,7 +577,12 @@
     "winBonus": "Win bonus (+{{percent}}%)",
     "flawless": "Flawless",
     "flawlessDetail_one": "every ball sealed tight",
-    "flawlessDetail_other": "all {{count}} balls sealed tight"
+    "flawlessDetail_other": "all {{count}} balls sealed tight",
+    "pickupHours": "Power-Up Hours",
+    "capBonus": "Comp Time",
+    "qualifiedOvertime": "Qualified Overtime",
+    "overCap": "Over the cap",
+    "capBonusValue": "ceiling +{{hours}}h"
   },
   "notFound": {
     "message": "Oops! Page not found",

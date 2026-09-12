@@ -478,6 +478,16 @@ export interface LevelScoreData {
   multipliedBase?: number;
   /** What this map could have paid: base + every axis ceiling. The "y". */
   mapCeiling?: number;
+  /**
+   * Hours paid OUTSIDE the map's own lanes, itemised so the level-complete
+   * breakdown adds up to the payout.
+   *
+   * These were in the payout and on no row: the screen showed the base, the
+   * lanes and a "Score", and then announced a larger "Overtime Earned" with
+   * nothing to explain the difference. See issue #79.
+   */
+  capBonus?: number;          // Stock Options + Comp Time pickups (flatBonus)
+  qualifiedOvertime?: number; // paid above the backstop (lib/qualifiedOvertime)
   /** Hours the map's win conditions paid on top of its earned pay, and the
    *  percent they asked for, so the results row can name the premium. */
   winBonus?: number;

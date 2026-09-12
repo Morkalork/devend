@@ -533,6 +533,16 @@
         "title": "Bono de victoria",
         "body": "Algunos mapas piden algo mas dificil que despejar el tablero: una bola sellada dentro de una zona de color, un bolsillo ajustado, una bola concreta atrapada. Cuando las condiciones de victoria de un mapa llevan una prima, cumplirlas paga ese porcentaje sobre todo lo que el mapa gano.",
         "tip": "La prima la fija el mapa por condicion, asi que es igual para cualquier ruta. Escala lo que ganaste, de modo que jugar bien un mapa dificil vale mas que pasarlo por los pelos."
+      },
+      "capBonus": {
+        "title": "Tiempo Compensatorio",
+        "body": "Stock Options y las fichas de Tiempo Compensatorio elevan el techo de lo que este mapa puede pagar, en vez de pagar horas por sí mismas. En un mapa que nunca llega a su techo no cambian nada; en uno grande son lo que deja pasar las últimas horas.",
+        "tip": "Valen más en un mapa que ya estás despejando bien. Si el pago no se acerca al techo, subir el tope no sirve de nada."
+      },
+      "qualifiedOvertime": {
+        "title": "Horas Extra Cualificadas",
+        "body": "Se pagan por sellar varias bolas en UN solo corte. La pila de bloqueos ya es cuadrática, y Entrega y Oficio se llenan mucho antes de que se note un pase de cuatro bolas, así que este canal paga esa curva por encima del techo, donde no puede ser absorbida.",
+        "tip": "Reúne las bolas en un mismo hueco y ciérralo con una sola valla. Dos en un corte pagan; cuatro pagan muchísimo más."
       }
     },
     "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
@@ -564,7 +574,12 @@
     "winBonus": "Bono de victoria (+{{percent}}%)",
     "flawless": "Impecable",
     "flawlessDetail_one": "cada bola sellada con precisión",
-    "flawlessDetail_other": "las {{count}} bolas selladas con precisión"
+    "flawlessDetail_other": "las {{count}} bolas selladas con precisión",
+    "pickupHours": "Horas de Potenciador",
+    "capBonus": "Tiempo Compensatorio",
+    "qualifiedOvertime": "Horas Extra Cualificadas",
+    "overCap": "Por encima del tope",
+    "capBonusValue": "techo +{{hours}}h"
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",

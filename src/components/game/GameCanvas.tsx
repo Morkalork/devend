@@ -1695,7 +1695,9 @@ export function GameCanvas({
         engagement: engagementProgress(game),
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
-        flatBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
+        // `capRaise`, not `flatBonus`: the two used to share an option, so the
+        // raise was paid as hours and never raised anything (#79).
+        capRaise: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
         // Bumper hours pay with the pickups, above the cap: a bumper counts
         // down from five in front of the player, so one bump must be one hour.
         postCapBonus: game.pickupOvertime + (game.bouncerOvertime ?? 0),
@@ -1720,6 +1722,10 @@ export function GameCanvas({
           zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
           multipliedBase: breakdown.multipliedBase,
           mapCeiling: breakdown.mapCeiling,
+          // Everything paid outside the map's lanes, so the overlay can show
+          // where the payout came from instead of only announcing it (#79).
+          capBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
+          qualifiedOvertime: game.qualifiedOvertime ?? 0,
           levelScore,
           remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
           thresholdPercent: level.sizeThreshold, pushBonus,
