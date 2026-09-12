@@ -1,11 +1,15 @@
 /**
  * Keep the browser's own zoom off the board while the game is running.
  *
- * Reported from play: "you can accidentally zoom out when playing". On a phone
- * the board fills the screen, a fence is drawn by dragging across it, and a
- * second finger landing anywhere near the first is a pinch as far as the
- * browser is concerned. The page zooms out mid-cut, the board stops matching
- * where the fingers are, and nothing in the game can put it back.
+ * Reported from play twice, in both directions: first "you can accidentally
+ * zoom out when playing", then, after that was fixed, "I still accidentally
+ * zoom in sometimes when drawing a fence". Two different gestures, both with
+ * the same result. On a phone the board fills the screen, a fence is drawn by
+ * dragging across it, and a second finger landing anywhere near the first is a
+ * pinch as far as the browser is concerned - that one zooms out. Two quick taps
+ * near the same spot, which happens just from playing quickly, reads as a
+ * double-tap - that one zooms in. Either way the board stops matching where the
+ * fingers are, and nothing in the game can put it back.
  *
  * ── Why the viewport meta was not enough ────────────────────────────────────
  *
@@ -25,16 +29,34 @@
  *
  * ── What actually stops it ──────────────────────────────────────────────────
  *
- * Two mechanisms, because neither covers the whole field alone:
+ * Three mechanisms, because none of them covers the whole field alone:
  *
  *   touch-action    `pan-x pan-y` on the root element permits scrolling and
- *                   withholds BOTH pinch-zoom and double-tap-zoom. This is the
- *                   one the compositor honours without waiting for a handler,
- *                   so it is the one that works while a frame is busy.
+ *                   withholds pinch-zoom. This is the one the compositor
+ *                   honours without waiting for a handler, so it is the one
+ *                   that works while a frame is busy.
  *   preventDefault  on a non-passive multi-touch `touchmove`, on Safari's
  *                   `gesture*` events, and on ctrl+wheel (a trackpad pinch and
  *                   the desktop zoom shortcut). Covers what touch-action does
  *                   not, including the gesture events touch-action never sees.
+ *   double-tap      reported separately ("you can accidentally zoom IN"),
+ *                   because it is a different gesture with a different cause:
+ *                   two quick single-finger taps, never more than one touch
+ *                   point at once, so the multi-touch handling above never
+ *                   sees it. `touch-action` is SPECIFIED to suppress this too,
+ *                   but only recent WebKit honours that for double-tap
+ *                   specifically - the same gap this file already documents
+ *                   for `user-scalable=no` - so a tap-and-hold on a board that
+ *                   is all rapid single-finger contact needed its own fix:
+ *                   preventDefault on the second `touchend` of a pair that
+ *                   land close together in both time and space, the standard
+ *                   technique for this exact gap. It targets `touchend` and
+ *                   not the pointer events the game itself reads
+ *                   (useGameInput), and pointerup for a contact always fires
+ *                   and is handled before its paired touchend does, so every
+ *                   tap-driven mechanic - freeze, tap-to-remove, targeted
+ *                   abilities - still fires even when the double-tap window
+ *                   catches its browser-side echo.
  *
  * ── Why it is safe to swallow a second finger ───────────────────────────────
  *
@@ -77,6 +99,21 @@ export const GUARDED_TOUCH_ACTION = "pan-x pan-y";
 const GESTURE_EVENTS = ["gesturestart", "gesturechange", "gestureend"] as const;
 
 /**
+ * How close together, in time, two taps must land to read as one double-tap.
+ * Matches the window browsers themselves use to decide the same thing, so this
+ * catches exactly the taps that would otherwise zoom and nothing slower.
+ */
+const DOUBLE_TAP_WINDOW_MS = 350;
+
+/**
+ * How close together, in screen pixels, two taps must land to read as the same
+ * spot. Generous enough for a real double-tap on a touchscreen, but tight
+ * enough that two quick, unrelated taps in different places on the board -
+ * tap-freezing two different balls, say - are never mistaken for one.
+ */
+const DOUBLE_TAP_MAX_DISTANCE_PX = 40;
+
+/**
  * Block browser zoom on `doc` until the returned function is called.
  *
  * Takes the document rather than reaching for the global so a test can drive it
@@ -108,6 +145,34 @@ export function installZoomGuard(doc: Document): () => void {
 
   const onGesture = (e: Event) => { if (e.cancelable) e.preventDefault(); };
 
+  // Double-tap-zoom: two single-finger taps, never two touches at once, so the
+  // pinch handling above never sees it. Tracked on `touchend` because that is
+  // the event whose default action IS the zoom, and only for the last finger
+  // lifting off a genuine single-touch tap: `changedTouches` other than 1, or
+  // any touch still down, means this was a drag or a multi-finger release, not
+  // a tap. The pointer events the game itself reads (useGameInput) fire and
+  // are handled before this ever runs, so gameplay taps are never affected -
+  // only the browser's own zoom is suppressed. Reset on a hit so a stray third
+  // tap in the same spot does not chain onto a suppressed second one and start
+  // reading as an endless double-tap.
+  let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
+  const onTouchEnd = (e: Event) => {
+    const touch = e as TouchEvent;
+    if (touch.changedTouches?.length !== 1 || (touch.touches?.length ?? 0) > 0) return;
+    const [t] = touch.changedTouches;
+    const now = Date.now();
+    const closeInTime = now - lastTapAt <= DOUBLE_TAP_WINDOW_MS;
+    const closeInSpace = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) <= DOUBLE_TAP_MAX_DISTANCE_PX;
+    if (closeInTime && closeInSpace) {
+      if (e.cancelable) e.preventDefault();
+      lastTapAt = 0;
+      return;
+    }
+    lastTapAt = now;
+    lastTapX = t.clientX;
+    lastTapY = t.clientY;
+  };
+
   // Capture, so this runs before anything in the app can mark the event handled
   // and before a scrolling panel's own listener sees it. Non-passive on every
   // one of them: a passive listener's preventDefault is ignored, silently, and
@@ -115,11 +180,13 @@ export function installZoomGuard(doc: Document): () => void {
   const opts: AddEventListenerOptions = { passive: false, capture: true };
   doc.addEventListener("touchmove", onTouchMove, opts);
   doc.addEventListener("wheel", onWheel, opts);
+  doc.addEventListener("touchend", onTouchEnd, opts);
   for (const name of GESTURE_EVENTS) doc.addEventListener(name, onGesture, opts);
 
   return () => {
     doc.removeEventListener("touchmove", onTouchMove, opts);
     doc.removeEventListener("wheel", onWheel, opts);
+    doc.removeEventListener("touchend", onTouchEnd, opts);
     for (const name of GESTURE_EVENTS) doc.removeEventListener(name, onGesture, opts);
     root.style.touchAction = previousTouchAction;
   };

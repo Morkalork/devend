@@ -1,15 +1,20 @@
 /**
  * The browser's zoom must not reach a board that is being played on.
  *
- * Reported as "you can accidentally zoom out when playing": on a phone a fence
- * is drawn by dragging across a board that fills the screen, so a second finger
- * anywhere near the first is a pinch, the page zooms out mid-cut, and nothing
- * in the game can put it back.
+ * Reported twice, in both directions. First "you can accidentally zoom out
+ * when playing": on a phone a fence is drawn by dragging across a board that
+ * fills the screen, so a second finger anywhere near the first is a pinch, and
+ * the page zooms out mid-cut. Then, after that shipped, "I still accidentally
+ * zoom in sometimes when drawing a fence": two quick single-finger taps near
+ * the same spot, which just playing fast produces on its own, reads to the
+ * browser as a double-tap and zooms in.
  *
- * What is worth testing is not "does preventDefault get called" but the three
- * ways this fix could be wrong: it could break the one-finger drag the whole
- * game is made of, it could be registered passively and do nothing at all, or
- * it could switch itself off on the wrong screen.
+ * What is worth testing is not "does preventDefault get called" but the ways
+ * each fix could be wrong: it could break the one-finger drag the whole game
+ * is made of, it could be registered passively and do nothing at all, it could
+ * switch itself off on the wrong screen, or the double-tap guard could catch
+ * two taps that were never a double-tap at all - two different balls tapped in
+ * quick succession, say - and eat a real gameplay tap's browser-side echo.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
@@ -36,6 +41,24 @@ function wheel(doc: Document, ctrlKey: boolean): boolean {
 
 function gesture(doc: Document, name: string): boolean {
   const e = new Event(name, { bubbles: true, cancelable: true });
+  doc.dispatchEvent(e);
+  return e.defaultPrevented;
+}
+
+/**
+ * A single finger lifting off at (x, y), optionally with other fingers still
+ * down (`touchesRemaining`) or lifting more than one at once
+ * (`changedCount`) - the two shapes that must NOT read as a tap.
+ */
+function touchEnd(
+  doc: Document, x: number, y: number,
+  opts: { touchesRemaining?: number; changedCount?: number } = {},
+): boolean {
+  const e = new Event("touchend", { bubbles: true, cancelable: true });
+  Object.defineProperty(e, "changedTouches", {
+    value: new Array(opts.changedCount ?? 1).fill({ clientX: x, clientY: y }),
+  });
+  Object.defineProperty(e, "touches", { value: new Array(opts.touchesRemaining ?? 0).fill({}) });
   doc.dispatchEvent(e);
   return e.defaultPrevented;
 }
@@ -98,6 +121,56 @@ describe("the guard while it is installed", () => {
     expect(value).not.toBe("none");
     expect(value).not.toContain("pinch-zoom");
   });
+
+  describe("double-tap zoom", () => {
+    // The CSS above is specified to cover this too, but only recent WebKit
+    // actually honours touch-action for double-tap specifically - the reason
+    // this guard exists is that a phone in the player's hand is not "recent
+    // WebKit" on a schedule anyone controls, so the JS fallback is what has to
+    // be right.
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("lets a lone tap through", () => {
+      expect(touchEnd(document, 100, 100)).toBe(false);
+    });
+
+    it("blocks the second tap of a real double-tap", () => {
+      expect(touchEnd(document, 100, 100)).toBe(false);
+      vi.advanceTimersByTime(150);
+      expect(touchEnd(document, 104, 98)).toBe(true);
+    });
+
+    it("lets two taps through when they are too slow to be one double-tap", () => {
+      expect(touchEnd(document, 100, 100)).toBe(false);
+      vi.advanceTimersByTime(400);
+      expect(touchEnd(document, 100, 100)).toBe(false);
+    });
+
+    it("lets two taps through when they land too far apart to be the same spot", () => {
+      // Tap-freezing two different balls in quick succession must never read
+      // as a double-tap on either one.
+      expect(touchEnd(document, 100, 100)).toBe(false);
+      vi.advanceTimersByTime(100);
+      expect(touchEnd(document, 300, 300)).toBe(false);
+    });
+
+    it("ignores a drag's release, not a tap", () => {
+      // Other fingers still down, or more than one lifting at once: neither is
+      // the single-finger tap a double-tap-zoom is built from.
+      expect(touchEnd(document, 100, 100, { touchesRemaining: 1 })).toBe(false);
+      vi.advanceTimersByTime(50);
+      expect(touchEnd(document, 100, 100, { changedCount: 2 })).toBe(false);
+    });
+
+    it("does not chain a stray third tap onto an already-suppressed pair", () => {
+      expect(touchEnd(document, 100, 100)).toBe(false);
+      vi.advanceTimersByTime(100);
+      expect(touchEnd(document, 100, 100), "the suppressed second tap").toBe(true);
+      vi.advanceTimersByTime(100);
+      expect(touchEnd(document, 100, 100), "a fresh first tap, not a third of a triple").toBe(false);
+    });
+  });
 });
 
 describe("the guard registers itself so that it can actually block", () => {
@@ -108,8 +181,8 @@ describe("the guard registers itself so that it can actually block", () => {
     const add = vi.spyOn(document, "addEventListener");
     const off = installZoomGuard(document);
     const guarded = add.mock.calls.filter(([name]) =>
-      ["touchmove", "wheel", "gesturestart", "gesturechange", "gestureend"].includes(String(name)));
-    expect(guarded.length).toBe(5);
+      ["touchmove", "wheel", "touchend", "gesturestart", "gesturechange", "gestureend"].includes(String(name)));
+    expect(guarded.length).toBe(6);
     for (const [name, , opts] of guarded) {
       expect(opts, `${String(name)} was registered with no options`).toBeTypeOf("object");
       expect((opts as AddEventListenerOptions).passive, `${String(name)} is passive`).toBe(false);
@@ -127,6 +200,7 @@ describe("taking the guard off again", () => {
     off();
     expect(touchMove(document, 2), "still blocking after teardown").toBe(false);
     expect(wheel(document, true)).toBe(false);
+    expect(touchEnd(document, 100, 100)).toBe(false);
     // Restored, not cleared: something else may own this property, and setting
     // it to "" on the way out would break whatever ran first.
     expect(document.documentElement.style.touchAction).toBe("pan-y");
