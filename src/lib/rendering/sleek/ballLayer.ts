@@ -41,6 +41,7 @@ import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
+import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
 import { contactFor, shadowFor, type LightScope } from "./light";
@@ -507,6 +508,25 @@ export class SleekBallLayer {
           .lineTo(c.x + Math.cos(a) * r * 1.05, c.y + Math.sin(a) * r * 1.05);
       }
       this.overlays.stroke({ width: Math.max(1, scale), color: PALETTE.frost, alpha: 0.55 });
+    }
+
+    // ── Heading chevrons: which way a held ball will leave ──────────────────
+    // Every hold, not just the tap-freeze: a motionless circle carries no
+    // heading, and Cold Boot in particular starts the map with a board of them
+    // the player has never seen move. Skipped on a Bug Squash splat, whose
+    // "behind" is the wall it is stuck to.
+    if (!squashed && ball.frozenUntil !== undefined && this.now < ball.frozenUntil) {
+      for (const chevron of getHeadingChevrons(c, ball.velocity, r, this.now)) {
+        this.overlays
+          .moveTo(chevron.left.x, chevron.left.y)
+          .lineTo(chevron.apex.x, chevron.apex.y)
+          .lineTo(chevron.right.x, chevron.right.y)
+          .stroke({
+            width: Math.max(1, 1.4 * scale),
+            color: PALETTE.frost,
+            alpha: chevron.alpha,
+          });
+      }
     }
 
     // ── Collision halos ─────────────────────────────────────────────────────
