@@ -1038,7 +1038,8 @@
     "newBadge": "NUEVO",
     "dailyIntroTitle": "Reunión diaria",
     "dailyIntroBody": "Cada dia todos reciben la misma partida desde una semilla compartida: mismos niveles, sorteos, tiendas y obstaculos. Tu resultado va a la tabla diaria y jugar crea una racha. Empieza en el nivel 1.",
-    "dailyIntroStart": "Empezar la partida de hoy"
+    "dailyIntroStart": "Empezar la partida de hoy",
+    "music": "Música"
   },
   "content": {
     "upgrades": {
@@ -1815,5 +1816,23 @@
   },
   "goal": {
     "par": "Vallas"
+  },
+  "music": {
+    "title": "Gramola",
+    "subtitle": "Todo lo que suena en el juego, y quién lo compuso.",
+    "play": "Reproducir {{title}}",
+    "pause": "Pausar {{title}}",
+    "byArtist": "de {{artist}}",
+    "artistUnknown": "Autoría sin registrar",
+    "viaSource": "de {{source}}",
+    "openSource": "Abrir la página de origen de {{title}}",
+    "licenseNote": "Todas las pistas se usan bajo la {{license}}.",
+    "licenseLink": "Leer la licencia",
+    "back": "Volver",
+    "usedFor": {
+      "menu": "Menú principal",
+      "band": "Niveles {{from}}-{{to}}",
+      "credits": "Créditos finales"
+    }
   }
 }

@@ -2,7 +2,7 @@ import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 import type { BankedAxes } from "@/types/scoring";
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'doorDraft' | 'capstoneDraft' | 'tierDraft' | 'assignmentSummary' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'admin' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'doorDraft' | 'capstoneDraft' | 'tierDraft' | 'assignmentSummary' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';

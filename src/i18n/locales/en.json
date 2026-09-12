@@ -1053,7 +1053,8 @@
     "newBadge": "NEW",
     "dailyIntroTitle": "Daily Stand-up",
     "dailyIntroBody": "Every day everyone gets the exact same run from one shared seed: same levels, drafts, shops and obstacles. Your result lands on the daily leaderboard, and playing builds a streak. Starts at level 1.",
-    "dailyIntroStart": "Start today's run"
+    "dailyIntroStart": "Start today's run",
+    "music": "Music"
   },
   "loadouts": {
     "title": "Loadouts",
@@ -1282,5 +1283,23 @@
   },
   "goal": {
     "par": "Fences"
+  },
+  "music": {
+    "title": "Jukebox",
+    "subtitle": "Everything the game plays, and who wrote it.",
+    "play": "Play {{title}}",
+    "pause": "Pause {{title}}",
+    "byArtist": "by {{artist}}",
+    "artistUnknown": "Artist not recorded",
+    "viaSource": "from {{source}}",
+    "openSource": "Open the source page for {{title}}",
+    "licenseNote": "All tracks used under the {{license}}.",
+    "licenseLink": "Read the licence",
+    "back": "Back",
+    "usedFor": {
+      "menu": "Main menu",
+      "band": "Levels {{from}}-{{to}}",
+      "credits": "End credits"
+    }
   }
 }

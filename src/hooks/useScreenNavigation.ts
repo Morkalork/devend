@@ -108,6 +108,10 @@ export function useScreenNavigation() {
     setCurrentScreen('hallOfFame');
   }, []);
 
+  const goToJukebox = useCallback(() => {
+    setCurrentScreen('jukebox');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -129,6 +133,7 @@ export function useScreenNavigation() {
     goToOptions,
     goToAchievements,
     goToHallOfFame,
+    goToJukebox,
     goToTenureDraft,
     goToAdmin,
     goToMapBuilder,

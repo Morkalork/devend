@@ -28,6 +28,7 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     case 'certificateStore':
     case 'loadouts':
     case 'achievements':
+    case 'jukebox':
     case 'result':
     case 'admin':
       return 'welcome';

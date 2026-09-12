@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X, Music } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
@@ -34,6 +34,8 @@ interface WelcomeScreenProps {
   /** True when today's stand-up already has a banked run (shows a check). */
   dailyDoneToday?: boolean;
   onAchievements?: () => void;
+  /** Opens the Jukebox (music credits + playlist). Absent if music.yml failed. */
+  onJukebox?: () => void;
   onAdmin?: () => void;
   /** Secret gesture: tapping the animated ball 10x unlocks admin (deployed dev). */
   onSecretUnlock?: () => void;
@@ -63,6 +65,7 @@ export function WelcomeScreen({
   dailyStreak = 0,
   dailyDoneToday = false,
   onAchievements,
+  onJukebox,
   onAdmin,
   onSecretUnlock,
   isLoading,
@@ -452,6 +455,18 @@ export function WelcomeScreen({
             </motion.button>
             );
           })()}
+          {onJukebox && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
+              onClick={onJukebox}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <Music className="w-5 h-5" />
+              {t('welcome.music')}
+            </motion.button>
+          )}
           {onAdmin && (
             <motion.button
               className="arcade-button-secondary arcade-button-sm rounded-lg opacity-70"

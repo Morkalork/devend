@@ -40,8 +40,11 @@ import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { FeatureUnlockedModal } from '@/components/game/FeatureUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
+import { JukeboxScreen } from '@/components/game/JukeboxScreen';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
-import { playMainMusic } from '@/lib/gameMusic';
+import { playMainMusic, stopMusic } from '@/lib/gameMusic';
+import { loadMusicCatalogue, getMusicCatalogue } from '@/lib/musicCatalogue';
+import type { MusicCatalogue } from '@/types/music';
 import { backActionForScreen } from '@/lib/screenBack';
 import { todayKey, previousDayKey } from '@/lib/runRng';
 
@@ -94,6 +97,20 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   // this to true to bring the welcome-menu button, its intro modal and its
   // first-time highlight back; the underlying feature is otherwise intact.
   const SHOW_DAILY_STANDUP = false;
+
+  // The music catalogue backs the Jukebox and nothing else, so it is loaded
+  // here rather than with the run catalogues in useGameSession: those load when
+  // a run starts, and this button has to work before one ever has. A failed
+  // load leaves it null, which hides the button rather than opening an empty
+  // screen.
+  const [musicCatalogue, setMusicCatalogue] = useState<MusicCatalogue | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadMusicCatalogue().then((ok) => {
+      if (ok && !cancelled) setMusicCatalogue(getMusicCatalogue());
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Play the main-menu loop on menu screens. Blocked by autoplay on the very
   // first screen until a gesture, which gameMusic resumes automatically.
@@ -187,7 +204,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   }, [navigation.currentScreen, armBackGuard]);
 
   const SCREEN_ORDER: Record<string, number> = {
-    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1,
+    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1, jukebox: 1,
     // tenureDraft sits just before runDraft: it is picked first so a free
     // upgrade chain can steer the loadout choice.
     tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
@@ -256,6 +273,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
                 onAchievements={session.isFeatureUnlocked('achievements') ? () => navigation.goToAchievements() : undefined}
+                onJukebox={musicCatalogue ? navigation.goToJukebox : undefined}
                 onAdmin={adminUnlocked ? navigation.goToAdmin : undefined}
                 onSecretUnlock={adminUnlocked ? undefined : handleSecretAdminUnlock}
                 isLoading={session.isLoading}
@@ -521,6 +539,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 metaStats={session.metaStats}
                 onBack={handleHallBack}
                 accentColor={accentHex}
+              />
+            )}
+            {navigation.currentScreen === 'jukebox' && musicCatalogue && (
+              <JukeboxScreen
+                catalogue={musicCatalogue}
+                onBack={navigation.goToWelcome}
+                accentColor={accentHex}
+                // The jukebox owns the speakers while it is open: the menu loop
+                // playing under a track the player chose is just two songs.
+                onEnter={stopMusic}
+                onExit={playMainMusic}
               />
             )}
             {navigation.currentScreen === 'achievements' && (

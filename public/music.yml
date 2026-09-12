@@ -1,0 +1,106 @@
+# Music catalogue: what plays, who made it, and where it came from.
+#
+# The single source of truth for the Jukebox screen (welcome menu > Music).
+# `file` is the served path under public/assets/music, so an entry with no file
+# on disk is a broken row and the catalogue test says so.
+#
+# `usedFor` is a translation KEY, not display text: the screen looks up
+# `music.usedFor.<key>` so "Levels 1-5" is a Swedish string in Swedish.
+#
+# Attribution is optional under the Pixabay license, which is exactly why it
+# has to be deliberate: nobody is going to send a takedown to remind us.
+
+license:
+  name: Pixabay Content License
+  url: https://pixabay.com/service/license-summary/
+
+tracks:
+  - file: main.mp3
+    title: 80's Energy
+    artist: Playasound
+    source: Pixabay
+    url: https://pixabay.com/music/synthwave-80s-energy-176577/
+    usedFor: menu
+
+  - file: maps_1-5.mp3
+    title: 80s Retrowave Synthwave Retro Synthpop
+    artist: REDproductions
+    source: Pixabay
+    url: https://pixabay.com/music/synthwave-80s-retrowave-synthwave-retro-synthpop-futuristic-electro-pop-music-20596/
+    usedFor: band
+    bandFrom: 1
+    bandTo: 5
+
+  - file: maps_6-10.mp3
+    title: Neon Odyssey
+    artist: Grand Project
+    source: Pixabay
+    url: https://pixabay.com/music/synthwave-neon-odyssey-short-1-399909/
+    usedFor: band
+    bandFrom: 6
+    bandTo: 10
+
+  - file: maps_11-15.mp3
+    title: Lady of the 80's
+    artist: Grand Project
+    source: Pixabay
+    url: https://pixabay.com/music/synthwave-lady-of-the-80x27s-128379/
+    usedFor: band
+    bandFrom: 11
+    bandTo: 15
+
+  - file: maps_16-20.mp3
+    title: Machiavellian Nightmare
+    artist: melodyayresgriffiths
+    source: Pixabay
+    url: https://pixabay.com/music/video-games-machiavellian-nightmare-electronic-dystopia-ai-robot-machine-139385/
+    usedFor: band
+    bandFrom: 16
+    bandTo: 20
+
+  - file: maps_21-25.mp3
+    title: No Copyright Cyberpunk
+    artist: HumanStudioEDM
+    source: Pixabay
+    url: https://pixabay.com/music/dance-no-copyright-cyberpunk-527641/
+    usedFor: band
+    bandFrom: 21
+    bandTo: 25
+
+  - file: maps_26-30.mp3
+    title: Cyberpunk Futuristic Music
+    artist: Poradovskyi
+    source: Pixabay
+    url: https://pixabay.com/music/phonk-cyberpunk-futuristic-music-514973/
+    usedFor: band
+    bandFrom: 26
+    bandTo: 30
+
+  - file: maps_31-35.mp3
+    title: Cyber Sport
+    artist: MiroMaxMusic
+    source: Pixabay
+    url: https://pixabay.com/music/dance-cyber-sport-no-copyright-dj-music-507206/
+    usedFor: band
+    bandFrom: 31
+    bandTo: 35
+
+  # The one track whose provenance was never written down: MUSIC.md skips from
+  # 31-35 straight to the end credits. It ships and it plays, so it is listed
+  # rather than hidden, with the gap stated instead of guessed at. `artist:` is
+  # omitted deliberately - the screen renders "Artist not recorded" for it, and
+  # `src/test/musicCatalogue.test.ts` allows exactly this one file to be missing
+  # its credit, so a second undocumented track fails the build.
+  - file: maps_36-40.mp3
+    title: Unknown
+    source: Pixabay
+    usedFor: band
+    bandFrom: 36
+    bandTo: 40
+
+  - file: end-credits.mp3
+    title: Fun 8-Bit Video Game Music
+    artist: Keyframe Audio
+    source: Pixabay
+    url: https://pixabay.com/music/video-games-fun-8-bit-video-game-music-boss-133663/
+    usedFor: credits

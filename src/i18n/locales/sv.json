@@ -1038,7 +1038,8 @@
     "newBadge": "NYTT",
     "dailyIntroTitle": "Morgonmöte",
     "dailyIntroBody": "Varje dag får alla exakt samma runda från ett delat frö: samma nivåer, dragningar, butiker och hinder. Ditt resultat hamnar på dagliga topplistan och att spela bygger en svit. Börjar på nivå 1.",
-    "dailyIntroStart": "Starta dagens runda"
+    "dailyIntroStart": "Starta dagens runda",
+    "music": "Musik"
   },
   "content": {
     "upgrades": {
@@ -1815,5 +1816,23 @@
   },
   "goal": {
     "par": "Staket"
+  },
+  "music": {
+    "title": "Jukebox",
+    "subtitle": "Allt spelet spelar, och vem som skrev det.",
+    "play": "Spela {{title}}",
+    "pause": "Pausa {{title}}",
+    "byArtist": "av {{artist}}",
+    "artistUnknown": "Upphovsperson ej noterad",
+    "viaSource": "från {{source}}",
+    "openSource": "Öppna källsidan för {{title}}",
+    "licenseNote": "Alla spår används under {{license}}.",
+    "licenseLink": "Läs licensen",
+    "back": "Tillbaka",
+    "usedFor": {
+      "menu": "Huvudmeny",
+      "band": "Nivå {{from}}-{{to}}",
+      "credits": "Eftertexter"
+    }
   }
 }
