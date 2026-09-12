@@ -50,6 +50,7 @@ import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
+import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { runwayBonuses, spendChunks, spendBoons, spendChunkCap, SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
@@ -409,8 +410,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Loadouts are gated behind the general feature-unlock system: earned by
   // beating the game for the first time (completing the final level; see the
-  // isLastLevel win path below). Until then the Sprint Planning draft is skipped
-  // and the menu Loadouts entry stays hidden.
+  // isLastLevel win path below). Until then the menu Loadouts entry stays
+  // hidden. (The Sprint Planning draft this used to gate is on hold outright;
+  // the ascension draft is not gated on this flag and still runs.)
   const loadoutsIntroduced = isFeatureUnlocked('loadouts');
 
   // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
@@ -930,7 +932,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * Seeded Daily runs deliberately do not come through here: a per-player head
    * start would make one shared seed incomparable.
    */
-  const enterRun = useCallback((thenDraftLoadout: boolean) => {
+  const enterRun = useCallback((wantsLoadoutDraft: boolean) => {
+    // Sprint Planning is on hold (see @/lib/sprintPlanning). Normalised HERE
+    // rather than at the three call sites so the Tenure continuation below,
+    // which replays this flag out of pendingTenure, is covered by the same
+    // line instead of being the one path that still reaches the draft.
+    const thenDraftLoadout = SPRINT_PLANNING_ENABLED && wantsLoadoutDraft;
     const tenureDepth = metaStats.lastRunDepth;
     const offers = tenureSteps(tenureDepth) > 0
       // getLoadedUpgrades(), not the `upgrades` state: on the New Game path this
@@ -1048,9 +1055,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       analytics.runStarted({ mode: 'new', daily: false });
 
-      // A fresh run drafts a loadout first, but the loadout system only appears
-      // once it's been introduced (after the first win). The first run and the
-      // ?level= debug path go straight into the game.
+      // A fresh run would draft a loadout first, but the loadout system only
+      // appears once it's been introduced (after the first win), and the first
+      // run and the ?level= debug path go straight into the game anyway.
+      // (Moot while Sprint Planning is on hold: enterRun drops the flag.)
       const thenDraftLoadout = !(skipDraft || !loadoutsIntroduced);
 
       enterRun(thenDraftLoadout);
@@ -1482,7 +1490,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       armFeatureUnlock('loadouts');
       // Legacy bookkeeping flag (loadouts now unlock via the feature system).
       introduceLoadouts();
-      const startLoadoutId = draftedLoadoutIds[0];
+      // Index 0 is the RUN-START loadout, which is what the unique-win count
+      // is specified against. With Sprint Planning on hold no run starts with
+      // one, so index 0 would be the depth-1 ascension pick instead: credit
+      // nothing rather than credit the wrong loadout.
+      const startLoadoutId = SPRINT_PLANNING_ENABLED ? draftedLoadoutIds[0] : undefined;
       if (startLoadoutId) {
         const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
         if (added) {

@@ -164,7 +164,7 @@ load, assignment levels fall back to the regular shop.
 
 ## loadouts.yml
 
-Curse + blessing bundles drafted at the **start of every run** (the base-game "Sprint Planning" loadout draft, `RunDraftScreen`) and again after beating the final level (the Ascension draft, `AscensionDraftScreen`). A run-start pick shapes the run from level 1; ascension picks stack on top and loop back to level 1. Loaded by `useLoadoutManager`, folded into the same GameModifiers pipeline as upgrades.
+Curse + blessing bundles drafted after beating the final level (the Ascension draft, `AscensionDraftScreen`), stacking on top of each other as the run loops back to level 1. The same catalogue also backed the run-start draft (the "Sprint Planning" loadout draft, `RunDraftScreen`), which is currently ON HOLD: `SPRINT_PLANNING_ENABLED` in `src/lib/sprintPlanning.ts` is `false`, so no run starts with a loadout until it is flipped back. Loaded by `useLoadoutManager`, folded into the same GameModifiers pipeline as upgrades.
 
 ### Fields
 

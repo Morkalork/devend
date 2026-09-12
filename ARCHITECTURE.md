@@ -61,7 +61,7 @@ welcome ──► runDraft ──► game ──► (LevelCompleteOverlay) ─�
    └──► admin ──► mapBuilder / animationTest        (dev builds only)
 ```
 
-A fresh run first visits **runDraft** ("Sprint Planning"), where the player drafts one curse+blessing mutator (or skips) to shape the run from level 1. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skips the draft.
+A fresh run used to visit **runDraft** ("Sprint Planning") first, where the player drafted one curse+blessing mutator (or skipped) to shape the run from level 1. That step is currently ON HOLD (`SPRINT_PLANNING_ENABLED` in [sprintPlanning.ts](src/lib/sprintPlanning.ts) is `false`), so a fresh run goes straight into the map; the screen, the catalogue and the Ascension draft that shares it are all still in the tree, and flipping the constant restores the step. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skipped the draft too.
 
 All run state (score, lives, owned upgrades, current level) lives in [useGameSession](src/hooks/useGameSession.ts), which composes the smaller managers below and is created once in `Index.tsx`.
 
