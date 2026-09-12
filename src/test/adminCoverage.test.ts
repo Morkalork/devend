@@ -132,3 +132,31 @@ describe("catalogue-driven pickers stay catalogue-driven", () => {
     expect(PLAYGROUND).toMatch(/getMapMutators\(\)/);
   });
 });
+
+describe("a phone can reach the knobs", () => {
+  // The Playground's dev controls collapse to one sheet below `lg`. The knobs
+  // were unreachable from it whenever a level was selected, which is the
+  // default, so on a phone the modifier table effectively did not exist.
+  const start = PLAYGROUND.indexOf('aria-label="Playground controls"');
+  const end = PLAYGROUND.indexOf("{/* Level picker modal */}", start);
+  const sheet = PLAYGROUND.slice(start, end);
+
+  it("opens the modifiers modal from the sheet, unconditionally", () => {
+    expect(start).toBeGreaterThan(-1);
+    expect(sheet).toContain("openModal()");
+    const guard = sheet.indexOf("{!selectedLevel && (");
+    if (guard >= 0) {
+      const guarded = sheet.slice(guard, sheet.indexOf("\n              )}", guard));
+      expect(guarded, "Modifiers is behind a level-selected guard").not.toContain("openModal()");
+    }
+  });
+
+  it("lets a knob be found by name rather than by scrolling", () => {
+    expect(PLAYGROUND).toMatch(/placeholder="Search modifiers"/);
+    // The search reads label, description AND key, so "squash" finds Bug Squash
+    // whichever of the three a tester remembers.
+    expect(PLAYGROUND).toMatch(/meta\.label\.toLowerCase\(\)\.includes\(q\)/);
+    expect(PLAYGROUND).toMatch(/meta\.description\.toLowerCase\(\)\.includes\(q\)/);
+    expect(PLAYGROUND).toMatch(/key\.toLowerCase\(\)\.includes\(q\)/);
+  });
+});

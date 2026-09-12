@@ -169,6 +169,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [draft, setDraft] = useState<ModifierValues>({});
   const [gameKey, setGameKey] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  // Knob search. Seventy-odd rows on a phone is a scroll, not a list; typing
+  // "squash" should be enough to find Bug Squash.
+  const [modFilter, setModFilter] = useState('');
 
   // Level picker
   const [allLevels, setAllLevels] = useState<LevelConfig[]>([]);
@@ -533,8 +536,21 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
   const openModal = useCallback(() => {
     setDraft(applied); // seed draft from currently applied values
+    setModFilter('');
     setModalOpen(true);
   }, [applied]);
+
+  /** Keys whose label, description or id mention the search text. */
+  const matchesFilter = useCallback((key: keyof GameModifiers): boolean => {
+    const q = modFilter.trim().toLowerCase();
+    if (!q) return true;
+    const meta = MODIFIER_META[key];
+    return key.toLowerCase().includes(q)
+      || meta.label.toLowerCase().includes(q)
+      || meta.description.toLowerCase().includes(q);
+  }, [modFilter]);
+  const shownMultiplicative = MULTIPLICATIVE_KEYS.filter(matchesFilter);
+  const shownAdditive = ADDITIVE_KEYS.filter(matchesFilter);
 
   const closeModal = useCallback(() => {
     if (JSON.stringify(draft) !== JSON.stringify(applied)) {
@@ -1111,10 +1127,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
               </>
 
-              {/* Modifiers is the one control the selected-level toolbar does
-                  NOT carry, so it stays guarded: offering it here would be a
-                  new feature wearing a bug fix's clothes. */}
-              {!selectedLevel && (
+              {/* Modifiers, ALWAYS. This used to be guarded behind !selectedLevel
+                  on the reasoning that the selected-level toolbar never carried
+                  it. That held while the sandbox was the default. The Playground
+                  now opens ON a level, so the guard hid the knobs from every
+                  phone in the normal case; the only route left was the pencil
+                  drawer's small "Mods" button at the bottom of the level editor,
+                  and the report was "I cannot find the upgrade editor on
+                  mobile". Reached from the sheet like everything else now. */}
+              {(
                 <button
                   onClick={() => { setDevMenuOpen(false); openModal(); }}
                   className="w-full flex items-center gap-2 px-4 h-12 rounded-lg font-semibold text-sm"
@@ -1611,26 +1632,45 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 </div>
               </div>
 
+              {/* Search */}
+              <div className="px-5 py-2 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}1a` }}>
+                <input
+                  type="search"
+                  value={modFilter}
+                  onChange={e => setModFilter(e.target.value)}
+                  placeholder="Search modifiers"
+                  aria-label="Search modifiers"
+                  autoFocus={false}
+                  className="w-full px-3 py-2 rounded-lg text-xs bg-transparent"
+                  style={{ border: `1px solid ${accent}33`, color: 'hsl(var(--foreground))' }}
+                />
+              </div>
+
               {/* Scrollable body */}
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-6">
-                <ModifierSection
+                {shownMultiplicative.length === 0 && shownAdditive.length === 0 && (
+                  <div className="text-xs text-center py-6" style={{ color: `${accent}66` }}>
+                    No modifier matches "{modFilter.trim()}".
+                  </div>
+                )}
+                {shownMultiplicative.length > 0 && <ModifierSection
                   title="Multiplicative"
                   subtitle="Stack by ×  - default 1.0"
-                  keys={MULTIPLICATIVE_KEYS}
+                  keys={shownMultiplicative}
                   getValue={getDraftValue}
                   setValue={setDraftValue}
                   resetKey={resetDraftKey}
                   accentColor={accent}
-                />
-                <ModifierSection
+                />}
+                {shownAdditive.length > 0 && <ModifierSection
                   title="Additive"
                   subtitle="Stack by +  - default 0"
-                  keys={ADDITIVE_KEYS}
+                  keys={shownAdditive}
                   getValue={getDraftValue}
                   setValue={setDraftValue}
                   resetKey={resetDraftKey}
                   accentColor={accent}
-                />
+                />}
               </div>
 
               {/* Footer */}

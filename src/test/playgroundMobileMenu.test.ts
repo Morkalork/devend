@@ -155,8 +155,10 @@ describe("everything on the strip is in the sheet", () => {
    * reset button both live there and both are unguarded.
    */
   function guardedBlock(): string {
+    // No guard at all is the strongest form of the property: nothing in the
+    // sheet disappears when a level is loaded.
     const start = sheet.indexOf("{!selectedLevel && (");
-    expect(start, "the !selectedLevel guard is gone").toBeGreaterThan(-1);
+    if (start < 0) return "";
     const end = sheet.indexOf("\n              )}", start);
     expect(end, "cannot find the end of the guarded block").toBeGreaterThan(start);
     return sheet.slice(start, end);
@@ -180,11 +182,16 @@ describe("everything on the strip is in the sheet", () => {
     }
   });
 
-  it("keeps Modifiers guarded, since the level bar never offered it", () => {
-    // The other direction: un-guarding it would be a new feature wearing a bug
-    // fix's clothes.
-    expect(guardedBlock(), "Modifiers is now offered on a selected level too")
-      .toContain("openModal()");
+  it("offers Modifiers whether or not a level is selected", () => {
+    // This used to assert the opposite, on the reasoning that the selected-level
+    // toolbar never carried Modifiers. That premise died when the Playground
+    // started opening ON a level rather than on the blank sandbox: the guard
+    // then hid the knobs from every phone in the normal case, and the only
+    // route left was a small button at the bottom of the level-edit drawer.
+    // Reported as "I cannot find the upgrade editor on mobile".
+    expect(sheet, "the sheet no longer opens the modifiers modal").toContain("openModal()");
+    expect(guardedBlock(), "Modifiers is hidden once a level is selected")
+      .not.toContain("openModal()");
   });
 });
 
