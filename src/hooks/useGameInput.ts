@@ -10,7 +10,7 @@ import { boardAngleFor } from "@/lib/boardTilt";
 import { CanvasGameState } from "@/types/gameState";
 import { boardEntityAt, type BoardEntityHit } from "@/lib/boardEntityInfo";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
-import { Ball, GrowingWall } from "@/types/game";
+import { Ball, GrowingWall, Vector2 } from "@/types/game";
 import {
   vec2Sub,
   vec2Length,
@@ -37,6 +37,7 @@ import { isPositionActive } from "@/lib/spaceGrid";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import type { GameMessageId } from "@/lib/gameMessages";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
@@ -50,6 +51,14 @@ import { initAudio } from "@/lib/gameAudio";
  * exactly the angle the board was drawn at. Caching it on the game state would
  * introduce a frame of skew between what is on screen and where a fence lands.
  */
+/**
+ * Bent-fence drag sampling (#66). Points closer together than the spacing add
+ * nothing the simplifier can use; the cap is a ceiling on a very long slow drag
+ * so the buffer cannot grow without bound.
+ */
+const SWIPE_SAMPLE_SPACING = 12;
+const MAX_SWIPE_SAMPLES = 256;
+
 function boardTilt(game: CanvasGameState): number {
   return boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
 }
@@ -290,6 +299,7 @@ export function useGameInput(
       game.swipeStart       = worldPos;
       game.swipeRegionId    = region.id;
       game.currentSwipePos  = worldPos;
+      game.swipePath        = [{ ...worldPos }];
       game.swipePointerId   = e.pointerId;
       setIsPlayerDragging(true);
     };
@@ -324,6 +334,15 @@ export function useGameInput(
       worldPos.y = Math.max(0, Math.min(BOARD_HEIGHT, worldPos.y));
 
       game.currentSwipePos = worldPos;
+      // Sample the path for bent fences (#66). Thinned by distance rather than
+      // by frame: a slow drag emits a point per frame and would fill the buffer
+      // with samples the simplifier throws away anyway, and a fast one on a
+      // 120Hz phone would still be sampled finely enough to see its corners.
+      const path = game.swipePath;
+      const last = path[path.length - 1];
+      if (!last || (worldPos.x - last.x) ** 2 + (worldPos.y - last.y) ** 2 >= SWIPE_SAMPLE_SPACING ** 2) {
+        if (path.length < MAX_SWIPE_SAMPLES) path.push({ ...worldPos });
+      }
     };
 
     const handlePointerUp = () => {
@@ -448,13 +467,23 @@ export function useGameInput(
             if (navigator.vibrate) navigator.vibrate(20);
           }
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE) {
-          const direction = vec2Normalize(delta);
-          const negDir    = { x: -direction.x, y: -direction.y };
-          const forwardResult  = castRayWithReflections(game.swipeStart, direction, game.walls);
-          const backwardResult = castRayWithReflections(game.swipeStart, negDir, game.walls);
+          // Bent fences (#66): keep the SHAPE of the drag and project only its
+          // two loose ends. `bent` is null without the loadout, for a drag that
+          // was straight after all, or for one the fence cannot follow (a
+          // fold-back), and every one of those falls back to the straight cut
+          // the swipe has always given rather than refusing the gesture.
+          const bent = bentDrawnPath(game);
+          const origin    = bent ? { ...bent[0] } : { ...game.swipeStart };
+          const direction = bent ? outgoingDirection(bent) : vec2Normalize(delta);
+          const backDir   = bent ? incomingDirection(bent) : { x: -direction.x, y: -direction.y };
+          // Forward from the FAR end of the drawn path, backward from its near
+          // end. With no bend both ends are the swipe's origin, which is the
+          // straight cut exactly as it was.
+          const forwardResult  = castRayWithReflections(bent ? bent[bent.length - 1] : origin, direction, game.walls);
+          const backwardResult = castRayWithReflections(origin, backDir, game.walls);
 
           if (forwardResult && backwardResult) {
-            const endWaypoints   = forwardResult.waypoints;
+            const endWaypoints   = bent ? joinProjection(bent, forwardResult.waypoints) : forwardResult.waypoints;
             const startWaypoints = backwardResult.waypoints;
             const targetEnd      = endWaypoints[endWaypoints.length - 1];
             const targetStart    = startWaypoints[startWaypoints.length - 1];
@@ -486,14 +515,17 @@ export function useGameInput(
             const isInstant = game.wallCount <= activeModifiers.instantFencesPerMap;
 
             game.activeWalls.push({
-              origin:             { ...game.swipeStart },
+              origin,
               direction,
               startWaypoints,
               endWaypoints,
               startSegmentIndex:  isInstant ? startWaypoints.length - 2 : 0,
               endSegmentIndex:    isInstant ? endWaypoints.length - 2 : 0,
-              startPoint:         isInstant ? { ...targetStart   } : { ...game.swipeStart },
-              endPoint:           isInstant ? { ...targetEnd     } : { ...game.swipeStart },
+              // Growth starts at the ORIGIN, which for a bent cut is the near
+              // end of the drawn path rather than wherever the finger went down
+              // (they are the same point on a straight one).
+              startPoint:         isInstant ? { ...targetStart } : { ...origin },
+              endPoint:           isInstant ? { ...targetEnd   } : { ...origin },
               targetStart,
               targetEnd,
               thickness:          WALL_THICKNESS,

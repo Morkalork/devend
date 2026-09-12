@@ -357,3 +357,26 @@ loadouts:
     modifiers:
       winRequiresSplitLocks: 1
       scoreMultiplier: 1.6
+
+  # Bent fences (issue #66): the one card that changes the VERB.
+  #
+  # An ascension card by nature, and marked `neverDrafted` so it stays one: it
+  # widens what a cut can do rather than moving a number, and the run-start
+  # ladder has nothing to trade against "you can now draw a shape". Ascension
+  # always offers the full catalogue, so this is exactly where it lands.
+  #
+  # Two corners, not more. Three-plus produces shapes that are legible to draw
+  # and illegible to READ back off the board a second later, and the projection
+  # off each end has to remain something the player can predict. The curse is
+  # deliberately about the same hand that draws: a slower fence gives the balls
+  # longer to find the bend you are still building.
+  - id: architectural_review
+    name: Architectural Review
+    curse: Fences grow 25% slower.
+    blessing: >-
+      Draw a bent cut. A fence keeps up to two corners of the line you drew, and
+      only its two loose ends are projected to the walls.
+    neverDrafted: true
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.75
+      bentFenceBends: 2

@@ -735,6 +735,7 @@ export function GameCanvas({
     swipeStart: null as Vector2 | null,
     swipeRegionId: null as string | null,
     currentSwipePos: null as Vector2 | null,
+    swipePath: [] as Vector2[],
     swipePointerId: null as number | null,
     swipeTrail: null as { start: Vector2; end: Vector2; createdAt: number } | null,
     lastTime: 0,
@@ -853,6 +854,7 @@ export function GameCanvas({
     freezeUsesRemaining: 0,
     freezePickups: false,
     bugSquashChance: 0,
+    bentFenceBends: 0,
     bugSquashSeconds: 0,
     pickupFeedback: [] as PickupFeedback[],
   });
@@ -1067,6 +1069,7 @@ export function GameCanvas({
       // them off the game (it is never handed modifiers), and the harness gets
       // the same two numbers from the same builder.
       game.bugSquashChance = data.bugSquashChance;
+      game.bentFenceBends = data.bentFenceBends;
       game.bugSquashSeconds = data.bugSquashSeconds;
       // File the well explainer the first time a map actually has one. Filed
       // rather than shown: a well is visible, quiet and never instantly fatal,

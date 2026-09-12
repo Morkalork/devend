@@ -227,6 +227,16 @@ export interface CanvasGameState {
   swipeStart: Vector2 | null;
   swipeRegionId: string | null;
   currentSwipePos: Vector2 | null;
+  /**
+   * Every sampled point of the drag in progress, oldest first (issue #66).
+   *
+   * A straight cut only ever needed the two ends, but a bent fence is drawn as
+   * the SHAPE of the drag, so the path between them has to survive until the
+   * finger lifts. Capped in the move handler: a long slow drag can otherwise
+   * sample hundreds of points, and the simplifier only needs enough of them to
+   * see the corners.
+   */
+  swipePath: Vector2[];
   /** Pointer ID that initiated the current swipe. */
   swipePointerId: number | null;
   /** Last completed cut gesture, rendered as a brief fading afterglow (issue #35). */
@@ -348,6 +358,15 @@ export interface CanvasGameState {
    */
   bugSquashChance: number;
   bugSquashSeconds: number;
+  /**
+   * Bent fences (#66): corners a drawn cut may keep. 0 = straight cuts only.
+   *
+   * On the game state rather than read from the modifiers at the two call
+   * sites, because BOTH the input handler and the cut PREVIEW have to agree on
+   * the shape of the fence: a preview that draws a straight line for a cut that
+   * lands bent is worse than no preview.
+   */
+  bentFenceBends: number;
   /**
    * Space remaining (%) as of the last resolved cut. Undefined until the first
    * one lands, which readers must treat as a full board rather than as zero.

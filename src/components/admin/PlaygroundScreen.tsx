@@ -48,6 +48,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   scoreMultiplier:                  { label: 'Score (OT) Mult.',       kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies overtime hours earned per map' },
   instantFencesPerMap:              { label: 'Instant Fences',         kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Fences that generate instantly at map start' },
   additionalConcurrentFences:       { label: 'Extra Concurrent',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional fences that can grow simultaneously' },
+  bentFenceBends:                   { label: 'Bent Fence Corners',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bent fences (#66): corners a drawn cut may keep. 0 = straight cuts only' },
   parBonus:                         { label: 'Par Bonus',              kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Padded Estimate: extra fences added to each map par (whole numbers)' },
   underParBonusMultiplier:          { label: 'Under-Par Bonus x',      kind: 'multiplicative', step: 0.25, min: 0.25, defaultValue: 1,    description: 'Overdelivery: multiplies the under-par bonus, applied after its cap' },
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },

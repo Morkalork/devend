@@ -33,6 +33,7 @@ import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
+import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 
 /** Opacity of the predicted path. A forecast, so never fully opaque. */
 const TRAJECTORY_ALPHA = 0.5;
@@ -591,12 +592,19 @@ export class FxLayer {
     // the finger settles is worse than none.
     if (vec2Length(delta) < 5) return;
 
-    const dir = vec2Normalize(delta);
-    const fwd = castRayWithReflections(swipeStart, dir, game.walls);
-    const bwd = castRayWithReflections(swipeStart, { x: -dir.x, y: -dir.y }, game.walls);
+    // Bent fences (#66): the preview is cast off the SAME path the cut will
+    // follow, through the same function the input handler calls, because a
+    // preview that draws a straight line for a fence that lands bent is worse
+    // than no preview.
+    const bent = bentDrawnPath(game);
+    const dir = bent ? outgoingDirection(bent) : vec2Normalize(delta);
+    const backDir = bent ? incomingDirection(bent) : { x: -dir.x, y: -dir.y };
+    const fwd = castRayWithReflections(bent ? bent[bent.length - 1] : swipeStart, dir, game.walls);
+    const bwd = castRayWithReflections(bent ? bent[0] : swipeStart, backDir, game.walls);
     if (!fwd || !bwd) return;
 
-    const fEnd = fwd.waypoints[fwd.waypoints.length - 1];
+    const forwardPath = bent ? joinProjection(bent, fwd.waypoints) : fwd.waypoints;
+    const fEnd = forwardPath[forwardPath.length - 1];
     const bEnd = bwd.waypoints[bwd.waypoints.length - 1];
     const isDud = cutAnchorsBreakable(game, fEnd, bEnd, WALL_THICKNESS + 6);
 
@@ -605,7 +613,7 @@ export class FxLayer {
     const dot = isDud ? 0xff5b5b : PALETTE.mirror;
     const alpha = isDud ? 0.3 : 0.15;
 
-    const paths = [fwd.waypoints, bwd.waypoints];
+    const paths = [forwardPath, bwd.waypoints];
     const stroke = (width: number, color: number) => {
       for (const wps of paths) {
         for (let i = 0; i < wps.length - 1; i++) {

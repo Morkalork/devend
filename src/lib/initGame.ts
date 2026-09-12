@@ -183,6 +183,8 @@ export interface InitialGameData {
   /** Bug Squash, copied here so the bot harness sticks balls the way the browser does. */
   bugSquashChance: number;
   bugSquashSeconds: number;
+  /** Bent fences, here for the same reason: the harness must cut as the browser does. */
+  bentFenceBends: number;
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
   /** Behaviour for the four outer walls, from the level. Absent on most maps. */
@@ -1407,6 +1409,7 @@ export function createInitialGameData(
     pickupSpots: (level.pickupSpots ?? []).map(sp => rotatePoint(sp.x, sp.y, mapRotation)),
     bugSquashChance: Math.max(0, Math.min(100, activeModifiers.bugSquashChance ?? 0)),
     bugSquashSeconds: Math.max(0, activeModifiers.bugSquashSeconds ?? 0),
+    bentFenceBends: Math.max(0, Math.round(activeModifiers.bentFenceBends ?? 0)),
     mirrorPolygons,
     boardPolygon,
     // Screen space, and only meaningful because a map that authors these

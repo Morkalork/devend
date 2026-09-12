@@ -46,6 +46,7 @@ export function runtimeDefaults() {
     swipeStart: null,
     swipeRegionId: null,
     currentSwipePos: null,
+    swipePath: [],
     swipePointerId: null,
     swipeTrail: null,
     lastTime: 0,
@@ -157,6 +158,7 @@ export function runtimeDefaults() {
     freezeUsesRemaining: 0,
     freezePickups: false,
     bugSquashChance: 0,
+    bentFenceBends: 0,
     bugSquashSeconds: 0,
     pickupFeedback: [],
   };

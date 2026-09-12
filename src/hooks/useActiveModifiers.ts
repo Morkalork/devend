@@ -19,6 +19,16 @@ export interface GameModifiers {
   instantFencesPerMap: number;
   additionalConcurrentFences: number;
   /**
+   * Bent fences (issue #66): how many CORNERS a drawn cut may keep.
+   *
+   * 0 is the game as it has always been - a swipe is a direction, and the fence
+   * is that direction cast to the walls. Above 0 the drag's own shape is kept
+   * (up to this many bends) and only the two loose ends are projected. An
+   * ascension loadout, since it widens what a cut can do rather than tuning a
+   * number, and the run-start ladder has nothing to trade against it.
+   */
+  bentFenceBends: number;
+  /**
    * Padded Estimate: extra fences added to each map's par before scoring.
    *
    * Par relief buys CONSISTENCY, not multiplier, which is what a per-map
@@ -332,6 +342,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   pushBonusMultiplier: 1,
   instantFencesPerMap: 0,
   additionalConcurrentFences: 0,
+  bentFenceBends: 0,
   parBonus: 0,
   underParBonusMultiplier: 1,
   extraLives: 0,
