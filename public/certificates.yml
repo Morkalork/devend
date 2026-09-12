@@ -16,8 +16,8 @@ certificates:
     # Three levels of +10, and they no longer buy what this note used to claim.
     # "10h is most of a first upgrade" was true against a 30h shelf; the pricing
     # anchor has since been rebuilt against what a map actually pays (see
-    # upgrades.yml `anchorHours`), so a first hire is 100h and a formula Junior
-    # 133h. All three levels together are under a third of one first hire.
+    # upgrades.yml `anchorHours`), so a first hire is 25h and a formula Junior
+    # 34h. All three levels together are under half of one first hire.
     #
     # Left at 10 on purpose rather than scaled quietly: this is a between-runs
     # meta effect bought in a DIFFERENT currency (Certificate Hours), so it is
@@ -26,11 +26,11 @@ certificates:
     # Counted in the run score like the Head Start certs.
     levels:
       - cost: 4
-        effect: { type: startingOvertime, value: 10 }
+        effect: { type: startingOvertime, value: 3 }
       - cost: 9
-        effect: { type: startingOvertime, value: 10 }
+        effect: { type: startingOvertime, value: 3 }
       - cost: 15
-        effect: { type: startingOvertime, value: 10 }
+        effect: { type: startingOvertime, value: 3 }
 
   - id: corporate-card
     name: Corporate Card
@@ -154,9 +154,9 @@ certificates:
     requiredRuns: 3
     levels:
       - cost: 4
-        effect: { type: bankedSlowPer50h, value: 0.01 }
+        effect: { type: bankedSlowPerStep, value: 0.01 }
       - cost: 7
-        effect: { type: bankedSlowPer50h, value: 0.01 }
+        effect: { type: bankedSlowPerStep, value: 0.01 }
 
   - id: process-optimiser
     name: Process Optimiser

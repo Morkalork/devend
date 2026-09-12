@@ -47,9 +47,9 @@
 #   tierDraft { tier }            a free 1-of-3 upgrade pick (Junior..Architect)
 #
 # Balance (reassessed): rewards sit on ONE value scale so every assignment is
-# worth the effort. Anchor: 1 life ~= 50 overtime (a Fault Tolerance life costs
-# ~50h in the shop). The roster leans on LIVES and free UPGRADE PICKS, which read
-# as clearly valuable; small flat-overtime payouts (~30h) were dropped because
+# worth the effort. Anchor: 1 life ~= 13 overtime (a Fault Tolerance life costs
+# ~13h in the shop). The roster leans on LIVES and free UPGRADE PICKS, which read
+# as clearly valuable; small flat-overtime payouts (~8h) were dropped because
 # they never compared to a couple of lives. Per tier slot:
 #   first tier  ~= +2 lives (a solid, comparable floor for taking the mission).
 #   top tier    ~= a tierDraft or +3 lives, scaling UP with the constraint +
@@ -70,8 +70,8 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 12, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
-        - { threshold: 20, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
+        - { threshold: 12, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
+        - { threshold: 20, label: "+10 overtime", reward: { type: overtime, hours: 10 } }
     clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably; a heavier block banks a bigger overtime bonus.
 
   - id: daily_standup
@@ -84,7 +84,7 @@ assignments:
       text: Lock at least 2 balls in each of the next 5 maps.
       track: { mode: everyMap, kind: lockCount, params: { count: 2 } }
       tiers:
-        - { threshold: 3, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
+        - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
     clarify: Consistency over volume. A map counts once you lock two balls in it; hit that in three of five maps for an overtime bonus, all five for a free Senior upgrade.
 
@@ -98,7 +98,7 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 4, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
+        - { threshold: 4, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 8, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
     clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. Land eight superior locks over the block for a free Senior upgrade.
 
@@ -112,8 +112,8 @@ assignments:
       text: Clear at or under par cuts in each of the next 5 maps.
       track: { mode: everyMap, kind: underPar, params: { delta: 0 } }
       tiers:
-        - { threshold: 3, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
-        - { threshold: 5, label: "+45 overtime", reward: { type: overtime, hours: 45 } }
+        - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
+        - { threshold: 5, label: "+11 overtime", reward: { type: overtime, hours: 11 } }
     clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut stings now; clean play across the block pays it back and then some.
 
   - id: sprint_review
@@ -126,7 +126,7 @@ assignments:
       text: Clear each of the next 5 maps within 40 seconds.
       track: { mode: everyMap, kind: speedClear, params: { seconds: 40 } }
       tiers:
-        - { threshold: 3, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
+        - { threshold: 3, label: "+8 overtime", reward: { type: overtime, hours: 8 } }
         - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
     clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window. Clear inside 40 active seconds; sweep all five maps for a free Principal upgrade.
 
@@ -176,8 +176,8 @@ assignments:
         kind: noSpend
       tiers:
         - threshold: 3
-          label: "+40 overtime"
-          reward: { type: overtime, hours: 40 }
+          label: "+10 overtime"
+          reward: { type: overtime, hours: 10 }
         - threshold: 5
           label: "Pick a Principal upgrade"
           reward: { type: tierDraft, tier: Principal }
@@ -207,8 +207,8 @@ assignments:
         kind: pushesWon
       tiers:
         - threshold: 2
-          label: "+30 overtime"
-          reward: { type: overtime, hours: 30 }
+          label: "+8 overtime"
+          reward: { type: overtime, hours: 8 }
         - threshold: 4
           label: "Pick a Principal upgrade"
           reward: { type: tierDraft, tier: Principal }

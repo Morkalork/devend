@@ -128,7 +128,7 @@ pickups:
       weight: 2         # splits a random free ball into two (more lock income)
     cap_raise:
       weight: 2
-      value: 5          # this map's overtime cap rises by this many hours
+      value: 1          # this map's overtime cap rises by this many hours
     freeze_charge:
       weight: 2
       value: 3          # one free tap-to-freeze, holds this many seconds

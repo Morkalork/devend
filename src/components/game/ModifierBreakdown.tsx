@@ -33,7 +33,7 @@ const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
   'microManagerPerLock',
   'fenceSpeedPerLock',
   'fenceSpeedPerFence',
-  'bankedSlowPer50h',
+  'bankedSlowPerStep',
   'spendFenceSpeedPerChunk',
 ]);
 
@@ -375,12 +375,12 @@ export function ModifierBreakdown({
     },
     {
       label: t('bottomBarDetails.bankedSlow'),
-      value: m.bankedSlowPer50h > 0 ? t('bottomBarDetails.bankedSlowValue', { percent: Math.round(m.bankedSlowPer50h * 100) }) : t('bottomBarDetails.off'),
-      changed: m.bankedSlowPer50h !== 0,
-      keys: ['bankedSlowPer50h'],
+      value: m.bankedSlowPerStep > 0 ? t('bottomBarDetails.bankedSlowValue', { percent: Math.round(m.bankedSlowPerStep * 100) }) : t('bottomBarDetails.off'),
+      changed: m.bankedSlowPerStep !== 0,
+      keys: ['bankedSlowPerStep'],
       description:
-        m.bankedSlowPer50h > 0
-          ? t('bottomBarDetails.bankedSlowActive', { percent: Math.round(m.bankedSlowPer50h * 100) })
+        m.bankedSlowPerStep > 0
+          ? t('bottomBarDetails.bankedSlowActive', { percent: Math.round(m.bankedSlowPerStep * 100) })
           : t('bottomBarDetails.bankedSlowInactive'),
     },
     {

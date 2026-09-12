@@ -12,6 +12,10 @@
  * ring is built so that you can never fill all five.
  *
  * THE RIGHT-HAND NUMBER IS "earned/ceiling", and it has been both ways. It read
+ * (The hours quoted below are the pre-deflation scale; see
+ * src/lib/economyDeflation.ts. The argument is about the shape of the
+ * readout, which the scale does not change.)
+ *
  * "18/30h", was changed to the shortfall "-12h" on the argument that a player
  * chases a full axis when they can see what the last one cost, and is now back.
  * What changed is the premise, not the taste: that argument leaned on the hours

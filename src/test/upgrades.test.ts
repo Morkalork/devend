@@ -253,12 +253,25 @@ describe("what a map pays against what the shop charges", () => {
   ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; shipEarly: { maxPercent: number } } };
   const scoring = scoringDoc.scoring;
 
+  /**
+   * The flat base a shipped map pays, and what one lock-multiplier point is
+   * worth, both READ from the shipped config. Every figure below used to be
+   * written out in old-economy hours (base 20, a x1 ball worth 12), so the
+   * whole block silently measured prices against income the game had stopped
+   * paying the moment the economy was rescaled.
+   */
+  const levelDoc = yaml.load(
+    readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  ) as { levels: Array<{ points: number }> };
+  const MAP_BASE_POINTS = levelDoc.levels[0].points;
+  const LV = scoring.lockValue;
+
   /** A map's payout at a given play quality, through the real scoring path. */
   const income = (o: {
     cuts: number; par: number; remaining: number; threshold: number;
     capacity: number; locked: number; premium: number;
     engagement: number; shipEarly: number;
-  }): number => calculateScore(o.cuts, o.par, o.remaining, o.threshold, 20, {
+  }): number => calculateScore(o.cuts, o.par, o.remaining, o.threshold, MAP_BASE_POINTS, {
     locks: {
       totalCapacity: o.capacity, lockedCapacity: o.locked,
       premiumEarned: o.premium, premiumAvailable: o.capacity,
@@ -270,10 +283,10 @@ describe("what a map pays against what the shop charges", () => {
   // Four runs of the same map, from flawless to hopeless. Level 1's shape (par
   // 3, clear to 40%, one x1 ball) but the numbers barely move across the
   // ladder: the axes are absolute, so every map's ceiling is the same.
-  const FLAWLESS = income({ cuts: 1, par: 3, remaining: 0, threshold: 40, capacity: 12, locked: 12, premium: 12, engagement: 1, shipEarly: 30 });
-  const GOOD     = income({ cuts: 2, par: 3, remaining: 30, threshold: 40, capacity: 12, locked: 12, premium: 7, engagement: 0.7, shipEarly: 20 });
-  const ORDINARY = income({ cuts: 3, par: 3, remaining: 40, threshold: 40, capacity: 12, locked: 12, premium: 0, engagement: 0.3, shipEarly: 0 });
-  const SCRAPPY  = income({ cuts: 5, par: 3, remaining: 40, threshold: 40, capacity: 12, locked: 6, premium: 0, engagement: 0, shipEarly: 0 });
+  const FLAWLESS = income({ cuts: 1, par: 3, remaining: 0, threshold: 40, capacity: LV, locked: LV, premium: LV, engagement: 1, shipEarly: 30 });
+  const GOOD     = income({ cuts: 2, par: 3, remaining: 30, threshold: 40, capacity: LV, locked: LV, premium: LV * 0.58, engagement: 0.7, shipEarly: 20 });
+  const ORDINARY = income({ cuts: 3, par: 3, remaining: 40, threshold: 40, capacity: LV, locked: LV, premium: 0, engagement: 0.3, shipEarly: 0 });
+  const SCRAPPY  = income({ cuts: 5, par: 3, remaining: 40, threshold: 40, capacity: LV, locked: LV / 2, premium: 0, engagement: 0, shipEarly: 0 });
 
   const cheapestFormula = Math.min(
     ...upgrades
@@ -374,8 +387,12 @@ describe("what a map pays against what the shop charges", () => {
     expect(scoring.lockQuality.superiorMultiplier).toBeGreaterThanOrEqual(1.5);
   });
 
+  // A RATIO against the map's flat base, not an absolute number of hours: the
+  // property is that a single lock-multiplier point rivals the whole clear
+  // floor, so a bare clear cannot fund a hire. It was 12 against a base of 20;
+  // the deflation moved both and left the relationship where it was.
   it("still pays enough per lock for locking to be the income", () => {
-    expect(scoring.lockValue).toBeGreaterThanOrEqual(10);
+    expect(scoring.lockValue / MAP_BASE_POINTS).toBeGreaterThanOrEqual(0.5);
   });
 });
 

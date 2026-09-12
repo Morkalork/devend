@@ -1,4 +1,5 @@
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
+import { DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 
 /**
  * The runtime fields GameCanvas seeds before initGame's data is merged over it.
@@ -97,7 +98,7 @@ export function runtimeDefaults() {
     frozenBallVelocity: null,
     frozenBallPosition: null,
     lockedBallsCount: 0,
-    mapBasePoints: 20,
+    mapBasePoints: DEFAULT_MAP_BASE_POINTS,
     lockBonus: 0,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,

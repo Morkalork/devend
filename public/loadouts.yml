@@ -75,10 +75,10 @@ ascension:
 
     - depth: 6
       name: Budget Cuts
-      description: Each map pays 10 fewer overtime hours before hitting its ceiling.
+      description: Each map pays 3 fewer overtime hours before hitting its ceiling.
       effects:
         modifiers:
-          overtimeCapBonus: -10
+          overtimeCapBonus: -3
 
     # Two rules with one theme: you cannot stockpile. Tokens rot, and the
     # ability bar is one slot narrower, so a chest stops being free and starts
@@ -256,13 +256,13 @@ loadouts:
   - id: bus_factor
     name: The Bus Factor
     curse: No Push Your Luck, and balls are 20% bigger.
-    blessing: "Locks pay +4 overtime (superior locks double) and slow every other ball by 3%."
+    blessing: "Locks pay +1 overtime (superior locks double) and slow every other ball by 3%."
     uniqueWinsRequired: 2
     modifiers:
       disablePushYourLuck: 1
       ballSizeMultiplier: 1.2
-      overtimePerLock: 4
-      overtimePerSuperiorLock: 4
+      overtimePerLock: 1
+      overtimePerSuperiorLock: 1
       microManagerPerLock: 0.03
 
   # Engine-builder: you cannot bank your way to victory, so you build one. The

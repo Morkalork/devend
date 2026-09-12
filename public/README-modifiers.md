@@ -310,7 +310,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `fenceSpeedPerFence` | `0` | Fence-speed bonus per fence completed **this map** (Continuous Delivery). Stacks with `fenceSpeedPerLock` in the same `× (1 + …)` tempo term; resets each map. | `0.04` = +4%/fence |
 | `underParInstantFence` | `0` | Instant fences granted on the **next** map after finishing a map under par (Clean Release). Re-evaluated every completion, so the carry lasts exactly one map. | `1` |
 | `winRequiresSplitLocks` | `0` | Locks demanded on **each side** of every eligible map, appended to that map's own win (Definition of Done). The only modifier that changes what **winning means** rather than what a number is worth. A map keeps its own win untouched unless its requirements are all `space`/`locks`, it spawns at least `2 x` the value in balls, and it does not already ask for a split: a boss map's ending is the boss and a one-ball map can never pay two sides. See `acceptsRunClause` in `lib/winSpec.ts`. | `1` |
-| `bankedSlowPer50h` | `0` | Ball-speed reduction per 50h banked at map start (War Chest), capped at 8% total. Folded by useGameSession into `ballSpeedMultiplier` per map. | `0.02` = 2%/50h |
+| `bankedSlowPerStep` | `0` | Ball-speed reduction per 13h banked at map start (War Chest, `BANKED_SLOW_STEP_HOURS`), capped at 8% total. Folded by useGameSession into `ballSpeedMultiplier` per map. | `0.02` = 2%/step |
 | `overtimeCapBonus` | `0` | Raises the per-map overtime cap by this many hours (Stock Options capstone). | `20` |
 | `freeCheapestOffer` | `0` | `> 0` makes the cheapest unowned offer in every shop free (Company Card capstone). | `1` |
 | `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
@@ -320,8 +320,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `100` |
 | `runwayConcurrentFenceAt` | `0` | Runway: while the bank is at/above this threshold, +1 concurrent fence. | `200` |
 | `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
-| `spendInstantFencePerChunk` | `0` | Budget Cycle (spend side): instant fences on the NEXT map per 60h spent in one shop visit (max 3 chunks counted; src/lib/treasury.ts). | `1` |
-| `spendFenceSpeedPerChunk` | `0` | Budget Cycle: fence-speed bonus on the NEXT map per 60h-spend chunk. | `0.05` = +5%/chunk |
+| `spendInstantFencePerChunk` | `0` | Budget Cycle (spend side): instant fences on the NEXT map per 15h spent in one shop visit (`SPEND_CHUNK_HOURS`, max 3 chunks counted; src/lib/treasury.ts). | `1` |
+| `spendFenceSpeedPerChunk` | `0` | Budget Cycle: fence-speed bonus on the NEXT map per 15h-spend chunk. | `0.05` = +5%/chunk |
 | `lockThresholdBonus` | `0` | Percentage points added to the lock threshold (base `lock.win_threshold_percent`, 10): pockets slightly larger than the limit still lock their ball (Code Review). | `3` |
 | `spawnFreezeSeconds` | `0` | Seconds every ball stays frozen at map start (Cold Boot). Rides the Feature Freeze `frozenUntil` path; the spawn thaw carries no re-freeze cooldown. | `2` |
 | `pickupChanceBonus` | `0` | Extra pickup-token spawn chance per roll, in absolute probability (0.03 = +3 percentage points on the game-config base). Only applies on maps where pickups are enabled; never turns them on. Player-facing copy stays vague on purpose (Benefits Package). | `0.03` |

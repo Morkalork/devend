@@ -10,13 +10,13 @@
  *
  * The simultaneous-lock multiplier is `newlyLocked`, applied to the SUM of the
  * balls locked in the pass, so the curve is already N-squared. For plain balls
- * at lockValue 12:
+ * at lockValue 3:
  *
- *      1 ball    12h nominal          2 balls    48h nominal
- *      3 balls  108h nominal          4 balls   192h nominal
+ *      1 ball     3h nominal          2 balls    12h nominal
+ *      3 balls   27h nominal          4 balls    48h nominal
  *
- * against a 60h ceiling. A four-ball pass - herding every ball on the map into
- * one pocket and closing it with a single cut - earns 192 and banks at most 60,
+ * against a 16h ceiling. A four-ball pass - herding every ball on the map into
+ * one pocket and closing it with a single cut - earns 48 and banks at most 16,
  * and only that much if nothing else had already filled those two lanes, which
  * on a map where you just did that is unlikely. In practice the fourth ball is
  * frequently worth NOTHING. The hardest play in the game pays like an ordinary

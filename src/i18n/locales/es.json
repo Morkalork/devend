@@ -1652,7 +1652,7 @@
     "startingLevelBonus": "Cada partida empieza en el nivel {{level}}",
     "startingCapturePercent": "Tablero ya capturado +{{percent}}%",
     "extraCertificateHours": "Horas de Certificación por partida +{{hours}}",
-    "bankedSlowPer50h": "Velocidad de bola {{percent}}% por cada 50h en el banco",
+    "bankedSlowPerStep": "Velocidad de bola {{percent}}% por cada 13h en el banco",
     "microManagerPerLock": "Velocidad de bola {{percent}}% por bola encerrada",
     "showHighscoreProgress": "Añade la barra de récord del mapa al HUD",
     "startingOvertime": "Empieza con +{{hours}}h de horas extra",

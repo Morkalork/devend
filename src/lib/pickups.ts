@@ -21,6 +21,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupEffect } from "@/types/pickups";
 import { Vector2, pointToSegmentDistance } from "@/lib/polygon";
 import { CellState, isPositionActive, worldToGridIndex } from "@/lib/spaceGrid";
+import { DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 import { spawnClearOfParent } from "@/lib/physics/spawnPlacement";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { getBallType } from "@/lib/ballTypes";
@@ -40,7 +41,7 @@ export const PICKUP_FEEDBACK_MS = 1100;
 /** A token starts blinking this many seconds before it expires. */
 export const PICKUP_EXPIRY_WARN_SECONDS = 3;
 /** Fork claimed with no free ball left to split: consolation overtime hours. */
-export const FORK_CONSOLATION_OVERTIME = 3;
+export const FORK_CONSOLATION_OVERTIME = 1;
 
 const MIN_WALL_CLEARANCE = PICKUP_DRAW_RADIUS + 6; // world units to any wall segment
 const MIN_BALL_CLEARANCE = 70;                 // don't spawn under a ball
@@ -282,9 +283,10 @@ function applyPickupEffect(
   switch (token.effect) {
     case "overtime": {
       // Proportionate to the map (#68): pay token.value x the map's base points,
-      // not a flat pittance (a +3h token was meaningless on a 100h+ map). Total
+      // not a flat pittance (a +3h token was meaningless on a 100h+ map, in
+      // the hours of the day). Total
       // Compensation still adds its +1h/level on top.
-      const otBonus = Math.max(1, Math.round((game.mapBasePoints ?? 20) * token.value)) + payoutLevel;
+      const otBonus = Math.max(1, Math.round((game.mapBasePoints ?? DEFAULT_MAP_BASE_POINTS) * token.value)) + payoutLevel;
       game.pickupOvertime = (game.pickupOvertime ?? 0) + otBonus;
       pushFeedback(game, token, "claimed", "overtime", otBonus);
       log("overtime", otBonus);

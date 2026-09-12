@@ -231,7 +231,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // Hours the map withheld because its colored areas were left alone.
   // The base the SCORER used, not a recomputation of it. The overlay used to
   // derive it as basePoints x performanceMultiplier and drop the build's score
-  // multiplier, so a 1.25x run showed a 20h base inside a 130h total whose
+  // multiplier, so a 1.25x run showed a 20h base inside a 130h total (old hours) whose
   // visible parts summed to 125.
   const paidBase = Math.round(multipliedBase ?? Math.floor(basePoints * performanceMultiplier));
   const zonesMissedCost = Math.max(0, Math.round(zoneShareWithheld));

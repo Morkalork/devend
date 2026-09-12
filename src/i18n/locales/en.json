@@ -1119,7 +1119,7 @@
     "startingLevelBonus": "Every run starts at level {{level}}",
     "startingCapturePercent": "Board pre-captured +{{percent}}%",
     "extraCertificateHours": "Certificate Hours per run +{{hours}}",
-    "bankedSlowPer50h": "Ball speed {{percent}}% per 50h banked",
+    "bankedSlowPerStep": "Ball speed {{percent}}% per 13h banked",
     "microManagerPerLock": "Ball speed {{percent}}% per locked ball",
     "showHighscoreProgress": "Adds the map highscore bar to the HUD",
     "startingOvertime": "Start with +{{hours}}h overtime",

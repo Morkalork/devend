@@ -16,6 +16,7 @@ import {
 } from '@/types/metaProgression';
 import { bestHighscore, isHighscoreRecord } from '@/lib/highscore';
 import { seedLegacyFeatureUnlocks } from '@/lib/features';
+import { ECONOMY_SCALE_VERSION, deflateRecord, needsDeflation } from '@/lib/economyDeflation';
 
 /**
  * Load meta stats from localStorage
@@ -96,13 +97,18 @@ function loadUnlockState(): UnlockState {
       Array.isArray(parsed.unlockedFeatureIds) ? parsed.unlockedFeatureIds : [],
       parsed.loadoutsIntroduced === true,
     );
+    // Both records are banked OVERTIME, so a save written before the economy
+    // was deflated holds old-scale hours. Rescale once, stamped, or every
+    // record stays 4x above what the new economy can pay and no highscore is
+    // ever beaten again.
+    const stale = needsDeflation(parsed.economyScale);
     return {
       unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : [],
       wonLoadoutIds: Array.isArray(parsed.wonLoadoutIds) ? parsed.wonLoadoutIds : [],
       loadoutsIntroduced: parsed.loadoutsIntroduced === true,
-      mapHighscores,
+      mapHighscores: stale ? deflateRecord(mapHighscores) : mapHighscores,
       encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
-      archetypeBests,
+      archetypeBests: stale ? deflateRecord(archetypeBests) : archetypeBests,
       unlockedFeatureIds: featureIds,
       lastRunUpgradeIds: Array.isArray(parsed.lastRunUpgradeIds) ? parsed.lastRunUpgradeIds : [],
     };
@@ -116,7 +122,13 @@ function loadUnlockState(): UnlockState {
  */
 function saveUnlockState(state: UnlockState): void {
   try {
-    localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify(state));
+    // The stamp rides along with the state rather than living in it: it is a
+    // fact about the SAVE, not about the player's unlocks, and stamping on
+    // write is what makes the load-side rescale run exactly once.
+    localStorage.setItem(
+      UNLOCK_STATE_STORAGE_KEY,
+      JSON.stringify({ ...state, economyScale: ECONOMY_SCALE_VERSION }),
+    );
   } catch (e) {
     console.warn('Failed to persist unlock state', e);
   }

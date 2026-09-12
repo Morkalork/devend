@@ -218,10 +218,16 @@ describe("the starter certificates", () => {
   const signing = certificates.find(c => c.id === "signing-bonus")!;
   const card = certificates.find(c => c.id === "corporate-card")!;
 
+  // EQUAL steps is the property; the step's size is an economy figure that
+  // moves when the economy is rescaled, so it is read off the first level
+  // rather than written in here.
   it("banks hours before the run begins, in equal steps", () => {
     expect(signing.levels).toHaveLength(3);
+    const step = signing.levels[0].effect;
+    expect(step.type).toBe("startingOvertime");
+    expect(step.value).toBeGreaterThan(0);
     for (const level of signing.levels) {
-      expect(level.effect).toEqual({ type: "startingOvertime", value: 10 });
+      expect(level.effect).toEqual(step);
     }
   });
 

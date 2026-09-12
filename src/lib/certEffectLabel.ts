@@ -42,7 +42,7 @@ const SPECIAL: Partial<Record<string, SpecialFormatter>> = {
   startingCapturePercent: (t, v) => t('certificateEffects.startingCapturePercent', { percent: v }),
   extraCertificateHours: (t, v) => t('certificateEffects.extraCertificateHours', { hours: v }),
   // Conditional rates: the value is a per-unit reduction, not a flat one.
-  bankedSlowPer50h: (t, v) => t('certificateEffects.bankedSlowPer50h', { percent: signed(-ratePct(v)) }),
+  bankedSlowPerStep: (t, v) => t('certificateEffects.bankedSlowPerStep', { percent: signed(-ratePct(v)) }),
   microManagerPerLock: (t, v) => t('certificateEffects.microManagerPerLock', { percent: signed(-ratePct(v)) }),
   // A toggle, so a signed number would be meaningless.
   showHighscoreProgress: t => t('certificateEffects.showHighscoreProgress'),

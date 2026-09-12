@@ -16,24 +16,32 @@ import {
 } from '@/types/hallOfFame';
 import { insertRun, monthKey, RunRankInfo } from '@/lib/runLedger';
 import { previousDayKey } from '@/lib/runRng';
+import { ECONOMY_SCALE_VERSION, deflateHours, needsDeflation } from '@/lib/economyDeflation';
 
 function loadHall(): HallOfFameState {
   try {
     const raw = localStorage.getItem(HALL_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_HALL_STATE };
     const parsed = JSON.parse(raw);
+    // Every figure in this ledger is banked overtime. A save from before the
+    // deflation is on the old scale, so it is rescaled once and re-stamped;
+    // otherwise the all-time board sits 4x above anything reachable and the
+    // best-run trajectory it drives compares new runs against old hours.
+    const stale = needsDeflation(parsed?.economyScale);
+    const rescale = (r: RunLedgerEntry): RunLedgerEntry =>
+      stale ? { ...r, score: deflateHours(r.score) } : r;
     const monthlyBests: Record<string, RunLedgerEntry> = {};
     if (parsed?.monthlyBests && typeof parsed.monthlyBests === 'object') {
       for (const [month, run] of Object.entries(parsed.monthlyBests)) {
         const r = run as RunLedgerEntry;
-        if (typeof r?.score === 'number' && r.score > 0) monthlyBests[month] = r;
+        if (typeof r?.score === 'number' && r.score > 0) monthlyBests[month] = rescale(r);
       }
     }
     const dailyBests: Record<string, RunLedgerEntry> = {};
     if (parsed?.dailyBests && typeof parsed.dailyBests === 'object') {
       for (const [day, run] of Object.entries(parsed.dailyBests)) {
         const r = run as RunLedgerEntry;
-        if (typeof r?.score === 'number' && r.score > 0) dailyBests[day] = r;
+        if (typeof r?.score === 'number' && r.score > 0) dailyBests[day] = rescale(r);
       }
     }
     const dailyStreak =
@@ -42,10 +50,14 @@ function loadHall(): HallOfFameState {
         : { ...DEFAULT_HALL_STATE.dailyStreak };
     return {
       topRuns: Array.isArray(parsed?.topRuns)
-        ? parsed.topRuns.filter((r: RunLedgerEntry) => typeof r?.score === 'number' && r.score > 0)
+        ? parsed.topRuns
+            .filter((r: RunLedgerEntry) => typeof r?.score === 'number' && r.score > 0)
+            .map(rescale)
         : [],
       bestRunTrajectory: Array.isArray(parsed?.bestRunTrajectory)
-        ? parsed.bestRunTrajectory.filter((n: unknown) => typeof n === 'number' && Number.isFinite(n))
+        ? parsed.bestRunTrajectory
+            .filter((n: unknown): n is number => typeof n === 'number' && Number.isFinite(n))
+            .map((n: number) => (stale ? deflateHours(n) : n))
         : [],
       monthlyBests,
       dailyBests,
@@ -58,7 +70,10 @@ function loadHall(): HallOfFameState {
 
 function saveHall(state: HallOfFameState): void {
   try {
-    localStorage.setItem(HALL_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(
+      HALL_STORAGE_KEY,
+      JSON.stringify({ ...state, economyScale: ECONOMY_SCALE_VERSION }),
+    );
   } catch {
     // ignore storage errors (quota / private mode)
   }

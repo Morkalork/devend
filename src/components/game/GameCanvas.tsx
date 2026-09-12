@@ -41,7 +41,7 @@ import type { BandShape } from "@/lib/rubberBand";
 import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/rendering/perfStats";
 import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
-import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
+import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent, DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 import { raiseMessage, type GameMessage, type GameMessageId } from "@/lib/gameMessages";
 import { readLockAxes } from "@/lib/lockCapacity";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
@@ -792,7 +792,7 @@ export function GameCanvas({
     frozenBallVelocity: null as Vector2 | null,
     frozenBallPosition: null as Vector2 | null,
     lockedBallsCount: 0,
-    mapBasePoints: 20,
+    mapBasePoints: DEFAULT_MAP_BASE_POINTS,
     lockBonus: 0,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
@@ -993,7 +993,7 @@ export function GameCanvas({
       game.objectivesBroken = 0;
       game.breakBonus = 0;
       // This map's overtime scale, for sizing overtime pickups proportionately (#68).
-      game.mapBasePoints = level.points ?? 20;
+      game.mapBasePoints = level.points ?? DEFAULT_MAP_BASE_POINTS;
       game.breakMultiplier = 1;
       game.lastDudAt = 0;
       game.chestLoot = [];
@@ -1671,7 +1671,7 @@ export function GameCanvas({
     // Passed to calculateScore rather than applied to basePoints, which was the
     // first attempt and was nearly invisible: basePoints feeds only the first
     // term of `multipliedBase + axes.total`, so on a level-3 run it was 20h of
-    // a 130h payout and withholding 40% of it cost 8h. The share has to come
+    // a 130h payout and withholding 40% of it cost 8h (old hours). The share has to come
     // off the map's pay or it does not mean what the number says.
     const zoneShareMissed = missedAreaShare(level, game.coloredAreas);
 

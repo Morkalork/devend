@@ -18,7 +18,7 @@ import type { GameModifiers } from '@/hooks/useActiveModifiers';
 /** Seconds a Runway-granted tap-freeze lasts (rides the Feature Freeze mechanic). */
 export const RUNWAY_FREEZE_SECONDS = 2;
 /** Hours of shop spend that charge one Budget Cycle boon. */
-export const SPEND_CHUNK_HOURS = 60;
+export const SPEND_CHUNK_HOURS = 15;
 /** Ceiling on chunks counted per shop visit. */
 export const MAX_SPEND_CHUNKS = 3;
 

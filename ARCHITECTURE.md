@@ -162,9 +162,16 @@ Two rules keep it a choice rather than a formula:
 
 `overtimeCapHeadroom` is no longer the ceiling, only a backstop on the base
 against a runaway score multiplier. As a binding cap it was the worst thing in
-the economy: 80h on every map while lock income routinely earned several times
-that, with Ship Early the only bonus paid above it, so speed was the only
-tactic the score could see.
+the economy: 80h on every map (old hours) while lock income routinely earned
+several times that, with Ship Early the only bonus paid above it, so speed was
+the only tactic the score could see.
+
+**The scale of an hour.** Overtime was deflated by 4 in
+[economyDeflation.ts](src/lib/economyDeflation.ts): a good map paid ~136h and
+now pays ~34h. Every price, ceiling and threshold moved with it, so the ratios
+are unchanged; the point was legibility, not balance. Because banked scores
+outlive the economy that produced them, per-map highscores, archetype bests and
+the Hall of Fame carry an `economyScale` stamp and are converted once on load.
 
 Upgrade multipliers raise an axis **ceiling**, not its payout, so an upgrade is
 a commitment to a lane and is dead weight in a run that never played it.

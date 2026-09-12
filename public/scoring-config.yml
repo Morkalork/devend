@@ -1,5 +1,10 @@
 # Overtime Scoring Configuration
 # Values are in overtime hours.
+#
+# SCALE. Hours were deflated by 4 (see src/lib/economyDeflation.ts): a good map
+# paid ~136h and now pays ~34h. Every price, ceiling and threshold moved with
+# it, so the RATIOS below are unchanged. Figures quoted from before that change
+# are marked "old hours"; everything else describes the economy as it ships.
 
 scoring:
   # A ceiling on the BASE, not on the payout.
@@ -10,12 +15,12 @@ scoring:
   # clip axis income on any low-`points:` map.
   #
   # It used to be THE ceiling, and that was the single worst thing in the
-  # economy. At 4.0 it meant 80h on all 35 maps (they all have points: 20),
-  # while lock income is a multiplicative stack that routinely earned 116h,
-  # 212h, even 596h into that pot - and everything over the brim was thrown
-  # away. Worse, Ship Early was the only bonus paid ABOVE it, so once a run
+  # economy. At 4.0 it meant 80h on all 35 maps (old hours; they all had
+  # points: 20), while lock income is a multiplicative stack that routinely
+  # earned 116h, 212h, even 596h into that pot - and everything over the brim
+  # was thrown away. Worse, Ship Early was the only bonus paid ABOVE it, so once a run
   # capped, tempo was the only lever still connected to the score and rushing
-  # sloppily out-earned a flawless precise run 96h to 80h.
+  # sloppily out-earned a flawless precise run 96h to 80h (old hours).
   overtimeCapHeadroom: 4.0
 
   # ── The Performance Review: six axes, banked independently ────────────────
@@ -34,20 +39,20 @@ scoring:
   #
   # The four tactical axes form a ring where neighbours physically fight each
   # other, so about two are reachable in a run, and any two land near the same
-  # total. Simulated over the whole ladder: perfectionist 96h, speedrunner 97h,
-  # balanced 95h, zone play 93h, greed 90h, and the intended failure (slow AND
-  # sloppy) 41h. The two poles come out even on every rung from level 3 to 29.
+  # total. Measured on a mid-ladder map: perfectionist 25h, speedrunner 25h,
+  # balanced 24h, zone play 24h, greed 23h, and the intended failure (slow AND
+  # sloppy) 5h. The two poles come out even on every rung from level 3 to 29.
   #
   # Every axis pays ceiling x ratio, where the ratio is measured against what
   # THIS map could give: lock capacity for delivery and craft, par for thrift,
   # leftover slack for greed. That is what lets one set of ceilings cover a
-  # 1-ball map worth 12h of locks and a 4-ball act-III map worth 240h.
+  # 1-ball map worth 3h of locks and a 4-ball act-III map worth 60h.
   axes:
-    delivery: 30
-    craft: 30
-    tempo: 24
-    thrift: 20
-    greed: 25
+    delivery: 8
+    craft: 8
+    tempo: 6
+    thrift: 5
+    greed: 6
     # ENGAGEMENT: the share of the map's own features you actually operated.
     #
     # Not just breakables. Every family of content that asks for a different
@@ -59,15 +64,16 @@ scoring:
     # not commensurate - a 40-hit slab and a single zone are each "the map's
     # feature" and each worth the same share of this lane.
     #
-    # 35 is sized against a REALISTIC run, not against the sum of ceilings -
+    # 9 is sized against a REALISTIC run, not against the sum of ceilings -
     # that sum is deliberately unreachable (the four tactical axes fight each
     # other, so about two land). A good run banks delivery, engagement and
-    # roughly two tacticals: 30 + 35 + ~50 = 115, and 35 of that is 30%. Sizing
-    # it against the 164 total instead would have put it at 55h and made every
-    # other lane a rounding error.
+    # roughly two tacticals: 8 + 9 + ~12 = 29, and 9 of that is about 30%.
+    # Sizing it against the 41 total instead would have put it near 14h and made
+    # every other lane a rounding error.
     #
     # It exists because the map's own content had no lane. Smashing paid a flat
-    # 5h per breakable INTO GREED, whose 25h pot it shared with clearing - so on
+    # 5h per breakable INTO GREED (old hours), whose pot it shared with
+    # clearing - so on
     # any map where you also cleared, the pot was full and the map's content
     # paid nothing. It rendered no row either. The first nine maps could be
     # finished on two quick locks with every object on the board untouched,
@@ -75,7 +81,7 @@ scoring:
     #
     # Zero on a map that offers no such feature: the axis is not offered and
     # the overlay draws five bars instead of six.
-    engagement: 35
+    engagement: 9
     # Under par by 40% of par banks all of Thrift: three cuts on a par-7 map,
     # two on a par-4. Relative because par runs 3..10 across the ladder, so an
     # absolute rung is a strong result on one map and impossible on another.
@@ -88,12 +94,12 @@ scoring:
 
   # Lock Value
   # Overtime hours paid per lock-multiplier point when a ball is locked away.
-  # Red/blue/grey (x1) pay 12h, yellow/purple/green (x2) 24h, black (x4) 48h,
+  # Red/blue/grey (x1) pay 3h, yellow/purple/green (x2) 6h, black (x4) 12h,
   # before the quality, simultaneous-trap and money-ball multipliers. Locking
-  # IS the income: the flat map base (points: 20) alone cannot fund even a
-  # Junior upgrade (40h), so clearing without locking means an empty-handed
+  # IS the income: the flat map base (points: 5) alone cannot fund even a
+  # Junior upgrade (34h), so clearing without locking means an empty-handed
   # shop visit unless you had hours saved.
-  lockValue: 12
+  lockValue: 3
 
   # Lock Quality (Superior Locks)
   # A lock is SUPERIOR when the sealed pocket is tight: at most
@@ -102,10 +108,10 @@ scoring:
   # not also widen this). Superior locks pay lockValue x superiorMultiplier
   # per lock-multiplier point; a sliver-floor lock (min_region_cells) always
   # grades superior. The sloppy-vs-tight gap is the skill economy: a sloppy red
-  # lock pays 20 + 12 = 32h, a superior one 20 + 24 = 44h. The three level-1
-  # "first hire" Juniors are discounted to 30h (upgrades.yml) so a sloppy lock
-  # already opens the store on map 1; the gap still gates the formula-priced
-  # 40h+ hires on later maps.
+  # lock pays 5 + 3 = 8h, a superior one 5 + 6 = 11h. The four level-1 "first
+  # hire" Juniors are discounted to 25h (upgrades.yml) against a 34h formula
+  # Junior, so the opening shelf is affordable on a good first map; the gap
+  # still gates the formula-priced hires on later maps.
   lockQuality:
     superiorThresholdFraction: 0.4
     superiorMultiplier: 2.0
@@ -138,7 +144,7 @@ scoring:
   # not count, so push-your-luck time is never taxed.
   #
   # The reward is a PERCENT of the map's earned overtime, paid ABOVE the per-map
-  # cap (so on a 100h map a blazing clear adds ~30h, not a flat 3h the cap eats).
+  # cap (so on a 25h map a blazing clear adds ~7h, not a flat 1h the cap eats).
   # Awards the best rung whose window was met, clamped at maxPercent. The tempo
   # counterpart to spaceOptimization: speed and precision are parallel payoffs.
   shipEarly:

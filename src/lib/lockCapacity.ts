@@ -4,9 +4,9 @@
  * This is the bridge between what actually happened on the board and the
  * Delivery and Craft axes (see scoreAxes.ts). Both axes are scored as a
  * fraction of what THIS map could give, and the reason is the single biggest
- * flaw in the economy this replaced: a 1-ball map holds 12h of lock capacity
- * and a 4-ball act-III map holds 240h, yet every map paid into the same flat
- * 80h ceiling. Big maps threw most of a skilled run away and small ones could
+ * flaw in the economy this replaced: a 1-ball map holds 3h of lock capacity
+ * and a 4-ball act-III map holds 60h, yet every map paid into the same flat
+ * ceiling (80h in the hours of the day; see src/lib/economyDeflation.ts). Big maps threw most of a skilled run away and small ones could
  * not fill the pot at all.
  *
  * Reading it as a ratio makes the same quality of play worth the same on level

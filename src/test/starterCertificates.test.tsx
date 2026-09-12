@@ -23,6 +23,19 @@ import { CERT_STORAGE_KEY } from "@/types/certificate";
 
 const PUBLIC = path.resolve(__dirname, "../../public");
 
+/**
+ * What one Signing Bonus level banks, READ FROM THE SHIPPED CERT rather than
+ * written here. The figure moved with the economy deflation; what this file is
+ * actually about is that the hours arrive at all and survive every reset path,
+ * so pinning the number only made it fail for being out of date.
+ */
+const SIGNING_STEP = (() => {
+  const doc = fs.readFileSync(path.join(PUBLIC, "certificates.yml"), "utf8");
+  const match = doc.match(/type: startingOvertime, value: (\d+)/);
+  if (!match) throw new Error("certificates.yml has no startingOvertime effect");
+  return Number(match[1]);
+})();
+
 beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -69,11 +82,11 @@ describe("Signing Bonus", () => {
   it("banks its hours before a single map has been played", async () => {
     owning("signing-bonus", 1);
     const hook = await startedSession();
-    expect(hook.result.current.session.totalScore).toBe(10);
+    expect(hook.result.current.session.totalScore).toBe(SIGNING_STEP);
   });
 
   it("stacks across its levels", async () => {
-    for (const [levels, expected] of [[2, 20], [3, 30]] as const) {
+    for (const [levels, expected] of [[2, SIGNING_STEP * 2], [3, SIGNING_STEP * 3]] as const) {
       localStorage.clear();
       owning("signing-bonus", levels);
       const hook = await startedSession();
@@ -91,17 +104,17 @@ describe("Signing Bonus", () => {
     const hook = await startedSession();
 
     act(() => { hook.result.current.session.handlePlayAgain(); });
-    await waitFor(() => expect(hook.result.current.session.totalScore).toBe(20));
+    await waitFor(() => expect(hook.result.current.session.totalScore).toBe(SIGNING_STEP * 2));
 
     act(() => { hook.result.current.session.handleRestartRun(); });
-    await waitFor(() => expect(hook.result.current.session.totalScore).toBe(20));
+    await waitFor(() => expect(hook.result.current.session.totalScore).toBe(SIGNING_STEP * 2));
   });
 
   it("does not need unlocking, since it is always on the shelf", async () => {
     owning("signing-bonus", 1); // unlockedCertIds is empty in that save
     const hook = await startedSession();
     expect(hook.result.current.session.unlockedCertIds).toContain("signing-bonus");
-    expect(hook.result.current.session.totalScore).toBe(10);
+    expect(hook.result.current.session.totalScore).toBe(SIGNING_STEP);
   });
 });
 

@@ -264,17 +264,28 @@ export function generateScoringPreview(
   });
 }
 
+/**
+ * The flat base to assume when a map has not declared one.
+ *
+ * Every shipped map sets `points`, so this only covers a game state built
+ * before a level is loaded (GameCanvas's initial state, the bot harness). It
+ * was written out as 20 in four separate places and every one of them went
+ * stale the moment hours were deflated - a pickup reading the fallback would
+ * have paid four times what the map it sat on was worth.
+ */
+export const DEFAULT_MAP_BASE_POINTS = 5;
+
 // ── Config loading ─────────────────────────────────────────────────────────
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 4.0,
     axes: {
-      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25, engagement: 35,
+      delivery: 8, craft: 8, tempo: 6, thrift: 5, greed: 6, engagement: 9,
       thriftFullAtParFraction: 0.40,
       greedFullAtSlackFraction: 0.60,
     },
-    lockValue: 12,
+    lockValue: 3,
     lockQuality: {
       superiorThresholdFraction: 0.4,
       superiorMultiplier: 2.0,
@@ -537,7 +548,7 @@ export function calculateScore(
   const safeWinPct = Number.isFinite(winBonusPercent) && winBonusPercent > 0 ? winBonusPercent : 0;
   // Colored areas carry a share of what the MAP pays, which is the base plus
   // the axes - not basePoints alone. basePoints feeds only the first term:
-  // on a level-3 run it was 20h of a 130h payout, so withholding 40% of it
+  // on a level-3 run it was 20h of a 130h payout (old hours), so withholding 40% of it
   // cost 8h, about 6% of the map, and the change was invisible in play. The
   // share has to come off mapPay or it does not mean what the number says.
   //

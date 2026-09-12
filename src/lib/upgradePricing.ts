@@ -26,7 +26,7 @@
  *
  * ANCHORED ON A GOOD RUN, not a perfect one. Measured through calculateScore
  * itself: flawless 184h, good 136h, ordinary 61h, scrappy 23h. 190 puts the
- * cheapest tier at 133h, so a good map buys one thing and a flawless one buys
+ * cheapest tier at 34h, so a good map buys one thing and a flawless one buys
  * one thing and banks half the next. Anchoring on the ceiling would price out
  * everyone who is not perfect; anchoring on an ordinary clear is what produced
  * the complaint.

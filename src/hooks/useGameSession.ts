@@ -105,6 +105,16 @@ const BASE_CONTINUES = 0;
 const FREE_CONTINUE_LEVEL = 20;
 /** War Chest ceiling: banked overtime never slows balls by more than this. */
 const MAX_BANKED_SLOW = 0.08;
+/**
+ * Hours of bank that earn one War Chest step.
+ *
+ * Named rather than inlined because it is an HOURS figure living in code: it
+ * was a bare `/ 50` and the modifier key still read `per50h`, so deflating the
+ * economy would have quartered War Chest's strength with nothing in the diff
+ * to notice it. 13 is a quarter of the old 50, which keeps a given bank buying
+ * the slowdown it always did.
+ */
+const BANKED_SLOW_STEP_HOURS = 13;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
@@ -570,7 +580,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Two-pass modifier resolution: the base pass aggregates every static source;
   // a second pass folds in run-state-dependent effects that READ base values
-  // (War Chest keys off bankedSlowPer50h + the bank; Clean Release off the
+  // (War Chest keys off bankedSlowPerStep + the bank; Clean Release off the
   // under-par carry). Both fold through the same merge rules as everything else.
   /**
    * The run as it stands, for upgrades that only pay in a situation.
@@ -613,8 +623,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses, runContext);
   const dynamicBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
-    if (baseModifiers.bankedSlowPer50h > 0 && totalScore > 0) {
-      const reduction = Math.min(MAX_BANKED_SLOW, Math.floor(totalScore / 50) * baseModifiers.bankedSlowPer50h);
+    if (baseModifiers.bankedSlowPerStep > 0 && totalScore > 0) {
+      const reduction = Math.min(MAX_BANKED_SLOW, Math.floor(totalScore / BANKED_SLOW_STEP_HOURS) * baseModifiers.bankedSlowPerStep);
       if (reduction > 0) bonuses = mergeBonuses(bonuses, { ballSpeedMultiplier: 1 - reduction });
     }
     if (carryInstantFences > 0) {

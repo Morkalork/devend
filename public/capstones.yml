@@ -26,7 +26,7 @@ capstones:
     tag: risk
     clarify: Overtime is normally capped per map, so any score multiplier beyond the cap is wasted. This raises that ceiling by 20h every map, turning stacked multipliers into real score. Near useless on a low-multiplier build, run-defining on a stacked one.
     modifiers:
-      overtimeCapBonus: 20
+      overtimeCapBonus: 5
 
   - id: company_card
     name: Company Card
@@ -53,9 +53,9 @@ capstones:
 
   - id: golden_handshake
     name: Golden Handshake
-    description: Every locked ball pays +2 overtime, and every lock counts as one ball bigger for the trap multiplier.
+    description: Every locked ball pays +1 overtime, and every lock counts as one ball bigger for the trap multiplier.
     tag: lock
-    clarify: Two lock payoffs at once. Every locked ball pays +2 overtime, and each lock counts as one ball larger for the simultaneous-trap multiplier. Snowballs hard on maps where you seal several balls together.
+    clarify: Two lock payoffs at once. Every locked ball pays +1 overtime, and each lock counts as one ball larger for the simultaneous-trap multiplier. Snowballs hard on maps where you seal several balls together.
     modifiers:
-      overtimePerLock: 2
+      overtimePerLock: 1
       simultaneousLockBonus: 1

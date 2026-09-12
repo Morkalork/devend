@@ -29,6 +29,21 @@ const LV = getLockValue();
 const SUP = getLockQuality().superiorMultiplier;
 const CEIL = getAxisCeilings(DEFAULT_SCORING_CONFIG);
 
+/**
+ * The flat base every shipped map pays, READ FROM THE LADDER rather than
+ * written here. It was hardcoded as 20, and when the economy was deflated
+ * these tests went on scoring against a base four times what any map pays -
+ * which showed up as a route-balance failure that was really a stale input.
+ * One fact, stated once.
+ */
+const MAP_BASE_POINTS = (() => {
+  const doc = yaml.load(readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8")) as
+    { levels?: Array<{ points?: number }> };
+  const points = (doc.levels ?? []).map(l => l.points).filter((p): p is number => typeof p === "number");
+  if (points.length === 0) throw new Error("map.yml has no levels with points");
+  return points[0];
+})();
+
 /** A map as the scorer sees it, plus how the run went. */
 interface Run {
   par: number; used: number; threshold: number; remaining: number;
@@ -55,7 +70,7 @@ function play(r: Run) {
   const lockedCapacity = locked.reduce((a, m) => a + m * LV, 0);
   // What the pass actually paid, quality stack and all.
   const paid = locked.reduce((a, m, i) => a + m * LV * stack * (i < r.superior ? SUP : 1), 0);
-  return calculateScore(r.used, r.par, r.remaining, r.threshold, 20, {
+  return calculateScore(r.used, r.par, r.remaining, r.threshold, MAP_BASE_POINTS, {
     locks: {
       totalCapacity, lockedCapacity,
       premiumEarned: paid - lockedCapacity,
@@ -81,7 +96,7 @@ const TACTICS: Record<string, Run> = {
   // Craft by a different route: two balls in one cut inside a const area.
   zonePlay: { ...MID, used: 8, remaining: 6, superior: 2, stack: 6 },
   // Stays on the board for everything that is left on it.
-  greedy: { ...MID, used: 6, remaining: 4, superior: 1, greedBonus: 14 },
+  greedy: { ...MID, used: 6, remaining: 4, superior: 1, greedBonus: 4 },
 };
 
 describe("no route dominates", () => {
@@ -132,7 +147,7 @@ describe("no route dominates", () => {
   it("pays every tactic what it earned, clipping none of it", () => {
     for (const [name, r] of Object.entries(TACTICS)) {
       const out = play(r);
-      const base = Math.floor(20 * out.breakdown.performanceMultiplier);
+      const base = Math.floor(MAP_BASE_POINTS * out.breakdown.performanceMultiplier);
       expect(out.levelScore, `${name} lost hours to a ceiling`).toBe(base + out.axes.total);
     }
   });
@@ -300,7 +315,7 @@ describe("upgrades buy a lane, not a payout", () => {
   const thriftWith = (r: Run, mult: number) => {
     const totalCapacity = r.roster.reduce((a, m) => a + m * LV, 0);
     const paid = r.roster.reduce((a, m, i) => a + m * LV * (i < r.superior ? SUP : 1), 0);
-    return calculateScore(r.used, r.par, r.remaining, r.threshold, 20, {
+    return calculateScore(r.used, r.par, r.remaining, r.threshold, MAP_BASE_POINTS, {
       locks: {
         totalCapacity, lockedCapacity: totalCapacity,
         premiumEarned: paid - totalCapacity, premiumAvailable: totalCapacity * (SUP - 1),
@@ -367,7 +382,7 @@ describe("the axes are named in every locale", () => {
  * player buys it for.
  */
 describe("Hard Deadline", () => {
-  const fast = (mult: number) => calculateScore(7, 7, 8, 12, 20, {
+  const fast = (mult: number) => calculateScore(7, 7, 8, 12, MAP_BASE_POINTS, {
     locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 },
     shipEarlyPercent: 30, tempoCeilingMultiplier: mult,
   }).axes.tempo;
@@ -441,23 +456,23 @@ describe("a map's win premium leaves the routes level", () => {
    *  does not make a claimed token worth more. */
   it("scales the map's earned pay and not the flat extras", () => {
     const base = { locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 } };
-    const noFlat = calculateScore(5, 5, 10, 30, 20, { ...base, winBonusPercent: 50 });
-    const withFlat = calculateScore(5, 5, 10, 30, 20, { ...base, winBonusPercent: 50, flatBonus: 20 });
+    const noFlat = calculateScore(5, 5, 10, 30, MAP_BASE_POINTS, { ...base, winBonusPercent: 50 });
+    const withFlat = calculateScore(5, 5, 10, 30, MAP_BASE_POINTS, { ...base, winBonusPercent: 50, flatBonus: 20 });
     expect(withFlat.levelScore - noFlat.levelScore, "the flat bonus was multiplied").toBe(20);
   });
 
   it("reports the hours it added", () => {
-    const r = calculateScore(5, 5, 10, 30, 20, {
+    const r = calculateScore(5, 5, 10, 30, MAP_BASE_POINTS, {
       locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 },
       winBonusPercent: 30,
     });
     expect(r.winBonus).toBeGreaterThan(0);
-    expect(r.levelScore).toBe(20 + r.axes.total + r.winBonus);
+    expect(r.levelScore).toBe(MAP_BASE_POINTS + r.axes.total + r.winBonus);
   });
 
   it("is inert at zero, which is every map today", () => {
     const opts = { locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 } };
-    expect(calculateScore(5, 5, 10, 30, 20, opts).levelScore)
-      .toBe(calculateScore(5, 5, 10, 30, 20, { ...opts, winBonusPercent: 0 }).levelScore);
+    expect(calculateScore(5, 5, 10, 30, MAP_BASE_POINTS, opts).levelScore)
+      .toBe(calculateScore(5, 5, 10, 30, MAP_BASE_POINTS, { ...opts, winBonusPercent: 0 }).levelScore);
   });
 });

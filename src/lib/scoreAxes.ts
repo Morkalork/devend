@@ -10,7 +10,7 @@
  * the brim was silently discarded:
  *
  *     3 superior locks (x1,x1,x2)                     earns 116h, paid 80h
- *     2 balls in one cut, both superior               earns 212h, paid 80h
+ *     2 balls in one cut, both superior         earns 212h, paid 80h (old hours)
  *     2 balls in one cut, superior, in a const area   earns 596h, paid 80h
  *
  * That alone would only have been wasteful. What made it decide the game was
@@ -43,8 +43,8 @@
  *
  * Every axis banks `ceiling x ratio`, where the ratio is measured against the
  * map's own potential rather than an absolute number of hours. That is what
- * makes the ceilings meaningful at all: a 1-ball map holds 12h of lock
- * capacity and a 4-ball act-III map holds 240h, so any flat figure either
+ * makes the ceilings meaningful at all: a 1-ball map holds 3h of lock
+ * capacity and a 4-ball act-III map holds 60h, so any flat figure either
  * crushes the big maps or gives the small ones away. Two consequences worth
  * stating, because both were bugs in the old ladders:
  *

@@ -120,9 +120,9 @@ export interface GameModifiers {
   // never mentioned is the one bug this feature can have. Maps that cannot
   // carry it keep their own win untouched (see acceptsRunClause).
   winRequiresSplitLocks: number;
-  // Additive (sum) — War Chest: ball-speed reduction per 50h banked at map
-  // start, capped in useGameSession (0.02 = 2% per 50h)
-  bankedSlowPer50h: number;
+  // Additive (sum) — War Chest: ball-speed reduction per BANKED_SLOW_STEP_HOURS
+  // of bank at map start, capped in useGameSession (0.02 = 2% per step)
+  bankedSlowPerStep: number;
   // Additive (sum) — Stock Options capstone: raises the per-map overtime cap
   overtimeCapBonus: number;
   // Additive (sum) — Company Card capstone: >0 = the cheapest shop offer is free
@@ -339,7 +339,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   fenceSpeedPerMapCleared: 0,
   underParInstantFence: 0,
   winRequiresSplitLocks: 0,
-  bankedSlowPer50h: 0,
+  bankedSlowPerStep: 0,
   overtimeCapBonus: 0,
   freeCheapestOffer: 0,
   wallShieldsPerMap: 0,

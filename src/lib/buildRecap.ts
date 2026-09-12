@@ -1,6 +1,6 @@
 /**
  * Build recap — names the run's build from its archetype tag counts, for the
- * end-of-run result screen ("Your Freeze-Lock build banked 412h").
+ * end-of-run result screen ("Your Freeze-Lock build banked 103h").
  *
  * The identity is the dominant archetype (primary) plus an optional second
  * one; a run with no real lean (nothing at minCount) is a Generalist. Display

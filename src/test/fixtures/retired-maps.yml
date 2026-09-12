@@ -56,7 +56,7 @@ levels:
     level: 11
     sizeThreshold: 16
     expectedCuts: 6
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 10
     maxBalls: 3
@@ -199,7 +199,7 @@ levels:
     level: 12
     sizeThreshold: 14
     expectedCuts: 6
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 8
     maxBalls: 3
@@ -271,7 +271,7 @@ levels:
     level: 13
     sizeThreshold: 13
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 10
     maxBalls: 4
@@ -347,7 +347,7 @@ levels:
     level: 14
     sizeThreshold: 12
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 10
     maxBalls: 4
@@ -408,7 +408,7 @@ levels:
     level: 15
     sizeThreshold: 12
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 5
     randomShapes: 0   # keep the sleepers' spots clear of stray mini-obstacles
     maxBalls: 0
@@ -456,7 +456,7 @@ levels:
     level: 16
     sizeThreshold: 11
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 8
     randomShapes: 0
     maxBalls: 2
@@ -520,7 +520,7 @@ levels:
     level: 17
     sizeThreshold: 11
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 10
     randomShapes: 8
     maxBalls: 3
@@ -614,7 +614,7 @@ levels:
     level: 18
     sizeThreshold: 10
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 8
     maxBalls: 4
@@ -689,7 +689,7 @@ levels:
     level: 19
     sizeThreshold: 9
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 10
     maxBalls: 4
@@ -746,7 +746,7 @@ levels:
     level: 20
     sizeThreshold: 18
     expectedCuts: 6
-    points: 20
+    points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -839,7 +839,7 @@ levels:
     level: 21
     sizeThreshold: 14
     expectedCuts: 6
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 8
     maxBalls: 2
@@ -904,7 +904,7 @@ levels:
     level: 22
     sizeThreshold: 12
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 10
     randomShapes: 0
     maxBalls: 3
@@ -975,7 +975,7 @@ levels:
     level: 23
     sizeThreshold: 11
     expectedCuts: 7
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 8
     maxBalls: 3
@@ -1074,7 +1074,7 @@ levels:
     level: 24
     sizeThreshold: 10
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 16
     randomShapes: 10
     maxBalls: 3
@@ -1133,7 +1133,7 @@ levels:
     level: 25
     sizeThreshold: 10
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 10
     maxBalls: 3
@@ -1201,7 +1201,7 @@ levels:
     level: 26
     sizeThreshold: 9
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 18
     randomShapes: 12
     maxBalls: 3
@@ -1279,7 +1279,7 @@ levels:
     level: 27
     sizeThreshold: 9
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 15
     randomShapes: 10
     maxBalls: 4
@@ -1381,7 +1381,7 @@ levels:
     level: 28
     sizeThreshold: 8
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 8
     maxBalls: 3
@@ -1447,7 +1447,7 @@ levels:
     level: 29
     sizeThreshold: 7
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 16
     randomShapes: 10
     maxBalls: 4
@@ -1529,7 +1529,7 @@ levels:
     level: 30
     sizeThreshold: 12
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -1619,7 +1619,7 @@ levels:
     level: 31
     sizeThreshold: 8
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 12
     randomShapes: 8
     maxBalls: 3
@@ -1756,7 +1756,7 @@ levels:
     level: 32
     sizeThreshold: 7
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 14
     randomShapes: 10
     maxBalls: 3
@@ -1854,7 +1854,7 @@ levels:
     level: 33
     sizeThreshold: 6
     expectedCuts: 9
-    points: 20
+    points: 5
     variety: 0
     # A stray mini-obstacle inside the nook would change its cell count and cost
     # the superior grade, so this map has to stay deterministic.
@@ -1976,7 +1976,7 @@ levels:
     level: 34
     sizeThreshold: 5
     expectedCuts: 10
-    points: 20
+    points: 5
     variety: 16
     randomShapes: 10
     maxBalls: 4
@@ -2077,7 +2077,7 @@ levels:
     level: 35
     sizeThreshold: 14
     expectedCuts: 8
-    points: 20
+    points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 1

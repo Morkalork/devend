@@ -1652,7 +1652,7 @@
     "startingLevelBonus": "Varje omgång börjar på nivå {{level}}",
     "startingCapturePercent": "Brädet redan intaget +{{percent}}%",
     "extraCertificateHours": "Certifikattimmar per omgång +{{hours}}",
-    "bankedSlowPer50h": "Bollhastighet {{percent}}% per 50h i banken",
+    "bankedSlowPerStep": "Bollhastighet {{percent}}% per 13h i banken",
     "microManagerPerLock": "Bollhastighet {{percent}}% per inlåst boll",
     "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en",
     "startingOvertime": "Börja med +{{hours}}h övertid",

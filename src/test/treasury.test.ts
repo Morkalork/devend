@@ -52,10 +52,13 @@ describe("runway (hoard-side thresholds)", () => {
 });
 
 describe("budget cycle (spend-side chunks)", () => {
-  it("charges one chunk per 60h spent, boundary inclusive", () => {
-    expect(spendChunks(59.99)).toBe(0);
+  // Written against SPEND_CHUNK_HOURS rather than its value: the chunk moved
+  // with the economy deflation, and a test that pins the old number fails for
+  // being stale rather than for catching anything.
+  it("charges one chunk per chunk-worth spent, boundary inclusive", () => {
+    expect(spendChunks(SPEND_CHUNK_HOURS - 0.01)).toBe(0);
     expect(spendChunks(SPEND_CHUNK_HOURS)).toBe(1);
-    expect(spendChunks(180)).toBe(3);
+    expect(spendChunks(SPEND_CHUNK_HOURS * 3)).toBe(3);
   });
 
   it("caps at MAX_SPEND_CHUNKS no matter the splurge", () => {
@@ -64,7 +67,7 @@ describe("budget cycle (spend-side chunks)", () => {
 
   it("guards garbage spend", () => {
     expect(spendChunks(NaN)).toBe(0);
-    expect(spendChunks(-60)).toBe(0);
+    expect(spendChunks(-SPEND_CHUNK_HOURS)).toBe(0);
   });
 
   it("scales with an inflated chunk size (market rates)", () => {
@@ -72,7 +75,7 @@ describe("budget cycle (spend-side chunks)", () => {
     expect(spendChunks(119, 120)).toBe(0);
     expect(spendChunks(360, 120)).toBe(MAX_SPEND_CHUNKS);
     // Garbage chunk size falls back to the base chunk.
-    expect(spendChunks(60, NaN)).toBe(1);
+    expect(spendChunks(SPEND_CHUNK_HOURS, NaN)).toBe(1);
   });
 
   it("composes boons from the owned tiers", () => {
