@@ -17,6 +17,11 @@ import { BallTypeDef, getAllBallTypes, getBallType, loadBallTypes, selectBallTyp
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
+import {
+  getDebugMutatorOverride, setDebugMutatorOverride,
+  getForcedTiltsOverride, setForcedTiltsOverride,
+} from '@/lib/devFlags';
+import { getMapMutators } from '@/lib/mapMutators';
 import { isPerfHudEnabled, setPerfHudEnabled, isStaticBgEnabled, setStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { saveMapYaml, mapSaveMessage, promptForMapSecret, mapEditSecret, gitBlobSha, type MapSaveFailure } from '@/lib/mapSave';
 
@@ -182,6 +187,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
   const [staticBg, setStaticBg] = useState(isStaticBgEnabled);
+  // The URL dev flags as controls (CLAUDE.md, "Admin must be able to test it").
+  // Session-scoped: see devFlags.ts for why these are not persisted.
+  const [forcedMutator, setForcedMutator] = useState(getDebugMutatorOverride);
+  const [forceTilts, setForceTilts] = useState(getForcedTiltsOverride);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -1394,6 +1403,62 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: lockDebug ? 19 : 3 }}
                     />
+                  </span>
+                </button>
+              </div>
+
+              {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so
+                  a new mutator is offered the moment it is authored. Re-deals the
+                  board, because a mutator is rolled when a map mounts. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" style={{ color: forcedMutator ? accent : 'hsl(var(--foreground))' }}>
+                  Force mutator
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Every eligible map this session; restarts the board. Off the ledger.
+                  </span>
+                </label>
+                <select
+                  value={forcedMutator ?? ''}
+                  onChange={(e) => {
+                    const next = e.target.value || null;
+                    setDebugMutatorOverride(next);
+                    setForcedMutator(next);
+                    setGameKey(k => k + 1);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-xs"
+                  style={{
+                    backgroundColor: forcedMutator ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${forcedMutator ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                    color: 'hsl(var(--foreground))',
+                  }}
+                >
+                  <option value="">(normal roll)</option>
+                  {getMapMutators().map(mut => (
+                    <option key={mut.id} value={mut.id}>{mut.name} ({mut.id})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Forced tilts: `?tilt=1` as a toggle. Pins the per-tier chance to 1;
+                  still needs a gravity well on the map to mean anything. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => { const next = !forceTilts; setForcedTiltsOverride(next); setForceTilts(next); setGameKey(k => k + 1); }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: forceTilts ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${forceTilts ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold text-left" style={{ color: forceTilts ? accent : 'hsl(var(--foreground))' }}>
+                    Force board tilts
+                    <span className="block text-[10px] font-normal opacity-60">Needs a map with a gravity well. This session; off the ledger.</span>
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors flex-shrink-0"
+                    style={{ width: 36, height: 20, backgroundColor: forceTilts ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: forceTilts ? 19 : 3 }} />
                   </span>
                 </button>
               </div>

@@ -74,9 +74,9 @@ export function parseAscensionParam(search: string): number {
 /** The requested depth from the live URL. 0 when absent or malformed. */
 export function debugAscensionDepth(): number {
   try {
-    return parseAscensionParam(window.location.search);
+    return parseAscensionParam(window.location.search) || ascensionOverride;
   } catch {
-    return 0; // no window (SSR / test env without a location)
+    return ascensionOverride; // no window (SSR / test env without a location)
   }
 }
 
@@ -101,9 +101,9 @@ export function parseMutatorParam(search: string): string | null {
 /** The forced mutator id from the live URL, or null. */
 export function debugMutatorId(): string | null {
   try {
-    return parseMutatorParam(window.location.search);
+    return parseMutatorParam(window.location.search) ?? mutatorOverride;
   } catch {
-    return null; // no window (SSR / test env without a location)
+    return mutatorOverride; // no window (SSR / test env without a location)
   }
 }
 
@@ -130,15 +130,47 @@ export function parseTiltParam(search: string): boolean {
 /** Whether the live URL is forcing tilts. */
 export function forcedTilts(): boolean {
   try {
-    return parseTiltParam(window.location.search);
+    return parseTiltParam(window.location.search) || tiltsOverride;
   } catch {
-    return false; // no window (SSR / test env without a location)
+    return tiltsOverride; // no window (SSR / test env without a location)
   }
 }
+
+// ── Session overrides for the URL flags ─────────────────────────────────────
+// The three flags above were URL-only, which made them exactly as testable as
+// they were discoverable: a tester had to know the parameter existed and hand
+// edit the address bar. The Playground and the Admin screen now set them from
+// a control instead. IN MEMORY, not localStorage: a forced mutator that quietly
+// survived into next week's normal runs would be a worse bug than the one the
+// flag exists to find, and the URL form is still there for a reload to carry.
+// The URL wins when both are set, so a link someone shares means what it says.
+let mutatorOverride: string | null = null;
+let tiltsOverride = false;
+let ascensionOverride = 0;
+
+/** Force a mutator onto every eligible map for this session (null clears). */
+export function setDebugMutatorOverride(id: string | null): void {
+  mutatorOverride = id && id.trim() ? id.trim() : null;
+}
+export function getDebugMutatorOverride(): string | null { return mutatorOverride; }
+
+/** Force every sporadic tilt to fire for this session. */
+export function setForcedTiltsOverride(on: boolean): void { tiltsOverride = on; }
+export function getForcedTiltsOverride(): boolean { return tiltsOverride; }
+
+/** Start the next New Game at this ascension depth (0 clears). */
+export function setDebugAscensionOverride(depth: number): void {
+  ascensionOverride = Number.isFinite(depth) && depth > 0
+    ? Math.min(MAX_DEBUG_ASCENSION, Math.floor(depth)) : 0;
+}
+export function getDebugAscensionOverride(): number { return ascensionOverride; }
 
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;
+  mutatorOverride = null;
+  tiltsOverride = false;
+  ascensionOverride = 0;
 }
 
 /**

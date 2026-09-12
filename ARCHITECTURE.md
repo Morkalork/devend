@@ -176,7 +176,7 @@ the Hall of Fame carry an `economyScale` stamp and are converted once on load.
 Upgrade multipliers raise an axis **ceiling**, not its payout, so an upgrade is
 a commitment to a lane and is dead weight in a run that never played it.
 
-**Test gameplay changes** — Welcome → Admin → Animation Test opens the Playground: every modifier adjustable live with apply-and-restart. Use `?level=N` in the URL to jump to a level.
+**Test gameplay changes** — Welcome → Admin → Animation Test opens the Playground: every modifier adjustable live with apply-and-restart, plus a forced mutator and forced board tilts. The Admin screen itself carries the run flags (infinite lives, start-at-ascension-depth). The URL forms still work (`?level=N`, `?mutator=<id>`, `?tilt=1`, `?ascension=N`) and win over the controls. The rule, and the test that keeps it (`src/test/adminCoverage.test.ts`): whatever changes how the game plays ships with its admin control in the same commit; see CLAUDE.md.
 
 ## Known gaps
 

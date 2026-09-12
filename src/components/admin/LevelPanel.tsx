@@ -3,6 +3,54 @@ import { MIN_MAP_LIGHT } from "@/lib/rendering/sleek/boardWash";
 import { ScoringPreviewPanel } from './ScoringPreviewPanel';
 import { WinConditionsPanel } from './WinConditionsPanel';
 import { areaShareOf, clampAreaShare, DEFAULT_COLORED_AREA_SHARE, MAX_COLORED_AREA_SHARE } from '@/lib/coloredAreaShare';
+import { getMapMutators } from '@/lib/mapMutators';
+import { BOARD_SIDES, type BoardEdgeSpecs, type BoardSide } from '@/lib/physics/boardEdges';
+
+/**
+ * Optional numeric field: blank deletes it, so "this map does not say" and
+ * "this map says the default" stay different things in the YAML. `scale`
+ * lets a 0..1 field be edited as a percentage.
+ */
+function OptionalNumber({
+  level, field, label, min, max, step = 1, scale = 1, hint, onUpdateLevel,
+}: {
+  level: LevelConfig;
+  field: 'maxBalls' | 'variety' | 'timeLimit' | 'pickupChance' | 'tiltChance';
+  label: string; min: number; max?: number; step?: number; scale?: number; hint?: string;
+  onUpdateLevel: (level: LevelConfig) => void;
+}) {
+  const raw = level[field];
+  return (
+    <label className="space-y-1">
+      <span className="text-muted-foreground">{label}</span>
+      <input
+        type="number"
+        value={raw != null ? Math.round(raw * scale * 1000) / 1000 : ''}
+        onChange={(e) => {
+          const next = { ...level };
+          const v = e.target.value.trim();
+          if (v === '') delete next[field];
+          else {
+            let n = Number(v) / scale;
+            if (max != null) n = Math.min(max / scale, n);
+            next[field] = Math.max(min / scale, n);
+          }
+          onUpdateLevel(next);
+        }}
+        className="w-full px-2 py-1 rounded bg-background border border-border"
+        min={min}
+        max={max}
+        step={step}
+      />
+      {hint && <span className="block text-[10px] text-muted-foreground leading-relaxed">{hint}</span>}
+    </label>
+  );
+}
+
+/** One side's kick: 1 (or blank) is a plain bounce; the bearing is left to YAML. */
+function edgeKick(edges: BoardEdgeSpecs | undefined, side: BoardSide): number | undefined {
+  return edges?.[side]?.kick;
+}
 
 interface LevelPanelProps {
   level: LevelConfig;
@@ -113,6 +161,94 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               step={0.05}
             />
           </label>
+
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="maxBalls"
+            label="Max Balls (blank = derived)" min={1} max={12} />
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="variety"
+            label="Variety % (blank = 0)" min={0} max={100} />
+
+          {/* The map's clock. Blank is the ladder's own ramp (60s minus 10 per
+              ten levels); levels 1-3 ignore it entirely. */}
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="timeLimit"
+            label="Time Limit s (blank = ladder)" min={5} max={600} step={5} />
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="pickupChance"
+            label="Pickup Chance % (blank = global)" min={0} max={100} scale={100}
+            hint="Set at all and the global start-level gate is bypassed: 100 guarantees a token, 0 suppresses them." />
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="tiltChance"
+            label="Tilt Chance % (blank = 5-10)" min={0} max={100} scale={100}
+            hint="Per progress tier. Needs a gravity well on the map and a level past the tilt floor to mean anything." />
+
+          {/* Pinned mutator: the roll replaced by an authored one. Populated from
+              mapMutators.yml, so a new mutator is offered here the moment it is
+              authored, with nothing to remember. */}
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Pinned Mutator (blank = roll)</span>
+            <select
+              value={level.mutator ?? ''}
+              onChange={(e) => {
+                const next = { ...level };
+                if (e.target.value === '') delete next.mutator;
+                else next.mutator = e.target.value;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+            >
+              <option value="">(procedural roll)</option>
+              {getMapMutators().map(m => (
+                <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2 pt-5">
+            <input
+              type="checkbox"
+              checked={level.neverRotates === true}
+              onChange={(e) => {
+                const next = { ...level };
+                if (e.target.checked) next.neverRotates = true;
+                else delete next.neverRotates;
+                onUpdateLevel(next);
+              }}
+            />
+            <span className="text-muted-foreground">Never rotates (screen-relative design)</span>
+          </label>
+
+          {/* Board edge kicks: a speed multiplier per side on contact. 1 or
+              blank is a plain bounce. A side's BEARING (fire the ball along a
+              heading) stays YAML-only: it is rare, and a wrong one strands a map. */}
+          <div className="col-span-2 space-y-1">
+            <span className="text-muted-foreground">Board Edge Kick (x speed; blank = 1)</span>
+            <div className="grid grid-cols-4 gap-1">
+              {BOARD_SIDES.map(side => (
+                <label key={side} className="space-y-0.5">
+                  <span className="block text-[10px] text-muted-foreground capitalize">{side}</span>
+                  <input
+                    type="number"
+                    value={edgeKick(level.boardEdges, side) ?? ''}
+                    placeholder="1"
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      const edges: BoardEdgeSpecs = { ...(level.boardEdges ?? {}) };
+                      const spec = { ...(edges[side] ?? {}) };
+                      if (v === '' || Number(v) === 1) delete spec.kick;
+                      else spec.kick = Math.max(0.25, Math.min(3, Number(v)));
+                      if (Object.keys(spec).length === 0) delete edges[side];
+                      else edges[side] = spec;
+                      const next = { ...level };
+                      if (Object.keys(edges).length === 0) delete next.boardEdges;
+                      else next.boardEdges = edges;
+                      onUpdateLevel(next);
+                    }}
+                    className="w-full px-1 py-1 rounded bg-background border border-border"
+                    min={0.25}
+                    max={3}
+                    step={0.05}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
 
           <label className="space-y-1">
             <span className="text-muted-foreground">Random Shapes %</span>

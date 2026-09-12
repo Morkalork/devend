@@ -71,6 +71,28 @@ Capacitor/Play-Store packaging.
   the `name`/`description`/other displayed fields in `public/*.yml`. Use a
   comma, colon, parentheses, or a spaced hyphen (`-`) instead. (Code comments
   are not UI text and are exempt.)
+- **Admin must be able to test it, in the same commit.** Anything new that
+  changes how the game plays lands together with the Admin control that lets a
+  tester reach it, not as a follow-up. Concretely:
+  - a new `GameModifiers` key gets a Playground knob in `MODIFIER_META`
+    (`src/components/admin/PlaygroundScreen.tsx`; the table is typed over every
+    key, so the compiler holds this one);
+  - a new scalar `LevelConfig` field gets an editor in `LevelPanel.tsx`; a
+    structured field (entities, beats, circuits, ...) gets one in
+    `EntityPanel.tsx` or is listed in `src/test/adminCoverage.test.ts` with a
+    reason, and that list may only shrink;
+  - a new mutator, ability, ball type or fence type comes from its YAML
+    catalogue, so the existing pickers list it with nothing to remember - keep
+    it that way, never a hardcoded list in admin;
+  - a new dev flag or debug switch gets a control in `AdminScreen.tsx` or the
+    Playground, never a URL parameter alone: URL-only flags are exactly as
+    testable as they are discoverable, which is how shifting gravity shipped
+    without ever being watched;
+  - a chance-based mechanic must be forceable from admin (a knob that reaches
+    100%, or a toggle), because "did not fire" and "does not work" look the
+    same from the outside.
+  `src/test/adminCoverage.test.ts` pins all of this; when a new CLASS of thing
+  appears, extend that test in the same commit.
 
 ## TL;DR first
 
