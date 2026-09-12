@@ -78,7 +78,7 @@ describe("music catalogue", () => {
 
   it("has its screen strings in every locale", () => {
     for (const [lang, dict] of [["en", en], ["es", es], ["sv", sv]] as const) {
-      const music = (dict as Record<string, unknown>).music as Record<string, unknown>;
+      const music = (dict as unknown as Record<string, unknown>).music as Record<string, unknown>;
       expect(music, `${lang} is missing the music block`).toBeTruthy();
       for (const key of ["title", "subtitle", "play", "pause", "byArtist", "artistUnknown", "viaSource", "licenseNote", "licenseLink", "back"]) {
         expect(music[key], `${lang}.music.${key}`).toBeTruthy();
@@ -87,7 +87,8 @@ describe("music catalogue", () => {
       for (const key of ["menu", "band", "credits"]) {
         expect(usedFor[key], `${lang}.music.usedFor.${key}`).toBeTruthy();
       }
-      expect(((dict as Record<string, Record<string, string>>).welcome).music, `${lang}.welcome.music`).toBeTruthy();
+      const welcome = (dict as unknown as Record<string, Record<string, string>>).welcome;
+      expect(welcome.music, `${lang}.welcome.music`).toBeTruthy();
     }
   });
 
