@@ -10,7 +10,7 @@
 
 import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
 import { MoverState, buildMoverPolygon, buildRotorOutline } from "@/lib/physics/moverState";
-import { GameModifiers } from "@/hooks/useActiveModifiers";
+import { GameModifiers, MAX_STARTING_CAPTURE_PERCENT } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
@@ -229,9 +229,17 @@ export function createInitialGameData(
   const arenaWidth  = BOARD_WIDTH  - margin * 2;
   const arenaHeight = BOARD_HEIGHT - margin * 2;
 
-  // startingCapturePercent (Equity Grant cert) shrinks the playable arena and
-  // counts the trimmed margin as already-captured: the run starts below 100%.
-  const startingCapture = Math.max(0, Math.min(40, activeModifiers.startingCapturePercent));
+  // startingCapturePercent (Onboarding, Equity Grant cert) shrinks the
+  // playable arena and counts the trimmed margin as already-captured: the run
+  // starts below 100%. computeGameModifiers already clamps this to
+  // MAX_STARTING_CAPTURE_PERCENT for every normal gameplay path, so this
+  // second clamp is defence in depth rather than the source of truth: this
+  // function is also called directly by the bot harness, the Playground
+  // preview and hand-built test fixtures, none of which are guaranteed to have
+  // gone through that merge. Same constant either way, so the two clamps
+  // cannot quietly disagree about where the line is.
+  const startingCapture = Math.max(
+    0, Math.min(MAX_STARTING_CAPTURE_PERCENT, activeModifiers.startingCapturePercent));
 
   /**
    * Breaking Change: knock the reduction off an object's authored integrity.

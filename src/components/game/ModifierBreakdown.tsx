@@ -145,6 +145,21 @@ export function ModifierBreakdown({
           : t('bottomBarDetails.instantFencesInactive'),
     },
     {
+      // Onboarding / Equity Grant: a map's own board is smaller from the first
+      // frame rather than anything visibly appearing captured, so this row is
+      // the one place the effect is actually confirmable. Rounded the same way
+      // initGame clamps it, so this can never claim a bigger head start than
+      // the map you are about to play actually gets.
+      label: t('bottomBarDetails.startingCapture'),
+      value: `${bonus(m.startingCapturePercent)}%`,
+      changed: m.startingCapturePercent !== 0,
+      keys: ['startingCapturePercent'],
+      description:
+        m.startingCapturePercent > 0
+          ? t('bottomBarDetails.startingCaptureActive', { percent: m.startingCapturePercent })
+          : t('bottomBarDetails.startingCaptureInactive'),
+    },
+    {
       label: t('bottomBarDetails.concurrentFences'),
       value: bonus(m.additionalConcurrentFences),
       changed: m.additionalConcurrentFences !== 0,

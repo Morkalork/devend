@@ -251,6 +251,19 @@ export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
 export const MAX_FASTEST_BALL_SLOW_PERCENT = 20;
 
 /**
+ * Ceiling on the pre-captured share of the board a map can start with.
+ *
+ * Onboarding and the Equity Grant certificate both grant this and share it: a
+ * player who stacks both past this line would otherwise start a map more than
+ * half already won, on every map, forever. Clamped HERE rather than at each
+ * reader (initGame, the shop's modifier readout) so every consumer of
+ * `startingCapturePercent` sees the same already-capped number - the same
+ * reason MAX_FENCE_GRACE_MS lives beside its own clamp instead of at the one
+ * call site it happened to be written for first.
+ */
+export const MAX_STARTING_CAPTURE_PERCENT = 40;
+
+/**
  * A single named contributor to the merged GameModifiers — an owned upgrade,
  * certificate, activated achievement, drafted loadout, or the ascension ramp.
  * Its `modifiers` are that source's raw (pre-merge) contribution, so the HUD
@@ -459,6 +472,13 @@ export function computeGameModifiers(
   result.microManagerPerLock = Math.min(result.microManagerPerLock, MAX_MICRO_MANAGER_PER_LOCK);
   result.fastestBallSlowPercent = Math.min(
     result.fastestBallSlowPercent, MAX_FASTEST_BALL_SLOW_PERCENT);
+
+  // Onboarding and Equity Grant stack (they share the key), so this has to
+  // cap the SUM, not either source alone. Also floors a negative extra bonus
+  // at 0 rather than letting the board grow past 100% captured, which initGame
+  // trusted callers to do for it before the clamp moved here.
+  result.startingCapturePercent =
+    Math.max(0, Math.min(result.startingCapturePercent, MAX_STARTING_CAPTURE_PERCENT));
 
   return result;
 }
