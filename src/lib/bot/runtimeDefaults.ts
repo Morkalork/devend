@@ -156,6 +156,8 @@ export function runtimeDefaults() {
     pickupsClaimedLog: [],
     freezeUsesRemaining: 0,
     freezePickups: false,
+    bugSquashChance: 0,
+    bugSquashSeconds: 0,
     pickupFeedback: [],
   };
 }

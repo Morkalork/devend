@@ -157,6 +157,11 @@ export interface GameModifiers {
   // Additive (sum) — Cold Boot: seconds every ball stays frozen at map start
   // (rides the Feature Freeze frozenUntil path; no re-freeze cooldown after)
   spawnFreezeSeconds: number;
+  // Additive (sum) - Bug Squash: percent chance (5 + 3 + 4 = 12) that a ball
+  // hitting a wall squashes flat against it and sticks, and for how many
+  // seconds (2 + 1 + 0.5 = 3.5). A stuck ball rides the frozenUntil path.
+  bugSquashChance: number;
+  bugSquashSeconds: number;
   // Additive (sum) — Benefits Package: extra pickup-token spawn chance per
   // roll (0.03 = +3 percentage points). Deliberately vague in all player-facing
   // copy ("slightly more often"); only applies where pickups are enabled.
@@ -368,6 +373,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   spendChunkCapBonus: 0,
   lockThresholdBonus: 0,
   spawnFreezeSeconds: 0,
+  bugSquashChance: 0,
+  bugSquashSeconds: 0,
   pickupChanceBonus: 0,
   pickupPayoutLevel: 0,
   destructibleHitsReduction: 0,

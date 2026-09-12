@@ -65,6 +65,10 @@ const EXPECTED_ROOTS = [
   // do not let the ball hit my growing fence. Onboarding shortens the map
   // instead, so the opening choice has a second direction in it.
   "onboarding_junior",
+  // Bug Squash: the freeze archetype's chance-based root. A held ball with no
+  // tap and no charge spent, so it sits beside Cold Boot rather than behind
+  // Feature Freeze.
+  "bug_squash_junior",
   // The two ways to relate to the store's ability slot. Roots, and deliberately
   // NOT a chain: Open Source Contribution removes the slot that Talent Scout
   // widens, so gating one behind the other would sell a player an upgrade and

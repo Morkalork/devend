@@ -41,7 +41,7 @@ import {
   constrainBallToRegion,
 } from "@/lib/regionOwnership";
 import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
-import { updateBallEffects, triggerWallHit, bounceImpact } from "@/lib/ballEffects";
+import { updateBallEffects, triggerWallHit, bounceImpact, pinSquish } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
@@ -320,6 +320,36 @@ function applyDeformable(
   // per-wall AABB is a different story and applyDent invalidates it - see there.
 }
 
+/**
+ * Bug Squash: roll whether this wall hit sticks the ball, and stick it.
+ *
+ * Called right after triggerWallHit has recorded the impact normal, on the
+ * three surfaces that do not move (board edges, fences, static obstacles).
+ * Movers are deliberately excluded: a ball glued to something that then slides
+ * away, or into it, is a bug of ours rather than the one being squashed.
+ *
+ * The hold rides `frozenUntil`, so everything that already knows what a held
+ * ball is - immovable in ball-to-ball collisions, no trail, exempt from the
+ * speed floor and gravity, Frozen Assets paying on it - applies unchanged.
+ * `bugSquashUntil` exists only so the renderer draws a splat rather than
+ * frost, and `freezeReadyAt` is left alone: the thaw cooldown is a tax on
+ * taps, and this was never a tap.
+ *
+ * Rolled from the run's persistent stream (runStream, not getRunRng): a fresh
+ * generator per call would return the same number on every hit and a seeded
+ * Daily would stick the same ball on every wall, or never.
+ */
+function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): void {
+  if (!(game.bugSquashChance > 0) || !(game.bugSquashSeconds > 0)) return;
+  if (ball.isBoss || ball.state !== "active") return;
+  if (ball.frozenUntil !== undefined && now < ball.frozenUntil) return;
+  if (runStream(`bugSquash:${ball.id}`)() * 100 >= game.bugSquashChance) return;
+  const holdMs = game.bugSquashSeconds * 1000;
+  ball.frozenUntil = now + holdMs;
+  ball.bugSquashUntil = now + holdMs;
+  pinSquish(ball.effects, now, holdMs);
+}
+
 export function updateBall(
   ball: Ball,
   dt: number,
@@ -332,6 +362,18 @@ export function updateBall(
   sanitise(ball, game);
 
   const now = performance.now();
+
+  // A held ball (tap-freeze, Cold Boot, a Breakpoint fence, Bug Squash) does
+  // not move. Decided HERE and not only in the game loop: the browser loop
+  // already skips a frozen ball before calling this, but the headless harness
+  // calls updateBall for every ball unconditionally, so until this line a
+  // frozen ball kept moving in every bot sweep. Its effects still tick so the
+  // pulse and the impact halo animate, and a pinned squash stays pinned
+  // because the hold is keyed on the clock inside updateBallEffects.
+  if (ball.frozenUntil !== undefined && now < ball.frozenUntil) {
+    updateBallEffects(ball.effects, dt, now);
+    return;
+  }
 
   // Boss break-out leap (issue #56): after a non-fatal trap the boss comes to a
   // FULL STOP, then ARCS out of the sealed pocket back onto the open map (a whoosh
@@ -599,6 +641,7 @@ export function updateBall(
         );
         // Trigger wall hit effect on ball
         triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
+        maybeBugSquash(ball, game, now);
         // Play wall hit sound
         playWallHitSound(impactStrength);
       }
@@ -735,6 +778,7 @@ export function updateBall(
 
       // Trigger wall hit effect on ball
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
+      maybeBugSquash(ball, game, now);
 
       // Play wall hit sound for obstacle collision
       const spd = vec2Length(ball.velocity);
@@ -811,6 +855,7 @@ export function updateBall(
         registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
       }
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
+      maybeBugSquash(ball, game, now);
       playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.

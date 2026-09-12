@@ -180,6 +180,9 @@ export interface InitialGameData {
   gravityWells: GravityWell[];
   coloredAreas: ColoredArea[];
   pickupSpots: Vector2[];
+  /** Bug Squash, copied here so the bot harness sticks balls the way the browser does. */
+  bugSquashChance: number;
+  bugSquashSeconds: number;
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
   /** Behaviour for the four outer walls, from the level. Absent on most maps. */
@@ -1402,6 +1405,8 @@ export function createInitialGameData(
     gravityWells: (level.gravityWells ?? []).map(w => rotateGravityWell(w, mapRotation)),
     coloredAreas: (level.coloredAreas ?? []).map(a => rotateColoredArea(a, mapRotation)),
     pickupSpots: (level.pickupSpots ?? []).map(sp => rotatePoint(sp.x, sp.y, mapRotation)),
+    bugSquashChance: Math.max(0, Math.min(100, activeModifiers.bugSquashChance ?? 0)),
+    bugSquashSeconds: Math.max(0, activeModifiers.bugSquashSeconds ?? 0),
     mirrorPolygons,
     boardPolygon,
     // Screen space, and only meaningful because a map that authors these

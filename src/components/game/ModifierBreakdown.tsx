@@ -307,6 +307,16 @@ export function ModifierBreakdown({
           : t('bottomBarDetails.spawnFreezeInactive'),
     },
     {
+      label: t('bottomBarDetails.bugSquash'),
+      value: m.bugSquashChance > 0 ? `${m.bugSquashChance}%` : t('bottomBarDetails.off'),
+      changed: m.bugSquashChance !== 0 || m.bugSquashSeconds !== 0,
+      keys: ['bugSquashChance', 'bugSquashSeconds'],
+      description:
+        m.bugSquashChance > 0
+          ? t('bottomBarDetails.bugSquashActive', { percent: m.bugSquashChance, seconds: m.bugSquashSeconds })
+          : t('bottomBarDetails.bugSquashInactive'),
+    },
+    {
       // Deliberately vague (no percentages): Benefits Package is sold as
       // "tokens appear more often", never as an exact number.
       label: t('bottomBarDetails.pickupChance'),

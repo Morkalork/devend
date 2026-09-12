@@ -1460,6 +1460,73 @@ upgrades:
     # not a data edit.
     scaling: { tag: safety, key: ballPathPredictionBounces, per: 1, every: 4, max: 8 }
 
+  # ===============================
+  # BUG SQUASH (a wall hit may stick the ball)
+  # Every wall a ball hits is a roll: on a hit, the ball squashes flat against
+  # the surface and stays stuck there, immovable, for a few seconds before it
+  # un-squashes and carries on along the path it would have taken. Odds and
+  # hold both grow up the chain (5%/2s, 8%/3s, 12%/3.5s).
+  #
+  # The freeze archetype's chance-based member: a held ball with no tap and no
+  # charge spent, so a stuck ball is a gift rather than a decision. It rides
+  # the same held-ball rules as a tap-freeze (immovable, exempt from the speed
+  # floor, and Frozen Assets pays on a lock made while it is stuck), which is
+  # what makes it a freeze build's pick rather than a curiosity. The physics
+  # roll and the hold live in updateBall (maybeBugSquash); the squash itself is
+  # ballEffects.pinSquish, and it is drawn against the wall by ballLayer.
+  # ===============================
+
+  - id: bug_squash_junior
+    name: Bug Squash
+    tier: Junior
+    description: "Every wall hit has a 5% chance to squash the ball flat against it and stick it there for 2s."
+    unlockLevel: 7
+    icon: bug
+    tags: [freeze]
+    modifiers:
+      bugSquashChance: 5
+      bugSquashSeconds: 2
+
+  - id: bug_squash_senior
+    name: Bug Squash
+    tier: Senior
+    description: "Squash odds rise to 8%, and a stuck ball stays put for 3s."
+    unlockLevel: 11
+    prerequisites:
+      - bug_squash_junior
+    tags: [freeze]
+    modifiers:
+      bugSquashChance: 3
+      bugSquashSeconds: 1
+
+  # Principal is a CHOICE, as every family's last tier is: more sticks, or
+  # longer ones. A wants a ball caught often; B wants the rare catch to be
+  # worth planning a whole cut around. Owning one locks out the other.
+  - id: bug_squash_principal_a
+    name: Bug Squash
+    tier: Principal
+    description: "Splat Rate: squash odds rise to 12%, and a stuck ball stays put for 3.5s."
+    unlockLevel: 17
+    prerequisites:
+      - bug_squash_senior
+    choiceGroup: bug_squash_principal
+    tags: [freeze]
+    modifiers:
+      bugSquashChance: 4
+      bugSquashSeconds: 0.5
+
+  - id: bug_squash_principal_b
+    name: Bug Squash
+    tier: Principal
+    description: "Sticky Situation: odds stay at 8%, but a stuck ball stays put for 6s."
+    unlockLevel: 17
+    prerequisites:
+      - bug_squash_senior
+    choiceGroup: bug_squash_principal
+    tags: [freeze]
+    modifiers:
+      bugSquashSeconds: 3
+
   - id: cold_boot
     name: Cold Boot
     tier: Junior

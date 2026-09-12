@@ -63,6 +63,13 @@ export interface BallEffectState {
   squishNx: number;        // unit impact-normal x (the compression axis)
   squishNy: number;        // unit impact-normal y
   squishAmount: number;    // 0-1 speed-scaled magnitude captured at impact (0 = no squish)
+  // Bug Squash hold. While `squishHoldUntil` is in the future the squash ramps
+  // in and then PINS at full compression instead of springing back; the
+  // spring-back plays from the moment the hold lifts. `squishBoost` scales the
+  // pinned deformation past the ordinary bounce's, so a stuck ball reads as
+  // splatted rather than merely nudged.
+  squishHoldUntil: number;
+  squishBoost: number;
 }
 
 // Effect configuration
@@ -104,6 +111,16 @@ const CONFIG = {
   // scene, so the deformation can stop over-acting.
   squishMaxCompress: 0.1715,
   squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
+
+  // Bug Squash (a stuck ball). The ordinary bounce compresses immediately at
+  // impact because at 60fps a ramp-in of a few frames is invisible; a ball that
+  // is about to sit still for seconds is different, and the ramp is what makes
+  // it read as "hit the wall and squashed" rather than "appeared flat". The
+  // boost takes the pinned compression to ~0.34, which is the 0.35 this file
+  // once dialled back for reading as rubbery on a passing bounce: rubbery is
+  // exactly right for a bug flattened against glass.
+  stickRampMs: 90,
+  stickCompressBoost: 2.0,
 };
 
 /**
@@ -121,6 +138,8 @@ export function createBallEffectState(): BallEffectState {
     squishNx: 0,
     squishNy: 0,
     squishAmount: 0,
+    squishHoldUntil: 0,
+    squishBoost: 1,
   };
 }
 
@@ -158,6 +177,23 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
     }
   }
 
+  // Bug Squash hold: ramp into the squash, then pin there until the hold lifts.
+  // The spring-back below is then played from the moment of release, so the
+  // ball visibly un-squashes as it leaves rather than snapping round. This
+  // branch runs whether or not the physics ticked during the hold (the browser
+  // loop skips a held ball, the harness does not), which is why release is
+  // keyed on the clock rather than on a tick count.
+  if (state.squishHoldUntil > 0) {
+    if (now < state.squishHoldUntil) {
+      const p = Math.min(1, (now - state.squishTime) / CONFIG.stickRampMs);
+      state.squishIntensity = Math.sin(p * Math.PI / 2); // ease-out into the splat
+      return;
+    }
+    state.squishHoldUntil = 0;
+    state.squishTime = now;
+    state.squishIntensity = 1;
+  }
+
   // Spring the squish back to round. One gentle overshoot (compress -> slight
   // stretch -> settle) under a linear-decay envelope, like a soft ball rebounding.
   if (state.squishAmount > 0) {
@@ -165,6 +201,7 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
     if (elapsed >= CONFIG.squishDuration) {
       state.squishAmount = 0;
       state.squishIntensity = 0;
+      state.squishBoost = 1;
     } else {
       const p = elapsed / CONFIG.squishDuration;
       state.squishIntensity = (1 - p) * Math.cos(p * Math.PI * 1.5);
@@ -252,6 +289,29 @@ function triggerSquish(
 }
 
 /**
+ * Bug Squash: pin the ball's squash against the wall it just hit for `holdMs`.
+ *
+ * Call right after triggerWallHit, which has already recorded the impact
+ * normal; this re-arms the envelope at full magnitude regardless of how hard
+ * the ball actually hit (a splat is a splat), starts the ramp-in, and sets the
+ * hold. Does nothing without a recorded normal, because a squash with no axis
+ * would be drawn along whatever axis the last impact happened to leave behind.
+ */
+export function pinSquish(state: BallEffectState, now: number, holdMs: number): void {
+  if (state.squishNx === 0 && state.squishNy === 0) return;
+  state.squishAmount = 1;
+  state.squishIntensity = 0;
+  state.squishTime = now;
+  state.squishHoldUntil = now + Math.max(0, holdMs);
+  state.squishBoost = CONFIG.stickCompressBoost;
+}
+
+/** True while a Bug Squash hold is pinning this ball's squash. */
+export function isSquishPinned(state: BallEffectState, now: number): boolean {
+  return state.squishHoldUntil > 0 && now < state.squishHoldUntil;
+}
+
+/**
  * Current squash-and-stretch deformation. `scaleAlong` compresses the ball along
  * the impact normal (nx,ny); `scalePerp` stretches perpendicular to preserve
  * area. Both are 1 when round. Apply as a rotated non-uniform scale at render.
@@ -276,7 +336,11 @@ export function getSquishEffect(state: BallEffectState, scale = 1): {
   // Signed compression along the normal; inverse perpendicular keeps area
   // constant. `scale` dials the whole deformation down per ball (e.g. 0.5 for
   // large boss balls, which look overblown at the full compression).
-  const s = state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress * scale;
+  // Boosted (Bug Squash) and clamped: at boost 2 the pinned compression is
+  // ~0.34, and the clamp only exists so no future dial can push scaleAlong
+  // through zero and turn the ball inside out.
+  const s = Math.min(0.8,
+    state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress * state.squishBoost * scale);
   return {
     active: true,
     scaleAlong: 1 - s,

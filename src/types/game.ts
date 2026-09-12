@@ -56,6 +56,12 @@ export interface Ball {
   // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
   frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
   freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)
+  // ── Bug Squash upgrade ─────────────────────────────────────────────────────
+  // While set and in the future, this ball is stuck flat against the wall it
+  // just hit. The HOLD itself rides frozenUntil (same immovable-in-collisions,
+  // no-trail, frozen-lock-bonus rules as a tap-freeze); this only tells the
+  // renderer to draw a squash rather than frost. See maybeBugSquash.
+  bugSquashUntil?: number;
   // ── Ball type / abilities (issue #37) ───────────────────────────────────
   typeId: string;            // ball-type id from ballTypes.ts (red, blue, yellow, …)
   ability: import('@/lib/ballTypes').BallAbility; // gameplay ability this ball carries

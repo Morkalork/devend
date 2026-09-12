@@ -39,7 +39,7 @@
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
-import { getSquishEffect, getWallHitEffect, getBallHitEffect } from "@/lib/ballEffects";
+import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
@@ -446,6 +446,18 @@ export class SleekBallLayer {
     if (squish.active) {
       holder.rotation = Math.atan2(squish.ny, squish.nx);
       holder.scale.set(squish.scaleAlong, squish.scalePerp);
+      // A pinned squash (Bug Squash) is drawn AGAINST the wall. The physics
+      // centre sits one radius off the surface; compressing about that centre
+      // would float the flattened face a few pixels clear of the wall for the
+      // whole hold, which reads as hovering rather than stuck. Sliding the
+      // body toward the wall by exactly the compression keeps the flat face on
+      // the surface. The normal points off the wall (it is the bounce impulse),
+      // so "toward the wall" is minus it. Only while pinned: a passing bounce
+      // is gone before the gap could register.
+      if (isSquishPinned(ball.effects, this.now)) {
+        const sink = r * (1 - squish.scaleAlong);
+        holder.position.set(c.x - squish.nx * sink, c.y - squish.ny * sink);
+      }
     } else {
       holder.rotation = 0;
       holder.scale.set(1, 1);
@@ -479,7 +491,11 @@ export class SleekBallLayer {
     // ── Frost: this ball is held by a tap-freeze ────────────────────────────
     // Informational, not decorative - a frozen ball is one the player has spent
     // a charge on and is planning a cut around, so it has to be unmistakable.
-    if (ball.frozenUntil !== undefined && this.now < ball.frozenUntil) {
+    // Not on a Bug Squash hold, which also rides frozenUntil: that ball is
+    // telling its own story with its shape, and frost over a splat would say
+    // "you spent a freeze here" about a freeze the player never spent.
+    const squashed = ball.bugSquashUntil !== undefined && this.now < ball.bugSquashUntil;
+    if (!squashed && ball.frozenUntil !== undefined && this.now < ball.frozenUntil) {
       this.overlays
         .circle(c.x, c.y, r * 1.12)
         .stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.frost, alpha: 0.85 });

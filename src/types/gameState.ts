@@ -342,6 +342,13 @@ export interface CanvasGameState {
    */
   gravityBendMultiplier?: number;
   /**
+   * Bug Squash: percent chance (0..100) that a wall hit sticks the ball, and
+   * how long it stays stuck. Copied from the modifiers by createInitialGameData
+   * rather than by GameCanvas, so the bot harness plays the same board.
+   */
+  bugSquashChance: number;
+  bugSquashSeconds: number;
+  /**
    * Space remaining (%) as of the last resolved cut. Undefined until the first
    * one lands, which readers must treat as a full board rather than as zero.
    *

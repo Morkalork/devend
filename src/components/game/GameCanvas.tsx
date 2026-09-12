@@ -852,6 +852,8 @@ export function GameCanvas({
     pickupsClaimedLog: [] as { effect: PickupEffect; value: number }[],
     freezeUsesRemaining: 0,
     freezePickups: false,
+    bugSquashChance: 0,
+    bugSquashSeconds: 0,
     pickupFeedback: [] as PickupFeedback[],
   });
 
@@ -1061,6 +1063,11 @@ export function GameCanvas({
       game.pickupSpots = data.pickupSpots;
       game.coloredAreas = data.coloredAreas;
       game.gravityWells = data.gravityWells;
+      // Bug Squash. Copied like everything else in this block: updateBall reads
+      // them off the game (it is never handed modifiers), and the harness gets
+      // the same two numbers from the same builder.
+      game.bugSquashChance = data.bugSquashChance;
+      game.bugSquashSeconds = data.bugSquashSeconds;
       // File the well explainer the first time a map actually has one. Filed
       // rather than shown: a well is visible, quiet and never instantly fatal,
       // so it does not earn an interruption (see manual.ts on what does).

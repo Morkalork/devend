@@ -387,7 +387,11 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 18/15/14: Set A Breakpoint, the open-shelf fence upgrade, is a Junior
+    // 19/16/15: Bug Squash arrived as a complete Junior->Senior->Principal
+    // ladder with an ungated head (its Principal is a fork, which Tenure walks
+    // like Onboarding's), so every threshold gained one.
+    //
+    // Before that, 18/15/14: Set A Breakpoint, the open-shelf fence upgrade, is a Junior
     // root with no siblings, so it resolves as a chain at the SHALLOWEST
     // threshold only - one step is one rung. At 20 and 30 the walk needs a
     // Senior and a Principal to continue into and finds none, so it drops out.
@@ -443,7 +447,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // so the family is no longer a Tenure head - the same reading that keeps
     // Budget Cycle, Procurement and Total Compensation out. It is still buyable
     // in the shop; it is just not a whole chain Tenure will hand over.
-    expect(counts).toEqual([18, 15, 14]);
+    expect(counts).toEqual([19, 16, 15]);
   });
 });
 
