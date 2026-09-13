@@ -44,9 +44,11 @@ import { splatOutline, splatMetrics, splatCore, SPLAT_SEGMENTS } from "@/lib/ren
 import { createLiquidImage, rasterizeLiquid, type LiquidImage } from "@/lib/rendering/liquidSplat";
 import type { SplatScene } from "@/lib/splatScene";
 import {
-  heartbeat, heartPhase, heartRate, flightStretch, createLag, stepLag,
+  heartbeat, heartPhase, heartRate, flightStretch, createLag, stepLag, flicker,
   BREATHE, CORONA_FLARE, type Lag,
 } from "@/lib/rendering/ballLife";
+import { webTex, clearWebTextures } from "./ballWeb";
+import { getBallLook } from "@/lib/ballLook";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
@@ -181,6 +183,7 @@ export function clearSphereCache(): void {
   sphereCache.clear();
   coronaTexture?.destroy(true);
   coronaTexture = null;
+  clearWebTextures();
 }
 
 /**
@@ -212,7 +215,20 @@ interface BallView {
   lag: Lag;
   /** When this view last drew, for the spring's dt. */
   lastNow: number;
+  /**
+   * The web on the shell (ballWeb.ts): the body's fan again, multiplied over
+   * it, its UVs turned by the ball's rotation each frame so the pattern rolls.
+   */
+  web: Mesh;
+  webPos: Float32Array;
+  webUv: Float32Array;
 }
+
+/** Web strength fades out below this radius (screen px) and is gone WEB_FADE_PX lower. */
+const WEB_FULL_PX = 10;
+const WEB_FADE_PX = 3;
+/** The web's peak alpha at strength 1. Multiply blend, so this is how dark the strands get. */
+const WEB_ALPHA = 0.7;
 
 /**
  * A STUCK ball's display objects: the liquid splat (liquidSplat.ts).
@@ -420,14 +436,25 @@ export class SleekBallLayer {
       corona.blendMode = "add";
       this.coronas.addChild(corona);
 
+      // The web rides the body: added right after it so the pair stays
+      // adjacent in the draw order and another ball's body never comes
+      // between a ball and its own pattern.
+      const wgeo = makeFan();
+      const web = new Mesh({ geometry: wgeo.geometry, texture: Texture.WHITE });
+      web.blendMode = "multiply";
+      web.visible = false;
+      this.bodies.addChild(web);
+
       this.views.push({
         body, bodyPos: b.positions, corona, coronaPos: c.positions, liquid: null,
         lag: createLag(), lastNow: 0,
+        web, webPos: wgeo.positions, webUv: wgeo.geometry.attributes.aUV.buffer.data as Float32Array,
       });
     }
     for (let i = balls.length; i < this.views.length; i++) {
       this.views[i].body.visible = false;
       this.views[i].corona.visible = false;
+      this.views[i].web.visible = false;
       const liquid = this.views[i].liquid;
       if (liquid) liquid.body.visible = liquid.glow.visible = false;
     }
@@ -529,7 +556,7 @@ export class SleekBallLayer {
     ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number,
     activeSeconds: number,
   ): void {
-    const { body, bodyPos, corona, coronaPos } = view;
+    const { body, bodyPos, corona, coronaPos, web, webPos, webUv } = view;
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
@@ -755,11 +782,19 @@ export class SleekBallLayer {
     }
 
     // ── Body ────────────────────────────────────────────────────────────────
+    const look = getBallLook();
+    // The light inside flickers now and then (ballLife.ts): the corona and
+    // the pool dim together, the body's bake does not. Not while asleep or
+    // locked, whose light is out or going out on its own schedule.
+    const flick = look.flicker && beating ? flicker(this.now, heartPhase(ball.id) * 7) : 1;
     if (lv) {
       lv.body.visible = true;
       lv.glow.visible = !dormant && bodyAlpha > 0.01;
+      lv.glow.alpha = bodyAlpha * (0.55 + 0.45 * flick);
       body.visible = false;
       corona.visible = false;
+      // The melt has no shell to carry a pattern.
+      web.visible = false;
     } else {
       if (view.liquid) view.liquid.body.visible = view.liquid.glow.visible = false;
       body.visible = true;
@@ -772,6 +807,37 @@ export class SleekBallLayer {
       writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy, lagDx, lagDy);
       if (stretchK > 0) stretchFan(bodyPos, c.x, c.y, ux, uy, 1 + stretchK, 1 - stretchK * 0.55);
       body.geometry.attributes.aPosition.buffer.update();
+
+      // ── The web ───────────────────────────────────────────────────────────
+      // The same fan as the body (so it squashes, breathes and stretches with
+      // it), with the centre vertex on the un-lagged core: the pattern is on
+      // the shell, and the shell does not slosh. Its UVs turn by the ball's
+      // rotation, which the physics has always advanced and nothing drew.
+      const sizeFade = Math.min(1, Math.max(0, (r - (WEB_FULL_PX - WEB_FADE_PX)) / WEB_FADE_PX));
+      const webAlpha = look.web * WEB_ALPHA * sizeFade * bodyAlpha;
+      web.visible = webAlpha > 0.01;
+      if (web.visible) {
+        webPos.set(bodyPos);
+        webPos[0] = sx(core.x, core.y);
+        webPos[1] = sy(core.x, core.y);
+        web.geometry.attributes.aPosition.buffer.update();
+        // Sampling at theta MINUS the rotation turns the pattern BY the
+        // rotation on screen, the same way round as the pool's sprite, so
+        // the web and its shadow roll together.
+        const rot = -ball.rotation;
+        const cr = Math.cos(rot), srot = Math.sin(rot);
+        for (let i = 0; i < SPLAT_SEGMENTS; i++) {
+          const theta = (i / SPLAT_SEGMENTS) * Math.PI * 2;
+          const ux0 = Math.sin(theta) * 0.5, uy0 = -Math.cos(theta) * 0.5;
+          webUv[(i + 1) * 2] = 0.5 + ux0 * cr - uy0 * srot;
+          webUv[(i + 1) * 2 + 1] = 0.5 + ux0 * srot + uy0 * cr;
+        }
+        web.geometry.attributes.aUV.buffer.update();
+        web.texture = webTex();
+        // Dark strands in the ball's own hue: multiply by a shade of itself.
+        web.tint = mix(bodyColor, 0x000000, 0.5);
+        web.alpha = webAlpha;
+      }
 
       // ── Corona ────────────────────────────────────────────────────────────
       // The bleed past the ball's own edge. A bright disc reads as a bright
@@ -793,7 +859,7 @@ export class SleekBallLayer {
         // reads as heat. More so on the beat: the flare is the heartbeat's
         // brightness half, the swell being its size half.
         corona.tint = mix(bodyColor, 0xffffff, 0.4 + CORONA_FLARE * heart);
-        corona.alpha = body.alpha;
+        corona.alpha = body.alpha * (0.55 + 0.45 * flick);
       }
     }
 

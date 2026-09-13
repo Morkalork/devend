@@ -35,6 +35,9 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
+import { webPoolTex, WEB_POOL_BAKE } from "./ballWeb";
+import { flicker, heartPhase } from "@/lib/rendering/ballLife";
+import { getBallLook } from "@/lib/ballLook";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -121,6 +124,13 @@ export function lightBufferPlan(rect: BoardRect): {
 
 interface Emitter {
   glow: Sprite;
+  /**
+   * The same pool with the shell's web shadowed into it (ballWeb.ts), turned
+   * by the ball's rotation. Both pools are additive, so mixing their alphas
+   * by the web strength is a linear blend between plain light and webbed
+   * light, and a strength of zero is exactly today's pool.
+   */
+  gobo: Sprite;
   shade: Graphics;
 }
 
@@ -145,7 +155,7 @@ export class BallLightPass {
    * Compose this frame's lighting. Pure display-tree work: no renderer, no GPU,
    * so it is drivable headlessly and the geometry is testable.
    */
-  build(game: CanvasGameState, w2s: W2S, scale: number): void {
+  build(game: CanvasGameState, w2s: W2S, scale: number, now: number = performance.now()): void {
     this.live = 0;
     const tex = poolTex();
 
@@ -159,13 +169,28 @@ export class BallLightPass {
       if (!light) continue;
 
       const e = this.emitterAt(this.live++);
+      // The light inside flickers now and then; asleep and locked balls are
+      // excluded by ballLight already (no light, or a fading one).
+      const look = getBallLook();
+      const flick = look.flicker && ball.state === "active" ? flicker(now, heartPhase(ball.id) * 7) : 1;
+      const webbed = look.web;
       e.glow.visible = true;
       e.glow.texture = tex;
       e.glow.position.set(light.x, light.y);
       // The bake is a fixed radius; scale it to this ball's reach.
       e.glow.scale.set(light.reach / BAKE_RADIUS);
       e.glow.tint = light.color;
-      e.glow.alpha = light.intensity;
+      e.glow.alpha = light.intensity * flick * (1 - webbed);
+
+      e.gobo.visible = webbed > 0.001;
+      if (e.gobo.visible) {
+        e.gobo.texture = webPoolTex();
+        e.gobo.position.set(light.x, light.y);
+        e.gobo.scale.set(light.reach / (WEB_POOL_BAKE / 2));
+        e.gobo.rotation = ball.rotation;
+        e.gobo.tint = light.color;
+        e.gobo.alpha = light.intensity * flick * webbed;
+      }
 
       e.shade.visible = true;
       this.drawShadows(e.shade, light, p, game, w2s, scale);
@@ -173,6 +198,7 @@ export class BallLightPass {
 
     for (let i = this.live; i < this.emitters.length; i++) {
       this.emitters[i].glow.visible = false;
+      this.emitters[i].gobo.visible = false;
       this.emitters[i].shade.visible = false;
     }
     this.sprite.visible = this.live > 0;
@@ -213,9 +239,11 @@ export class BallLightPass {
     if (!e) {
       const glow = new Sprite();
       glow.anchor.set(0.5);
+      const gobo = new Sprite();
+      gobo.anchor.set(0.5);
       const shade = new Graphics();
-      this.stage.addChild(glow, shade);
-      e = { glow, shade };
+      this.stage.addChild(glow, gobo, shade);
+      e = { glow, gobo, shade };
       this.emitters[i] = e;
     }
     return e;

@@ -260,7 +260,10 @@ describe("the light pass", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kinds = ((pass as any).stage as Container).children
       .map(c => (c instanceof Graphics ? "shade" : "glow"));
-    expect(kinds.slice(0, 4)).toEqual(["glow", "shade", "glow", "shade"]);
+    // Two pools per ball since the web (ballWeb.ts): the plain one and the
+    // one with the shell's shadow in it. Both are this ball's light, and both
+    // come before its shade.
+    expect(kinds.slice(0, 6)).toEqual(["glow", "glow", "shade", "glow", "glow", "shade"]);
     pass.destroy();
   });
 });

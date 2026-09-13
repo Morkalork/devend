@@ -116,3 +116,37 @@ export function stepLag(lag: Lag, vx: number, vy: number, radius: number, dt: nu
   if (m > lim) { lag.x *= lim / m; lag.y *= lim / m; }
   return lag;
 }
+
+// ── The light inside flickers, now and then ─────────────────────────────────
+/** Mean spacing between flickers. Each slot rolls for one; some slots stay quiet. */
+export const FLICKER_EVERY_MS = 6500;
+/** How long one flicker lasts. */
+export const FLICKER_MS = 260;
+/** The dimmest the light gets mid-flicker, as a fraction of steady. */
+export const FLICKER_FLOOR = 0.3;
+
+/** A cheap deterministic hash to 0..1. */
+function hash01(n: number): number {
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Multiplier for the light's intensity, 1 almost always. Every FLICKER_EVERY_MS
+ * a slot rolls: about seven in ten get one flicker at a hashed moment inside
+ * the slot, a quarter of a second of fast jitter (about 45 Hz) that is
+ * deepest in its middle. Clock-driven and hashed, so it never repeats in a
+ * way the eye can learn, and the headless harness sees the same values.
+ */
+export function flicker(nowMs: number, phaseMs = 0): number {
+  const t = nowMs + phaseMs;
+  const slot = Math.floor(t / FLICKER_EVERY_MS);
+  const roll = hash01(slot);
+  if (roll < 0.3) return 1;
+  const start = slot * FLICKER_EVERY_MS + roll * (FLICKER_EVERY_MS - FLICKER_MS);
+  const u = t - start;
+  if (u < 0 || u > FLICKER_MS) return 1;
+  const envelope = Math.sin((Math.PI * u) / FLICKER_MS);
+  const jitter = hash01(Math.floor(u / 22) + slot * 977);
+  return 1 - envelope * ((1 - FLICKER_FLOOR) * (0.35 + 0.65 * jitter));
+}

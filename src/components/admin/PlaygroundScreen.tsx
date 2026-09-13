@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ModifierInput } from '@/components/admin/ModifierInput';
+import { getBallLook, setBallLook } from '@/lib/ballLook';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stepLevelIndex } from '@/lib/levelStep';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronLeft, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
@@ -191,6 +192,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
+  const [ballLook, setBallLookState] = useState(getBallLook);
   const [staticBg, setStaticBg] = useState(isStaticBgEnabled);
   // The URL dev flags as controls (CLAUDE.md, "Admin must be able to test it").
   // Session-scoped: see devFlags.ts for why these are not persisted.
@@ -1424,6 +1426,50 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: lockDebug ? 19 : 3 }}
                     />
+                  </span>
+                </button>
+              </div>
+
+              {/* Ball look: the web on the shell and the flicker of the light
+                  inside (ballLook.ts). Rendering, not gameplay, so not a
+                  modifier; persisted, so a tester's dial survives a reload. A
+                  slider for the web because the right strength is judged in
+                  play: off, and obvious, are both one drag away. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="ball-web-strength" style={{ color: ballLook.web > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Ball web: {Math.round(ballLook.web * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    The pattern on the shell and its shadow in the ball's light. 0 is today's plain bulb.
+                  </span>
+                </label>
+                <input
+                  id="ball-web-strength"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(ballLook.web * 100)}
+                  onChange={e => setBallLookState(setBallLook({ web: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+                <button
+                  onClick={() => setBallLookState(setBallLook({ flicker: !ballLook.flicker }))}
+                  className="mt-2 w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: ballLook.flicker ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${ballLook.flicker ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold text-left" style={{ color: ballLook.flicker ? accent : 'hsl(var(--foreground))' }}>
+                    Light flicker
+                    <span className="block text-[10px] font-normal opacity-60">The light inside stutters every few seconds</span>
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors flex-shrink-0"
+                    style={{ width: 36, height: 20, backgroundColor: ballLook.flicker ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: ballLook.flicker ? 19 : 3 }} />
                   </span>
                 </button>
               </div>
