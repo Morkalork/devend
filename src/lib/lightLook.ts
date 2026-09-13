@@ -41,11 +41,23 @@ export interface LightLook {
    * light a pure decoration, which is what it was.
    */
   tell: number;
+  /**
+   * Whether balls block each other's light (ballLightPass.ts). A glowing ball
+   * is still opaque; before this only walls were in the occluder loop, so one
+   * ball's pool shone straight through another.
+   */
+  ballShadows: number;
+  /**
+   * The board answering something that just happened: a flash where a ball
+   * struck, and the hot tip of a fence being drawn. 0 leaves both dark, which
+   * is what they were.
+   */
+  reaction: number;
 }
 
 const KEY = "devend.lightLook";
 export const DEFAULT_LIGHT_LOOK: LightLook = {
-  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1,
+  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1,
 };
 
 let current: LightLook | null = null;
@@ -61,6 +73,8 @@ function sanitise(l: LightLook): LightLook {
     caustic: unit(l.caustic, DEFAULT_LIGHT_LOOK.caustic),
     flash: unit(l.flash, DEFAULT_LIGHT_LOOK.flash),
     tell: unit(l.tell, DEFAULT_LIGHT_LOOK.tell),
+    ballShadows: unit(l.ballShadows, DEFAULT_LIGHT_LOOK.ballShadows),
+    reaction: unit(l.reaction, DEFAULT_LIGHT_LOOK.reaction),
   };
 }
 

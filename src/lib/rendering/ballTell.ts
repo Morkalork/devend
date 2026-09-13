@@ -58,6 +58,34 @@ export const TELL_DEPTH = 0.38;
 /** How much of its reach a locked ball's pool has left when it is fully drained. */
 export const COLLAPSE_TO = 0.18;
 
+/**
+ * How far a pool stretches along the heading at top speed, as a fraction.
+ *
+ * Small. This is a soft shape a couple of hundred pixels across, so a little
+ * asymmetry reads clearly - and at anything more the pool stops looking like
+ * light on a floor and starts looking like a comet, which claims a speed the
+ * ball does not have.
+ */
+export const SPEED_STRETCH = 0.3;
+
+/** The speed the stretch is measured against, in world units per second. */
+export const SPEED_STRETCH_REF = 320;
+
+/**
+ * How much a pool is stretched along the heading, and squeezed across it.
+ *
+ * Volume-preserving, near enough: what is added to the long axis comes off the
+ * short one, so a fast ball's pool covers about the same board as a slow one's
+ * and speed reads as SHAPE rather than as the board getting brighter. Brighter
+ * would be the wrong signal entirely, since brightness already means how close
+ * a ball is.
+ */
+export function speedStretch(speed: number, gain: number): { along: number; across: number } {
+  if (!(speed > 0) || gain <= 0.001) return { along: 1, across: 1 };
+  const k = SPEED_STRETCH * gain * Math.min(1, speed / SPEED_STRETCH_REF);
+  return { along: 1 + k, across: 1 / (1 + k) };
+}
+
 export interface Warmup {
   /** Multiplier on intensity, 0 at the instant of switch-on. */
   gain: number;

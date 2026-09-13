@@ -119,6 +119,14 @@ export function clearBounceTextures(): void {
   kissTexture = null;
 }
 
+/** Turn off every sprite from `from` on, tolerating holes in the pool. */
+function hideFrom(pool: Sprite[], from: number): void {
+  for (let i = from; i < pool.length; i++) {
+    const s = pool[i];
+    if (s) s.visible = false;
+  }
+}
+
 export class BounceLayer {
   /** The bands on the fences and obstacles. Hung above the wall layer. */
   readonly onWalls = new Container();
@@ -203,9 +211,15 @@ export class BounceLayer {
       kiss.alpha = a * BOUNCE_KISS_ALPHA;
     }
 
-    for (let i = list.length; i < this.bands.length; i++) this.bands[i].visible = false;
-    for (let i = list.length; i < this.frameBands.length; i++) this.frameBands[i].visible = false;
-    for (let i = list.length; i < this.kisses.length; i++) this.kisses[i].visible = false;
+    // GUARDED, because the two band pools are SPARSE. They share an index, and
+    // only the pool a bounce actually landed in gets a sprite at it - so a
+    // frame with [board edge, fence] leaves a hole at 0 in `bands` while
+    // pushing its length to 2, and the next frame with fewer bounces walked
+    // straight into it. That is a crash, not a glitch, and it took a bench run
+    // on a mixed board to find: every test so far had bounces of one kind.
+    hideFrom(this.bands, list.length);
+    hideFrom(this.frameBands, list.length);
+    hideFrom(this.kisses, list.length);
   }
 
   private syncFrameMask(game: CanvasGameState, w2s: W2S, scale: number): void {

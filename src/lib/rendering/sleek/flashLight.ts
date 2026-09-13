@@ -98,6 +98,34 @@ export function causticShadow(
   return mix(shadow, body, CAUSTIC_TINT * gain);
 }
 
+/**
+ * How long an impact's flash lasts, in ms.
+ *
+ * Much shorter than the bulge it rides on (520ms). A bounce is instantaneous;
+ * the fence taking a moment to stop wobbling is the AFTERMATH, and a light
+ * that outstayed the event would turn every bounce into a lingering lamp on a
+ * board where bounces never stop happening.
+ */
+export const IMPACT_FLASH_MS = 190;
+
+/** Reach of an impact flash, in ball radii, at full strength. */
+export const IMPACT_REACH_RADII = 3.6;
+
+/** Peak intensity of an impact flash. */
+export const IMPACT_INTENSITY = 0.8;
+
+/**
+ * The shape of a hit: all attack, no sustain.
+ *
+ * Full brightness on the frame of contact and a fast power decay, because that
+ * IS the event. Anything with a rise reads as the fence lighting up in
+ * anticipation of a ball that already arrived.
+ */
+export function impactEnvelope(t: number): number {
+  if (t < 0 || t >= 1) return 0;
+  return Math.pow(1 - t, 2.2);
+}
+
 export interface PlacedLight {
   /** Screen position. */
   x: number;

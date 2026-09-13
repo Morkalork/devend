@@ -164,11 +164,13 @@ describe("the mass is where the liquid put it, not where the ball is", () => {
     const { game, w2s } = layerFor(b, T0 + 1200);
     const pass = new BallLightPass();
     pass.build(game, w2s, 1);
+    // The POOL container carries the placement now; the sprites inside it sit
+    // at its origin so the whole pool can be stretched along a ball's heading.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const glow = (pass as unknown as any).emitters[0].glow;
-    expect(glow.position.x).toBeCloseTo(b.splatMass!.x, 6);
-    expect(glow.position.y).toBeCloseTo(b.splatMass!.y, 6);
-    expect(glow.position.x).not.toBeCloseTo(AT.x, 0);
+    const pool = (pass as unknown as any).emitters[0].pool;
+    expect(pool.position.x).toBeCloseTo(b.splatMass!.x, 6);
+    expect(pool.position.y).toBeCloseTo(b.splatMass!.y, 6);
+    expect(pool.position.x).not.toBeCloseTo(AT.x, 0);
   });
 });
 

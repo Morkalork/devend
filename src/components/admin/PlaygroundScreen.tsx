@@ -1579,6 +1579,46 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
               </div>
 
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-ball-shadows" style={{ color: lightLook.ballShadows > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Balls block each other: {Math.round(lightLook.ballShadows * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A glowing ball is still opaque, so it throws a shadow in another ball's pool.
+                  </span>
+                </label>
+                <input
+                  id="light-ball-shadows"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.ballShadows * 100)}
+                  onChange={e => setLightLookState(setLightLook({ ballShadows: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-reaction" style={{ color: lightLook.reaction > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  The board reacts: {Math.round(lightLook.reaction * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A flash where a ball strikes, and a hot tip on the fence you are drawing.
+                  </span>
+                </label>
+                <input
+                  id="light-reaction"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.reaction * 100)}
+                  onChange={e => setLightLookState(setLightLook({ reaction: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
               {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so
                   a new mutator is offered the moment it is authored. Re-deals the
                   board, because a mutator is rolled when a map mounts. */}

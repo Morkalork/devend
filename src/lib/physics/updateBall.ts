@@ -663,6 +663,7 @@ export function updateBall(
           boardResult.impactEdge.point,
           impactStrength,
           ball.position,
+          ball.color,
         );
         // Trigger wall hit effect on ball
         triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
@@ -877,7 +878,7 @@ export function updateBall(
       // Fences/board edges bulge as walls; obstacles get a radial bulge below
       // (a wall bulge here would also be invisible and could leak onto nearby fences).
       if (!isObstacleWall) {
-        registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
+        registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position, ball.color);
       }
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
       if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);

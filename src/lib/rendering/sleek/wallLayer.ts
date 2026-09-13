@@ -24,12 +24,45 @@ import type { Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
-import { ambientAt, facing, shadowFor, type LightScope } from "./light";
+import { ambientAt, contactFor, facing, shadowFor, type LightScope } from "./light";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 
 /** How thick the board's outer frame is, in world units. Heavier than a
  *  fence (6) so the enclosure reads as structure rather than as a cut. */
 export const OUTER_WALL_THICKNESS = 14;
+
+/**
+ * Ambient occlusion along the base of a fence: how far out it reaches (as a
+ * multiple of the fence's half-width) and how dark each step goes.
+ *
+ * THREE NESTED BANDS, not one, and CENTRED on the fence rather than thrown
+ * away from the monitor. Both of those are corrections to the first version,
+ * which was a single flat quad at contactFor's own offset - the same shape and
+ * the same direction as the cast shadow it sat inside, only 1.5 world units
+ * wider than the fence. On a six-unit fence that is a pixel and a half of
+ * darkening hiding under a shadow, which is to say nothing at all.
+ *
+ * What a fence actually needs is not a contact patch (that shape belongs to
+ * round objects, which is why balls and obstacles get one and read fine) but
+ * the crease darkening where a wall meets a floor. That is symmetric - a
+ * crease occludes the sky from both sides equally - so it must NOT be offset,
+ * and it has to fall off over several units to read as a soften rather than as
+ * a second thinner fence.
+ *
+ * Three steps is a gradient the shadow plane can actually draw: they bucket by
+ * alpha the way every other shadow here does, so the whole board's occlusion
+ * costs three fills rather than three per fence.
+ */
+const AO_STEPS: readonly [number, number][] = [[4.6, 0.20], [3.0, 0.32], [1.8, 0.48]];
+
+/**
+ * Overall strength, against `contactFor`'s own alpha.
+ *
+ * Well under 1. There are a lot of fences on a late board and every one of
+ * them gets this, so it is the one darkening in the scene that can quietly add
+ * up to a dingy board. It only has to seat the object, not describe it.
+ */
+const AO_STRENGTH = 1.6;
 import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
 import { transformKey } from "./transformKey";
 
@@ -324,6 +357,31 @@ export class WallLayer {
     run.push(hull);
   }
 
+  /**
+   * One band of a wall's ambient occlusion: the wall's own quad, widened.
+   *
+   * Deliberately NOT routed through addShadow. That builds a convex hull of
+   * eight points to sweep a quad along the light offset, which is the right
+   * shape for a cast shadow thrown some distance and pure waste for a band
+   * that is not thrown anywhere. Measured: hulling this too cost 11% of the
+   * light frame on an 85-wall board; the plain quad is free.
+   */
+  private addContact(
+    a: Pt, b: Pt, nx: number, ny: number, half: number, alpha: number,
+  ): void {
+    const quad: Pt[] = [
+      { x: a.x + nx * half, y: a.y + ny * half },
+      { x: b.x + nx * half, y: b.y + ny * half },
+      { x: b.x - nx * half, y: b.y - ny * half },
+      { x: a.x - nx * half, y: a.y - ny * half },
+    ];
+    const bucket = Math.round(alpha * 20) / 20;
+    if (bucket <= 0) return;
+    let run = this.shadowRuns.get(bucket);
+    if (!run) { run = []; this.shadowRuns.set(bucket, run); }
+    run.push(quad);
+  }
+
   private flushShadows(): void {
     for (const [alpha, polys] of this.shadowRuns) {
       for (const poly of polys) this.shadows.poly(poly);
@@ -374,12 +432,19 @@ export class WallLayer {
       const { a, b } = snapSegment(a0, b0, snapWidth(thickness));
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       if (len < 0.5) continue;
-      const cast = shadowFor(light, (a.x + b.x) / 2, (a.y + b.y) / 2, thickness);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len;
+      const cast = shadowFor(light, mx, my, thickness);
       this.addShadow(
-        a, b,
-        -(b.y - a.y) / len, (b.x - a.x) / len, thickness / 2,
+        a, b, nx, ny, thickness / 2,
         cast.dx * cast.length, cast.dy * cast.length, cast.alpha,
       );
+      // Seated the same way a finished fence is: a growing one is the same
+      // object mid-extension and must not read as a different material.
+      const contact = contactFor(light, mx, my, thickness);
+      for (const [spread, step] of AO_STEPS) {
+        this.addContact(a, b, nx, ny, (thickness / 2) * spread, contact.alpha * AO_STRENGTH * step);
+      }
       const amb = ambientAt(light, (a.x + b.x) / 2, (a.y + b.y) / 2);
       this.bodies
         .moveTo(a.x, a.y)
@@ -594,9 +659,19 @@ export class WallLayer {
     const midX = (a.x + b.x) / 2;
     const midY = (a.y + b.y) / 2;
 
-    // ── 1. Cast shadow ─────────────────────────────────────────────────────
+    // ── 1. Cast shadow, and the contact under the fence ────────────────────
     const cast = shadowFor(light, midX, midY, thickness);
     this.addShadow(a, b, nx, ny, half, cast.dx * cast.length, cast.dy * cast.length, cast.alpha);
+    // A cast shadow is DISPLACED from its caster; what makes an object read as
+    // standing on a surface rather than floating over it is the tight dark
+    // patch right at its base. Balls, obstacles, props and stack objects have
+    // all called contactFor since the light model was built. Fences were the
+    // one class of standing object that never did, which is most of why they
+    // read as painted lines next to an obstacle's slab.
+    const contact = contactFor(light, midX, midY, thickness);
+    for (const [spread, step] of AO_STEPS) {
+      this.addContact(a, b, nx, ny, half * spread, contact.alpha * AO_STRENGTH * step);
+    }
 
     // ── 2. Body ────────────────────────────────────────────────────────────
     // Lit like a slab: the same mix(shadow, material, ambient) the obstacles

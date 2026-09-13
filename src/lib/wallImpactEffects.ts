@@ -82,6 +82,14 @@ export interface WallImpact {
   wallLen: number;
   tx: number; ty: number; // unit tangent
   nx: number; ny: number; // unit normal
+  /**
+   * The colour of the ball that made it, for the flash the light pass throws
+   * at the contact (flashLight.ts). Carried here rather than matched up by
+   * position at render time, because two balls hitting the same fence in the
+   * same frame is exactly the case a nearest-ball guess gets wrong, and it is
+   * also the case worth looking at.
+   */
+  color?: string;
 }
 
 let activeImpacts: WallImpact[] = [];
@@ -99,6 +107,7 @@ export function registerWallImpact(
   impactPoint: Vector2,
   impactStrength = 1,
   ballPos?: Vector2,
+  color?: string,
 ): void {
   const strength = Math.max(0.4, Math.min(1, impactStrength));
 
@@ -140,6 +149,7 @@ export function registerWallImpact(
     live.strength = Math.max(live.strength, strength);
     live.impactPoint = { ...impactPoint };
     live.impactT = impactT;
+    if (color) live.color = color;
     return;
   }
 
@@ -155,6 +165,7 @@ export function registerWallImpact(
     wallEnd: { ...wallEnd },
     wallLen,
     tx, ty, nx, ny,
+    color,
   });
   if (activeImpacts.length > MAX_IMPACTS) activeImpacts.shift();
 }
@@ -230,6 +241,11 @@ export function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean 
     }
   }
   return false;
+}
+
+/** Every impact still alive. Read by the light pass; never mutated by it. */
+export function activeWallImpacts(): readonly WallImpact[] {
+  return activeImpacts;
 }
 
 export function clearWallImpacts(): void {

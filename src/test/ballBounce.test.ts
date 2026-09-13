@@ -240,6 +240,25 @@ describe("the layer", () => {
     layer.destroy();
   });
 
+  it("survives a hole in a band pool, which is a crash and not a glitch", () => {
+    // The two pools share an index and only one of them gets a sprite per
+    // bounce, so they are SPARSE. A frame of [board edge, fence] leaves slot 0
+    // of `bands` empty while pushing its length to 2; the next frame with
+    // fewer bounces then swept over the hole. Found by a bench run on a mixed
+    // board, because every test before this one used bounces of one kind.
+    const layer = new BounceLayer();
+    const both = {
+      balls: [atGap(1), atGap(1, { id: "b2" })],
+      walls: [floor({ id: "board-edge-2", isBoardEdge: true }), floor({ id: "fence" })],
+    };
+    layer.sync(state(both), w2s, 1);
+    expect(shown(layer.onFrame).length + shown(layer.onWalls).length).toBeGreaterThan(1);
+    expect(() => layer.sync(state({ balls: [atGap(999)] }), w2s, 1)).not.toThrow();
+    expect(shown(layer.onWalls)).toHaveLength(0);
+    expect(shown(layer.onFrame)).toHaveLength(0);
+    layer.destroy();
+  });
+
   it("scales the band's brightness by the dial", () => {
     const full = layerFor({ balls: [atGap(0)] });
     const a = shown(full.onWalls)[0].alpha;

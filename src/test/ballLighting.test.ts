@@ -259,11 +259,15 @@ describe("the light pass", () => {
       w2s, 1);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kinds = ((pass as any).stage as Container).children
-      .map(c => (c instanceof Graphics ? "shade" : "glow"));
-    // Two pools per ball since the web (ballWeb.ts): the plain one and the
-    // one with the shell's shadow in it. Both are this ball's light, and both
-    // come before its shade.
-    expect(kinds.slice(0, 6)).toEqual(["glow", "glow", "shade", "glow", "glow", "shade"]);
+      .map(c => (c instanceof Graphics ? "shade" : "pool"));
+    // One POOL container per emitter now, holding both sprites: the plain
+    // pool and the one with the shell's shadow in it (ballWeb.ts). They share
+    // a container so a moving ball's light can be stretched along its heading
+    // without the two disagreeing about rotation - and the shade stays outside
+    // it, because a shadow is screen-space geometry and must not stretch with
+    // the light that cast it. What matters here is unchanged: a ball's shade
+    // sits directly after that ball's own light.
+    expect(kinds.slice(0, 4)).toEqual(["pool", "shade", "pool", "shade"]);
     pass.destroy();
   });
 });

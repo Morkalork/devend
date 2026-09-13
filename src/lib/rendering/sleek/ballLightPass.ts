@@ -30,8 +30,10 @@
  */
 
 import { Container, Graphics, Matrix, RenderTexture, Sprite, Texture } from "pixi.js";
+
 import type { Renderer } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
+import type { Ball } from "@/types/game";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
@@ -39,11 +41,13 @@ import { webPoolTex, POOL_STOPS, WEB_POOL_BAKE, WEB_SPIN } from "./ballWeb";
 import { derivedLights, type DerivedLight } from "./derivedLight";
 import {
   causticFor, flashEnvelope, flashReach, FLASH_INTENSITY,
-  LOCK_FLASH_MS, SUPERIOR_FLASH_MS, type PlacedLight,
+  LOCK_FLASH_MS, SUPERIOR_FLASH_MS, impactEnvelope, IMPACT_FLASH_MS,
+  IMPACT_REACH_RADII, IMPACT_INTENSITY, type PlacedLight,
 } from "./flashLight";
+import { activeWallImpacts } from "@/lib/wallImpactEffects";
 import type { LightScope } from "./light";
 import { flicker, heartPhase } from "@/lib/rendering/ballLife";
-import { tell, warmup, WARMUP_EMBER, type Warmup } from "@/lib/rendering/ballTell";
+import { tell, warmup, speedStretch, WARMUP_EMBER, type Warmup } from "@/lib/rendering/ballTell";
 import { getBallLook } from "@/lib/ballLook";
 import { getLightLook } from "@/lib/lightLook";
 import type { Pt } from "./pixelGrid";
@@ -60,6 +64,40 @@ export const LIGHT_RESOLUTION = 0.5;
  * anyone should hit.
  */
 export const MAX_OCCLUDERS_PER_LIGHT = 40;
+
+/**
+ * How dark a ball's shadow is against a wall's.
+ *
+ * Not full. A wall is a solid slab and blocks everything; a ball is the
+ * translucent body the caustic exists to describe, so it has no business
+ * casting the same hard black. Partial also keeps the case that happens
+ * constantly - a ball drifting through another's pool - from reading as a hole
+ * being punched in the floor every time two of them pass.
+ */
+export const BALL_SHADOW_ALPHA = 0.55;
+
+/**
+ * The ball radius an impact flash is sized against, in world units.
+ *
+ * A constant rather than the ball's own, because an impact does not carry a
+ * reference to the ball that made it and matching one up by position is
+ * exactly wrong in the case worth looking at: two balls striking the same
+ * fence in the same frame. Every ball on the board is within a factor of two
+ * of this, and the flash is scaled by impact STRENGTH anyway, which is where
+ * a heavier ball's extra weight already shows.
+ */
+export const BALL_RADIUS_REF = 18;
+
+/**
+ * Reach and strength of the light at a growing fence's tip, in world units.
+ *
+ * Deliberately smaller than a ball's pool. The tip is a working point, not a
+ * lamp: it should show the player where their cut has got to and throw a
+ * short shadow off whatever it is about to reach, without competing with the
+ * balls they are trying to trap.
+ */
+export const TIP_REACH = 62;
+export const TIP_INTENSITY = 0.5;
 
 /** Radius of the baked gradient in texture pixels. Bigger than any pool needs. */
 const BAKE_RADIUS = 128;
@@ -135,6 +173,19 @@ export function lightBufferPlan(rect: BoardRect): {
 }
 
 interface Emitter {
+  /**
+   * Holds the two pool sprites so a moving ball's light can be stretched
+   * along its heading.
+   *
+   * A container rather than scaling the sprites, because the two disagree
+   * about rotation: the plain pool has none, and the webbed one is turned by
+   * the shell's spin. Stretching a parent applies to both, and the shear it
+   * puts on the spun gobo is a smear of the web pattern along the direction
+   * of travel - which is what motion blur on a pattern actually looks like.
+   * The shade stays OUTSIDE it: shadows are screen-space geometry and must
+   * not be stretched with the thing casting them.
+   */
+  pool: Container;
   glow: Sprite;
   /**
    * The same pool with the shell's web shadowed into it (ballWeb.ts), turned
@@ -201,9 +252,19 @@ export class BallLightPass {
       light.intensity *= beat * (1 - (1 - warm.gain) * tellGain);
       light.color = mix(WARMUP_EMBER, light.color, warm.hue);
       const webbed = look.web;
+      // A light source travelling fast does not light a circle. Stretching
+      // the pool along the heading puts SPEED in the largest, softest,
+      // most peripherally visible thing on the board, which is the one
+      // channel a player reads without looking directly at it.
+      e.pool.position.set(light.x, light.y);
+      const vx = ball.velocity?.x ?? 0, vy = ball.velocity?.y ?? 0;
+      const sp = Math.hypot(vx, vy);
+      const st = speedStretch(sp, tellGain);
+      e.pool.rotation = sp > 1 ? Math.atan2(vy, vx) : 0;
+      e.pool.scale.set(st.along, st.across);
       e.glow.visible = true;
       e.glow.texture = tex;
-      e.glow.position.set(light.x, light.y);
+      e.glow.position.set(0, 0);
       // The bake is a fixed radius; scale it to this ball's reach.
       e.glow.scale.set(light.reach / BAKE_RADIUS);
       e.glow.tint = light.color;
@@ -212,7 +273,7 @@ export class BallLightPass {
       e.gobo.visible = webbed > 0.001;
       if (e.gobo.visible) {
         e.gobo.texture = webPoolTex();
-        e.gobo.position.set(light.x, light.y);
+        e.gobo.position.set(0, 0);
         e.gobo.scale.set(light.reach / (WEB_POOL_BAKE / 2));
         e.gobo.rotation = ball.rotation * WEB_SPIN;
         e.gobo.tint = light.color;
@@ -220,7 +281,7 @@ export class BallLightPass {
       }
 
       e.shade.visible = true;
-      this.drawShadows(e.shade, light, p, game, w2s, scale);
+      this.drawShadows(e.shade, light, p, game, w2s, scale, ball);
 
       // The bright core inside this ball's own shadow (flashLight.ts). It is
       // placed from the MONITOR, not from the ball's light: it is the monitor's
@@ -230,7 +291,7 @@ export class BallLightPass {
       const caustic = monitor && causticGain > 0.001
         ? causticFor(ball, c, r, light.color, light.intensity * causticGain * flick, monitor)
         : null;
-      if (caustic) this.place(this.emitterAt(this.live++), caustic, tex, p, game, w2s, scale);
+      if (caustic) this.place(this.emitterAt(this.live++), caustic, tex, p, game, w2s, scale, ball);
 
       // Second-hand light: a mirror giving this ball's pool back, a portal
       // passing it to the far mouth (derivedLight.ts). Each is an ordinary
@@ -249,7 +310,7 @@ export class BallLightPass {
         // reflection that held steady while the ball behind it stuttered
         // would read as a second, unrelated source.
         dl.intensity *= flick;
-        this.place(this.emitterAt(this.live++), dl, tex, d, game, w2s, scale);
+        this.place(this.emitterAt(this.live++), dl, tex, d, game, w2s, scale, ball);
       }
     }
 
@@ -280,6 +341,46 @@ export class BallLightPass {
       }
     }
 
+    // ── A bounce is an event, so it makes light ─────────────────────────
+    // The most frequent thing that happens in this game carried no light at
+    // all: the fence bulged, the ball squished, a sound played, and the room
+    // did not notice. These are already tracked per frame for the bulge, so
+    // the flash is a read of state that exists rather than new bookkeeping.
+    const reaction = getLightLook().reaction;
+    if (reaction > 0.001) {
+      for (const hit of activeWallImpacts()) {
+        const env = impactEnvelope((now - hit.startTime) / IMPACT_FLASH_MS);
+        if (env <= 0.001) continue;
+        const at = w2s(hit.impactPoint.x, hit.impactPoint.y);
+        this.place(this.emitterAt(this.live++), {
+          x: at.x, y: at.y,
+          reach: IMPACT_REACH_RADII * BALL_RADIUS_REF * scale * (0.6 + 0.4 * hit.strength),
+          intensity: IMPACT_INTENSITY * reaction * env * hit.strength,
+          color: parseColor(hit.color ?? "#ffffff"),
+        }, tex, hit.impactPoint, game, w2s, scale);
+      }
+    }
+
+    // ── The cut the player is drawing is hot ────────────────────────────
+    // The one thing on the board that is the PLAYER's doing emitted nothing.
+    // A fence grows from a point in both directions, so the light belongs at
+    // the two travelling tips rather than along the line: that is where the
+    // work is happening, and it is where the eye already is.
+    if (reaction > 0.001) {
+      for (const g of game.activeWalls ?? []) {
+        if (g.isComplete) continue;
+        for (const tip of [g.startPoint, g.endPoint]) {
+          const at = w2s(tip.x, tip.y);
+          this.place(this.emitterAt(this.live++), {
+            x: at.x, y: at.y,
+            reach: TIP_REACH * scale,
+            intensity: TIP_INTENSITY * reaction,
+            color: PALETTE.accentGlow,
+          }, tex, tip, game, w2s, scale);
+        }
+      }
+    }
+
     for (let i = this.live; i < this.emitters.length; i++) {
       this.emitters[i].glow.visible = false;
       this.emitters[i].gobo.visible = false;
@@ -303,23 +404,28 @@ export class BallLightPass {
    */
   private place(
     e: Emitter, light: PlacedLight, tex: Texture, world: { x: number; y: number },
-    game: CanvasGameState, w2s: W2S, scale: number,
+    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball,
   ): void {
+    // Second-hand light, a caustic and a flash are all still: nothing here
+    // is travelling, so the pool stays round.
+    e.pool.position.set(light.x, light.y);
+    e.pool.rotation = 0;
+    e.pool.scale.set(1);
     e.glow.visible = true;
     e.glow.texture = tex;
-    e.glow.position.set(light.x, light.y);
+    e.glow.position.set(0, 0);
     e.glow.scale.set(light.reach / BAKE_RADIUS);
     e.glow.tint = light.color;
     e.glow.alpha = light.intensity;
     e.gobo.visible = false;
     e.shade.visible = true;
-    this.drawShadows(e.shade, light, world, game, w2s, scale);
+    this.drawShadows(e.shade, light, world, game, w2s, scale, skip);
   }
 
   /** Every wall inside this pool, as one black quad each. */
   private drawShadows(
     g: Graphics, light: PlacedLight, world: { x: number; y: number },
-    game: CanvasGameState, w2s: W2S, scale: number,
+    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball,
   ): void {
     g.clear();
     // The reach test runs in WORLD units against the ball's world position. A
@@ -344,6 +450,40 @@ export class BallLightPass {
       g.poly(quad).fill({ color: PALETTE.shadow, alpha: 1 });
       drawn++;
     }
+
+    // ── Balls occlude each other ───────────────────────────────────────────
+    // A glowing ball is still opaque - ballLight.ts says exactly that where it
+    // explains the half-strength self-lit shadow - but until now only WALLS
+    // were in this loop, so one ball's pool shone straight through another.
+    // Two shadows on one object is the strongest single cue that a scene has
+    // real lights in it rather than painted glows, and this is where it comes
+    // from.
+    if (getLightLook().ballShadows <= 0.001) return;
+    let balls = 0;
+    for (const other of game.balls) {
+      // Never its own parent. For a ball's own pool that would be the ball
+      // eclipsing itself; for its caustic it would be worse, since a caustic
+      // is by definition the light that went THROUGH that ball.
+      if (other === skip || other.state === "won") continue;
+      const q = other.splatMass ?? other.renderPosition ?? other.position;
+      const orad = other.radius * (other.assimScale ?? 1);
+      const d = Math.hypot(q.x - world.x, q.y - world.y);
+      if (d >= reach || d < orad * 0.5) continue;
+      // A sphere's silhouette from a point light is a disc facing the light,
+      // so its umbra is what a SEGMENT across that disc would throw. Reusing
+      // shadowQuad keeps the two kinds of occluder on one piece of geometry
+      // code, quad ordering and degenerate cases included.
+      const c = w2s(q.x, q.y);
+      const dx = c.x - light.x, dy = c.y - light.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const px = (-dy / len) * orad * scale, py = (dx / len) * orad * scale;
+      const quad = shadowQuad(light, c.x - px, c.y - py, c.x + px, c.y + py);
+      if (quad) { g.poly(quad); balls++; }
+    }
+    // One fill for all of them, the way wallLayer buckets its shadows by
+    // alpha: they share a strength, so a single fill both costs less and stops
+    // two balls whose umbras cross from double-darkening the overlap.
+    if (balls > 0) g.fill({ color: PALETTE.shadow, alpha: BALL_SHADOW_ALPHA });
   }
 
   private emitterAt(i: number): Emitter {
@@ -353,9 +493,11 @@ export class BallLightPass {
       glow.anchor.set(0.5);
       const gobo = new Sprite();
       gobo.anchor.set(0.5);
+      const pool = new Container();
+      pool.addChild(glow, gobo);
       const shade = new Graphics();
-      this.stage.addChild(glow, gobo, shade);
-      e = { glow, gobo, shade };
+      this.stage.addChild(pool, shade);
+      e = { pool, glow, gobo, shade };
       this.emitters[i] = e;
     }
     return e;
