@@ -17,7 +17,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  splatOutline, splatMetrics, isDeformed, ROUND, SPLAT_SEGMENTS,
+  splatOutline, splatMetrics, splatCore, isDeformed, ROUND, SPLAT_SEGMENTS,
   type SplatState,
 } from "@/lib/rendering/splatShape";
 
@@ -108,11 +108,63 @@ describe("at full splat", () => {
     expect(atMiddle).toBeGreaterThan(atCrown);
   });
 
-  it("puts its mass low, which is where the highlight goes", () => {
-    // The centroid is what the renderer pins the texture's bright core to, so
-    // "the highlight slides down onto the mass" is a property of this number.
+  it("puts its mass low, which is where the shadow goes", () => {
+    // The centroid is what the shadow is laid under. It used to carry the
+    // texture's bright core too; that moved to splatCore below, which is the
+    // same middle-of-the-ball point the material actually has.
     expect(m.cy).toBeGreaterThan(-m.height / 2);
     expect(Math.abs(m.cx)).toBeLessThan(0.001);   // and stays on the axis
+  });
+});
+
+describe("the bulb's core", () => {
+  // The renderer pins the texture's white-hot filament to this point. It is the
+  // middle of the SPHERE carried through the deformation, not the centroid of
+  // the silhouette: a material point, so it moves the way the material does.
+
+  it("is the ball's own centre while it is round", () => {
+    const core = splatCore(ROUND, R);
+    expect(core.x).toBe(0);
+    expect(core.y).toBeCloseTo(-R, 9);
+  });
+
+  it("sinks toward the wall as the face forms and the mass slumps", () => {
+    // y runs INTO the wall, so sinking is y climbing toward 0.
+    const round = splatCore(ROUND, R);
+    const pressed = splatCore({ d: 1, v: 0, w: 0, stretch: 0 }, R);
+    const slumped = splatCore({ d: 1, v: 1, w: 0, stretch: 0 }, R);
+    expect(pressed.y).toBeGreaterThan(round.y);
+    expect(slumped.y).toBeGreaterThan(pressed.y);
+  });
+
+  it("stays on the axis and inside the outline at every setting", () => {
+    for (const d of [0, 0.5, 1]) {
+      for (const v of [0, 0.5, 1]) {
+        for (const w of [0, 0.5, 1]) {
+          const s: SplatState = { d, v, w, stretch: 0 };
+          const core = splatCore(s, R);
+          const m = measure(s);
+          expect(core.x).toBe(0);                        // never leaves the axis
+          expect(core.y).toBeLessThan(0);                // never reaches the wall
+          expect(core.y).toBeGreaterThan(-m.height);     // never leaves the crown
+        }
+      }
+    }
+  });
+
+  it("sits lower than the centroid, which is dragged up by the spread", () => {
+    // Why it is not the centroid: the footprint flowing sideways pulls the
+    // silhouette's average away from where the middle of the ball actually
+    // went, so the filament used to sit higher than the material it lights.
+    const m = measure(FULL);
+    const core = splatCore(FULL, R);
+    expect(core.y).toBeGreaterThan(m.cy);
+  });
+
+  it("is stretched away from the wall by the peel, like the rest of the body", () => {
+    const still = splatCore({ d: 0.3, v: 0.1, w: 0.2, stretch: 0 }, R);
+    const pulling = splatCore({ d: 0.3, v: 0.1, w: 0.2, stretch: 1 }, R);
+    expect(pulling.y).toBeLessThan(still.y);
   });
 });
 

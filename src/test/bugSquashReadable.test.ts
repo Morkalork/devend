@@ -19,10 +19,17 @@
 import { describe, it, expect } from "vitest";
 import {
   createBallEffectState, triggerWallHit, pinSquish, updateBallEffects,
-  getSquishEffect, isSquishPinned,
+  getSquishEffect, isSquishPinned, SPLAT_HELD_OUT_MS,
 } from "@/lib/ballEffects";
 
+/** The upgrade's seconds: the WHOLE stuck time, animation included. */
 const HOLD_MS = 2000;
+/**
+ * When the flat hold ends and the reinflate begins. Earlier than HOLD_MS,
+ * because the ball must be round again by the time it is allowed to move: the
+ * release plays inside the freeze, not after it.
+ */
+const RELEASE_AT = HOLD_MS - SPLAT_HELD_OUT_MS;
 const T0 = 10_000;
 const FRAME = 1 / 60;
 
@@ -34,9 +41,15 @@ function splat() {
   return st;
 }
 
-/** The deformation at `ms` after impact, ticking every frame to get there. */
+/**
+ * The deformation at `ms` after impact, ticking every frame to get there and
+ * landing a last tick exactly on `ms` - 60fps steps do not divide the times
+ * that matter, and "round at the instant the freeze lifts" is a claim about
+ * that instant, not about the frame 17ms before it.
+ */
 function at(st: ReturnType<typeof splat>, ms: number) {
   for (let t = 0; t <= ms; t += 1000 / 60) updateBallEffects(st, FRAME, T0 + t);
+  updateBallEffects(st, FRAME, T0 + ms);
   return getSquishEffect(st, 1);
 }
 
@@ -114,43 +127,59 @@ describe("the squashing is a motion, not a state", () => {
 });
 
 describe("it holds, then reverses", () => {
-  it("stays pinned at full squash for the whole stick", () => {
+  it("stays pinned at full squash until the reinflate starts", () => {
+    // Sampled before RELEASE_AT rather than before HOLD_MS: the flat part of
+    // the stick now ends early, so the reinflate can finish inside the freeze.
     const st = splat();
     const deep = at(st, 300);
-    for (let t = 300; t < HOLD_MS - 100; t += 1000 / 60) {
+    for (let t = 300; t < RELEASE_AT - 100; t += 1000 / 60) {
       updateBallEffects(st, FRAME, T0 + t);
     }
-    expect(isSquishPinned(st, T0 + HOLD_MS - 100)).toBe(true);
+    expect(isSquishPinned(st, T0 + RELEASE_AT - 100)).toBe(true);
     expect(getSquishEffect(st, 1).scaleAlong).toBeCloseTo(deep.scaleAlong, 6);
   });
 
-  it("un-squashes back through round after the hold lifts", () => {
+  it("un-squashes back to round while it is still stuck", () => {
     const st = splat();
     // THE CROWN LIFTS FIRST. Height is recovering while the footprint is still
     // wide, which is the "un-slump upward before letting go of the wall" beat.
-    at(st, HOLD_MS + 250);
+    // Sampled 250ms into the release, which is now 250ms BEFORE the ball is let
+    // go rather than after it: the whole reverse plays on a ball that has not
+    // moved yet, instead of on one already crossing the board.
+    at(st, RELEASE_AT + 250);
     const rising = getSquishEffect(st, 1);
     expect(rising.scaleAlong).toBeGreaterThan(0.5);
     expect(rising.scalePerp).toBeGreaterThan(1.3);
-    // Then past round and into the peel-off stretch: the ball pulls away from
-    // the wall elongated along the direction it is leaving in, which is the
-    // "reverse it once the ball leaves" half of the brief.
-    const peeling = at(st, HOLD_MS + 600);
-    expect(peeling.scaleAlong).toBeGreaterThan(1);
-    expect(peeling.scalePerp).toBeLessThan(1);
+    // And it arrives at round, never past it. The peel-off stretch used to play
+    // here and is gone from a held splat: it is the shape of a ball LEAVING,
+    // and this one is nailed to the wall until it is round again. An ordinary
+    // bounce still peels, and bugSquash.test.tsx pins both halves of that.
+    const done = at(st, HOLD_MS);
+    expect(done.active).toBe(false);
+    expect(done.scaleAlong).toBe(1);
+    expect(done.scalePerp).toBe(1);
   });
 
-  it("takes longer to peel off than an ordinary bounce takes to recover", () => {
-    // A ripe tomato does not ping back. Still deformed at 520ms, where a
-    // bounce (500ms) has already settled.
+  it("takes longer to let go than a whole ordinary bounce lasts", () => {
+    // A ripe tomato does not ping back. The release alone runs 520ms, longer
+    // than an entire bounce at the brisk timescale, so it is still deformed
+    // 400ms in. Measured from RELEASE_AT now: the release sits INSIDE the
+    // stick, so "HOLD_MS + 520" is a ball that let go half a second ago.
     const st = splat();
-    at(st, HOLD_MS + 520);
+    at(st, RELEASE_AT + 400);
     expect(getSquishEffect(st, 1).active).toBe(true);
+
+    const bounce = createBallEffectState();
+    triggerWallHit(bounce, T0, -300, 0, 300);
+    for (let t = 0; t <= 400; t += 1000 / 60) updateBallEffects(bounce, FRAME, T0 + t);
+    expect(getSquishEffect(bounce, 1).active).toBe(false);
   });
 
   it("ends perfectly round, with the tomato dials cleared", () => {
+    // At HOLD_MS exactly, not 900ms past it: the stick is over when the ball is
+    // round, because that is the moment its physics resume.
     const st = splat();
-    at(st, HOLD_MS + 900);
+    at(st, HOLD_MS);
     const s = getSquishEffect(st, 1);
     expect(s.active).toBe(false);
     expect(s.scaleAlong).toBe(1);
@@ -162,12 +191,14 @@ describe("it holds, then reverses", () => {
     expect(st.splatW).toBe(0);
   });
 
-  it("a fresh bounce during the peel-off is a bounce, not a tomato", () => {
+  it("a fresh bounce during the reinflate is a bounce, not a tomato", () => {
     // Otherwise the deep boost and the slow spring would leak onto the next
     // wall the ball touches, and one splat would make every hit after it soft.
+    // Interrupted mid-release now, which is where a leak could actually happen:
+    // a stuck ball can be struck by another ball while it is reinflating.
     const st = splat();
-    at(st, HOLD_MS + 200);
-    const hitAt = T0 + HOLD_MS + 200;
+    at(st, RELEASE_AT + 200);
+    const hitAt = T0 + RELEASE_AT + 200;
     triggerWallHit(st, hitAt, 0, -300, 300);
     // No hold, the brisk bounce timescale, and every dial reset: the tomato is
     // gone the instant the ball is struck again.

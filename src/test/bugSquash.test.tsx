@@ -7,10 +7,12 @@
  *
  *  1. The SQUASH. The ordinary bounce squish compresses at impact and springs
  *     back in half a second. A stuck ball needs a different envelope: ramp
- *     INTO the splat, hold there for the whole stick, then play the spring-back
- *     from the moment of release, so it visibly un-squashes as it leaves. If
- *     the hold were merely "stop ticking the clock", the release would jump the
- *     curve to its end and the ball would snap round.
+ *     INTO the splat, hold there, then play the spring-back, and fit ALL THREE
+ *     inside the stick, so the ball is round again at the instant its physics
+ *     resume. If the hold were merely "stop ticking the clock", the release
+ *     would jump the curve to its end and the ball would snap round; if the
+ *     release began where the freeze ends (which is how this first shipped),
+ *     the ball departs half-flat and reinflates in mid-flight.
  *  2. The STICK. The ball must not move, must keep the velocity it bounced off
  *     with, and must carry on with exactly that once the hold lifts. It rides
  *     frozenUntil so every held-ball rule already in the game applies.
@@ -40,7 +42,7 @@ vi.mock("@/lib/gameHaptics", () => ({
 
 import {
   createBallEffectState, triggerWallHit, updateBallEffects, getSquishEffect,
-  pinSquish, isSquishPinned,
+  pinSquish, isSquishPinned, SPLAT_HELD_OUT_MS,
 } from "@/lib/ballEffects";
 import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock,
@@ -126,29 +128,41 @@ describe("the squash ramps in, holds, and springs back on release", () => {
     // The failure this pins: keying the spring-back on the impact time would
     // find the whole 500ms curve already elapsed at release and snap the ball
     // round in one frame. It has to un-squash visibly as it leaves.
+    //
+    // The times moved because the release now plays INSIDE the freeze: the flat
+    // hold ends SPLAT_HELD_OUT_MS before the stick does, so the reinflate is
+    // finished at 3000 rather than starting there.
     const st = stuckAt(1000, 2000);
-    updateBallEffects(st, 0.016, 2999);
+    const holdEnd = 1000 + 2000 - SPLAT_HELD_OUT_MS;
+    updateBallEffects(st, 0.016, holdEnd - 1);
     const justBefore = compression(st);
-    updateBallEffects(st, 0.016, 3001);
+    updateBallEffects(st, 0.016, holdEnd + 1);
     const justAfter = compression(st);
-    updateBallEffects(st, 0.016, 3120);
+    updateBallEffects(st, 0.016, holdEnd + 120);
     const settling = compression(st);
-    expect(isSquishPinned(st, 3001)).toBe(false);
+    expect(isSquishPinned(st, holdEnd + 1)).toBe(false);
     expect(justAfter).toBeCloseTo(justBefore, 1);
     expect(settling).toBeLessThan(justAfter);
     expect(settling).toBeGreaterThan(0);
-    // Round again by the end of the peel-off, which runs 750ms from release
-    // (the crown lifts, then the footprint, then the departure stretch).
-    updateBallEffects(st, 0.016, 3800);
+    // Round again exactly at the end of the stick, which is the moment the
+    // ball's physics resume. Not 750ms after it, on a ball already in flight.
+    updateBallEffects(st, 0.016, 3000);
     expect(getSquishEffect(st).active).toBe(false);
   });
 
   it("does not snap round even if nothing ticked during the hold", () => {
     // The browser loop skips a held ball entirely, so the effects may not have
     // been updated once between the stick and the release.
+    // Sampled inside the freeze rather than at 3001: the release now finishes
+    // by then, so a single late tick correctly finds a round ball.
     const st = stuckAt(1000, 2000);
-    updateBallEffects(st, 0.016, 3001);
+    updateBallEffects(st, 0.016, 2400);   // one tick, deep inside the flat hold
     expect(compression(st)).toBeGreaterThan(0.25);
+    const mid = createBallEffectState();
+    triggerWallHit(mid, 1000, 0, -300, 300);
+    pinSquish(mid, 1000, 2000);
+    updateBallEffects(mid, 0.016, 2600);  // one tick, mid-reinflate
+    expect(compression(mid)).toBeGreaterThan(0.25);
   });
 
   it("forgets the boost once the spring-back has finished", () => {
@@ -169,6 +183,77 @@ describe("the squash ramps in, holds, and springs back on release", () => {
     pinSquish(st, 1000, 2000);
     expect(isSquishPinned(st, 1500)).toBe(false);
     expect(getSquishEffect(st).active).toBe(false);
+  });
+});
+
+// ── 1b. The freeze covers the WHOLE animation ───────────────────────────────
+//
+// Reported by the owner after playing it: the hold ran the full N seconds, the
+// freeze lifted, and the reinflate then played on a ball that was already on
+// its way - so it left the wall half-flat and rounded out in flight, which
+// reads as a rendering glitch rather than as a ball peeling off a wall. The
+// upgrade's seconds are now the WHOLE stuck time: squash in, hold, reinflate,
+// and only when it is a round ball again does it carry on with the velocity and
+// heading it arrived with.
+
+/** Tick a state every frame up to `ms` after the impact at `t0`. */
+function playTo(st: ReturnType<typeof createBallEffectState>, t0: number, ms: number) {
+  for (let t = 0; t <= ms; t += 1000 / 60) updateBallEffects(st, 1 / 60, t0 + t);
+  updateBallEffects(st, 1 / 60, t0 + ms);
+  return getSquishEffect(st);
+}
+
+describe("the ball is never deformed at a moment it could move", () => {
+  const T0 = 5000;
+
+  for (const T of [2000, 3000, 3500]) {
+    it(`is exactly round at the end of a ${T / 1000}s stick, and still deformed 100ms before`, () => {
+      const st = stuckAt(T0, T);
+      expect(playTo(st, T0, T - 100).active, "round before the freeze lifted").toBe(true);
+      const end = playTo(st, T0, T);
+      expect(end.active).toBe(false);
+      expect(end.scaleAlong).toBe(1);
+      expect(end.scalePerp).toBe(1);
+      expect(st.squishAmount).toBe(0);
+    });
+  }
+
+  it("plays the reinflate WHILE STUCK: crown lifting, footprint still wide", () => {
+    // 100ms into the release, which is 420ms before the ball may move. The
+    // crown is already coming back up and the ball is still sitting in a wide
+    // flat footprint, which is the whole "un-slump before letting go" beat -
+    // and every frame of it now happens on a motionless ball.
+    const T = 2000;
+    const st = stuckAt(T0, T);
+    const flat = playTo(st, T0, T - SPLAT_HELD_OUT_MS);
+    const lifting = playTo(st, T0, T - SPLAT_HELD_OUT_MS + 100);
+    expect(lifting.scaleAlong).toBeGreaterThan(flat.scaleAlong);   // crown rising
+    expect(lifting.scalePerp).toBeGreaterThan(1.3);                // footprint still wide
+    expect(isSquishPinned(st, T0 + T - SPLAT_HELD_OUT_MS + 100)).toBe(false);
+  });
+
+  it("never stretches a held ball, because it has nowhere to be going yet", () => {
+    // The peel is the ball elongating along its departure. A stuck ball has no
+    // departure to elongate into - it is frozen, and it is round before it is
+    // released - so the dial stays at zero for the whole stick.
+    const st = stuckAt(T0, 2000);
+    for (let t = 0; t <= 2100; t += 1000 / 60) {
+      updateBallEffects(st, 1 / 60, T0 + t);
+      expect(st.splatStretch, `stretched at +${Math.round(t)}ms`).toBe(0);
+    }
+  });
+
+  it("still peels an ordinary bounce, which is not frozen and IS leaving", () => {
+    // The other half of the same rule: a bounce keeps its departure stretch,
+    // because that ball really is moving away while the shape plays out.
+    const st = createBallEffectState();
+    triggerWallHit(st, T0, 0, -300, 300);
+    let peak = 0;
+    for (let t = 0; t <= 400; t += 1000 / 60) {
+      updateBallEffects(st, 1 / 60, T0 + t);
+      peak = Math.max(peak, st.splatStretch);
+    }
+    expect(peak).toBeGreaterThan(0.5);
   });
 });
 
@@ -199,13 +284,17 @@ function play(
     ball.position = { x: pin.x, y: pin.y };
     ball.velocity = { x: pin.vx, y: pin.vy };
   }
-  const log: Array<{ t: number; x: number; y: number; vx: number; vy: number; stuck: boolean }> = [];
+  const log: Array<{
+    t: number; x: number; y: number; vx: number; vy: number;
+    stuck: boolean; deformed: boolean;
+  }> = [];
   for (let f = 0; f < seconds / PHYSICS_STEP; f++) {
     stepBot(ctx, PHYSICS_STEP);
     const now = performance.now();
     log.push({
       t: now, x: ball.position.x, y: ball.position.y, vx: ball.velocity.x, vy: ball.velocity.y,
       stuck: ball.bugSquashUntil !== undefined && now < ball.bugSquashUntil,
+      deformed: getSquishEffect(ball.effects).active,
     });
   }
   return { ctx, ball, log };
@@ -234,6 +323,27 @@ describe("a stuck ball stays put and then carries on", () => {
     // And it actually leaves.
     const later = log[first + stuckRun + 30];
     expect(Math.hypot(later.x - held[0].x, later.y - held[0].y)).toBeGreaterThan(1);
+  });
+
+  it("is round on the very first frame it moves again", () => {
+    // The invariant, measured through the real physics rather than the
+    // envelope: a stuck ball does not move while it is deformed, and it is not
+    // deformed once it moves. The whole squash-hold-reinflate now happens on a
+    // motionless ball, so the frame it sets off carries a perfectly round one.
+    const { log } = play({ bugSquashChance: 100, bugSquashSeconds: 2 }, 8);
+    const first = log.findIndex(e => e.stuck);
+    const stuckRun = log.slice(first).findIndex(e => !e.stuck);
+    expect(first, "the ball never stuck to a wall").toBeGreaterThan(0);
+    expect(stuckRun, "the ball never let go").toBeGreaterThan(0);
+    const held = log.slice(first, first + stuckRun);
+    // Still visibly reinflating a few frames before the release...
+    expect(held[held.length - 6].deformed, "already round while still stuck").toBe(true);
+    // ...and round on the frame it starts moving, and never deformed after it.
+    for (const e of log.slice(first + stuckRun, first + stuckRun + 20)) {
+      expect(e.deformed, "moving while still deformed").toBe(false);
+    }
+    // Which is also the first frame it has moved since it stuck.
+    expect(log[first + stuckRun].x !== held[0].x || log[first + stuckRun].y !== held[0].y).toBe(true);
   });
 
   it("is a held ball by every existing rule, without the tap-freeze thaw cooldown", () => {

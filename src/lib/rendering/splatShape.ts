@@ -146,6 +146,28 @@ export function splatOutline(
   return points;
 }
 
+/**
+ * The BULB'S FILAMENT, in contact space: where the sphere's centre ends up
+ * once the ball has deformed.
+ *
+ * The renderer pins the texture's white-hot core to a single vertex, and that
+ * vertex used to sit on the outline's CENTROID. A centroid is a property of a
+ * silhouette, not of the material: it drifts sideways with the footprint and
+ * lags the mass on the way in, so the filament slid around inside a ball that
+ * had not moved. The core is a MATERIAL POINT - the middle of the sphere - and
+ * it goes through the same transform as every vertex, so it is computed from
+ * the same chain rather than measured off the result.
+ *
+ * The chain, minus two steps that do not apply to a point on the axis inside
+ * the body: the wall CLAMP (the core never reaches the wall, so it is never on
+ * it) and the SPREAD (weighted by distance from the axis, and the core is on
+ * the axis, so it is zero there).
+ */
+export function splatCore(s: SplatState, radius: number): { x: number; y: number } {
+  const cy = -radius + s.d * radius * CENTRE_DROP;
+  return { x: 0, y: cy * (1 - s.v * SLUMP) * (1 + s.stretch * PEEL_STRETCH) };
+}
+
 /** Summary numbers a caller can size other things from (shadows, tests). */
 export interface SplatMetrics {
   /** Widest point, in world units. */

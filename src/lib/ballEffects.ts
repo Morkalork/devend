@@ -69,7 +69,11 @@ export interface BallEffectState {
   squishNy: number;
   /** Peak deformation for this hit, 0..1. A bounce is a small fraction of a splat. */
   squishAmount: number;
-  /** While in the future the splat is pinned at full instead of releasing (Bug Squash). */
+  /**
+   * While in the future the splat is pinned at full instead of releasing (Bug
+   * Squash). NOT the end of the stick: it lands SPLAT_HELD_OUT_MS earlier, so
+   * the reinflate finishes while the ball is still frozen. See pinSquish.
+   */
   squishHoldUntil: number;
   /** Timescale: 1 for a splat, faster for a passing bounce. */
   squishSpeed: number;
@@ -152,6 +156,23 @@ const CONFIG = {
 
   squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
 };
+
+/**
+ * How long the release of a HELD splat takes, measured from the moment the
+ * hold lifts. Shorter than `splatOutEndMs` because a held splat has no peel.
+ *
+ * A stuck ball is frozen for the WHOLE animation and starts moving the instant
+ * it is round again (see pinSquish), so there is no departure to stretch into:
+ * the peel would play on a ball still nailed to the wall, and the ball would
+ * then set off having already done its leaving. Without it the release is over
+ * the moment d, v and w are all back to zero, which is when the footprint
+ * finishes letting go - the last of the three to finish.
+ *
+ * Derived rather than written down, because pinSquish sizes the hold by it and
+ * tickSplat ends the release by it, and those two disagreeing is exactly the
+ * bug this whole change is fixing: a ball that starts moving mid-animation.
+ */
+export const SPLAT_HELD_OUT_MS = CONFIG.splatFootFrom + CONFIG.splatFootMs;
 
 /**
  * How much of the lost thickness a squashed ball spends spreading sideways.
@@ -246,9 +267,14 @@ function tickSplat(state: BallEffectState, now: number): void {
   const speed = state.squishSpeed || 1;
   const t = (now - state.squishTime) * speed;
 
+  // A HELD splat (Bug Squash) is frozen for the whole animation and only moves
+  // once it is round again, so it plays a different release from a bounce: no
+  // departure stretch, and over as soon as the three dials are back to zero.
+  const held = state.squishHoldUntil > 0;
+
   // Where the release begins: the end of the hold for a splat, or the moment
   // the ball is fully squashed for a bounce, which has no hold at all.
-  const holdEnds = state.squishHoldUntil > 0
+  const holdEnds = held
     ? (state.squishHoldUntil - state.squishTime) * speed
     : C.splatInEndMs;
 
@@ -273,9 +299,16 @@ function tickSplat(state: BallEffectState, now: number): void {
   state.splatV = 1 - easeIn(r / C.splatLiftMs);
   state.splatD = 1 - easeIn((r - C.splatFaceFrom) / C.splatFaceMs);
   state.splatW = 1 - easeIn((r - C.splatFootFrom) / C.splatFootMs);
-  state.splatStretch = Math.sin(Math.PI * clamp01((r - C.splatPeelFrom) / C.splatPeelMs));
+  // THE PEEL IS A BOUNCE'S ALONE. It is the ball elongating along the way it
+  // is going as it pulls off the wall, and a stuck ball is not going anywhere
+  // yet: it is still frozen, and it is round before it is released. Playing it
+  // here would stretch a nailed-down ball and then hand the physics a ball
+  // that had already finished leaving.
+  state.splatStretch = held
+    ? 0
+    : Math.sin(Math.PI * clamp01((r - C.splatPeelFrom) / C.splatPeelMs));
 
-  if (r >= C.splatOutEndMs) {
+  if (r >= (held ? SPLAT_HELD_OUT_MS : C.splatOutEndMs)) {
     // Round again, and every dial cleared so the next hit starts from nothing.
     state.squishAmount = 0;
     state.squishHoldUntil = 0;
@@ -368,7 +401,22 @@ function triggerSquish(
 }
 
 /**
- * Bug Squash: pin the ball's squash against the wall it just hit for `holdMs`.
+ * Bug Squash: splat the ball against the wall it just hit and keep it there
+ * for `totalMs`, the WHOLE time the ball is stuck.
+ *
+ * `totalMs` is the upgrade's seconds, and it covers the entire animation -
+ * squash in, hold flat, reinflate - because the ball is frozen for exactly
+ * that span. So the hold ends EARLY, at totalMs minus the release, and the
+ * ball is round again at the moment its physics resume.
+ *
+ * That is the fix for what shipped first: the hold ran the full duration, the
+ * ball unfroze, and the reinflate then played on a ball that was already
+ * leaving. It departed half-flat and rounded out in mid-flight, which reads as
+ * a rendering glitch rather than as a ball peeling off a wall.
+ *
+ * The in-phase always completes: if the seconds are ever shorter than in plus
+ * out there is simply no flat hold at all, and the ball squashes and rebounds
+ * without pausing, rather than being drawn deformed once it is moving again.
  *
  * Call right after triggerWallHit, which has already recorded the impact
  * normal; this re-arms the envelope at full magnitude regardless of how hard
@@ -376,7 +424,7 @@ function triggerSquish(
  * hold. Does nothing without a recorded normal, because a squash with no axis
  * would be drawn along whatever axis the last impact happened to leave behind.
  */
-export function pinSquish(state: BallEffectState, now: number, holdMs: number): void {
+export function pinSquish(state: BallEffectState, now: number, totalMs: number): void {
   if (state.squishNx === 0 && state.squishNy === 0) return;
   // Full depth regardless of how hard the ball actually hit - a splat is a
   // splat - at the slow timescale, starting from round so the contact face is
@@ -384,11 +432,17 @@ export function pinSquish(state: BallEffectState, now: number, holdMs: number): 
   state.squishAmount = 1;
   state.squishTime = now;
   state.squishSpeed = 1;
-  state.squishHoldUntil = now + Math.max(0, holdMs);
+  state.squishHoldUntil = now + Math.max(
+    CONFIG.splatInEndMs, Math.max(0, totalMs) - SPLAT_HELD_OUT_MS,
+  );
   state.splatD = state.splatV = state.splatW = state.splatStretch = 0;
 }
 
-/** True while a Bug Squash hold is pinning this ball's squash. */
+/**
+ * True while a Bug Squash hold is pinning this ball's squash FLAT. It goes
+ * false when the reinflate starts, which is still inside the freeze - a stuck
+ * ball spends its last SPLAT_HELD_OUT_MS recovering its shape without moving.
+ */
 export function isSquishPinned(state: BallEffectState, now: number): boolean {
   return state.squishHoldUntil > 0 && now < state.squishHoldUntil;
 }

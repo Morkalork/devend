@@ -25,8 +25,10 @@ import { describe, it, expect } from "vitest";
 import { Graphics } from "pixi.js";
 import { SleekBallLayer } from "@/lib/rendering/sleek/ballLayer";
 import { lightScope } from "@/lib/rendering/sleek/light";
-import { createBallEffectState, triggerWallHit, pinSquish, updateBallEffects } from "@/lib/ballEffects";
-import { SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
+import {
+  createBallEffectState, triggerWallHit, pinSquish, updateBallEffects, getSquishEffect,
+} from "@/lib/ballEffects";
+import { SPLAT_SEGMENTS, splatOutline, splatMetrics, splatCore } from "@/lib/rendering/splatShape";
 import type { Ball } from "@/types/game";
 
 const RADIUS = 9;
@@ -151,14 +153,26 @@ describe("a splatted ball is a droplet, not an ellipse", () => {
     expect(atMiddle).toBeGreaterThan(atCrown);
   });
 
-  it("slides the highlight down onto the mass", () => {
-    // The centre vertex carries the texture's bright core, so putting it on the
-    // deformed centroid is what moves the highlight toward the wall as the ball
-    // slumps. Decision taken at design review: slide it.
+  it("slides the highlight down onto the mass, at the deformed CORE", () => {
+    // The centre vertex carries the texture's bright core, so where it goes is
+    // where the highlight goes. It rides the deformed core - the middle of the
+    // sphere put through the same transform as every vertex - rather than the
+    // outline's centroid, which is an average of a silhouette and gets dragged
+    // about by the footprint spreading. The filament is a material point.
     const s = splatted(300);
     const { body } = render(ball(s.fx), s.now);
-    expect(body.cx).toBeGreaterThan(AT.x);      // toward the wall (+x side)
-    expect(body.cy).toBeCloseTo(AT.y, 0);
+    const splat = getSquishEffect(s.fx, 1).splat;
+    const core = splatCore(splat, RADIUS);
+    const centroid = splatMetrics(splatOutline(splat, RADIUS));
+    // The ball hit a wall on its RIGHT, so contact space maps to the screen
+    // simply here: the wall is the vertical line at AT.x + RADIUS, and contact
+    // y (negative, off the wall) runs back along -x from it.
+    const wallX = AT.x + RADIUS;
+    expect(body.cx).toBeGreaterThan(AT.x);                  // toward the wall
+    expect(body.cx).toBeCloseTo(wallX + core.y, 3);         // exactly on the core (float32 buffer)
+    expect(body.cx).toBeGreaterThan(wallX + centroid.cy);   // nearer the wall than the centroid
+    expect(body.cx).toBeLessThan(wallX);                    // and never through it
+    expect(body.cy).toBeCloseTo(AT.y, 6);                   // still on the impact axis
   });
 });
 

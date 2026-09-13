@@ -40,7 +40,7 @@ import { Container, Graphics, Mesh, MeshGeometry, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
-import { splatOutline, splatMetrics, SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
+import { splatOutline, splatMetrics, splatCore, SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
@@ -210,14 +210,20 @@ interface BallView {
  *
  * THE CENTRE VERTEX IS WHERE THE TEXTURE'S MIDDLE GOES, and that is how the
  * highlight follows the mass: both bakes are concentric radial gradients, so
- * putting the centre vertex on the deformed CENTROID slides the bright core
+ * putting the centre vertex on the ball's deformed CORE slides the bright core
  * down toward the wall as the ball slumps, with no separate highlight to move.
  *
+ * The core, not the centroid. The filament is a material point at the middle of
+ * the sphere, so it goes through the deformation like every other point of the
+ * body (splatCore). A centroid is a property of the silhouette instead: it is
+ * pulled about by the footprint spreading, so the bright core wandered inside a
+ * ball whose middle had not actually moved that way.
+ *
  * The ring's UV radius is 0.5 - the very edge of the texture - for both bakes.
- * Each ring is then pushed out from the centroid by the factor that its
- * texture's "ball edge" feature is inset by (the sphere's transparent margin,
- * the corona's peak-to-canvas ratio), so in both cases that feature lands
- * exactly on the ball's silhouette. Same construction, one number apart.
+ * Each ring is then pushed out from the core by the factor that its texture's
+ * "ball edge" feature is inset by (the sphere's transparent margin, the
+ * corona's peak-to-canvas ratio), so in both cases that feature lands exactly
+ * on the ball's silhouette. Same construction, one number apart.
  */
 function makeFan(): { geometry: MeshGeometry; positions: Float32Array } {
   const n = SPLAT_SEGMENTS;
@@ -240,23 +246,24 @@ function makeFan(): { geometry: MeshGeometry; positions: Float32Array } {
 }
 
 /**
- * Write one fan's screen positions: centre vertex on the mass, ring pushed out
- * from it by `expand` (see makeFan for why each texture wants its own factor).
+ * Write one fan's screen positions: centre vertex on the deformed core, ring
+ * pushed out from it by `expand` (see makeFan for why each texture wants its
+ * own factor).
  */
 function writeFan(
   out: Float32Array,
   outline: ReturnType<typeof splatOutline>,
-  shape: ReturnType<typeof splatMetrics>,
+  core: ReturnType<typeof splatCore>,
   expand: number,
   sx: (lx: number, ly: number) => number,
   sy: (lx: number, ly: number) => number,
 ): void {
-  out[0] = sx(shape.cx, shape.cy);
-  out[1] = sy(shape.cx, shape.cy);
+  out[0] = sx(core.x, core.y);
+  out[1] = sy(core.x, core.y);
   for (let i = 0; i < outline.length; i++) {
     const pt = outline[i];
-    const lx = shape.cx + (pt.x - shape.cx) * expand;
-    const ly = shape.cy + (pt.y - shape.cy) * expand;
+    const lx = core.x + (pt.x - core.x) * expand;
+    const ly = core.y + (pt.y - core.y) * expand;
     out[(i + 1) * 2] = sx(lx, ly);
     out[(i + 1) * 2 + 1] = sy(lx, ly);
   }
@@ -466,6 +473,11 @@ export class SleekBallLayer {
     const squish = getSquishEffect(ball.effects, ball.isBoss ? BOSS_SQUISH_SCALE : 1);
     const outline = splatOutline(squish.splat, r);
     const shape = splatMetrics(outline);
+    // The bulb's filament: the middle of the sphere carried through the same
+    // deformation, which is where both textures' bright core belongs. The
+    // shadow below stays on the CENTROID, because a shadow is cast by the
+    // silhouette and not by a point inside the ball.
+    const core = splatCore(squish.splat, r);
 
     // The impact normal is a WORLD direction and the board may be turned, so it
     // is pushed through the same w2s every vertex goes through rather than used
@@ -557,7 +569,7 @@ export class SleekBallLayer {
     // The fan, in screen space. Both meshes are the same silhouette pushed out
     // from the mass by their own texture's inset (see makeFan), so the bulb's
     // edge and the corona's peak both land on the outline.
-    writeFan(bodyPos, outline, shape, SPHERE_MARGIN, sx, sy);
+    writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy);
     body.geometry.attributes.aPosition.buffer.update();
 
     // ── Corona ──────────────────────────────────────────────────────────────
@@ -571,7 +583,7 @@ export class SleekBallLayer {
       // and it bleeds past the silhouette, so a round one over a splatted ball
       // does not merely fail to help - it erases the splat, which was most of
       // why the squash could not be seen at all.
-      writeFan(coronaPos, outline, shape, CORONA_RADII, sx, sy);
+      writeFan(coronaPos, outline, core, CORONA_RADII, sx, sy);
       corona.geometry.attributes.aPosition.buffer.update();
       // Whitened like the light pool, for the same reason: a pure hue bloom
       // over a pure hue ball is invisible, and it is the WHITENING that reads

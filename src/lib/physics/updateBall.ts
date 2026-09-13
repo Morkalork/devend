@@ -344,10 +344,14 @@ function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): void {
   if (ball.isBoss || ball.state !== "active") return;
   if (ball.frozenUntil !== undefined && now < ball.frozenUntil) return;
   if (runStream(`bugSquash:${ball.id}`)() * 100 >= game.bugSquashChance) return;
-  const holdMs = game.bugSquashSeconds * 1000;
-  ball.frozenUntil = now + holdMs;
-  ball.bugSquashUntil = now + holdMs;
-  pinSquish(ball.effects, now, holdMs);
+  // The upgrade's seconds are the WHOLE stuck time: squash in, hold, reinflate.
+  // pinSquish sizes its flat hold so the ball has finished coming back to round
+  // by the time the freeze lifts, rather than setting off half-flat and
+  // reinflating in flight.
+  const stuckMs = game.bugSquashSeconds * 1000;
+  ball.frozenUntil = now + stuckMs;
+  ball.bugSquashUntil = now + stuckMs;
+  pinSquish(ball.effects, now, stuckMs);
 }
 
 export function updateBall(
