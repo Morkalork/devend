@@ -7,6 +7,15 @@
 // elements so track changes are smooth, not abrupt. A missing/broken band track
 // falls back to main.mp3.
 //
+// LOOPING IS IN TWO LAYERS, and the order matters. Each element has native
+// `loop` set, which is the floor and cannot fail. On top of that, a timeupdate
+// handler hands the track to the other element ~1.4s before the end so the
+// wrap is a crossfade rather than a seam. The nice layer is allowed to miss -
+// a hidden tab throttles timeupdate and a backgrounded phone stops it - and
+// when it does, the browser's own loop carries the track and the crossfade
+// re-arms on the next pass. It used to be the nice layer ALONE, which meant one
+// missed window was silence for the rest of the session.
+//
 // Files live in public/assets/music/ and are served at /assets/music/*.
 
 import { isAudioMuted } from "@/lib/gameAudio";
@@ -54,7 +63,26 @@ function ensureDeck(): [HTMLAudioElement, HTMLAudioElement] | null {
   if (!deck) {
     const make = () => {
       const a = new Audio();
-      a.loop = false; // crossfade-loop handled manually via timeupdate
+      // NATIVELY LOOPING, with the crossfade-loop layered on top as a nicety.
+      //
+      // This was `false`, on the reasoning that the timeupdate crossfade below
+      // handles looping itself. It does, when it fires. When it does not, the
+      // track reached its end and there was SILENCE, permanently, because
+      // nothing else ever restarted it - no `ended` handler, no fallback, one
+      // trigger and no floor under it. Reported as "the main menu music isn't
+      // on a loop, it just stops".
+      //
+      // The trigger is a `timeupdate` listener comparing currentTime against
+      // duration - 1.4s, and timeupdate is exactly the event browsers throttle
+      // when a tab is hidden or a phone backgrounds the app. Miss the ~1.4s
+      // window once and the loop is gone for the rest of the session.
+      //
+      // `loop` cannot miss: it is the browser's own. It also never competes
+      // with the crossfade, because a crossfaded-away element is paused at
+      // duration - 0.5s and never reaches the end that would trigger it. So
+      // this is purely a floor: the crossfade still does the seamless job
+      // whenever it fires, and when it does not the track simply loops.
+      a.loop = true;
       a.preload = "auto";
       a.volume = 0;
       return a;
@@ -85,6 +113,7 @@ function primeElement(a: HTMLAudioElement): void {
   try {
     a.dataset.priming = "1";
     a.muted = true;
+    a.loop = false;       // a 25ms silent clip has no business looping
     a.src = SILENT_AUDIO; // unlock with silence, never the real (audible) track
     const restore = () => {
       if (a.dataset.priming !== "1") return; // a real switchTo took this element over
@@ -185,6 +214,7 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
     : null;
 
   delete incoming.dataset.priming; // cancel any in-flight prime-restore on this element
+  incoming.loop = true;            // primeElement may have cleared it; see ensureDeck
   incoming.src = src;
   incoming.currentTime = 0;
   incoming.volume = 0;
@@ -202,6 +232,21 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   fadeTo(incoming, musicVolume, crossfadeMs, gen);
   if (crossfade) {
     fadeTo(outgoing, 0, crossfadeMs, gen, () => outgoing.pause());
+    // HARD BACKSTOP on the pause, because the fade's own onDone is not
+    // guaranteed to run: fadeTo bails the moment a newer switch bumps fadeGen,
+    // and it bails BEFORE calling onDone. That used to be harmless - an
+    // unpaused outgoing element would reach the end of its track and stop by
+    // itself. Now that the deck loops natively it would instead play forever
+    // underneath the new track, so the pause has to be owned by something the
+    // generation guard cannot cancel.
+    //
+    // Guarded on the element not having become the foreground again in the
+    // meantime, which is exactly what a quick switch back to the same track
+    // would do.
+    const stale = outgoing;
+    setTimeout(() => {
+      if (deck && deck[activeIndex] !== stale) stale.pause();
+    }, crossfadeMs + 250);
   } else {
     outgoing.pause();
   }
