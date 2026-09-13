@@ -28,7 +28,7 @@ import { speedStretch, SPEED_STRETCH, SPEED_STRETCH_REF } from "@/lib/rendering/
 import { registerWallImpact, updateWallImpacts, clearWallImpacts, activeWallImpacts } from "@/lib/wallImpactEffects";
 import { setLightLook, resetLightLookCache } from "@/lib/lightLook";
 import type { CanvasGameState } from "@/types/gameState";
-import type { Ball } from "@/types/game";
+import type { Ball, GrowingWall } from "@/types/game";
 
 const RECT = { left: 0, top: 0, width: 900, height: 900, scale: 1 } as never;
 const R = 18;
@@ -186,10 +186,13 @@ describe("a bounce makes light", () => {
 });
 
 describe("the cut the player is drawing is hot", () => {
+  // Only the four fields the light pass reads. Cast rather than filled out:
+  // a GrowingWall carries nine more for the physics that grows it, and
+  // spelling them here would say this effect depends on them.
   const growing = (over = {}) => ({
     startPoint: { x: 400, y: 500 }, endPoint: { x: 400, y: 700 },
     isComplete: false, thickness: 6, ...over,
-  });
+  } as unknown as GrowingWall);
 
   it("lights both travelling tips, which is where the work is", () => {
     const pass = new BallLightPass();
