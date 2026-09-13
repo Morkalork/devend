@@ -12,6 +12,7 @@ import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock,
 } from "@/lib/bot/headlessGame";
 import { LADDER } from "@/test/fixtures/maps";
+import { setRunSeedText } from "@/lib/runRng";
 import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import { castRayWithReflections } from "@/lib/wallGeometry";
 import { pointToSegmentDistance } from "@/lib/polygon";
@@ -21,13 +22,32 @@ import type { GrowingWall, Vector2 } from "@/types/game";
 
 afterEach(() => releaseClock());
 
-/** A bare early map, settled enough that its grid and regions are real. */
+/**
+ * A bare early map, settled enough that its grid and regions are real, with the
+ * balls parked and frozen in one corner.
+ *
+ * Both halves matter and both were learned the hard way. The seed is pinned
+ * because createBotGame deals from whatever seed the previous test left, so
+ * without it the ball roster and start positions change with test ORDER. The
+ * balls are then held still because a ball that touches a growing fence kills
+ * it: this file is about the geometry of a bent cut, and a run where a ball
+ * happened to wander into the corner reported "the fence produced no walls",
+ * intermittently and only in a full-suite run.
+ */
 function board(bends: number) {
   releaseClock();
+  setRunSeedText("bent-fence");
   installClock();
   const level = LADDER.find((l) => l.level === 1)!;
   const ctx = createBotGame(level, 1, plainModifiers({ bentFenceBends: bends }));
   for (let i = 0; i < 30; i++) stepBot(ctx);
+  const game = ctx.game as unknown as CanvasGameState;
+  for (const ball of game.balls) {
+    ball.position = { x: 90, y: 810 };
+    ball.velocity = { x: 0, y: 0 };
+    ball.speed = 0;
+    ball.frozenUntil = performance.now() + 60_000;
+  }
   return ctx;
 }
 

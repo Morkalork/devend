@@ -113,7 +113,12 @@ describe("level 14 holds together", () => {
     // not need.
     const band = LADDER.filter(l => (l.level ?? 0) >= 11);
     const noSmash = band.filter(l => !(l.win?.require ?? []).some(c => c.kind === "smashed"));
-    expect(noSmash.map(l => l.level)).toEqual([14, 15]);
+    // 16 makes three, and for the same reason rather than by drifting: its
+    // furniture (bumpers, a deformable slab, two phasing pillars) is all
+    // terrain, so there is nothing on it to smash and nothing to gate. The
+    // band's `smashed` habit is being broken by maps that do not need the
+    // clause, which is the only honest way to break it.
+    expect(noSmash.map(l => l.level)).toEqual([14, 15, 16]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,

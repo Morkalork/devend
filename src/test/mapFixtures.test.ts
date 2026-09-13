@@ -48,7 +48,12 @@ describe("the map fixtures", () => {
     // different map (a gravity-well board, where the retired level-15 is a
     // terminals pilot), so anything that had cached a lookup by id across both
     // sets would have been wrong in a new way without noticing.
-    expect(shared).toEqual(["level-11", "level-12", "level-13", "level-14", "level-15"]);
+    // level-16 joins on the same terms: the retired level-16 was a different
+    // map on the same rung, so the id now resolves to two unrelated boards
+    // depending on the set.
+    expect(shared).toEqual([
+      "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
+    ]);
   });
 
   it("keeps LADDER_END pointing at the last map that actually exists", () => {

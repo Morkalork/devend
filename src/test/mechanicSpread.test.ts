@@ -111,7 +111,16 @@ describe("no mechanic is introduced and then dropped", () => {
     //
     // `boardEdges` stays off the list, which is the part that did carry over:
     // four symmetric live walls need no gravity to earn their keep.
-    expect(singles.map(w => w.key).sort()).toEqual(["gravityWell", "mirror", "mutator"]);
+    //
+    // DEFORMABLE and PHASING joined on 16, both on their meet, both for the
+    // one map. That is two names at once rather than the rebuild's usual one,
+    // and it is the compressed-sibling pattern rather than a slip: 16 Meets
+    // phasing and compresses the deformable beside it, because they are the
+    // same family read from opposite ends (a wall that is never the same twice
+    // against one that is the same forever and forgets nothing). They come off
+    // when 17 onward develop them, on the same rhythm as bouncer and launcher.
+    expect(singles.map(w => w.key).sort())
+      .toEqual(["deformable", "gravityWell", "mirror", "mutator", "phasing"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -131,12 +140,14 @@ describe("no mechanic is introduced and then dropped", () => {
     // Take a name off when a rebuilt map places the mechanic. When the list is
     // empty the assertion goes back to toEqual([]). LAUNCHER was the first off,
     // on level 11; BUMPER the second, on 12; MIRROR the third, on 13; PINNED
-    // MUTATOR the fourth, on 14; GRAVITY WELL the fifth, on 15.
+    // MUTATOR the fourth, on 14; GRAVITY WELL the fifth, on 15; DEFORMABLE and
+    // PHASING the sixth and seventh, both on 16, which Meets one and
+    // compresses the other.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
-        "Ball gate", "Cage", "Charge", "Data stream", "Deformable",
+        "Ball gate", "Cage", "Charge", "Data stream",
         "Delivery box", "Fence ground", "Latch",
-        "One-way", "Phasing", "Portal", "Rotor",
+        "One-way", "Portal", "Rotor",
         "Terminals", "Thread lock", "WIP limit",
       ]);
   });
@@ -190,9 +201,13 @@ describe("no single idea owns an act", () => {
     // That round trip is the sampling effect the note above warns about, shown
     // twice in two commits: the same three maps read as 3 of 5, then 3 of 4,
     // then 3 of 5 again while nothing about them was touched.
-    expect(monopolies).toEqual([
-      "Breakable: on 3 of act II's 5 maps",
-    ]);
+    // AND IT DID SETTLE, exactly as predicted and without a slab moving. Level
+    // 16 carries no breakable, so the fraction went 3 of 5 to 3 of 6 and fell
+    // under the rule's bar: the act's only reported monopoly was a small
+    // sample all along, and it aged out rather than being fixed. The assertion
+    // is empty again, which is the state it should stay in - a name arriving
+    // here now means six maps' worth of evidence rather than four.
+    expect(monopolies).toEqual([]);
   });
 
   it("does not complain about furniture", () => {

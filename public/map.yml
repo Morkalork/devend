@@ -1299,3 +1299,172 @@ levels:
           count: 2
     entities: []
     balls: []
+
+  # 16 "Tech Debt" - MEET phasing, COMPRESSED deformable, USE the bumper.
+  - id: level-16
+    level: 16
+    # THREE OBJECTS THAT DISAGREE ABOUT HOW FAST THE BALLS ARE.
+    #
+    # 14 and 15 were terrain maps: bare boards where the whole read was a pull.
+    # This one puts furniture back, and picks the furniture so that every piece
+    # of it is about the same quantity. The bumpers hand out speed and pay for
+    # it. The slab takes speed away and keeps a permanent mark of how much. The
+    # pillars vanish, and shove everything near them 35% faster on the way out.
+    # So the map's difficulty is not a threshold, it is a number that will not
+    # sit still, and the player's job is to seal a board while it moves.
+    #
+    # The MEET is phasing, and the COMPRESSED sibling is the deformable: both
+    # are family A ("this wall will not be the same wall in a minute") read from
+    # opposite ends. The pillars are never the same wall twice and forget
+    # everything; the slab is the same wall forever and forgets nothing. Meeting
+    # one against the other is cheaper than meeting either alone, which is the
+    # whole argument for compressing a sibling (see the ledger).
+    sizeThreshold: 13
+    # 9. Above 15's 7 because the furniture is back and a fence has things to
+    # anchor on again, and above 14's 8 because the divider means most cuts only
+    # ever claim half a board. Re-measured against the bot sweep below.
+    expectedCuts: 9
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, red]
+    # 0.8, low for this rung on purpose. Everything on this board ADDS speed:
+    # two bumpers at 1.25 a kick and two shockwaves at 1.35. A normal opening
+    # pace plus all of that is a map that is fast from the first bump and stays
+    # there, and a ball at terminal speed is moving at a constant speed again -
+    # which is the one thing this map must not be. Starting slow is what makes
+    # the additions legible, and it is the same lesson 14 learned about kicks.
+    ballSpeedScale: 0.8
+    win:
+      require:
+        - kind: space
+          threshold: 13
+        - kind: locks
+          count: 1
+    # The one thing on the board that is worth more than the board.
+    #
+    # Everything else here is TERRAIN in the sense ladderWins means it: a
+    # bumper, a slab and a pillar have no state that says whether you engaged
+    # with them, so none of them can carry a win clause and `space + locks` is
+    # the honest ask (see 14 and 15 for the same reasoning). A bonus pocket is
+    # not a clause either - it is an ECONOMY, the axis this map otherwise has
+    # none of, and it turns "seal a ball somewhere" into "seal it HERE if you
+    # can afford to".
+    #
+    # Placed in the top-left with `escalation-a` immediately under it, on
+    # purpose: the pocket that pays is the one with a machine in it whose whole
+    # job is throwing balls back out. Cheap to seal, hard to seal with a ball
+    # still inside.
+    coloredAreas:
+      - kind: var
+        x: 100
+        'y': 80
+        width: 180
+        height: 150
+        required: false
+    entities:
+      # ── The divider: one wall you can rely on, two you cannot ─────────────
+      #
+      # The middle of the board is a wall in three pieces. The centre piece is
+      # permanent; the two that reach for the frame come and go together. So
+      # the board is TWO ROOMS for about five seconds and ONE ROOM for about
+      # four, over and over, and that sentence is the whole map.
+      #
+      # Both pillars run the same cycle, in phase, deliberately. Two different
+      # cycles gives four states and a board nobody can read; a MEET gets one
+      # relationship, stated as loudly as possible. 9 seconds is long enough to
+      # commit to a cut inside one phase and short enough that waiting for the
+      # other one is a real choice rather than a rest.
+      #
+      # NOTE, because it will look like a bug and is not: a fence always
+      # terminates on a pillar, whatever phase it is in. Phasing governs BALLS,
+      # not cuts. That asymmetry is the tactical content - the divider is a
+      # reliable thing to cut against and an unreliable thing to trap against -
+      # so the pillars are placed where a pocket would never want them as a
+      # side, out in the open with the frame a clear gap away.
+      #
+      # The three pieces are separated by 10-unit SEAMS, not by gaps. A ball is
+      # 36 across, and the first draft left 40 between each pillar and the slab
+      # - wide enough to look like a way through, narrow enough that nothing
+      # reliably takes it, and a different width again the moment the big-ball
+      # gift rolls. That is the exact trap featureSchedule's seam/neck rule
+      # names, and it caught this before it was ever played. Every real way
+      # across this board is now a 75-unit neck at the frame.
+      - id: flake-top
+        kind: wall
+        shape: rect
+        x: 430
+        'y': 120
+        width: 40
+        height: 200
+        isPhasing: true
+        phaseCycleSeconds: 9
+      - id: flake-bottom
+        kind: wall
+        shape: rect
+        x: 430
+        'y': 580
+        width: 40
+        height: 200
+        isPhasing: true
+        phaseCycleSeconds: 9
+      # The permanent centre, and the only brake on the board. Every crossing
+      # that does not go through a doorway goes through this, at 3% a time, and
+      # the dents stay: by the end of a long map its face is a record of how
+      # much pace it has already drunk. Sized to leave a real doorway above and
+      # below it even while the pillars are solid (y 45-120 and y 780-855, both
+      # a clear 75-unit neck), so the board is never actually sealed in half - a
+      # divider with no gap at all would make each half a separate map.
+      - id: the-slab
+        kind: wall
+        shape: rect
+        x: 425
+        'y': 330
+        width: 50
+        height: 240
+        deformable: true
+      # ── The two that hand speed out ───────────────────────────────────────
+      #
+      # One per room, so neither half is the calm half, and off the centre line
+      # from each other so a ball crossing the board does not meet them in a
+      # straight run. This is the bumper's USE beat: met at 12 as a thing that
+      # pays, developed at 13, and here it is finally an ANTAGONIST as well as
+      # an income - the hours it pays are the same hits that make the map fast.
+      - id: escalation-a
+        kind: wall
+        shape: circle
+        cx: 220
+        cy: 290
+        radius: 46
+        bouncer: true
+        bounceHours: 5
+      - id: escalation-b
+        kind: wall
+        shape: circle
+        cx: 680
+        cy: 610
+        radius: 46
+        bouncer: true
+        bounceHours: 5
+      # ── Two quiet corners ─────────────────────────────────────────────────
+      #
+      # Slack, in the sense the difficulty contract means it: somewhere in each
+      # room that a cut can reach without crossing anything, so the map always
+      # has a cheap first move and a lock is never gated on threading the
+      # middle. Plain solids, no flags: the map already has three ideas.
+      - id: backlog-a
+        kind: wall
+        shape: rect
+        x: 110
+        'y': 660
+        width: 150
+        height: 40
+      - id: backlog-b
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 200
+        width: 150
+        height: 40
+    balls: []

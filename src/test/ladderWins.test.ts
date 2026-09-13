@@ -163,6 +163,16 @@ describe("the maps with nothing a lock cannot produce", () => {
     // though - there is no state saying whether you engaged with one - so it
     // gets no clause of its own and `space + locks` is still the honest ask.
     // That is the list's own rule doing its job rather than an exception.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15]);
+    //
+    // 16 joins for the third variation on the same reasoning, and it is the
+    // clearest one yet: it is not bare at all. It carries five obstacles and a
+    // bonus pocket. But a bumper, a deformable slab and a phasing pillar are
+    // every one of them terrain by this list's definition - nothing on the map
+    // records whether the player engaged with them - and a BONUS colored area
+    // is an economy rather than a gate. So there is genuinely nothing there to
+    // ask for, and inventing something (a token breakable, a gate the map does
+    // not want) to get 16 off this list would be exactly the dishonesty the
+    // list exists to expose.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15, 16]);
   });
 });

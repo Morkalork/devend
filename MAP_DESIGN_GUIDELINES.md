@@ -224,16 +224,24 @@ someone has to remember to update.
 
 **Four rules the shipped ladder breaks, recorded rather than quietly fixed:**
 
-1. **Level 11 debuts three mechanics at once** (launcher, bumper, deformable)
-   against the one-Meet-per-map rule. It is the act II opener and it opens loud.
+1. **Level 16 debuts two at once**, phasing and the deformable. That one is
+   deliberate and is the compressed-sibling rule working rather than breaking:
+   they are the same family read from opposite ends, so meeting one against the
+   other is cheaper than meeting either alone. It is still worth listing,
+   because "deliberate" is what every violation claims.
 2. **Ball gate debuts at 33**, inside the act that is supposed to introduce no
    new primitives.
-3. **Launcher and bumper appear on exactly one map each**, and portal, delivery
-   box, thread lock and pinned mutator on one apiece. A Meet with no Use is a
-   mechanic the player sees once and never has to understand.
+3. **The launcher appears on 11 and 12 only**, and portal, delivery box, thread
+   lock and pinned mutator on one map apiece. A Meet with no Use is a mechanic
+   the player sees once and never has to understand. (The bumper came OFF this
+   list: 12, 13 and 16.)
 4. Phasing used to debut on the level-20 BOSS, which is the worst place on the
-   ladder to learn anything. That one IS fixed: it meets at 12 now, with its
-   family, and the boss is no longer anyone's first encounter with it.
+   ladder to learn anything. That one IS fixed: it meets at 16, with its family
+   beside it, and the boss is no longer anyone's first encounter with it.
+
+Rule 1 replaced an older entry that said level 11 debuts THREE at once
+(launcher, bumper and deformable). That was the pre-rebuild plan, not the map:
+the 11 that shipped carries a launcher and nothing else new.
 
 **20 debuts across 31 playable maps**, so 11 maps carry no new mechanic at all.
 Those 11 are not filler: they are where the combinations live, and they are the
@@ -403,7 +411,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-15 built, 16-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-16 built, 17-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -574,14 +582,24 @@ neither said which was stale, which nearly cost act II a ground-up rebuild to
 match a document that was itself the artifact. `ladderLedger.test.ts` now checks
 these numbers against `map.yml` so this cannot happen twice.
 
+**Rows 11-13 were rewritten to match what shipped**, and it is worth saying what
+they used to say, because it is the same failure this section opens with. They
+described the pre-rebuild plan - launcher plus bumper plus deformable all on 11,
+phasing at 12, rotor at 13 - while the maps that were actually built are
+launcher at 11, bumper at 12, mirror at 13. Two authoritative-looking tables
+disagreeing about the same five maps is exactly what `ladderLedger.test.ts`
+exists to stop, and it only checks the LEDGER, so this table drifted unwatched.
+The per-map entries below and the ledger above are the authority; this table is
+now a summary of them rather than a rival to them.
+
 | L | new | develops | premise |
 |---|---|---|---|
-| 11 | **Meet** launcher, **Compressed** bumper + deformable | Fight breakable | The act opens loud: a barrel, bumpers that pay, and a wall that drinks hits instead of breaking. Three at once, against the one-Meet rule, and it is the only map that does it. |
-| 12 | **Meet** phasing | Use reveals + chest | A bar in the lower chamber that is not always there. Wait for the fade and cut cheaply, or go round and pay for it. |
-| 13 | **Meet** rotor | Use chest, Fight mover | The patrol pivots instead of shuttling, so where you cross it matters as much as when: the tip moves far faster than the hub. |
-| 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built, ladder ends here)* |
+| 11 | **Meet** launcher | Use reveals, Fight breakable | You commit to a scope before you know how the sprint goes: the pull sets the pay AND the speed, and the aim can buy the pocket or buy position, never both. *(built)* |
+| 12 | **Meet** bumper | Fight launcher | The machine that pays you is the machine that speeds the map up. *(built)* |
+| 13 | **Meet** mirror | Use bumper | A cut that banks. Where you start a fence stops being where it ends. *(built)* |
+| 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built)* |
 | 15 | **Meet** gravity well | Use live outer walls | Two patches that pull, on a board where nothing else does. 14 is the pull you cannot escape; this is the pull you can walk around, and choose not to. *(built)* |
-| 16 | **Compressed** deformable | Use bumper | A wall that drinks speed instead of breaking, on a board that keeps handing speed out. |
+| 16 | **Meet** phasing, **Compressed** deformable | Use bumper | Three objects that disagree about how fast the balls are: two that hand speed out, one that drinks it and keeps the marks, and two pillars that are not always there. *(built, ladder ends here)* |
 | 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
 | 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
 | 19 | **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
@@ -634,9 +652,84 @@ the walls have stopped being a variable. **Author the ramp, not the ceiling.**
 `boardEdges` are world space and do not turn with the pull (7.3b), any asymmetry
 on a tipping map is correct one phase in four. Four identical walls have no
 preferred direction to lose, so this is the first live-edge map that needs no
-`neverRotates` and can be dealt in all four orientations. It also wins on
-`space` alone - no obstacles means no breakables means nothing to smash - which
-makes it the one map in act II that does not ask for `space + smashed`.
+`neverRotates` and can be dealt in all four orientations. It also asks for
+`space + locks` rather than `space + smashed` - no obstacles means no breakables
+means nothing to smash - which made it, for one map, the only act II board that
+did not ask for a smash. 16 is the second.
+
+#### 16 "Tech Debt" - Meet phasing, Compressed deformable, Use bumper  *(built)*
+
+**Three objects that disagree about how fast the balls are.** 14 and 15 were
+terrain maps, bare boards where the whole read was a pull. 16 puts the furniture
+back and picks all of it to argue about one quantity: two bumpers hand speed out
+and pay for it, one deformable slab takes speed away and keeps a permanent mark
+of how much, and two phasing pillars vanish on a nine-second cycle and shove
+everything within 220 units 35% faster as they go. The map's difficulty is not a
+threshold, it is a number that will not sit still.
+
+**Why two debuts on one map.** Phasing MEETS here and the deformable is
+COMPRESSED beside it, which is the one shape the ledger allows a two-mechanic
+map (level 8 does the same with reveals and the colored-area gate). They are
+both family A - *this wall will not be the same wall in a minute* - read from
+opposite ends: the pillars are never the same wall twice and forget everything,
+the slab is the same wall forever and forgets nothing. Meeting one against the
+other is cheaper than meeting either alone, and it is the whole argument for
+compressing a sibling.
+
+**The divider is the map.** The middle is a wall in three pieces - pillar, slab,
+pillar - and only the middle piece is permanent. So the board is two rooms for
+about five seconds and one room for about four, over and over, and that sentence
+is the entire premise. Both pillars run the same cycle in phase, deliberately:
+two different cycles gives four states and a board nobody can read, and a MEET
+gets one relationship stated as loudly as possible.
+
+**The asymmetry that is the tactical content, and will look like a bug.** A
+fence always terminates on a pillar, whatever phase it is in - phasing governs
+BALLS, not cuts (`castRayWithReflections` reads `game.walls` and never consults
+the phase; `phasing.ts`'s header says "balls / fences / chains pass through",
+which overstates what the code does). So the divider is a reliable thing to cut
+AGAINST and an unreliable thing to trap against. That is worth having, and it is
+why both pillars sit out in the open with a clear neck to the frame: a pocket
+should never want one as a side.
+
+**What the sweep can and cannot tell you.** 16/16 wins, 22.8 bot cuts, 8.8%
+left, par 9 (ratio 2.53, against 13's 2.62, 14's 2.59 and 15's 2.81). Then the
+variant sweep, and it is worth reading as a lesson about the harness rather than
+about the map:
+
+| variant | wins | bot cuts |
+|---|---|---|
+| shipped | 16/16 | 22.8 |
+| pillars permanent (phasing off) | 16/16 | 23.9 |
+| pillars removed entirely | 16/16 | 23.4 |
+| slab not deformable | 16/16 | 23.7 |
+| no bumpers | 16/16 | 21.2 |
+| 4s cycle | 16/16 | 22.6 |
+| 16s cycle | 16/16 | 23.3 |
+
+**The bot cannot tell any of them apart**, and that is not evidence the map is
+flat. The bot cuts on a fixed cadence and never waits for anything, so a
+mechanic whose whole content is WHEN you act is invisible to it - the same
+finding level 15 recorded about the tilt, arriving from a different direction. A
+sweep can tell you a map is winnable and what it costs in cuts. It cannot tell
+you whether a timing mechanic is interesting.
+
+**So the divider was measured on the balls instead**, with no reference to the
+bot's cut policy, counting how often a ball crosses x=450 in a fifteen-second
+run:
+
+| | crossings per run |
+|---|---|
+| no pillars at all | 9.3 |
+| pillars permanent | 5.8 |
+| **shipped (9s cycle)** | **3.3** |
+
+The phasing divider separates the board MORE than a permanent one, which is the
+opposite of what it was built to do and the most interesting thing the map
+turned up. The likely cause is the phase-out shockwave: the doorway opens and
+shoves everything near it away in the same instant, so the window that looks
+like an invitation mostly is not one. Stated as a hypothesis, because the
+measurement establishes the ordering and not the reason.
 
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
