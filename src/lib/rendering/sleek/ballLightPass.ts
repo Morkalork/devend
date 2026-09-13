@@ -35,7 +35,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
-import { webPoolTex, WEB_POOL_BAKE } from "./ballWeb";
+import { webPoolTex, POOL_STOPS, WEB_POOL_BAKE, WEB_SPIN } from "./ballWeb";
 import { flicker, heartPhase } from "@/lib/rendering/ballLife";
 import { getBallLook } from "@/lib/ballLook";
 import type { Pt } from "./pixelGrid";
@@ -80,11 +80,9 @@ function poolTex(): Texture {
   const g = ctx.createRadialGradient(
     BAKE_RADIUS, BAKE_RADIUS, 0, BAKE_RADIUS, BAKE_RADIUS, BAKE_RADIUS,
   );
-  g.addColorStop(0, "rgba(255,255,255,0.55)");
-  g.addColorStop(0.18, "rgba(255,255,255,0.60)");
-  g.addColorStop(0.40, "rgba(255,255,255,0.34)");
-  g.addColorStop(0.65, "rgba(255,255,255,0.14)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
+  // The stops are shared with the webbed pool (ballWeb.ts) so the two mix
+  // linearly at any web strength; the long tail keeps the edge soft.
+  for (const [o, a] of POOL_STOPS) g.addColorStop(o, `rgba(255,255,255,${a})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
 
@@ -187,7 +185,7 @@ export class BallLightPass {
         e.gobo.texture = webPoolTex();
         e.gobo.position.set(light.x, light.y);
         e.gobo.scale.set(light.reach / (WEB_POOL_BAKE / 2));
-        e.gobo.rotation = ball.rotation;
+        e.gobo.rotation = ball.rotation * WEB_SPIN;
         e.gobo.tint = light.color;
         e.gobo.alpha = light.intensity * flick * webbed;
       }

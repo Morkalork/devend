@@ -12,7 +12,7 @@ import { Graphics } from "pixi.js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { flicker, heartPhase, FLICKER_FLOOR, FLICKER_EVERY_MS } from "@/lib/rendering/ballLife";
-import { webStrands } from "@/lib/rendering/sleek/ballWeb";
+import { webStrands, WEB_SPIN } from "@/lib/rendering/sleek/ballWeb";
 import { getBallLook, setBallLook, resetBallLookCache, DEFAULT_BALL_LOOK } from "@/lib/ballLook";
 import { SleekBallLayer } from "@/lib/rendering/sleek/ballLayer";
 import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
@@ -114,7 +114,8 @@ describe("the web on the body", () => {
     const b = ball({ rotation: 0 });
     const { draw } = scene(b);
     const uv0 = Array.from(draw(1000).web.geometry.attributes.aUV.buffer.data as Float32Array);
-    b.rotation = Math.PI / 2;
+    // The web turns at WEB_SPIN of the ball's rotation: this is a quarter turn of the pattern.
+    b.rotation = (Math.PI / 2) / WEB_SPIN;
     const uv1 = Array.from(draw(1016).web.geometry.attributes.aUV.buffer.data as Float32Array);
     expect(uv1).not.toEqual(uv0);
     // A quarter turn the same way round as a sprite's rotation: the vertex a
@@ -148,7 +149,7 @@ describe("the web in the light", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = (pass as unknown as any).emitters[0];
     expect(e.gobo.visible).toBe(true);
-    expect(e.gobo.rotation).toBeCloseTo(1.2, 6);
+    expect(e.gobo.rotation).toBeCloseTo(1.2 * WEB_SPIN, 6);
     expect(e.gobo.position.x).toBeCloseTo(e.glow.position.x, 6);
     const web = getBallLook().web;
     expect(e.gobo.alpha / (e.gobo.alpha + e.glow.alpha)).toBeCloseTo(web, 5);

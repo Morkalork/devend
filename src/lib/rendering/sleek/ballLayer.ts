@@ -47,7 +47,7 @@ import {
   heartbeat, heartPhase, heartRate, flightStretch, createLag, stepLag, flicker,
   BREATHE, CORONA_FLARE, type Lag,
 } from "@/lib/rendering/ballLife";
-import { webTex, clearWebTextures } from "./ballWeb";
+import { webTex, clearWebTextures, WEB_SPIN } from "./ballWeb";
 import { getBallLook } from "@/lib/ballLook";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
@@ -824,7 +824,7 @@ export class SleekBallLayer {
         // Sampling at theta MINUS the rotation turns the pattern BY the
         // rotation on screen, the same way round as the pool's sprite, so
         // the web and its shadow roll together.
-        const rot = -ball.rotation;
+        const rot = -ball.rotation * WEB_SPIN;
         const cr = Math.cos(rot), srot = Math.sin(rot);
         for (let i = 0; i < SPLAT_SEGMENTS; i++) {
           const theta = (i / SPLAT_SEGMENTS) * Math.PI * 2;

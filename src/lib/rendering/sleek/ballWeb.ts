@@ -21,6 +21,13 @@ export const WEB_BAKE = 128;
 export const WEB_POOL_BAKE = 256;
 /** Brightness lift of the webbed pool, so the shadows do not simply dim the light. */
 export const WEB_POOL_LIFT = 1.35;
+/**
+ * How much of the ball's rotation the web turns by. The physics spins the
+ * ball at a rate that reads right for a solid; a pattern on a shell at that
+ * rate is a whirl, so it turns at half. The pool's shadow uses the same
+ * figure, so the two never drift apart.
+ */
+export const WEB_SPIN = 0.5;
 
 let webTexture: Texture | null = null;
 let webPoolTexture: Texture | null = null;
@@ -110,16 +117,24 @@ export function webTex(): Texture {
   ctx.clip();
   ctx.strokeStyle = "rgba(255,255,255,0.9)";
   ctx.shadowColor = "rgba(255,255,255,0.9)";
-  ctx.shadowBlur = size * 0.02;
-  drawWebStrands(ctx, half, half, ballR, size * 0.034);
+  ctx.shadowBlur = size * 0.012;
+  drawWebStrands(ctx, half, half, ballR, size * 0.02);
   ctx.restore();
   webTexture = Texture.from(canvas);
   return webTexture;
 }
 
-/** The plain pool's stops, shared with the webbed pool so the two mix linearly. */
+/**
+ * The plain pool's stops, shared with the webbed pool so the two mix linearly.
+ *
+ * The tail is long and finely stepped on purpose: a pool that reaches zero in
+ * three coarse stops shows the seam where it lands, and a ball's light ending
+ * at a visible circle reads as a decal rather than as light. These follow a
+ * near-exponential falloff all the way out.
+ */
 export const POOL_STOPS: [number, number][] = [
-  [0, 0.55], [0.18, 0.60], [0.40, 0.34], [0.65, 0.14], [1, 0],
+  [0, 0.55], [0.16, 0.60], [0.32, 0.40], [0.46, 0.25], [0.58, 0.16],
+  [0.70, 0.09], [0.80, 0.05], [0.88, 0.025], [0.94, 0.01], [1, 0],
 ];
 
 /**
@@ -149,10 +164,17 @@ export function webPoolTex(): Texture {
   // on a phone the whole pool is forty pixels across and a hairline shadow
   // in a soft glow is no shadow at all.
   ctx.globalCompositeOperation = "destination-out";
-  ctx.strokeStyle = "rgba(0,0,0,1)";
-  ctx.shadowColor = "rgba(0,0,0,1)";
-  ctx.shadowBlur = size * 0.008;
-  drawWebStrands(ctx, half, half, half * 0.98, size * 0.06);
+  // The strands fade out toward the rim, where the light itself is fading:
+  // a shadow cut all the way to the edge draws the edge, and the pool's
+  // falloff has to stay soft.
+  const cut = ctx.createRadialGradient(half, half, 0, half, half, half);
+  cut.addColorStop(0, "rgba(0,0,0,1)");
+  cut.addColorStop(0.5, "rgba(0,0,0,1)");
+  cut.addColorStop(0.9, "rgba(0,0,0,0)");
+  ctx.strokeStyle = cut;
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = size * 0.006;
+  drawWebStrands(ctx, half, half, half * 0.98, size * 0.018);
   ctx.globalCompositeOperation = "source-over";
   webPoolTexture = Texture.from(canvas);
   return webPoolTexture;
