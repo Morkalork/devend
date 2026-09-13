@@ -28,6 +28,7 @@ import { isArmedBreakpoint } from "@/lib/physics/breakpointFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
+import { LOCK_FLASH_MS, SUPERIOR_FLASH_MS } from "./flashLight";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
@@ -45,8 +46,6 @@ const TAIL_BANDS = 6;
 type W2S = (x: number, y: number) => Pt;
 
 /** How long a lock flash burns. Mirrors the classic renderer's feel. */
-const LOCK_FLASH_MS = 900;
-const SUPERIOR_FLASH_MS = 1500;
 /**
  * Magnet marker lifetime. Not exported from anywhere shared - the physics culls
  * the marker on its own clock - so this must stay 1100 to match. Guessing it

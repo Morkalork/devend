@@ -33,11 +33,19 @@ import { Container, Graphics, Matrix, RenderTexture, Sprite, Texture } from "pix
 import type { Renderer } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { BoardRect } from "@/lib/boardConstants";
-import { PALETTE } from "./palette";
+import { PALETTE, mix } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
 import { webPoolTex, POOL_STOPS, WEB_POOL_BAKE, WEB_SPIN } from "./ballWeb";
+import { derivedLights, type DerivedLight } from "./derivedLight";
+import {
+  causticFor, flashEnvelope, flashReach, FLASH_INTENSITY,
+  LOCK_FLASH_MS, SUPERIOR_FLASH_MS, type PlacedLight,
+} from "./flashLight";
+import type { LightScope } from "./light";
 import { flicker, heartPhase } from "@/lib/rendering/ballLife";
+import { tell, warmup, WARMUP_EMBER, type Warmup } from "@/lib/rendering/ballTell";
 import { getBallLook } from "@/lib/ballLook";
+import { getLightLook } from "@/lib/lightLook";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -57,6 +65,12 @@ export const MAX_OCCLUDERS_PER_LIGHT = 40;
 const BAKE_RADIUS = 128;
 
 let poolTexture: Texture | null = null;
+
+/** A bulb already at temperature: what the dial being off gives back. */
+const FULLY_WARM: Warmup = { gain: 1, hue: 1 };
+
+/** Shared empty list, so the dial being off allocates nothing. */
+const NO_DERIVED: readonly DerivedLight[] = [];
 
 /**
  * One white radial pool, baked once and TINTED per ball rather than baked per
@@ -144,6 +158,8 @@ export class BallLightPass {
   private rtH = 0;
   /** Lights built this frame; zero means the composite is skipped entirely. */
   private live = 0;
+  /** Scratch for the derived lights, reused so a frame allocates nothing. */
+  private derived: DerivedLight[] = [];
 
   constructor() {
     this.sprite.blendMode = "add";
@@ -153,7 +169,10 @@ export class BallLightPass {
    * Compose this frame's lighting. Pure display-tree work: no renderer, no GPU,
    * so it is drivable headlessly and the geometry is testable.
    */
-  build(game: CanvasGameState, w2s: W2S, scale: number, now: number = performance.now()): void {
+  build(
+    game: CanvasGameState, w2s: W2S, scale: number, now: number = performance.now(),
+    monitor?: LightScope,
+  ): void {
     this.live = 0;
     const tex = poolTex();
 
@@ -171,6 +190,16 @@ export class BallLightPass {
       // excluded by ballLight already (no light, or a fading one).
       const look = getBallLook();
       const flick = look.flicker && ball.state === "active" ? flicker(now, heartPhase(ball.id) * 7) : 1;
+      // What the light SAYS (ballTell.ts): the countdown beat of a ball with a
+      // timer, and the warm-up of one that has just switched on. Both fold
+      // into the same intensity the flicker does, because they are the same
+      // channel - and the tell multiplies the flicker rather than replacing
+      // it, so a compass still stutters like every other bulb between beats.
+      const tellGain = getLightLook().tell;
+      const beat = tellGain > 0.001 ? 1 - (1 - tell(ball, game.activePlaySeconds)) * tellGain : 1;
+      const warm = tellGain > 0.001 ? warmup(now, ball.spawnTime) : FULLY_WARM;
+      light.intensity *= beat * (1 - (1 - warm.gain) * tellGain);
+      light.color = mix(WARMUP_EMBER, light.color, warm.hue);
       const webbed = look.web;
       e.glow.visible = true;
       e.glow.texture = tex;
@@ -192,6 +221,63 @@ export class BallLightPass {
 
       e.shade.visible = true;
       this.drawShadows(e.shade, light, p, game, w2s, scale);
+
+      // The bright core inside this ball's own shadow (flashLight.ts). It is
+      // placed from the MONITOR, not from the ball's light: it is the monitor's
+      // beam being focused by a translucent body, and the shadow it sits in is
+      // the monitor's too.
+      const causticGain = getLightLook().caustic;
+      const caustic = monitor && causticGain > 0.001
+        ? causticFor(ball, c, r, light.color, light.intensity * causticGain * flick, monitor)
+        : null;
+      if (caustic) this.place(this.emitterAt(this.live++), caustic, tex, p, game, w2s, scale);
+
+      // Second-hand light: a mirror giving this ball's pool back, a portal
+      // passing it to the far mouth (derivedLight.ts). Each is an ordinary
+      // emitter placed in world space, so it interleaves with its own shadows
+      // exactly as a ball's own light does - and must, for the same reason.
+      const secondHand = getLightLook().reflected;
+      for (const d of secondHand > 0.001 ? derivedLights(ball, game, this.derived) : NO_DERIVED) {
+        const dc = w2s(d.x, d.y);
+        const dl: PlacedLight = {
+          x: dc.x, y: dc.y,
+          reach: light.reach * d.spread,
+          intensity: light.intensity * d.gain * secondHand,
+          color: light.color,
+        };
+        // Flickers with its parent, because it IS its parent's light: a
+        // reflection that held steady while the ball behind it stuttered
+        // would read as a second, unrelated source.
+        dl.intensity *= flick;
+        this.place(this.emitterAt(this.live++), dl, tex, d, game, w2s, scale);
+      }
+    }
+
+    // ── Lock flashes as real lights ─────────────────────────────────────
+    // For the second one burns it IS the brightest thing on the board, so the
+    // room has to answer: every fence around the pocket throws a long shadow
+    // that appears and fades with it. Added after the balls so a ball standing
+    // in a flash is lit by it rather than the other way round.
+    const flashGain = getLightLook().flash;
+    if (flashGain > 0.001 && game.assimilations) {
+      const cell = game.spaceGrid?.cellSize ?? 15;
+      for (const a of game.assimilations.values()) {
+        const dur = a.superior ? SUPERIOR_FLASH_MS : LOCK_FLASH_MS;
+        const env = flashEnvelope((now - a.startTime) / dur);
+        if (env <= 0.001) continue;
+        const at = w2s(a.centroid.x, a.centroid.y);
+        // The flash's own tint, picked exactly as fxLayer picks it, so the
+        // light and the flare it belongs to are one event and not two.
+        const color = a.zoneColor
+          ? parseColor(a.zoneColor)
+          : a.superior ? 0xffd54a : parseColor(a.ballColor);
+        this.place(this.emitterAt(this.live++), {
+          x: at.x, y: at.y,
+          reach: flashReach(a, cell) * scale,
+          intensity: FLASH_INTENSITY * flashGain * env,
+          color,
+        }, tex, a.centroid, game, w2s, scale);
+      }
     }
 
     for (let i = this.live; i < this.emitters.length; i++) {
@@ -202,9 +288,37 @@ export class BallLightPass {
     this.sprite.visible = this.live > 0;
   }
 
+  /**
+   * One light onto one emitter, with its own shadows straight after it.
+   *
+   * Shared by everything that is not a ball's own pool - the caustic, a
+   * mirror's return, a portal's far mouth, a lock flash - because the ONE rule
+   * this pass has is that a light's shadows sit directly after that light, so
+   * the next light paints back over them. Hand-rolling that per source is how
+   * you get a shadow eating a light it has nothing to do with.
+   *
+   * None of them take the gobo. The web is a pattern on one ball's shell, and
+   * carrying it crisply through a reflection, a portal or a beam focused by
+   * the ball's own body would claim more than second-hand light can support.
+   */
+  private place(
+    e: Emitter, light: PlacedLight, tex: Texture, world: { x: number; y: number },
+    game: CanvasGameState, w2s: W2S, scale: number,
+  ): void {
+    e.glow.visible = true;
+    e.glow.texture = tex;
+    e.glow.position.set(light.x, light.y);
+    e.glow.scale.set(light.reach / BAKE_RADIUS);
+    e.glow.tint = light.color;
+    e.glow.alpha = light.intensity;
+    e.gobo.visible = false;
+    e.shade.visible = true;
+    this.drawShadows(e.shade, light, world, game, w2s, scale);
+  }
+
   /** Every wall inside this pool, as one black quad each. */
   private drawShadows(
-    g: Graphics, light: BallLight, world: { x: number; y: number },
+    g: Graphics, light: PlacedLight, world: { x: number; y: number },
     game: CanvasGameState, w2s: W2S, scale: number,
   ): void {
     g.clear();

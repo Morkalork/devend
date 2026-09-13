@@ -30,6 +30,7 @@
  */
 
 import type { Ball } from "@/types/game";
+import { collapse } from "@/lib/rendering/ballTell";
 import type { Pt } from "./pixelGrid";
 
 /**
@@ -106,10 +107,16 @@ export function ballLight(ball: Ball, screen: Pt, radius: number, color: number)
   if (ball.state === "dormant") return null;
 
   let intensity = BASE_INTENSITY;
+  let reach = radius * REACH_RADII;
   if (ball.state === "won") {
     // Fades with the same clock the body's colour drains on, so the light and
     // the ball go out together instead of on two schedules.
-    intensity *= 0.55 * (1 - Math.min(1, ball.assimColorFade ?? 0) * 0.6);
+    const fade = Math.min(1, ball.assimColorFade ?? 0);
+    intensity *= 0.55 * (1 - fade * 0.6);
+    // And COLLAPSES rather than merely fading. A pool that dims where it
+    // stands reads as the light going out; one that pulls in toward the ball
+    // reads as the ball taking it into the pocket, which is what happened.
+    reach *= collapse(fade);
   }
   // A boss is bigger, and a bigger emitter is a brighter one. This is the only
   // per-ball variation: everything else about the light comes from its radius,
@@ -121,7 +128,7 @@ export function ballLight(ball: Ball, screen: Pt, radius: number, color: number)
   return {
     x: screen.x,
     y: screen.y,
-    reach: radius * REACH_RADII,
+    reach,
     intensity,
     color: whiten(color, WHITEN),
   };

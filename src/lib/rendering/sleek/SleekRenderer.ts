@@ -307,7 +307,9 @@ export class SleekRenderer {
 
     // Composed after the layers so it sees this frame's walls, and committed
     // before app.render() because it is a separate pass into its own target.
-    this.ballLights.build(game, w2s, scale, now);
+    // The monitor, not the lamp: a caustic is the ROOM's beam being focused by
+    // a translucent ball, and it has to sit in the shadow that same beam casts.
+    this.ballLights.build(game, w2s, scale, now, monitor);
     this.ballLights.commit(this.app.renderer, boardRect);
 
     this.probeForBeams(now);

@@ -20,10 +20,33 @@ export interface LightLook {
    * 0 is the behaviour before it existed.
    */
   bounce: number;
+  /**
+   * Second-hand light: a mirror giving a ball's pool back, a portal passing it
+   * to the far mouth (derivedLight.ts). 0 is the behaviour before it existed.
+   */
+  reflected: number;
+  /**
+   * The bright core a translucent ball focuses into its own shadow
+   * (flashLight.ts). 0 is the opaque-stone shadow it had before.
+   */
+  caustic: number;
+  /**
+   * How hard a lock flash lights the room around the pocket it just took.
+   * 0 leaves it the bright fill it was, lighting nothing.
+   */
+  flash: number;
+  /**
+   * How much the light SAYS (ballTell.ts): a countdown beating in a compass
+   * ball's pool, and a filament warming up when one switches on. 0 leaves the
+   * light a pure decoration, which is what it was.
+   */
+  tell: number;
 }
 
 const KEY = "devend.lightLook";
-export const DEFAULT_LIGHT_LOOK: LightLook = { bounce: 0.8 };
+export const DEFAULT_LIGHT_LOOK: LightLook = {
+  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1,
+};
 
 let current: LightLook | null = null;
 
@@ -32,7 +55,13 @@ function unit(v: number, fallback: number): number {
 }
 
 function sanitise(l: LightLook): LightLook {
-  return { bounce: unit(l.bounce, DEFAULT_LIGHT_LOOK.bounce) };
+  return {
+    bounce: unit(l.bounce, DEFAULT_LIGHT_LOOK.bounce),
+    reflected: unit(l.reflected, DEFAULT_LIGHT_LOOK.reflected),
+    caustic: unit(l.caustic, DEFAULT_LIGHT_LOOK.caustic),
+    flash: unit(l.flash, DEFAULT_LIGHT_LOOK.flash),
+    tell: unit(l.tell, DEFAULT_LIGHT_LOOK.tell),
+  };
 }
 
 function load(): LightLook {

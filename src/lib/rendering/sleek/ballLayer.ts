@@ -54,6 +54,9 @@ import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
 import { contactFor, shadowFor, type LightScope } from "./light";
+import { causticShadow } from "./flashLight";
+import { getLightLook } from "@/lib/lightLook";
+import { warmup, WARMUP_EMBER } from "@/lib/rendering/ballTell";
 import { compassRing } from "./compassRing";
 import { ballTrail } from "./ballTrail";
 import type { Pt } from "./pixelGrid";
@@ -662,11 +665,30 @@ export class SleekBallLayer {
     // the cache to at most 13 extra bakes for the whole clear.
     const fadeRaw = ball.assimColorFade ?? 0;
     const fade = fadeRaw > 0 ? Math.round(Math.min(1, fadeRaw) * 12) / 12 : 0;
-    const bodyColor = fade > 0
+    // Coming up to temperature (ballTell.ts). It has to reach the BULB and not
+    // only the pool on the floor: a cold ball with a dark pool but a fully lit
+    // body is not a filament warming up, it is a bug. The hue leads the
+    // brightness here exactly as it does in the pool, so the two agree.
+    const warm = warmup(this.now, ball.spawnTime);
+    const tellGain = getLightLook().tell;
+    // BUCKETED for exactly the reason `fade` is, one line above: the hue feeds
+    // sphereTexture, which caches per colour, so a continuous warm-up would
+    // bake a fresh sphere every frame for as long as it lasted - per ball, on
+    // every map start. Twelve steps over 900ms is a step every 75ms, which is
+    // indistinguishable from continuous and bounds the extra bakes.
+    const warmHue = Math.round((1 - (1 - warm.hue) * tellGain) * 12) / 12;
+    const warmGain = 1 - (1 - warm.gain) * tellGain;
+    const bodyColor = mix(WARMUP_EMBER, fade > 0
       ? mix(parseColor(ball.color), PALETTE.accent, fade)
-      : parseColor(ball.color);
+      : parseColor(ball.color), warmHue);
     // Locked balls dim toward the captured substrate they now belong to.
-    const bodyAlpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
+    // A cold bulb is DIM as well as the wrong colour. Colour alone does almost
+    // nothing here: the bake is white-hot through the middle and only carries
+    // the ball's hue at the rim, so tinting it toward the ember changes a thin
+    // ring and leaves the ball as bright as ever. Never to nothing, though -
+    // this is the object the player is tracking, and it exists before it lights.
+    const bodyAlpha = (dormant ? 0.5 : ball.state === "won" ? 0.72 : 1)
+      * (0.32 + 0.68 * warmGain);
 
     // ── Stuck: the liquid splat ─────────────────────────────────────────────
     // A Bug Squash hold with its scene captured draws as a field, not a fan
@@ -749,10 +771,15 @@ export class SleekBallLayer {
       // shadow is soft and dark: what matters is that it stays under the ball
       // and grows with the splat, not that its axes are exact.
       const sr = r * (squish.scalePerp + squish.scaleAlong) / 2;
+      // A translucent body does not leave a grey shadow. Light through a red
+      // marble makes the whole shadow red, and that hue shift is the one part
+      // of "this thing is made of glass" the ball's own pool cannot wash out,
+      // because it changes colour rather than competing on brightness.
+      const shade = causticShadow(PALETTE.shadow, bodyColor, getLightLook().caustic, mix);
       const cast = shadowFor(light, bx, by, sr);
       this.shadows
         .ellipse(bx + cast.dx * cast.length, by + cast.dy * cast.length, sr * 1.02, sr * 0.72)
-        .fill({ color: PALETTE.shadow, alpha: cast.alpha * SELF_LIT_SHADOW });
+        .fill({ color: shade, alpha: cast.alpha * SELF_LIT_SHADOW });
 
       const contact = contactFor(light, bx, by, sr);
       this.shadows
@@ -762,7 +789,7 @@ export class SleekBallLayer {
           sr * 0.95,
           sr * 0.68,
         )
-        .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 * SELF_LIT_SHADOW });
+        .fill({ color: shade, alpha: contact.alpha * 0.45 * SELF_LIT_SHADOW });
     }
 
     // ── Dormant: asleep, not gone ───────────────────────────────────────────
@@ -858,8 +885,10 @@ export class SleekBallLayer {
         // over a pure hue ball is invisible, and it is the WHITENING that
         // reads as heat. More so on the beat: the flare is the heartbeat's
         // brightness half, the swell being its size half.
-        corona.tint = mix(bodyColor, 0xffffff, 0.4 + CORONA_FLARE * heart);
-        corona.alpha = body.alpha * (0.55 + 0.45 * flick);
+        // The whitening is what reads as heat, so a cold bulb gets less of it:
+        // at switch-on the bloom is the ember's own colour and barely there.
+        corona.tint = mix(bodyColor, 0xffffff, (0.4 + CORONA_FLARE * heart) * warmGain);
+        corona.alpha = body.alpha * (0.55 + 0.45 * flick) * warmGain;
       }
     }
 

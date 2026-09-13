@@ -1499,6 +1499,86 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
               </div>
 
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-reflected" style={{ color: lightLook.reflected > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Second-hand light: {Math.round(lightLook.reflected * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A mirror gives a ball's light back; a portal passes it to the far mouth before the ball arrives.
+                  </span>
+                </label>
+                <input
+                  id="light-reflected"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.reflected * 100)}
+                  onChange={e => setLightLookState(setLightLook({ reflected: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-caustic" style={{ color: lightLook.caustic > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Caustics: {Math.round(lightLook.caustic * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A ball is translucent, so it focuses a bright core into its own shadow instead of blocking the light.
+                  </span>
+                </label>
+                <input
+                  id="light-caustic"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.caustic * 100)}
+                  onChange={e => setLightLookState(setLightLook({ caustic: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-flash" style={{ color: lightLook.flash > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Lock flash lights the room: {Math.round(lightLook.flash * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    For the second it burns, every fence around the pocket throws a long shadow. 0 leaves it a bright fill.
+                  </span>
+                </label>
+                <input
+                  id="light-flash"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.flash * 100)}
+                  onChange={e => setLightLookState(setLightLook({ flash: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-tell" style={{ color: lightLook.tell > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Light as a tell: {Math.round(lightLook.tell * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A compass ball's light beats with its countdown, and a ball warms up like a filament when it switches on.
+                  </span>
+                </label>
+                <input
+                  id="light-tell"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.tell * 100)}
+                  onChange={e => setLightLookState(setLightLook({ tell: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
               {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so
                   a new mutator is offered the moment it is authored. Re-deals the
                   board, because a mutator is rolled when a map mounts. */}
