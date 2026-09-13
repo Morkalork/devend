@@ -169,10 +169,14 @@ describe("it holds, then reverses", () => {
     at(st, RELEASE_AT + 400);
     expect(getSquishEffect(st, 1).active).toBe(true);
 
+    // A bounce at the same age has all but let go: what is left is the jelly
+    // tail (ballLife), a swing of a few percent, against a tomato that is
+    // still deeply flattened.
     const bounce = createBallEffectState();
     triggerWallHit(bounce, T0, -300, 0, 300);
     for (let t = 0; t <= 400; t += 1000 / 60) updateBallEffects(bounce, FRAME, T0 + t);
-    expect(getSquishEffect(bounce, 1).active).toBe(false);
+    expect(Math.abs(getSquishEffect(bounce, 1).scaleAlong - 1)).toBeLessThan(0.05);
+    expect(getSquishEffect(st, 1).scaleAlong).toBeLessThan(0.9);
   });
 
   it("ends perfectly round, with the tomato dials cleared", () => {

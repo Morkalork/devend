@@ -86,7 +86,9 @@ export const ROUND: SplatState = { d: 0, v: 0, w: 0, stretch: 0 };
 
 /** True when the state would draw anything other than a circle. */
 export function isDeformed(s: SplatState): boolean {
-  return s.d > 0.001 || s.v > 0.001 || s.w > 0.001 || Math.abs(s.stretch) > 0.001;
+  // Absolute on every dial: the jelly after a bounce swings v and w below
+  // zero (taller, narrower), and that is still not a circle.
+  return Math.abs(s.d) > 0.001 || Math.abs(s.v) > 0.001 || Math.abs(s.w) > 0.001 || Math.abs(s.stretch) > 0.001;
 }
 
 /** One vertex of the outline, in contact space. */

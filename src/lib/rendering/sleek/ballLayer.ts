@@ -43,6 +43,10 @@ import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned, BO
 import { splatOutline, splatMetrics, splatCore, SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
 import { createLiquidImage, rasterizeLiquid, type LiquidImage } from "@/lib/rendering/liquidSplat";
 import type { SplatScene } from "@/lib/splatScene";
+import {
+  heartbeat, heartPhase, heartRate, flightStretch, createLag, stepLag,
+  BREATHE, CORONA_FLARE, type Lag,
+} from "@/lib/rendering/ballLife";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
@@ -204,6 +208,10 @@ interface BallView {
   coronaPos: Float32Array;
   /** The liquid splat, made on the first Bug Squash this view draws. See LiquidView. */
   liquid: LiquidView | null;
+  /** The filament's spring (ballLife.ts), so the highlight trails the body. */
+  lag: Lag;
+  /** When this view last drew, for the spring's dt. */
+  lastNow: number;
 }
 
 /**
@@ -313,15 +321,38 @@ function writeFan(
   expand: number,
   sx: (lx: number, ly: number) => number,
   sy: (lx: number, ly: number) => number,
+  coreDx = 0,
+  coreDy = 0,
 ): void {
-  out[0] = sx(core.x, core.y);
-  out[1] = sy(core.x, core.y);
+  // The centre vertex may be displaced from the core (the filament's lag):
+  // the ring stays put and the texture's middle slides inside it.
+  out[0] = sx(core.x, core.y) + coreDx;
+  out[1] = sy(core.x, core.y) + coreDy;
   for (let i = 0; i < outline.length; i++) {
     const pt = outline[i];
     const lx = core.x + (pt.x - core.x) * expand;
     const ly = core.y + (pt.y - core.y) * expand;
     out[(i + 1) * 2] = sx(lx, ly);
     out[(i + 1) * 2 + 1] = sy(lx, ly);
+  }
+}
+
+/**
+ * Stretch a written fan's RING about a centre: longer along (ux, uy), narrower
+ * across it. The centre vertex is left where it is. Applied in screen space,
+ * after the fan is written, so it composes with whatever silhouette the
+ * squash produced.
+ */
+function stretchFan(
+  out: Float32Array, cx: number, cy: number, ux: number, uy: number, along: number, across: number,
+): void {
+  for (let i = 2; i + 1 < out.length; i += 2) {
+    const dx = out[i] - cx, dy = out[i + 1] - cy;
+    const a = dx * ux + dy * uy;
+    const b = -dx * uy + dy * ux;
+    const a2 = a * along, b2 = b * across;
+    out[i] = cx + a2 * ux - b2 * uy;
+    out[i + 1] = cy + a2 * uy + b2 * ux;
   }
 }
 
@@ -391,6 +422,7 @@ export class SleekBallLayer {
 
       this.views.push({
         body, bodyPos: b.positions, corona, coronaPos: c.positions, liquid: null,
+        lag: createLag(), lastNow: 0,
       });
     }
     for (let i = balls.length; i < this.views.length; i++) {
@@ -529,13 +561,45 @@ export class SleekBallLayer {
     // face, mass pooled at the wall, domed crown. It is computed in contact
     // space - origin on the wall, +y into it - and mapped onto the board here.
     const squish = getSquishEffect(ball.effects, ball.isBoss ? BOSS_SQUISH_SCALE : 1);
-    const outline = splatOutline(squish.splat, r);
+    // ── Life (ballLife.ts) ──────────────────────────────────────────────────
+    // The heartbeat swells the BODY, not the marks or the rings, which keep the
+    // plain radius. A held ball's heart slows; a sleeper's and a locked one's
+    // stop. The fastest ball on the board races.
+    const held = ball.frozenUntil !== undefined && this.now < ball.frozenUntil;
+    const beating = !dormant && ball.state === "active";
+    const heart = beating
+      ? heartbeat(this.now, heartPhase(ball.id), heartRate({ fastest: ball.id === this.fastestId, held }))
+      : 0;
+    const rBody = r * (1 + BREATHE * heart);
+    const outline = splatOutline(squish.splat, rBody);
     const shape = splatMetrics(outline);
     // The bulb's filament: the middle of the sphere carried through the same
     // deformation, which is where both textures' bright core belongs. The
     // shadow below stays on the CENTROID, because a shadow is cast by the
     // silhouette and not by a point inside the ball.
-    const core = splatCore(squish.splat, r);
+    const core = splatCore(squish.splat, rBody);
+    // The filament's lag: a spring in world units, kicked by every change of
+    // the ball's velocity. Stepped here because this is where the velocity is
+    // seen; render-only state, so it lives on the view.
+    const dtLife = view.lastNow > 0 ? Math.min(0.05, Math.max(0, (this.now - view.lastNow) / 1000)) : 0;
+    view.lastNow = this.now;
+    stepLag(view.lag, ball.velocity.x, ball.velocity.y, ball.radius, dtLife);
+    const lg0 = w2s(p.x, p.y);
+    const lg1 = w2s(p.x + view.lag.x, p.y + view.lag.y);
+    const lagDx = lg1.x - lg0.x, lagDy = lg1.y - lg0.y;
+    // Stretch along the way it is going, faded out by any squash in progress
+    // (the bounce takes over the silhouette) and off entirely while held.
+    const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+    const squashing = Math.abs(squish.splat.d) + Math.abs(squish.splat.v) + Math.abs(squish.splat.w);
+    const stretchK = (held || !beating || speed < 1e-6)
+      ? 0
+      : flightStretch(speed) * (1 - Math.min(1, squashing / 0.05));
+    let ux = 1, uy = 0;
+    if (stretchK > 0) {
+      const v1 = w2s(p.x + ball.velocity.x / speed, p.y + ball.velocity.y / speed);
+      const vl = Math.hypot(v1.x - lg0.x, v1.y - lg0.y) || 1;
+      ux = (v1.x - lg0.x) / vl; uy = (v1.y - lg0.y) / vl;
+    }
 
     // The impact normal is a WORLD direction and the board may be turned, so it
     // is pushed through the same w2s every vertex goes through rather than used
@@ -549,8 +613,12 @@ export class SleekBallLayer {
     const tx = -ny;
     const ty = nx;
     // Where the ball touches: one radius back along the normal from its centre.
-    const wx = c.x - nx * r;
-    const wy = c.y - ny * r;
+    // The BREATHING radius for a free ball, so the swell is about its centre
+    // and not about a contact point it left long ago; the plain radius for a
+    // held one, whose face is glued to the wall and swells away from it.
+    const rc = held ? r : rBody;
+    const wx = c.x - nx * rc;
+    const wy = c.y - ny * rc;
     /** Contact space -> screen. `ly` is INTO the wall, so it runs against the normal. */
     const sx = (lx: number, ly: number) => wx + tx * lx - nx * ly;
     const sy = (lx: number, ly: number) => wy + ty * lx - ny * ly;
@@ -701,7 +769,8 @@ export class SleekBallLayer {
       // The fan, in screen space. Both meshes are the same silhouette pushed out
       // from the mass by their own texture's inset (see makeFan), so the bulb's
       // edge and the corona's peak both land on the outline.
-      writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy);
+      writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy, lagDx, lagDy);
+      if (stretchK > 0) stretchFan(bodyPos, c.x, c.y, ux, uy, 1 + stretchK, 1 - stretchK * 0.55);
       body.geometry.attributes.aPosition.buffer.update();
 
       // ── Corona ────────────────────────────────────────────────────────────
@@ -716,12 +785,14 @@ export class SleekBallLayer {
         // and it bleeds past the silhouette, so a round one over a splatted
         // ball does not merely fail to help - it erases the splat, which was
         // most of why the squash could not be seen at all.
-        writeFan(coronaPos, outline, core, CORONA_RADII, sx, sy);
+        writeFan(coronaPos, outline, core, CORONA_RADII, sx, sy, lagDx, lagDy);
+        if (stretchK > 0) stretchFan(coronaPos, c.x, c.y, ux, uy, 1 + stretchK, 1 - stretchK * 0.55);
         corona.geometry.attributes.aPosition.buffer.update();
         // Whitened like the light pool, for the same reason: a pure hue bloom
         // over a pure hue ball is invisible, and it is the WHITENING that
-        // reads as heat.
-        corona.tint = mix(bodyColor, 0xffffff, 0.4);
+        // reads as heat. More so on the beat: the flare is the heartbeat's
+        // brightness half, the swell being its size half.
+        corona.tint = mix(bodyColor, 0xffffff, 0.4 + CORONA_FLARE * heart);
         corona.alpha = body.alpha;
       }
     }

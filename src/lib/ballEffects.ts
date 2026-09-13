@@ -143,6 +143,10 @@ const CONFIG = {
   splatPeelFrom: 350,       // departure stretch along the normal
   splatPeelMs: 400,
   splatOutEndMs: 750,
+  // After the peel, two decaying swings between flatter and taller: the jelly
+  // that says the material is soft even on a hit that barely dented it.
+  splatJellyMs: 450,
+  splatJellyAmp: 0.9,
 
   /**
    * A passing bounce runs the same droplet at a fraction of the depth, so the
@@ -308,7 +312,20 @@ function tickSplat(state: BallEffectState, now: number): void {
     ? 0
     : Math.sin(Math.PI * clamp01((r - C.splatPeelFrom) / C.splatPeelMs));
 
-  if (r >= (held ? SPLAT_HELD_OUT_MS : C.splatOutEndMs)) {
+  // ── The jelly. A bounce's alone, like the peel: a stuck ball is held. ─────
+  // Negative dials are legal here and mean "the other way": v below zero is
+  // taller than round, w below zero narrower. The outline handles both.
+  if (!held && r >= C.splatOutEndMs && r < C.splatOutEndMs + C.splatJellyMs) {
+    const p = (r - C.splatOutEndMs) / C.splatJellyMs;
+    const a = C.splatJellyAmp * Math.exp(-p * 3.2) * Math.cos(p * Math.PI * 4) * (1 - p);
+    state.splatD = 0;
+    state.splatV = a;
+    state.splatW = a * 0.8;
+    state.splatStretch = 0;
+    return;
+  }
+
+  if (r >= (held ? SPLAT_HELD_OUT_MS : C.splatOutEndMs + C.splatJellyMs)) {
     // Round again, and every dial cleared so the next hit starts from nothing.
     state.squishAmount = 0;
     state.squishHoldUntil = 0;

@@ -29,6 +29,7 @@ import {
   createBallEffectState, triggerWallHit, pinSquish, updateBallEffects, getSquishEffect,
 } from "@/lib/ballEffects";
 import { SPLAT_SEGMENTS, splatOutline, splatMetrics, splatCore } from "@/lib/rendering/splatShape";
+import { heartbeat, heartPhase, heartRate, BREATHE } from "@/lib/rendering/ballLife";
 import type { Ball } from "@/types/game";
 
 const RADIUS = 9;
@@ -160,10 +161,15 @@ describe("a splatted ball is a droplet, not an ellipse", () => {
     // outline's centroid, which is an average of a silhouette and gets dragged
     // about by the footprint spreading. The filament is a material point.
     const s = splatted(300);
-    const { body } = render(ball(s.fx), s.now);
+    // Held, as a pinned splat always is in the game: a held ball breathes
+    // about the wall its face is glued to, at a held ball's slow rate.
+    const { body } = render(ball(s.fx, { frozenUntil: s.now + 1000, bugSquashUntil: s.now + 1000 }), s.now);
     const splat = getSquishEffect(s.fx, 1).splat;
-    const core = splatCore(splat, RADIUS);
-    const centroid = splatMetrics(splatOutline(splat, RADIUS));
+    // The body breathes (ballLife.ts): the core is computed on the radius the
+    // heartbeat has swelled it to at this instant, not the resting one.
+    const rBody = RADIUS * (1 + BREATHE * heartbeat(s.now, heartPhase("b1"), heartRate({ fastest: false, held: true })));
+    const core = splatCore(splat, rBody);
+    const centroid = splatMetrics(splatOutline(splat, rBody));
     // The ball hit a wall on its RIGHT, so contact space maps to the screen
     // simply here: the wall is the vertical line at AT.x + RADIUS, and contact
     // y (negative, off the wall) runs back along -x from it.
