@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bounceImpact, createBallEffectState, triggerWallHit, getSquishEffect } from "@/lib/ballEffects";
+import { updateBallEffects, bounceImpact, createBallEffectState, triggerWallHit, getSquishEffect } from "@/lib/ballEffects";
 
 /**
  * The squash must reflect the ANGLE and SPEED of the impact.
@@ -44,12 +44,18 @@ describe("squash driven by bounceImpact", () => {
   it("compresses along the wall normal and leaves a graze nearly round", () => {
     const now = 1000;
 
+    // TICKED, both of them. The deformation is a choreography now, not a value
+    // set at the instant of impact: the contact face forms over the first few
+    // frames and the ball is exactly round on the frame it lands. Reading the
+    // shape without advancing the clock reads the round frame.
     const square = createBallEffectState();
     triggerWallHit(square, now, ...bounceImpact({ x: 240, y: 0 }, { x: -240, y: 0 }));
+    updateBallEffects(square, 1 / 60, now + 60);
     const hard = getSquishEffect(square);
 
     const skim = createBallEffectState();
     triggerWallHit(skim, now, ...bounceImpact({ x: 300, y: 12 }, { x: 300, y: -12 }));
+    updateBallEffects(skim, 1 / 60, now + 60);
     const soft = getSquishEffect(skim);
 
     // Both deform along their own normal...

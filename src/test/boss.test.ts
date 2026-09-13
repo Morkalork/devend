@@ -18,7 +18,7 @@ import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState"
 import { evaluateObjective } from "@/lib/mapObjectives";
 import { updateBall } from "@/lib/physics/updateBall";
 import { createRectPolygon } from "@/lib/polygon";
-import { createBallEffectState, getSquishEffect } from "@/lib/ballEffects";
+import { createBallEffectState, getSquishEffect, updateBallEffects } from "@/lib/ballEffects";
 import type { CanvasGameState } from "@/types/gameState";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -338,9 +338,13 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
     expect(land.bossLeapAt).toBeUndefined();
     expect(land.position.x).toBeCloseTo(300, 3);
     expect(land.position.y).toBeCloseTo(200, 3);
-    const squish = getSquishEffect(land.effects);
-    expect(squish.active).toBe(true);          // top-down landing squash
-    expect(squish.ny).toBeCloseTo(1, 3);       // compression axis points straight down
+    // The AXIS is recorded on the landing frame; the shape follows over the
+    // next few, because the contact face forms before the mass slumps and the
+    // ball is still exactly round on the frame it lands. So the axis is checked
+    // here and the deformation one tick later.
+    expect(getSquishEffect(land.effects).ny).toBeCloseTo(1, 3); // straight down
+    updateBallEffects(land.effects, 1 / 60, performance.now() + 60);
+    expect(getSquishEffect(land.effects).active).toBe(true);    // landing squash
   });
 
   it("the boss stops dead and swells ~25% mid-division, then restores", () => {

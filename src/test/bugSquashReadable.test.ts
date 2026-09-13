@@ -126,13 +126,18 @@ describe("it holds, then reverses", () => {
 
   it("un-squashes back through round after the hold lifts", () => {
     const st = splat();
+    // THE CROWN LIFTS FIRST. Height is recovering while the footprint is still
+    // wide, which is the "un-slump upward before letting go of the wall" beat.
     at(st, HOLD_MS + 250);
-    const s = getSquishEffect(st, 1);
-    // Past round and into the peel-off stretch: the ball pulls away from the
-    // wall elongated along the direction it is leaving in, which is the
+    const rising = getSquishEffect(st, 1);
+    expect(rising.scaleAlong).toBeGreaterThan(0.5);
+    expect(rising.scalePerp).toBeGreaterThan(1.3);
+    // Then past round and into the peel-off stretch: the ball pulls away from
+    // the wall elongated along the direction it is leaving in, which is the
     // "reverse it once the ball leaves" half of the brief.
-    expect(s.scaleAlong).toBeGreaterThan(1);
-    expect(s.scalePerp).toBeLessThan(1);
+    const peeling = at(st, HOLD_MS + 600);
+    expect(peeling.scaleAlong).toBeGreaterThan(1);
+    expect(peeling.scalePerp).toBeLessThan(1);
   });
 
   it("takes longer to peel off than an ordinary bounce takes to recover", () => {
@@ -150,8 +155,11 @@ describe("it holds, then reverses", () => {
     expect(s.active).toBe(false);
     expect(s.scaleAlong).toBe(1);
     expect(s.scalePerp).toBe(1);
-    expect(st.squishBoost).toBe(1);
+    expect(st.squishAmount).toBe(0);
     expect(st.squishHoldUntil).toBe(0);
+    expect(st.splatD).toBe(0);
+    expect(st.splatV).toBe(0);
+    expect(st.splatW).toBe(0);
   });
 
   it("a fresh bounce during the peel-off is a bounce, not a tomato", () => {
@@ -159,9 +167,14 @@ describe("it holds, then reverses", () => {
     // wall the ball touches, and one splat would make every hit after it soft.
     const st = splat();
     at(st, HOLD_MS + 200);
-    triggerWallHit(st, T0 + HOLD_MS + 200, 0, -300, 300);
-    updateBallEffects(st, FRAME, T0 + HOLD_MS + 200);
-    expect(st.squishBoost).toBe(1);
-    expect(getSquishEffect(st, 1).scaleAlong).toBeGreaterThan(0.7);
+    const hitAt = T0 + HOLD_MS + 200;
+    triggerWallHit(st, hitAt, 0, -300, 300);
+    // No hold, the brisk bounce timescale, and every dial reset: the tomato is
+    // gone the instant the ball is struck again.
+    expect(st.squishHoldUntil).toBe(0);
+    expect(st.squishAmount).toBeLessThan(0.2);
+    expect(st.splatD).toBe(0);
+    for (let t = 0; t <= 80; t += 1000 / 60) updateBallEffects(st, FRAME, hitAt + t);
+    expect(getSquishEffect(st, 1).scaleAlong).toBeGreaterThan(0.8);
   });
 });

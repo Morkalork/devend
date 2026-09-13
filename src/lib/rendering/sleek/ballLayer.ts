@@ -36,10 +36,11 @@
  * corona, then the informational overlays (frost, rings, splash) that are not
  * lighting at all.
  */
-import { Container, Graphics, Sprite, Texture } from "pixi.js";
+import { Container, Graphics, Mesh, MeshGeometry, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
-import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned } from "@/lib/ballEffects";
+import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
+import { splatOutline, splatMetrics, SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
@@ -80,23 +81,37 @@ function parseColor(c: string): number {
  * edge, so the rim stays the ball's own colour and the corona takes over from
  * there. Nothing on a ball is darker than the board it sits on any more.
  */
+/**
+ * Transparent padding around the baked ball, as a multiple of its radius. The
+ * body mesh's ring sits here, one radius-and-a-bit out, so its straight edges
+ * never cross a painted pixel. See sphereTexture.
+ */
+const SPHERE_MARGIN = 1.14;
+
 function sphereTexture(color: number, radius: number): Texture {
   const key = `${color}:${radius}`;
   const cached = sphereCache.get(key);
   if (cached) return cached;
 
-  const size = radius * 2;
+  // Baked with a transparent MARGIN around the ball. The body is drawn as a
+  // mesh whose outer ring sits at the canvas edge, so without a margin the
+  // polygon's straight edges would cut across a circle that is fully opaque
+  // right to its rim - visible faceting, worst on a big boss ball. With one,
+  // the polygon edge lands in transparent pixels and the texture's own round
+  // alpha draws the silhouette.
+  const half = Math.ceil(radius * SPHERE_MARGIN);
+  const size = half * 2;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return Texture.WHITE;
 
-  const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, radius);
   for (const stop of bulbStops(color)) grad.addColorStop(stop.offset, withAlpha(stop.color, stop.alpha));
 
   ctx.beginPath();
-  ctx.arc(radius, radius, radius, 0, Math.PI * 2);
+  ctx.arc(half, half, radius, 0, Math.PI * 2);
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
@@ -117,13 +132,14 @@ function sphereTexture(color: number, radius: number): Texture {
  */
 export const SELF_LIT_SHADOW = 0.35;
 
-/** Corona bake radius, in texture pixels. Scaled per ball by the sprite. */
+/** Corona bake radius, in texture pixels. Mapped onto the ball by the fan UVs. */
 const CORONA_BAKE = 96;
 let coronaTexture: Texture | null = null;
 
 /**
  * The bloom around a bulb: nothing at the centre, peaking exactly at the ball's
- * edge, gone by the outside.
+ * edge, gone by the outside. Mapped so the peak lands on the silhouette
+ * whatever shape the ball is in - see makeFan.
  *
  * Zero in the middle ON PURPOSE. This is drawn additively OVER the body, so any
  * brightness here would blow the ball out to white and throw away the colour
@@ -164,18 +180,86 @@ export function clearSphereCache(): void {
 /**
  * One ball's display objects.
  *
- * The squash needs its own transform, because the SPRITE's rotation is already
- * spent aiming the baked highlight at the monitor. So each ball is a holder
- * carrying the deformation (rotated to the impact axis, scaled non-uniformly)
- * with the lit sphere nested inside it, counter-rotated so the highlight still
- * points at the light. The child inherits the parent's non-uniform scale, which
- * is exactly right: a squashed ball's highlight should smear with it.
+ * Two meshes, not two sprites, and that is the whole reason a ball can splat.
+ * A sprite can only be scaled and rotated, so the best a squash could ever be
+ * was an ELLIPSE - and an ellipse squeezes symmetrically, flattening the far
+ * side of the ball exactly as much as the side against the wall. That is a
+ * rubber ball under pressure and it reads as one at any setting.
+ *
+ * A mesh can be any silhouette, so the contact face can go flat and wide while
+ * the crown stays round. Both meshes are the same fan, differing only in which
+ * texture they carry and how far their ring sits from the mass.
+ *
+ * Round balls go through the identical path: a splat state of all zeroes gives
+ * a circle. There is no second code path to keep in step.
  */
 interface BallView {
-  holder: Container;
-  sprite: Sprite;
-  /** Additive bloom at the rim, in its own layer above every body. */
-  corona: Sprite;
+  /** The body: a triangle fan carrying the baked bulb, warped to the splat. */
+  body: Mesh;
+  bodyPos: Float32Array;
+  /** Additive bloom at the rim, in its own layer above every body. Same shape. */
+  corona: Mesh;
+  coronaPos: Float32Array;
+}
+
+/**
+ * A fan of SPLAT_SEGMENTS triangles: one centre vertex plus a ring.
+ *
+ * Indices and UVs never change - only the positions move - so both are built
+ * once per view and the per-frame cost is writing a Float32Array.
+ *
+ * THE CENTRE VERTEX IS WHERE THE TEXTURE'S MIDDLE GOES, and that is how the
+ * highlight follows the mass: both bakes are concentric radial gradients, so
+ * putting the centre vertex on the deformed CENTROID slides the bright core
+ * down toward the wall as the ball slumps, with no separate highlight to move.
+ *
+ * The ring's UV radius is 0.5 - the very edge of the texture - for both bakes.
+ * Each ring is then pushed out from the centroid by the factor that its
+ * texture's "ball edge" feature is inset by (the sphere's transparent margin,
+ * the corona's peak-to-canvas ratio), so in both cases that feature lands
+ * exactly on the ball's silhouette. Same construction, one number apart.
+ */
+function makeFan(): { geometry: MeshGeometry; positions: Float32Array } {
+  const n = SPLAT_SEGMENTS;
+  const positions = new Float32Array((n + 1) * 2);
+  const uvs = new Float32Array((n + 1) * 2);
+  uvs[0] = 0.5;
+  uvs[1] = 0.5;
+  for (let i = 0; i < n; i++) {
+    const theta = (i / n) * Math.PI * 2;
+    uvs[(i + 1) * 2] = 0.5 + Math.sin(theta) * 0.5;
+    uvs[(i + 1) * 2 + 1] = 0.5 - Math.cos(theta) * 0.5;
+  }
+  const indices = new Uint32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    indices[i * 3] = 0;
+    indices[i * 3 + 1] = 1 + i;
+    indices[i * 3 + 2] = 1 + ((i + 1) % n);
+  }
+  return { geometry: new MeshGeometry({ positions, uvs, indices }), positions };
+}
+
+/**
+ * Write one fan's screen positions: centre vertex on the mass, ring pushed out
+ * from it by `expand` (see makeFan for why each texture wants its own factor).
+ */
+function writeFan(
+  out: Float32Array,
+  outline: ReturnType<typeof splatOutline>,
+  shape: ReturnType<typeof splatMetrics>,
+  expand: number,
+  sx: (lx: number, ly: number) => number,
+  sy: (lx: number, ly: number) => number,
+): void {
+  out[0] = sx(shape.cx, shape.cy);
+  out[1] = sy(shape.cx, shape.cy);
+  for (let i = 0; i < outline.length; i++) {
+    const pt = outline[i];
+    const lx = shape.cx + (pt.x - shape.cx) * expand;
+    const ly = shape.cy + (pt.y - shape.cy) * expand;
+    out[(i + 1) * 2] = sx(lx, ly);
+    out[(i + 1) * 2 + 1] = sy(lx, ly);
+  }
 }
 
 export class SleekBallLayer {
@@ -233,21 +317,21 @@ export class SleekBallLayer {
     // Grow the pool to match; views are reused frame to frame so a steady board
     // allocates nothing.
     while (this.views.length < balls.length) {
-      const holder = new Container();
-      const sprite = new Sprite();
-      sprite.anchor.set(0.5);
-      holder.addChild(sprite);
-      this.bodies.addChild(holder);
+      const b = makeFan();
+      const body = new Mesh({ geometry: b.geometry, texture: Texture.WHITE });
+      this.bodies.addChild(body);
 
-      const corona = new Sprite();
-      corona.anchor.set(0.5);
+      const c = makeFan();
+      const corona = new Mesh({ geometry: c.geometry, texture: Texture.WHITE });
       corona.blendMode = "add";
       this.coronas.addChild(corona);
 
-      this.views.push({ holder, sprite, corona });
+      this.views.push({
+        body, bodyPos: b.positions, corona, coronaPos: c.positions,
+      });
     }
     for (let i = balls.length; i < this.views.length; i++) {
-      this.views[i].holder.visible = false;
+      this.views[i].body.visible = false;
       this.views[i].corona.visible = false;
     }
 
@@ -311,7 +395,7 @@ export class SleekBallLayer {
    * measure 4.6 apart in CIELAB, against the ~15 where two colours stop being
    * confusable. See ballMark.ts for the shapes and why they are so plain.
    *
-   * Drawn into `overlays` rather than onto the holder, like the frost and the
+   * Drawn into `overlays` rather than onto the body mesh, like the frost and the
    * collision halos, so it stays upright while the body squashes and spins.
    * A mark that rolled with the ball would be unreadable exactly when the ball
    * is doing something worth reading.
@@ -348,7 +432,7 @@ export class SleekBallLayer {
     ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number,
     activeSeconds: number,
   ): void {
-    const { holder, sprite, corona } = view;
+    const { body, bodyPos, corona, coronaPos } = view;
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
@@ -369,28 +453,40 @@ export class SleekBallLayer {
 
     const dormant = ball.state === "dormant";
 
-    // ── Squash & stretch, computed FIRST ────────────────────────────────────
-    // Everything the ball draws has to agree about its shape, and for a long
-    // time only the body did. The squash was computed further down, after the
-    // shadows were already laid at the round centre and just before the corona
-    // was scaled uniformly - so a splatted ball was a flattened body under a
-    // perfectly round additive bloom, seated on a perfectly round shadow. On a
-    // ~13px ball with an "add" blend over it, the round glow simply won.
-    // Reported as "there is no animation for the ball squashing".
-    const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
-    // A pinned squash (Bug Squash) is drawn AGAINST the wall. The physics
-    // centre sits one radius off the surface; compressing about that centre
-    // would float the flattened face clear of the wall for the whole hold,
-    // which reads as hovering rather than as stuck. Sliding the body toward the
-    // wall by exactly the compression keeps the flat face on the surface. The
-    // normal points off the wall (it is the bounce impulse), so "toward the
-    // wall" is minus it. Only while pinned: a passing bounce is gone before the
-    // gap could register.
-    const sink = squish.active && isSquishPinned(ball.effects, this.now)
-      ? r * (1 - squish.scaleAlong)
-      : 0;
-    const bx = c.x - squish.nx * sink;
-    const by = c.y - squish.ny * sink;
+    // ── The silhouette, computed FIRST ──────────────────────────────────────
+    // Everything the ball draws has to agree about its shape, so the outline is
+    // built before anything is laid down. It used to be computed after the
+    // shadows and just before a uniformly-scaled corona, which is how a
+    // splatted ball ended up as a flattened body under a perfectly round
+    // additive bloom on a perfectly round shadow.
+    //
+    // The shape is a DROPLET, not an ellipse (see splatShape.ts): flat contact
+    // face, mass pooled at the wall, domed crown. It is computed in contact
+    // space - origin on the wall, +y into it - and mapped onto the board here.
+    const squish = getSquishEffect(ball.effects, ball.isBoss ? BOSS_SQUISH_SCALE : 1);
+    const outline = splatOutline(squish.splat, r);
+    const shape = splatMetrics(outline);
+
+    // The impact normal is a WORLD direction and the board may be turned, so it
+    // is pushed through the same w2s every vertex goes through rather than used
+    // as a screen angle directly. (The ellipse did use it directly, which was
+    // quietly wrong on every tilting map.)
+    const o0 = w2s(p.x, p.y);
+    const o1 = w2s(p.x + squish.nx, p.y + squish.ny);
+    const dlen = Math.hypot(o1.x - o0.x, o1.y - o0.y) || 1;
+    const nx = (o1.x - o0.x) / dlen;
+    const ny = (o1.y - o0.y) / dlen;
+    const tx = -ny;
+    const ty = nx;
+    // Where the ball touches: one radius back along the normal from its centre.
+    const wx = c.x - nx * r;
+    const wy = c.y - ny * r;
+    /** Contact space -> screen. `ly` is INTO the wall, so it runs against the normal. */
+    const sx = (lx: number, ly: number) => wx + tx * lx - nx * ly;
+    const sy = (lx: number, ly: number) => wy + ty * lx - ny * ly;
+    // The mass, which is where the highlight goes and what the shadow sits under.
+    const bx = sx(shape.cx, shape.cy);
+    const by = sy(shape.cx, shape.cy);
 
     // ── Cast shadow + contact ───────────────────────────────────────────────
     // Skipped while dormant: a sleeper is not yet part of the scene, and seating
@@ -400,14 +496,13 @@ export class SleekBallLayer {
       // to exist (a glowing ball is still opaque, and without one it floats off
       // the board), but at full strength a hard dark ellipse beside a bulb
       // reads as a mistake rather than as shading.
-      // Laid under the SQUASHED body, and spread with it. Pixi's ellipse is
-      // axis-aligned so it cannot follow the impact axis exactly; taking the
-      // mean of the two scale factors keeps the footprint growing as the ball
-      // spreads without pretending to a precision the primitive does not have.
-      // A shadow is soft and dark - what matters is that it stays under the
-      // ball and gets wider as it splats, not that its axes are exact.
-      const spread = squish.active ? (squish.scaleAlong + squish.scalePerp) / 2 : 1;
-      const sr = r * spread;
+      // Laid under the mass and sized to the FOOTPRINT, so it widens as the
+      // ball spreads. Pixi's ellipse is axis-aligned and cannot follow the
+      // impact axis, so it takes the mean of the silhouette's two dimensions
+      // rather than pretending to a precision the primitive does not have. A
+      // shadow is soft and dark: what matters is that it stays under the ball
+      // and grows with the splat, not that its axes are exact.
+      const sr = r * (squish.scalePerp + squish.scaleAlong) / 2;
       const cast = shadowFor(light, bx, by, sr);
       this.shadows
         .ellipse(bx + cast.dx * cast.length, by + cast.dy * cast.length, sr * 1.02, sr * 0.72)
@@ -442,8 +537,7 @@ export class SleekBallLayer {
 
     // ── Body ────────────────────────────────────────────────────────────────
     const rb = bucket(r);
-    holder.visible = true;
-    holder.position.set(c.x, c.y);
+    body.visible = true;
     // While a lock plays out the ball drains toward the accent, so it visibly
     // becomes part of the territory it just created rather than simply stopping.
     // BUCKET the fade before blending. assimColorFade is a continuous 0->1 clock
@@ -456,57 +550,34 @@ export class SleekBallLayer {
     const bodyColor = fade > 0
       ? mix(parseColor(ball.color), PALETTE.accent, fade)
       : parseColor(ball.color);
-    sprite.texture = sphereTexture(bodyColor, rb);
-    sprite.position.set(0, 0);
-    // Scale the bucketed bake back to the exact radius.
-    sprite.scale.set(r / rb);
+    body.texture = sphereTexture(bodyColor, rb);
     // Locked balls dim toward the captured substrate they now belong to.
-    sprite.alpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
+    body.alpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
 
-    // ── Squash & stretch ────────────────────────────────────────────────────
-    // The ball flattens along the impact normal and springs back (physics owns
-    // the envelope; this only draws it). Applied to the HOLDER, and the sprite
-    // inherits the non-uniform scale, so the bulb smears with the deformation
-    // and reads as a soft ball rather than a scaled disc.
-    //
-    // The sprite itself is never rotated now. It used to be, in both branches,
-    // purely to keep a baked highlight aimed at the monitor while the holder
-    // turned to the impact axis. The bulb is centred and radially symmetric, so
-    // there is no direction left to preserve and the counter-rotation went with
-    // the highlight it existed for.
-    if (squish.active) {
-      holder.rotation = Math.atan2(squish.ny, squish.nx);
-      holder.scale.set(squish.scaleAlong, squish.scalePerp);
-      holder.position.set(bx, by);
-    } else {
-      holder.rotation = 0;
-      holder.scale.set(1, 1);
-    }
+    // The fan, in screen space. Both meshes are the same silhouette pushed out
+    // from the mass by their own texture's inset (see makeFan), so the bulb's
+    // edge and the corona's peak both land on the outline.
+    writeFan(bodyPos, outline, shape, SPHERE_MARGIN, sx, sy);
+    body.geometry.attributes.aPosition.buffer.update();
 
     // ── Corona ──────────────────────────────────────────────────────────────
     // The bleed past the ball's own edge. A bright disc reads as a bright disc;
     // this is the part that reads as emitting. It follows the body's dimming,
     // so a sleeper is an unlit bulb and a locked ball goes out as it drains.
-    corona.visible = !dormant && sprite.alpha > 0.01;
+    corona.visible = !dormant && body.alpha > 0.01;
     if (corona.visible) {
       corona.texture = coronaTex();
-      // The bloom takes the body's shape, not just its place. It is additive
-      // and it bleeds past the silhouette, so a round one over a squashed ball
-      // does not merely fail to help - it actively erases the squash, which is
-      // most of why the Bug Squash splat could not be seen at all. Same
-      // rotation, same non-uniform scale, same sink as the holder.
-      corona.position.set(bx, by);
-      const coronaScale = (r * CORONA_RADII) / CORONA_BAKE;
-      corona.rotation = squish.active ? Math.atan2(squish.ny, squish.nx) : 0;
-      corona.scale.set(
-        coronaScale * (squish.active ? squish.scaleAlong : 1),
-        coronaScale * (squish.active ? squish.scalePerp : 1),
-      );
+      // The bloom takes the body's SHAPE, not just its place. It is additive
+      // and it bleeds past the silhouette, so a round one over a splatted ball
+      // does not merely fail to help - it erases the splat, which was most of
+      // why the squash could not be seen at all.
+      writeFan(coronaPos, outline, shape, CORONA_RADII, sx, sy);
+      corona.geometry.attributes.aPosition.buffer.update();
       // Whitened like the light pool, for the same reason: a pure hue bloom
       // over a pure hue ball is invisible, and it is the WHITENING that reads
       // as heat.
       corona.tint = mix(bodyColor, 0xffffff, 0.4);
-      corona.alpha = sprite.alpha;
+      corona.alpha = body.alpha;
     }
 
     // The ability mark rides on top of the body, including on a sleeper: what a

@@ -1,4 +1,7 @@
 import { hexToRgba } from "@/lib/gameUtils";
+import {
+  splatOutline, splatMetrics, isDeformed, ROUND, type SplatState,
+} from "@/lib/rendering/splatShape";
 
 // ── Pulse glow OffscreenCanvas cache ─────────────────────────────────────────
 // Pre-renders the always-active baseline glow at max intensity (alpha = 1).
@@ -56,27 +59,25 @@ export interface BallEffectState {
   ballHitIntensity: number;
   ballHitTime: number; // timestamp when ball hit occurred
 
-  // Squash & stretch on contact (issue #44). The ball deforms along the impact
-  // normal and springs back, like a soft ball bouncing. 0 everywhere = round.
-  squishIntensity: number; // signed spring envelope: +compress along normal, -stretch, decays to 0
-  squishTime: number;      // timestamp of the impact
-  squishNx: number;        // unit impact-normal x (the compression axis)
-  squishNy: number;        // unit impact-normal y
-  squishAmount: number;    // 0-1 speed-scaled magnitude captured at impact (0 = no squish)
-  // Bug Squash hold. While `squishHoldUntil` is in the future the squash ramps
-  // in and then PINS at full compression instead of springing back; the
-  // spring-back plays from the moment the hold lifts. `squishBoost` scales the
-  // pinned deformation past the ordinary bounce's, so a stuck ball reads as
-  // splatted rather than merely nudged.
+  // ── Squash & stretch on contact (issue #44) ────────────────────────────────
+  // The impact axis and how hard the hit was, plus the four shape dials the
+  // renderer draws from. See CONFIG's choreography block and splatShape.ts.
+  /** Timestamp of the impact the current deformation came from. */
+  squishTime: number;
+  /** Unit impact normal: the axis the ball is pressed along, pointing OFF the wall. */
+  squishNx: number;
+  squishNy: number;
+  /** Peak deformation for this hit, 0..1. A bounce is a small fraction of a splat. */
+  squishAmount: number;
+  /** While in the future the splat is pinned at full instead of releasing (Bug Squash). */
   squishHoldUntil: number;
-  squishBoost: number;
-  /**
-   * Spring-back duration for the CURRENT deformation, ms. An ordinary bounce
-   * leaves this at squishDuration; a Bug Squash splat sets the slower
-   * stickReleaseMs, because a soft body that spread over 150ms does not
-   * recover in the time a firm one takes to bounce.
-   */
-  squishSpringMs: number;
+  /** Timescale: 1 for a splat, faster for a passing bounce. */
+  squishSpeed: number;
+  /** The four dials, recomputed every tick. See SplatState in splatShape.ts. */
+  splatD: number;
+  splatV: number;
+  splatW: number;
+  splatStretch: number;
 }
 
 // Effect configuration
@@ -100,54 +101,56 @@ const CONFIG = {
   ballHitRingRadius: 6.5, // Expands to 6.5x ball radius (was 1.8)
   ballHitSecondaryPulse: true, // Optional spark-like secondary effect
 
-  // Squash & stretch on contact (issue #44) - speed-scaled. Reference speed sits
-  // near typical ball speeds (200-340 in balls.yml) so an ordinary bounce fires a
-  // clear squash while faster hits saturate. The duration is the perceptual knob:
-  // the compression phase is the first third of it, and anything under ~150ms of
-  // compression dies inside 4-5 frames and reads as nothing at ball size (~13px),
-  // especially with the round highlight ring and glow masking the silhouette.
-  squishDuration: 500,       // ms spring-back to round (compress ~165ms, stretch, settle)
-  // Peak compression fraction along the impact axis at full speed.
+  // ── Squash & stretch on contact (issue #44) ───────────────────────────────
   //
-  // Dialled back twice, both times on play feedback, and the second time for a
-  // reason worth recording: 0.35 -> 0.245 because a square hit read as rubbery
-  // rather than as a ball with some give, then 0.245 -> 0.1715 (another 30%)
-  // once the board's objects started casting readable shadows. The squash used
-  // to be carrying the whole impact on its own, on a ~13px ball, against a flat
-  // board. With the geometry throwing real shadows the hit is legible from the
-  // scene, so the deformation can stop over-acting.
-  squishMaxCompress: 0.1715,
-  squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
+  // The SHAPE lives in rendering/splatShape.ts (a droplet: flat contact face,
+  // mass pooled at the wall, domed crown). What is here is the CHOREOGRAPHY -
+  // when each of the four dials moves - and it is the same for a passing bounce
+  // and a Bug Squash splat, only faster and shallower for the bounce.
+  //
+  // The ordering is the whole effect, and it is why these are four dials rather
+  // than one:
+  //
+  //   THE CONTACT FACE FORMS FIRST, alone, for about four frames. The ball
+  //   still looks like a hard ball pressing into the wall, and only then does
+  //   it give up and slump. That beat is what reads as "solid material suddenly
+  //   went soft"; without it the ball simply appears in a different shape.
+  //
+  //   ON THE WAY OUT THE ORDER REVERSES. The crown lifts first while the
+  //   footprint is still wide - the ball un-slumps upward before it lets go -
+  //   and the contact face is the last thing to leave the wall.
+  //
+  // Times are milliseconds from the impact, at splat speed. A bounce runs the
+  // identical curve at BOUNCE_SPEEDUP.
+  splatContactMs: 70,       // contact face: 0 -> full
+  splatSlumpFrom: 50,       // slump starts before the contact face has finished
+  splatSlumpMs: 140,
+  splatSpreadFrom: 60,
+  splatSpreadMs: 130,
+  splatInEndMs: 190,        // fully splatted
+  splatSettleEndMs: 400,    // one jelly wobble after landing, then still
 
-  // ── Bug Squash: the stuck ball, and it is a TOMATO ────────────────────────
-  //
-  // Everything above is tuned for a ball with some give that bounces off. This
-  // is a different object for two seconds: something slightly overripe hitting
-  // a wall, spreading against it, and peeling back off. Reported as "there is
-  // no animation for the ball squashing", with the mechanic working - and the
-  // envelope WAS running exactly as designed. It was just too small and too
-  // quick to be an animation at ball size, which is the same failure mode
-  // squishMaxCompress's own note above describes.
-  //
-  // Three numbers, and each fixes a different half of "I cannot see it":
-  //
-  //   RAMP. 90ms is five frames. The ball did not appear to squash, it appeared
-  //   to already be flat - the deformation was a state, not a motion. 150ms is
-  //   nine, which is enough to watch it spread.
-  //
-  //   DEPTH. 3.0 puts the pinned compression at ~0.51: the ball loses half its
-  //   thickness and doubles across. That is far past the 0.35 this file once
-  //   dialled back for a passing bounce, and deliberately so - the thing being
-  //   drawn is not a bounce, and anything subtler on a ~13px ball is a slightly
-  //   oval circle.
-  //
-  //   RELEASE. A ripe tomato does not ping back. 620ms rather than the bounce's
-  //   500, so the peel-off is slower than the splat that made it, and the
-  //   shared spring's stretch phase (which pulls PAST round before settling) is
-  //   3x deeper here too, so it comes away from the wall stringy.
-  stickRampMs: 150,
-  stickCompressBoost: 3.0,
-  stickReleaseMs: 620,
+  // Release, measured from the moment the hold lifts.
+  splatLiftMs: 350,         // crown recovers
+  splatFaceFrom: 150,       // contact face starts letting go, later
+  splatFaceMs: 370,
+  splatFootFrom: 120,       // footprint narrows
+  splatFootMs: 400,
+  splatPeelFrom: 350,       // departure stretch along the normal
+  splatPeelMs: 400,
+  splatOutEndMs: 750,
+
+  /**
+   * A passing bounce runs the same droplet at a fraction of the depth, so the
+   * material is consistent - a ball that goes soft when it sticks should not be
+   * made of something else the rest of the time. Small on purpose: the contrast
+   * with a full splat is part of what makes the splat read.
+   */
+  bounceSplatFraction: 0.15,
+  /** ...and faster, so a bounce is over in ~380ms rather than ~940ms. */
+  bounceSpeedup: 2.5,
+
+  squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
 };
 
 /**
@@ -167,14 +170,16 @@ export function createBallEffectState(): BallEffectState {
     wallHitTime: 0,
     ballHitIntensity: 0,
     ballHitTime: 0,
-    squishIntensity: 0,
     squishTime: 0,
     squishNx: 0,
     squishNy: 0,
     squishAmount: 0,
     squishHoldUntil: 0,
-    squishBoost: 1,
-    squishSpringMs: CONFIG.squishDuration,
+    squishSpeed: 1,
+    splatD: 0,
+    splatV: 0,
+    splatW: 0,
+    splatStretch: 0,
   };
 }
 
@@ -212,39 +217,70 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
     }
   }
 
-  // Bug Squash hold: ramp into the squash, then pin there until the hold lifts.
-  // The spring-back below is then played from the moment of release, so the
-  // ball visibly un-squashes as it leaves rather than snapping round. This
-  // branch runs whether or not the physics ticked during the hold (the browser
-  // loop skips a held ball, the harness does not), which is why release is
-  // keyed on the clock rather than on a tick count.
-  if (state.squishHoldUntil > 0) {
-    if (now < state.squishHoldUntil) {
-      const p = Math.min(1, (now - state.squishTime) / CONFIG.stickRampMs);
-      state.squishIntensity = Math.sin(p * Math.PI / 2); // ease-out into the splat
-      return;
+  tickSplat(state, now);
+}
+
+/** 0..1, fast off the mark and settling in. easeOut(0) is 0, easeOut(1) is 1. */
+function easeOut(t: number): number {
+  return 1 - Math.pow(1 - clamp01(t), 2.2);
+}
+/** 0..1, slow off the mark. Used on the way out, so the ball is reluctant to leave. */
+function easeIn(t: number): number {
+  return Math.pow(clamp01(t), 1.8);
+}
+function clamp01(t: number): number {
+  return t < 0 ? 0 : t > 1 ? 1 : t;
+}
+
+/**
+ * Advance the four shape dials.
+ *
+ * Keyed on the CLOCK, never on a tick count, because a held ball may not be
+ * ticked at all for a stretch (a hidden tab, a dropped frame) and must still
+ * come back at the right point in the animation rather than resuming where it
+ * left off.
+ */
+function tickSplat(state: BallEffectState, now: number): void {
+  if (state.squishAmount <= 0) return;
+  const C = CONFIG;
+  const speed = state.squishSpeed || 1;
+  const t = (now - state.squishTime) * speed;
+
+  // Where the release begins: the end of the hold for a splat, or the moment
+  // the ball is fully squashed for a bounce, which has no hold at all.
+  const holdEnds = state.squishHoldUntil > 0
+    ? (state.squishHoldUntil - state.squishTime) * speed
+    : C.splatInEndMs;
+
+  if (t < holdEnds) {
+    // ── Going in ──────────────────────────────────────────────────────────
+    state.splatD = easeOut(t / C.splatContactMs);
+    state.splatV = easeOut((t - C.splatSlumpFrom) / C.splatSlumpMs);
+    let w = easeOut((t - C.splatSpreadFrom) / C.splatSpreadMs);
+    // One jelly wobble as it settles: the spread overshoots a touch and comes
+    // back. Cheap, and it is most of what separates "soft" from "deformed".
+    if (t > C.splatInEndMs && t < C.splatSettleEndMs) {
+      const p = (t - C.splatInEndMs) / (C.splatSettleEndMs - C.splatInEndMs);
+      w += 0.08 * Math.sin(p * Math.PI) * Math.cos(p * Math.PI * 1.5) * (1 - p);
     }
-    state.squishHoldUntil = 0;
-    state.squishTime = now;
-    state.squishIntensity = 1;
+    state.splatW = w < 0 ? 0 : w;
+    state.splatStretch = 0;
+    return;
   }
 
-  // Spring the squish back to round. One gentle overshoot (compress -> slight
-  // stretch -> settle) under a linear-decay envelope, like a soft ball rebounding.
-  // The duration is per-deformation, not global: a Bug Squash splat peels off
-  // over stickReleaseMs, which is slower than a bounce's recovery.
-  if (state.squishAmount > 0) {
-    const springMs = state.squishSpringMs || CONFIG.squishDuration;
-    const elapsed = now - state.squishTime;
-    if (elapsed >= springMs) {
-      state.squishAmount = 0;
-      state.squishIntensity = 0;
-      state.squishBoost = 1;
-      state.squishSpringMs = CONFIG.squishDuration;
-    } else {
-      const p = elapsed / springMs;
-      state.squishIntensity = (1 - p) * Math.cos(p * Math.PI * 1.5);
-    }
+  // ── Coming out. The crown lifts first, the contact face lets go last. ─────
+  const r = t - holdEnds;
+  state.splatV = 1 - easeIn(r / C.splatLiftMs);
+  state.splatD = 1 - easeIn((r - C.splatFaceFrom) / C.splatFaceMs);
+  state.splatW = 1 - easeIn((r - C.splatFootFrom) / C.splatFootMs);
+  state.splatStretch = Math.sin(Math.PI * clamp01((r - C.splatPeelFrom) / C.splatPeelMs));
+
+  if (r >= C.splatOutEndMs) {
+    // Round again, and every dial cleared so the next hit starts from nothing.
+    state.squishAmount = 0;
+    state.squishHoldUntil = 0;
+    state.squishSpeed = 1;
+    state.splatD = state.splatV = state.splatW = state.splatStretch = 0;
   }
 }
 
@@ -316,20 +352,19 @@ export function triggerBallHit(
 function triggerSquish(
   state: BallEffectState, nx: number, ny: number, speed: number, now: number,
 ): void {
-  const vx = nx, vy = ny;
-  const amount = Math.min(1, speed / CONFIG.squishReferenceSpeed);
-  if (amount <= 0.01) return;
-  const mag = Math.hypot(vx, vy) || 1;
-  state.squishNx = vx / mag;
-  state.squishNy = vy / mag;
+  const mag = Math.hypot(nx, ny) || 1;
+  const amount = Math.min(1, speed / CONFIG.squishReferenceSpeed) * CONFIG.bounceSplatFraction;
+  if (amount <= 0.002) return;
+  state.squishNx = nx / mag;
+  state.squishNy = ny / mag;
   state.squishAmount = amount;
-  state.squishIntensity = 1;
   state.squishTime = now;
-  // An ordinary bounce recovers at the ordinary rate, whatever the last
-  // deformation was: a ball hit again while peeling off a splat is a bouncing
-  // ball now, not a tomato.
-  state.squishSpringMs = CONFIG.squishDuration;
-  state.squishBoost = 1;
+  // An ordinary bounce is a bounce whatever came before it: no hold, and the
+  // brisk timescale, so a ball struck again while it is still peeling off a
+  // splat stops being a tomato immediately.
+  state.squishHoldUntil = 0;
+  state.squishSpeed = CONFIG.bounceSpeedup;
+  state.splatD = state.splatV = state.splatW = state.splatStretch = 0;
 }
 
 /**
@@ -343,12 +378,14 @@ function triggerSquish(
  */
 export function pinSquish(state: BallEffectState, now: number, holdMs: number): void {
   if (state.squishNx === 0 && state.squishNy === 0) return;
+  // Full depth regardless of how hard the ball actually hit - a splat is a
+  // splat - at the slow timescale, starting from round so the contact face is
+  // watched forming rather than found already there.
   state.squishAmount = 1;
-  state.squishIntensity = 0;
   state.squishTime = now;
+  state.squishSpeed = 1;
   state.squishHoldUntil = now + Math.max(0, holdMs);
-  state.squishBoost = CONFIG.stickCompressBoost;
-  state.squishSpringMs = CONFIG.stickReleaseMs;
+  state.splatD = state.splatV = state.splatW = state.splatStretch = 0;
 }
 
 /** True while a Bug Squash hold is pinning this ball's squash. */
@@ -357,19 +394,26 @@ export function isSquishPinned(state: BallEffectState, now: number): boolean {
 }
 
 /**
- * Current squash-and-stretch deformation. `scaleAlong` compresses the ball along
- * the impact normal (nx,ny); `scalePerp` stretches perpendicular to preserve
- * area. Both are 1 when round. Apply as a rotated non-uniform scale at render.
- */
-/**
- * Per-ball squish dial for big boss balls: the full ~35% compression reads as
- * overblown on their large radius, so they squish at half strength. Shared by
- * both renderers (Pixi rig + 2D transform) so the factor lives in one place.
+ * Per-ball squish dial for big boss balls: the full deformation reads as
+ * overblown on their large radius, so they squash at half strength.
  */
 export const BOSS_SQUISH_SCALE = 0.5;
 
+/**
+ * The current deformation: the four shape dials, the axis they act along, and
+ * two summary ratios.
+ *
+ * `scaleAlong` and `scalePerp` are the silhouette's height and width as
+ * fractions of the round ball's DIAMETER - 1 and 1 when round, about 0.48 and
+ * 1.77 at a full splat. They are measurements OF the droplet, not the model
+ * behind it: the shape used to be an ellipse and those two numbers were its
+ * definition, and keeping them as a summary is what lets a shadow be sized and
+ * a test assert "flatter than a bounce" without either knowing about outlines.
+ * Anything drawing the ball wants `splatOutline` instead.
+ */
 export function getSquishEffect(state: BallEffectState, scale = 1): {
   active: boolean;
+  splat: SplatState;
   scaleAlong: number;
   scalePerp: number;
   nx: number;
@@ -377,33 +421,32 @@ export function getSquishEffect(state: BallEffectState, scale = 1): {
 } {
   // NEGATED rather than `<= 0`, so undefined and NaN are inactive too. They
   // used to fall through to the maths below and come back as NaN scales, which
-  // was invisible for as long as the only consumer was holder.scale.set() - a
-  // display property Pixi silently tolerates. The moment the same numbers were
-  // used to place the SHADOW, the NaN reached real geometry and
-  // ballLayerNoBeams caught it on the first run. A squash with no magnitude is
-  // no squash, whatever shape the state is in.
+  // was invisible for as long as the only consumer was a display property Pixi
+  // silently tolerates. The moment the same numbers were used to place the
+  // SHADOW, the NaN reached real geometry and ballLayerNoBeams caught it on the
+  // first run. A squash with no magnitude is no squash, whatever shape the
+  // state is in.
   if (!(state.squishAmount > 0)) {
-    return { active: false, scaleAlong: 1, scalePerp: 1, nx: 1, ny: 0 };
+    return { active: false, splat: ROUND, scaleAlong: 1, scalePerp: 1, nx: 1, ny: 0 };
   }
-  // Signed compression along the normal, and a perpendicular bulge that spreads
-  // with it. `scale` dials the whole deformation down per ball (e.g. 0.5 for
-  // large boss balls, which look overblown at the full compression). Clamped so
-  // no future dial can push scaleAlong through zero and turn the ball inside
-  // out.
-  const s = Math.min(0.8,
-    state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress * state.squishBoost * scale);
-  // The bulge is DAMPED area preservation: (1/(1-s)) raised to BULGE_EXPONENT
-  // rather than the strict inverse. A flat 1/(1-s) is right for a disc, which
-  // this is not: a real soft body pressed against a wall also bulges toward the
-  // viewer, and that third dimension is invisible here, so a strict inverse
-  // spends all of it sideways. Barely distinguishable on an ordinary bounce
-  // (43.5 world units across becomes 41.5) and the whole difference between a
-  // tomato and a water balloon at Bug Squash depth, where the strict version
-  // spread the ball to 2.06x its own width.
+  // `scale` dials the whole deformation down per ball, and the amount carries
+  // how hard the hit was, so a graze on a boss ball barely registers and a
+  // full splat on an ordinary one goes all the way.
+  const k = Math.min(1, Math.max(0, state.squishAmount * scale));
+  const splat: SplatState = {
+    d: state.splatD * k,
+    v: state.splatV * k,
+    w: state.splatW * k,
+    stretch: state.splatStretch * k,
+  };
+  // Measured on a unit ball, so these come back as ratios of the diameter
+  // whatever size the ball actually is.
+  const m = splatMetrics(splatOutline(splat, 0.5));
   return {
-    active: true,
-    scaleAlong: 1 - s,
-    scalePerp: Math.pow(1 / (1 - s), BULGE_EXPONENT),
+    active: isDeformed(splat),
+    splat,
+    scaleAlong: m.height,
+    scalePerp: m.width,
     nx: state.squishNx,
     ny: state.squishNy,
   };

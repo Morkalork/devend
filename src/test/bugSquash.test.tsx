@@ -137,7 +137,9 @@ describe("the squash ramps in, holds, and springs back on release", () => {
     expect(justAfter).toBeCloseTo(justBefore, 1);
     expect(settling).toBeLessThan(justAfter);
     expect(settling).toBeGreaterThan(0);
-    updateBallEffects(st, 0.016, 3700);
+    // Round again by the end of the peel-off, which runs 750ms from release
+    // (the crown lifts, then the footprint, then the departure stretch).
+    updateBallEffects(st, 0.016, 3800);
     expect(getSquishEffect(st).active).toBe(false);
   });
 
