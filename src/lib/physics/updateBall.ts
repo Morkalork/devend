@@ -42,6 +42,7 @@ import {
 } from "@/lib/regionOwnership";
 import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit, bounceImpact, pinSquish } from "@/lib/ballEffects";
+import { captureSplatScene } from "@/lib/splatScene";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
@@ -352,6 +353,11 @@ function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): void {
   ball.frozenUntil = now + stuckMs;
   ball.bugSquashUntil = now + stuckMs;
   pinSquish(ball.effects, now, stuckMs);
+  // The solids it is stuck to are gathered on the NEXT step, not here: the
+  // rest of this step's collisions (an obstacle's edge walls run after its
+  // polygon) can still move the ball, and the scene has to be built around
+  // where it finally rests.
+  ball.splatScene = null;
 }
 
 export function updateBall(
@@ -375,6 +381,17 @@ export function updateBall(
   // pulse and the impact halo animate, and a pinned squash stays pinned
   // because the hold is keyed on the clock inside updateBallEffects.
   if (ball.frozenUntil !== undefined && now < ball.frozenUntil) {
+    // A fresh Bug Squash: the ball has come to rest, so this is the moment to
+    // record what it is resting against (see maybeBugSquash).
+    if (ball.splatScene === null && ball.bugSquashUntil !== undefined && now < ball.bugSquashUntil) {
+      const nx = ball.effects.squishNx, ny = ball.effects.squishNy;
+      ball.splatScene = captureSplatScene(
+        game,
+        { x: ball.position.x - nx * ball.radius, y: ball.position.y - ny * ball.radius },
+        { x: nx, y: ny },
+        ball.radius,
+      );
+    }
     updateBallEffects(ball.effects, dt, now);
     return;
   }

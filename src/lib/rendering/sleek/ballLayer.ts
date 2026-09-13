@@ -36,11 +36,13 @@
  * corona, then the informational overlays (frost, rings, splash) that are not
  * lighting at all.
  */
-import { Container, Graphics, Mesh, MeshGeometry, Texture } from "pixi.js";
+import { BufferImageSource, Container, Graphics, Mesh, MeshGeometry, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { getSquishEffect, getWallHitEffect, getBallHitEffect, isSquishPinned, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
 import { splatOutline, splatMetrics, splatCore, SPLAT_SEGMENTS } from "@/lib/rendering/splatShape";
+import { createLiquidImage, rasterizeLiquid, type LiquidImage } from "@/lib/rendering/liquidSplat";
+import type { SplatScene } from "@/lib/splatScene";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
@@ -200,6 +202,60 @@ interface BallView {
   /** Additive bloom at the rim, in its own layer above every body. Same shape. */
   corona: Mesh;
   coronaPos: Float32Array;
+  /** The liquid splat, made on the first Bug Squash this view draws. See LiquidView. */
+  liquid: LiquidView | null;
+}
+
+/**
+ * A STUCK ball's display objects: the liquid splat (liquidSplat.ts).
+ *
+ * A third way to draw a ball, and the only one that is an image rather than
+ * geometry. The mesh can be any silhouette, but it is still ONE silhouette
+ * warped from a circle, and a blob that pours over the end of a fence and
+ * curls under it is not that: it is a field, with a shape that depends on the
+ * solids around the ball. So while a ball is held by Bug Squash its body and
+ * corona are two sprites carrying a texture the CPU repaints from the field,
+ * and the two meshes are hidden. Ordinary balls and ordinary bounces never
+ * come here.
+ *
+ * The images are in CONTACT SPACE, like the fan; the sprite's rotation and
+ * scale carry them onto the board, so the same mapping serves both paths.
+ */
+interface LiquidView {
+  body: Sprite;
+  glow: Sprite;
+  bodySrc: BufferImageSource;
+  glowSrc: BufferImageSource;
+  image: LiquidImage;
+  /** The world radius the image was allocated for. */
+  radius: number;
+  /** What was last painted, so a held (unchanging) splat costs nothing per frame. */
+  scene: SplatScene | null;
+  d: number; v: number; w: number; stretch: number; color: number;
+}
+
+/**
+ * Build the liquid sprites for a ball of this world radius. The buffers are
+ * fixed-size for the radius, so every later frame only rewrites and re-uploads.
+ */
+function makeLiquid(radius: number): LiquidView {
+  const image = createLiquidImage(radius);
+  const bodySrc = new BufferImageSource({ resource: image.body, width: image.width, height: image.height });
+  const glowSrc = new BufferImageSource({ resource: image.glow, width: image.width, height: image.height });
+  const body = new Sprite(new Texture({ source: bodySrc }));
+  const glow = new Sprite(new Texture({ source: glowSrc }));
+  glow.blendMode = "add";
+  // The sprite's origin is the CONTACT POINT, which is where the grid's
+  // (0, 0) lies; the anchor is that point as a fraction of the image.
+  const ax = -image.x0 / (image.width * image.texel);
+  const ay = -image.y0 / (image.height * image.texel);
+  body.anchor.set(ax, ay);
+  glow.anchor.set(ax, ay);
+  body.visible = glow.visible = false;
+  return {
+    body, glow, bodySrc, glowSrc, image, radius,
+    scene: null, d: -1, v: -1, w: -1, stretch: -1, color: -1,
+  };
 }
 
 /**
@@ -334,12 +390,14 @@ export class SleekBallLayer {
       this.coronas.addChild(corona);
 
       this.views.push({
-        body, bodyPos: b.positions, corona, coronaPos: c.positions,
+        body, bodyPos: b.positions, corona, coronaPos: c.positions, liquid: null,
       });
     }
     for (let i = balls.length; i < this.views.length; i++) {
       this.views[i].body.visible = false;
       this.views[i].corona.visible = false;
+      const liquid = this.views[i].liquid;
+      if (liquid) liquid.body.visible = liquid.glow.visible = false;
     }
 
     this.trails.clear();
@@ -549,7 +607,6 @@ export class SleekBallLayer {
 
     // ── Body ────────────────────────────────────────────────────────────────
     const rb = bucket(r);
-    body.visible = true;
     // While a lock plays out the ball drains toward the accent, so it visibly
     // becomes part of the territory it just created rather than simply stopping.
     // BUCKET the fade before blending. assimColorFade is a continuous 0->1 clock
@@ -562,34 +619,90 @@ export class SleekBallLayer {
     const bodyColor = fade > 0
       ? mix(parseColor(ball.color), PALETTE.accent, fade)
       : parseColor(ball.color);
-    body.texture = sphereTexture(bodyColor, rb);
     // Locked balls dim toward the captured substrate they now belong to.
-    body.alpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
+    const bodyAlpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
 
-    // The fan, in screen space. Both meshes are the same silhouette pushed out
-    // from the mass by their own texture's inset (see makeFan), so the bulb's
-    // edge and the corona's peak both land on the outline.
-    writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy);
-    body.geometry.attributes.aPosition.buffer.update();
+    // ── Stuck: the liquid splat ─────────────────────────────────────────────
+    // A Bug Squash hold with its scene captured draws as a field, not a fan
+    // (see LiquidView). The hold flag rather than bugSquashUntil, because the
+    // reinflate plays inside the freeze and the liquid has to see it through
+    // to round before the mesh takes over again; and the scene, because for
+    // one frame after the stick the physics has not yet recorded it.
+    const scene = ball.splatScene;
+    const liquid = !!scene && squish.active && ball.effects.squishHoldUntil > 0;
+    if (liquid) {
+      let lv = view.liquid;
+      if (!lv || lv.radius !== ball.radius) {
+        if (lv) {
+          lv.body.texture.destroy(true);
+          lv.glow.texture.destroy(true);
+          lv.body.destroy();
+          lv.glow.destroy();
+        }
+        lv = view.liquid = makeLiquid(ball.radius);
+        this.bodies.addChild(lv.body);
+        this.coronas.addChild(lv.glow);
+      }
+      // Repaint only when something it depends on moved. A splat spends most
+      // of its stick flat and still, and a still splat is free.
+      const sp = squish.splat;
+      if (lv.scene !== scene || lv.d !== sp.d || lv.v !== sp.v || lv.w !== sp.w
+        || lv.stretch !== sp.stretch || lv.color !== bodyColor) {
+        rasterizeLiquid(lv.image, scene, sp, ball.radius, bodyColor);
+        lv.bodySrc.update();
+        lv.glowSrc.update();
+        lv.scene = scene;
+        lv.d = sp.d; lv.v = sp.v; lv.w = sp.w; lv.stretch = sp.stretch;
+        lv.color = bodyColor;
+      }
+      // Contact space onto the screen, exactly as sx/sy do it for the fan:
+      // local +x along the tangent, local +y against the normal. That is a
+      // rotation by the tangent's angle (Pixi's local y is the x axis turned
+      // a quarter on), scaled by screen pixels per texel.
+      const k = (r / ball.radius) * lv.image.texel;
+      const rot = Math.atan2(ty, tx);
+      for (const sprite of [lv.body, lv.glow]) {
+        sprite.position.set(wx, wy);
+        sprite.rotation = rot;
+        sprite.scale.set(k);
+        sprite.alpha = bodyAlpha;
+      }
+      lv.body.visible = true;
+      lv.glow.visible = !dormant && bodyAlpha > 0.01;
+      body.visible = false;
+      corona.visible = false;
+    } else {
+      if (view.liquid) view.liquid.body.visible = view.liquid.glow.visible = false;
+      body.visible = true;
+      body.texture = sphereTexture(bodyColor, rb);
+      body.alpha = bodyAlpha;
 
-    // ── Corona ──────────────────────────────────────────────────────────────
-    // The bleed past the ball's own edge. A bright disc reads as a bright disc;
-    // this is the part that reads as emitting. It follows the body's dimming,
-    // so a sleeper is an unlit bulb and a locked ball goes out as it drains.
-    corona.visible = !dormant && body.alpha > 0.01;
-    if (corona.visible) {
-      corona.texture = coronaTex();
-      // The bloom takes the body's SHAPE, not just its place. It is additive
-      // and it bleeds past the silhouette, so a round one over a splatted ball
-      // does not merely fail to help - it erases the splat, which was most of
-      // why the squash could not be seen at all.
-      writeFan(coronaPos, outline, core, CORONA_RADII, sx, sy);
-      corona.geometry.attributes.aPosition.buffer.update();
-      // Whitened like the light pool, for the same reason: a pure hue bloom
-      // over a pure hue ball is invisible, and it is the WHITENING that reads
-      // as heat.
-      corona.tint = mix(bodyColor, 0xffffff, 0.4);
-      corona.alpha = body.alpha;
+      // The fan, in screen space. Both meshes are the same silhouette pushed out
+      // from the mass by their own texture's inset (see makeFan), so the bulb's
+      // edge and the corona's peak both land on the outline.
+      writeFan(bodyPos, outline, core, SPHERE_MARGIN, sx, sy);
+      body.geometry.attributes.aPosition.buffer.update();
+
+      // ── Corona ────────────────────────────────────────────────────────────
+      // The bleed past the ball's own edge. A bright disc reads as a bright
+      // disc; this is the part that reads as emitting. It follows the body's
+      // dimming, so a sleeper is an unlit bulb and a locked ball goes out as
+      // it drains.
+      corona.visible = !dormant && body.alpha > 0.01;
+      if (corona.visible) {
+        corona.texture = coronaTex();
+        // The bloom takes the body's SHAPE, not just its place. It is additive
+        // and it bleeds past the silhouette, so a round one over a splatted
+        // ball does not merely fail to help - it erases the splat, which was
+        // most of why the squash could not be seen at all.
+        writeFan(coronaPos, outline, core, CORONA_RADII, sx, sy);
+        corona.geometry.attributes.aPosition.buffer.update();
+        // Whitened like the light pool, for the same reason: a pure hue bloom
+        // over a pure hue ball is invisible, and it is the WHITENING that
+        // reads as heat.
+        corona.tint = mix(bodyColor, 0xffffff, 0.4);
+        corona.alpha = body.alpha;
+      }
     }
 
     // The ability mark rides on top of the body, including on a sleeper: what a
@@ -711,6 +824,13 @@ export class SleekBallLayer {
   }
 
   destroy(): void {
+    // The liquid textures are per view, not shared like the sphere bakes, so
+    // they go with the layer rather than waiting for a cache clear.
+    for (const v of this.views) {
+      if (!v.liquid) continue;
+      v.liquid.body.texture.destroy(true);
+      v.liquid.glow.texture.destroy(true);
+    }
     this.container.destroy({ children: true });
   }
 }

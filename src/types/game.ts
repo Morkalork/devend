@@ -62,6 +62,15 @@ export interface Ball {
   // no-trail, frozen-lock-bonus rules as a tap-freeze); this only tells the
   // renderer to draw a squash rather than frost. See maybeBugSquash.
   bugSquashUntil?: number;
+  /**
+   * What the stuck ball is stuck TO, in contact space, for the liquid splat
+   * (splatScene.ts). `null` is "pending": set by maybeBugSquash, filled on the
+   * NEXT physics step, once every collision of the step that stuck it has
+   * finished moving the ball and its resting position is final. Absent or
+   * stale once the ball is moving again; the renderer only reads it while the
+   * squash is held.
+   */
+  splatScene?: import('@/lib/splatScene').SplatScene | null;
   // ── Ball type / abilities (issue #37) ───────────────────────────────────
   typeId: string;            // ball-type id from ballTypes.ts (red, blue, yellow, …)
   ability: import('@/lib/ballTypes').BallAbility; // gameplay ability this ball carries
