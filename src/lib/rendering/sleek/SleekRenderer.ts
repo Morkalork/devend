@@ -51,6 +51,7 @@ import { EntityLayer } from "./entityLayer";
 import { AreaLayer } from "./areaLayer";
 import { SleekBallLayer, clearSphereCache } from "./ballLayer";
 import { BallLightPass, clearPoolTexture } from "./ballLightPass";
+import { BounceLayer, clearBounceTextures } from "./bounceLayer";
 import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
@@ -85,6 +86,7 @@ export class SleekRenderer {
 
   private board = new BoardLayer();
   private areas = new AreaLayer();
+  private bounce = new BounceLayer();
   private props = new PropLayer();
   private entities = new EntityLayer();
   private objects = new ObjectLayer();
@@ -154,8 +156,13 @@ export class SleekRenderer {
       this.entities.container,
       this.objects.container,
       this.walls.container,
+      // Bounce light lands ON the surface it comes off, so each half sits
+      // directly above the layer that drew that surface: the bands over the
+      // walls, the return light over the balls (bounceLayer.ts).
+      this.bounce.onWalls,
       this.fx.container,
       this.balls.container,
+      this.bounce.onBalls,
       // Rim + danger frame: masked with the board, so their wide halo strokes
       // clip at the edge instead of blooming out over the page.
       this.chrome.container,
@@ -167,6 +174,9 @@ export class SleekRenderer {
     // scope it would be clipped flat against the very edge it frames. Added
     // after boardScope so it sits over the margin rather than under the panel.
     this.root.addChild(this.walls.outer);
+    // The frame's bounce goes with the frame, outside the board mask that
+    // would otherwise clip it off at the edge it is lighting.
+    this.root.addChild(this.bounce.onFrame);
     // The board's drop shadow falls on the page BEHIND the board, so it is a
     // stage-level underlay added before everything else. The space bar is the
     // one piece of chrome that belongs outside the board on top. The shatter
@@ -291,6 +301,7 @@ export class SleekRenderer {
     this.walls.sync(game, light, this.shadowPlane, w2s, scale);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
     this.balls.sync(game, light, this.shadowPlane, w2s, scale, now);
+    this.bounce.sync(game, w2s, scale);
     this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 
@@ -481,6 +492,7 @@ export class SleekRenderer {
   destroy(): void {
     clearSphereCache();
     clearPoolTexture();
+    clearBounceTextures();
     this.sweep.teardown();
     this.shatter.clear();
     this.clearShatterRT();
@@ -490,6 +502,7 @@ export class SleekRenderer {
     this.entities.destroy();
     this.objects.destroy();
     this.walls.destroy();
+    this.bounce.destroy();
     this.fx.destroy();
     this.balls.destroy();
     this.ballLights.destroy();

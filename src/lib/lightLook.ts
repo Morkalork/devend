@@ -1,0 +1,67 @@
+/**
+ * The light model's dials.
+ *
+ * Rendering settings, not gameplay, so they sit outside the modifiers the same
+ * way ballLook.ts does - and separate from it because these are about how the
+ * BOARD responds to light rather than how a ball is dressed. Persisted, so a
+ * tester's dial survives a reload, and read by the renderer every frame through
+ * one cached object.
+ *
+ * Each has a Playground slider (CLAUDE.md: anything new that changes how the
+ * game plays lands with the control that lets a tester reach it), and each is a
+ * slider rather than a toggle for the same reason the ball's web is: the right
+ * strength is judged in play, and 0 is always one drag away, which makes every
+ * one of these a before/after a tester can do without a rebuild.
+ */
+export interface LightLook {
+  /**
+   * Bounce light: how brightly a surface answers a ball that is nearly
+   * touching it, and how much of that the ball takes back on its near side.
+   * 0 is the behaviour before it existed.
+   */
+  bounce: number;
+}
+
+const KEY = "devend.lightLook";
+export const DEFAULT_LIGHT_LOOK: LightLook = { bounce: 0.8 };
+
+let current: LightLook | null = null;
+
+function unit(v: number, fallback: number): number {
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
+}
+
+function sanitise(l: LightLook): LightLook {
+  return { bounce: unit(l.bounce, DEFAULT_LIGHT_LOOK.bounce) };
+}
+
+function load(): LightLook {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<LightLook>;
+      return sanitise({ ...DEFAULT_LIGHT_LOOK, ...parsed });
+    }
+  } catch { /* unreadable storage: defaults */ }
+  return { ...DEFAULT_LIGHT_LOOK };
+}
+
+/** The current dials. Cached: this is read every frame. */
+export function getLightLook(): LightLook {
+  if (!current) current = load();
+  return current;
+}
+
+/** Change part of the light model; persisted, and live from the next frame. */
+export function setLightLook(patch: Partial<LightLook>): LightLook {
+  current = sanitise({ ...getLightLook(), ...patch });
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(current));
+  } catch { /* storage full or blocked: the setting still applies this session */ }
+  return current;
+}
+
+/** Tests: forget the cached dials so the next read comes from storage. */
+export function resetLightLookCache(): void {
+  current = null;
+}

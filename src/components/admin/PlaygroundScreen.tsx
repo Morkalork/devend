@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ModifierInput } from '@/components/admin/ModifierInput';
 import { getBallLook, setBallLook } from '@/lib/ballLook';
+import { getLightLook, setLightLook } from '@/lib/lightLook';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stepLevelIndex } from '@/lib/levelStep';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronLeft, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
@@ -193,6 +194,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
   const [ballLook, setBallLookState] = useState(getBallLook);
+  const [lightLook, setLightLookState] = useState(getLightLook);
   const [staticBg, setStaticBg] = useState(isStaticBgEnabled);
   // The URL dev flags as controls (CLAUDE.md, "Admin must be able to test it").
   // Session-scoped: see devFlags.ts for why these are not persisted.
@@ -1472,6 +1474,29 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: ballLook.flicker ? 19 : 3 }} />
                   </span>
                 </button>
+              </div>
+
+              {/* The light model (lightLook.ts). One slider per dial, and every
+                  one reaches 0, which is the behaviour before it existed: the
+                  before/after is a drag rather than a rebuild. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-bounce" style={{ color: lightLook.bounce > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Bounce light: {Math.round(lightLook.bounce * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A wall lights up where a ball is nearly touching it, and the ball takes some of it back.
+                  </span>
+                </label>
+                <input
+                  id="light-bounce"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.bounce * 100)}
+                  onChange={e => setLightLookState(setLightLook({ bounce: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
               </div>
 
               {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so

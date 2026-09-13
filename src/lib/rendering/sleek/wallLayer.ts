@@ -29,7 +29,7 @@ import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEf
 
 /** How thick the board's outer frame is, in world units. Heavier than a
  *  fence (6) so the enclosure reads as structure rather than as a cut. */
-const OUTER_WALL_THICKNESS = 14;
+export const OUTER_WALL_THICKNESS = 14;
 import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
 import { transformKey } from "./transformKey";
 
