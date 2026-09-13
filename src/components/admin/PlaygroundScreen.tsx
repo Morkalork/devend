@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { ModifierInput } from '@/components/admin/ModifierInput';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stepLevelIndex } from '@/lib/levelStep';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronLeft, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
@@ -588,9 +589,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     return draft[key] ?? MODIFIER_META[key].defaultValue;
   }, [draft]);
 
-  const setDraftValue = useCallback((key: keyof GameModifiers, raw: string) => {
-    const num = parseFloat(raw);
-    if (isNaN(num)) return;
+  const setDraftValue = useCallback((key: keyof GameModifiers, num: number) => {
     setDraft(prev => ({ ...prev, [key]: num }));
   }, []);
 
@@ -1709,7 +1708,7 @@ function ModifierSection({
   subtitle: string;
   keys: (keyof GameModifiers)[];
   getValue: (k: keyof GameModifiers) => number;
-  setValue: (k: keyof GameModifiers, v: string) => void;
+  setValue: (k: keyof GameModifiers, v: number) => void;
   resetKey: (k: keyof GameModifiers) => void;
   accentColor: string;
 }) {
@@ -1757,12 +1756,11 @@ function ModifierSection({
               </div>
 
               {/* Input */}
-              <input
-                type="number"
+              <ModifierInput
                 value={value}
                 step={meta.step}
                 min={meta.min}
-                onChange={e => setValue(key, e.target.value)}
+                onChange={v => setValue(key, v)}
                 className="w-20 text-right text-sm font-mono rounded px-2 py-1 bg-transparent outline-none border"
                 style={{
                   color: isDefault ? 'hsl(var(--muted-foreground))' : accentColor,
