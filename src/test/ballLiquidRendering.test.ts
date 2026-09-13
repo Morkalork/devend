@@ -18,6 +18,7 @@ import {
   createBallEffectState, triggerWallHit, pinSquish, updateBallEffects, getSquishEffect,
 } from "@/lib/ballEffects";
 import { captureSplatScene, type SplatScene } from "@/lib/splatScene";
+import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
 import type { Ball } from "@/types/game";
 
 const RADIUS = 18;
@@ -127,6 +128,47 @@ describe("a held squash with its scene draws as the liquid", () => {
     const { view } = layerFor(ball(st, { splatScene: sceneRight() }), T0 + 3100);
     expect(view.body.visible).toBe(true);
     expect(view.liquid === null || view.liquid.body.visible === false).toBe(true);
+  });
+});
+
+describe("the mass is where the liquid put it, not where the ball is", () => {
+  // The first play report on the liquid: "the halo hangs in the air when a
+  // ball hits a corner". The light pool, the mark and the rings were all
+  // placed from the ball's POSITION, which is a radius out from the surface,
+  // while the liquid had flowed onto the corner. Everything now follows the
+  // painted mass.
+  it("records the drawn mass on the ball, between its position and the wall", () => {
+    const st = heldAt(1200);
+    const b = ball(st, { splatScene: sceneRight(), bugSquashUntil: T0 + 3000, frozenUntil: T0 + 3000 });
+    layerFor(b, T0 + 1200);
+    expect(b.splatMass).toBeDefined();
+    // The wall is on the +x side: the mass has sunk toward it.
+    expect(b.splatMass!.x).toBeGreaterThan(AT.x + RADIUS * 0.3);
+    expect(b.splatMass!.x).toBeLessThan(AT.x + RADIUS);
+    expect(b.splatMass!.y).toBeCloseTo(AT.y, 0);
+  });
+
+  it("clears it once the ball is back on the fan", () => {
+    const st = heldAt(1200);
+    const b = ball(st, { splatScene: sceneRight(), bugSquashUntil: T0 + 3000, frozenUntil: T0 + 3000 });
+    const { layer, game, light, shadows, w2s, scale } = layerFor(b, T0 + 1200);
+    expect(b.splatMass).toBeDefined();
+    for (let t = 1200; t <= 3100; t += 16) updateBallEffects(st, 1 / 60, T0 + t);
+    layer.sync(game, light, shadows, w2s, scale, T0 + 3100);
+    expect(b.splatMass).toBeUndefined();
+  });
+
+  it("the light pool is centred on the mass", () => {
+    const st = heldAt(1200);
+    const b = ball(st, { splatScene: sceneRight(), bugSquashUntil: T0 + 3000, frozenUntil: T0 + 3000 });
+    const { game, w2s } = layerFor(b, T0 + 1200);
+    const pass = new BallLightPass();
+    pass.build(game, w2s, 1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const glow = (pass as unknown as any).emitters[0].glow;
+    expect(glow.position.x).toBeCloseTo(b.splatMass!.x, 6);
+    expect(glow.position.y).toBeCloseTo(b.splatMass!.y, 6);
+    expect(glow.position.x).not.toBeCloseTo(AT.x, 0);
   });
 });
 

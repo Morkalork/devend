@@ -71,6 +71,15 @@ export interface Ball {
    * squash is held.
    */
   splatScene?: import('@/lib/splatScene').SplatScene | null;
+  /**
+   * Where the ball's mass is DRAWN while the liquid splat is up, in world
+   * units. Set by the ball layer each frame it draws the liquid, cleared
+   * otherwise; render-only, like renderPosition. The light pool follows it:
+   * on a corner the ball's position is a radius out in the air from the
+   * liquid, and a pool of light centred there was a halo hanging beside the
+   * ball rather than under it.
+   */
+  splatMass?: Vector2;
   // ── Ball type / abilities (issue #37) ───────────────────────────────────
   typeId: string;            // ball-type id from ballTypes.ts (red, blue, yellow, …)
   ability: import('@/lib/ballTypes').BallAbility; // gameplay ability this ball carries

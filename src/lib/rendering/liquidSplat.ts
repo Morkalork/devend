@@ -141,6 +141,14 @@ export interface LiquidImage {
   /** The threshold and peak the last frame settled on (tests read them). */
   iso: number;
   peak: number;
+  /**
+   * Where the mass is: the body's alpha-weighted centroid, in contact space.
+   * The shadow, the mark and the light pool follow this rather than the
+   * ball's position, because on a corner the position is a radius out in the
+   * air from where the liquid actually is.
+   */
+  cx: number;
+  cy: number;
 }
 
 /** Allocate an image for a ball of this radius. */
@@ -160,6 +168,8 @@ export function createLiquidImage(radius: number): LiquidImage {
     maskFor: null,
     iso: 0,
     peak: 0,
+    cx: 0,
+    cy: -radius,
   };
 }
 
@@ -332,6 +342,7 @@ export function rasterizeLiquid(
   const band = iso * EDGE_BAND;
   const range = peak - iso || 1;
   const igf = 1 / (GLOW_FALLOFF * GLOW_FALLOFF);
+  let mx = 0, my = 0, mw = 0;
   for (let k = 0; k < F.length; k++) {
     const v = F[k];
     const o = k * 4;
@@ -343,6 +354,10 @@ export function rasterizeLiquid(
       a = a < 0 ? 0 : a > 1 ? 1 : a;
       body[o] = (c >> 16) & 255; body[o + 1] = (c >> 8) & 255; body[o + 2] = c & 255;
       body[o + 3] = Math.round(255 * a);
+      // Thickness-weighted, so a thin tongue along a face does not drag the
+      // centre off the bulk the way a plain area centroid would.
+      const wgt = a * (0.3 + tk);
+      mx += wgt * (k % W); my += wgt * ((k / W) | 0); mw += wgt;
     } else {
       body[o] = body[o + 1] = body[o + 2] = body[o + 3] = 0;
     }
@@ -354,6 +369,13 @@ export function rasterizeLiquid(
     } else {
       glow[o] = glow[o + 1] = glow[o + 2] = glow[o + 3] = 0;
     }
+  }
+  if (mw > 0) {
+    img.cx = x0 + (mx / mw + 0.5) * texel;
+    img.cy = y0 + (my / mw + 0.5) * texel;
+  } else {
+    img.cx = 0;
+    img.cy = -hc;
   }
   return img;
 }

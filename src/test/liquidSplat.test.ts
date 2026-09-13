@@ -168,6 +168,30 @@ describe("liquid splat: it melts around what it touches", () => {
   });
 });
 
+describe("liquid splat: where the mass is", () => {
+  it("mid-wall the centroid sits on the axis, low against the wall", () => {
+    const img = paint(midWall());
+    expect(Math.abs(img.cx)).toBeLessThan(img.texel);
+    expect(img.cy).toBeLessThan(0);
+    expect(-img.cy).toBeLessThan(R * 0.6);      // well below the round ball's centre
+  });
+
+  it("at a fence end the centroid follows the mass over the edge", () => {
+    const img = paint(fenceEnd());
+    const b = liquidBounds(img)!;
+    expect(img.cx).toBeGreaterThan(b.minX);
+    expect(img.cx).toBeLessThan(b.maxX);
+    // The fence ends at x = 8; the mass has leaned out past the middle of the ball.
+    expect(img.cx).toBeGreaterThan(-R * 0.15);
+  });
+
+  it("a round state puts it at the ball's centre", () => {
+    const img = paint(midWall(), ROUND);
+    expect(Math.abs(img.cx)).toBeLessThan(img.texel);
+    expect(img.cy).toBeCloseTo(-R, 0);
+  });
+});
+
 describe("liquid splat: the image is reusable", () => {
   it("repainting into the same image with the same inputs is stable", () => {
     const scene = fenceEnd();

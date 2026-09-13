@@ -150,7 +150,9 @@ export class BallLightPass {
     const tex = poolTex();
 
     for (const ball of game.balls) {
-      const p = ball.renderPosition ?? ball.position;
+      // A stuck ball's light comes from where its mass is drawn, which on a
+      // corner is not where its position is (see Ball.splatMass).
+      const p = ball.splatMass ?? ball.renderPosition ?? ball.position;
       const c = w2s(p.x, p.y);
       const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
       const light = ballLight(ball, c, r, parseColor(ball.color));

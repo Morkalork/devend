@@ -555,8 +555,89 @@ export class SleekBallLayer {
     const sx = (lx: number, ly: number) => wx + tx * lx - nx * ly;
     const sy = (lx: number, ly: number) => wy + ty * lx - ny * ly;
     // The mass, which is where the highlight goes and what the shadow sits under.
-    const bx = sx(shape.cx, shape.cy);
-    const by = sy(shape.cx, shape.cy);
+    let bx = sx(shape.cx, shape.cy);
+    let by = sy(shape.cx, shape.cy);
+
+    // While a lock plays out the ball drains toward the accent, so it visibly
+    // becomes part of the territory it just created rather than simply stopping.
+    // BUCKET the fade before blending. assimColorFade is a continuous 0->1 clock
+    // over the ~2s lock fade, and sphereTexture caches per colour - so an
+    // unbucketed blend bakes a fresh texture nearly every frame, per locking
+    // ball. 13 steps is visually indistinguishable from continuous and bounds
+    // the cache to at most 13 extra bakes for the whole clear.
+    const fadeRaw = ball.assimColorFade ?? 0;
+    const fade = fadeRaw > 0 ? Math.round(Math.min(1, fadeRaw) * 12) / 12 : 0;
+    const bodyColor = fade > 0
+      ? mix(parseColor(ball.color), PALETTE.accent, fade)
+      : parseColor(ball.color);
+    // Locked balls dim toward the captured substrate they now belong to.
+    const bodyAlpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
+
+    // ── Stuck: the liquid splat ─────────────────────────────────────────────
+    // A Bug Squash hold with its scene captured draws as a field, not a fan
+    // (see LiquidView). The hold flag rather than bugSquashUntil, because the
+    // reinflate plays inside the freeze and the liquid has to see it through
+    // to round before the mesh takes over again; and the scene, because for
+    // one frame after the stick the physics has not yet recorded it.
+    //
+    // Decided HERE, before the shadow, because the liquid moves the mass:
+    // on a corner it flows onto the solid, a radius or so from where the
+    // droplet's centroid would have put it, and the shadow, the mark and the
+    // light pool all have to sit under the liquid rather than beside it.
+    const scene = ball.splatScene;
+    const liquid = !!scene && squish.active && ball.effects.squishHoldUntil > 0;
+    let lv: LiquidView | null = null;
+    if (liquid) {
+      lv = view.liquid;
+      if (!lv || lv.radius !== ball.radius) {
+        if (lv) {
+          lv.body.texture.destroy(true);
+          lv.glow.texture.destroy(true);
+          lv.body.destroy();
+          lv.glow.destroy();
+        }
+        lv = view.liquid = makeLiquid(ball.radius);
+        this.bodies.addChild(lv.body);
+        this.coronas.addChild(lv.glow);
+      }
+      // Repaint only when something it depends on moved. A splat spends most
+      // of its stick flat and still, and a still splat is free.
+      const sp = squish.splat;
+      if (lv.scene !== scene || lv.d !== sp.d || lv.v !== sp.v || lv.w !== sp.w
+        || lv.stretch !== sp.stretch || lv.color !== bodyColor) {
+        rasterizeLiquid(lv.image, scene, sp, ball.radius, bodyColor);
+        lv.bodySrc.update();
+        lv.glowSrc.update();
+        lv.scene = scene;
+        lv.d = sp.d; lv.v = sp.v; lv.w = sp.w; lv.stretch = sp.stretch;
+        lv.color = bodyColor;
+      }
+      // Contact space onto the screen, exactly as sx/sy do it for the fan:
+      // local +x along the tangent, local +y against the normal. That is a
+      // rotation by the tangent's angle (Pixi's local y is the x axis turned
+      // a quarter on), scaled by screen pixels per texel.
+      const k = (r / ball.radius) * lv.image.texel;
+      const rot = Math.atan2(ty, tx);
+      for (const sprite of [lv.body, lv.glow]) {
+        sprite.position.set(wx, wy);
+        sprite.rotation = rot;
+        sprite.scale.set(k);
+        sprite.alpha = bodyAlpha;
+      }
+      // The mass is where the liquid put it. In WORLD units for the light
+      // pass, which has its own transform; on screen for everything here.
+      const { cx: mcx, cy: mcy } = lv.image;
+      const wtx = -squish.ny, wty = squish.nx;
+      const cwx = p.x - squish.nx * ball.radius, cwy = p.y - squish.ny * ball.radius;
+      ball.splatMass = {
+        x: cwx + wtx * mcx - squish.nx * mcy,
+        y: cwy + wty * mcx - squish.ny * mcy,
+      };
+      bx = sx(mcx, mcy);
+      by = sy(mcx, mcy);
+    } else {
+      ball.splatMass = undefined;
+    }
 
     // ── Cast shadow + contact ───────────────────────────────────────────────
     // Skipped while dormant: a sleeper is not yet part of the scene, and seating
@@ -606,67 +687,7 @@ export class SleekBallLayer {
     }
 
     // ── Body ────────────────────────────────────────────────────────────────
-    const rb = bucket(r);
-    // While a lock plays out the ball drains toward the accent, so it visibly
-    // becomes part of the territory it just created rather than simply stopping.
-    // BUCKET the fade before blending. assimColorFade is a continuous 0->1 clock
-    // over the ~2s lock fade, and sphereTexture caches per colour - so an
-    // unbucketed blend bakes a fresh texture nearly every frame, per locking
-    // ball. 13 steps is visually indistinguishable from continuous and bounds
-    // the cache to at most 13 extra bakes for the whole clear.
-    const fadeRaw = ball.assimColorFade ?? 0;
-    const fade = fadeRaw > 0 ? Math.round(Math.min(1, fadeRaw) * 12) / 12 : 0;
-    const bodyColor = fade > 0
-      ? mix(parseColor(ball.color), PALETTE.accent, fade)
-      : parseColor(ball.color);
-    // Locked balls dim toward the captured substrate they now belong to.
-    const bodyAlpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
-
-    // ── Stuck: the liquid splat ─────────────────────────────────────────────
-    // A Bug Squash hold with its scene captured draws as a field, not a fan
-    // (see LiquidView). The hold flag rather than bugSquashUntil, because the
-    // reinflate plays inside the freeze and the liquid has to see it through
-    // to round before the mesh takes over again; and the scene, because for
-    // one frame after the stick the physics has not yet recorded it.
-    const scene = ball.splatScene;
-    const liquid = !!scene && squish.active && ball.effects.squishHoldUntil > 0;
-    if (liquid) {
-      let lv = view.liquid;
-      if (!lv || lv.radius !== ball.radius) {
-        if (lv) {
-          lv.body.texture.destroy(true);
-          lv.glow.texture.destroy(true);
-          lv.body.destroy();
-          lv.glow.destroy();
-        }
-        lv = view.liquid = makeLiquid(ball.radius);
-        this.bodies.addChild(lv.body);
-        this.coronas.addChild(lv.glow);
-      }
-      // Repaint only when something it depends on moved. A splat spends most
-      // of its stick flat and still, and a still splat is free.
-      const sp = squish.splat;
-      if (lv.scene !== scene || lv.d !== sp.d || lv.v !== sp.v || lv.w !== sp.w
-        || lv.stretch !== sp.stretch || lv.color !== bodyColor) {
-        rasterizeLiquid(lv.image, scene, sp, ball.radius, bodyColor);
-        lv.bodySrc.update();
-        lv.glowSrc.update();
-        lv.scene = scene;
-        lv.d = sp.d; lv.v = sp.v; lv.w = sp.w; lv.stretch = sp.stretch;
-        lv.color = bodyColor;
-      }
-      // Contact space onto the screen, exactly as sx/sy do it for the fan:
-      // local +x along the tangent, local +y against the normal. That is a
-      // rotation by the tangent's angle (Pixi's local y is the x axis turned
-      // a quarter on), scaled by screen pixels per texel.
-      const k = (r / ball.radius) * lv.image.texel;
-      const rot = Math.atan2(ty, tx);
-      for (const sprite of [lv.body, lv.glow]) {
-        sprite.position.set(wx, wy);
-        sprite.rotation = rot;
-        sprite.scale.set(k);
-        sprite.alpha = bodyAlpha;
-      }
+    if (lv) {
       lv.body.visible = true;
       lv.glow.visible = !dormant && bodyAlpha > 0.01;
       body.visible = false;
@@ -674,7 +695,7 @@ export class SleekBallLayer {
     } else {
       if (view.liquid) view.liquid.body.visible = view.liquid.glow.visible = false;
       body.visible = true;
-      body.texture = sphereTexture(bodyColor, rb);
+      body.texture = sphereTexture(bodyColor, bucket(r));
       body.alpha = bodyAlpha;
 
       // The fan, in screen space. Both meshes are the same silhouette pushed out
@@ -761,10 +782,14 @@ export class SleekBallLayer {
     // the latter larger and brighter because it is the rarer, more consequential
     // event. This is feedback, not decoration - it is how a hit you did not see
     // coming announces itself - so it is drawn over the body rather than lit.
+    // On the mass while the liquid is up, for the same reason as the shadow:
+    // a ring around a position the ball is no longer drawn at reads as a
+    // halo left hanging beside it.
+    const hx = lv ? bx : c.x, hy = lv ? by : c.y;
     const wallHit = getWallHitEffect(ball.effects);
     if (wallHit.active) {
       this.overlays
-        .circle(c.x, c.y, r * wallHit.ringRadius)
+        .circle(hx, hy, r * wallHit.ringRadius)
         .stroke({
           width: Math.max(1, wallHit.ringWidth * scale),
           color: parseColor(ball.color),
@@ -774,7 +799,7 @@ export class SleekBallLayer {
     const ballHit = getBallHitEffect(ball.effects, this.now);
     if (ballHit.active) {
       this.overlays
-        .circle(c.x, c.y, r * ballHit.ringRadius)
+        .circle(hx, hy, r * ballHit.ringRadius)
         .stroke({
           width: Math.max(1, 2 * scale),
           color: parseColor(ball.color),
@@ -785,7 +810,7 @@ export class SleekBallLayer {
     // ── Fastest ball: the one the trajectory tracks and the danger frame means.
     if (ball.id === this.fastestId && ball.state === "active") {
       this.overlays
-        .circle(c.x, c.y, r + 6 * scale)
+        .circle(hx, hy, r + 6 * scale)
         .stroke({ width: Math.max(1, 2 * scale), color: PALETTE.mirror, alpha: 0.55 });
     }
 
