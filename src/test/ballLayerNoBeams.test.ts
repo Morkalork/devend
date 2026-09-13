@@ -25,6 +25,7 @@ import { Graphics } from "pixi.js";
 import { SleekBallLayer } from "@/lib/rendering/sleek/ballLayer";
 import { lightScope } from "@/lib/rendering/sleek/light";
 import { DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
+import { createBallEffectState } from "@/lib/ballEffects";
 import type { Ball } from "@/types/game";
 
 /**
@@ -100,7 +101,13 @@ function compassBall(over: Partial<Ball> = {}): Ball {
     speed: 100, baseSpeed: 235, topSpeed: 300, minimumSpeed: 150,
     radius: RADIUS, color: "#c08cff", state: "active",
     ability: "turnTimer", turnIntervalSeconds: DEFAULT_TURN_INTERVAL,
-    nextTurnAt: DEFAULT_TURN_INTERVAL, effects: [],
+    // A real effect state, not the `[]` this fixture used to carry. An empty
+    // array has no squishAmount, and getSquishEffect used to answer that with
+    // NaN scales - harmless while they only reached holder.scale, and a NaN
+    // shadow the moment the squash started placing geometry too. The guard is
+    // fixed in ballEffects; the fixture is fixed here so this file drives the
+    // shape a ball actually has.
+    nextTurnAt: DEFAULT_TURN_INTERVAL, effects: createBallEffectState(),
     ...over,
   } as unknown as Ball;
 }

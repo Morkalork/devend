@@ -70,6 +70,13 @@ export interface BallEffectState {
   // splatted rather than merely nudged.
   squishHoldUntil: number;
   squishBoost: number;
+  /**
+   * Spring-back duration for the CURRENT deformation, ms. An ordinary bounce
+   * leaves this at squishDuration; a Bug Squash splat sets the slower
+   * stickReleaseMs, because a soft body that spread over 150ms does not
+   * recover in the time a firm one takes to bounce.
+   */
+  squishSpringMs: number;
 }
 
 // Effect configuration
@@ -112,16 +119,43 @@ const CONFIG = {
   squishMaxCompress: 0.1715,
   squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
 
-  // Bug Squash (a stuck ball). The ordinary bounce compresses immediately at
-  // impact because at 60fps a ramp-in of a few frames is invisible; a ball that
-  // is about to sit still for seconds is different, and the ramp is what makes
-  // it read as "hit the wall and squashed" rather than "appeared flat". The
-  // boost takes the pinned compression to ~0.34, which is the 0.35 this file
-  // once dialled back for reading as rubbery on a passing bounce: rubbery is
-  // exactly right for a bug flattened against glass.
-  stickRampMs: 90,
-  stickCompressBoost: 2.0,
+  // ── Bug Squash: the stuck ball, and it is a TOMATO ────────────────────────
+  //
+  // Everything above is tuned for a ball with some give that bounces off. This
+  // is a different object for two seconds: something slightly overripe hitting
+  // a wall, spreading against it, and peeling back off. Reported as "there is
+  // no animation for the ball squashing", with the mechanic working - and the
+  // envelope WAS running exactly as designed. It was just too small and too
+  // quick to be an animation at ball size, which is the same failure mode
+  // squishMaxCompress's own note above describes.
+  //
+  // Three numbers, and each fixes a different half of "I cannot see it":
+  //
+  //   RAMP. 90ms is five frames. The ball did not appear to squash, it appeared
+  //   to already be flat - the deformation was a state, not a motion. 150ms is
+  //   nine, which is enough to watch it spread.
+  //
+  //   DEPTH. 3.0 puts the pinned compression at ~0.51: the ball loses half its
+  //   thickness and doubles across. That is far past the 0.35 this file once
+  //   dialled back for a passing bounce, and deliberately so - the thing being
+  //   drawn is not a bounce, and anything subtler on a ~13px ball is a slightly
+  //   oval circle.
+  //
+  //   RELEASE. A ripe tomato does not ping back. 620ms rather than the bounce's
+  //   500, so the peel-off is slower than the splat that made it, and the
+  //   shared spring's stretch phase (which pulls PAST round before settling) is
+  //   3x deeper here too, so it comes away from the wall stringy.
+  stickRampMs: 150,
+  stickCompressBoost: 3.0,
+  stickReleaseMs: 620,
 };
+
+/**
+ * How much of the lost thickness a squashed ball spends spreading sideways.
+ * 1 is strict area preservation (a disc); below it, some of the displacement is
+ * read as going toward the viewer, where it cannot be seen. See getSquishEffect.
+ */
+const BULGE_EXPONENT = 0.75;
 
 /**
  * Initialize effect state for a new ball
@@ -140,6 +174,7 @@ export function createBallEffectState(): BallEffectState {
     squishAmount: 0,
     squishHoldUntil: 0,
     squishBoost: 1,
+    squishSpringMs: CONFIG.squishDuration,
   };
 }
 
@@ -196,14 +231,18 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
 
   // Spring the squish back to round. One gentle overshoot (compress -> slight
   // stretch -> settle) under a linear-decay envelope, like a soft ball rebounding.
+  // The duration is per-deformation, not global: a Bug Squash splat peels off
+  // over stickReleaseMs, which is slower than a bounce's recovery.
   if (state.squishAmount > 0) {
+    const springMs = state.squishSpringMs || CONFIG.squishDuration;
     const elapsed = now - state.squishTime;
-    if (elapsed >= CONFIG.squishDuration) {
+    if (elapsed >= springMs) {
       state.squishAmount = 0;
       state.squishIntensity = 0;
       state.squishBoost = 1;
+      state.squishSpringMs = CONFIG.squishDuration;
     } else {
-      const p = elapsed / CONFIG.squishDuration;
+      const p = elapsed / springMs;
       state.squishIntensity = (1 - p) * Math.cos(p * Math.PI * 1.5);
     }
   }
@@ -286,6 +325,11 @@ function triggerSquish(
   state.squishAmount = amount;
   state.squishIntensity = 1;
   state.squishTime = now;
+  // An ordinary bounce recovers at the ordinary rate, whatever the last
+  // deformation was: a ball hit again while peeling off a splat is a bouncing
+  // ball now, not a tomato.
+  state.squishSpringMs = CONFIG.squishDuration;
+  state.squishBoost = 1;
 }
 
 /**
@@ -304,6 +348,7 @@ export function pinSquish(state: BallEffectState, now: number, holdMs: number): 
   state.squishTime = now;
   state.squishHoldUntil = now + Math.max(0, holdMs);
   state.squishBoost = CONFIG.stickCompressBoost;
+  state.squishSpringMs = CONFIG.stickReleaseMs;
 }
 
 /** True while a Bug Squash hold is pinning this ball's squash. */
@@ -330,21 +375,35 @@ export function getSquishEffect(state: BallEffectState, scale = 1): {
   nx: number;
   ny: number;
 } {
-  if (state.squishAmount <= 0) {
+  // NEGATED rather than `<= 0`, so undefined and NaN are inactive too. They
+  // used to fall through to the maths below and come back as NaN scales, which
+  // was invisible for as long as the only consumer was holder.scale.set() - a
+  // display property Pixi silently tolerates. The moment the same numbers were
+  // used to place the SHADOW, the NaN reached real geometry and
+  // ballLayerNoBeams caught it on the first run. A squash with no magnitude is
+  // no squash, whatever shape the state is in.
+  if (!(state.squishAmount > 0)) {
     return { active: false, scaleAlong: 1, scalePerp: 1, nx: 1, ny: 0 };
   }
-  // Signed compression along the normal; inverse perpendicular keeps area
-  // constant. `scale` dials the whole deformation down per ball (e.g. 0.5 for
-  // large boss balls, which look overblown at the full compression).
-  // Boosted (Bug Squash) and clamped: at boost 2 the pinned compression is
-  // ~0.34, and the clamp only exists so no future dial can push scaleAlong
-  // through zero and turn the ball inside out.
+  // Signed compression along the normal, and a perpendicular bulge that spreads
+  // with it. `scale` dials the whole deformation down per ball (e.g. 0.5 for
+  // large boss balls, which look overblown at the full compression). Clamped so
+  // no future dial can push scaleAlong through zero and turn the ball inside
+  // out.
   const s = Math.min(0.8,
     state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress * state.squishBoost * scale);
+  // The bulge is DAMPED area preservation: (1/(1-s)) raised to BULGE_EXPONENT
+  // rather than the strict inverse. A flat 1/(1-s) is right for a disc, which
+  // this is not: a real soft body pressed against a wall also bulges toward the
+  // viewer, and that third dimension is invisible here, so a strict inverse
+  // spends all of it sideways. Barely distinguishable on an ordinary bounce
+  // (43.5 world units across becomes 41.5) and the whole difference between a
+  // tomato and a water balloon at Bug Squash depth, where the strict version
+  // spread the ball to 2.06x its own width.
   return {
     active: true,
     scaleAlong: 1 - s,
-    scalePerp: 1 / (1 - s),
+    scalePerp: Math.pow(1 / (1 - s), BULGE_EXPONENT),
     nx: state.squishNx,
     ny: state.squishNy,
   };

@@ -105,14 +105,21 @@ describe("the squash ramps in, holds, and springs back on release", () => {
   it("splats harder than a passing bounce ever does", () => {
     // A stuck ball is drawn for seconds and has to read as flattened. The
     // ordinary bounce is deliberately mild (~17% at full speed); the pinned
-    // squash is about double that, and area is still preserved.
+    // squash is now about three times that, up from double, because double was
+    // reported as no animation at all (see bugSquashReadable.test.ts for the
+    // perceptual thresholds and the reasoning).
     const bounce = createBallEffectState();
     triggerWallHit(bounce, 1000, 0, -300, 300);
     const stuck = stuckAt(1000, 2000);
     updateBallEffects(stuck, 0.016, 1500);
-    expect(compression(stuck)).toBeGreaterThan(compression(bounce) * 1.8);
+    expect(compression(stuck)).toBeGreaterThan(compression(bounce) * 2.5);
+    // This used to assert strict area preservation. The bulge is damped now
+    // (BULGE_EXPONENT): a soft body pressed flat also swells toward the viewer,
+    // and spending all of that sideways made the splat a water balloon. So it
+    // still spreads as it flattens, by less than a disc would.
     const s = getSquishEffect(stuck);
-    expect(s.scaleAlong * s.scalePerp).toBeCloseTo(1, 6);
+    expect(s.scalePerp).toBeGreaterThan(1);
+    expect(s.scaleAlong * s.scalePerp).toBeLessThan(1);
   });
 
   it("plays the un-squash FROM the release, not from the impact", () => {

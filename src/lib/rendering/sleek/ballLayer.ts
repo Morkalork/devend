@@ -369,6 +369,29 @@ export class SleekBallLayer {
 
     const dormant = ball.state === "dormant";
 
+    // ── Squash & stretch, computed FIRST ────────────────────────────────────
+    // Everything the ball draws has to agree about its shape, and for a long
+    // time only the body did. The squash was computed further down, after the
+    // shadows were already laid at the round centre and just before the corona
+    // was scaled uniformly - so a splatted ball was a flattened body under a
+    // perfectly round additive bloom, seated on a perfectly round shadow. On a
+    // ~13px ball with an "add" blend over it, the round glow simply won.
+    // Reported as "there is no animation for the ball squashing".
+    const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
+    // A pinned squash (Bug Squash) is drawn AGAINST the wall. The physics
+    // centre sits one radius off the surface; compressing about that centre
+    // would float the flattened face clear of the wall for the whole hold,
+    // which reads as hovering rather than as stuck. Sliding the body toward the
+    // wall by exactly the compression keeps the flat face on the surface. The
+    // normal points off the wall (it is the bounce impulse), so "toward the
+    // wall" is minus it. Only while pinned: a passing bounce is gone before the
+    // gap could register.
+    const sink = squish.active && isSquishPinned(ball.effects, this.now)
+      ? r * (1 - squish.scaleAlong)
+      : 0;
+    const bx = c.x - squish.nx * sink;
+    const by = c.y - squish.ny * sink;
+
     // ── Cast shadow + contact ───────────────────────────────────────────────
     // Skipped while dormant: a sleeper is not yet part of the scene, and seating
     // it on the board with a shadow makes it read as a live ball to be locked.
@@ -377,18 +400,26 @@ export class SleekBallLayer {
       // to exist (a glowing ball is still opaque, and without one it floats off
       // the board), but at full strength a hard dark ellipse beside a bulb
       // reads as a mistake rather than as shading.
-      const cast = shadowFor(light, c.x, c.y, r);
+      // Laid under the SQUASHED body, and spread with it. Pixi's ellipse is
+      // axis-aligned so it cannot follow the impact axis exactly; taking the
+      // mean of the two scale factors keeps the footprint growing as the ball
+      // spreads without pretending to a precision the primitive does not have.
+      // A shadow is soft and dark - what matters is that it stays under the
+      // ball and gets wider as it splats, not that its axes are exact.
+      const spread = squish.active ? (squish.scaleAlong + squish.scalePerp) / 2 : 1;
+      const sr = r * spread;
+      const cast = shadowFor(light, bx, by, sr);
       this.shadows
-        .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r * 1.02, r * 0.72)
+        .ellipse(bx + cast.dx * cast.length, by + cast.dy * cast.length, sr * 1.02, sr * 0.72)
         .fill({ color: PALETTE.shadow, alpha: cast.alpha * SELF_LIT_SHADOW });
 
-      const contact = contactFor(light, c.x, c.y, r);
+      const contact = contactFor(light, bx, by, sr);
       this.shadows
         .ellipse(
-          c.x + contact.dx * contact.length,
-          c.y + contact.dy * contact.length,
-          r * 0.95,
-          r * 0.68,
+          bx + contact.dx * contact.length,
+          by + contact.dy * contact.length,
+          sr * 0.95,
+          sr * 0.68,
         )
         .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 * SELF_LIT_SHADOW });
     }
@@ -443,22 +474,10 @@ export class SleekBallLayer {
     // turned to the impact axis. The bulb is centred and radially symmetric, so
     // there is no direction left to preserve and the counter-rotation went with
     // the highlight it existed for.
-    const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
     if (squish.active) {
       holder.rotation = Math.atan2(squish.ny, squish.nx);
       holder.scale.set(squish.scaleAlong, squish.scalePerp);
-      // A pinned squash (Bug Squash) is drawn AGAINST the wall. The physics
-      // centre sits one radius off the surface; compressing about that centre
-      // would float the flattened face a few pixels clear of the wall for the
-      // whole hold, which reads as hovering rather than stuck. Sliding the
-      // body toward the wall by exactly the compression keeps the flat face on
-      // the surface. The normal points off the wall (it is the bounce impulse),
-      // so "toward the wall" is minus it. Only while pinned: a passing bounce
-      // is gone before the gap could register.
-      if (isSquishPinned(ball.effects, this.now)) {
-        const sink = r * (1 - squish.scaleAlong);
-        holder.position.set(c.x - squish.nx * sink, c.y - squish.ny * sink);
-      }
+      holder.position.set(bx, by);
     } else {
       holder.rotation = 0;
       holder.scale.set(1, 1);
@@ -471,8 +490,18 @@ export class SleekBallLayer {
     corona.visible = !dormant && sprite.alpha > 0.01;
     if (corona.visible) {
       corona.texture = coronaTex();
-      corona.position.set(c.x, c.y);
-      corona.scale.set((r * CORONA_RADII) / CORONA_BAKE);
+      // The bloom takes the body's shape, not just its place. It is additive
+      // and it bleeds past the silhouette, so a round one over a squashed ball
+      // does not merely fail to help - it actively erases the squash, which is
+      // most of why the Bug Squash splat could not be seen at all. Same
+      // rotation, same non-uniform scale, same sink as the holder.
+      corona.position.set(bx, by);
+      const coronaScale = (r * CORONA_RADII) / CORONA_BAKE;
+      corona.rotation = squish.active ? Math.atan2(squish.ny, squish.nx) : 0;
+      corona.scale.set(
+        coronaScale * (squish.active ? squish.scaleAlong : 1),
+        coronaScale * (squish.active ? squish.scalePerp : 1),
+      );
       // Whitened like the light pool, for the same reason: a pure hue bloom
       // over a pure hue ball is invisible, and it is the WHITENING that reads
       // as heat.
@@ -485,7 +514,9 @@ export class SleekBallLayer {
     // needs to know while deciding whether to route through its terminal. Not
     // on a locked ball, which is draining toward the accent and has stopped
     // being a thing you can act on.
-    if (ball.state !== "won") this.drawMark(ball, c, r);
+    // At the SUNK centre: the mark is painted on the ball, so it goes where the
+    // ball goes. Left at `c` it hovered a few pixels off a splatted ball.
+    if (ball.state !== "won") this.drawMark(ball, { x: bx, y: by }, r);
 
     if (ball.state === "won" || dormant) return;
 
