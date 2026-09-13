@@ -1,10 +1,11 @@
 /**
- * The Playground's modifier fields can be emptied.
+ * The Playground's modifier fields clear when entered and can be emptied.
  *
- * They could not: the input was controlled by the parsed number, "" parsed to
- * NaN and was dropped, and React put the old 0 back on the same keystroke. To
- * type a value you had to edit around the 0. An empty field now stays empty
- * on screen and counts as 0 underneath.
+ * They could not be emptied at all: the input was controlled by the parsed
+ * number, "" parsed to NaN and was dropped, and React put the old 0 back on
+ * the same keystroke. To type a value you had to edit around the 0. Now the
+ * field clears on focus, takes what is typed, and if nothing new is entered
+ * by the time it is left, the value it had on entry comes back.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, fireEvent, cleanup } from "@testing-library/react";
@@ -16,59 +17,81 @@ import { ModifierInput } from "@/components/admin/ModifierInput";
 afterEach(cleanup);
 
 describe("parseModifierInput", () => {
-  it("reads an empty field as zero", () => {
-    expect(parseModifierInput("")).toBe(0);
-    expect(parseModifierInput("   ")).toBe(0);
-  });
   it("reads numbers, including decimals and negatives", () => {
     expect(parseModifierInput("25")).toBe(25);
     expect(parseModifierInput("0.5")).toBe(0.5);
     expect(parseModifierInput("-3")).toBe(-3);
   });
-  it("leaves half-typed text alone", () => {
+  it("treats an empty field and half-typed text as no value", () => {
+    expect(parseModifierInput("")).toBeNull();
+    expect(parseModifierInput("   ")).toBeNull();
     expect(parseModifierInput("-")).toBeNull();
     expect(parseModifierInput("abc")).toBeNull();
   });
 });
 
 describe("ModifierInput", () => {
-  it("shows an empty field when cleared and reports zero", () => {
+  function mount(value: number) {
     const onChange = vi.fn();
-    const { getByRole } = render(<ModifierInput value={40} onChange={onChange} />);
-    const input = getByRole("spinbutton") as HTMLInputElement;
+    const utils = render(<ModifierInput value={value} onChange={onChange} />);
+    const input = utils.getByRole("spinbutton") as HTMLInputElement;
+    return { ...utils, onChange, input };
+  }
+
+  it("clears when entered, so a value is typed straight in", () => {
+    const { input, onChange } = mount(40);
     expect(input.value).toBe("40");
-    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.focus(input);
     expect(input.value).toBe("");
-    expect(onChange).toHaveBeenCalledWith(0);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("lets a fresh value be typed over an emptied field", () => {
-    const onChange = vi.fn();
-    const { getByRole } = render(<ModifierInput value={0} onChange={onChange} />);
-    const input = getByRole("spinbutton") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "" } });
+  it("reports each value as it is typed", () => {
+    const { input, onChange } = mount(0);
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "2" } });
     fireEvent.change(input, { target: { value: "25" } });
     expect(input.value).toBe("25");
+    expect(onChange).toHaveBeenNthCalledWith(1, 2);
     expect(onChange).toHaveBeenLastCalledWith(25);
   });
 
-  it("shows the number again once the field loses focus", () => {
-    const onChange = vi.fn();
-    const { getByRole, rerender } = render(<ModifierInput value={40} onChange={onChange} />);
-    const input = getByRole("spinbutton") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "" } });
-    rerender(<ModifierInput value={0} onChange={onChange} />);
-    expect(input.value).toBe("");
+  it("puts the old value back when left with nothing entered", () => {
+    const { input, onChange } = mount(40);
+    fireEvent.focus(input);
     fireEvent.blur(input);
-    expect(input.value).toBe("0");
+    expect(input.value).toBe("40");
+    // Nothing had moved, so nothing is reported.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("puts the old value back even after typing and then clearing", () => {
+    const { input, onChange, rerender } = mount(40);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "5" } });
+    expect(onChange).toHaveBeenLastCalledWith(5);
+    rerender(<ModifierInput value={5} onChange={onChange} />);
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(onChange).toHaveBeenLastCalledWith(40);
+    rerender(<ModifierInput value={40} onChange={onChange} />);
+    expect(input.value).toBe("40");
+  });
+
+  it("keeps a typed value on blur", () => {
+    const { input, onChange, rerender } = mount(40);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "12" } });
+    rerender(<ModifierInput value={12} onChange={onChange} />);
+    fireEvent.blur(input);
+    expect(input.value).toBe("12");
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it("follows an outside reset when it is not being edited", () => {
-    const onChange = vi.fn();
-    const { getByRole, rerender } = render(<ModifierInput value={40} onChange={onChange} />);
+    const { input, onChange, rerender } = mount(40);
     rerender(<ModifierInput value={0} onChange={onChange} />);
-    expect((getByRole("spinbutton") as HTMLInputElement).value).toBe("0");
+    expect(input.value).toBe("0");
   });
 });
 
