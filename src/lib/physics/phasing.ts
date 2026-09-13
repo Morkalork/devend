@@ -1,9 +1,21 @@
 /**
  * Phasing objects (issue #64) — obstacles that fade solid (`in`) and intangible
- * (`out`) on a repeating cycle. While phased out, balls / fences / chains pass
- * through them (see the phased-out skips in updateBall + chain.ts). The in->out
+ * (`out`) on a repeating cycle. While phased out, BALLS and CHAINS pass through
+ * them (see the phased-out skips in updateBall + chain.ts). The in->out
  * transition fires a localized shockwave that flings nearby balls free, which is
  * how a boss-20 pair snagged on the obstacle gets released.
+ *
+ * FENCES DO NOT. This header used to say "balls / fences / chains", and it
+ * overstated the code: a cut is aimed with castRayWithReflections over
+ * `game.walls`, which carries a phasing obstacle's edge walls whatever phase it
+ * is in, and nothing on the fence path consults `phase` at all. So a growing
+ * fence always terminates on one of these, solid or ghost.
+ *
+ * Left as it is rather than "fixed", because the asymmetry is better than
+ * either uniform rule and level 16 is built on it: a phasing wall is a RELIABLE
+ * thing to cut against and an UNRELIABLE thing to trap against. A player can
+ * see which of those they are doing. What they could not see is a comment
+ * promising the other behaviour, so the comment is what changed.
  *
  * One cycle (default 10s): ~55% solid, then intangible for the rest (a fade-out,
  * a fully-gone stretch, and a fade back in). `phase` is the SOURCE OF TRUTH for
