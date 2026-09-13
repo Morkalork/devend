@@ -17,6 +17,7 @@ import { creepFactor } from "@/lib/scopeCreep";
 import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
+import { updateBallEffects } from "@/lib/ballEffects";
 import { advanceLamp } from "@/lib/lampBall";
 import { tickChains } from "@/lib/physics/chain";
 import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
@@ -451,12 +452,34 @@ export function createGameLoop(
             }
             ball.position = { ...game.frozenBallPosition };
           }
+          // Its EFFECTS still run. A ball that stops moving has not stopped
+          // being drawn, and an effect envelope that is not ticked does not
+          // pause - it stops mid-curve and stays there. See the frozenUntil
+          // note below, which is the same bug with a longer history.
+          updateBallEffects(ball.effects, PHYSICS_STEP, performance.now());
           continue;
         }
 
-        // Feature Freeze: tap-frozen balls hold position until their timer ends.
-        if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
-
+        // NO `continue` FOR A HELD BALL. updateBall owns that decision, and
+        // owning it in two places is what shipped Bug Squash with no visible
+        // squash at all.
+        //
+        // This line used to read:
+        //
+        //   if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
+        //
+        // and it skipped the ball before updateBall could be reached. updateBall
+        // has its own held-ball branch which returns early AND ticks the ball's
+        // effects, so the headless harness - which calls updateBall for every
+        // ball unconditionally - animated a held ball correctly. The browser
+        // never got there. A Bug Squash ball therefore held whatever envelope
+        // value it had at the instant it stuck, which pinSquish sets to ZERO
+        // before the ramp raises it, so the ball sat against the wall perfectly
+        // round with its wall-hit halo frozen mid-decay around it.
+        //
+        // Every test passed throughout, because every test either called
+        // updateBallEffects directly or drove the harness. The harness was
+        // cited as the proof and was the one place that could not see the bug.
         updateBall(ball, PHYSICS_STEP, game, phasedOut);
       }
       handleBallCollisions(game);
