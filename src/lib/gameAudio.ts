@@ -18,6 +18,7 @@ let lastCollideTime = -Infinity;
 // Volume settings
 const VOLUME = {
   wallHit: 0.12,
+  squish: 0.2,
   ballCollide: 0.07,
   fenceBreak: 0.18,
   death: 0.24,
@@ -754,6 +755,95 @@ export function playBossLandSound(): void {
   ng.gain.setValueAtTime(vol * 0.5, now);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
   ns.start(now); ns.stop(now + 0.2);
+}
+
+/**
+ * Bug Squash: a ball of wet paper hitting a wall.
+ *
+ * Plays INSTEAD of the wall thud on the hit that sticks. Four parts, none of
+ * them a tone you could hum:
+ *
+ *   SLAP     a noise burst through a bandpass that drops from 1.4 kHz to
+ *            200 Hz in a tenth of a second: the wet smack of the impact.
+ *   BODY     a low sine falling 110 -> 32 Hz: the mass arriving. Lower and
+ *            longer than the dry thud, because this thing does not bounce.
+ *   SQUELCH  lowpassed noise with its level wobbled at ~24 Hz, dying over a
+ *            quarter second: the water squeezing out as it flattens.
+ *   SUCK     a faint sine dropping 240 -> 90 Hz: the little inhale of a wet
+ *            mass sealing itself against the surface.
+ *
+ * `intensity` (0..1) scales the whole thing, as the thud's does.
+ */
+export function playSquishSound(intensity: number = 0.5): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
+  const now = ctx.currentTime;
+  const vol = VOLUME.squish * Math.min(1, Math.max(0.4, intensity));
+
+  // SLAP
+  const slap = ctx.createBufferSource();
+  const slapF = ctx.createBiquadFilter();
+  const slapG = ctx.createGain();
+  slap.buffer = createNoiseBuffer(ctx, 0.2);
+  slapF.type = 'bandpass';
+  slapF.Q.value = 0.9;
+  slapF.frequency.setValueAtTime(1400, now);
+  slapF.frequency.exponentialRampToValueAtTime(200, now + 0.11);
+  slap.connect(slapF); slapF.connect(slapG); slapG.connect(bus);
+  slapG.gain.setValueAtTime(0, now);
+  slapG.gain.linearRampToValueAtTime(vol, now + 0.004);
+  slapG.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+  slap.start(now); slap.stop(now + 0.22);
+
+  // BODY
+  const body = ctx.createOscillator();
+  const bodyF = ctx.createBiquadFilter();
+  const bodyG = ctx.createGain();
+  bodyF.type = 'lowpass'; bodyF.frequency.value = 180;
+  body.type = 'sine';
+  body.frequency.setValueAtTime(110, now);
+  body.frequency.exponentialRampToValueAtTime(32, now + 0.12);
+  body.connect(bodyF); bodyF.connect(bodyG); bodyG.connect(bus);
+  bodyG.gain.setValueAtTime(0, now);
+  bodyG.gain.linearRampToValueAtTime(vol * 0.9, now + 0.008);
+  bodyG.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+  body.start(now); body.stop(now + 0.3);
+
+  // SQUELCH: the wobble is an LFO on the noise's gain, so the level flutters
+  // rather than the pitch, which is what wet material squeezing out sounds like.
+  const sq = ctx.createBufferSource();
+  const sqF = ctx.createBiquadFilter();
+  const sqG = ctx.createGain();
+  const wob = ctx.createOscillator();
+  const wobG = ctx.createGain();
+  sq.buffer = createNoiseBuffer(ctx, 0.3);
+  sqF.type = 'lowpass';
+  sqF.frequency.setValueAtTime(700, now);
+  sqF.frequency.exponentialRampToValueAtTime(260, now + 0.24);
+  sq.connect(sqF); sqF.connect(sqG); sqG.connect(bus);
+  sqG.gain.setValueAtTime(0, now);
+  sqG.gain.linearRampToValueAtTime(vol * 0.45, now + 0.02);
+  sqG.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+  wob.type = 'sine';
+  wob.frequency.value = 24;
+  wobG.gain.value = vol * 0.22;
+  wob.connect(wobG); wobG.connect(sqG.gain);
+  sq.start(now + 0.01); sq.stop(now + 0.3);
+  wob.start(now); wob.stop(now + 0.3);
+
+  // SUCK
+  const suck = ctx.createOscillator();
+  const suckG = ctx.createGain();
+  suck.type = 'sine';
+  suck.frequency.setValueAtTime(240, now + 0.02);
+  suck.frequency.exponentialRampToValueAtTime(90, now + 0.09);
+  suck.connect(suckG); suckG.connect(bus);
+  suckG.gain.setValueAtTime(0, now + 0.02);
+  suckG.gain.linearRampToValueAtTime(vol * 0.22, now + 0.035);
+  suckG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+  suck.start(now + 0.02); suck.stop(now + 0.16);
 }
 
 /** Rising pitch sweep — energy spinning up — when the level is cleared. */

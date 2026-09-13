@@ -40,7 +40,7 @@ import {
   findContainingRegion,
   constrainBallToRegion,
 } from "@/lib/regionOwnership";
-import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
+import { playWallHitSound, playSquishSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit, bounceImpact, pinSquish } from "@/lib/ballEffects";
 import { captureSplatScene } from "@/lib/splatScene";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
@@ -324,6 +324,9 @@ function applyDeformable(
 /**
  * Bug Squash: roll whether this wall hit sticks the ball, and stick it.
  *
+ * Returns true when the ball stuck, so the caller can play the squelch in
+ * place of the dry thud: a ball of wet paper hitting a wall does not knock.
+ *
  * Called right after triggerWallHit has recorded the impact normal, on the
  * three surfaces that do not move (board edges, fences, static obstacles).
  * Movers are deliberately excluded: a ball glued to something that then slides
@@ -340,11 +343,11 @@ function applyDeformable(
  * generator per call would return the same number on every hit and a seeded
  * Daily would stick the same ball on every wall, or never.
  */
-function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): void {
-  if (!(game.bugSquashChance > 0) || !(game.bugSquashSeconds > 0)) return;
-  if (ball.isBoss || ball.state !== "active") return;
-  if (ball.frozenUntil !== undefined && now < ball.frozenUntil) return;
-  if (runStream(`bugSquash:${ball.id}`)() * 100 >= game.bugSquashChance) return;
+function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): boolean {
+  if (!(game.bugSquashChance > 0) || !(game.bugSquashSeconds > 0)) return false;
+  if (ball.isBoss || ball.state !== "active") return false;
+  if (ball.frozenUntil !== undefined && now < ball.frozenUntil) return false;
+  if (runStream(`bugSquash:${ball.id}`)() * 100 >= game.bugSquashChance) return false;
   // The upgrade's seconds are the WHOLE stuck time: squash in, hold, reinflate.
   // pinSquish sizes its flat hold so the ball has finished coming back to round
   // by the time the freeze lifts, rather than setting off half-flat and
@@ -358,6 +361,7 @@ function maybeBugSquash(ball: Ball, game: CanvasGameState, now: number): void {
   // polygon) can still move the ball, and the scene has to be built around
   // where it finally rests.
   ball.splatScene = null;
+  return true;
 }
 
 export function updateBall(
@@ -662,9 +666,9 @@ export function updateBall(
         );
         // Trigger wall hit effect on ball
         triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
-        maybeBugSquash(ball, game, now);
-        // Play wall hit sound
-        playWallHitSound(impactStrength);
+        // The squelch replaces the thud on the hit that sticks.
+        if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
+        else playWallHitSound(impactStrength);
       }
     }
   }
@@ -799,12 +803,12 @@ export function updateBall(
 
       // Trigger wall hit effect on ball
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
-      maybeBugSquash(ball, game, now);
 
-      // Play wall hit sound for obstacle collision
+      // Wall hit sound for the obstacle collision; the squelch instead when it sticks.
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
-      playWallHitSound(impactStrength);
+      if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
+      else playWallHitSound(impactStrength);
     }
   }
 
@@ -876,8 +880,8 @@ export function updateBall(
         registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
       }
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
-      maybeBugSquash(ball, game, now);
-      playWallHitSound(impactStrength);
+      if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
+      else playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.
       // Exhausted fences are queued and broken after the physics step.

@@ -28,6 +28,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import "@/i18n";
 vi.mock("@/lib/gameAudio", () => ({
+  playSquishSound: () => {},
   playWallHitSound: () => {}, playBallCollideSound: () => {}, playFenceBreakSound: () => {},
   playDeathSound: () => {}, playBallLockSound: () => {}, playCutClaimedSound: () => {},
   playPickupClaimedSound: () => {}, playBossJumpSound: () => {}, playHeartbeatSound: () => {},
