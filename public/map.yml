@@ -1471,8 +1471,9 @@ levels:
 
   # 17 "Deprecation" - COMPRESSED brittle, FIGHT the launcher, USE the chest.
   # The first Demolition map (MAP_DESIGN_GUIDELINES.md section 11, plan and
-  # build record in DEMOLITION_PLAN.md): a wall of glass around a vault, in the
-  # middle of the traffic, and a launcher whose pull is also the hammer.
+  # build record in DEMOLITION_PLAN.md): a wall of glass along the top edge,
+  # a vault set into its back row, and a serve fired up into it from the
+  # bottom. Every strip you seal from the bottom shortens the bounce.
   - id: level-17
     level: 17
     sizeThreshold: 12
@@ -1488,7 +1489,7 @@ levels:
         - kind: space
           threshold: 12
         - kind: smashed
-          count: 10
+          count: 16
     beats:
       - id: crunch
         atSpaceRemaining: 30
@@ -1498,131 +1499,291 @@ levels:
       - id: barrel
         kind: launcher
         shape: rect
-        x: 60
-        'y': 90
-        width: 240
-        height: 110
-        facing: right
-        angle: 12
+        x: 361
+        'y': 600
+        width: 110
+        height: 240
+        facing: up
+        angle: 0
       - id: vault
         kind: wall
         shape: rect
-        x: 560
-        'y': 410
-        width: 80
-        height: 80
+        x: 386
+        'y': 53
+        width: 128
+        height: 22
         chest: true
         breakable: true
         hitsToBreak: 3
-      - id: brick-t1
+      - id: brick-a1
         kind: wall
         shape: rect
-        x: 468
-        'y': 318
+        x: 46
+        'y': 53
         width: 60
         height: 22
         brittle: true
-      - id: brick-t2
+      - id: brick-a2
         kind: wall
         shape: rect
-        x: 536
-        'y': 318
+        x: 114
+        'y': 53
         width: 60
         height: 22
         brittle: true
-      - id: brick-t3
+      - id: brick-a3
         kind: wall
         shape: rect
-        x: 604
-        'y': 318
+        x: 182
+        'y': 53
         width: 60
         height: 22
         brittle: true
-      - id: brick-t4
+      - id: brick-a4
         kind: wall
         shape: rect
-        x: 672
-        'y': 318
+        x: 250
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a5
+        kind: wall
+        shape: rect
+        x: 318
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a8
+        kind: wall
+        shape: rect
+        x: 522
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a9
+        kind: wall
+        shape: rect
+        x: 590
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a10
+        kind: wall
+        shape: rect
+        x: 658
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a11
+        kind: wall
+        shape: rect
+        x: 726
+        'y': 53
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-a12
+        kind: wall
+        shape: rect
+        x: 794
+        'y': 53
         width: 60
         height: 22
         brittle: true
       - id: brick-b1
         kind: wall
         shape: rect
-        x: 468
-        'y': 560
+        x: 46
+        'y': 83
         width: 60
         height: 22
         brittle: true
       - id: brick-b2
         kind: wall
         shape: rect
-        x: 536
-        'y': 560
+        x: 114
+        'y': 83
         width: 60
         height: 22
         brittle: true
       - id: brick-b3
         kind: wall
         shape: rect
-        x: 604
-        'y': 560
+        x: 182
+        'y': 83
         width: 60
         height: 22
         brittle: true
       - id: brick-b4
         kind: wall
         shape: rect
-        x: 672
-        'y': 560
+        x: 250
+        'y': 83
         width: 60
         height: 22
         brittle: true
-      - id: brick-l1
+      - id: brick-b5
         kind: wall
         shape: rect
-        x: 468
-        'y': 340
-        width: 22
-        height: 68
+        x: 318
+        'y': 83
+        width: 60
+        height: 22
         brittle: true
-      - id: brick-l3
+      - id: brick-b6
         kind: wall
         shape: rect
-        x: 468
-        'y': 492
-        width: 22
-        height: 68
+        x: 386
+        'y': 83
+        width: 60
+        height: 22
         brittle: true
-      - id: brick-r1
+      - id: brick-b7
         kind: wall
         shape: rect
-        x: 710
-        'y': 340
-        width: 22
-        height: 68
+        x: 454
+        'y': 83
+        width: 60
+        height: 22
         brittle: true
-      - id: brick-r2
+      - id: brick-b8
         kind: wall
         shape: rect
-        x: 710
-        'y': 416
-        width: 22
-        height: 68
+        x: 522
+        'y': 83
+        width: 60
+        height: 22
         brittle: true
-      - id: brick-r3
+      - id: brick-b9
         kind: wall
         shape: rect
-        x: 710
-        'y': 492
-        width: 22
-        height: 68
+        x: 590
+        'y': 83
+        width: 60
+        height: 22
         brittle: true
-      - id: brick-loose
+      - id: brick-b10
         kind: wall
         shape: rect
-        x: 800
-        'y': 200
+        x: 658
+        'y': 83
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b11
+        kind: wall
+        shape: rect
+        x: 726
+        'y': 83
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b12
+        kind: wall
+        shape: rect
+        x: 794
+        'y': 83
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c1
+        kind: wall
+        shape: rect
+        x: 46
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c2
+        kind: wall
+        shape: rect
+        x: 114
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c3
+        kind: wall
+        shape: rect
+        x: 182
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c4
+        kind: wall
+        shape: rect
+        x: 250
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c5
+        kind: wall
+        shape: rect
+        x: 318
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c6
+        kind: wall
+        shape: rect
+        x: 386
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c7
+        kind: wall
+        shape: rect
+        x: 454
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c8
+        kind: wall
+        shape: rect
+        x: 522
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c9
+        kind: wall
+        shape: rect
+        x: 590
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c10
+        kind: wall
+        shape: rect
+        x: 658
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c11
+        kind: wall
+        shape: rect
+        x: 726
+        'y': 113
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-c12
+        kind: wall
+        shape: rect
+        x: 794
+        'y': 113
         width: 60
         height: 22
         brittle: true

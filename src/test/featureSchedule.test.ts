@@ -303,6 +303,29 @@ describe("every gap is a seam or a neck, never in between", () => {
         return { id: r.id, x0: r.x, x1: r.x + r.width, y0: r.y, y1: r.y + r.height };
       });
 
+
+  /**
+   * A pair with a third rect spanning the whole gap between them is not a
+   * gap: nothing can be in it. Three rows of bricks with 8-unit seams are the
+   * case (level 17): rows one and three sit 38 apart with row two filling the
+   * space, and the pairwise measure read that as a ball-width slot.
+   */
+  const occluded = (rs: Rect[], a: Rect, b: Rect, axis: "x" | "y"): boolean => {
+    const ox0 = Math.max(a.x0, b.x0), ox1 = Math.min(a.x1, b.x1);
+    const oy0 = Math.max(a.y0, b.y0), oy1 = Math.min(a.y1, b.y1);
+    // The strip between them: along the gap axis, from the near edge of one to
+    // the near edge of the other; across it, their shared extent.
+    const gy0 = Math.min(a.y1, b.y1), gy1 = Math.max(a.y0, b.y0);
+    const gx0 = Math.min(a.x1, b.x1), gx1 = Math.max(a.x0, b.x0);
+    // The occluder sits inside the strip and leaves no more than a seam on
+    // either side of itself, so neither sub-gap is one a ball could take.
+    return rs.some(c => c !== a && c !== b && (axis === "y"
+      ? c.x0 <= ox0 && c.x1 >= ox1 && c.y0 >= gy0 - 0.5 && c.y1 <= gy1 + 0.5
+        && c.y0 - gy0 <= SEAM_MAX && gy1 - c.y1 <= SEAM_MAX
+      : c.y0 <= oy0 && c.y1 >= oy1 && c.x0 >= gx0 - 0.5 && c.x1 <= gx1 + 0.5
+        && c.x0 - gx0 <= SEAM_MAX && gx1 - c.x1 <= SEAM_MAX));
+  };
+
   /** Gaps between stubs that line up, i.e. the places a ball could try to pass. */
   const gapsIn = (l: LevelConfig): { gap: number; between: string }[] => {
     const rs = rectsOf(l);
@@ -313,12 +336,12 @@ describe("every gap is a seam or a neck, never in between", () => {
         const xOverlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
         if (xOverlap > 0) {
           const g = Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1);
-          if (g > 0) out.push({ gap: g, between: `${a.id}|${b.id}` });
+          if (g > 0 && !occluded(rs, a, b, "y")) out.push({ gap: g, between: `${a.id}|${b.id}` });
         }
         const yOverlap = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
         if (yOverlap > 0) {
           const g = Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1);
-          if (g > 0) out.push({ gap: g, between: `${a.id}|${b.id}` });
+          if (g > 0 && !occluded(rs, a, b, "x")) out.push({ gap: g, between: `${a.id}|${b.id}` });
         }
       }
     }

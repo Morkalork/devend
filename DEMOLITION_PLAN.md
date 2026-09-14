@@ -9,7 +9,8 @@ build departed from it marked **[CHANGED]** and the reason given. The per-map
 rationale now lives in section 5 of the guidelines; this file is the record of
 what the plan got wrong and what the sweep measured.
 
-Five departures, and the third is the one worth reading:
+Six departures. The third is the one worth reading, and the sixth replaced the
+layout the first five arrived at:
 
 1. **The barrel moved to the top-left corner, angled 12 degrees down.** At
    mid-left, firing straight through the doorway, the volley shattered four
@@ -51,9 +52,38 @@ Five departures, and the third is the one worth reading:
    17. Their rows moved to 18 and the ledger's recorded rule 5 says that 18 is
    now a queue, not a map.
 
-**Sweep on shipping, 8 seeds, 60s:** 8 wins, 16 to 39 bot cuts against par 9,
-6 to 12% left, no violations. One "ball escaped, recovered" ownership line in
-sixteen runs, against level 16's recorded baseline of one or two per sweep.
+6. **The ring became a wall along the top edge, at the author's direction.**
+   The ring-around-a-vault layout shipped first (8 of 8 on the bot, no
+   buries). The map's owner asked for the Arkanoid shape instead: a wall of
+   bricks across the top, so the player is inclined to seal the bottom of the
+   board quickly to shorten the balls' bounce and the time between hits.
+   That is a better premise than the ring, because it lines the two verbs
+   up: clearing space IS speeding up the smash. Built as three rows of
+   eleven-and-a-half (the vault takes two slots in the back row), a serve
+   fired up from the bottom, `smashed: 16` of 35. Three things it changed:
+   - **The count dropped under half the wall.** A vertical cut with every
+     ball on one side buries about half of it; at 24 that was fatal, at 16
+     it is survivable. The fatal cut is now only the horizontal one above
+     every ball, which is the map's rule and is visible before you draw it.
+   - **The gap guards learned about occlusion.** Three rows with 8-unit
+     seams put rows one and three 38 apart with row two between them, and
+     both pairwise guards read that as a ball-width slot. A pair whose gap
+     is filled by a third rect with no more than a seam on either side is
+     no longer reported.
+   - **The serve was aimed at a seam.** Centred on the board, the barrel's
+     straight shot hit the seam between two bricks and the first ball logged
+     "no valid region" on six of eight seeds. Moved 34 units onto a brick's
+     centre: zero.
+
+**Sweep on shipping (the top wall), 8 seeds, 60s:** 3 wins at 19 to 20 cuts
+against par 9, 5 `objectiveBuried` by a horizontal cut above the balls, no
+violations, one benign ownership recovery. With no cuts at all, accidents
+break sixteen bricks in 3 to 14 seconds and twenty-four in 8 to 29. The
+scripted seal-from-the-bottom policy written to measure the premise's gain was
+too crude to trust (three strips in fifty seconds, since three balls at up to
+3x rarely leave a line clear), so the size of that gain for a human is not
+measured here; the geometry says a roster held in the top third of the board
+hits the wall about three times as often.
 
 ---
 

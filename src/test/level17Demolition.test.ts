@@ -25,41 +25,49 @@ describe("level 17 is a Demolition map", () => {
     expect(level.randomShapes ?? 0).toBe(0);
   });
 
-  it("asks for a smash count that accidents alone will not deliver, with slack", () => {
+  it("asks for a smash count a side cut cannot bury, with slack", () => {
     const spec = resolveWinSpec(level, NO_RUN_RULES);
     const smash = spec.require.find(c => c.kind === "smashed");
-    expect(smash && smash.kind === "smashed" ? smash.count : 0).toBe(10);
-    // The slack rule: more objects than the clause counts, and here a lot more,
-    // because the wall IS the map's slack.
-    expect(breakables.length).toBeGreaterThanOrEqual(10 + 5);
+    expect(smash && smash.kind === "smashed" ? smash.count : 0).toBe(16);
+    // A vertical cut with every ball on one side buries about half the wall.
+    // That has to be survivable, so the count stays under half the wall; the
+    // cut that IS fatal is a horizontal one above every ball, which is the
+    // map's one rule and is visible at decision time.
+    expect(breakables.length).toBeGreaterThanOrEqual(2 * 16 + 1);
     expect(spec.require.some(c => c.kind === "space")).toBe(true);
     expect(spec.alsoWinIf).toEqual([]);
   });
 
-  it("is a wall of glass, not a slab drawn in pieces", () => {
-    expect(bricks.length).toBeGreaterThanOrEqual(14);
+  it("is a wall of glass along the top edge, three rows deep", () => {
+    expect(bricks.length).toBeGreaterThanOrEqual(34);
     for (const b of bricks) {
       expect(b.hitsToBreak ?? 3, `${b.id} carries a hit count a brittle brick ignores`).toBe(3);
+      expect(b.y + b.height, `${b.id} is not part of the top wall`).toBeLessThanOrEqual(140);
     }
+    const rows = new Set(bricks.map(b => b.y));
+    expect(rows.size).toBe(3);
   });
 
-  it("leaves a legal doorway in the wall", () => {
-    // Left column: the middle brick is omitted, so the gap between the two
-    // that remain is a neck (60 or more), never the forbidden in-between band.
-    // A ring with no legal way in encloses the moat, and section 7.6 says an
-    // enclosed space is captured at load.
-    const l1 = bricks.find(b => b.id === "brick-l1")!;
-    const l3 = bricks.find(b => b.id === "brick-l3")!;
-    const doorway = l3.y - (l1.y + l1.height);
-    expect(doorway).toBeGreaterThanOrEqual(60);
+  it("hides the vault in the back row, behind the bricks", () => {
+    const vault = walls.find(w => w.chest)!;
+    expect(vault).toBeTruthy();
+    const backRow = Math.min(...bricks.map(b => b.y));
+    expect(vault.y).toBe(backRow);
+    // Something brittle sits directly under it, so it cannot be hit first.
+    const under = bricks.filter(b => b.y > vault.y && b.x < vault.x + vault.width && b.x + b.width > vault.x);
+    expect(under.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("keeps the wall in the traffic, not behind a neck", () => {
-    // Measured, twice: a wall in a room of its own is buried by the first cut
-    // that separates the balls from the neck (the bot lost 7 of 8 that way,
-    // most at over 50% remaining), because the launcher gathers the whole
-    // roster in the other room. The wall lives where the balls are, per
-    // section 9's rule, and the smash is a tempo lever rather than a gate.
+  it("serves from the bottom, straight up into the wall", () => {
+    const barrel = (level.entities ?? []).find(e => e.kind === "launcher") as { y: number; height: number; facing: string };
+    expect(barrel.facing).toBe("up");
+    expect(barrel.y + barrel.height).toBeGreaterThan(800);
+  });
+
+  it("has no solid divider: the wall lives where the balls are", () => {
+    // Measured on two earlier layouts: a wall in a room of its own is buried
+    // by the first cut that separates the balls from its neck. Every solid on
+    // this map is small furniture.
     const solids = walls.filter(w => !w.breakable && !w.brittle && !w.chest);
     for (const s of solids) {
       expect(s.width * s.height, `${s.id} is big enough to divide the board`).toBeLessThan(120 * 120);
@@ -67,9 +75,6 @@ describe("level 17 is a Demolition map", () => {
   });
 
   it("keeps its pocket away from the wall, where the reach guard will let it lock", () => {
-    // Every brick's strike box (a ball radius plus two cells, generously 60)
-    // must miss the pockets under both shelves, or the map's superior pockets
-    // would be refused as locks until the clause is met.
     for (const id of ["corner-shelf"]) {
       const shelf = walls.find(w => w.id === id)!;
       const pocket = { x0: shelf.x, x1: shelf.x + shelf.width, y0: shelf.y + shelf.height, y1: 855 };

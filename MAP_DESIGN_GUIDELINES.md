@@ -743,70 +743,70 @@ measurement establishes the ordering and not the reason.
 
 #### 17 "Deprecation" - Compressed brittle, Fight launcher, Use chest  *(built)*
 
-**The launcher fires the roster at a wall that breaks on touch, and the win
-wants ten of its fifteen bricks gone.** The first map of the Demolition
-archetype (section 11); the plan it was built from, with the geometry
-arithmetic and the five places the build departed from it, is
-`DEMOLITION_PLAN.md`.
+**A wall of glass along the top edge, three rows deep with the vault set into
+the back row, and a serve fired up into it from the bottom. Every strip you
+seal from the bottom shortens the bounce, so clearing the board is how you
+chew the wall faster.** The first map of the Demolition archetype (section
+11); the plan it was built from, the two layouts it went through first, and
+the sweeps, are in `DEMOLITION_PLAN.md`.
 
 **What is new is the brick, not the smash.** Every act II map already asks
-`space + smashed`, so a smash clause teaches nothing here. What the map adds
-is a breakable that goes on one touch, fifteen of them in a square ring with
-one side left open, so the wall opens *where the balls happen to hit it* and
-the chamber it forms is a different chamber every ten seconds. Brittle is
+`space + smashed`, so a smash clause teaches nothing here. What the map adds is
+a breakable that goes on one touch, thirty-four of them in three rows with
+8-unit seams, so only the front row is exposed and the wall is chewed layer by
+layer: the chest in the back row is genuinely hidden behind it. Brittle is
 family A's compressed sibling (breakable met at 5, fought at 6), which is what
 leaves room for the launcher's third beat on the same map.
 
-**The launcher's wager gains a third term.** On 11 the pull bought pay and
-speed; on 12 the board bought the speed back. Here speed is also *hammer
-force* (the force model: mass x closing speed to the 1.6), so a hard pull is
-more pay, a faster map, and a wall that comes down sooner, and a soft pull is
-a calm map with a wall that lingers. The roster is pinned to `[red, grey,
-blue]`: grey is heavy and winds down, so it is the obvious hammer and a hammer
-that gets worse, and ranking the three is the map's second decision.
+**The verbs line up, which is the design.** The balls rain off the wall and
+cross the whole board on the way back. A horizontal cut below the lowest ball
+captures a strip of floor (space) and shortens the bounce (smash), so the
+ordinary way to clear this map is also the fast way to break it, and a player
+who understands that seals from the bottom up. The serve is the launcher's
+Fight beat: the pull is the opening volley into the front row, aimed within
+the cone, and the roster then falls back onto a board you have not cut yet.
 
-**The clause names most of the wall, and the wall is the slack.** `smashed:
-10` against fifteen breakables (fourteen bricks and the chest) is slack five,
-so no single cut is fatal. It is a **tempo lever, not a gate**, and that was
-measured rather than assumed: with the bot making no cuts at all, accidents
-alone break ten bricks in four to ten seconds, because a one-touch wall in the
-middle of a three-ball board is hit constantly. An aimed hard volley does it in
-about one. So the smash is never the thing that stops a player; it is the
-thing a hard aimed shot buys early, and a soft or unaimed one pays for in
-clock. Two layouts that put the wall in a room of its own to make the smash
-genuinely aimed were built and swept, and both lost seven of eight to
-`objectiveBuried`: the launcher gathers the roster in the other room, and any
-cut separating the balls from the neck captures the wall with the room
-(section 9's rule, arriving a third time). The wall lives in the traffic.
+**The one rule, and it is visible.** A horizontal cut ABOVE every ball
+captures the wall's region with the wall in it, and the map ends as
+`objectiveBuried` on the spot, one life, named on the overlay. That is
+Arkanoid's "do not drop the ball" turned upside down, and it is the read the
+map is built around: the bricks ring as required, the balls are where they
+are, and the line you draw is either under them or over them. The random bot
+has no such read and buries the wall on five of eight seeds, most above 50%
+remaining, which section 9 would normally call a layout smell; here it is the
+rule doing its job on a player who cannot see it. A *vertical* cut with every
+ball on one side buries about half the wall and must stay survivable, which
+is what sets the count.
 
-The reach guard refuses any pocket around an unbroken brick while smashes are
-outstanding, so the map's lockable ground - the superior pocket under the
-corner shelf - sits away from the wall, and the order of play is smash first,
-seal second.
+**The clause names less than half the wall, and the wall is the slack.**
+`smashed: 16` against thirty-five breakables is slack nineteen. It is a tempo
+lever, not a gate, and that was measured: with no cuts at all, accidents alone
+break sixteen bricks in three to fourteen seconds, twenty-four in eight to
+twenty-nine, and the whole wall inside the clock on a third of seeds, because
+a one-touch wall the balls fall back onto is hit constantly. A player sealing
+the floor makes every one of those numbers smaller. The reach guard refuses
+any pocket around an unbroken brick while smashes are outstanding, so the
+map's lockable ground - the superior pocket under the corner shelf - sits at
+the bottom, away from the wall, and the order of play is smash first, seal
+second.
 
-**The doorway is not decoration.** The left column is missing its middle
-brick, an 84-unit neck. A ring with no legal way in encloses the moat, and
-section 7.6 says an enclosed space is captured at load; the doorway is also
-the map's second approach, so the chest can be reached without breaking
-anything.
+**Greed hook: the vault**, three real hits in the back row, reachable only
+once the two rows under it are gone. The cost is the fast ball you fired hard,
+which is the one that gets there and the one you least want loose. **The Turn
+is the `crunch` spike at 30%**: faster balls hit harder and more often, so the
+wall goes faster late, and the strips you have not yet sealed are crossed
+faster too.
 
-**Greed hook: the chest**, three real hits inside a wall that is also the
-requirement. The cost is the ball that opens it: the fast one you fired hard
-is the one that gets there, and its moat cannot lock until the clause is met.
-**The Turn is the `crunch` spike at 30%**: faster balls hit harder, so the
-wall dissolves faster late, and the column you caged the roster in is a
-different room by the time you go to seal it.
+**A serve aimed at a seam.** The barrel first sat centred on the board, which
+put its straight shot on the 8-unit seam between two bricks; the first ball
+struck two brick corners at once and logged "no valid region" on six of eight
+seeds. Moved 34 units so the shot lands on a brick's centre: zero afterwards.
+Worth knowing for any launcher pointed at a brick grid.
 
-**Fail states, both visible.** Lock all three with fewer than ten smashed
-and it is `lockedOut`, named on the overlay with the top-bar chip already
-amber at one ball left. Wall off enough bricks that fewer than eight remain
-reachable and it is `objectiveBuried` at that instant.
-
-**Bot sweep, 8 seeds, 60s: 8 wins**, 16 to 39 cuts against par 9, 6 to 12%
-left, no violations, and no `objectiveBuried` at all once the wall was in the
-traffic. The same sweep also found the harness cutting during the barrel's
-drain, which players cannot do; fixed in `runBot`, and level 11's recorded
-`launcherPrematureLock` loss was that and not the map.
+**Bot sweep, 8 seeds, 60s:** 3 wins at 19 to 20 cuts against par 9, 5
+`objectiveBuried` (the horizontal-cut rule above), no violations, one benign
+ownership recovery. Level 11 on the same harness reads 8 of 8, so the bot is
+not broken, it is blind to the rule.
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 
@@ -1744,10 +1744,16 @@ topology lever (two approaches) for free.
   count on them is a tempo lever (an aimed shot buys it early) and never a
   gate; and a wall placed in a room the balls are not in is captured by the
   first cut that separates them from its neck (section 9). So a Meet beat
-  keeps the wall in the traffic and sizes its clause to name most of the
-  wall. The map that wants the smash to be genuinely *aimed* needs bricks a
-  ball cannot reach by accident and a resident ball beside them, which is the
-  targeted-clause Fight beat's problem, not the Meet's.
+  keeps the wall in the traffic and sizes its clause under half the wall,
+  so a side cut with the balls on one side stays survivable. The map that
+  wants the smash to be genuinely *aimed* needs bricks a ball cannot reach by
+  accident and a resident ball beside them, which is the targeted-clause
+  Fight beat's problem, not the Meet's.
+- **A wall on an edge is a clock the player winds.** Level 17's wall is the
+  top edge; the balls fall back off it across the whole board, and every
+  strip sealed from the bottom shortens the bounce. That lines the two verbs
+  up (clearing is chewing) and gives the map exactly one fatal cut, the
+  horizontal one above every ball, which is visible at decision time.
 - **Steerable, never a waiting game.** Scope creep punishes waiting, and the
   bot cannot aim at all, so a sweep will tell you what accidents deliver.
   Every Demolition map names its aiming tool in its premise, and the sweep
@@ -1768,7 +1774,7 @@ topology lever (two approaches) for free.
 
 | beat | premise | new on the board | win |
 |---|---|---|---|
-| **Meet** (17) | A wall of bricks around a vault, in the traffic. Fire hard and the wall goes fast and so does the map. | brittle (Compressed) | `space` + `smashed: 10` of 15 |
+| **Meet** (17) | A wall of glass along the top edge, the vault in its back row, a serve from the bottom. Every strip you seal from the floor shortens the bounce. | brittle (Compressed) | `space` + `smashed: 16` of 35 |
 | **Use** | Bricks that drop tokens. The greed hook is farming the wall versus sealing early, and a `wrecking` token sits behind it. | drops, the first ball buff | `space` + `smashed: N` |
 | **Fight** | Two cores behind two shells, a mover in the lane you aim through, under a WIP limit. Every fence is either aim or seal. | `objectives` clause | `space` + `objectives: 1`, `fenceBudget` |
 | **Break** | The inversion: the core is *yours*. The shell is its armour, the balls eat through it, and you must lock them before they reach it. A latch on `smashes` closes the exit when they get close. | nothing | `space` + `locks`; the core breaking fails the map |
