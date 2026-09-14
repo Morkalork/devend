@@ -442,12 +442,18 @@ describe("the family-name assumption Tenure is built on", () => {
     // ones). Before THAT, 16/13/11, itself a gain of one over the Garbage
     // Collector line it replaced: those three families used three DIFFERENT
     // names, so Tenure could never walk them as a chain at all.
+    // Before that, 19/16/15: every threshold gained one when Control Freak was
+    // added. It is a plain four-rung family (Junior, Senior, and a Principal
+    // choiceGroup) whose Junior has no prerequisite, so it is a chain head at
+    // every depth - the same shape as the freeze lines rather than the gated
+    // ones that Tenure cannot walk.
+    //
     // 17/15/14 since Ghost Protocol went behind Defensive Programming's Senior
     // to stop it being an opening buy. That is a Senior door, not a doorstep,
     // so the family is no longer a Tenure head - the same reading that keeps
     // Budget Cycle, Procurement and Total Compensation out. It is still buyable
     // in the shop; it is just not a whole chain Tenure will hand over.
-    expect(counts).toEqual([19, 16, 15]);
+    expect(counts).toEqual([20, 17, 16]);
   });
 });
 

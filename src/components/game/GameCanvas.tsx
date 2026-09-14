@@ -152,6 +152,10 @@ export interface GameStateInfo {
   bossDefeated: boolean;
   /** Feature Freeze tap-freezes left this map (for the HUD counter). */
   freezeUsesRemaining: number;
+  /** Control Freak derails left this map (for the HUD counter). */
+  moverDerailsRemaining: number;
+  /** Control Freak bumper snaps left this map (for the HUD counter). */
+  moverBandsRemaining: number;
   pushMode: "none" | "prompt" | "pushing";
   /** Current Scope Creep speed boost in percent (0 = not yet active). */
   creepPercent: number;
@@ -672,6 +676,9 @@ export function GameCanvas({
   // Feature Freeze tap-freezes left this map, mirrored from game.freezeUsesRemaining
   // for the HUD counter (updated on map init and on each freeze spent).
   const [freezeUsesRemaining, setFreezeUsesRemaining] = useState(0);
+  // Control Freak rations, mirrored from the game for the HUD the same way.
+  const [moverDerailsRemaining, setMoverDerailsRemaining] = useState(0);
+  const [moverBandsRemaining, setMoverBandsRemaining] = useState(0);
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
   // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
   const [creepPercent, setCreepPercent] = useState(0);
@@ -855,6 +862,8 @@ export function GameCanvas({
     freeShopItems: 0,
     pickupsClaimedLog: [] as { effect: PickupEffect; value: number }[],
     freezeUsesRemaining: 0,
+    moverDerailsRemaining: 0,
+    moverBandsRemaining: 0,
     freezePickups: false,
     bugSquashChance: 0,
     bentFenceBends: 0,
@@ -1040,6 +1049,15 @@ export function GameCanvas({
       // Feature Freeze tap-freezes refill to the owned per-map allowance.
       game.freezeUsesRemaining = Math.max(0, Math.round(activeModifiers.freezeUsesPerMap));
       setFreezeUsesRemaining(game.freezeUsesRemaining);
+      // Control Freak rations, refilled per map exactly as the freeze is.
+      game.moverDerailsRemaining = Math.max(0, Math.round(activeModifiers.moverDerailPerMap));
+      game.moverBandsRemaining   = Math.max(0, Math.round(activeModifiers.moverBandPerMap));
+      setMoverDerailsRemaining(game.moverDerailsRemaining);
+      setMoverBandsRemaining(game.moverBandsRemaining);
+      // A grab cannot survive the map it was made on: the mover it names is
+      // gone, and a drag left pointing at a dead id would swallow the first
+      // pointerup of the next map.
+      game.moverDrag = null;
       // ...and so does the Breakpoint fence's hold, which is per MAP. Reset in
       // this block for the reason its own comment gives: a field this block
       // forgets is a field that is never set at all, and a hold budget that
@@ -1944,6 +1962,8 @@ export function GameCanvas({
         bossMaxHp: bossHud.maxHp,
         bossDefeated: bossHud.defeated,
         freezeUsesRemaining,
+        moverDerailsRemaining,
+        moverBandsRemaining,
         pushMode,
         creepPercent,
         activeSeconds,
@@ -1962,7 +1982,7 @@ export function GameCanvas({
         onSelectFenceType: handleSelectFenceType,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

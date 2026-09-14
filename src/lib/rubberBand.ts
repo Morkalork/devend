@@ -91,6 +91,27 @@ export interface BandShape {
 }
 
 /**
+ * How hard a pull of this length throws, as a fraction of full stretch.
+ *
+ * Split out of bandShape because a pull is not always a drag between two points
+ * on the board. A mover driven off its rest and released is a band too - its
+ * anchor is the rail, not a finger - and it must use the SAME dead zone, the
+ * same full-pull length and the same curve, or "a full pull" would quietly mean
+ * two different things in two places. Returns 0 below the dead zone, which the
+ * caller reads as "not yet a band" rather than as a weak one.
+ */
+export function bandStretch(pull: number): number {
+  if (!(pull > BAND_DEAD_PULL)) return 0;
+  return Math.min(1, (pull - BAND_DEAD_PULL) / (BAND_FULL_PULL - BAND_DEAD_PULL));
+}
+
+/** The speed multiple a given stretch fires at. */
+export function bandPower(stretch: number): number {
+  const t = Math.max(0, Math.min(1, stretch));
+  return BAND_MIN_POWER + t * (BAND_MAX_POWER - BAND_MIN_POWER);
+}
+
+/**
  * Read a drag into a band.
  *
  * `start` is where the finger went down and `current` is where it is now. The
@@ -110,7 +131,7 @@ export function bandShape(start: Vector2, current: Vector2): BandShape | null {
   // The band lies across the pull: perpendicular to the heading.
   const px = -heading.y, py = heading.x;
 
-  const t = Math.min(1, (len - BAND_DEAD_PULL) / (BAND_FULL_PULL - BAND_DEAD_PULL));
+  const t = bandStretch(len);
   return {
     centre: { x: current.x, y: current.y },
     heading,
@@ -118,7 +139,7 @@ export function bandShape(start: Vector2, current: Vector2): BandShape | null {
     b: { x: current.x + px * BAND_HALF_WIDTH, y: current.y + py * BAND_HALF_WIDTH },
     halfWidth: BAND_HALF_WIDTH,
     powerT: t,
-    power: BAND_MIN_POWER + t * (BAND_MAX_POWER - BAND_MIN_POWER),
+    power: bandPower(t),
   };
 }
 

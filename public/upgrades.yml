@@ -1601,6 +1601,72 @@ upgrades:
 
 
   # ===============================
+  # CONTROL FREAK (Take a moving object by the hand)
+  # A mover's position is ONE number on a rail the map already authored, so
+  # every tier here writes that number and none of them decides where the object
+  # may go. The reachable set under the finger is exactly the patrol the level
+  # author had to keep clear, which is why a hand-driven mover can never be put
+  # through a wall: it is the same interval, walked by hand.
+  #
+  # The ladder is stop, then steer, then a Principal fork between deleting the
+  # obstacle and turning it into a weapon. Breaking is deliberately NOT the
+  # entry tier: it is terminal, skill-free and strictly stronger than steering,
+  # so a player owning both would only ever break, and the tier they paid for
+  # to steer would feel like a downgrade.
+  #
+  # The brake needs no ration because the finger IS the ration: the game's one
+  # control is the fence, so a hand holding a hazard still is a hand not
+  # carving the board. Only the two Principal verbs are counted per map.
+  # ===============================
+
+  - id: control_freak_junior
+    name: Control Freak
+    tier: Junior
+    description: Press and hold a moving object to stop it where it is.
+    unlockLevel: 6
+    icon: grab
+    tags: [tempo, safety]
+    modifiers:
+      moverBrake: 1
+
+  - id: control_freak_senior
+    name: Control Freak
+    tier: Senior
+    description: Drag a held object along its own track, as fast as it patrols.
+    unlockLevel: 11
+    prerequisites:
+      - control_freak_junior
+    tags: [tempo, risk]
+    modifiers:
+      moverDrive: 1
+
+  # Principal is a CHOICE: buy ONE. Delete the obstacle, or fit it with a spring
+  # and hit things with it. Owning one locks out the other.
+  - id: control_freak_principal_a
+    name: Control Freak
+    tier: Principal
+    description: "Derail: hold an object against the end of its track to break it. Once per map."
+    unlockLevel: 16
+    prerequisites:
+      - control_freak_senior
+    choiceGroup: control_freak_principal
+    tags: [tempo, safety]
+    modifiers:
+      moverDerailPerMap: 1
+
+  - id: control_freak_principal_b
+    name: Control Freak
+    tier: Principal
+    description: "Bumper: a held object is spring-loaded. Pull back, let go, and it flings what it hits."
+    unlockLevel: 16
+    prerequisites:
+      - control_freak_senior
+    choiceGroup: control_freak_principal
+    tags: [tempo, risk]
+    modifiers:
+      moverBandPerMap: 2
+
+  # ===============================
   # CASCADE FREEZE (Multi-ball freeze)
   # Unlocks once Feature Freeze reaches Senior this run (the Principal tier is a
   # mutually-exclusive choice, so downstream freeze lines gate on Senior).

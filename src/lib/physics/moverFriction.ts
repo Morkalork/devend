@@ -75,6 +75,22 @@ export function moverFenceDrag(
   return { factor, contacts };
 }
 
+/**
+ * Is this mover overlapping any player fence right now?
+ *
+ * The same contact test the drag uses, without building the contact list. It is
+ * what Control Freak's manual drive stops against: a HELD mover stops dead at a
+ * fence where a patrolling one only labours through it (see moverControl for
+ * why that inversion is the honest rule rather than an exception).
+ */
+export function touchesPlayerFence(mover: MoverState, walls: Wall[]): boolean {
+  for (const wall of walls) {
+    if (!isPlayerFence(wall)) continue;
+    if (contactWith(mover, wall)) return true;
+  }
+  return false;
+}
+
 /** Where this mover meets this fence, or null when they do not overlap. */
 function contactWith(mover: MoverState, wall: Wall): FrictionContact | null {
   const half = (wall.thickness ?? 6) / 2;

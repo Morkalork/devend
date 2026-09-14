@@ -312,6 +312,8 @@
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
+    "moverDerailsLeft": "{{count}} descarrilamientos restantes en este mapa",
+    "moverBandsLeft": "{{count}} golpes de resorte restantes en este mapa",
     "fenceBudgetLeft": "{{count}} vallas restantes en este mapa",
     "beatCrunchTime": "Recta Final",
     "beatReorg": "Reorganización",

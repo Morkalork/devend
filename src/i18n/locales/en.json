@@ -314,6 +314,8 @@
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",
     "freezeUsesLeft": "{{count}} freezes left this map",
+    "moverDerailsLeft": "{{count}} derails left this map",
+    "moverBandsLeft": "{{count}} bumper snaps left this map",
     "fenceBudgetLeft": "{{count}} fences left this map",
     "beatCrunchTime": "Crunch Time",
     "beatReorg": "Reorg",

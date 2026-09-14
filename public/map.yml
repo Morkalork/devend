@@ -1515,6 +1515,33 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 3
+      # The wiper: the first ROTOR authored on any map, and the reason
+      # Demolition needed one. A shuttle would cross the serve lane on a fixed
+      # line and you would learn it once; this sweeps the airspace directly
+      # above the muzzle, so the angle it meets a rising ball at keeps changing
+      # and its tip (which travels far faster than its hub) bats returns back
+      # up into the glass. Pivot is well below the bar, so the same 200-long
+      # bar is an arm rather than a windmill.
+      #
+      # Deliberately NOT load-bearing: the win is space + smashed, and the
+      # wiper only ever makes both harder. Control Freak can hold it, crank it
+      # or break it, and the bot sweep cannot drive it, so nothing may depend
+      # on it being moved.
+      - id: wiper
+        kind: mover
+        shape: rect
+        x: 440
+        'y': 210
+        width: 20
+        height: 200
+        motion: rotate
+        pivotX: 450
+        pivotY: 420
+        sweepDegrees: 120
+        startDegrees: -35
+        speed: 55
+        axis: horizontal
+        range: 0
       - id: brick-a1
         kind: wall
         shape: rect

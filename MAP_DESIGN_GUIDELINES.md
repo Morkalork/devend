@@ -196,7 +196,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
 | brittle | A | Compressed | 17 | - | - |
-| rotor | C | Compressed | 18 | - | - |
+| rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 18 | 19 | 31 |
 | portal | B | Meet | 18 | - | - |
@@ -243,9 +243,18 @@ someone has to remember to update.
 5. **Level 17 took the slot the plan had given portal, WIP limit, rotor and
    terminals**, and spent it on brittle bricks instead (the first Demolition
    map, section 11). Their rows moved to 18 without anyone deciding what 18 is
-   actually about, so 18 is now over-booked on paper: four Meets in one row is
-   not a map, it is a queue. Whoever authors 18 picks one and moves the rest,
-   and the ledger will say so when they do.
+   actually about, so 18 was over-booked on paper: four Meets in one row is not
+   a map, it is a queue. Whoever authors 18 picks one and moves the rest, and
+   the ledger will say so when they do.
+
+   **The rotor is the first one taken back.** 17 now carries one (the wiper
+   sweeping the airspace over its barrel), so the row reads 17 and 18's queue is
+   three rather than four. It went there rather than waiting for 18 because a
+   sweeping arm is Demolition's own idea: the archetype's premise is that the
+   balls are the player's hammer as well as their enemy, and an arm that bats a
+   rising serve back into the glass is that sentence as a machine. It had also
+   been implemented in the engine and authored on zero maps for its whole life,
+   which is the one state worse than being late.
 
 Rule 1 replaced an older entry that said level 11 debuts THREE at once
 (launcher, bumper and deformable). That was the pre-rebuild plan, not the map:

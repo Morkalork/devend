@@ -312,6 +312,8 @@
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
+    "moverDerailsLeft": "{{count}} urspårningar kvar på denna bana",
+    "moverBandsLeft": "{{count}} fjäderslag kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
     "beatReorg": "Omorganisation",

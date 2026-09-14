@@ -40,6 +40,23 @@ export interface MoverState {
   direction: 1 | -1;
   /** Polygon updated in place every physics step for collision + rendering. */
   polygon: { vertices: { x: number; y: number }[] };
+  /**
+   * How fast the rail parameter is changing right now, in rail units per second
+   * (world units for a shuttle, RADIANS for a rotor). Set only while a player is
+   * driving this mover or while it is snapping back, and cleared the moment it
+   * is let go; an ordinary patrol leaves it at zero.
+   *
+   * It exists so ball collision can resolve in the mover's own frame and hand
+   * the ball the surface's velocity (moverControl.moverSurfaceVelocity). Zero
+   * makes that arithmetic an exact no-op, which is what keeps every shipped
+   * map's patrol behaving precisely as it did before Control Freak existed.
+   */
+  driveRate?: number;
+  /**
+   * A bumper snapping home: where it is heading on the rail and how hard it was
+   * pulled (0..1 of full stretch), or absent when it is not snapping.
+   */
+  snap?: { to: number; rate: number; powerT: number };
   /** Cached bounding-circle radius (circle: radius; rect: half diagonal), filled lazily. */
   boundRadius?: number;
   /**
@@ -178,4 +195,50 @@ export function updateMoverPolygon(m: MoverState): void {
   verts[1].x = x + m.width!;  verts[1].y = y;
   verts[2].x = x + m.width!;  verts[2].y = y + m.height!;
   verts[3].x = x;             verts[3].y = y + m.height!;
+}
+
+/**
+ * The centre of the circle that contains this mover right now, and its radius.
+ *
+ * One helper because three callers had three opinions and one of them was
+ * wrong. The ball's broad-phase rejection used `home + offset` with a radius of
+ * `hypot(width, height) / 2`, which is right for a shuttle and silently wrong
+ * for a ROTOR twice over: `homeX/homeY` is the rotor's PIVOT rather than its
+ * centre (initGame moves the outline off the pivot to author a sweeping arm),
+ * and `offset` means nothing to something that turns. An arm pivoting near one
+ * end therefore had a rejection circle covering its hub and missing its tip, so
+ * balls passed clean through the outer half of the very part that moves
+ * fastest. Nothing caught it because rotors ship on zero maps.
+ *
+ * The rotor arm is measured the way drawRail already measured it: the furthest
+ * vertex of the outline from the pivot. Cached on the mover, because the
+ * outline is built once and never changes shape.
+ */
+export function moverBoundRadius(m: MoverState): number {
+  if (m.boundRadius !== undefined) return m.boundRadius;
+  if (m.motion === "rotate") {
+    let reach = 0;
+    for (const p of m.rotorOutline ?? buildRotorOutline(m)) {
+      reach = Math.max(reach, Math.hypot(p.x, p.y));
+    }
+    m.boundRadius = reach;
+    return reach;
+  }
+  m.boundRadius = m.shape === "circle"
+    ? (m.radius ?? 0)
+    : Math.hypot(m.width ?? 0, m.height ?? 0) / 2;
+  return m.boundRadius;
+}
+
+/**
+ * Where that bounding circle is centred: the pivot for a rotor (it turns about
+ * a fixed point and never travels), home plus the offset along the axis for a
+ * shuttle.
+ */
+export function moverBoundCentre(m: MoverState): { x: number; y: number } {
+  if (m.motion === "rotate") return { x: m.homeX, y: m.homeY };
+  return {
+    x: m.homeX + (m.axis === "horizontal" ? m.offset : 0),
+    y: m.homeY + (m.axis === "vertical" ? m.offset : 0),
+  };
 }

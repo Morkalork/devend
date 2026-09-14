@@ -11,7 +11,7 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark, ClipboardList } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark, ClipboardList, Unlink, Grab } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
 import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
@@ -369,6 +369,8 @@ export function GameScreen({
     bossMaxHp: 0,
     bossDefeated: false,
     freezeUsesRemaining: 0,
+    moverDerailsRemaining: 0,
+    moverBandsRemaining: 0,
     pushMode: "none",
     creepPercent: 0,
     activeSeconds: 0,
@@ -1013,6 +1015,47 @@ export function GameScreen({
               <Snowflake className="w-3.5 h-3.5" />
               <span className="font-display text-sm font-bold tabular-nums">
                 {gameState.freezeUsesRemaining}/{Math.round(activeModifiers.freezeUsesPerMap)}
+              </span>
+            </div>
+          )}
+          {/* Control Freak rations: the two Principal verbs are the only ones
+              counted, because the brake and the crank are paid for with the
+              finger (a hand on a mover is a hand not drawing a fence). Stacked
+              under the freeze chip and dimmed at zero, same as it is. */}
+          {activeModifiers.moverDerailPerMap > 0 && !mapComplete && (
+            <div
+              className="absolute top-11 right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
+              style={{
+                backgroundColor: 'rgba(0,10,5,0.7)',
+                border: `1px solid ${accentColor}44`,
+                color: accentColor,
+                opacity: gameState.moverDerailsRemaining > 0 ? 1 : 0.4,
+              }}
+              aria-label={t('game.moverDerailsLeft', { count: gameState.moverDerailsRemaining })}
+            >
+              <Unlink className="w-3.5 h-3.5" />
+              <span className="font-display text-sm font-bold tabular-nums">
+                {gameState.moverDerailsRemaining}/{Math.round(activeModifiers.moverDerailPerMap)}
+              </span>
+            </div>
+          )}
+          {/* The two are a choiceGroup, so a player can only ever own one; the
+              Playground can set both at once, and stacking rather than
+              overlapping is what makes that testable. */}
+          {activeModifiers.moverBandPerMap > 0 && !mapComplete && (
+            <div
+              className={`absolute ${activeModifiers.moverDerailPerMap > 0 ? 'top-20' : 'top-11'} right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none`}
+              style={{
+                backgroundColor: 'rgba(0,10,5,0.7)',
+                border: `1px solid ${accentColor}44`,
+                color: accentColor,
+                opacity: gameState.moverBandsRemaining > 0 ? 1 : 0.4,
+              }}
+              aria-label={t('game.moverBandsLeft', { count: gameState.moverBandsRemaining })}
+            >
+              <Grab className="w-3.5 h-3.5" />
+              <span className="font-display text-sm font-bold tabular-nums">
+                {gameState.moverBandsRemaining}/{Math.round(activeModifiers.moverBandPerMap)}
               </span>
             </div>
           )}

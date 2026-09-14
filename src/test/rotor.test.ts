@@ -16,7 +16,10 @@
  * the thing being pinned below.
  */
 import { describe, it, expect } from "vitest";
-import { buildMoverPolygon, buildRotorOutline, updateMoverPolygon, type MoverState } from "@/lib/physics/moverState";
+import {
+  buildMoverPolygon, buildRotorOutline, updateMoverPolygon,
+  moverBoundCentre, moverBoundRadius, type MoverState,
+} from "@/lib/physics/moverState";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -186,5 +189,86 @@ describe("how it is driven", () => {
     updateMoversFn(STEP, game);
     expect(shuttle.offset).toBeGreaterThan(0);
     expect(shuttle.angle).toBeUndefined();
+  });
+});
+
+/**
+ * The broad phase, which is where a rotor was invisible.
+ *
+ * Ball-versus-mover rejects early on a bounding circle, and that circle used to
+ * be built for a shuttle: centred on `home + offset` with a radius of the
+ * bar's own half-diagonal. Both halves are wrong for something that turns.
+ * `home` is a rotor's PIVOT, not its centre, and initGame deliberately moves
+ * the outline off the pivot when a map authors a sweeping arm - so the circle
+ * sat on the hub while the arm reached far outside it, and balls flew through
+ * the tip. The tip is the fastest-moving part and the whole reason a rotor is a
+ * different threat from a patrol, so the bug hid the feature inside the feature.
+ */
+describe("a rotor is where the broad phase says it is", () => {
+  /** Every vertex of the polygon, at this angle, inside the bounding circle. */
+  const contains = (m: MoverState): boolean => {
+    const c = moverBoundCentre(m);
+    const r = moverBoundRadius(m);
+    return m.polygon.vertices.every(v => Math.hypot(v.x - c.x, v.y - c.y) <= r + 1e-6);
+  };
+
+  it("covers an arm that pivots about its own middle", () => {
+    const m = rotor();
+    for (let i = 0; i < 32; i++) {
+      m.angle = (i / 32) * Math.PI * 2;
+      updateMoverPolygon(m);
+      expect(contains(m), `angle ${m.angle}`).toBe(true);
+    }
+  });
+
+  it("covers an arm whose pivot is off the bar, at every angle", () => {
+    // The authored case: pivotX/pivotY put the hub 200 units off the bar's
+    // middle, so the far tip is ~300 from the pivot while the bar's own
+    // half-diagonal is only ~101. The old formula missed two thirds of it.
+    const m = rotor({ rotorOutline: buildRotorOutline(rotor()).map(p => ({ x: p.x + 200, y: p.y })) });
+    m.boundRadius = undefined;
+    for (let i = 0; i < 32; i++) {
+      m.angle = (i / 32) * Math.PI * 2;
+      updateMoverPolygon(m);
+      expect(contains(m), `angle ${m.angle}`).toBe(true);
+    }
+  });
+
+  it("reaches the tip, not merely the hub", () => {
+    const m = rotor({ rotorOutline: buildRotorOutline(rotor()).map(p => ({ x: p.x + 200, y: p.y })) });
+    m.boundRadius = undefined;
+    const halfDiagonal = Math.hypot(m.width!, m.height!) / 2;
+    expect(moverBoundRadius(m)).toBeGreaterThan(halfDiagonal * 2);
+  });
+
+  it("centres a rotor on its pivot and ignores the offset it does not have", () => {
+    // `offset` is meaningless for a rotor but is still a number on the state,
+    // and the old broad phase added it to the centre.
+    const m = rotor({ offset: 999 });
+    const c = moverBoundCentre(m);
+    expect(c).toEqual({ x: m.homeX, y: m.homeY });
+  });
+
+  it("still measures a shuttle exactly as it always did", () => {
+    const shuttle: MoverState = {
+      id: "s2", shape: "rect", homeX: 300, homeY: 300, width: 90, height: 26,
+      axis: "horizontal", range: 200, speed: 60, offset: 40, direction: 1,
+      polygon: { vertices: [] },
+    } as MoverState;
+    shuttle.polygon = buildMoverPolygon(shuttle);
+    expect(moverBoundRadius(shuttle)).toBeCloseTo(Math.hypot(90, 26) / 2, 6);
+    expect(moverBoundCentre(shuttle)).toEqual({ x: 340, y: 300 });
+    expect(contains(shuttle)).toBe(true);
+  });
+
+  it("measures a circular shuttle by its radius", () => {
+    const disc: MoverState = {
+      id: "s3", shape: "circle", homeX: 200, homeY: 200, radius: 30,
+      axis: "vertical", range: 120, speed: 60, offset: -20, direction: 1,
+      polygon: { vertices: [] },
+    } as MoverState;
+    disc.polygon = buildMoverPolygon(disc);
+    expect(moverBoundRadius(disc)).toBe(30);
+    expect(moverBoundCentre(disc)).toEqual({ x: 200, y: 180 });
   });
 });
