@@ -34,6 +34,7 @@ import { Container, Graphics, Matrix, RenderTexture, Sprite, Texture } from "pix
 import type { Renderer } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Ball } from "@/types/game";
+import type { MoteLight } from "@/lib/rendering/motes";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
@@ -211,6 +212,16 @@ export class BallLightPass {
   private live = 0;
   /** Scratch for the derived lights, reused so a frame allocates nothing. */
   private derived: DerivedLight[] = [];
+  /**
+   * This frame's emitters in WORLD units, for anything that needs to know
+   * where the light is without being part of the composite - the motes, so far.
+   *
+   * World rather than screen because the motes live in world space and the
+   * board can be tilted; and published rather than recomputed because a second
+   * opinion about where the light is would be a second thing to keep in step
+   * with this one.
+   */
+  readonly worldLights: MoteLight[] = [];
 
   constructor() {
     this.sprite.blendMode = "add";
@@ -225,6 +236,7 @@ export class BallLightPass {
     monitor?: LightScope,
   ): void {
     this.live = 0;
+    this.worldLights.length = 0;
     const tex = poolTex();
 
     for (const ball of game.balls) {
@@ -282,6 +294,7 @@ export class BallLightPass {
 
       e.shade.visible = true;
       this.drawShadows(e.shade, light, p, game, w2s, scale, ball);
+      this.note(p.x, p.y, light, scale, flick);
 
       // The bright core inside this ball's own shadow (flashLight.ts). It is
       // placed from the MONITOR, not from the ball's light: it is the monitor's
@@ -420,6 +433,16 @@ export class BallLightPass {
     e.gobo.visible = false;
     e.shade.visible = true;
     this.drawShadows(e.shade, light, world, game, w2s, scale, skip);
+    this.note(world.x, world.y, light, scale, 1);
+  }
+
+  /** Remember an emitter in world units. */
+  private note(
+    x: number, y: number, light: PlacedLight, scale: number, flick: number,
+  ): void {
+    const intensity = light.intensity * flick;
+    if (intensity <= 0.002) return;
+    this.worldLights.push({ x, y, reach: light.reach / scale, intensity, color: light.color });
   }
 
   /** Every wall inside this pool, as one black quad each. */

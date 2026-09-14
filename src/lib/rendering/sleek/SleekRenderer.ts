@@ -52,6 +52,7 @@ import { AreaLayer } from "./areaLayer";
 import { SleekBallLayer, clearSphereCache } from "./ballLayer";
 import { BallLightPass, clearPoolTexture } from "./ballLightPass";
 import { BounceLayer, clearBounceTextures } from "./bounceLayer";
+import { MoteLayer, clearMoteTexture } from "./moteLayer";
 import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
@@ -87,6 +88,7 @@ export class SleekRenderer {
   private board = new BoardLayer();
   private areas = new AreaLayer();
   private bounce = new BounceLayer();
+  private motes = new MoteLayer();
   private props = new PropLayer();
   private entities = new EntityLayer();
   private objects = new ObjectLayer();
@@ -160,6 +162,10 @@ export class SleekRenderer {
       // directly above the layer that drew that surface: the bands over the
       // walls, the return light over the balls (bounceLayer.ts).
       this.bounce.onWalls,
+      // Motes hang in the AIR, so they sit above everything standing on the
+      // floor and below the balls: a speck in front of a ball would read as
+      // dirt on the lens rather than as air in the room.
+      this.motes.container,
       this.fx.container,
       this.balls.container,
       this.bounce.onBalls,
@@ -311,6 +317,9 @@ export class SleekRenderer {
     // a translucent ball, and it has to sit in the shadow that same beam casts.
     this.ballLights.build(game, w2s, scale, now, monitor);
     this.ballLights.commit(this.app.renderer, boardRect);
+    // After the pass, because the motes catch exactly the emitters it just
+    // built - handed over rather than recomputed (ballLightPass.worldLights).
+    this.motes.sync(game, this.ballLights.worldLights, w2s, scale, now);
 
     this.probeForBeams(now);
 
@@ -495,6 +504,7 @@ export class SleekRenderer {
     clearSphereCache();
     clearPoolTexture();
     clearBounceTextures();
+    clearMoteTexture();
     this.sweep.teardown();
     this.shatter.clear();
     this.clearShatterRT();
@@ -505,6 +515,7 @@ export class SleekRenderer {
     this.objects.destroy();
     this.walls.destroy();
     this.bounce.destroy();
+    this.motes.destroy();
     this.fx.destroy();
     this.balls.destroy();
     this.ballLights.destroy();

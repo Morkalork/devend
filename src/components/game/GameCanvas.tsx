@@ -724,6 +724,7 @@ export function GameCanvas({
     mirrorPolygons: [] as Polygon[],
     boardPolygon: null as Polygon | null,
     boardEdges: undefined as BoardEdgeSpecs | undefined,
+    weather: undefined as { x: number; y: number } | undefined,
     originalArea: 0,
     basePlayableArea: 0,
     balls: [],
@@ -1125,6 +1126,7 @@ export function GameCanvas({
       // game having it, and a live floor that never reached the game would be a
       // map whose whole premise silently did nothing.
       game.boardEdges         = data.boardEdges;
+      game.weather            = data.weather;
       game.originalArea       = data.originalArea;
       game.basePlayableArea   = data.basePlayableArea;
       game.balls              = data.balls;

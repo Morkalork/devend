@@ -53,11 +53,17 @@ export interface LightLook {
    * is what they were.
    */
   reaction: number;
+  /**
+   * Motes in the air (motes.ts): how much of the ambient field is present.
+   * Scales the COUNT rather than the brightness, because dimming is what the
+   * light already means. 0 is a board with no air in it, which is what it was.
+   */
+  motes: number;
 }
 
 const KEY = "devend.lightLook";
 export const DEFAULT_LIGHT_LOOK: LightLook = {
-  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1,
+  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1, motes: 0.8,
 };
 
 let current: LightLook | null = null;
@@ -75,6 +81,7 @@ function sanitise(l: LightLook): LightLook {
     tell: unit(l.tell, DEFAULT_LIGHT_LOOK.tell),
     ballShadows: unit(l.ballShadows, DEFAULT_LIGHT_LOOK.ballShadows),
     reaction: unit(l.reaction, DEFAULT_LIGHT_LOOK.reaction),
+    motes: unit(l.motes, DEFAULT_LIGHT_LOOK.motes),
   };
 }
 

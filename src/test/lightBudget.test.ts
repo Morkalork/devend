@@ -21,6 +21,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { Graphics } from "pixi.js";
 import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
 import { BounceLayer } from "@/lib/rendering/sleek/bounceLayer";
+import { MoteLayer, AMBIENT_MOTES, RESIDUE_MOTES } from "@/lib/rendering/sleek/moteLayer";
 import { WallLayer } from "@/lib/rendering/sleek/wallLayer";
 import { lightScope } from "@/lib/rendering/sleek/light";
 import { createBallEffectState } from "@/lib/ballEffects";
@@ -76,6 +77,7 @@ function rig() {
   const pass = new BallLightPass();
   const bounce = new BounceLayer();
   const wall = new WallLayer();
+  const motes = new MoteLayer();
   const shadows = new Graphics();
 
   const step = (t: number) => {
@@ -95,8 +97,9 @@ function rig() {
     wall.sync(game, light, shadows, w2s, 1);
     bounce.sync(game, w2s, 1);
     pass.build(game, w2s, 1, t, light);
+    motes.sync(game, pass.worldLights, w2s, 1, t);
   };
-  return { step, pass, bounce, wall, shadows, walls, balls, game };
+  return { step, pass, bounce, wall, motes, shadows, walls, balls, game };
 }
 
 /** Emitters actually composed this frame. */
@@ -147,6 +150,30 @@ describe("the light budget on a board heavier than any that ships", () => {
     }
   });
 
+  it("keeps the mote field a fixed size, however long the game runs", () => {
+    // The field never grows: ambient motes WRAP rather than respawning, and
+    // residue is a ring that overwrites its oldest. A particle system that
+    // allocates per event is one that gets slower the longer you play, which
+    // is the failure nobody notices until a long run.
+    const { step, motes } = rig();
+    for (let i = 0; i < 30; i++) step(performance.now());
+    const first = motes.lit;
+    for (let i = 0; i < 200; i++) step(performance.now());
+    expect(motes.lit).toBeLessThan(AMBIENT_MOTES + RESIDUE_MOTES);
+    expect(first).toBeGreaterThanOrEqual(0);
+    // Two meshes for the whole field, whatever is in it: one draw each.
+    expect(motes.container.children.length).toBe(2);
+  });
+
+  it("lights only the motes near a pool, never the whole field", () => {
+    // The honest version of "invisible until light finds it": with ten balls
+    // on an 85-wall board, the lit fraction has to stay a small minority or
+    // the specks have become a texture over the board rather than air in it.
+    const { step, motes } = rig();
+    for (let i = 0; i < 40; i++) step(performance.now());
+    expect(motes.lit).toBeLessThan(AMBIENT_MOTES * 0.5);
+  });
+
   it("costs a fraction of the frame it already spent, not a multiple of it", () => {
     // The one timing check, measured OFF then ON in ONE process so it compares
     // like with like on whatever machine is running it. Loose on purpose: it
@@ -159,7 +186,8 @@ describe("the light budget on a board heavier than any that ships", () => {
       return performance.now() - t0;
     };
     setLightLook({
-      bounce: 0, reflected: 0, caustic: 0, flash: 0, tell: 0, ballShadows: 0, reaction: 0,
+      bounce: 0, reflected: 0, caustic: 0, flash: 0, tell: 0, ballShadows: 0,
+      reaction: 0, motes: 0,
     });
     const off = run();
     setLightLook(DEFAULT_LIGHT_LOOK);
