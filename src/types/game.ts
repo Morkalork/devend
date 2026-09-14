@@ -354,6 +354,7 @@ export interface DestructibleState {
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
   obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
   objective?: boolean;         // breakable: smashing it awards more bonus
+  brittle?: boolean;           // breakable: the first debounced contact breaks it, whatever the damage
   dents?: ImpactDent[];        // world-space impact points — rendered as inward dents
   fenceStyle?: boolean;        // breakable: render as a barrier/fence line, not a block
   /**

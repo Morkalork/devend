@@ -20,6 +20,7 @@
  * callbacks stubbed. If the loop's order changes, this must change with it -
  * which is why the order below is commented against its source.
  */
+import { updateLauncherArming } from "@/lib/physics/launcher";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { runtimeDefaults } from "./runtimeDefaults";
 import { DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
@@ -290,6 +291,12 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   tickPhasing(game, game.activePlaySeconds);
 
   for (const ball of game.balls) updateBall(ball, dt, game);
+
+  // A fired barrel latches armed once its last ball has left, and until then
+  // the input layer refuses every cut. The bot honours the same rule (runBot
+  // reads fencesBlockedByLauncher), so the latch has to tick here or the bot
+  // never cuts on a launcher map at all.
+  updateLauncherArming(game);
 
   // Deliveries: a ball that has crossed a box's membrane is taken out of play
   // and counted. After ball movement so a ball that entered this step counts

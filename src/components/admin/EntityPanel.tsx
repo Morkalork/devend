@@ -643,6 +643,21 @@ export function EntityPanel({
           </label>
           )}
 
+          {/* Brittle implies breakable (initGame treats the flag like `chest`),
+              so one box is enough to turn a plain rect into a glass brick. */}
+          {!isMoverEntity(selectedEntity) && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={!!(selectedEntity as { brittle?: boolean }).brittle}
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { brittle: e.target.checked || undefined } as Partial<LevelEntity>)}
+              className="rounded"
+            />
+            <span className="text-sky-200">Brittle</span>
+            <span className="text-muted-foreground">(glass: any touch breaks it)</span>
+          </label>
+          )}
+
           {/* A bumper's own settings, shown only once it IS one. The bank is the
               reason a player keeps a ball in play instead of taking the quick
               win, so it is the number a designer is really tuning, and it was

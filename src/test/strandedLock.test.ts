@@ -48,7 +48,7 @@ import type { LevelConfig, LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { SpaceGrid } from "@/lib/spaceGrid";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { RETIRED } from "./fixtures/maps";
 
 /** A tiny grid, all open, so the predicate can be read rather than inferred. */
 function grid(w = 9, h = 9): SpaceGrid {
@@ -93,7 +93,9 @@ describe("level 17: a ball warped into a chamber that was already taken", () => 
   /** Build the real map, claim the far mouth's ground, and send a ball through. */
   function warpIntoClaimedGround() {
     setRunSeedText("deal-a");
-    const lvl = ENGINE_MAPS.find(l => l.level === 17) as unknown as LevelConfig;
+    // The RETIRED 17 (the portal pipe), by name: the ladder's own 17 is a
+    // different map now, and ENGINE_MAPS lists the ladder first.
+    const lvl = RETIRED.find(l => l.level === 17) as unknown as LevelConfig;
     const d = createInitialGameData(lvl, 17, DEFAULT_MODIFIERS);
     const game = {
       ...d, objectDebris: [], pendingDestroys: [], bouncerFlashes: [], assimilations: new Map(),

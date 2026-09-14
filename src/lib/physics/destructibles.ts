@@ -179,6 +179,13 @@ export function registerObjectHit(
   if (d.destroyed) return;
   if (d.lastHitAt && now - d.lastHitAt < HIT_DEBOUNCE_MS) return;
   d.lastHitAt = now;
+  // A brittle brick goes on the first contact that counts, whatever the force
+  // model says the contact was worth. The debounce above still applies, so
+  // one pass is one hit; it is the DAMAGE floor that a brick ignores, not the
+  // contact rule. Spent as a full budget rather than by flagging `destroyed`
+  // directly so the dent, the chip burst and the destroy queue below all run
+  // exactly as they do for a slab that took its last hit.
+  if (d.brittle) amount = d.maxHits;
   // `amount` is now physics damage (a float), not a whole hit; the object
   // breaks once accumulated damage reaches its integrity budget (maxHits).
   d.hits = Math.min(d.maxHits, d.hits + amount);

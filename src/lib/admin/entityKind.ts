@@ -75,11 +75,12 @@ export const ADD_TYPE_LABEL: Record<AddEntityType, string> = {
  */
 export function entityQualifiers(entity: LevelEntity): string[] {
   const e = entity as LevelEntity & {
-    breakable?: boolean; chest?: boolean; mirror?: boolean; objective?: boolean;
-    oneWay?: string; phasing?: unknown;
+    breakable?: boolean; chest?: boolean; brittle?: boolean; mirror?: boolean;
+    objective?: boolean; oneWay?: string; phasing?: unknown;
   };
   const out: string[] = [];
   if (e.chest) out.push("chest");
+  else if (e.brittle) out.push("brittle");
   else if (e.breakable) out.push("breakable");
   if (e.mirror) out.push("mirror");
   if (e.objective) out.push("objective");

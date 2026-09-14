@@ -44,10 +44,12 @@ import { setRunSeedText } from "@/lib/runRng";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { RETIRED } from "./fixtures/maps";
 
 const level17 = (): LevelConfig => {
-  const l = ENGINE_MAPS.find(x => x.level === 17);
+  // The RETIRED 17: the ladder's own 17 is a different map now (glass bricks,
+  // no portal), and ENGINE_MAPS lists the ladder first.
+  const l = RETIRED.find(x => x.level === 17);
   if (!l) throw new Error("no level 17");
   return l as unknown as LevelConfig;
 };

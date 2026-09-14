@@ -126,6 +126,15 @@ export const PALETTE = {
    */
   breakableEdge: 0xf2c66a,
   /**
+   * Brittle bricks: glass. Cool and pale where every other breakable is warm,
+   * because the thing it has to say is "one touch", and a player who has
+   * learned that gold takes three good hits must never mistake this for gold.
+   * Kept apart from the mirror's saturated cyan (a mirror bends fences; this
+   * just breaks) by being nearly white.
+   */
+  brittle: 0x8fb8c4,
+  brittleEdge: 0xe8f8ff,
+  /**
    * Deformable slabs: the obstacle colour pulled cool and grey at the SAME
    * value, on the breakable's reasoning and for the same reason.
    *

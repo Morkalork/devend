@@ -134,6 +134,17 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   breakable?: boolean;
   /** Hits required to break (default 3). Black ball counts double. */
   hitsToBreak?: number;
+  /**
+   * BRITTLE: any contact breaks it, however light. Implies `breakable`.
+   *
+   * A flag rather than a fractional hit count, so `hitsToBreak` keeps meaning
+   * hits everywhere else. The force model floors a grazing chip well under one
+   * hit, which is right for a slab (a slab should take a real strike) and wrong
+   * for a brick: a wall of these is meant to open wherever the balls happen to
+   * touch it, so the shape of the wall, not just its presence, is the variable.
+   * See MAP_DESIGN_GUIDELINES.md section 11 (Demolition).
+   */
+  brittle?: boolean;
   /** When true, smashing it awards more bonus (an intended target). */
   objective?: boolean;
   /** Render this breakable as a barrier/fence line rather than a solid block. */

@@ -1468,3 +1468,169 @@ levels:
         width: 150
         height: 40
     balls: []
+
+  # 17 "Deprecation" - COMPRESSED brittle, FIGHT the launcher, USE the chest.
+  # The first Demolition map (MAP_DESIGN_GUIDELINES.md section 11, plan and
+  # build record in DEMOLITION_PLAN.md): a wall of glass around a vault, in the
+  # middle of the traffic, and a launcher whose pull is also the hammer.
+  - id: level-17
+    level: 17
+    sizeThreshold: 12
+    expectedCuts: 9
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, grey, blue]
+    pickupChance: 0
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: smashed
+          count: 10
+    beats:
+      - id: crunch
+        atSpaceRemaining: 30
+        speedSpike: 0.15
+        announce: game.beatCrunchTime
+    entities:
+      - id: barrel
+        kind: launcher
+        shape: rect
+        x: 60
+        'y': 90
+        width: 240
+        height: 110
+        facing: right
+        angle: 12
+      - id: vault
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 410
+        width: 80
+        height: 80
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: brick-t1
+        kind: wall
+        shape: rect
+        x: 468
+        'y': 318
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-t2
+        kind: wall
+        shape: rect
+        x: 536
+        'y': 318
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-t3
+        kind: wall
+        shape: rect
+        x: 604
+        'y': 318
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-t4
+        kind: wall
+        shape: rect
+        x: 672
+        'y': 318
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b1
+        kind: wall
+        shape: rect
+        x: 468
+        'y': 560
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b2
+        kind: wall
+        shape: rect
+        x: 536
+        'y': 560
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b3
+        kind: wall
+        shape: rect
+        x: 604
+        'y': 560
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-b4
+        kind: wall
+        shape: rect
+        x: 672
+        'y': 560
+        width: 60
+        height: 22
+        brittle: true
+      - id: brick-l1
+        kind: wall
+        shape: rect
+        x: 468
+        'y': 340
+        width: 22
+        height: 68
+        brittle: true
+      - id: brick-l3
+        kind: wall
+        shape: rect
+        x: 468
+        'y': 492
+        width: 22
+        height: 68
+        brittle: true
+      - id: brick-r1
+        kind: wall
+        shape: rect
+        x: 710
+        'y': 340
+        width: 22
+        height: 68
+        brittle: true
+      - id: brick-r2
+        kind: wall
+        shape: rect
+        x: 710
+        'y': 416
+        width: 22
+        height: 68
+        brittle: true
+      - id: brick-r3
+        kind: wall
+        shape: rect
+        x: 710
+        'y': 492
+        width: 22
+        height: 68
+        brittle: true
+      - id: brick-loose
+        kind: wall
+        shape: rect
+        x: 800
+        'y': 200
+        width: 60
+        height: 22
+        brittle: true
+      - id: corner-shelf
+        kind: wall
+        shape: rect
+        x: 760
+        'y': 770
+        width: 95
+        height: 22
+    balls: []

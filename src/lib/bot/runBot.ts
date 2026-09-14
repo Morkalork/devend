@@ -9,7 +9,7 @@ import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "./headlessGame";
 import { checkInvariants, checkTerminal, type Violation } from "./invariants";
-import { fireLauncher } from "@/lib/physics/launcher";
+import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, seededRandom } from "./policy";
 import type { LevelConfig } from "@/types/level";
@@ -97,7 +97,13 @@ export function runBot(
   for (let f = 0; f < maxFrames; f++) {
     if (ctx.game.levelComplete || ctx.game.gameOver) break;
 
-    if (f % cutEvery === 0 && ctx.game.activeWalls.length === 0) {
+    // No cut while a barrel is still draining, which is the rule the input
+    // layer enforces for a player (useGameInput's fence block). Without it the
+    // bot could seal a ball the shot was still ejecting, and every launcher map
+    // read a `launcherPrematureLock` loss on some seed that no player can
+    // reach - level 11 on seed 7, level 17 on three of eight - and the sweep
+    // was measuring the harness rather than the map.
+    if (f % cutEvery === 0 && ctx.game.activeWalls.length === 0 && !fencesBlockedByLauncher(ctx.game)) {
       // Desperation rises while nothing is happening, so a bot pinned in a
       // nearly-cleared board eventually takes the cut a player would take
       // rather than standing still and calling the map broken.

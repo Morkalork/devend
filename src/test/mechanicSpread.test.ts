@@ -119,8 +119,12 @@ describe("no mechanic is introduced and then dropped", () => {
     // same family read from opposite ends (a wall that is never the same twice
     // against one that is the same forever and forgets nothing). They come off
     // when 17 onward develop them, on the same rhythm as bouncer and launcher.
+    //
+    // BRITTLE joined on 17, where it MEETS as breakable's compressed sibling
+    // (the first Demolition map, MAP_DESIGN_GUIDELINES.md section 11). It
+    // comes off when the archetype's Use beat lands.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["deformable", "gravityWell", "mirror", "mutator", "phasing"]);
+      .toEqual(["brittle", "deformable", "gravityWell", "mirror", "mutator", "phasing"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

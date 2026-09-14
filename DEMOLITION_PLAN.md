@@ -4,10 +4,56 @@ The plan for the first **Demolition** map: level 17, the archetype's Meet beat.
 The archetype itself is section 11 of `MAP_DESIGN_GUIDELINES.md`; this file is
 the map and the build steps, in the shape `FENCE_TYPES_PLAN.md` used.
 
-Status: **PLANNED, unbuilt.** When it ships, mark departures **[CHANGED]** with
-the reason rather than editing the plan to match, and move the per-map
-rationale into section 5 of the guidelines (the builder eats comments inside a
-level body, so `map.yml` is not where it can live).
+Status: **BUILT.** The plan below is kept as written, with the places the
+build departed from it marked **[CHANGED]** and the reason given. The per-map
+rationale now lives in section 5 of the guidelines; this file is the record of
+what the plan got wrong and what the sweep measured.
+
+Five departures, and the third is the one worth reading:
+
+1. **The barrel moved to the top-left corner, angled 12 degrees down.** At
+   mid-left, firing straight through the doorway, the volley shattered four
+   to six bricks in the first second and the shot was the whole map. From the
+   corner the straight shot passes over the wall and comes back to it off the
+   right edge; the wall is still the first thing the roster meets, but a
+   second later, and aiming at it is a choice.
+2. **`smashed: 8` became `smashed: 10`.** Measured with the bot making no
+   cuts at all, eight bricks fall to accidents in two to five seconds at a hard
+   pull and twelve at a soft one; ten in four to ten. Neither number gates
+   anything, so the clause was set to the one that names "most of the wall"
+   and leaves slack five, rather than the one that is met before the player
+   has drawn a fence.
+3. **The wall does not live in a room of its own, and cannot.** Two layouts
+   were built and swept to try to make the smash *aimed*: a floor dividing the
+   board with the wall in the far room and one neck, then two necks with the
+   ring welded to the floor so no straight cut could sever it. Both lost seven
+   of eight to `objectiveBuried`, most above 50% remaining, and the reason is
+   the guidelines' own rule in section 9: the launcher gathers the whole
+   roster in one room, so the other room is ball-free from the first frame and
+   any cut that separates the balls from the neck captures it, wall and all.
+   A partial roster in the barrel would fix it and is ruled out by the
+   launcher's design (the pull is the map because everything is in the cup).
+   So the wall sits in the traffic, where the bot never buries it, and the
+   smash on this map is a **tempo lever**: an aimed hard volley meets it in
+   about a second, accidents take four to ten, and a player who cages the
+   roster with the wall sits in between. The archetype's rules in section 11
+   were rewritten to say so.
+4. **The bot harness was measuring itself.** `runBot` cut during the barrel's
+   drain, which the input layer forbids for a player, so every launcher map
+   carried a `launcherPrematureLock` loss no player can reach (level 11 on
+   one seed, this map on three). `runBot` now honours
+   `fencesBlockedByLauncher` and the headless step ticks
+   `updateLauncherArming`, which the real loop always did. Level 11 reads 8 of
+   8 on the same seeds afterwards.
+5. **The ledger reshuffle was not left to the act's owner.** `ladderLedger`
+   refuses a mechanic scheduled for a level at or below the ladder's end that
+   is on no map, so portal, WIP limit, terminals and rotor could not stay at
+   17. Their rows moved to 18 and the ledger's recorded rule 5 says that 18 is
+   now a queue, not a map.
+
+**Sweep on shipping, 8 seeds, 60s:** 8 wins, 16 to 39 bot cuts against par 9,
+6 to 12% left, no violations. One "ball escaped, recovered" ownership line in
+sixteen runs, against level 16's recorded baseline of one or two per sweep.
 
 ---
 
@@ -15,7 +61,7 @@ level body, so `map.yml` is not where it can live).
 
 *The launcher fires the roster at a wall that breaks on touch, and the win
 wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so
-does the map.*
+does the map.* **[CHANGED]** ten of fifteen; see departure 2.
 
 ## 2. Why level 17, and what it displaces
 
@@ -59,7 +105,8 @@ exactly the wall that was drawn.
 ```
 
 **The launcher.** `x 60, y 395, 240 x 110, facing right, angle 0`, on the left
-edge at mid-height, firing straight along y 450 into the wall's doorway. The
+edge at mid-height, firing straight along y 450 into the wall's doorway.
+**[CHANGED]** `y 90, angle 12`, in the top-left corner; see departure 1. The
 muzzle is at x 300; the runway rule wants 225 clear ahead of it and breakables
 do not count as blocking, so the wall may stand in the path and the next solid
 is the right edge. The barrel is axis-aligned, so the bore rule for turned
@@ -159,7 +206,7 @@ the board cleared without smashing.
 | `maxBalls` | 3 | act II's roster size |
 | `ballTypeIds` | `[red, grey, blue]` | one heavy hammer that decays, two plain |
 | `pickupChance` | 0 | drops are the Use beat; keep the Meet clean |
-| `win.require` | `space 12`, `smashed 8` | the smash never replaces the clear; eight is past what accidents deliver |
+| `win.require` | `space 12`, `smashed 10` **[CHANGED]** from 8 | the smash never replaces the clear; ten names most of the wall. "Past what accidents deliver" was wrong: see departure 2 |
 | `win.alsoWinIf` | none | act II carries no alternatives |
 
 ## 7. Draft YAML
@@ -300,7 +347,10 @@ clause are the later beats and are not in this plan.
   structural guards that read `map.yml` (featureSchedule's gap rule and spine,
   mapHookPlacement's self-overlap, launcherBarrel's runway and reachability,
   winSpec, areasGatingWin, mapTuning) all cover level 17 automatically.
-- **Bot sweep, 8 seeds**, per section 8 of the guidelines. What to read:
+- **Bot sweep, 8 seeds**, per section 8 of the guidelines. What to read
+  (**[CHANGED]** the readings below assumed accidents would fall short of
+  the clause; they do not, see departure 2, so the sweep's job here was the
+  violation check, reachability across deals, and the bury rate):
   - `smashed` reached 8 on most seeds without the bot aiming means accidents
     are enough and the clause is too small; raise it toward 10.
   - `lockedOut` on every seed means accidents are never enough; the bot does

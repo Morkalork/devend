@@ -49,6 +49,11 @@ export const MECHANICS: Mechanic[] = [
   { key: "mover", label: "Mover", headline: true, detect: l => anyEntity(l, e => e.kind === "mover") },
   { key: "breakable", label: "Breakable", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.breakable && !e.chest) },
   { key: "chest", label: "Chest", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.chest) },
+  // Family A's compressed sibling: a breakable that goes on one touch, so a wall
+  // of them opens where the balls happen to hit it. Its own line because a map
+  // can be ABOUT it (MAP_DESIGN_GUIDELINES.md section 11) in a way it cannot
+  // be about a hit count.
+  { key: "brittle", label: "Brittle", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.brittle) },
   { key: "reveals", label: "Reveals", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.reveals) },
   { key: "mirror", label: "Mirror", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.mirror) },
   { key: "phasing", label: "Phasing", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.isPhasing) },

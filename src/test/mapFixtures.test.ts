@@ -50,9 +50,13 @@ describe("the map fixtures", () => {
     // sets would have been wrong in a new way without noticing.
     // level-16 joins on the same terms: the retired level-16 was a different
     // map on the same rung, so the id now resolves to two unrelated boards
-    // depending on the set.
+    // depending on the set. level-17 likewise: retired, a portal pipe under a
+    // WIP limit; on the ladder, a wall of glass bricks. Three tests that read
+    // ENGINE_MAPS.find(l => l.level === 17) picked up the new map the day it
+    // landed and now read RETIRED by name.
     expect(shared).toEqual([
       "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
+      "level-17",
     ]);
   });
 

@@ -188,18 +188,19 @@ Every mechanic gets a status, and the status decides what it costs.
 | colored area (bonus) | D | Meet | 3 | 5 | 9, 14, 17, 21, 22, 24, 26, 28, 29, 31, 33 |
 | mover | C | Meet | 4 | 5 | 7, 9, 13, 22, 23, 29, 33 |
 | breakable | A | Meet | 5 | 6 | 7-9, 11-13, 16, 18, 19, 25, 29, 32 |
-| chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 23, 27, 32 |
+| chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
-| launcher | C | Meet | 11 | 12 | - |
+| launcher | C | Meet | 11 | 12 | 17 |
 | bumper | C | Compressed | 12 | 13 | - |
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
-| rotor | C | Compressed | 17 | - | - |
+| brittle | A | Compressed | 17 | - | - |
+| rotor | C | Compressed | 18 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 17 | 18 | 31 |
-| portal | B | Meet | 17 | - | - |
-| WIP limit | D | Meet | 17 | 18 | 32 |
+| terminals | E | Meet | 18 | 19 | 31 |
+| portal | B | Meet | 18 | - | - |
+| WIP limit | D | Meet | 18 | 19 | 32 |
 | cage | E | Compressed | 18 | 29 | - |
 | thread lock | D | Compressed | 19 | - | - |
 | gravity well | C | Meet | 15 | 21 | 22, 28, 29 |
@@ -238,6 +239,13 @@ someone has to remember to update.
 4. Phasing used to debut on the level-20 BOSS, which is the worst place on the
    ladder to learn anything. That one IS fixed: it meets at 16, with its family
    beside it, and the boss is no longer anyone's first encounter with it.
+
+5. **Level 17 took the slot the plan had given portal, WIP limit, rotor and
+   terminals**, and spent it on brittle bricks instead (the first Demolition
+   map, section 11). Their rows moved to 18 without anyone deciding what 18 is
+   actually about, so 18 is now over-booked on paper: four Meets in one row is
+   not a map, it is a queue. Whoever authors 18 picks one and moves the rest,
+   and the ledger will say so when they do.
 
 Rule 1 replaced an older entry that said level 11 debuts THREE at once
 (launcher, bumper and deformable). That was the pre-rebuild plan, not the map:
@@ -325,7 +333,8 @@ Read as *row mechanic acting on column mechanic*.
 | mirror **bends** the only fence line to a chest | the vault whose approach cannot be drawn straight | 12 |
 | portal **poisons** a pocket | the cheapest-looking seal on the board pays nothing, because a region holding a live portal cannot lock | 14 |
 | launcher **fires into** a mirrored lane | speed is permanent and the lane aims it at you | 16 |
-| bumper **brakes** a launched ball | the map's own answer to its own wager, paid for out of a fixed bank | 17 |
+| bumper **brakes** a launched ball | the map's own answer to its own wager, paid for out of a fixed bank | 12 |
+| launcher **fires into** a brittle wall | the pull is also the hammer: power buys pay, speed and damage at once, and the wall opens where the shot lands | 17 |
 | deformable **taxes** a launched ball | the wall that never breaks is the only thing that takes speed back | 25 |
 | gravity well **aims** into a pocket you cannot reach straight | the well becomes the aiming device, not the hazard | 22 |
 | one-way **drains** into a sealed room | a pocket that fills itself, and then you cannot get out either | 23 |
@@ -411,7 +420,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-16 built, 17-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-17 built, 18-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -599,10 +608,11 @@ now a summary of them rather than a rival to them.
 | 13 | **Meet** mirror | Use bumper | A cut that banks. Where you start a fence stops being where it ends. *(built)* |
 | 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built)* |
 | 15 | **Meet** gravity well | Use live outer walls | Two patches that pull, on a board where nothing else does. 14 is the pull you cannot escape; this is the pull you can walk around, and choose not to. *(built)* |
-| 16 | **Meet** phasing, **Compressed** deformable | Use bumper | Three objects that disagree about how fast the balls are: two that hand speed out, one that drinks it and keeps the marks, and two pillars that are not always there. *(built, ladder ends here)* |
-| 17 | **Meet** portal + WIP limit | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
-| 18 | **Compressed** cage | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
-| 19 | **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
+| 16 | **Meet** phasing, **Compressed** deformable | Use bumper | Three objects that disagree about how fast the balls are: two that hand speed out, one that drinks it and keeps the marks, and two pillars that are not always there. *(built)* |
+| 17 | **Compressed** brittle | Fight launcher, Use chest | The launcher fires the roster at a wall that breaks on touch, and the win wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so does the map. *(built, ladder ends here)* |
+| 18 | **Meet** portal + WIP limit *(was 17; see rule 5 under the ledger)* | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
+| 19 | **Compressed** cage *(was 18; act II now has one slot fewer, so cage or thread lock has to wait)* | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
+| 19 | *(skill check brief, displaced)* **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
 
 #### 15 "Standup" - Meet live outer walls (symmetric), Use pinned mutator  *(built)*
@@ -731,6 +741,72 @@ shoves everything near it away in the same instant, so the window that looks
 like an invitation mostly is not one. Stated as a hypothesis, because the
 measurement establishes the ordering and not the reason.
 
+#### 17 "Deprecation" - Compressed brittle, Fight launcher, Use chest  *(built)*
+
+**The launcher fires the roster at a wall that breaks on touch, and the win
+wants ten of its fifteen bricks gone.** The first map of the Demolition
+archetype (section 11); the plan it was built from, with the geometry
+arithmetic and the five places the build departed from it, is
+`DEMOLITION_PLAN.md`.
+
+**What is new is the brick, not the smash.** Every act II map already asks
+`space + smashed`, so a smash clause teaches nothing here. What the map adds
+is a breakable that goes on one touch, fifteen of them in a square ring with
+one side left open, so the wall opens *where the balls happen to hit it* and
+the chamber it forms is a different chamber every ten seconds. Brittle is
+family A's compressed sibling (breakable met at 5, fought at 6), which is what
+leaves room for the launcher's third beat on the same map.
+
+**The launcher's wager gains a third term.** On 11 the pull bought pay and
+speed; on 12 the board bought the speed back. Here speed is also *hammer
+force* (the force model: mass x closing speed to the 1.6), so a hard pull is
+more pay, a faster map, and a wall that comes down sooner, and a soft pull is
+a calm map with a wall that lingers. The roster is pinned to `[red, grey,
+blue]`: grey is heavy and winds down, so it is the obvious hammer and a hammer
+that gets worse, and ranking the three is the map's second decision.
+
+**The clause names most of the wall, and the wall is the slack.** `smashed:
+10` against fifteen breakables (fourteen bricks and the chest) is slack five,
+so no single cut is fatal. It is a **tempo lever, not a gate**, and that was
+measured rather than assumed: with the bot making no cuts at all, accidents
+alone break ten bricks in four to ten seconds, because a one-touch wall in the
+middle of a three-ball board is hit constantly. An aimed hard volley does it in
+about one. So the smash is never the thing that stops a player; it is the
+thing a hard aimed shot buys early, and a soft or unaimed one pays for in
+clock. Two layouts that put the wall in a room of its own to make the smash
+genuinely aimed were built and swept, and both lost seven of eight to
+`objectiveBuried`: the launcher gathers the roster in the other room, and any
+cut separating the balls from the neck captures the wall with the room
+(section 9's rule, arriving a third time). The wall lives in the traffic.
+
+The reach guard refuses any pocket around an unbroken brick while smashes are
+outstanding, so the map's lockable ground - the superior pocket under the
+corner shelf - sits away from the wall, and the order of play is smash first,
+seal second.
+
+**The doorway is not decoration.** The left column is missing its middle
+brick, an 84-unit neck. A ring with no legal way in encloses the moat, and
+section 7.6 says an enclosed space is captured at load; the doorway is also
+the map's second approach, so the chest can be reached without breaking
+anything.
+
+**Greed hook: the chest**, three real hits inside a wall that is also the
+requirement. The cost is the ball that opens it: the fast one you fired hard
+is the one that gets there, and its moat cannot lock until the clause is met.
+**The Turn is the `crunch` spike at 30%**: faster balls hit harder, so the
+wall dissolves faster late, and the column you caged the roster in is a
+different room by the time you go to seal it.
+
+**Fail states, both visible.** Lock all three with fewer than ten smashed
+and it is `lockedOut`, named on the overlay with the top-bar chip already
+amber at one ball left. Wall off enough bricks that fewer than eight remain
+reachable and it is `objectiveBuried` at that instant.
+
+**Bot sweep, 8 seeds, 60s: 8 wins**, 16 to 39 cuts against par 9, 6 to 12%
+left, no violations, and no `objectiveBuried` at all once the wall was in the
+traffic. The same sweep also found the harness cutting during the barrel's
+drain, which players cannot do; fixed in `runBot`, and level 11's recorded
+`launcherPrematureLock` loss was that and not the map.
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 
@@ -1543,8 +1619,9 @@ substitute for it.
 **Premise in one sentence:** *the balls are your hammer as well as your enemy,
 and the map is about what you break, not only what you trap.*
 
-**Status:** designed, unbuilt. The first map is planned as level 17; see
-`DEMOLITION_PLAN.md`.
+**Status:** the Meet beat is built as level 17 "Deprecation" (section 5; plan
+and build record in `DEMOLITION_PLAN.md`). Drops, ball buffs and the targeted
+clause are unbuilt.
 
 #### What it adds to the ladder
 
@@ -1661,11 +1738,20 @@ topology lever (two approaches) for free.
   live elsewhere, and the order of play is smash first, seal second. A map
   that wants a lock *inside* the wall before the clause is met is fighting the
   engine and will read as a bug.
+- **A brittle wall in traffic is gone in seconds, and out of traffic it is
+  buried in one cut.** Both measured on level 17. One-touch bricks on a
+  three-ball board fall to accidents at about one a second, so a `smashed`
+  count on them is a tempo lever (an aimed shot buys it early) and never a
+  gate; and a wall placed in a room the balls are not in is captured by the
+  first cut that separates them from its neck (section 9). So a Meet beat
+  keeps the wall in the traffic and sizes its clause to name most of the
+  wall. The map that wants the smash to be genuinely *aimed* needs bricks a
+  ball cannot reach by accident and a resident ball beside them, which is the
+  targeted-clause Fight beat's problem, not the Meet's.
 - **Steerable, never a waiting game.** Scope creep punishes waiting, and the
-  bot cannot aim at all, so a sweep will tell you whether accidents alone can
-  meet the clause. If they can, the clause is too small; if a human has no way
-  to do better than the bot, the map has no aiming tool. Every Demolition map
-  names its aiming tool in its premise.
+  bot cannot aim at all, so a sweep will tell you what accidents deliver.
+  Every Demolition map names its aiming tool in its premise, and the sweep
+  says how much the tool is worth in seconds.
 - **Do not fully enclose anything with bricks.** Section 7.6: a space only
   reachable through a breakable is captured at load. A brick shell needs a
   legal neck (60 or more) somewhere in it, which is also its second approach.
@@ -1682,7 +1768,7 @@ topology lever (two approaches) for free.
 
 | beat | premise | new on the board | win |
 |---|---|---|---|
-| **Meet** (17) | A wall of bricks between the launcher and the board. Fire hard and the wall goes fast and so does the map. | brittle (Compressed) | `space` + `smashed: 8` of 15 |
+| **Meet** (17) | A wall of bricks around a vault, in the traffic. Fire hard and the wall goes fast and so does the map. | brittle (Compressed) | `space` + `smashed: 10` of 15 |
 | **Use** | Bricks that drop tokens. The greed hook is farming the wall versus sealing early, and a `wrecking` token sits behind it. | drops, the first ball buff | `space` + `smashed: N` |
 | **Fight** | Two cores behind two shells, a mover in the lane you aim through, under a WIP limit. Every fence is either aim or seal. | `objectives` clause | `space` + `objectives: 1`, `fenceBudget` |
 | **Break** | The inversion: the core is *yours*. The shell is its armour, the balls eat through it, and you must lock them before they reach it. A latch on `smashes` closes the exit when they get close. | nothing | `space` + `locks`; the core breaking fails the map |

@@ -252,6 +252,7 @@ Entities are obstacles that carve into the playable area.
 | `mirror` | boolean | | If `true`, growing fences reflect off this wall |
 | `breakable` | boolean | | If `true`, balls smash it (any ball; black ball = half the hits). Smashing awards bonus overtime and topples anything stacked on it. You can't fence against a breakable (the cut duds). |
 | `hitsToBreak` | number | | Hits required to break (default `3`). |
+| `brittle` | boolean | | Glass: any contact breaks it, however light, ignoring the force model's chip floor. Implies `breakable`. A wall of these opens wherever the balls touch it (the Demolition archetype, MAP_DESIGN_GUIDELINES.md section 11). |
 | `objective` | boolean | | Marks an intended breakable target (worth more bonus). |
 | `fence` | boolean | | Render the breakable as a barrier/fence line instead of a solid block. |
 | `reveals` | object | | `{ x, y, width, height }` — a sealed (locked, uncuttable) area this breakable gates; re-opened as capturable space when it breaks. |

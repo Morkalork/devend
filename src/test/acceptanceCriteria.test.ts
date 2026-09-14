@@ -27,7 +27,7 @@ import yaml from "js-yaml";
 import type { TFunction } from "i18next";
 import { winConditions, renderCriteria, CRITERION_GROUPS } from "@/lib/winConditions";
 import type { LevelConfig } from "@/types/level";
-import { LADDER, ENGINE_MAPS } from "./fixtures/maps";
+import { LADDER, ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 /** Echoes the key, so a test asserts which STRING was chosen, not its English. */
 const t = ((key: string, params?: Record<string, unknown>) =>
@@ -211,7 +211,7 @@ describe("a real either/or is called one", () => {
     // is whether `winConditions` RECOGNISES a budget-plus-pocket map, which is
     // about the function and not about the ladder. Act I poses no trade (see
     // the next test), so on the ladder alone there would be nothing to ask.
-    const budgeted = ENGINE_MAPS.find(l => l.level === 17)!;
+    const budgeted = RETIRED.find(l => l.level === 17)!;
     expect(groupsOf(budgeted, 17).trade?.join(" "), "a budgeted map states no trade")
       .toContain("winConditions.tradeBudgetBonus");
   });
@@ -249,7 +249,7 @@ describe("the rendered block", () => {
   it("prints a heading and a bullet per line, groups blank-line separated", () => {
     // The retired budget map again, for the same reason as above: this is a
     // test of the RENDERER's grouping, and it needs a map with two groups.
-    const budgeted = ENGINE_MAPS.find(l => l.level === 17)!;
+    const budgeted = RETIRED.find(l => l.level === 17)!;
     const body = renderCriteria(t, winConditions(t, budgeted, 17, NO_RUN_RULES));
     expect(body).toContain("winConditions.group.optional\n  - ");
     expect(body).toContain("winConditions.group.trade\n  - ");

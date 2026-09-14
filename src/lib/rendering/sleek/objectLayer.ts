@@ -357,6 +357,9 @@ export class ObjectLayer {
     // broken rim below. This just stops a breakable being pixel-identical to
     // the wall beside it, which is what it was.
     const base = d.chest ? PALETTE.amber
+      // Glass: a brittle brick is the one breakable that is not gold, because
+      // gold has come to mean "three good hits" and this one means "one touch".
+      : d.brittle ? PALETTE.brittle
       // The objective breakable keeps a step of separation from the ordinary
       // one now that both are gold: a little more saturated, same luma.
       : d.objective ? 0xa06610
@@ -367,10 +370,18 @@ export class ObjectLayer {
     // Chest first: it is loot, and its pale near-white amber keeps it apart
     // from the slabs even though the whole family is gold now. Everything else
     // here is a breakable, so it takes the breakable rim rather than the wall's.
-    const rimColor = d.chest ? 0xffe9b0 : PALETTE.breakableEdge;
+    const rimColor = d.chest ? 0xffe9b0 : d.brittle ? PALETTE.brittleEdge : PALETTE.breakableEdge;
     const rimStrength = 0.95 * (1 - damage * 0.7);
     if (d.chest) {
       this.rimEdges(pts, cx, cy, light, rimColor, rimStrength);
+    } else if (d.brittle) {
+      // Glass keeps a CONTINUOUS rim: the broken dashes below say "this comes
+      // apart in pieces", and a brick does not, it goes all at once. What says
+      // "fragile" instead is the material - the pale body, the hard bright
+      // edge, and a glint along its long side - so the two breakables are told
+      // apart by what they are made of, not only by how they are outlined.
+      this.rimEdges(pts, cx, cy, light, rimColor, rimStrength);
+      this.drawGlint(pts, scale);
     } else {
       // A BROKEN rim, and this is the whole point of the change. A solid slab
       // is outlined continuously; this one is outlined in pieces, so the
@@ -391,6 +402,31 @@ export class ObjectLayer {
     // so it is identical every frame; a per-frame random would make the cracks
     // crawl and read as noise.
     this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
+  }
+
+  /**
+   * The glint on a glass brick: one short bright hairline a quarter of the way
+   * in from the top-left, running along the brick's long side for the middle
+   * half of its length. Drawn from the bounds rather than the contour so a
+   * dented brick (there are none: brittle breaks on the first hit, but the
+   * prep path is shared) still reads the same.
+   */
+  private drawGlint(pts: Pt[], scale: number): void {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const w = maxX - minX, h = maxY - minY;
+    if (w <= 0 || h <= 0) return;
+    if (w >= h) {
+      const y = minY + h * 0.28;
+      this.rims.moveTo(minX + w * 0.25, y).lineTo(minX + w * 0.75, y);
+    } else {
+      const x = minX + w * 0.28;
+      this.rims.moveTo(x, minY + h * 0.25).lineTo(x, minY + h * 0.75);
+    }
+    this.rims.stroke({ width: Math.max(hairline(), scale * 0.8), color: 0xffffff, alpha: 0.55 });
   }
 
   /**

@@ -419,8 +419,11 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       // Breakables only, matching the clause: a map whose only destructibles
       // are mirrors and movers offers nothing to smash, and a win asking for
       // one would be unwinnable with no hint on the board as to why.
+      // The same three flags initGame builds a breakable from: `chest` and
+      // `brittle` each imply it, and a wall of glass bricks written without
+      // `breakable: true` used to count as zero here and flag the map.
       const breakables = (level.entities ?? [])
-        .filter(e => e.kind === "wall" && e.breakable).length;
+        .filter(e => e.kind === "wall" && (e.breakable || e.chest || e.brittle)).length;
       if (c.count > breakables) {
         problems.push(
           `Asks for ${c.count} smashed, but the map has ${breakables} breakable ${breakables === 1 ? "obstacle" : "obstacles"}.`);

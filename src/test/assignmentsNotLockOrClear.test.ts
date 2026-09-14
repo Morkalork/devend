@@ -202,14 +202,12 @@ describe("a mission bound to a map feature needs an eligibility rule", () => {
     // The thin half of the ladder: 21-25, 26-30 and 31-35 hold 1, 1 and 2
     // breakables, which is under the two-tier minimum, so all three drop it.
     //
-    // 16 is on the list for a different reason and a temporary one: its block
-    // is 16-20 and only 16 of those exists, so the block holds one map with no
-    // breakable on it. That is the ladder being half-built, not a thin block,
-    // and 16 comes off the moment 17 lands with something to smash. Pinned
-    // rather than special-cased so the day it moves is a decision somebody
-    // makes rather than a number that quietly changed.
-    expect(verdicts.filter(([, ok]) => !ok).map(([from]) => from)).toEqual([16, 21, 26, 31]);
-    expect(verdicts.filter(([, ok]) => ok).map(([from]) => from)).toEqual([6, 11]);
+    // 16 WAS on this list while its block (16-20) held only map 16, which has
+    // nothing to smash. It came off when 17 landed with fifteen breakables on
+    // it, exactly as the pin said it would; that is the ladder filling in, not
+    // a thin block getting thicker.
+    expect(verdicts.filter(([, ok]) => !ok).map(([from]) => from)).toEqual([21, 26, 31]);
+    expect(verdicts.filter(([, ok]) => ok).map(([from]) => from)).toEqual([6, 11, 16]);
 
     // Wherever it IS offered, its top tier fits inside what the block holds.
     for (const [from, ok] of verdicts) {
