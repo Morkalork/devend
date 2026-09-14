@@ -1524,3 +1524,204 @@ A map is not done until:
 - [ ] The **bot sweep** is clean and the numbers read the way section 8 expects.
 - [ ] If it replaces a map with a pinned test, that test is **rewritten**, not
       deleted.
+
+---
+
+## 11. Archetypes
+
+A mechanic is a thing on the board. An **archetype** is what a map is *for*:
+how it states its win, which grammar it leans on, the decision it exists to
+force, and a four-beat plan for developing it. Section 4 finds premises one
+cell at a time; an archetype is a row of cells that share a verb, so a map
+built to it inherits its rules instead of rediscovering them.
+
+An archetype map still passes the section 10 checklist. Nothing here is a
+substitute for it.
+
+### Demolition (the "Arkanoid" maps)
+
+**Premise in one sentence:** *the balls are your hammer as well as your enemy,
+and the map is about what you break, not only what you trap.*
+
+**Status:** designed, unbuilt. The first map is planned as level 17; see
+`DEMOLITION_PLAN.md`.
+
+#### What it adds to the ladder
+
+Every act II map already asks `space + smashed`, so "break something to win"
+is not new. What is new is the *role* of the smash. On 11, 12 and 13 the slabs
+are furniture a ball happens to hit, the clause is `smashed: 1` against three,
+and a `deadline` beat breaks one at 21% so a player who never engages is
+rescued. The smash is a tax on the lock rush, and the maps are about their
+launcher, their bumpers and their mirror.
+
+Demolition makes the smash the subject, and it changes three things:
+
+1. **The wall is many small objects, not one slab.** A breakable that goes in
+   one touch, in a run of them. The wall opens *where the balls happen to hit
+   it*, so the chamber it forms is a different chamber every ten seconds and
+   the read a player took at second five has expired by second thirty. That is
+   family A's grammar ("this wall will not be the same wall in a minute")
+   pushed to where the wall's shape, not just its presence, is the variable.
+2. **Hitting things is aimed, not incidental.** The clause asks for enough
+   smashes that waiting for accidents is a losing plan, so the player has to
+   put balls into the wall on purpose: a launcher's power and aim, a kicker
+   lane, a fence drawn as a ricochet surface, a magnet. This game's one control
+   is the fence; Demolition is the archetype where a fence is as often a bank
+   shot as a wall.
+3. **Force is a quantity the player trades in.** The force model already makes
+   damage mass x closing speed^1.6, so a fast heavy ball is a better hammer
+   and a worse neighbour. Demolition makes that visible and buildable: a
+   launcher's pull, a bumper's kick, a ball buff, a slow build, all move the
+   same number, and the number is legible because bricks are what it acts on.
+
+The hammer decision (which ball do I keep loose, and for how long) is already
+on every smash map through the `lockedOut` rule. Demolition is where it stops
+being a footnote and becomes the premise.
+
+#### What already exists (reuse, do not duplicate)
+
+| need | already there | where |
+|---|---|---|
+| a thing balls break | `breakable` + `hitsToBreak` | `types/level.ts`, `physics/destructibles.ts` |
+| heavier and faster breaks it sooner | the force model, capped per hit | `ballImpactDamage` |
+| the win asks for smashes | `smashed: N` (counts breakables only) | `types/winSpec.ts` |
+| a marked target worth more | `objective: true`, `game.objectivesBroken` | `destructibles.ts` |
+| an instant reward on a smash | a `chest` (one ability charge) | `chests.ts`, `abilities.yml` |
+| a reward you must earn *after* it appears | a pickup token: claimed by locking a ball in with it, wasted if captured empty | `pickups.ts` |
+| lock every ball with the smash unmet | `lockedOut` fails the map | `mapFailure.ts` |
+| wall off a needed slab | `objectiveBuried` fails it; a pocket sealed WITH a ball beside a needed slab is refused as a lock | `physics/smashReach.ts` |
+| a player-side hammer | the drill fence: anchors on a breakable and chews through | `physics/drill.ts`, `fences.yml` |
+| a wall that opens on smashes | `latchAfter` with `latchOn: smashes` | `types/level.ts` |
+| the board points at what the win needs | `winHighlight.ts` rings required slabs | `winHighlight.ts` |
+| smashing pays | break bonus, the demolition multiplier, `breakMultiplierBonus`, `destructibleHitsReduction` | `scoreAxes.ts`, `useActiveModifiers.ts` |
+
+#### What is new
+
+Four additions, in the order they should be built. Only the first is needed
+for the Meet beat.
+
+**1. Brittle bricks.** `brittle: true` on a breakable wall: any contact
+breaks it. Today a graze deals a fraction of a hit (the model floors chip
+damage at 0.15), so `hitsToBreak: 1` still wants a solid strike, which is
+right for a slab and wrong for a brick. A flag rather than a fractional hit
+count, so `hitsToBreak` keeps meaning hits everywhere else. Family A,
+**Compressed** (breakable met at 5), drawn as a glass tile so "one touch" and
+"three good hits" never read the same. Ledger row and `mechanicSpread`
+detector land with the flag.
+
+**2. Drops.** `drops: { chance, effects? }` on a breakable: the smash rolls
+the chance (through `getRunRng`, so Daily runs agree) and on a hit spawns a
+**pickup token** at the brick's footprint, from the named subset or the global
+pool. It then obeys every existing token rule. This is the whole reason not to
+invent a third claim mechanism: "instant on the smash" (chest) and "lead a
+ball to it and seal them in together" (pickup) are both taught by level 9, and
+a drop that had to be tapped, caught, or that fell to a floor the player cannot
+stand on would be a new rule on top of a new archetype. Bricks that pay on the
+smash itself are chests, and exist.
+
+**3. Ball buffs as pickup effects.** New `PickupEffect` kinds that put a
+timed state on one ball, the way `frozenUntil` does, applied to the ball that
+was locked in with the token. The player-side hammer is the drill fence; these
+are the ball-side one, and the two are the archetype's "two builds shortcut the
+map in different ways". Every buff is double-edged, because here a better
+hammer is a worse neighbour:
+
+| effect | while it lasts | the cost |
+|---|---|---|
+| `wrecking` | density x3: bricks and slabs go in one hit | it also fractures your fences, like the black ball |
+| `piercing` | passes through breakables, breaking them | the wall stops being a bounce surface for your reads |
+| `ballast` | slower and bigger | easier to lock, useless as a hammer |
+
+Recolour the ball's outline and reuse the compass ball's countdown ring, which
+already means "something about this ball changes when the ring runs out". Each
+is enhanced by `pickupPayoutLevel` like every token, so Benefits Package stays
+one lane; each is forceable from the Playground, per CLAUDE.md.
+
+**4. A targeted smash clause.** `{ kind: "objectives", count }`, reading
+`game.objectivesBroken`, so a map can ask for the *marked* target rather than
+any N breakables. It needs the reach guard taught to protect objectives only
+when that clause is the outstanding one. Not for the Meet beat, and never with
+one object: the slack rule applies to it exactly as to `smashed`, so "smash the
+core" is authored as **two cores, `objectives: 1`**, which is also the
+topology lever (two approaches) for free.
+
+#### Rules
+
+- **It never replaces the clear.** `space` stays in every Demolition win, per
+  section 6.4. A smash is a second thing to do while clearing.
+- **Slack, and lots of it.** A wall of fifteen bricks against `smashed: 8`
+  has slack seven. The wall is the map's slack, which is what lets the clause
+  be large enough to force aiming without ever being load-bearing.
+- **Know what the reach guard will refuse.** While smashes are outstanding, a
+  pocket that holds the strike cells of *any* unbroken breakable is refused as
+  a lock (`regionHoldsNeededSlab` is per slab, deliberately). A brick wall in
+  the middle of the board therefore makes the middle unlockable until the
+  clause is met. Design with it: the wall is the hammer's ground, the pockets
+  live elsewhere, and the order of play is smash first, seal second. A map
+  that wants a lock *inside* the wall before the clause is met is fighting the
+  engine and will read as a bug.
+- **Steerable, never a waiting game.** Scope creep punishes waiting, and the
+  bot cannot aim at all, so a sweep will tell you whether accidents alone can
+  meet the clause. If they can, the clause is too small; if a human has no way
+  to do better than the bot, the map has no aiming tool. Every Demolition map
+  names its aiming tool in its premise.
+- **Do not fully enclose anything with bricks.** Section 7.6: a space only
+  reachable through a breakable is captured at load. A brick shell needs a
+  legal neck (60 or more) somewhere in it, which is also its second approach.
+- **Must and may never read the same.** Required bricks ring through
+  `winHighlight` like any slab. A drop brick carries a small mark. A chest has
+  its own look. Brittle looks like glass, not like a dented slab.
+- **A buff that only helps is a lottery ticket.** Every ball buff costs
+  something the player can see.
+- **One sentence.** "The one where the launcher fires the roster at a wall
+  that breaks on touch." "The one where the bricks drop tokens." "The one
+  where the core is *yours* and the balls are eating through to it."
+
+#### The four beats
+
+| beat | premise | new on the board | win |
+|---|---|---|---|
+| **Meet** (17) | A wall of bricks between the launcher and the board. Fire hard and the wall goes fast and so does the map. | brittle (Compressed) | `space` + `smashed: 8` of 15 |
+| **Use** | Bricks that drop tokens. The greed hook is farming the wall versus sealing early, and a `wrecking` token sits behind it. | drops, the first ball buff | `space` + `smashed: N` |
+| **Fight** | Two cores behind two shells, a mover in the lane you aim through, under a WIP limit. Every fence is either aim or seal. | `objectives` clause | `space` + `objectives: 1`, `fenceBudget` |
+| **Break** | The inversion: the core is *yours*. The shell is its armour, the balls eat through it, and you must lock them before they reach it. A latch on `smashes` closes the exit when they get close. | nothing | `space` + `locks`; the core breaking fails the map |
+
+Only the Meet is solo. Each later beat crosses an older mechanic, which is the
+schedule's point. The Fight beat is the first to need the targeted clause; the
+Break beat needs a "protect" fail state and is the furthest out.
+
+#### Interactions
+
+- **Launcher.** The natural aiming tool, and its wager (power buys pay and
+  speed) is also a wager on hammer force. A launcher gathers the roster, so
+  the wall goes where it fires (section 9's rule: put the objective where the
+  traffic is).
+- **Bumpers.** A kicker lane (`bounceBearing`) is the other aiming tool, and
+  a charged bumper is a brake: the map's own answer to a hammer that got too
+  fast.
+- **The drill fence.** A certificate-sourced hammer that ignores the whole
+  question. Fine: it is the build affinity the contract asks for, and a drill
+  still spends time in the hole it opens.
+- **Descope.** Already refuses objectives and chests. Bricks stay descopable;
+  they are the cheap layer.
+- **Rotation.** Bricks are rects and turn with the map; a launcher turns with
+  it too. Nothing in the Meet beat depends on gravity.
+- **Scoring.** Every smash compounds the demolition multiplier. A large
+  `smashed` clause pays a lot of break bonus by construction; price the base
+  accordingly rather than letting a brick map out-earn its neighbours.
+- **Slots.** From the Use beat on, a slot can decide which brick drops or
+  where the door in the shell sits. Never the core: its position is the map.
+
+#### Anti-patterns, on top of section 9
+
+- **Brick confetti.** Bricks scattered for texture. A brick is a wall, a shell
+  or a drop, or it is noise.
+- **A wall the balls cannot reach on purpose.** No aiming tool means the
+  clause is met by accident or not at all, and the clock decides which.
+- **A pocket inside the wall.** Refused until the clause is met; see the reach
+  guard above.
+- **The smash as the whole win.** Without `space` it is a different game that
+  shares a renderer.
+- **Locking early as the safe play.** If keeping a hammer loose is never worth
+  it, the clause is too small.
