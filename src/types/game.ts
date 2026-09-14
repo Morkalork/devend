@@ -409,6 +409,38 @@ export interface ObjectDebrisState {
   particles: ObjectDebrisParticle[];
 }
 
+/** One tile of a dematerializing shell section: a small rect that flies off. */
+export interface ShellTile {
+  x: number; y: number;        // world-space centre at release
+  w: number; h: number;        // world units
+  vx: number; vy: number;      // world units / sec at release
+  rotation: number;            // radians at release
+  rotSpeed: number;            // rad / sec
+}
+
+/**
+ * One section of a shell that dematerializes on its own beat. Until its delay
+ * has elapsed the section is still drawn whole, as the slab it was; after it,
+ * the tiles fly.
+ */
+export interface ShellSection {
+  vertices: Vector2[];         // world-space polygon of the intact section
+  delay: number;               // ms after startTime before this section lets go
+  tiles: ShellTile[];
+}
+
+/**
+ * A launcher shell coming apart section by section once its last ball has
+ * left (src/lib/physics/launcherShell.ts). The model has already removed the
+ * shell when this is created; this is only the picture of it going.
+ */
+export interface ShellShatterState {
+  startTime: number;
+  /** How long each section's tiles fly, from that section's own release. */
+  flightMs: number;
+  sections: ShellSection[];
+}
+
 /**
  * A loot gem flung from a smashed treasure chest (issue #38). Falls under
  * gravity and bounces off the board floor like a rubber ball (see chests.ts).

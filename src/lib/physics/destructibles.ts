@@ -337,7 +337,6 @@ function makeFalling(poly: Polygon, color: string, now: number): FallingObject {
 
 // ── Space / region rebuild ──────────────────────────────────────────────────
 
-/** Indices of grid cells whose centre lies inside `poly` and are REMOVED. */
 /**
  * Is this cell REMOVED by something other than the obstacle coming down?
  *
@@ -420,7 +419,8 @@ export function floodSealedShadow(
   return out;
 }
 
-function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
+/** Indices of grid cells REMOVED by `poly`: under it, or in its edge-seal ring. */
+export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   const grid = game.spaceGrid;
   if (!grid) return [];
   // createSpaceGrid seals each obstacle EDGE as a band of REMOVED cells reaching
@@ -691,6 +691,34 @@ function grantChestReward(
   onChestReward?.(rewardId);
 }
 
+/**
+ * Make reopened ground playable: everything that has to follow `reopenCells`
+ * before the next frame, or the cells come back as a dark island.
+ *
+ * Reopened space a ball can actually reach becomes capturable again (the point
+ * of breaking things). But a footprint reopened INSIDE captured territory -
+ * e.g. a box toppled by the stack-chain when its supporter was smashed on the
+ * other side of a sealed fence - is unreachable by every ball, so it would
+ * linger forever as an uncapturable dark island in the captured fill AND
+ * permanently inflate the remaining-%. Recapture every reopened cell no ball
+ * can physically reach, right now.
+ *
+ * Shared by the destroy pass and the launcher shell coming down: the second
+ * caller is exactly why this is a function and not the tail of one loop.
+ */
+export function settleReopenedGround(
+  game: CanvasGameState, callbacks: Pick<DestroyCallbacks, "setRemainingPercent">, opened: number,
+): void {
+  if (opened <= 0 || !game.spaceGrid) {
+    return;
+  }
+  captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
+  rebuildRegionsKeepAll(game);
+  // A destroy-recapture can swallow a token's cell with no lock involved.
+  wasteCapturedPickups(game);
+  callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
+}
+
 // ── Processing queued destructions ──────────────────────────────────────────
 
 export function processDestroysFn(
@@ -756,20 +784,7 @@ export function processDestroysFn(
   // the model while the last render of it stayed on screen.
   callbacks.repaintRegionCanvas();
 
-  if (opened > 0 && game.spaceGrid) {
-    // Reopened space a ball can actually reach becomes capturable again (the
-    // point of breaking things). But a footprint reopened INSIDE captured
-    // territory - e.g. a box toppled by the stack-chain when its supporter was
-    // smashed on the other side of a sealed fence - is unreachable by every
-    // ball, so it would linger forever as an uncapturable dark island in the
-    // captured fill AND permanently inflate the remaining-%. Recapture every
-    // reopened cell no ball can physically reach, right now.
-    captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
-    rebuildRegionsKeepAll(game);
-    // A destroy-recapture can swallow a token's cell with no lock involved.
-    wasteCapturedPickups(game);
-    callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
-  }
+  settleReopenedGround(game, callbacks, opened);
 
   // A drill that was eating one of these carries on through the gap it just
   // made (FENCE_TYPES_PLAN.md). LAST, and after the region rebuild above, for

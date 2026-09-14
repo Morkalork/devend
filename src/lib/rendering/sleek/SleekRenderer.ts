@@ -302,7 +302,7 @@ export class SleekRenderer {
     this.board.sync(game, monitor, w2s, this.staticDirty);
     this.areas.sync(game, light, w2s, scale, tilt, rctx.accentColor);
     this.props.sync(game, light, this.shadowPlane, w2s, scale, now);
-    this.entities.sync(game, light, this.shadowPlane, w2s, scale);
+    this.entities.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.objects.sync(game, light, this.shadowPlane, w2s, scale);
     this.walls.sync(game, light, this.shadowPlane, w2s, scale);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);

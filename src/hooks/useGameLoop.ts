@@ -48,6 +48,11 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /**
+   * Called every frame after the barrels are armed: tears down the shell of
+   * any barrel that armed this frame (physics/launcherShell.ts).
+   */
+  settleLaunchers?: () => void;
   /** Fired when a "Deploy Charge" detonates this frame, to flash the payoff banner. */
   onChargeBlown?: (announce?: string) => void;
   /**
@@ -489,6 +494,10 @@ export function createGameLoop(
       // before the win checks downstream, so the first frame a fence could be
       // drawn is the frame the interior is genuinely clear.
       updateLauncherArming(game);
+      // The frame a barrel arms, its shell dematerializes. Right after arming,
+      // so the ground the barrel stood on is playable the same frame a fence
+      // first becomes legal.
+      callbacks.settleLaunchers?.();
 
       // Deliveries: a ball that has crossed a box's membrane is taken out of
       // play and counted. Runs after ball movement so a ball that arrived this

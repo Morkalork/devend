@@ -117,6 +117,7 @@ export class EntityLayer {
     shadows: Graphics,
     w2s: W2S,
     scale: number,
+    now: number,
   ): void {
     this.shadows = shadows;
     this.rails.clear();
@@ -159,6 +160,19 @@ export class EntityLayer {
       // it: a player who reads it as a pillar will aim to bounce off it.
       const portal = game.portals?.get(poly as Polygon);
       if (portal) this.drawPortal(portal, w2s, scale);
+    }
+
+    // A launcher shell mid-dematerialization (physics/launcherShell.ts). The
+    // model has already dropped the slabs; each section keeps standing in for
+    // its slab, drawn exactly as one, until its own beat, and then the fx layer
+    // has its tiles. Drawn here rather than in fxLayer so the section and the
+    // slab it replaces are pixel-identical up to the moment it lets go.
+    for (const shatter of game.shellShatters ?? []) {
+      for (const section of shatter.sections) {
+        if (now < shatter.startTime + section.delay) {
+          this.drawSlab({ vertices: section.vertices }, light, w2s, scale);
+        }
+      }
     }
 
     for (const m of game.movers) {

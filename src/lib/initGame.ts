@@ -294,6 +294,7 @@ export function createInitialGameData(
   const launcherSpecs: Array<{
     id: string; facing: LaunchFacing; angle?: number; ballType?: string;
     inner: { x: number; y: number; width: number; height: number };
+    shell: Polygon[];
   }> = [];
   const reservingBoxes: Array<{ id: string; poly: Polygon }> = [];
   const mirrorPolygons:   Polygon[] = [];
@@ -393,10 +394,11 @@ export function createInitialGameData(
     for (const entity of allEntities) {
       if (entity.kind === "launcher") {
         // THREE walls, not four: the side named by `facing` is left open so the
-        // balls can leave and so the empty shell is still worth fencing around
-        // afterwards. Otherwise identical to a delivery box, deliberately - a
-        // barrel and a box are the same construction with a different missing
-        // side.
+        // balls can leave. Otherwise identical to a delivery box, deliberately -
+        // a barrel and a box are the same construction with a different missing
+        // side. The shell only lasts until the barrel is empty: once the last
+        // ball has left it dematerializes (physics/launcherShell.ts) and the
+        // ground it stood on is ordinary floor.
         const T = BOX_WALL_THICKNESS;
         const { x, y, width: w, height: h } = entity;
         const sides: Array<{ side: LaunchFacing; poly: Polygon }> = [
@@ -422,10 +424,12 @@ export function createInitialGameData(
             }),
           };
         };
+        const shell: Polygon[] = [];
         for (const { side, poly } of sides) {
           if (side === entity.facing) continue; // the muzzle
           const turned = spin(poly);
           obstaclePolygons.push(turned);
+          shell.push(turned);
           allWalls.push(...createWallsFromPolygon(turned, `launcher-${entity.id}-${side}`, false));
         }
         launcherSpecs.push({
@@ -433,6 +437,7 @@ export function createInitialGameData(
           facing: entity.facing,
           angle: entity.angle,
           ballType: entity.ballType,
+          shell,
           // Kept axis-aligned and un-turned on purpose: it is the barrel's own
           // frame, and every consumer (the ball stack, the band, the muzzle
           // vector) turns it by the same angle when it needs world coordinates.
@@ -1234,6 +1239,8 @@ export function createInitialGameData(
       ballIds: loaded.map(b => b.id),
       fired: false,
       armed: false,
+      shell: spec.shell,
+      dematerialized: false,
     });
   }
 

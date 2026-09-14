@@ -104,6 +104,7 @@ export class FxLayer {
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
+    this.drawShellShatters(game, light, w2s, scale, now);
     this.drawFalling(game, light, w2s, now);
     this.drawAbilityFx(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);
@@ -801,6 +802,50 @@ export class FxLayer {
             { x: s.x - c - sn, y: s.y - sn + c },
           ])
           .fill({ color, alpha: (1 - t) * 0.9 });
+      }
+    }
+  }
+
+  /**
+   * A launcher shell dematerializing: released sections fly apart as tiles.
+   *
+   * The same kinematics as the board's own shatter (transitions.ts): a tile
+   * keeps its release velocity, falls under a constant gravity, spins, and
+   * fades over its flight. Sections not yet released are not drawn here at
+   * all; entityLayer draws them as the slabs they still stand in for.
+   */
+  private drawShellShatters(
+    game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number,
+  ): void {
+    const GRAVITY = 500; // world units / s^2, the board shatter's fall at world scale
+    for (const shatter of game.shellShatters ?? []) {
+      for (const section of shatter.sections) {
+        const released = shatter.startTime + section.delay;
+        const t = (now - released) / shatter.flightMs;
+        if (t < 0 || t > 1) {
+          continue;
+        }
+        const secs = (now - released) / 1000;
+        const fade = Math.max(0, 1 - t * 1.15);
+        for (const tile of section.tiles) {
+          const x = tile.x + tile.vx * secs;
+          const y = tile.y + tile.vy * secs + GRAVITY * secs * secs;
+          const s = w2s(x, y);
+          const amb = ambientAt(light, s.x, s.y);
+          const rot = tile.rotation + tile.rotSpeed * secs;
+          const hw = (tile.w / 2) * scale;
+          const hh = (tile.h / 2) * scale;
+          const c = Math.cos(rot);
+          const sn = Math.sin(rot);
+          this.over
+            .poly([
+              { x: s.x - hw * c + hh * sn, y: s.y - hw * sn - hh * c },
+              { x: s.x + hw * c + hh * sn, y: s.y + hw * sn - hh * c },
+              { x: s.x + hw * c - hh * sn, y: s.y + hw * sn + hh * c },
+              { x: s.x - hw * c - hh * sn, y: s.y - hw * sn + hh * c },
+            ])
+            .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.45 + amb * 0.55), alpha: fade });
+        }
       }
     }
   }

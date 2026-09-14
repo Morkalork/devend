@@ -89,7 +89,7 @@ const layerGraphics = (layer: EntityLayer, name: string) =>
 const drawn = (game: CanvasGameState) => {
   const layer = new EntityLayer();
   const light = lightScope({ left: 0, top: 0, width: 900, height: 900, scale: 1 } as never, 0);
-  layer.sync(game, light, new Graphics(), W2S, 1);
+  layer.sync(game, light, new Graphics(), W2S, 1, 0);
   return layer;
 };
 

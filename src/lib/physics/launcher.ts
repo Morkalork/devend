@@ -7,6 +7,7 @@
  */
 import type { CanvasGameState } from "@/types/gameState";
 import type { Vector2 } from "@/types/game";
+import type { Polygon } from "@/lib/polygon";
 import type { LaunchFacing, LaunchAim } from "@/lib/launcher";
 import { launchVelocity, clampLaunchPower, LAUNCH_SPREAD } from "@/lib/launcher";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
@@ -35,15 +36,26 @@ export interface LauncherState {
    * The barrel interior is forbidden ground until this flips. You cannot fence
    * while it is false (a fence there would trap balls the shot is still
    * emptying), and a ball sealed inside while it is false fails the map. Once
-   * armed, the interior is an ordinary - if tricky - pocket: a ball that finds
-   * its way back in can be locked there like anywhere else.
+   * armed, the shell dematerializes (launcherShell.ts): the ground it stood on
+   * is ordinary floor, capturable like anywhere else.
    *
-   * Latching is the point. A returning ball puts a ball back inside an ARMED
-   * barrel, and that must stay lockable rather than dropping the barrel back
-   * into its forbidden state and failing the map for the very play the rule
-   * exists to allow.
+   * Latching is the point. A returning ball puts a ball back where the barrel
+   * was, and that must stay lockable rather than dropping the barrel back into
+   * its forbidden state and failing the map for the very play the rule exists
+   * to allow.
    */
   armed?: boolean;
+  /**
+   * The three side slabs the barrel is built from, the same objects that sit in
+   * game.obstaclePolygons. Held here so the shell can be taken out of the world
+   * by identity once the barrel is armed; the walls go by their id prefix.
+   */
+  shell?: Polygon[];
+  /**
+   * Latching, like `armed`: true once the shell has been removed from the
+   * world and its going has been queued for the renderer. Never reset.
+   */
+  dematerialized?: boolean;
 }
 
 /**

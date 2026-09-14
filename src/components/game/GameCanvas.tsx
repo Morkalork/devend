@@ -128,6 +128,7 @@ import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } fr
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
+import { dematerializeArmedLaunchers } from "@/lib/physics/launcherShell";
 import { pushBonusEarned } from "@/lib/pushLuck";
 import { mapGoals, type Goal } from "@/lib/goalTracker";
 import { winHighlightRects } from "@/lib/winHighlight";
@@ -823,6 +824,7 @@ export function GameCanvas({
     destructibles: [] as import("@/types/game").DestructibleState[],
     pendingDestroys: [] as import("@/types/game").DestructibleState[],
     objectDebris: [] as import("@/types/game").ObjectDebrisState[],
+    shellShatters: [] as import("@/types/game").ShellShatterState[],
     stackObjects: [] as import("@/types/game").StackObject[],
     fallingObjects: [] as import("@/types/game").FallingObject[],
     objectivesTotal: 0,
@@ -994,6 +996,7 @@ export function GameCanvas({
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
       game.objectDebris = [];
+      game.shellShatters = [];
       game.fallingObjects = [];
       game.objectivesBroken = 0;
       game.breakBonus = 0;
@@ -1493,6 +1496,8 @@ export function GameCanvas({
           setRemainingPercent,
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
+      settleLaunchers: () =>
+        dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, performance.now()),
       processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,

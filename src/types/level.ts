@@ -239,9 +239,11 @@ export type BoxRectEntity = BoxEntity & RectShape;
  * A launcher: a three-sided cup holding a ball asleep until the player fires it.
  *
  * The side named by `facing` is left OPEN - the cup is built from the other
- * three - so the ball leaves that way and the empty shell stays on the board as
- * an ordinary obstacle for the rest of the map. That is the whole reason it is
- * a cup rather than a pad: it has to be worth fencing around afterwards.
+ * three - so the balls leave that way. The shell lasts exactly as long as the
+ * shot: the frame the last ball has left, it dematerializes section by section
+ * (src/lib/physics/launcherShell.ts) and the ground it stood on is ordinary
+ * floor. A cup rather than a pad because the tube is what makes the pull read
+ * as a pull, not because the shell is worth anything afterwards.
  *
  * The launch power multiplies the map's base pay and the ball's speed FOR THE
  * WHOLE MAP, so a launcher map is authored knowing the player chooses its

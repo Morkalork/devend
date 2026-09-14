@@ -21,6 +21,7 @@
  * which is why the order below is commented against its source.
  */
 import { updateLauncherArming } from "@/lib/physics/launcher";
+import { dematerializeArmedLaunchers } from "@/lib/physics/launcherShell";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { runtimeDefaults } from "./runtimeDefaults";
 import { DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
@@ -297,6 +298,11 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // reads fencesBlockedByLauncher), so the latch has to tick here or the bot
   // never cuts on a launcher map at all.
   updateLauncherArming(game);
+  // And the frame it arms, the shell comes down and its ground reopens. The
+  // loop does the same (settleLaunchers), and the bot has to see the same
+  // board: a barrel footprint that reopens in the browser and not here would
+  // make every launcher sweep read a different space count from the player.
+  dematerializeArmedLaunchers(game, callbacks, performance.now());
 
   // Deliveries: a ball that has crossed a box's membrane is taken out of play
   // and counted. After ball movement so a ball that entered this step counts

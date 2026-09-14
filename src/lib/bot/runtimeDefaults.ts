@@ -123,6 +123,7 @@ export function runtimeDefaults() {
     destructibles: [],
     pendingDestroys: [],
     objectDebris: [],
+    shellShatters: [],
     stackObjects: [],
     fallingObjects: [],
     objectivesTotal: 0,

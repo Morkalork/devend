@@ -433,6 +433,10 @@ for the rest of the map: the launch power multiplies the map's base pay AND the
 ball speed, one to three times. There is no safe default. Fire hard for the
 money and play a fast map, fire soft for a calm map at base pay, and you choose
 before a single fence exists - you cannot even cut until the barrel is empty.
+The moment it is, the barrel dematerializes, section by section from the muzzle
+back, and its footprint is ordinary floor. A launcher is therefore never a
+piece of furniture: it does not shape the board after the shot, and a design
+that wants a wall where the barrel stood has to put one there.
 
 The aim is the second half of the same decision. The barrel sits in one corner
 and the curtain over the paying pocket is in the far one, inside the aim cone
@@ -1186,6 +1190,7 @@ previously spread across a dozen test files and comment blocks.
 | Self-overlap | nothing a map authors may sit on top of anything else it authors | `mapHookPlacement.test.ts` |
 | Launcher runway | **>= 225** units (25% of the board) clear ahead of a muzzle; breakables do not count as blocking | `MIN_LAUNCH_RUNWAY_FRACTION` |
 | Reachability | **> 90%** of open cells must stay reachable with every ball loaded, across all deals | `launcherBarrel.test.ts` |
+| Launcher shell | leaves the board the frame the barrel arms (`physics/launcherShell.ts`). Its slabs and walls go at once and its footprint comes back as capturable space, so a launcher adds to the board's space rather than subtracting from it; only the picture takes its time. | `launcherShell.test.ts` |
 | Launcher bore | a turned barrel needs a bore of **~110 or more**. Reachability is ball-size aware and works on the rasterised grid, so a narrow bore at an angle rasterises to a staircase that erodes into disconnected cells: at 84 the balls inside were sealed off from the board and `captureUnreachableCells` wrote off everything outside the barrel. From about 110 up it stays connected on every rotation. | `launcherBarrel.test.ts` |
 | Tunnelling ceiling | ~5520 units/s; past it an 18-unit ball crosses a 6-unit fence between physics steps | `bouncer.ts` |
 

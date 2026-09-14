@@ -283,7 +283,7 @@
     "boxIntroTitle": "✦ La columna Hecho",
     "boxIntroBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
     "launcherIntroTitle": "El lanzador",
-    "launcherIntroBody": "Todas las bolas del mapa están en el cañón. Tira de la goma trasera y suelta: la dirección apunta, la distancia marca la velocidad.\n\nEsa velocidad nunca baja, y la paga base del mapa se multiplica por ella. Tira fuerte para un mapa más rico, más rápido y más difícil. No puedes trazar vallas hasta que el barril se vacie. Despues su interior es un bolsillo como cualquier otro, asi que una bola que vuelva a entrar puede encerrarse ahi, pero si sellas una dentro antes de que se vacie, pierdes una vida.",
+    "launcherIntroBody": "Todas las bolas del mapa están en el cañón. Tira de la goma trasera y suelta: la dirección apunta, la distancia marca la velocidad.\n\nEsa velocidad nunca baja, y la paga base del mapa se multiplica por ella. Tira fuerte para un mapa más rico, más rápido y más difícil. No puedes trazar vallas hasta que el barril se vacie. En cuanto se vacia, el barril se deshace y el suelo donde estaba queda libre como cualquier otro, pero si sellas una bola dentro antes de que se vacie, pierdes una vida.",
     "launcherTutorialTitle": "El lanzador",
     "launcherTutorialBody": "Toda la plantilla espera en el cañón hasta que tiras de la goma y sueltas. La velocidad nunca baja, así que la potencia con la que disparas es a la vez la dificultad del mapa y el multiplicador de su paga base.",
     "boxTutorialTitle": "✦ La columna Hecho",
