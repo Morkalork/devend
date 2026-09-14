@@ -103,6 +103,11 @@ export interface CanvasGameState {
   // ── Geometry ───────────────────────────────────────────────────────────
   /** All walls: board edges, obstacles, and user-drawn fences. */
   walls: Wall[];
+  /**
+   * This map's weather, in screen-space world units per second, or absent for
+   * still air. Copied from LevelConfig at init; read only by the mote field.
+   */
+  weather?: { x: number; y: number };
   /** Spatial index over `walls`, rebuilt once per frame for the ball collision
    *  broad-phase (see wallGrid.ts). Absent until the first frame builds it. */
   wallGrid?: WallGrid | null;

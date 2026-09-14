@@ -378,6 +378,23 @@ export interface LevelConfig {
    * map where you cannot see the walls is not a challenge.
    */
   light?: number;
+  /**
+   * Weather: a heading the map's air drifts on, in world units per second.
+   *
+   * Scenery, so it belongs to the map rather than to the renderer's dials.
+   * Snow falls, ash drifts sideways, a server room has an updraft - the motes
+   * (motes.ts) are the same field either way and only their push changes.
+   *
+   * SCREEN space, like the light itself and for the same reason: a map is
+   * dealt in one of four orientations, and weather that rotated with the board
+   * would tell the player which deal they got. Snow falls down the screen.
+   *
+   * Kept small on purpose. Anything moving across the whole board competes for
+   * attention with the balls, which are the thing the player is tracking, so
+   * this is a drift and not a gale. WEATHER_MAX is the ceiling the admin
+   * editor and the loader both clamp to.
+   */
+  weather?: { x: number; y: number };
   threadLockRequired?: number; // minimum number of balls that must be thread-locked to win
   /**
    * The map's win, stated outright.

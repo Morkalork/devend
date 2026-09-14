@@ -5,6 +5,7 @@ import { WinConditionsPanel } from './WinConditionsPanel';
 import { areaShareOf, clampAreaShare, DEFAULT_COLORED_AREA_SHARE, MAX_COLORED_AREA_SHARE } from '@/lib/coloredAreaShare';
 import { getMapMutators } from '@/lib/mapMutators';
 import { BOARD_SIDES, type BoardEdgeSpecs, type BoardSide } from '@/lib/physics/boardEdges';
+import { clampWeather, WEATHER_MAX } from '@/lib/rendering/motes';
 
 /**
  * Optional numeric field: blank deletes it, so "this map does not say" and
@@ -281,6 +282,51 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               min={25}
               max={200}
               step={5}
+            />
+          </label>
+        </div>
+
+        {/* Weather: the heading this map's air drifts on (motes.ts). Scenery,
+            so it belongs to the map. SCREEN space, like the light and the
+            board edges: snow falls down the screen whichever of the four ways
+            the map was dealt. Both blank is still air. */}
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Weather X (blank = still)</span>
+            <input
+              type="number"
+              value={level.weather?.x ?? ''}
+              onChange={(e) => {
+                const next = { ...level };
+                const raw = e.target.value;
+                const x = raw === '' ? 0 : Number(raw);
+                const w = clampWeather({ x, y: level.weather?.y ?? 0 });
+                if (w) next.weather = w; else delete next.weather;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+              min={-WEATHER_MAX}
+              max={WEATHER_MAX}
+              step={2}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Weather Y (positive = falls)</span>
+            <input
+              type="number"
+              value={level.weather?.y ?? ''}
+              onChange={(e) => {
+                const next = { ...level };
+                const raw = e.target.value;
+                const y = raw === '' ? 0 : Number(raw);
+                const w = clampWeather({ x: level.weather?.x ?? 0, y });
+                if (w) next.weather = w; else delete next.weather;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+              min={-WEATHER_MAX}
+              max={WEATHER_MAX}
+              step={2}
             />
           </label>
         </div>

@@ -1619,6 +1619,26 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
               </div>
 
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-motes" style={{ color: lightLook.motes > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Motes in the air: {Math.round(lightLook.motes * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Specks a pool lights as it passes, plus debris from anything that breaks. 0 is a board with no air in it.
+                  </span>
+                </label>
+                <input
+                  id="light-motes"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.motes * 100)}
+                  onChange={e => setLightLookState(setLightLook({ motes: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
               {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so
                   a new mutator is offered the moment it is authored. Re-deals the
                   board, because a mutator is rolled when a map mounts. */}

@@ -81,6 +81,7 @@ import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { BIG_BALL_MIN_LEVEL, BIG_BALL_CHANCE, BIG_BALL_RADIUS_SCALE, BIG_BALL_LOCK_BONUS, CHAINED_MIN_LEVEL, CHAINED_CHANCE, canAnchorChain } from "@/lib/ballGifts";
 import { makeChain } from "@/lib/physics/chain";
+import { clampWeather } from "@/lib/rendering/motes";
 
 /**
  * Build one ball of a given type at a position. Shared by map init and the
@@ -149,6 +150,11 @@ export function createBall(
 // ── Return type ────────────────────────────────────────────────────────────
 
 export interface InitialGameData {
+  /**
+   * This map's weather, in screen-space world units per second, or absent for
+   * still air. Straight from LevelConfig, clamped; read only by the motes.
+   */
+  weather?: { x: number; y: number };
   walls: Wall[];
   obstaclePolygons: Polygon[];
   /** Pass rules for the obstacles above, keyed by polygon identity. */
@@ -1417,6 +1423,10 @@ export function createInitialGameData(
     // Screen space, and only meaningful because a map that authors these
     // also pins `neverRotates` - see the field's own note on LevelConfig.
     boardEdges: level.boardEdges,
+    // Weather is screen space too, and for the same reason: snow falls DOWN
+    // the screen whichever of the four ways this map was dealt. Clamped here
+    // as well as in the editor, because map.yml is hand-edited.
+    weather: clampWeather(level.weather),
     originalArea:        initialEstimatedArea,
     basePlayableArea:    initialEstimatedArea,
     balls,
