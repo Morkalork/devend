@@ -54,9 +54,14 @@ describe("the map fixtures", () => {
     // WIP limit; on the ladder, a wall of glass bricks. Three tests that read
     // ENGINE_MAPS.find(l => l.level === 17) picked up the new map the day it
     // landed and now read RETIRED by name.
+    // level-18 is the newest, and the sharpest case yet: the retired level-18
+    // was a CAGE map under a fence budget, and the rebuilt one is the windmill
+    // room with neither. So a test that wanted "the map with a cage on it" and
+    // reached for level 18 by number now gets a board with no cage at all,
+    // while the same id in RETIRED still has one.
     expect(shared).toEqual([
       "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
-      "level-17",
+      "level-17", "level-18",
     ]);
   });
 

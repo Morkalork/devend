@@ -198,10 +198,10 @@ Every mechanic gets a status, and the status decides what it costs.
 | brittle | A | Compressed | 17 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 18 | 19 | 31 |
-| portal | B | Meet | 18 | - | - |
-| WIP limit | D | Meet | 18 | 19 | 32 |
-| cage | E | Compressed | 18 | 29 | - |
+| terminals | E | Meet | 19 | - | 31 |
+| portal | B | Meet | 19 | - | - |
+| WIP limit | D | Meet | 19 | - | 32 |
+| cage | E | Compressed | 19 | 29 | - |
 | thread lock | D | Compressed | 19 | - | - |
 | gravity well | C | Meet | 15 | 21 | 22, 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
@@ -255,6 +255,33 @@ someone has to remember to update.
    rising serve back into the glass is that sentence as a machine. It had also
    been implemented in the engine and authored on zero maps for its whole life,
    which is the one state worse than being late.
+
+   **18 then took none of the remaining three, and that was a measurement
+   rather than a preference.** It was drafted as Meet WIP limit and the budget
+   was swept at four values against the map's own par of 8:
+
+   | budget | bot wins | what it means |
+   |---|---|---|
+   | 10 | 0 of 8 | every seed `outOfFences` at 31-56% remaining |
+   | 14 | 0 of 8 | seven of eight `outOfFences` |
+   | 20 | 2 of 8 | |
+   | 26 | 4 of 8 | 3.25x par: a counter in the HUD that never binds |
+   | none | 5 of 8 | |
+
+   The bot needs 21-36 cuts to win this map and 17-27 to win level 17, both
+   against a par in single figures, because it does not plan cut economy at all
+   - it cuts on a timer. So on THIS ladder any budget tight enough to teach a
+   WIP limit reads as an unwinnable map in the sweep, and any budget the sweep
+   survives is not teaching anything. That is a fact about the pairing, not
+   about level 18: **a WIP limit wants a map with a high threshold and a short
+   board**, where par and the budget can sit close together. 19 is a better
+   home for it than 18 was, and the row moved there rather than shipping the
+   first fence-budget map on the ladder at 0 of 8.
+
+   So 18 carries **no new mechanic**, which is not a gap: eleven of the
+   thirty-one planned maps carry none, and they are where the combinations
+   live. It is the rotor's second map, which is the thing act II actually owed
+   after 17 introduced one.
 
 Rule 1 replaced an older entry that said level 11 debuts THREE at once
 (launcher, bumper and deformable). That was the pre-rebuild plan, not the map:
@@ -429,7 +456,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-17 built, 18-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-18 built, 19-20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -623,7 +650,7 @@ now a summary of them rather than a rival to them.
 | 15 | **Meet** gravity well | Use live outer walls | Two patches that pull, on a board where nothing else does. 14 is the pull you cannot escape; this is the pull you can walk around, and choose not to. *(built)* |
 | 16 | **Meet** phasing, **Compressed** deformable | Use bumper | Three objects that disagree about how fast the balls are: two that hand speed out, one that drinks it and keeps the marks, and two pillars that are not always there. *(built)* |
 | 17 | **Compressed** brittle | Fight launcher, Use chest | The launcher fires the roster at a wall that breaks on touch, and the win wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so does the map. *(built, ladder ends here)* |
-| 18 | **Meet** portal + WIP limit *(was 17; see rule 5 under the ledger)* | Use bonus pocket | Ten fences, and the cheapest-looking pocket on the board pays nothing: a region holding a live portal cannot be locked. |
+| 18 | *(none)* | **Fight** rotor, **Use** const area | A windmill owns the middle of the board, and the room it turns in is the pocket that pays triple. Its two doors are corner necks the arm closes in turn, and a fence grown into a mover costs a life, so every cut across the centre is a bet on where the arm will be. *(built)* |
 | 19 | **Compressed** cage *(was 18; act II now has one slot fewer, so cage or thread lock has to wait)* | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
 | 19 | *(skill check brief, displaced)* **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
@@ -820,6 +847,66 @@ Worth knowing for any launcher pointed at a brick grid.
 `objectiveBuried` (the horizontal-cut rule above), no violations, one benign
 ownership recovery. Level 11 on the same harness reads 8 of 8, so the bot is
 not broken, it is blind to the rule.
+
+**Re-swept after the wiper landed: 5 of 8**, 17 to 27 cuts, 3 `objectiveBuried`,
+no violations. The rotor made the map BETTER, which was not the intention and is
+worth keeping. Two thirds of the old losses were the bot burying its own smash
+targets by sealing the floor under a wall it had not finished; an arm sweeping
+the airspace over the barrel keeps returning balls up into the glass instead of
+letting them settle, so the count goes on climbing while the bot fences badly.
+A hazard that also keeps the objective alive is the shape to reach for again.
+
+#### 18 "On Call" - Fight rotor, Use const area  *(built)*
+
+**A windmill owns the middle of the board, and the room it turns in is the
+pocket that pays triple.** No new mechanic: this is the rotor's second map, the
+development 17 owed it, and the first map built around something the player can
+take hold of rather than only time.
+
+Two L-walls make a room 220 across with a neck at the NE and SW corners, 70
+units each. A 200-long arm turns inside it at 70 degrees a second, pivoted at
+its own middle, reaching 100.5 - which is 9.5 short of every inner face, a seam
+no ball fits through. So the arm never touches a wall and never leaves the room,
+and twice a revolution it swings across a corner and squeezes that neck to about
+25 units a side. **The room has two doors and they are never both properly open
+at the same moment.**
+
+The prize is a `const` bonus area painted on the room's floor (3x, `required:
+false`). Sealing it costs two cuts, both across a corner the arm periodically
+fills - and a fence grown into a mover costs a LIFE, which is the level-4 rule
+the wiper on 17 restated. That is the whole map: **every cut across the centre
+is a bet on where the arm will be.**
+
+**Two answers.** Seal the room for the 3x and accept two bets, or ignore it
+entirely and work the outer board - three slabs in three different quadrants
+carry the `smashed: 2` clause (four breakables on the map, so the count has
+slack), and a superior-sized nook in the bottom-left corner pays 2x for one
+cheap 75-unit cut. Skipping the room costs nothing but the multiplier.
+
+**The Turn** is the room's south wall: a breakable that the beat force-breaks at
+26% remaining, or that the balls break themselves at three hits. Either way the
+room stops being a room, its SW neck widens into most of a side, and the pocket
+that was two cuts becomes a much longer one. The player who took the prize early
+is paid for it; the one who was saving it for later finds it gone.
+
+**Control Freak is aimed squarely at this map and is not needed by it.** Brake
+the arm and the bet becomes a decision; crank it and you choose which door is
+shut; a bumper flings a ball off the arm into the outer slabs. None of it is
+required - the sweep below ran with no upgrades at all - which is the
+anti-pattern about build-gating being honoured rather than argued with. The bot
+cannot use the upgrade either way, which is the stricter reason nothing on the
+map may depend on it.
+
+**Bot sweep, 8 seeds, 60s: 5 of 8**, 21 to 34 cuts against par 8, 1 to 3 locks
+per winning run, no violations. The three losses are one `objectiveBuried` and
+two near-misses (`timeUp` at 1% remaining and `lockedOut` at 2%), which is a
+healthier spread than level 17's three buried objectives: the map is being lost
+at the end rather than in the first thirty seconds.
+
+**It was drafted with a fence budget and shipped without one.** See rule 5 under
+the mechanic ledger for the four-budget sweep that settled it; the short version
+is that this ladder's bot needs 21-36 cuts against a par of 8, so no budget can
+be both teaching-strength and survivable, and the WIP limit moved to 19.
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 

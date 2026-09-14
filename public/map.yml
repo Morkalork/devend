@@ -1822,3 +1822,120 @@ levels:
         width: 95
         height: 22
     balls: []
+
+  # 18 "On Call" - FIGHT the rotor, USE the const area. No new mechanic.
+  # A windmill owns the middle of the board. Two L-walls make a room with a
+  # neck at opposite corners, and the arm turning inside closes each one in
+  # turn: the pocket that pays triple is the room whose two doors keep swinging
+  # shut. A fence growing into a mover costs a life (the rule the player met at
+  # level 4 and the wiper on 17 restated), so every cut across the centre is a
+  # bet on where the arm will be. The rotor's second map, and the one Control
+  # Freak is aimed at: braking the arm turns the bet into a decision.
+  - id: level-18
+    level: 18
+    sizeThreshold: 11
+    expectedCuts: 8
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey]
+    pickupChance: 0
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: smashed
+          count: 2
+    coloredAreas:
+      - kind: const
+        x: 340
+        'y': 340
+        width: 220
+        height: 220
+        required: false
+    beats:
+      - id: south-wall-goes
+        atSpaceRemaining: 26
+        breakId: wm-s
+        announce: game.beatReorg
+    entities:
+      - id: windmill
+        kind: mover
+        shape: rect
+        x: 350
+        'y': 440
+        width: 200
+        height: 20
+        motion: rotate
+        pivotX: 450
+        pivotY: 450
+        startDegrees: 20
+        speed: 70
+        axis: horizontal
+        range: 0
+      - id: wm-n
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 320
+        width: 190
+        height: 20
+      - id: wm-w
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 340
+        width: 20
+        height: 170
+      - id: wm-s
+        kind: wall
+        shape: rect
+        x: 390
+        'y': 560
+        width: 190
+        height: 20
+        breakable: true
+        hitsToBreak: 3
+      - id: wm-e
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 390
+        width: 20
+        height: 170
+      - id: nook-shelf
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 760
+        width: 110
+        height: 20
+      - id: slab-nw
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 180
+        width: 130
+        height: 24
+        breakable: true
+        hitsToBreak: 2
+      - id: slab-ne
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 180
+        width: 130
+        height: 24
+        breakable: true
+        hitsToBreak: 2
+      - id: slab-se
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 660
+        width: 130
+        height: 24
+        breakable: true
+        hitsToBreak: 2
+    balls: []

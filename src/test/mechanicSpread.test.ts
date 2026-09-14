@@ -124,14 +124,15 @@ describe("no mechanic is introduced and then dropped", () => {
     // (the first Demolition map, MAP_DESIGN_GUIDELINES.md section 11). It
     // comes off when the archetype's Use beat lands.
     //
-    // ROTOR joined on 17 too, and came off the unused list below to do it: the
-    // engine had carried a full rotor implementation with no map authoring one,
-    // which is the worst of both lists. It is a single-use MEET in the ordinary
-    // way, and it is also what Control Freak exists to take hold of, so the
-    // second rotor should be the map that develops the arc rather than one
-    // added to move a name between two lists.
+    // ROTOR CAME OFF, on 18, and it is the one name here that arrived and left
+    // inside two commits. It joined on 17 (and came off the unused list below
+    // to do it: the engine had carried a full rotor implementation with no map
+    // authoring one, which is the worst of both lists), then 18 "On Call" built
+    // a windmill room around a second one. That is the rhythm this list exists
+    // to measure - a name is on it for exactly one map - happening on purpose
+    // for once rather than being noticed afterwards.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["brittle", "deformable", "gravityWell", "mirror", "mutator", "phasing", "rotor"]);
+      .toEqual(["brittle", "deformable", "gravityWell", "mirror", "mutator", "phasing"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

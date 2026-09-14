@@ -62,7 +62,7 @@ describe("what a block can actually give", () => {
     // 6-10 and 31-35 are the thin ones, and they are where an absolute target
     // was furthest out of reach.
     //
-    // Measured, not assumed. The capacities run 9, 11, 14, 16, 14, 15, 14, so
+    // Measured, not assumed. The capacities run 9, 11, 15, 14, 14, 15, 14, so
     // the genuinely thin ones are the EARLY blocks - act I spawns one and two
     // balls - and 31-35 is thin only against the fattest block rather than
     // against the middle of the ladder.
@@ -71,9 +71,18 @@ describe("what a block can actually give", () => {
     // is half rebuilt, so its capacity moves with every map authored. Level 14
     // alone took it from 12 to 14 and made "31 is thinner than 11" false. What
     // is being tested is the measurement, not the state of a ladder mid-rebuild.
+    //
+    // BLOCK 16 has now gone the same way, and for the same reason: level 18
+    // "On Call" is a three-ball map where the retired level-18 it replaced held
+    // more, so the block fell 16 -> 14 and "31 is thinner than 16" became 14 <
+    // 14. Rather than re-pin a number that will move again when 19 and 20 are
+    // authored, the yardstick moves to 26-30, which is entirely retired and
+    // therefore stands still. The rule this file is really holding is that a
+    // block mid-rebuild cannot be a fixed point, and that is now written down
+    // twice because it was learned twice.
     expect(blockLockCapacity(LEVELS, 6)).toBeLessThan(blockLockCapacity(LEVELS, 26));
     expect(blockLockCapacity(LEVELS, 1)).toBeLessThan(blockLockCapacity(LEVELS, 6));
-    expect(blockLockCapacity(LEVELS, 31)).toBeLessThan(blockLockCapacity(LEVELS, 16));
+    expect(blockLockCapacity(LEVELS, 31)).toBeLessThan(blockLockCapacity(LEVELS, 26));
   });
 });
 
