@@ -32,6 +32,13 @@ export interface BotRunResult {
 }
 
 export interface BotRunOptions {
+  /**
+   * Hold the weather still. Undefined rolls the mutator the run seed would give
+   * a player (the default, and the point); null forces a bare board; an id pins
+   * one. For isolating a map from its conditions, which is the one job the old
+   * pinned-only behaviour was actually good at.
+   */
+  mutator?: string | null;
   /** Frames to play before giving up. 60/s of game time at PHYSICS_STEP. */
   maxFrames?: number;
   /** Frames between cut attempts, so fences have time to finish. */
@@ -54,7 +61,8 @@ export function runBot(
   // later test in the file would inherit a frozen clock.
   installClock();
   const rng = seededRandom(seed);
-  const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers());
+  const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers(),
+    "mutator" in opts ? { mutator: opts.mutator } : {});
 
   // Fire any launcher before play starts. Without this a launcher map cannot be
   // won by a bot at all: the loaded ball stays dormant, a dormant ball holds its

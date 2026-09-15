@@ -1539,7 +1539,7 @@ levels:
         pivotY: 420
         sweepDegrees: 120
         startDegrees: -35
-        speed: 55
+        speed: 30
         axis: horizontal
         range: 0
       - id: brick-a1

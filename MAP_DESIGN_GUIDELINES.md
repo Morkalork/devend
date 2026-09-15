@@ -848,13 +848,23 @@ Worth knowing for any launcher pointed at a brick grid.
 ownership recovery. Level 11 on the same harness reads 8 of 8, so the bot is
 not broken, it is blind to the rule.
 
-**Re-swept after the wiper landed: 5 of 8**, 17 to 27 cuts, 3 `objectiveBuried`,
-no violations. The rotor made the map BETTER, which was not the intention and is
-worth keeping. Two thirds of the old losses were the bot burying its own smash
-targets by sealing the floor under a wall it had not finished; an arm sweeping
-the airspace over the barrel keeps returning balls up into the glass instead of
-letting them settle, so the count goes on climbing while the bot fences badly.
-A hazard that also keeps the objective alive is the shape to reach for again.
+**Both of those numbers were measured on a harness that was not playing this
+game**, and they are kept above only as the record of what was believed. The
+sweep had no Scope Creep, no beat speed spike, no ball-to-ball collisions and no
+rolled mutator (see section 8). On the corrected harness:
+
+| | wiper at 55 deg/s | wiper at 30 | no wiper |
+|---|---|---|---|
+| bot wins, 8 seeds | 2 of 8 | 4 of 8 | 4 of 8 |
+
+So the claim this paragraph used to make - that the rotor made the map BETTER,
+3 of 8 to 5 of 8 - was an artefact. **A fast arm made it markedly worse**, and
+the honest reading is the ordinary one: an arm sweeping the lane the serve
+climbs is a hazard, and on a map whose losses are already three quarters
+`objectiveBuried` it buries the objective faster. The wiper now runs at 30
+deg/s, which holds the map at the same 4 of 8 it has without one, so the
+mechanic costs the map nothing and a full traverse takes four seconds instead
+of two - slow enough to read, which is what a timing hazard wanted anyway.
 
 #### 18 "On Call" - Fight rotor, Use const area  *(built)*
 
@@ -897,11 +907,16 @@ anti-pattern about build-gating being honoured rather than argued with. The bot
 cannot use the upgrade either way, which is the stricter reason nothing on the
 map may depend on it.
 
-**Bot sweep, 8 seeds, 60s: 5 of 8**, 21 to 34 cuts against par 8, 1 to 3 locks
-per winning run, no violations. The three losses are one `objectiveBuried` and
-two near-misses (`timeUp` at 1% remaining and `lockedOut` at 2%), which is a
-healthier spread than level 17's three buried objectives: the map is being lost
-at the end rather than in the first thirty seconds.
+**Bot sweep, 8 seeds, 60s: 5 of 8**, 20 to 30 cuts against par 8, no
+violations; two `lockedOut` and one `objectiveBuried`. Measured on the corrected
+harness (section 8), with Scope Creep running, the balls colliding and the
+mutator rolled from the run seed as a player's would be.
+
+The windmill is neutral to the bot: the same map with the arm deleted also
+sweeps 5 of 8. That is the right result rather than a disappointing one - the
+room is a BONUS, so a player who ignores it should be able to clear the map, and
+the bot ignores it by construction. What the arm costs is the multiplier, and
+the bot never goes for multipliers.
 
 **It was drafted with a fence budget and shipped without one.** See rule 5 under
 the mechanic ledger for the four-budget sweep that settled it; the short version
@@ -1491,6 +1506,64 @@ amount of staring at YAML will:
 The bot is a *lead generator*, not a verdict. It cannot tell you a map is fun. It
 can tell you a map is impossible, trivial, or shaped differently from how it
 reads, and it does that across every deal in seconds.
+
+### What the harness was not playing, and now is
+
+Every sweep number recorded in this document before 2026-09-15 was taken on a
+harness that diverged from the browser's loop in five ways, all silent, all
+found by accident months apart. They are listed in
+`src/test/harnessMatchesLoop.test.ts`, which now guards against a sixth. The two
+that changed the ladder's numbers:
+
+- **`game.creepFactor` was seeded to 1 and never moved.** It multiplies ball
+  displacement in `updateBall`, so NO SWEEP EVER HAD SCOPE CREEP: the balls
+  never sped up, on any map, in any run. It also disabled a beat's `speedSpike`
+  and the crunch/overclock mutators' effect on balls, while the MOVERS felt
+  those mutators (updateMovers reads `mutatorSpeedFactor` directly) - which is
+  why pinning a mutator appeared to change a sweep and hid the fact that the
+  balls were ignoring it.
+- **`handleBallCollisions` was never called**, so balls passed through one
+  another on every map past level 3.
+
+Plus `tickCages`, `tickChains`, `updatePickups`, the freeze-release net, and the
+whole `spawnTimedBalls` bundle - which means **a boss map had never been
+playable headlessly**: the boss never changed phase, never spat and never wiped
+the player's fences, so a boss sweep measured a stationary lump with a health
+bar.
+
+The harness also consulted only a PINNED mutator, on the argument that an
+unpinned one is "weather" a sweep should not report. That was wrong in a way
+worth keeping: the roll is a pure function of the run seed and the level id,
+exactly like the obstacle variety and ball types the harness already takes from
+that seed. From level 14 up, 22% of maps roll a gravity mutator and 55% a speed
+one, so **more than three quarters of real plays of a late map sat outside
+anything a sweep had measured.** It now rolls what the seed would give a player,
+and `runBot`'s `mutator` option holds the weather still when you want the map
+isolated from it.
+
+**The corrected ladder, 8 seeds, 60s**, with what moved:
+
+| L | was | now | |
+|---|---|---|---|
+| 1-4 | 8,6,8,8 | 8,6,8,8 | unchanged |
+| 5 | 4 | 4 | |
+| 6 | 5 | 4 | |
+| 7 | 1 | 1 | |
+| 8 | 1 | **0** | every seed `areaUnreachable`: see below |
+| 9 | 2 *(1 violation)* | **3** | the violation is gone |
+| 10 | 4 | 4 | boss: phases actually run now |
+| 11-12 | 8,8 | 8,8 | |
+| 13 | 8 | **6** | |
+| 14-16 | 8,8,8 | 8,8,8 | |
+| 17 | 5 | **4** | after slowing the wiper; 2 of 8 at its shipped speed |
+| 18 | 5 | 5 | |
+
+**Level 8 is the finding to act on.** It sweeps 0 of 8 with every seed failing
+`areaUnreachable` - the gate area the win requires stops being reachable - and
+the old harness hid it at 1 of 8. By the table at the top of this section that
+is a STOP, and it is a shipped act-I map. Level 13's fall from 8 to 6 and level
+6's from 5 to 4 are the same mechanism in a milder form: Scope Creep now runs,
+so the back half of a long map is faster than anything previously measured.
 
 ### The measured ladder, as a calibration baseline
 
