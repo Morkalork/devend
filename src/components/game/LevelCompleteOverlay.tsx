@@ -158,6 +158,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     superiorLockBonus = 0,
     zoneLockCount = 0,
     zoneLockBonus = 0,
+    zoneCount = 0,
     multiLockBonus = 0,
     multiLockBest = 1,
     bouncerOvertime = 0,
@@ -529,6 +530,30 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 {paidBase}h
               </span>
             </div>
+
+            {/* That a zone was TAKEN, which this screen used to leave unsaid.
+                The hours are already in Engagement and are deliberately not
+                repeated here - itemising them twice is exactly what the rows
+                below this one were deleted for. What was missing was not the
+                pay, it was the acknowledgement: the screen could tell you what
+                skipping the zones cost (the row underneath) and had no way to
+                tell you that you had taken one, so a player who sealed a ball
+                inside a colored area was met with silence and reasonably
+                concluded it had not counted.
+
+                A count, not hours, and it names the denominator so "one zone
+                left" is visible while the map is still worth replaying. */}
+            {zoneCount > 0 && zoneLockCount > 0 && (
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Target className="w-3 h-3 text-fuchsia-300" />
+                  {t('levelComplete.zonesSealed')}
+                </span>
+                <span className="font-bold text-fuchsia-300">
+                  {Math.min(zoneLockCount, zoneCount)}/{zoneCount}
+                </span>
+              </div>
+            )}
 
             {/* What skipping the colored areas cost. A percentage, because that
                 is what it is: the share comes off everything above, not out of

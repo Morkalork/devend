@@ -170,6 +170,46 @@ describe('the breakdown says what was on offer, not just what landed', () => {
     expect(screen.queryByText('-12h'), 'the row still shows only the shortfall').toBeNull();
   });
 
+  it('says a zone was sealed, which it used to leave entirely unsaid', () => {
+    // Reported from play: a ball locked inside a colored area on level 5, and
+    // nothing on this screen acknowledged it. The hours had gone into
+    // Engagement correctly - the screen simply had no way to say so, while it
+    // DID have a row for zones you missed. Naming the penalty and not the
+    // success is how a player concludes the mechanic is broken.
+    renderOverlay({ scoreData: { ...withAxes, zoneLockCount: 1, zoneCount: 2 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+
+    expect(screen.getByText('Zones Sealed'), 'a sealed zone is still unreported').toBeTruthy();
+    // The denominator too, so "one left" is visible while the map is still
+    // worth replaying.
+    expect(screen.getByText('1/2')).toBeTruthy();
+  });
+
+  it('reports the sealed zone as a COUNT, never as hours', () => {
+    // The rule the deleted rows were deleted for. Engagement has already paid
+    // for this; a second figure in hours here would be the same double-count
+    // wearing a new label.
+    renderOverlay({ scoreData: { ...withAxes, zoneLockCount: 1, zoneCount: 2, zoneLockBonus: 9 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+
+    const row = screen.getByText('Zones Sealed').closest('div')!;
+    expect(row.textContent, 'the zone row is quoting hours again').not.toMatch(/\dh/);
+  });
+
+  it('stays quiet on a map with no zones at all', () => {
+    renderOverlay({ scoreData: withAxes });
+    fireEvent.click(screen.getByText('Score breakdown'));
+    expect(screen.queryByText('Zones Sealed')).toBeNull();
+  });
+
+  it('stays quiet when the map had zones and none were taken', () => {
+    // That case already has a row of its own (Zones Missed), and two rows
+    // saying the same nothing is worse than one.
+    renderOverlay({ scoreData: { ...withAxes, zoneLockCount: 0, zoneCount: 2 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+    expect(screen.queryByText('Zones Sealed')).toBeNull();
+  });
+
   it('no longer itemises the same hours a second time', () => {
     // The duplication itself. These rows restated axis income that the axis
     // block above them had already reported.

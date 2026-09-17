@@ -577,6 +577,13 @@ export interface LevelScoreData {
   lockPoints?: { x: number; y: number }[];
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
+  /**
+   * How many colored areas the MAP offered, so the summary can say "1 of 2"
+   * rather than a bare count. Without it the screen could report a miss (it
+   * knew the withheld share) and not a success, which is how a player came to
+   * seal a zone and be told nothing at all.
+   */
+  zoneCount?: number;
   /** Hours the simultaneous-lock multiplier added (see CanvasGameState). */
   multiLockBonus?: number;
   /** Most balls sealed by one cut this map. */
