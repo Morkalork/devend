@@ -65,7 +65,7 @@ import { updatePickups } from "@/lib/pickups";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMutators";
-import { getRunRng } from "@/lib/runRng";
+import { getRunRng, getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { normaliseGravity } from "@/lib/physics/gravity";
 /**
  * A clock the bot controls.
@@ -216,34 +216,58 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
 }
 
 /** Deal a map, ready to be played. */
+/**
+ * What weather to deal this board.
+ *
+ * `"roll"` is what a PLAYER gets: the boss's forced mutator, then the map's own
+ * pin, then the procedural roll off the run seed - the same expression, in the
+ * same order, that GameScreen uses. runBot asks for it, because a sweep has to
+ * play the map the player gets.
+ *
+ * Anything else holds the weather still: an id pins one, `null` forces a bare
+ * board, and OMITTING IT - the default - also gives a bare board.
+ *
+ * That default is deliberate and was learned the hard way. When the roll landed
+ * it was unconditional, and `getRunRng` falls through to `Math.random` when no
+ * run seed is armed. Eighteen test files build a board with createBotGame
+ * directly and arm no seed, so overnight every one of them at level 11 or above
+ * started drawing a random mutator per run - crunch, overclock or none - and
+ * the suite grew a flake that took a full-suite repeat to catch. A board dealt
+ * by a mechanic test is not a sweep and never wanted weather; a sweep asks for
+ * it by name.
+ */
+export type BotWeather = "roll" | string | null;
+
 export function createBotGame(
   level: LevelConfig, levelNumber: number, modifiers: GameModifiers = plainModifiers(),
-  opts: { mutator?: string | null } = {},
+  opts: { mutator?: BotWeather } = {},
 ): BotGame {
-  // THE MUTATOR THE PLAYER WOULD GET, on this run seed.
+  // A DEAL WITH NO RUN SEED IS A DEAL NOBODY CAN REPRODUCE, so arm one.
   //
-  // This used to consult only the pinned one, arguing that "an unpinned mutator
-  // is a random visitor, and a sweep should report on the map rather than on
-  // the weather". That reasoning was wrong in a way worth writing down, because
-  // it sounds right: the roll is not weather, it is a pure function of the run
-  // seed and the level id, exactly like the obstacle variety and the ball types
-  // this harness has always taken from that same seed. Sweeping seeds 1-8 with
-  // the roll consulted IS sweeping the map across its real conditions; sweeping
-  // them without it is sweeping a version of the map that reaches no player.
+  // createInitialGameData takes the map rotation, the variety draw and the ball
+  // types from getRunRng, which falls through to Math.random when no seed is
+  // armed. Eighteen test files deal a board here and arm nothing, so each of
+  // them was getting one of FOUR ROTATIONS at random, every run - which is the
+  // flake class the guidelines already describe as having cost two separate
+  // ~1-in-4 CI failures, still live, and measured again here at 0,1,2,3 across
+  // thirty deals of level 12.
   //
-  // From level 14 up, 22% of maps roll a gravity mutator and 55% roll a speed
-  // one, so more than three quarters of real plays of a late map were outside
-  // what any sweep had ever measured.
+  // The rule those guidelines give ("any test that asserts a coordinate must
+  // pin the deal") is sound and has been quietly disobeyed eighteen times,
+  // which is the usual fate of a rule that has to be remembered. So the harness
+  // pins it instead: no seed armed means this one, and a caller that wants a
+  // particular deal arms its own beforehand exactly as runBot does.
   //
-  // Same expression GameScreen uses, in the same order: a boss's forced
-  // mutator, then the map's own pin, then the roll. `opts.mutator` sits above
-  // all of it for the one job the old behaviour was actually good at - holding
-  // the weather still to isolate the map - and passing null forces a bare
-  // board.
-  const mutator = opts.mutator !== undefined
-    ? mutatorById(opts.mutator)
-    : mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
-      ?? selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`));
+  // Deliberately NOT restored afterwards. The seed has to stay armed for the
+  // rest of the deal (createInitialGameData reads it below) and for the play
+  // that follows, and a test process that ends up deterministic is the outcome
+  // being asked for rather than a side effect to tidy away.
+  if (getRunSeedText() === null) setRunSeedText("bot-unseeded-deal");
+
+  const mutator = opts.mutator === "roll"
+    ? mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
+      ?? selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`))
+    : mutatorById(opts.mutator ?? undefined);
 
   const events: BotEvents = {
     levelComplete: false, gameOver: false, livesLost: 0,

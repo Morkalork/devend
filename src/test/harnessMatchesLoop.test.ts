@@ -60,6 +60,7 @@ const LOOP_FILE = read("src/hooks/useGameLoop.ts");
 const CANVAS = read("src/components/game/GameCanvas.tsx");
 const LOOP = LOOP_FILE + "\n" + CANVAS;
 const HARNESS = read("src/lib/bot/headlessGame.ts");
+const RUNBOT = read("src/lib/bot/runBot.ts");
 
 /**
  * Engine passes the loop runs that move the WORLD, and so must appear in the
@@ -169,6 +170,16 @@ describe("the harness plays the map the player gets", () => {
 
   it("keeps a way to hold the weather still, for isolating a map", () => {
     expect(HARNESS).toMatch(/opts\.mutator/);
+  });
+
+  it("only rolls when a run ASKS, so a board dealt by a test is repeatable", () => {
+    // The roll landed unconditional, and getRunRng falls through to Math.random
+    // with no run seed armed. Eighteen test files deal a board through
+    // createBotGame without arming one, so every one of them at level 11 or
+    // above began drawing a random mutator per run and the suite grew a flake.
+    // runBot asks for "roll" by name; everything else gets a bare board.
+    expect(HARNESS).toMatch(/opts\.mutator === "roll"/);
+    expect(RUNBOT).toMatch(/mutator: "mutator" in opts \? opts\.mutator : "roll"/);
   });
 
   it("drives creepFactor from the same four terms the loop multiplies", () => {
