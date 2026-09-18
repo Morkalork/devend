@@ -28,6 +28,10 @@ import { isArmedBreakpoint } from "@/lib/physics/breakpointFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
+import { mirrorOwner } from "./derivedLight";
+import { getLightLook } from "@/lib/lightLook";
+import { REACH_RADII } from "./ballLight";
+import { closestOnSegment } from "./ballBounce";
 import { LOCK_FLASH_MS, SUPERIOR_FLASH_MS } from "./flashLight";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
@@ -103,6 +107,7 @@ export class FxLayer {
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
+    this.drawMirrorGlints(game, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
     this.drawShellShatters(game, light, w2s, scale, now);
     this.drawFalling(game, light, w2s, now);
@@ -776,6 +781,78 @@ export class FxLayer {
         color: mix(PALETTE.shadow, body, 0.45 + amb * 0.55),
         alpha: 1, cap: "round", join: "round",
       });
+    }
+  }
+
+  /**
+   * The bright smear a ball's light leaves on a mirror's face.
+   *
+   * The reflection itself (derivedLight.ts) is a pool standing behind the
+   * mirror, which is the right picture and a slow read: it says something is
+   * lit over there. This says WHICH SURFACE DID IT, on the surface, the moment
+   * a ball comes near - the cue that makes a mirror legible as a mirror before
+   * a ball has ever bounced off one, which was the original complaint about
+   * `isMirror` and is still the thing a player needs first.
+   *
+   * Drawn along the face rather than as a blob on it, and brightest at the
+   * point nearest the ball: a specular highlight on a flat surface is a streak
+   * whose length is the surface and whose position is the light, so it slides
+   * along the mirror as the ball travels. That sliding is the part the eye
+   * catches.
+   */
+  private drawMirrorGlints(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const look = getLightLook();
+    if (look.reflected <= 0.001) return;
+    // One glint per mirror, from the ball with the strongest claim on it, so
+    // two balls near one face do not stack into a white bar.
+    const best = new Map<string, { t: number; wall: CanvasGameState["walls"][number]; near: { x: number; y: number }; color: number }>();
+    for (const ball of game.balls) {
+      if (ball.state === "won" || ball.state === "dormant") continue;
+      const p = ball.splatMass ?? ball.renderPosition ?? ball.position;
+      const reach = ball.radius * (ball.assimScale ?? 1) * REACH_RADII;
+      for (const wall of game.walls) {
+        if (!wall.isMirror || wall.portal) continue;
+        const c = closestOnSegment(p.x, p.y, wall.start.x, wall.start.y, wall.end.x, wall.end.y);
+        if (c.dist >= reach) continue;
+        // Squared, unlike the pool's linear falloff: a highlight is a narrow
+        // thing that arrives late, where the reflected pool is a wide one that
+        // has to arrive early to be a warning.
+        const t = (1 - c.dist / reach) ** 2;
+        const key = mirrorOwner(wall.id);
+        const prev = best.get(key);
+        if (!prev || t > prev.t) {
+          best.set(key, { t, wall, near: c, color: parseColor(ball.color, 0xffffff) });
+        }
+      }
+    }
+
+    for (const { t, wall, near, color } of best.values()) {
+      const a = w2s(wall.start.x, wall.start.y);
+      const b = w2s(wall.end.x, wall.end.y);
+      const c = w2s(near.x, near.y);
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 1e-6) continue;
+      const ux = dx / len, uy = dy / len;
+      // Half-length of the streak: a close ball throws a short hot highlight,
+      // a far one a long soft one, which is how a specular smear behaves and
+      // also stops the glint from being a single unreadable dot.
+      const half = Math.min(len / 2, (0.18 + (1 - t) * 0.5) * len);
+      const x0 = Math.max(Math.min(c.x - ux * half, Math.max(a.x, b.x)), Math.min(a.x, b.x));
+      const y0 = Math.max(Math.min(c.y - uy * half, Math.max(a.y, b.y)), Math.min(a.y, b.y));
+      const x1 = Math.max(Math.min(c.x + ux * half, Math.max(a.x, b.x)), Math.min(a.x, b.x));
+      const y1 = Math.max(Math.min(c.y + uy * half, Math.max(a.y, b.y)), Math.min(a.y, b.y));
+      const glint = t * look.reflected;
+      // Three strokes, widest and faintest first: a bloom around a core, which
+      // is what a highlight on a polished surface looks like and what keeps it
+      // from reading as a drawn line.
+      this.over
+        .moveTo(x0, y0).lineTo(x1, y1)
+        .stroke({ width: 7 * scale, color, alpha: 0.28 * glint, cap: "round" })
+        .moveTo(x0, y0).lineTo(x1, y1)
+        .stroke({ width: 3.2 * scale, color, alpha: 0.5 * glint, cap: "round" })
+        .moveTo(x0, y0).lineTo(x1, y1)
+        .stroke({ width: 1.2 * scale, color: 0xffffff, alpha: 0.65 * glint, cap: "round" });
     }
   }
 

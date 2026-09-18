@@ -323,7 +323,7 @@ export class BallLightPass {
         // reflection that held steady while the ball behind it stuttered
         // would read as a second, unrelated source.
         dl.intensity *= flick;
-        this.place(this.emitterAt(this.live++), dl, tex, d, game, w2s, scale, ball);
+        this.place(this.emitterAt(this.live++), dl, tex, d, game, w2s, scale, ball, d);
       }
     }
 
@@ -417,7 +417,7 @@ export class BallLightPass {
    */
   private place(
     e: Emitter, light: PlacedLight, tex: Texture, world: { x: number; y: number },
-    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball,
+    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball, derived?: DerivedLight,
   ): void {
     // Second-hand light, a caustic and a flash are all still: nothing here
     // is travelling, so the pool stays round.
@@ -432,7 +432,7 @@ export class BallLightPass {
     e.glow.alpha = light.intensity;
     e.gobo.visible = false;
     e.shade.visible = true;
-    this.drawShadows(e.shade, light, world, game, w2s, scale, skip);
+    this.drawShadows(e.shade, light, world, game, w2s, scale, skip, derived);
     this.note(world.x, world.y, light, scale, 1);
   }
 
@@ -448,9 +448,16 @@ export class BallLightPass {
   /** Every wall inside this pool, as one black quad each. */
   private drawShadows(
     g: Graphics, light: PlacedLight, world: { x: number; y: number },
-    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball,
+    game: CanvasGameState, w2s: W2S, scale: number, skip?: Ball, derived?: DerivedLight,
   ): void {
     g.clear();
+    // A mirror's reflection stands BEHIND that mirror (derivedLight.ts), so the
+    // mirror is the one wall on the board that must not shadow this light: it
+    // sits between the light and the entire room the light exists to reach.
+    // Named by owner rather than by geometry, so only the object that produced
+    // the light is exempt and every other wall - including any OTHER mirror -
+    // still occludes it normally.
+    const exempt = derived?.owner;
     // The reach test runs in WORLD units against the ball's world position. A
     // board tilt is a rotation, so it preserves distance exactly, which makes
     // the cheap test the correct one - and means only the handful of walls that
@@ -462,6 +469,7 @@ export class BallLightPass {
     let drawn = 0;
     for (const wall of game.walls) {
       if (drawn >= MAX_OCCLUDERS_PER_LIGHT) break;
+      if (exempt && wall.id.startsWith(exempt)) continue;
       if (segmentDistance(
         world.x, world.y, wall.start.x, wall.start.y, wall.end.x, wall.end.y,
       ) >= reach) continue;
@@ -507,6 +515,49 @@ export class BallLightPass {
     // alpha: they share a strength, so a single fill both costs less and stops
     // two balls whose umbras cross from double-darkening the overlap.
     if (balls > 0) g.fill({ color: PALETTE.shadow, alpha: BALL_SHADOW_ALPHA });
+
+    this.clipToFrontOfMirror(g, light, w2s, derived);
+  }
+
+  /**
+   * Black out the half of a mirror's reflection that falls BEHIND the mirror.
+   *
+   * The light stands at the ball's virtual image, which is behind the face, so
+   * without this the back of the mirror is the brightest part of the pool and
+   * the mirror reads as a window rather than a mirror. The exemption above
+   * removes the mirror as an occluder; this is what replaces it, and the pair
+   * is what a reflection is: light on one side of a line and none on the other.
+   *
+   * A half-plane rather than a cone through the mirror's ends, which is what
+   * true optics would clip to. The cone is only correct for an eye at a fixed
+   * point, and a board seen from above has no such eye; the half-plane says the
+   * true thing for every viewer, which is that this light lives in front.
+   */
+  private clipToFrontOfMirror(
+    g: Graphics, light: PlacedLight, w2s: W2S, derived?: DerivedLight,
+  ): void {
+    const face = derived?.face;
+    if (!face) return;
+    const a = w2s(face.ax, face.ay);
+    const b = w2s(face.bx, face.by);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-6) return;
+    const ux = dx / len, uy = dy / len;
+    // Normal pointing at the light, which is the side to erase: the light is
+    // behind the mirror by construction.
+    let nx = -uy, ny = ux;
+    if ((light.x - a.x) * nx + (light.y - a.y) * ny < 0) { nx = -nx; ny = -ny; }
+    // Far enough to cover the whole pool in both directions along the face and
+    // away from it, so the mask is a half-plane rather than a rectangle whose
+    // corners the pool can leak past.
+    const R = light.reach * 2 + len;
+    const a0x = a.x - ux * R, a0y = a.y - uy * R;
+    const b0x = b.x + ux * R, b0y = b.y + uy * R;
+    g.poly([
+      { x: a0x, y: a0y }, { x: b0x, y: b0y },
+      { x: b0x + nx * R, y: b0y + ny * R }, { x: a0x + nx * R, y: a0y + ny * R },
+    ]).fill({ color: PALETTE.shadow, alpha: 1 });
   }
 
   private emitterAt(i: number): Emitter {
