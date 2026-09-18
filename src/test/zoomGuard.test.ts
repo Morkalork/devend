@@ -1,20 +1,25 @@
 /**
  * The browser's zoom must not reach a board that is being played on.
  *
- * Reported twice, in both directions. First "you can accidentally zoom out
- * when playing": on a phone a fence is drawn by dragging across a board that
- * fills the screen, so a second finger anywhere near the first is a pinch, and
- * the page zooms out mid-cut. Then, after that shipped, "I still accidentally
- * zoom in sometimes when drawing a fence": two quick single-finger taps near
- * the same spot, which just playing fast produces on its own, reads to the
- * browser as a double-tap and zooms in.
+ * Reported three times, three different gestures. First "you can accidentally
+ * zoom out when playing": on a phone a fence is drawn by dragging across a
+ * board that fills the screen, so a second finger anywhere near the first is a
+ * pinch, and the page zooms out mid-cut. Then, after that shipped, "I still
+ * accidentally zoom in sometimes when drawing a fence": two quick
+ * single-finger taps near the same spot, which just playing fast produces on
+ * its own, reads to the browser as a double-tap and zooms in. Then, after
+ * THAT shipped, "I still managed to zoom out with just one finger as I tried
+ * to draw a fence": a second single-finger touchdown near a recent tap,
+ * followed by a drag instead of a lift, is Safari's continuous one-finger
+ * zoom - the gesture a fence draw begun near a previous tap or release IS.
  *
  * What is worth testing is not "does preventDefault get called" but the ways
  * each fix could be wrong: it could break the one-finger drag the whole game
  * is made of, it could be registered passively and do nothing at all, it could
- * switch itself off on the wrong screen, or the double-tap guard could catch
- * two taps that were never a double-tap at all - two different balls tapped in
- * quick succession, say - and eat a real gameplay tap's browser-side echo.
+ * switch itself off on the wrong screen, or a tap-proximity guard could catch
+ * two taps - or a tap and a drag - that were never the same gesture at all -
+ * two different balls tapped in quick succession, say, or an ordinary fence
+ * begun nowhere near the player's last touch - and eat real gameplay.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
@@ -63,6 +68,18 @@ function touchEnd(
   return e.defaultPrevented;
 }
 
+/**
+ * A finger touching down at (x, y), as the `n`th finger currently on the
+ * board (default 1: the ordinary single-finger case a fence draw begins with).
+ */
+function touchStart(doc: Document, x: number, y: number, touchesDown = 1): boolean {
+  const e = new Event("touchstart", { bubbles: true, cancelable: true });
+  Object.defineProperty(e, "changedTouches", { value: [{ clientX: x, clientY: y }] });
+  Object.defineProperty(e, "touches", { value: new Array(touchesDown).fill({}) });
+  doc.dispatchEvent(e);
+  return e.defaultPrevented;
+}
+
 describe("which screens may zoom", () => {
   it("allows it only on the admin tools", () => {
     for (const s of ZOOM_ALLOWED_SCREENS) expect(zoomAllowedOn(s), s).toBe(true);
@@ -93,6 +110,10 @@ describe("the guard while it is installed", () => {
     // across the board, and a guard that swallowed it would trade a rare
     // annoyance for an unplayable game.
     expect(touchMove(document, 1)).toBe(false);
+  });
+
+  it("leaves a fresh single-finger touchdown alone, with no prior tap", () => {
+    expect(touchStart(document, 400, 400)).toBe(false);
   });
 
   it("blocks a pinch", () => {
@@ -171,6 +192,67 @@ describe("the guard while it is installed", () => {
       expect(touchEnd(document, 100, 100), "a fresh first tap, not a third of a triple").toBe(false);
     });
   });
+
+  describe("one-finger drag-to-zoom", () => {
+    // Reported after the pinch and the double-tap were both already fixed: "I
+    // still managed to zoom out with just one finger as I tried to draw a
+    // fence." Safari's own gesture - a second single-finger touchdown near a
+    // recent tap, dragged instead of lifted, zooms continuously - and by the
+    // time that finger's touchend fires the zoom has already happened, so the
+    // double-tap fix above (which acts on touchend) is too late for it.
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("refuses a touchdown that lands near a tap it just saw complete", () => {
+      expect(touchEnd(document, 100, 100)).toBe(false);       // the first tap completes
+      vi.advanceTimersByTime(100);
+      expect(touchStart(document, 104, 98)).toBe(true);        // the second, close by
+    });
+
+    it("keeps refusing that finger's own move - the drag the touchend fix is too late for", () => {
+      touchEnd(document, 100, 100);
+      vi.advanceTimersByTime(100);
+      touchStart(document, 100, 100);
+      expect(touchMove(document, 1)).toBe(true);
+    });
+
+    it("stops refusing once every finger is up, even mid-gesture", () => {
+      touchEnd(document, 100, 100);
+      vi.advanceTimersByTime(100);
+      touchStart(document, 100, 100);
+      touchMove(document, 1);
+      touchEnd(document, 130, 220);                             // the drag's own release
+      expect(touchMove(document, 1), "a later, unrelated move").toBe(false);
+    });
+
+    it("never fires for a touchdown far from the last tap", () => {
+      touchEnd(document, 100, 100);
+      vi.advanceTimersByTime(100);
+      expect(touchStart(document, 400, 400)).toBe(false);
+      expect(touchMove(document, 1), "an ordinary drag started elsewhere").toBe(false);
+    });
+
+    it("never fires for a touchdown too long after the last tap", () => {
+      touchEnd(document, 100, 100);
+      vi.advanceTimersByTime(400);
+      expect(touchStart(document, 100, 100)).toBe(false);
+      expect(touchMove(document, 1)).toBe(false);
+    });
+
+    it("never fires when it is a second finger joining, not the whole gesture", () => {
+      // The multi-touch (pinch) handling is onTouchMove's job; this candidate
+      // is specifically for a touch that is alone on the board.
+      touchEnd(document, 100, 100);
+      vi.advanceTimersByTime(100);
+      expect(touchStart(document, 100, 100, 2)).toBe(false);
+    });
+
+    it("with no prior tap at all, an ordinary fence drag is untouched start to finish", () => {
+      expect(touchStart(document, 300, 300)).toBe(false);
+      expect(touchMove(document, 1)).toBe(false);
+      expect(touchEnd(document, 500, 500)).toBe(false);
+    });
+  });
 });
 
 describe("the guard registers itself so that it can actually block", () => {
@@ -181,8 +263,9 @@ describe("the guard registers itself so that it can actually block", () => {
     const add = vi.spyOn(document, "addEventListener");
     const off = installZoomGuard(document);
     const guarded = add.mock.calls.filter(([name]) =>
-      ["touchmove", "wheel", "touchend", "gesturestart", "gesturechange", "gestureend"].includes(String(name)));
-    expect(guarded.length).toBe(6);
+      ["touchstart", "touchmove", "wheel", "touchend", "gesturestart", "gesturechange", "gestureend"]
+        .includes(String(name)));
+    expect(guarded.length).toBe(7);
     for (const [name, , opts] of guarded) {
       expect(opts, `${String(name)} was registered with no options`).toBeTypeOf("object");
       expect((opts as AddEventListenerOptions).passive, `${String(name)} is passive`).toBe(false);
@@ -201,10 +284,22 @@ describe("taking the guard off again", () => {
     expect(touchMove(document, 2), "still blocking after teardown").toBe(false);
     expect(wheel(document, true)).toBe(false);
     expect(touchEnd(document, 100, 100)).toBe(false);
+    expect(touchStart(document, 100, 100)).toBe(false);
     // Restored, not cleared: something else may own this property, and setting
     // it to "" on the way out would break whatever ran first.
     expect(document.documentElement.style.touchAction).toBe("pan-y");
     document.documentElement.style.touchAction = "";
+  });
+
+  it("stops refusing a drag-to-zoom candidate's own move too", () => {
+    vi.useFakeTimers();
+    const off = installZoomGuard(document);
+    touchEnd(document, 100, 100);
+    vi.advanceTimersByTime(100);
+    expect(touchStart(document, 100, 100)).toBe(true);   // set up as a candidate
+    off();
+    expect(touchMove(document, 1), "still refusing after teardown").toBe(false);
+    vi.useRealTimers();
   });
 });
 

@@ -1,15 +1,21 @@
 /**
  * Keep the browser's own zoom off the board while the game is running.
  *
- * Reported from play twice, in both directions: first "you can accidentally
- * zoom out when playing", then, after that was fixed, "I still accidentally
- * zoom in sometimes when drawing a fence". Two different gestures, both with
- * the same result. On a phone the board fills the screen, a fence is drawn by
- * dragging across it, and a second finger landing anywhere near the first is a
- * pinch as far as the browser is concerned - that one zooms out. Two quick taps
- * near the same spot, which happens just from playing quickly, reads as a
- * double-tap - that one zooms in. Either way the board stops matching where the
- * fingers are, and nothing in the game can put it back.
+ * Reported from play three times now, and each time the result looked the
+ * same - the board stops matching where the fingers are, mid-cut - while the
+ * gesture behind it was different: "you can accidentally zoom out when
+ * playing" (a two-finger pinch), then "I still accidentally zoom in sometimes
+ * when drawing a fence" (two quick single-finger taps read as a double-tap),
+ * then "I still managed to zoom out with just one finger as I tried to draw a
+ * fence". That third one is real and is not either of the first two: iOS
+ * Safari also treats a SECOND single-finger touchdown landing close to a
+ * recent tap, followed by a drag instead of a lift, as the start of a
+ * continuous one-finger zoom - press near where you just tapped and drag
+ * up or down to zoom smoothly, never more than one contact point at once. A
+ * fence is drawn by exactly that gesture (touch down, drag), so any fence
+ * begun close to wherever the player's last tap or release landed - the end
+ * of the previous cut, an incidental tap on the board - is offered to Safari
+ * as the opening move of a zoom instead.
  *
  * ── Why the viewport meta was not enough ────────────────────────────────────
  *
@@ -29,7 +35,7 @@
  *
  * ── What actually stops it ──────────────────────────────────────────────────
  *
- * Three mechanisms, because none of them covers the whole field alone:
+ * Four mechanisms, because none of them covers the whole field alone:
  *
  *   touch-action    `pan-x pan-y` on the root element permits scrolling and
  *                   withholds pinch-zoom. This is the one the compositor
@@ -57,6 +63,20 @@
  *                   tap-driven mechanic - freeze, tap-to-remove, targeted
  *                   abilities - still fires even when the double-tap window
  *                   catches its browser-side echo.
+ *   drag-to-zoom    the one-finger gesture, and the gap the other three leave
+ *                   open: by the time a `touchend` fires on this second
+ *                   contact the finger has already dragged and the zoom has
+ *                   already happened, so suppressing the tap's OWN touchend
+ *                   is too late, and it never has a second simultaneous touch
+ *                   for the pinch handling above to see either. So this is
+ *                   caught earlier, on `touchstart`: a single-finger touchdown
+ *                   landing within the SAME double-tap window and distance as
+ *                   the last completed tap is a live candidate for the drag,
+ *                   whether or not it turns into one, and both its touchstart
+ *                   and every one of its own touchmove events are suppressed
+ *                   until it lifts. A fence begun somewhere else on the board
+ *                   - not close to the last tap - never sets the candidate and
+ *                   is untouched, same as every ordinary drag has always been.
  *
  * ── Why it is safe to swallow a second finger ───────────────────────────────
  *
@@ -64,6 +84,11 @@
  * handler in useGameInput opens by discarding a pointer that is not the one it
  * started with. So a second finger is already inert, and taking its browser
  * default away removes a gesture the game never offered rather than one it did.
+ * The drag-to-zoom candidate above is a single finger, not a second one, but
+ * the same fact covers it from the other direction: preventDefault on a touch
+ * event never reaches the pointer events the game reads, on this contact or
+ * any other, so the fence still draws exactly as the finger moves even while
+ * its browser-side zoom is being refused underneath it.
  *
  * ── Admin keeps its own zoom ────────────────────────────────────────────────
  *
@@ -127,13 +152,40 @@ export function installZoomGuard(doc: Document): () => void {
   const previousTouchAction = root.style.touchAction;
   root.style.touchAction = GUARDED_TOUCH_ACTION;
 
+  // Shared by the double-tap-zoom check and the drag-to-zoom candidate below:
+  // both are "is this touch close, in time and space, to the last one that
+  // completed" - the same question a double-tap always was, asked from two
+  // different events because the two zoom gestures reveal themselves at two
+  // different moments.
+  let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
+  const isCloseToLastTap = (x: number, y: number, now: number): boolean =>
+    now - lastTapAt <= DOUBLE_TAP_WINDOW_MS
+    && Math.hypot(x - lastTapX, y - lastTapY) <= DOUBLE_TAP_MAX_DISTANCE_PX;
+
+  // Is the single touch currently down a live candidate for Safari's one-finger
+  // drag-to-zoom (a second touchdown near the last tap, not yet lifted)? Set on
+  // a qualifying touchstart, read by onTouchMove for as long as it stays the
+  // only finger on the board, cleared the moment every finger is up. A flag
+  // rather than a remembered touch id: the gate that sets it already requires
+  // exactly one finger down, so for as long as that stays true there is only
+  // ever one touch it could mean.
+  let dragZoomCandidate = false;
+
   // A pinch is the only multi-touch this game has a use for stopping, and the
   // check is on the EVENT rather than on a remembered "are we pinching" flag: a
   // finger can arrive or leave mid-gesture, and a flag would have to be right
   // about every one of those transitions to stay correct.
   const onTouchMove = (e: Event) => {
     const touch = e as TouchEvent;
-    if (touch.touches && touch.touches.length > 1 && e.cancelable) e.preventDefault();
+    const count = touch.touches?.length ?? 0;
+    if (count > 1) {
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+    // The drag half of the one-finger zoom: by the time this touch lifts the
+    // zoom has already happened, so its OWN move has to be refused too, not
+    // just its touchend - see onTouchStart for where the candidate is set.
+    if (dragZoomCandidate && count === 1 && e.cancelable) e.preventDefault();
   };
 
   // ctrl+wheel is a trackpad pinch and the desktop zoom shortcut. A plain wheel
@@ -145,6 +197,27 @@ export function installZoomGuard(doc: Document): () => void {
 
   const onGesture = (e: Event) => { if (e.cancelable) e.preventDefault(); };
 
+  // The opening move of the one-finger drag-to-zoom: a single-finger touchdown
+  // landing within the double-tap window and distance of the last tap this
+  // guard saw complete. It does not yet know whether the finger is about to
+  // lift (an ordinary double-tap, already caught below on its touchend) or
+  // drag (the gesture touchend catches too late for), so it treats either as
+  // the candidate and lets onTouchMove keep refusing this contact's default
+  // for as long as it is the only finger down. `touches.length === 1` (not
+  // `changedTouches`) is deliberate: a second finger arriving mid-pinch also
+  // fires touchstart, and that path is the multi-touch handling above's job,
+  // not this one's.
+  const onTouchStart = (e: Event) => {
+    const touch = e as TouchEvent;
+    if ((touch.touches?.length ?? 0) !== 1 || touch.changedTouches?.length !== 1) {
+      dragZoomCandidate = false;
+      return;
+    }
+    const [t] = touch.changedTouches;
+    dragZoomCandidate = isCloseToLastTap(t.clientX, t.clientY, Date.now());
+    if (dragZoomCandidate && e.cancelable) e.preventDefault();
+  };
+
   // Double-tap-zoom: two single-finger taps, never two touches at once, so the
   // pinch handling above never sees it. Tracked on `touchend` because that is
   // the event whose default action IS the zoom, and only for the last finger
@@ -155,15 +228,16 @@ export function installZoomGuard(doc: Document): () => void {
   // only the browser's own zoom is suppressed. Reset on a hit so a stray third
   // tap in the same spot does not chain onto a suppressed second one and start
   // reading as an endless double-tap.
-  let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
   const onTouchEnd = (e: Event) => {
     const touch = e as TouchEvent;
+    // Every finger is up: whatever this touch was, it is no longer a live
+    // drag-to-zoom candidate. Unconditional, ahead of the tap-shape check
+    // below, so a drag's release clears it exactly as a tap's does.
+    if ((touch.touches?.length ?? 0) === 0) dragZoomCandidate = false;
     if (touch.changedTouches?.length !== 1 || (touch.touches?.length ?? 0) > 0) return;
     const [t] = touch.changedTouches;
     const now = Date.now();
-    const closeInTime = now - lastTapAt <= DOUBLE_TAP_WINDOW_MS;
-    const closeInSpace = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) <= DOUBLE_TAP_MAX_DISTANCE_PX;
-    if (closeInTime && closeInSpace) {
+    if (isCloseToLastTap(t.clientX, t.clientY, now)) {
       if (e.cancelable) e.preventDefault();
       lastTapAt = 0;
       return;
@@ -178,12 +252,14 @@ export function installZoomGuard(doc: Document): () => void {
   // one of them: a passive listener's preventDefault is ignored, silently, and
   // that failure looks exactly like the bug this fixes.
   const opts: AddEventListenerOptions = { passive: false, capture: true };
+  doc.addEventListener("touchstart", onTouchStart, opts);
   doc.addEventListener("touchmove", onTouchMove, opts);
   doc.addEventListener("wheel", onWheel, opts);
   doc.addEventListener("touchend", onTouchEnd, opts);
   for (const name of GESTURE_EVENTS) doc.addEventListener(name, onGesture, opts);
 
   return () => {
+    doc.removeEventListener("touchstart", onTouchStart, opts);
     doc.removeEventListener("touchmove", onTouchMove, opts);
     doc.removeEventListener("wheel", onWheel, opts);
     doc.removeEventListener("touchend", onTouchEnd, opts);
