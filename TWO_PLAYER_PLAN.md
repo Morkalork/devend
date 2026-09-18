@@ -11,6 +11,18 @@ Where the doc says "today", it means that commit.
 The question that prompted it: **can this be done without a server in the
 middle?** Short answer, yes. The long answer is section 3.
 
+**Decisions so far**, from review with the author:
+
+- Players are on the same network, in the same room or at least the same
+  location.
+- This is a **mobile-only game**. The web build exists for development, the
+  staging site and the desk rig, not as a player target.
+- Pairing starts with one QR that is a link plus the answer mailbox on the
+  existing server (step 5), because it is thirty lines and works everywhere.
+- The end state on Android is **Google Nearby Connections** (step 9): both
+  players open 2-Player, the phones find each other, one tap joins. No QR, no
+  Wi-Fi network, no server at any point. The QR path stays for the web build.
+
 ---
 
 ## 1. The mode in one paragraph
@@ -153,9 +165,11 @@ The only peer-to-peer channel a WebView can open to another phone is a
 **WebRTC data channel**. Bluetooth is out: Web Bluetooth is central-only, a
 web page cannot advertise as a peripheral, so two web layers cannot find each
 other over it. A native Nearby Connections plugin (Google Play Services,
-Bluetooth + Wi-Fi Direct, no network at all) would work and needs no server,
-but it is Kotlin work in a custom Capacitor plugin and it is Android-only,
-which leaves the web build with nothing. WebRTC works in both builds.
+Bluetooth + Wi-Fi Direct, no network at all) works and needs no server, but it
+is Kotlin work in a custom Capacitor plugin and it is Android-only. **[CHANGED]**
+Since the game is mobile-only, Nearby is the chosen end state (step 9); WebRTC
+is the first version and remains the path for the web build. The rest of this
+section describes the WebRTC path.
 
 The recipe, and where "no server" bends:
 
@@ -538,6 +552,73 @@ return path, so it lands in step 5. What remains optional is a typed code as
 an alternative to the QR ("tell your friend: FENCE"), which is the same
 endpoint keyed by a shorter id.
 
+### Step 9 - Nearby Connections, the Android end state  (L)  **[CHANGED]**
+
+What the player sees: both open 2-Player. Each phone shows "Looking for your
+partner" and, within a few seconds, the other phone's name. Tap it, and both
+phones show the same four digits for a moment (Nearby's authentication
+token, which doubles as the "yes, that is the phone across the table" check)
+while the connection comes up. Then the Continue / New Game choice from step
+6b, or straight to the map. No QR, no camera, no Wi-Fi network, no server, and
+no host/guest choice: whoever's device id sorts lower hosts.
+
+What it is: Google Play Services' Nearby Connections API, driven from a small
+Capacitor plugin written for this app. Both phones advertise and discover at
+once under one service id with the `P2P_POINT_TO_POINT` strategy, which starts
+over Bluetooth and upgrades itself to Wi-Fi Direct or the shared LAN for
+bandwidth. Payloads are reliable byte messages up to 32 KB, which is far
+above anything the lockstep sends; the lockstep messages carry tick numbers,
+so delivery order is not something the transport has to promise.
+
+Once this exists, WebRTC and the mailbox are not used on Android at all. The
+transport interface from step 4 gets its third implementation,
+`NearbyTransport`, and the lockstep does not know which one it is on. The
+plugin's web stub reports "unavailable", which is how the web build and the
+desk rig keep the WebRTC path.
+
+The plugin (`android/app/src/main/java/.../NearbyPlugin.kt`, one file):
+
+```
+startAdvertising(name)      startDiscovery()       stop()
+connect(endpointId)         accept(endpointId)     disconnect()
+send(bytes)
+events: endpointFound, endpointLost, connectionInitiated(digits),
+        connected, payload, disconnected
+```
+
+Permissions, which is the part that takes the time: Android 12 and up need
+`BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN`; Android 13
+adds `NEARBY_WIFI_DEVICES`; Android 11 and below need
+`ACCESS_FINE_LOCATION` with location services switched on, which is the one
+prompt that surprises people, so the 2-Player screen explains it before the
+system dialog appears. Plus `play-services-nearby` in the Gradle
+dependencies. The plugin exposes `permissionState()` so the app can show
+which one is missing instead of a silent "nobody found".
+
+Input delay: the Bluetooth phase before the bandwidth upgrade has a higher
+round trip than Wi-Fi (tens of ms, occasionally over a hundred). The lockstep
+measures the round trip continuously and sets the input delay from it,
+clamped between 6 ticks (50 ms) and 24 ticks (200 ms). A fence takes seconds
+to grow, so even the top of that range reads as a slight lag on the start of
+a cut, not as a broken game, and the upgrade normally lands within seconds.
+
+Reconnect: Nearby reports a disconnect promptly. The map pauses on both
+phones with "Reconnecting", discovery restarts, and the same partner reconnects
+without a tap. After thirty seconds the host may continue solo; the pair save
+from step 6b holds the run for next time either way.
+
+The pair identity from step 6b is unchanged: the advertised name carries the
+device id, so `pairId` is computed the same way it is over WebRTC.
+
+Testing: Nearby does not work in the emulator (no Bluetooth), so this step is
+the one that needs two physical phones from the start. Everything above the
+transport is already tested by the Playground rig, so what two phones test is
+the plugin and the permissions. Admin gets a **Nearby diagnostics** panel:
+permission states, advertising and discovery state, endpoints seen with
+signal, the connection's medium (Bluetooth or Wi-Fi) and measured round trip.
+"Did not find anyone" and "does not work" look the same from the outside,
+which is exactly the case the CLAUDE.md rule is about.
+
 ---
 
 ## 6. Things most likely to go wrong
@@ -553,6 +634,11 @@ endpoint keyed by a shorter id.
   diverge silently. The hash catches it; the fix is to hash the modifier set
   once at map start too, and refuse to start on a mismatch with a message that
   names the field.
+- **Nearby's permission maze.** The permission set differs by Android version
+  and the location prompt on older phones reads as unrelated to a game. The
+  diagnostics panel in step 9 and an explainer before the system dialog are
+  the mitigations; the mailbox path stays as the fallback when a phone
+  refuses.
 - **Mixed devices disagreeing.** A desktop and a phone are the most likely
   pair to differ in Chrome version, and therefore the most likely to trip the
   hash. Treat the first desk-rig session as a determinism audit, not a
@@ -594,6 +680,7 @@ sessions.
 | 6b pair save and continue | S | no |
 | 7 presentation | M | no |
 | 8 typed room codes | S, optional | no |
+| 9 Nearby Connections plugin | L | no |
 
 ---
 
@@ -621,4 +708,8 @@ sessions.
   servers, and an input delay tuned for 100 ms round trips.
 - **Spectating, or a phone as a second screen.**
 - **iOS.** WKWebView has WebRTC and would work the same way; there is no iOS
-  build to put it in.
+  build to put it in. Nearby Connections has no iOS counterpart in the same
+  API, so an iOS build would keep the WebRTC path.
+- **A web build for players.** The game is mobile-only; the web build's job is
+  development, the staging site and the desk rig, so the WebRTC path is kept
+  working for those and not polished beyond them.
