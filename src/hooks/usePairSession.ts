@@ -154,6 +154,42 @@ export function usePairSession(paired: PairedSession | null) {
         }));
         return;
       }
+      // The host has no save for this pair, or a staler one, and has asked
+      // for this phone's copy. A pair save lives on both phones precisely so
+      // one of them clearing its data does not end the run for the other, and
+      // this is the half of that which actually moves it across.
+      if (msg.t === "hostChoice" && msg.choice === "sendSave") {
+        setState(s => {
+          const record = s.pairId ? pairSave.saveFor(s.pairId) : null;
+          if (record) {
+            transportRef.current?.send({
+              t: "hostChoice", choice: "saveRecord", payload: record,
+            });
+          }
+          return s;
+        });
+        return;
+      }
+      // The host's copy, coming the other way. Adopt it whole: the host is the
+      // single owner of run state, so there is nothing here to merge.
+      if (msg.t === "hostChoice" && msg.choice === "saveRecord") {
+        const record = msg.payload as PairRunSave;
+        pairSave.adopt(record);
+        if (paired.isHost) {
+          runIdRef.current = record.runId;
+          setRunSeedText(record.seed);
+          const rs: PairRunState = { seed: record.seed, run: record.run, resumed: true };
+          transportRef.current?.send({ t: "runState", payload: rs });
+          setState(s => ({ ...s, runState: rs, phase: "playing" }));
+        }
+        return;
+      }
+      // New game: both phones let go of the old one at the same moment, so a
+      // reconnect cannot offer a run one of them has already discarded.
+      if (msg.t === "hostChoice" && msg.choice === "discardSave") {
+        pairSave.discard();
+        return;
+      }
       if (msg.t === "runState") {
         // The guest takes the host's run whole. Arming the seed here rather
         // than at map start is deliberate: the board, the shop and the mutator
