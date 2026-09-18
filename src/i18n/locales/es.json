@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Cargando...",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "back": "Atrás",
+    "cancel": "Cancelar"
   },
   "game": {
     "paused": "EN PAUSA",
@@ -1852,5 +1854,31 @@
       "band": "Niveles {{from}}-{{to}}",
       "credits": "Créditos finales"
     }
+  },
+  "pair": {
+    "title": "2 jugadores",
+    "intro": "Un tablero, dos móviles, uno al lado del otro. Muestra el código y que el otro jugador lo escanee con su cámara.",
+    "showCode": "Mostrar el código",
+    "showCodeHint": "Tu pareja lo escanea y entra",
+    "scanMe": "Escanea esto con la cámara del otro móvil.",
+    "preparing": "Preparando el código",
+    "joining": "Entrando con tu pareja",
+    "connected": "Conectados. Empieza el mapa.",
+    "failed": "No se pudo contactar con el otro móvil.",
+    "slowHint": "Los dos móviles deben estar en la misma Wi-Fi. Si ya lo están, activa un punto de acceso en uno y conecta el otro.",
+    "tryAgain": "Reintentar",
+    "partner": "Pareja",
+    "versionMismatch": "Un móvil tiene una versión antigua. Actualízalo y vuelve a intentarlo.",
+    "resumeWith": "Seguir con {{name}}",
+    "continueRun": "Continuar",
+    "newGame": "Partida nueva",
+    "waitingForPartner": "Esperando a tu pareja",
+    "reconnecting": "Reconectando",
+    "partnerLeft": "Tu pareja se ha desconectado.",
+    "continueSolo": "Seguir en solitario",
+    "lostSync": "Los tableros se separaron. Reiniciando el mapa.",
+    "yourFences": "Tú",
+    "theirFences": "Pareja",
+    "savedRun": "Tenéis una partida en curso, en el mapa {{level}}."
   }
 }

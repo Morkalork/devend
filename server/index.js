@@ -22,6 +22,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { commitMapYaml, mapCommitConfig, configProblem, secretMatches } from "./mapCommit.js";
+import { putAnswer, takeAnswer, dropRoom } from "./pairRooms.js";
 
 const PORT = process.env.PORT || 8080;
 const DIST = resolve(process.cwd(), "dist");
@@ -142,6 +143,34 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/api/map") {
     if (req.method === "PUT") return handleMapSave(req, res);
     res.writeHead(405, { Allow: "PUT" });
+    return res.end();
+  }
+
+  // The pairing mailbox (server/pairRooms.js). One message per pairing, and
+  // never on the path once the two phones are talking.
+  if (url.pathname.startsWith("/api/room/")) {
+    const roomId = url.pathname.slice("/api/room/".length);
+    if (req.method === "PUT") {
+      let body;
+      try { body = await readBody(req); }
+      catch { return json(res, 413, { error: "body too large" }); }
+      let answer;
+      try { answer = JSON.parse(body).answer; }
+      catch { return json(res, 400, { error: "bad JSON" }); }
+      const out = putAnswer(roomId, answer);
+      if (out.body === null) { res.writeHead(out.status); return res.end(); }
+      return json(res, out.status, out.body);
+    }
+    if (req.method === "GET") {
+      const out = takeAnswer(roomId);
+      return json(res, out.status, out.body);
+    }
+    if (req.method === "DELETE") {
+      dropRoom(roomId);
+      res.writeHead(204);
+      return res.end();
+    }
+    res.writeHead(405, { Allow: "GET, PUT, DELETE" });
     return res.end();
   }
 

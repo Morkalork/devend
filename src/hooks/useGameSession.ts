@@ -1145,9 +1145,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * re-hydrated from the loaded pools by id; the exact level variants are
    * restored via restoreSequence so the resumed maps match what was saved.
    */
-  const handleContinueRun = useCallback(async () => {
-    const save = readRun();
-    if (!save) return;
+  /**
+   * Resume a run from a record, whoever is holding it.
+   *
+   * Split out of handleContinueRun so a PAIR can resume too
+   * (TWO_PLAYER_PLAN.md step 6b): a pair save lives under its own key, and on
+   * the guest's phone it arrives over the wire rather than out of storage, so
+   * "read the solo save and resume it" is the one thing it cannot do. Same
+   * path otherwise, down to the seed being armed before the loads.
+   */
+  const resumeRunFrom = useCallback(async (save: RunSave) => {
 
     // Restore the run's seeded context (or lack of it) BEFORE loading: the
     // shops/drafts/pickups ahead must keep rolling from the daily seed.
@@ -1234,7 +1241,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
 
     nav.goToGame();
-  }, [readRun, loadLevels, loadUpgrades, loadCertificates, loadLoadouts, restoreRunProgress, restoreSequence, nav.goToGame, bestScore]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, restoreRunProgress, restoreSequence, nav.goToGame, bestScore]);
+
+  const handleContinueRun = useCallback(async () => {
+    const save = readRun();
+    if (!save) return;
+    await resumeRunFrom(save);
+  }, [readRun, resumeRunFrom]);
 
   // End-of-run build recap: name the build from its archetype lean and score
   // the banked overtime against the dominant archetype's personal best.
@@ -2407,6 +2420,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     /** The saved run's ascension depth, for the menu's Continue button. */
     savedRun,
     handleContinueRun,
+    /** Resume a run from a record (the pair save; see TWO_PLAYER_PLAN step 6b). */
+    resumeRunFrom,
+    /**
+     * The run as it stands, for anyone who needs to persist it somewhere else.
+     *
+     * A pair keeps its own copy of this on BOTH phones, under its own key, so
+     * one player clearing their data does not end the run for the other. Read
+     * through a getter rather than handed out as state: it is the same ref the
+     * per-map write above reads, so the two cannot disagree about what "now"
+     * is.
+     */
+    readRunSnapshot: () => runSnapshotRef.current,
     // Records (HIGHSCORES.md Phase A/B/C/D)
     levelPace,
     lastRunRank,

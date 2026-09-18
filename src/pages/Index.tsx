@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
+import { usePairSession } from '@/hooks/usePairSession';
+import type { PairedSession } from '@/components/game/PairLobby';
 import { useMenuHighlights } from '@/hooks/useMenuHighlights';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
@@ -53,6 +55,8 @@ const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => 
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
 const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScreen').then(m => ({ default: m.UpgradeAtlasScreen })));
 const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
+const PairLobby = lazy(() => import('@/components/game/PairLobby').then(m => ({ default: m.PairLobby })));
+const PairDecision = lazy(() => import('@/components/game/PairDecision').then(m => ({ default: m.PairDecision })));
 
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
@@ -76,6 +80,48 @@ type Navigation = ReturnType<typeof useScreenNavigation>;
 type Session = ReturnType<typeof useGameSession>;
 
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
+  /**
+   * Two-player (TWO_PLAYER_PLAN.md).
+   *
+   * `paired` is the live link the lobby produced; `pair` is everything that
+   * hangs off it, including the lockstep the game loop reads its ticks from.
+   * Both are null in solo play, which is why nothing below the lobby has to
+   * ask whether a second player exists.
+   */
+  const [paired, setPaired] = useState<PairedSession | null>(null);
+  const pair = usePairSession(paired);
+
+  const leavePair = useCallback(() => {
+    pair.end();
+    setPaired(null);
+    navigation.goToWelcome();
+  }, [pair, navigation]);
+
+  // The host has settled Continue or New and both devices hold the run: start
+  // the map. A resumed run goes through the same path the solo Continue uses.
+  const pairRunState = pair.runState;
+  const pairPhase = pair.phase;
+  useEffect(() => {
+    if (pairPhase !== 'playing' || !pairRunState) return;
+    if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run);
+    else session.handleStartGame();
+    // handleStartGame/handleResumeSavedRun are stable session actions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pairPhase, pairRunState]);
+
+  // A pair keeps its own copy of the run on BOTH phones, written on the same
+  // signal the solo save uses: a new map beginning.
+  const pairRecordMap = pair.recordMap;
+  useEffect(() => {
+    if (pairPhase !== 'playing' || navigation.currentScreen !== 'game') return;
+    const snap = session.readRunSnapshot();
+    if (!snap || snap.levelSequenceIds.length === 0) return;
+    pairRecordMap({ ...snap, version: 1, savedAt: Date.now() });
+    // Keyed on the map, like the solo write: the payload is read fresh, so
+    // this fires once per map rather than on every state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pairPhase, navigation.currentScreen, session.currentLevelIndex, pairRecordMap]);
+
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
   // Browser zoom off everywhere the game is PLAYED, on for the admin tools that
@@ -263,6 +309,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                 onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
+                onTwoPlayer={navigation.goToPairLobby}
                 showDailyIntro={session.shouldShowDaily}
                 onDailyIntroSeen={session.markDailySeen}
                 // A streak is only shown while alive: attended today, or
@@ -315,6 +362,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onRecover={navigation.goToWelcome}
               >
               <GameScreen
+                lockstep={pair.lockstep}
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
                 key={`game-${session.gameInstanceKey}`}
@@ -589,6 +637,27 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {adminUnlocked && navigation.currentScreen === 'upgradeAtlas' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <UpgradeAtlasScreen onBack={navigation.goToAdmin} />
+              </Suspense>
+            )}
+            {navigation.currentScreen === 'pairLobby' && pair.phase === 'idle' && (
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
+                <PairLobby
+                  onBack={navigation.goToWelcome}
+                  onPaired={setPaired}
+                />
+              </Suspense>
+            )}
+            {navigation.currentScreen === 'pairLobby' && pair.phase === 'deciding' && (
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
+                <PairDecision
+                  isHost={pair.isHost}
+                  remoteName={pair.remoteName}
+                  mine={pair.offeredSave?.mine ?? null}
+                  theirs={pair.offeredSave?.theirs ?? null}
+                  onContinue={pair.chooseContinue}
+                  onNew={pair.chooseNew}
+                  onLeave={leavePair}
+                />
               </Suspense>
             )}
             {adminUnlocked && navigation.currentScreen === 'pairLoopback' && (

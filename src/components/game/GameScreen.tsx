@@ -95,6 +95,12 @@ interface GameScreenProps {
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
   lives: number;
+  /**
+   * The lockstep session, when this map is being played by a pair
+   * (TWO_PLAYER_PLAN.md). Passed straight through to the canvas; absent means
+   * solo, which is every other path into this screen.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
@@ -188,6 +194,7 @@ export function GameScreen({
   ownedUpgradeIds,
   upgrades,
   lives,
+  lockstep,
   continuesRemaining = 0,
   onLivesChange,
   onGrantAbility,
@@ -1089,6 +1096,7 @@ export function GameScreen({
             totalLevels={totalLevels}
             totalScore={totalScore}
             lives={lives}
+            lockstep={lockstep}
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
             abilityCharges={abilityCharges ?? {}}

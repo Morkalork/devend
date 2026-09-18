@@ -90,6 +90,16 @@ export interface GameLoopCallbacks {
    * the one the next command sees.
    */
   commandDeps?: () => CommandDeps;
+  /**
+   * The lockstep session, when this map is being played by a pair.
+   *
+   * Absent in solo play, which is why nothing below changes for it. Present,
+   * it decides which ticks may run: the loop still owns the accumulator and
+   * the rendering, but a tick only happens once both devices' commands for it
+   * are in. A tick that cannot run is a stutter, never a divergence, and the
+   * frame is drawn anyway so the board does not appear to freeze.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
 }
 
 /**
@@ -400,8 +410,21 @@ export function createGameLoop(
     // which is the same instant in practice for one player and no instant at
     // all for two: a pair has to apply both devices' actions in one agreed
     // order, and this is that order.
+    //
+    // Solo, the queue is whatever this device's fingers put there and it is
+    // drained now. In a pair the lockstep owns the queue: it fills it one tick
+    // at a time inside the step loop below, from both devices' commands, and
+    // this drain handles only what is already waiting.
     const deps = callbacks.commandDeps?.();
-    if (deps) drainCommands(game, deps);
+    const pair = callbacks.lockstep?.() ?? null;
+    if (pair && !pair.beginFrame(game)) {
+      // Waiting to be put back on the host's board. Draw, do not step.
+      game.lastTime = timestamp;
+      callbacks.render();
+      schedule();
+      return;
+    }
+    if (deps && !pair) drainCommands(game, deps);
 
     // Rebuild the wall spatial index once per frame. `game.walls` is immutable
     // across this frame's substeps (movers carry their own polygons; fences
@@ -412,6 +435,14 @@ export function createGameLoop(
     let _physSteps = 0;
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
+      // In a pair, a tick runs only when both devices' commands for it are in.
+      // Refused means the partner's phone has not been heard from yet: leave
+      // the accumulator where it is and draw; the tick will run next frame.
+      if (pair) {
+        if (!pair.tryReleaseTick(game)) break;
+        if (deps) drainCommands(game, deps);
+      }
+
       // One step of sim time per physics step: the whole point of the sim
       // clock. Advanced FIRST so everything this step stamps or compares sees
       // the instant the step lands on, not the one it left.
@@ -572,6 +603,7 @@ export function createGameLoop(
       tickChains(game, PHYSICS_STEP, simNow());
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
+      pair?.endTick(game);
     }
 
     // The Lamp: which ball is lighting the board. Once per frame rather than

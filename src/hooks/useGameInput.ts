@@ -43,7 +43,7 @@ import type { GameMessageId } from "@/lib/gameMessages";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
-import { enqueueCommand, freezeTargetAt, LOCAL_PLAYER } from "@/lib/net/commands";
+import { enqueueCommand, freezeTargetAt, getLocalPlayer } from "@/lib/net/commands";
 import { simNow } from "@/lib/simClock";
 
 /**
@@ -185,7 +185,7 @@ export function useGameInput(
       if (gesture?.kind === "mover" && e.pointerId !== gesture.pointerId) {
         // A held mover IS simulation state (the physics step drives it), so
         // letting go has to travel as a command even when it fires nothing.
-        enqueueCommand(game, { kind: "moverRelease", player: LOCAL_PLAYER, cancel: true });
+        enqueueCommand(game, { kind: "moverRelease", player: getLocalPlayer(), cancel: true });
         gesture = null;
         if (navigator.vibrate) navigator.vibrate(30);
         return;
@@ -315,7 +315,7 @@ export function useGameInput(
             gesture = { kind: "mover", pointerId: e.pointerId, moverId: mover.id };
             enqueueCommand(game, {
               kind: "moverGrab",
-              player: LOCAL_PLAYER,
+              player: getLocalPlayer(),
               moverId: mover.id,
               pointer: { ...w },
               driveMultiplier: activeModifiers.moverDrive,
@@ -393,7 +393,7 @@ export function useGameInput(
         const c = getCanvasCoords(e);
         enqueueCommand(game, {
           kind: "moverMove",
-          player: LOCAL_PLAYER,
+          player: getLocalPlayer(),
           pointer: screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game)),
         });
         return;
@@ -441,7 +441,7 @@ export function useGameInput(
       // from there.
       if (gesture?.kind === "mover") {
         gesture = null;
-        enqueueCommand(game, { kind: "moverRelease", player: LOCAL_PLAYER });
+        enqueueCommand(game, { kind: "moverRelease", player: getLocalPlayer() });
         return;
       }
 
@@ -452,7 +452,7 @@ export function useGameInput(
         gesture = null;
         enqueueCommand(game, {
           kind: "slingRelease",
-          player: LOCAL_PLAYER,
+          player: getLocalPlayer(),
           wallId: drag.wallId,
           pull: { x: drag.current.x - drag.start.x, y: drag.current.y - drag.start.y },
         });
@@ -493,7 +493,7 @@ export function useGameInput(
             // The ball is named, not described: by the time the command is
             // applied the board has moved on a frame, and "the ball nearest
             // this point" would no longer be the ball the player tapped.
-            enqueueCommand(game, { kind: "tapRemove", player: LOCAL_PLAYER, ballId: target.id });
+            enqueueCommand(game, { kind: "tapRemove", player: getLocalPlayer(), ballId: target.id });
             game.swipeStart = null; game.swipeRegionId = null;
             game.currentSwipePos = null; game.swipePointerId = null;
             setIsPlayerDragging(false);
@@ -514,7 +514,7 @@ export function useGameInput(
           if (freezeTargetAt(game, game.swipeStart, game.swipeRegionId)) {
             enqueueCommand(game, {
               kind: "freezeTap",
-              player: LOCAL_PLAYER,
+              player: getLocalPlayer(),
               at: { ...game.swipeStart },
               regionId: game.swipeRegionId,
               // A Feature Freeze use is spent before a stored charge, as it was
@@ -535,7 +535,7 @@ export function useGameInput(
           const bent = bentDrawnPath(game);
           enqueueCommand(game, {
             kind: "cut",
-            player: LOCAL_PLAYER,
+            player: getLocalPlayer(),
             start: { ...game.swipeStart },
             end: { ...game.currentSwipePos },
             path: bent ? bent.map(p => ({ ...p })) : null,

@@ -48,7 +48,35 @@ import { simNow } from "@/lib/simClock";
  *  all player 0, which is why nothing below special-cases it. */
 export type PlayerId = 0 | 1;
 
-export const LOCAL_PLAYER: PlayerId = 0;
+/**
+ * Which player this DEVICE is.
+ *
+ * Solo play is always player 0, which is why nothing in the pointer layer
+ * special-cases it. In a pair the guest's phone is player 1, and every command
+ * its fingers produce has to say so, or the two devices apply each other's
+ * actions under the wrong name and the fence colours (and the mover grabs)
+ * swap over. One device, one answer, so this is a module value rather than
+ * something threaded through every handler.
+ */
+let localPlayer: PlayerId = 0;
+
+export function setLocalPlayer(p: PlayerId): void { localPlayer = p; }
+export function getLocalPlayer(): PlayerId { return localPlayer; }
+
+/**
+ * Where a command goes when the pointer layer produces one.
+ *
+ * Solo, straight onto the game's own queue, drained by the loop at the top of
+ * the frame. In a pair the lockstep takes it instead: it books the command for
+ * a tick a few ahead, sends it to the other phone, and hands it back to the
+ * queue when that tick comes round on BOTH devices. The pointer layer does not
+ * know which of those is happening, which is the point.
+ */
+let sink: ((cmd: GameCommand) => void) | null = null;
+
+export function setCommandSink(fn: ((cmd: GameCommand) => void) | null): void {
+  sink = fn;
+}
 
 export type GameCommand =
   /** A finished cut. Carries the drag, not the fence: both devices cast the
@@ -108,8 +136,20 @@ export interface CommandDeps {
   vibrate?: (pattern: number | number[]) => void;
 }
 
-/** Put a command in the queue the loop drains. */
+/** Put a command where it should go: the local queue, or the pair's lockstep. */
 export function enqueueCommand(game: CanvasGameState, cmd: GameCommand): void {
+  if (sink) { sink(cmd); return; }
+  queueLocally(game, cmd);
+}
+
+/**
+ * Put a command straight on the game's own queue, sink or no sink.
+ *
+ * This is how the lockstep hands a released tick's commands over: they have
+ * already been through the sink once, on the device whose finger made them,
+ * and sending them round again would be a loop.
+ */
+export function queueLocally(game: CanvasGameState, cmd: GameCommand): void {
   (game.pending ??= []).push(cmd);
 }
 

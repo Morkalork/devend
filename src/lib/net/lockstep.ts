@@ -22,7 +22,7 @@
  */
 import type { CanvasGameState } from "@/types/gameState";
 import type { GameCommand, PlayerId, CommandDeps } from "./commands";
-import { enqueueCommand } from "./commands";
+import { queueLocally } from "./commands";
 import type { NetMessage, Transport } from "./transport";
 import {
   motionHash, topologyHash, captureMotion, applyMotion, type MotionSnapshot,
@@ -129,11 +129,79 @@ export class LockstepSession {
   }
 
   /**
-   * Run up to `budget` ticks, applying both players' commands to `game`.
+   * Prepare for a frame: absorb any repair, re-measure the link, and say
+   * whether this device may step at all.
    *
-   * Returns how many ticks actually ran. Fewer than asked means the other
-   * device has not sent its commands yet, and the caller should draw the frame
-   * it has rather than spin.
+   * Called once per frame, before the step loop. False means this device is
+   * waiting to be put back on the host's board, and the caller should draw
+   * what it has and try again next frame.
+   */
+  beginFrame(game: CanvasGameState): boolean {
+    if (this.closed) return false;
+    this.adaptDelay();
+    // A repair first: it rewinds this device to the host's tick, and running a
+    // tick before absorbing it only takes it further from the board it is
+    // about to adopt.
+    this.absorbResync(game);
+    if (this.awaitingResync) {
+      // Keep sending while waiting, or the host stalls behind a guest that has
+      // gone quiet precisely because it is waiting to be repaired.
+      this.sendUpTo(this.tick + this.delayTicks);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Hand one tick's commands to the game, if both players' are in.
+   *
+   * False means the other device has not sent yet; the caller steps nothing
+   * and draws the frame it has. This is the stall the design promises: never a
+   * divergence, only a wait.
+   */
+  tryReleaseTick(game: CanvasGameState): boolean {
+    if (this.closed || this.awaitingResync) return false;
+
+    // Always send this tick's outbox before asking whether we may run it: the
+    // other side is waiting on exactly this message, and a session that sent
+    // only when it was about to step would deadlock against itself.
+    this.sendUpTo(this.tick + this.delayTicks);
+
+    const record = this.records.get(this.tick);
+    const remote = record?.cmds[this.remotePlayer];
+    const local = record?.cmds[this.localPlayer];
+    if (!remote || !local) {
+      this.stalledFor++;
+      if (this.stalledFor === 1) this.stats.stalls++;
+      this.cb.onStall?.(this.stalledFor);
+      return false;
+    }
+    this.stalledFor = 0;
+
+    // Player order, always, so both devices apply a simultaneous pair the same
+    // way round. Two cuts landing on the same tick is rare and exactly the
+    // case that must not be settled by who happened to arrive first.
+    for (const cmd of local.concat(remote).sort((a, b) => a.player - b.player)) {
+      queueLocally(game, cmd);
+    }
+    return true;
+  }
+
+  /** Called after the caller has stepped the tick tryReleaseTick released. */
+  endTick(game: CanvasGameState): void {
+    // The record is KEPT, not deleted: a repair rewinds to the host's tick and
+    // replays forward, which needs the commands for the ticks in between.
+    this.tick++;
+    this.pruneRecords();
+    this.stats.ticksRun++;
+    if (this.tick % HASH_EVERY === 0) this.exchangeHash(game);
+    this.checkAgreement(game);
+  }
+
+  /**
+   * Run up to `budget` ticks. A convenience wrapper over the three calls
+   * above, for the headless bench and the admin rig; the real game loop drives
+   * them itself, because its step is spread across an accumulator.
    */
   run(
     game: CanvasGameState,
@@ -141,59 +209,18 @@ export class LockstepSession {
     step: (game: CanvasGameState) => void,
     deps: CommandDeps,
   ): number {
-    if (this.closed) return 0;
-    this.adaptDelay();
-
-    // A repair, if one arrived, before anything else: it rewinds this device to
-    // the host's tick, and running a tick first would only take it further from
-    // the board it is about to adopt.
-    this.absorbResync(game);
-    if (this.awaitingResync) {
-      // Still waiting. Keep sending, or the host stalls behind a guest that has
-      // gone quiet while it waits to be repaired.
-      this.sendUpTo(this.tick + this.delayTicks);
-      return 0;
-    }
-
+    if (!this.beginFrame(game)) return 0;
     let ran = 0;
     while (ran < budget) {
-      // Always send this tick's outbox before asking whether we may run it:
-      // the other side is waiting on exactly this message, and a session that
-      // sent only when it was about to step would deadlock against itself.
-      this.sendUpTo(this.tick + this.delayTicks);
-
-      const record = this.records.get(this.tick);
-      const remote = record?.cmds[this.remotePlayer];
-      const local = record?.cmds[this.localPlayer];
-      if (!remote || !local) {
-        this.stalledFor++;
-        if (this.stalledFor === 1) this.stats.stalls++;
-        this.cb.onStall?.(this.stalledFor);
-        return ran;
-      }
-      this.stalledFor = 0;
-
-      // Player order, always, so both devices apply a simultaneous pair the
-      // same way round. Two cuts landing on the same tick is rare and exactly
-      // the case that must not be resolved by who happened to arrive first.
-      for (const cmd of local.concat(remote).sort((a, b) => a.player - b.player)) {
-        enqueueCommand(game, cmd);
-      }
+      if (!this.tryReleaseTick(game)) break;
       step(game);
-      // The record is KEPT, not deleted: a repair rewinds to the host's tick
-      // and replays forward, which needs the commands for the ticks in between.
-      this.tick++;
-      this.pruneRecords();
-      this.stats.ticksRun++;
+      this.endTick(game);
       ran++;
-
-      if (this.tick % HASH_EVERY === 0) this.exchangeHash(game);
-      this.checkAgreement(game);
-      // The deps are the caller's; the step function is what drains the queue,
-      // so nothing here applies a command itself.
-      void deps;
       if (this.awaitingResync) break;
     }
+    // The deps are the caller's; the step function drains the queue, so
+    // nothing here applies a command itself.
+    void deps;
     return ran;
   }
 

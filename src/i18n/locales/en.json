@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Loading...",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back",
+    "cancel": "Cancel"
   },
   "game": {
     "paused": "PAUSED",
@@ -1304,5 +1306,31 @@
       "band": "Levels {{from}}-{{to}}",
       "credits": "End credits"
     }
+  },
+  "pair": {
+    "title": "2 Player",
+    "intro": "One board, two phones, side by side. Show the code and let the other player scan it with their camera.",
+    "showCode": "Show the code",
+    "showCodeHint": "Your partner scans it and joins",
+    "scanMe": "Scan this with the other phone's camera.",
+    "preparing": "Getting the code ready",
+    "joining": "Joining your partner",
+    "connected": "Connected. Starting the map.",
+    "failed": "Could not reach the other phone.",
+    "slowHint": "Both phones must be on the same Wi-Fi. If they are, turn on a hotspot on one and join it with the other.",
+    "tryAgain": "Try again",
+    "partner": "Partner",
+    "versionMismatch": "One phone is running an older build. Update it and try again.",
+    "resumeWith": "Resume with {{name}}",
+    "continueRun": "Continue",
+    "newGame": "New game",
+    "waitingForPartner": "Waiting for your partner",
+    "reconnecting": "Reconnecting",
+    "partnerLeft": "Your partner dropped out.",
+    "continueSolo": "Carry on alone",
+    "lostSync": "The two boards drifted apart. Restarting this map.",
+    "yourFences": "You",
+    "theirFences": "Partner",
+    "savedRun": "You have a run in progress, on map {{level}}."
   }
 }

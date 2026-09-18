@@ -247,6 +247,12 @@ interface GameCanvasProps {
    *  Passed true only for the first map of a run. */
   introAssemble?: boolean;
   onGameStateChange?: (state: GameStateInfo) => void;
+  /**
+   * The lockstep session, when a pair is playing this map
+   * (TWO_PLAYER_PLAN.md step 4). Read fresh each frame; null is solo play and
+   * changes nothing about the loop.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -345,6 +351,7 @@ export function GameCanvas({
   totalLevels,
   totalScore,
   lives,
+  lockstep,
   onLivesChange,
   onGrantAbility,
   abilityCharges,
@@ -1516,6 +1523,7 @@ export function GameCanvas({
       // Everything a player command needs to reach React. Rebuilt per frame so
       // it always carries the CURRENT modifiers rather than the ones the loop
       // was constructed with.
+      lockstep: lockstep ?? (() => null),
       commandDeps: () => ({
         modifiers: activeModifiersRef.current,
         setCutCount,

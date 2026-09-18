@@ -41,7 +41,17 @@ export type NetMessage =
   | { t: "hostChoice"; choice: string; payload?: unknown }
   /** The partner's finger, for the preview (step 7). Not simulation state:
    *  dropping one costs a frame of someone else's cursor and nothing else. */
-  | { t: "pointer"; player: number; x: number; y: number; down: boolean };
+  | { t: "pointer"; player: number; x: number; y: number; down: boolean }
+  /**
+   * The heartbeat, and the only way the round trip gets measured.
+   *
+   * A transport answers a ping with a pong carrying the same timestamp and
+   * hands neither to the session: this is about the link, not the game, and a
+   * message the lockstep did not expect is one it would have to have an
+   * opinion about.
+   */
+  | { t: "ping"; at: number }
+  | { t: "pong"; at: number };
 
 export interface Transport {
   send(msg: NetMessage): void;

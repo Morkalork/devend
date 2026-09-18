@@ -104,6 +104,10 @@ export function useScreenNavigation() {
     setCurrentScreen('pairLoopback');
   }, []);
 
+  const goToPairLobby = useCallback(() => {
+    setCurrentScreen('pairLobby');
+  }, []);
+
   const goToAchievements = useCallback(() => {
     setCurrentScreen('achievements');
   }, []);
@@ -144,5 +148,6 @@ export function useScreenNavigation() {
     goToAnimationTest,
     goToUpgradeAtlas,
     goToPairLoopback,
+    goToPairLobby,
   };
 }

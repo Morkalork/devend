@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Laddar...",
-    "close": "Stäng"
+    "close": "Stäng",
+    "back": "Tillbaka",
+    "cancel": "Avbryt"
   },
   "game": {
     "paused": "PAUSAD",
@@ -1852,5 +1854,31 @@
       "band": "Nivå {{from}}-{{to}}",
       "credits": "Eftertexter"
     }
+  },
+  "pair": {
+    "title": "2 spelare",
+    "intro": "En spelplan, två mobiler, sida vid sida. Visa koden och låt den andra spelaren skanna den med kameran.",
+    "showCode": "Visa koden",
+    "showCodeHint": "Din partner skannar den och hoppar in",
+    "scanMe": "Skanna den här med den andra mobilens kamera.",
+    "preparing": "Förbereder koden",
+    "joining": "Ansluter till din partner",
+    "connected": "Anslutna. Banan startar.",
+    "failed": "Kunde inte nå den andra mobilen.",
+    "slowHint": "Båda mobilerna måste vara på samma Wi-Fi. Är de det redan, slå på en surfzon på den ena och anslut den andra.",
+    "tryAgain": "Försök igen",
+    "partner": "Partner",
+    "versionMismatch": "En mobil kör en äldre version. Uppdatera den och försök igen.",
+    "resumeWith": "Fortsätt med {{name}}",
+    "continueRun": "Fortsätt",
+    "newGame": "Nytt spel",
+    "waitingForPartner": "Väntar på din partner",
+    "reconnecting": "Återansluter",
+    "partnerLeft": "Din partner kopplade ner.",
+    "continueSolo": "Kör vidare ensam",
+    "lostSync": "Spelplanerna gled isär. Banan startas om.",
+    "yourFences": "Du",
+    "theirFences": "Partner",
+    "savedRun": "Ni har ett pågående spel, på bana {{level}}."
   }
 }
