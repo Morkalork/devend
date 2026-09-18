@@ -144,6 +144,11 @@ step 4.
 
 ## 3. Without a server: yes, over WebRTC on the local network
 
+Confirmed by the author: players are on the same network, in the same room or
+at least the same location, and QR-code pairing is the intended flow. The
+design below takes both as given; the room-code relay in step 8 stays
+optional.
+
 The only peer-to-peer channel a WebView can open to another phone is a
 **WebRTC data channel**. Bluetooth is out: Web Bluetooth is central-only, a
 web page cannot advertise as a peripheral, so two web layers cannot find each
@@ -357,6 +362,59 @@ note that the mode needs mDNS-capable Wi-Fi or a hotspot.
 Admin: the lobby is reachable from the Playground with the `MemoryTransport`
 substituted, so the whole flow can be walked without a camera.
 
+### The desk rig: a phone and a computer  (part of steps 4 and 5)
+
+The author's own test setup is one phone plus a computer running the game in
+Chrome with DevTools device mode. It works, and it is worth designing for,
+because it is the harshest realistic determinism test there is: an x86
+desktop V8 against an ARM phone V8, almost always on different Chrome
+versions. If the hashes agree across that pair for a full map, two phones
+are easy. Basic IEEE 754 arithmetic is identical on both (V8 uses scalar
+double ops on both architectures, and JavaScript forbids fused multiply-add),
+and V8's transcendental functions are its own software port on both, so they
+should agree; the hash readout is where that claim gets tested.
+
+What is the same as two phones: same LAN, host candidates only, the fixed
+tick, the input delay. DevTools device mode emits touch pointer events, and
+each device has one finger in this mode, so its lack of independent
+multi-touch does not matter. The computer's rate (60, 120 or 144 Hz) is
+irrelevant to a fixed-step sim; the phone paces the pair.
+
+What differs, and how each is handled:
+
+1. **The phone loads the game from the dev server.** Vite already listens on
+   every interface (`host: "::"` in `vite.config.ts`), so the phone opens
+   `http://<computer LAN address>:5173` today. But a plain-http LAN origin is
+   not a secure context, and `getUserMedia` refuses outside one, so the phone
+   **cannot scan a QR** from that URL. `RTCPeerConnection` itself is not gated
+   on a secure context in Chrome, so the data channel works; only the camera
+   is out.
+2. **So the dev server does the signalling.** The `/api/map` dev-only plugin in
+   `vite.config.ts` gets a sibling, `/api/room`: park an offer under a code,
+   fetch it, post the answer, poll. The computer hosts, the phone taps Join
+   and types the four-letter code (or the lobby offers "join the host on this
+   server", since there is exactly one). No camera on either side. This is
+   step 8's relay written early in dev-only form, so step 8 is later a move
+   into `server/index.js` rather than new code. In the lobby it appears as a
+   third pairing option, shown only when the origin has the endpoint.
+3. **The camera on the computer.** With the staging site on both devices (an
+   https origin, so both are secure contexts), the QR flow works at the desk
+   too: the phone scans the laptop screen, the laptop webcam scans the phone.
+   `BarcodeDetector` is not available in desktop Chrome on Windows or Linux,
+   which is why step 5 carries the `jsQR` fallback.
+4. **The computer's network interfaces.** A desktop gathers host candidates
+   for every interface: Docker bridges, WSL, a VPN adapter. ICE tries them
+   all and settles on the one that answers, at the cost of a second or two.
+   A VPN that blocks LAN traffic breaks the link; the ten-second timeout
+   message in step 5 names it next to the hotspot advice.
+5. **A third option needs no phone at all.** Two Chrome windows on the
+   computer (one normal, one incognito, or two profiles) pair with each other
+   over a real `RTCPeerConnection` on the loopback interface. It complements
+   the Playground rig in step 4: the in-memory transport exercises the
+   lockstep logic with fake latency; two windows exercise the real WebRTC
+   stack; the phone-plus-computer pair exercises cross-architecture
+   determinism. Three rigs, each cheap, each answering a different question.
+
 ### Step 6 - The run around the map  (M)
 
 The host owns run state. Before each map the host sends `runState` (level
@@ -383,6 +441,7 @@ since both sims run every event).
 
 ### Step 8 - Room codes  (S, optional)
 
+The dev-only `/api/room` from the desk rig, moved onto the production server.
 `/api/room` on `server/index.js`: POST an offer, get a four-letter code; the
 guest GETs it and POSTs an answer; the host polls for the answer. Entries
 expire after two minutes and hold nothing but SDP. The lobby offers "Show
@@ -403,6 +462,11 @@ code" next to "Show QR". Gameplay traffic never touches it.
   diverge silently. The hash catches it; the fix is to hash the modifier set
   once at map start too, and refuse to start on a mismatch with a message that
   names the field.
+- **Mixed devices disagreeing.** A desktop and a phone are the most likely
+  pair to differ in Chrome version, and therefore the most likely to trip the
+  hash. Treat the first desk-rig session as a determinism audit, not a
+  playtest: any mismatch there is a bug in the engine's determinism, not in
+  the phone.
 - **mDNS on the guest Wi-Fi.** Covered in section 3 and gated by the step 5
   spike. The hotspot message is the safety net.
 - **The slower phone.** Lockstep runs at the pace of the slower sim. On a phone
