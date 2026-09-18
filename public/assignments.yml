@@ -46,14 +46,35 @@
 #             deepen a key to "enhance" a top-tier upgrade's effect)
 #   tierDraft { tier }            a free 1-of-3 upgrade pick (Junior..Architect)
 #
-# Balance (reassessed): rewards sit on ONE value scale so every assignment is
-# worth the effort. Anchor: 1 life ~= 13 overtime (a Fault Tolerance life costs
-# ~13h in the shop). The roster leans on LIVES and free UPGRADE PICKS, which read
-# as clearly valuable; small flat-overtime payouts (~8h) were dropped because
-# they never compared to a couple of lives. Per tier slot:
-#   first tier  ~= +2 lives (a solid, comparable floor for taking the mission).
-#   top tier    ~= a tierDraft or +3 lives, scaling UP with the constraint +
-#                  mission difficulty (Senior -> Principal -> Architect pick).
+# Balance (reassessed again 2026-09): rewards sit on ONE value scale so every
+# assignment is worth the effort. Anchor: 1 life ~= a Junior-tier upgrade, the
+# cheapest thing the shop sells - 34h, from upgrades.yml's live pricing block
+# (anchorHours 48 x tierFactor Junior 0.70), not the 13h this comment used to
+# say. That 13h was carried through the hours-by-4 deflation by simple
+# division from a PRE-deflation "~50h" that was already a guess rather than a
+# read of the formula, and it was never re-checked against upgrades.yml's own
+# anchor (48), which is not src/lib/upgradePricing.ts's fallback default (190)
+# - the mistake this note exists to stop happening again. Reported from play:
+# "6 overtime for locking 2 balls per map a few times is worth nothing next to
+# the effort" - Daily Standup's first tier, and it was right: 6h is a sixth of
+# one life, for a real behavioral ask sustained across a block.
+#
+# The roster leans on LIVES and free UPGRADE PICKS, which read as clearly
+# valuable; flat-overtime payouts under about two lives' worth read as
+# nothing next to a couple of lives and should not be a mission's headline
+# reward. Per tier slot:
+#   first tier  ~= +2 lives (a solid, comparable floor for taking the mission;
+#                  +3 for a mission whose constraint or ask carries real risk,
+#                  matching Zero Incidents / Double Down / a timed or
+#                  no-spend block, where the downside is losing a life or a
+#                  build's whole momentum, not just friction).
+#   top tier    ~= a tierDraft, scaling UP with the constraint + mission
+#                  difficulty (Senior -> Principal -> Architect pick). Every
+#                  assignment gets one at its top tier now; a mission with no
+#                  route to a free pick was the other half of the same mistake
+#                  (Lock Quota, Under Budget) - a flat number at the top of a
+#                  five-map commitment reads exactly as small as one at the
+#                  bottom does.
 # tierDraft is the mastery payoff and only sits on constrained assignments. Keep
 # constraints survivable across five maps. No em-dashes in displayed strings.
 offeredAfterLevel: 5
@@ -70,9 +91,9 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 12, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
-        - { threshold: 20, label: "+10 overtime", reward: { type: overtime, hours: 10 } }
-    clarify: A small always-on speed tax for a payout that scales with balls sealed over the block. Two or three a map clears the first tier.
+        - { threshold: 12, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 20, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: A small always-on speed tax. Two or three locks a map clears the first tier for two lives; keep it up and the block ends in a free Senior upgrade.
 
   - id: daily_standup
     name: Daily Standup
@@ -84,9 +105,9 @@ assignments:
       text: Lock at least 2 balls in each of the next 5 maps.
       track: { mode: everyMap, kind: lockCount, params: { count: 2 } }
       tiers:
-        - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
+        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: "Consistency over volume. A map counts once you lock two balls in it: three of five maps pays overtime, all five a free Senior upgrade."
+    clarify: "Consistency over volume. A map counts once you lock two balls in it: three of five maps pays two lives, all five a free Senior upgrade."
 
   - id: precision_review
     name: Precision Review
@@ -98,9 +119,9 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 4, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
+        - { threshold: 4, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 8, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: "Rewards tight pockets. Slower fences make them harder, which is the point. Eight superior locks over the block: free Senior upgrade."
+    clarify: "Rewards tight pockets. Slower fences make them harder, which is the point. Four superior locks pays two lives; eight over the block a free Senior upgrade."
 
   - id: under_budget
     name: Under Budget
@@ -112,9 +133,9 @@ assignments:
       text: Clear at or under par cuts in each of the next 5 maps.
       track: { mode: everyMap, kind: underPar, params: { delta: 0 } }
       tiers:
-        - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
-        - { threshold: 5, label: "+11 overtime", reward: { type: overtime, hours: 11 } }
-    clarify: Efficient cutting. A map counts when you finish at or under par. The overtime cut stings now; clean play pays it back.
+        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
+    clarify: Efficient cutting, taxed the whole way through. A map counts when you finish at or under par. Three of five pays two lives; all five a free Principal upgrade.
 
   - id: sprint_review
     name: Sprint Review
@@ -126,9 +147,9 @@ assignments:
       text: Clear each of the next 5 maps within 40 seconds.
       track: { mode: everyMap, kind: speedClear, params: { seconds: 40 } }
       tiers:
-        - { threshold: 3, label: "+8 overtime", reward: { type: overtime, hours: 8 } }
+        - { threshold: 3, label: "+3 lives", reward: { type: lives, count: 3 } }
         - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: For fast cutters. Balls surge from the first second. Clear inside 40 active seconds; all five maps earns a free Principal upgrade.
+    clarify: For fast cutters. Balls surge from the first second. Clear inside 40 active seconds three times for three lives; all five maps earns a free Principal upgrade.
 
   # ZERO INCIDENTS. The first mission about SURVIVING rather than producing.
   # Every other contract pays for throughput, which pushes toward aggressive
@@ -176,12 +197,12 @@ assignments:
         kind: noSpend
       tiers:
         - threshold: 3
-          label: "+10 overtime"
-          reward: { type: overtime, hours: 10 }
+          label: "+3 lives"
+          reward: { type: lives, count: 3 }
         - threshold: 5
           label: "Pick a Principal upgrade"
           reward: { type: tierDraft, tier: Principal }
-    clarify: "Every hour you do not spend stays banked. The store still opens and tempts; walking out empty handed is the task, and it pays well."
+    clarify: "Every hour you do not spend stays banked, and the block pays you back directly for it too. The store still opens and tempts; walk out empty handed three times for three lives, all five for a free Principal upgrade."
 
   # DOUBLE DOWN. Push Your Luck is a decision layer no contract touched: two of
   # them FORBID pushing as a constraint, and none made it the point. This grades
@@ -207,8 +228,8 @@ assignments:
         kind: pushesWon
       tiers:
         - threshold: 2
-          label: "+8 overtime"
-          reward: { type: overtime, hours: 8 }
+          label: "+3 lives"
+          reward: { type: lives, count: 3 }
         - threshold: 4
           label: "Pick a Principal upgrade"
           reward: { type: tierDraft, tier: Principal }
@@ -219,7 +240,7 @@ assignments:
         - threshold: 5
           label: "Pick an Architect upgrade"
           reward: { type: tierDraft, tier: Architect }
-    clarify: "A banked push counts; a lost push does not, and now costs a life. Declining every offer is safe and scores nothing."
+    clarify: "A banked push counts; a lost push does not, and now costs a life. Declining every offer is safe and scores nothing. Two won bets pays three lives outright."
 
   - id: named_delivery
     name: Named Delivery
