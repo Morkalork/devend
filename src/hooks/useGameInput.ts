@@ -43,6 +43,7 @@ import type { GameMessageId } from "@/lib/gameMessages";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
+import { enqueueCommand, freezeTargetAt, LOCAL_PLAYER } from "@/lib/net/commands";
 import { simNow } from "@/lib/simClock";
 
 /**
@@ -124,6 +125,22 @@ export function useGameInput(
     let holdPointerId: number | null = null;
     let holdStartWorld: { x: number; y: number } | null = null;
 
+    /**
+     * What THIS device's finger is doing, as opposed to what the game state is
+     * doing about it.
+     *
+     * The two used to be the same thing: a grab wrote game.moverDrag and the
+     * move handler read the pointer id back out of it. They cannot be the same
+     * thing any more. A grab is now a command, applied at the top of the next
+     * frame, and in a pair the game state may be holding the OTHER player's
+     * mover; neither tells this device whether its own finger is down. So the
+     * pointer layer keeps its own record and the simulation keeps its own.
+     */
+    let gesture:
+      | { kind: "mover"; pointerId: number; moverId: string }
+      | { kind: "sling"; pointerId: number }
+      | null = null;
+
     const clearHold = () => {
       if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
       holdPointerId = null;
@@ -153,8 +170,11 @@ export function useGameInput(
       // Second-finger cancel, for a Redeploy pull. The same meaning the second
       // finger already has for a cut, and it must come first: a throw that
       // cannot be called off is a throw nobody dares start.
-      if (game.slingDrag && e.pointerId !== game.slingDrag.pointerId) {
+      if (game.slingDrag && gesture?.kind === "sling" && e.pointerId !== gesture.pointerId) {
+        // A pull that has not been let go is still only a drawing on this
+        // device, so calling it off touches nothing the other player can see.
         game.slingDrag = null;
+        gesture = null;
         if (navigator.vibrate) navigator.vibrate(30);
         return;
       }
@@ -162,10 +182,11 @@ export function useGameInput(
       // Second-finger cancel for a mover grab, with the meaning the second
       // finger already has everywhere else. A grab that cannot be called off is
       // a grab nobody dares start on a bumper.
-      if (game.moverDrag && e.pointerId !== game.moverDrag.pointerId) {
-        const held = game.movers?.find(m => m.id === game.moverDrag!.moverId);
-        game.moverDrag = null;
-        if (held) held.driveRate = 0;
+      if (gesture?.kind === "mover" && e.pointerId !== gesture.pointerId) {
+        // A held mover IS simulation state (the physics step drives it), so
+        // letting go has to travel as a command even when it fires nothing.
+        enqueueCommand(game, { kind: "moverRelease", player: LOCAL_PLAYER, cancel: true });
+        gesture = null;
         if (navigator.vibrate) navigator.vibrate(30);
         return;
       }
@@ -265,6 +286,7 @@ export function useGameInput(
             game.slingDrag = {
               wallId: sling.id, start: w, current: w, pointerId: e.pointerId,
             };
+            gesture = { kind: "sling", pointerId: e.pointerId };
             return;
           }
         }
@@ -285,23 +307,21 @@ export function useGameInput(
         if (grabbing && isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
           const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
           const mover = moverAt(game, w.x, w.y);
-          if (mover) {
+          // Refused where the finger is when someone already holds it. Solo,
+          // that someone is this player's own other finger, which the
+          // second-finger cancel above has already dealt with.
+          if (mover && !game.moverDrag) {
             clearHold();
-            game.moverDrag = {
+            gesture = { kind: "mover", pointerId: e.pointerId, moverId: mover.id };
+            enqueueCommand(game, {
+              kind: "moverGrab",
+              player: LOCAL_PLAYER,
               moverId: mover.id,
-              pointerId: e.pointerId,
-              pointer: w,
-              // The grip stays under the finger: subtract what the rail read at
-              // the moment of the grab, so the body does not snap its centre to
-              // the touch point.
-              ref: railReading(mover, w.x, w.y) - railParam(mover),
+              pointer: { ...w },
               driveMultiplier: activeModifiers.moverDrive,
               canDerail: activeModifiers.moverDerailPerMap > 0 && game.moverDerailsRemaining > 0,
               canBand: activeModifiers.moverBandPerMap > 0 && game.moverBandsRemaining > 0,
-              stopHoldMs: 0,
-              derailAt: 0,
-            };
-            if (navigator.vibrate) navigator.vibrate(15);
+            });
             return;
           }
         }
@@ -369,16 +389,20 @@ export function useGameInput(
       // A mover under the finger. Only the pointer is written here: turning it
       // into a position on the rail is the physics step's job, so input stays
       // ignorant of rails and physics stays the only author of where a mover is.
-      if (game.moverDrag && e.pointerId === game.moverDrag.pointerId) {
+      if (gesture?.kind === "mover" && e.pointerId === gesture.pointerId) {
         const c = getCanvasCoords(e);
-        game.moverDrag.pointer = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+        enqueueCommand(game, {
+          kind: "moverMove",
+          player: LOCAL_PLAYER,
+          pointer: screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game)),
+        });
         return;
       }
 
       // A Redeploy fence being pulled back. Unclamped to the board on purpose:
       // the pull is a direction and a length, and clamping it at the edge would
       // silently cap the power of a throw aimed from near the frame.
-      if (game.slingDrag && e.pointerId === game.slingDrag.pointerId) {
+      if (game.slingDrag && gesture?.kind === "sling" && e.pointerId === gesture.pointerId) {
         const c = getCanvasCoords(e);
         game.slingDrag.current = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
         return;
@@ -415,30 +439,23 @@ export function useGameInput(
       // Let go of a mover. With a bumper fitted this fires the snap; without
       // one the mover simply stays where it was parked and resumes patrolling
       // from there.
-      if (game.moverDrag) {
-        const held = game.movers?.find(m => m.id === game.moverDrag!.moverId);
-        if (held) {
-          if (releaseMover(game, held) && navigator.vibrate) navigator.vibrate(25);
-        } else {
-          game.moverDrag = null;
-        }
+      if (gesture?.kind === "mover") {
+        gesture = null;
+        enqueueCommand(game, { kind: "moverRelease", player: LOCAL_PLAYER });
         return;
       }
 
       // Let go of a Redeploy fence: it snaps forward and throws.
       const drag = game.slingDrag;
-      if (drag) {
+      if (drag && gesture?.kind === "sling") {
         game.slingDrag = null;
-        const wall = game.walls.find(w => w.id === drag.wallId);
-        const shape = wall
-          ? slingShape(wall, { x: drag.current.x - drag.start.x, y: drag.current.y - drag.start.y })
-          : null;
-        // A tap on the fence, or a throw that caught nothing, spends nothing:
-        // the player could see the rings while they dragged, so an empty
-        // release is a change of mind rather than a miss to charge them for.
-        if (wall && shape && fireSlingFence(game, wall, shape)) {
-          if (navigator.vibrate) navigator.vibrate(25);
-        }
+        gesture = null;
+        enqueueCommand(game, {
+          kind: "slingRelease",
+          player: LOCAL_PLAYER,
+          wallId: drag.wallId,
+          pull: { x: drag.current.x - drag.start.x, y: drag.current.y - drag.start.y },
+        });
         return;
       }
 
@@ -473,9 +490,10 @@ export function useGameInput(
             if (d <= ball.radius + FREEZE_TAP_SLOP && d < bestDist) { bestDist = d; target = ball; }
           }
           if (target) {
-            const removed = { x: target.position.x, y: target.position.y, color: target.color };
-            game.balls = game.balls.filter(b => b !== target);
-            onTapRemoveRef.current(removed);
+            // The ball is named, not described: by the time the command is
+            // applied the board has moved on a frame, and "the ball nearest
+            // this point" would no longer be the ball the player tapped.
+            enqueueCommand(game, { kind: "tapRemove", player: LOCAL_PLAYER, ballId: target.id });
             game.swipeStart = null; game.swipeRegionId = null;
             game.currentSwipePos = null; game.swipePointerId = null;
             setIsPlayerDragging(false);
@@ -490,53 +508,20 @@ export function useGameInput(
         const featureFreeze = activeModifiers.ballFreezeDuration > 0 && (game.freezeUsesRemaining ?? 0) > 0;
         const hasFreezeCharge = (game.freezeCharges ?? 0) > 0;
         if (dist < BASE_SWIPE_MIN_DISTANCE && (featureFreeze || hasFreezeCharge)) {
-          const tap = game.swipeStart;
-          const now = simNow();
-          let target: Ball | null = null;
-          let bestDist = Infinity;
-          for (const ball of game.balls) {
-            if (ball.state !== "active") continue;
-            if (ball.regionId !== game.swipeRegionId) continue;
-            if (isTappableBall(ball.ability)) continue;                       // white balls: tap removes, never freezes (#57)
-            if (ball.frozenUntil && now < ball.frozenUntil) continue;        // already frozen
-            if (ball.freezeReadyAt && now < ball.freezeReadyAt) continue;    // on cooldown
-            const d = vec2Length(vec2Sub(ball.position, tap));
-            if (d <= ball.radius + FREEZE_TAP_SLOP && d < bestDist) {
-              bestDist = d;
-              target = ball;
-            }
-          }
-          if (target) {
-            // Spend a Feature Freeze use if one is available this map, else a
-            // claimed pickup freeze charge.
-            if (featureFreeze) { game.freezeUsesRemaining -= 1; setFreezeUsesRemaining(game.freezeUsesRemaining); }
-            else game.freezeCharges -= 1;
-            const durationMs = (featureFreeze
-              ? activeModifiers.ballFreezeDuration
-              : game.freezeChargeSeconds || 3) * 1000;
-            // Cascade Freeze: a single tap also freezes the nearest eligible
-            // balls in the region (the tapped ball plus `ballFreezeCount` more).
-            const freezeCount = 1 + Math.max(0, Math.round(activeModifiers.ballFreezeCount));
-            const eligible = game.balls.filter(b =>
-              b.state === "active" &&
-              b.regionId === game.swipeRegionId &&
-              !isTappableBall(b.ability) &&
-              !(b.frozenUntil && now < b.frozenUntil) &&
-              !(b.freezeReadyAt && now < b.freezeReadyAt)
-            );
-            eligible.sort((a, b) =>
-              vec2Length(vec2Sub(a.position, target!.position)) -
-              vec2Length(vec2Sub(b.position, target!.position))
-            );
-            for (const ball of eligible.slice(0, freezeCount)) {
-              ball.frozenUntil   = now + durationMs;
-              // Absolute Zero (freeze set bonus): no re-freeze cooldown, the
-              // ball is tappable again the moment it thaws.
-              ball.freezeReadyAt = activeModifiers.freezeNoCooldown > 0
-                ? now + durationMs
-                : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
-            }
-            if (navigator.vibrate) navigator.vibrate(20);
+          // Only worth sending if it would land on something. Which ball, and
+          // which of its neighbours go with it, is settled when the command is
+          // applied, off state both devices share.
+          if (freezeTargetAt(game, game.swipeStart, game.swipeRegionId)) {
+            enqueueCommand(game, {
+              kind: "freezeTap",
+              player: LOCAL_PLAYER,
+              at: { ...game.swipeStart },
+              regionId: game.swipeRegionId,
+              // A Feature Freeze use is spent before a stored charge, as it was
+              // when this lived here: the per-map allowance expires with the
+              // map and the charge does not.
+              useCharge: !featureFreeze,
+            });
           }
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE) {
           // Bent fences (#66): keep the SHAPE of the drag and project only its
@@ -544,79 +529,19 @@ export function useGameInput(
           // was straight after all, or for one the fence cannot follow (a
           // fold-back), and every one of those falls back to the straight cut
           // the swipe has always given rather than refusing the gesture.
+          // The rays are cast where the command is applied, not here: both
+          // devices hold the same walls at that tick and will land the fence in
+          // the same place. What travels is the drag itself.
           const bent = bentDrawnPath(game);
-          const origin    = bent ? { ...bent[0] } : { ...game.swipeStart };
-          const direction = bent ? outgoingDirection(bent) : vec2Normalize(delta);
-          const backDir   = bent ? incomingDirection(bent) : { x: -direction.x, y: -direction.y };
-          // Forward from the FAR end of the drawn path, backward from its near
-          // end. With no bend both ends are the swipe's origin, which is the
-          // straight cut exactly as it was.
-          const forwardResult  = castRayWithReflections(bent ? bent[bent.length - 1] : origin, direction, game.walls);
-          const backwardResult = castRayWithReflections(origin, backDir, game.walls);
-
-          if (forwardResult && backwardResult) {
-            const endWaypoints   = bent ? joinProjection(bent, forwardResult.waypoints) : forwardResult.waypoints;
-            const startWaypoints = backwardResult.waypoints;
-            const targetEnd      = endWaypoints[endWaypoints.length - 1];
-            const targetStart    = startWaypoints[startWaypoints.length - 1];
-
-            // Issue #38: you can't fence against a breakable structure — if the
-            // cut would anchor on one, it "duds" (no wall, brief feedback).
-            // ...unless the selected fence type is allowed to. The drill is
-            // the only one, and it is what turns this refusal from an
-            // arbitrary rule into "only the drill bites into slabs".
-            const mayAnchor = getFenceType(game.selectedFenceTypeId).anchorOnBreakable;
-            if (!mayAnchor && cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
-              game.lastDudAt = simNow();
-              // The buzz and the flash say "no" without saying why, and this is
-              // the refusal the player is most likely to read as a bug: the
-              // fence grows all the way and then simply is not there.
-              onMessageRef?.current?.("breakableAnchor");
-              if (navigator.vibrate) navigator.vibrate([8, 30, 8]);
-              game.swipeStart = null;
-              game.swipeRegionId = null;
-              game.currentSwipePos = null;
-              game.swipePointerId = null;
-              setIsPlayerDragging(false);
-              return;
-            }
-
-            game.wallCount += 1;
-            setCutCount(game.wallCount);
-
-            const isInstant = game.wallCount <= activeModifiers.instantFencesPerMap;
-
-            game.activeWalls.push({
-              origin,
-              direction,
-              startWaypoints,
-              endWaypoints,
-              startSegmentIndex:  isInstant ? startWaypoints.length - 2 : 0,
-              endSegmentIndex:    isInstant ? endWaypoints.length - 2 : 0,
-              // Growth starts at the ORIGIN, which for a bent cut is the near
-              // end of the drawn path rather than wherever the finger went down
-              // (they are the same point on a straight one).
-              startPoint:         isInstant ? { ...targetStart } : { ...origin },
-              endPoint:           isInstant ? { ...targetEnd   } : { ...origin },
-              targetStart,
-              targetEnd,
-              thickness:          WALL_THICKNESS,
-              isComplete:         isInstant,
-              activeRegionId:     game.swipeRegionId!,
-              startTime:          isInstant ? undefined : simNow(),
-              // Read ONCE, here. Switching slots while this grows must not
-              // change the fence already on its way.
-              fenceTypeId:        game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
-            } as GrowingWall);
-
-            // Issue #35: record the swipe gesture so it can be drawn as a brief
-            // fading afterglow, connecting the drawn fence to the player's input.
-            game.swipeTrail = {
-              start:     { ...game.swipeStart },
-              end:       { ...game.currentSwipePos },
-              createdAt: simNow(),
-            };
-          }
+          enqueueCommand(game, {
+            kind: "cut",
+            player: LOCAL_PLAYER,
+            start: { ...game.swipeStart },
+            end: { ...game.currentSwipePos },
+            path: bent ? bent.map(p => ({ ...p })) : null,
+            regionId: game.swipeRegionId,
+            fenceTypeId: game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
+          });
         }
       }
 

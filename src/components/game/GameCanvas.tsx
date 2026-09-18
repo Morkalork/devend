@@ -719,6 +719,16 @@ export function GameCanvas({
   }, []);
   const onMessageRef = useRef<((id: GameMessageId) => void) | null>(null);
   onMessageRef.current = raiseGameMessage;
+
+  /**
+   * The live modifier set, for the command layer.
+   *
+   * The loop is built once per map but modifiers change inside one (an ability
+   * fires, a pickup is claimed), and a command applied three frames later must
+   * see the set that is current then, not the one the loop closed over.
+   */
+  const activeModifiersRef = useRef(activeModifiers);
+  activeModifiersRef.current = activeModifiers;
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
   const gameRef = useRef<CanvasGameState>({
@@ -1503,6 +1513,17 @@ export function GameCanvas({
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
       render,
+      // Everything a player command needs to reach React. Rebuilt per frame so
+      // it always carries the CURRENT modifiers rather than the ones the loop
+      // was constructed with.
+      commandDeps: () => ({
+        modifiers: activeModifiersRef.current,
+        setCutCount,
+        setFreezeUsesRemaining,
+        onMessage: (id) => onMessageRef.current?.(id),
+        onTapRemove: (info) => handleTapRemoveRef.current?.(info),
+        vibrate: (pattern) => { if (navigator.vibrate) navigator.vibrate(pattern); },
+      }),
       // A Deploy Charge detonated its slab: flash the payoff banner.
       onChargeBlown: (announce?: string) => {
         setBeatBanner({ key: simNow(), announce: announce ?? "game.chargeBlown" });

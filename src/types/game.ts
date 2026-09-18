@@ -232,6 +232,14 @@ export interface GrowingWall {
    * rather than a crash.
    */
   fenceTypeId?: string;
+  /**
+   * Who drew it (lib/net/commands.ts).
+   *
+   * Solo play is all player 0; in a pair this is what gives each player's
+   * fences their own colour. Optional, so every fixture and test that builds a
+   * wall by hand keeps working and reads as player 0.
+   */
+  player?: import("@/lib/net/commands").PlayerId;
 }
 
 export interface GameState {

@@ -159,6 +159,37 @@ describe("the headless harness runs the browser's passes", () => {
 });
 
 describe("the harness plays the map the player gets", () => {
+  it("drains the command queue before it moves anything, as the loop does", () => {
+    // The pass that makes a player action happen. If the harness stopped
+    // draining, a bot's cuts would sit in the queue for ever and every sweep
+    // would report a board nobody had touched - the flattering kind of
+    // divergence this file exists to catch.
+    expect(LOOP, "the loop does not drain player commands").toMatch(/drainCommands\s*\(/);
+    expect(HARNESS, "the harness does not drain player commands").toMatch(/drainCommands\s*\(/);
+
+    // And it drains BEFORE the world moves, or a command would land on a board
+    // one step further on than the one the player was looking at.
+    // Inside stepBot, not the whole file: advanceClock is DEFINED near the top
+    // and a naive indexOf finds the definition rather than the call.
+    const step = HARNESS.slice(HARNESS.indexOf("export function stepBot"));
+    const harnessDrain = step.indexOf("drainCommands(");
+    const harnessMove  = step.indexOf("advanceClock(");
+    expect(harnessDrain, "stepBot does not drain").toBeGreaterThan(-1);
+    expect(harnessMove, "stepBot does not advance the clock").toBeGreaterThan(-1);
+    expect(harnessDrain, "the harness moves the world before applying what the player did")
+      .toBeLessThan(harnessMove);
+  });
+
+  it("builds a fence the way a player does, not one of its own", () => {
+    // The harness used to push onto activeWalls itself, with a thickness of 4
+    // on a board whose fences are WALL_THICKNESS wide. Same shape of bug as
+    // every other entry in this file: a second copy of a pass, drifting.
+    expect(HARNESS, "the harness builds its own fence again")
+      .not.toMatch(/activeWalls\.push\(/);
+    expect(HARNESS, "the harness does not cut through the command layer")
+      .toMatch(/kind: "cut"/);
+  });
+
   it("rolls the mutator from the run seed rather than only reading a pin", () => {
     // The roll is a pure function of the run seed and the level id, exactly
     // like the obstacle variety and ball types the harness already takes from

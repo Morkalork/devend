@@ -236,8 +236,10 @@ describe("the chain", () => {
 
 describe("anchoring", () => {
   it("lets only the drill start a cut on a slab", () => {
-    const src = read("src/hooks/useGameInput.ts");
-    expect(src).toMatch(/getFenceType\(game\.selectedFenceTypeId\)\.anchorOnBreakable/);
+    // The cut is built in the command layer now (TWO_PLAYER_PLAN step 3), so
+    // the anchor exception lives there with it.
+    const src = read("src/lib/net/commands.ts");
+    expect(src).toMatch(/getFenceType\(cmd\.fenceTypeId\)\.anchorOnBreakable/);
     expect(src, "the refusal was removed for everyone rather than excepted")
       .toMatch(/!mayAnchor && cutAnchorsBreakable\(/);
   });

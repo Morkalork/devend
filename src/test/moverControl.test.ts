@@ -84,7 +84,7 @@ const grab = (
     moverId: m.id, pointerId: 1, pointer: { x, y },
     ref: railReading(m, x, y) - railParam(m),
     driveMultiplier: 1, canDerail: false, canBand: false,
-    stopHoldMs: 0, derailAt: 0, ...over,
+    stopHoldMs: 0, derailAt: 0, player: 0, ...over,
   };
 };
 

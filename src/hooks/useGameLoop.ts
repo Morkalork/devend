@@ -38,6 +38,7 @@ import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 import { simNow, advanceSimClock } from "@/lib/simClock";
+import { drainCommands, type CommandDeps } from "@/lib/net/commands";
 import { runStream } from "@/lib/runRng";
 
 /**
@@ -82,6 +83,13 @@ export interface GameLoopCallbacks {
   onPushPrompt?: () => void;
   /** Renderer-owned "blank the board" (Pixi path; the 2D path clearRects its ctx). */
   renderEmpty?: () => void;
+  /**
+   * What an applied player command needs: the run's modifiers, and the few
+   * callbacks that carry a result back to React. Read fresh each frame so a
+   * modifier that changes mid-map (an ability firing, a pickup claimed) is
+   * the one the next command sees.
+   */
+  commandDeps?: () => CommandDeps;
 }
 
 /**
@@ -386,6 +394,14 @@ export function createGameLoop(
         // next frame rather than skipping this scheduled tick entirely.
       }
     }
+
+    // Player actions land HERE, at the top of the frame, before anything
+    // moves. They used to land wherever the pointer handler happened to run,
+    // which is the same instant in practice for one player and no instant at
+    // all for two: a pair has to apply both devices' actions in one agreed
+    // order, and this is that order.
+    const deps = callbacks.commandDeps?.();
+    if (deps) drainCommands(game, deps);
 
     // Rebuild the wall spatial index once per frame. `game.walls` is immutable
     // across this frame's substeps (movers carry their own polygons; fences

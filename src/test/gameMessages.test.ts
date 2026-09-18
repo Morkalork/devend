@@ -124,13 +124,17 @@ describe("the refusals actually raise one", () => {
    *
    * It used to be useGameInput alone, because every message was an input
    * refusal. The physics layer raises two now - a ball or a mover cutting a
-   * fence you were drawing, which costs a life and lets play continue - so the
-   * check is "raised from one of the raising sites" rather than "raised from
-   * that one file". Still not a whole-tree grep: a message id that appears
-   * only in a test or a locale file is exactly the silence this guards.
+   * fence you were drawing, which costs a life and lets play continue - and
+   * the command layer raises the breakable-anchor dud, because that refusal
+   * depends on where the rays landed and the rays are cast where the command
+   * is applied. So the check is "raised from one of the raising sites" rather
+   * than "raised from that one file". Still not a whole-tree grep: a message
+   * id that appears only in a test or a locale file is exactly the silence
+   * this guards.
    */
   const RAISERS = [
     "../hooks/useGameInput.ts",
+    "../lib/net/commands.ts",
     "../lib/physics/updateFenceWall.ts",
     "../lib/physics/fenceStrike.ts",
   ].map(f => readFileSync(resolve(__dirname, f), "utf8")).join("\n");
@@ -146,7 +150,10 @@ describe("the refusals actually raise one", () => {
   });
 
   it("says something at the breakable dud, not just a buzz", () => {
-    const dud = INPUT.slice(INPUT.indexOf("cutAnchorsBreakable(game"), INPUT.indexOf("game.wallCount += 1"));
+    // In the command layer since the cut became a command: the refusal needs
+    // the cast rays, and those are cast where the fence is built.
+    const COMMANDS = readFileSync(resolve(__dirname, "../lib/net/commands.ts"), "utf8");
+    const dud = COMMANDS.slice(COMMANDS.indexOf("cutAnchorsBreakable(game"), COMMANDS.indexOf("game.wallCount += 1"));
     expect(dud).toMatch(/breakableAnchor/);
     expect(dud, "the haptic stays: the words explain, the buzz confirms").toMatch(/vibrate/);
   });

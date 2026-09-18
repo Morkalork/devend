@@ -68,6 +68,8 @@ import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMuta
 import { getRunRng, getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { normaliseGravity } from "@/lib/physics/gravity";
 import { advanceSimClock, setSimNow, simNow, SIM_CLOCK_START_MS } from "@/lib/simClock";
+import { drainCommands, enqueueCommand } from "@/lib/net/commands";
+import { STANDARD_FENCE_ID } from "@/lib/fences";
 /**
  * A clock the bot controls.
  *
@@ -315,6 +317,10 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   const { game, level, levelNumber, modifiers, callbacks } = ctx;
   if (game.levelComplete || game.gameOver) return;
 
+  // Player actions first, exactly where the loop drains them: at the top of
+  // the frame, before anything moves.
+  drainCommands(game, { modifiers });
+
   // Time moves before anything reads it, so a fence started on the previous
   // frame sees a non-zero elapsed on this one.
   advanceClock(dt);
@@ -544,29 +550,28 @@ export function tryCut(ctx: BotGame, origin: Vector2, direction: Vector2): boole
   if (!Number.isFinite(dir.x) || !Number.isFinite(dir.y)) return false;
   const neg = { x: -dir.x, y: -dir.y };
 
+  // The rays are cast twice: once here, to answer "is there a cut to make at
+  // all", and once by the command, which is the thing that actually makes it.
+  // Cheap, and the alternative is the harness owning a second copy of the
+  // fence-building code - which is exactly what it used to own, thickness 4
+  // and all, on a board whose fences are WALL_THICKNESS wide.
   const forward = castRayWithReflections(origin, dir, game.walls);
   const backward = castRayWithReflections(origin, neg, game.walls);
-  const endWaypoints = forward.waypoints;
-  const startWaypoints = backward.waypoints;
-  if (endWaypoints.length < 2 || startWaypoints.length < 2) return false;
+  if (forward.waypoints.length < 2 || backward.waypoints.length < 2) return false;
 
-  game.wallCount = (game.wallCount ?? 0) + 1;
-  game.activeWalls.push({
-    origin: { ...origin },
-    direction: dir,
-    startWaypoints,
-    endWaypoints,
-    startSegmentIndex: 0,
-    endSegmentIndex: 0,
-    startPoint: { ...origin },
-    endPoint: { ...origin },
-    targetStart: startWaypoints[startWaypoints.length - 1],
-    targetEnd: endWaypoints[endWaypoints.length - 1],
-    thickness: 4,
-    isComplete: false,
-    activeRegionId: region.id,
-    startTime: simNow(),
-  } as unknown as GrowingWall);
+  const before = game.activeWalls.length;
+  enqueueCommand(game, {
+    kind: "cut",
+    player: 0,
+    start: { ...origin },
+    // Any point along the heading will do: the command normalises the drag.
+    end: { x: origin.x + dir.x * 100, y: origin.y + dir.y * 100 },
+    path: null,
+    regionId: region.id,
+    fenceTypeId: game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
+  });
+  drainCommands(game, { modifiers: ctx.modifiers });
+  if (game.activeWalls.length === before) return false;   // refused on a breakable anchor
   ctx.events.cutsMade += 1;
   return true;
 }
