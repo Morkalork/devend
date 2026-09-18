@@ -29,9 +29,9 @@
     "selectLoadout": "Select a Loadout",
     "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "You beat every level. Ascend to start again at level 1, harder, keeping your depth, your Certificate Hours and one ",
+    "tutorialIntro1": "Every level beaten. Ascend to restart at level 1, harder, keeping your depth, your Certificate Hours and one ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": " per ascension: a curse with a blessing. Upgrades and overtime do NOT carry, so each loop is rebuilt from nothing under one more rule. Retire anytime to bank it all.",
+    "tutorialIntro2": " per ascension: a curse paired with a blessing. Upgrades and overtime reset each loop. Retire anytime to bank it all.",
     "gotIt": "Got It",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Also in force: {{names}}.",
@@ -40,8 +40,8 @@
     "congrats": "Congratulations. You cleared every level and shipped the whole roadmap.",
     "congratsAscended": "Congratulations. You cleared every level again, at Ascension {{depth}}.",
     "whatDepthAdds": "What Ascension {{depth}} adds",
-    "noNewRung": "No new rule. The ladder is fully climbed, so a deeper loop is faster and worth more, but adds nothing further.",
-    "resetWarning": "Ascending starts a FRESH run: upgrades, overtime and the Promotion are cleared. Your loadouts, your depth and your Certificate Hours carry."
+    "noNewRung": "No new rule. The ladder is fully climbed: deeper loops are faster and pay more, nothing else changes.",
+    "resetWarning": "Ascending starts a FRESH run: upgrades, overtime and the Promotion are cleared. Loadouts, depth and Certificate Hours carry."
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",
@@ -64,31 +64,31 @@
     "ballSpeedDescMicro_other": ". MicroManager applies an additional {{reduction}}% reduction from {{count}} locked balls",
     "ballSpeedDescTail": ". Slower balls give you more reaction time when drawing fences.",
     "ballSize": "Ball Size",
-    "ballSizeDesc": "Radius multiplier applied to every ball. Larger balls are harder to dodge when drawing a fence - but also cover more of the board for locking purposes.",
+    "ballSizeDesc": "Ball size multiplier. Bigger balls are harder to dodge but easier to lock.",
     "fenceSpeed": "Fence Speed",
-    "fenceSpeedDesc": "How quickly your fence grows after you start drawing. Higher fence speed shortens the window a ball has to collide with your in-progress fence, making cuts safer.",
+    "fenceSpeedDesc": "How fast a fence grows. Faster fences give balls less time to hit them.",
     "scoreMultiplier": "Score Multiplier",
-    "scoreMultiplierDesc": "Global multiplier applied to all points earned this run. Stacks multiplicatively with per-cut par bonuses.",
+    "scoreMultiplierDesc": "Multiplies all points this run. Stacks with par bonuses.",
     "instantFences": "Instant Fences",
-    "instantFencesActive_one": "{{count}} fence is automatically completed at the start of each level, capturing territory without any risk.",
-    "instantFencesActive_other": "{{count}} fences are automatically completed at the start of each level, capturing territory without any risk.",
+    "instantFencesActive_one": "{{count}} fence completes automatically at the start of each level, risk free.",
+    "instantFencesActive_other": "{{count}} fences complete automatically at the start of each level, risk free.",
     "instantFencesInactive": "No instant fences active. Purchase upgrades to gain free fences each level.",
     "startingCapture": "Head Start",
-    "startingCaptureActive": "Every map starts with {{percent}}% of the board already captured (Onboarding, Equity Grant). The board itself is smaller from the first frame rather than shown as claimed territory, so this is where to check it landed.",
-    "startingCaptureInactive": "No head start owned. Purchase Onboarding or the Equity Grant certificate to start every map already ahead.",
+    "startingCaptureActive": "Every map starts with {{percent}}% of the board already captured (Onboarding, Equity Grant). The board is simply smaller from the first frame.",
+    "startingCaptureInactive": "No head start. Buy Onboarding or the Equity Grant certificate to start every map ahead.",
     "concurrentFences": "Concurrent Fences",
-    "concurrentFencesActive": "You can draw {{total}} fences simultaneously. Extra concurrent fences let you cut from multiple walls at once.",
+    "concurrentFencesActive": "You can grow {{total}} fences at once, from different walls.",
     "concurrentFencesInactive": "Default: 1 active fence at a time.",
     "extraLives": "Extra Lives",
-    "extraLivesActive_one": "+{{count}} additional starting live added at the start of every run. More lives means more chances to recover from a bad cut.",
-    "extraLivesActive_other": "+{{count}} additional starting lives added at the start of every run. More lives means more chances to recover from a bad cut.",
+    "extraLivesActive_one": "+{{count}} extra life at the start of every run.",
+    "extraLivesActive_other": "+{{count}} extra lives at the start of every run.",
     "extraLivesInactive": "No extra starting lives.",
     "runwayInstantFence": "Runway: Instant Fence",
     "runwayInstantFenceActive": "While you have {{hours}}h or more banked when a map starts, one fence completes instantly (Runway).",
     "runwayConcurrentFence": "Runway: Extra Fence",
-    "runwayConcurrentFenceActive": "While you have {{hours}}h or more banked when a map starts, you can grow one extra fence at a time (Runway).",
+    "runwayConcurrentFenceActive": "With {{hours}}h or more banked at map start, you can grow one extra fence at a time (Runway).",
     "runwayFreeze": "Runway: Tap-Freeze",
-    "runwayFreezeActive": "While you have {{hours}}h or more banked when a map starts, tapping a ball freezes it for 2 seconds (Runway).",
+    "runwayFreezeActive": "With {{hours}}h or more banked at map start, tapping a ball freezes it for 2s (Runway).",
     "runwayInactive": "No runway perk owned.",
     "budgetCycle": "Budget Cycle",
     "budgetCycleValue": "per {{hours}}h spent",
@@ -104,20 +104,20 @@
     "shopRestocksInactive": "No shop restocking.",
     "microManager": "MicroManager",
     "microManagerValue": "{{percent}}% / lock",
-    "microManagerActive_one": "Each locked ball reduces ball speed by {{percent}}% (stacks multiplicatively, down to a 50% floor). Right now {{count}} ball locked → effective speed {{speed}}.",
-    "microManagerActive_other": "Each locked ball reduces ball speed by {{percent}}% (stacks multiplicatively, down to a 50% floor). Right now {{count}} balls locked → effective speed {{speed}}.",
+    "microManagerActive_one": "Each locked ball slows the rest by {{percent}}% (stacking, 50% floor). {{count}} ball locked: speed {{speed}}.",
+    "microManagerActive_other": "Each locked ball slows the rest by {{percent}}% (stacking, 50% floor). {{count}} balls locked: speed {{speed}}.",
     "microManagerInactive": "MicroManager not active.",
     "overtimePerLock": "Overtime per Lock",
-    "overtimePerLockActive": "Each ball you lock away adds +{{hours}} bonus overtime, folded under the map's reward cap (Severance Package).",
+    "overtimePerLockActive": "Each locked ball adds +{{hours}} overtime, under the map cap (Severance Package).",
     "overtimePerLockInactive": "No per-lock overtime bonus.",
     "overtimePerSuperiorLock": "Overtime per Superior Lock",
-    "overtimePerSuperiorLockActive": "Each Superior Lock (a tight pocket) pays +{{hours}} extra overtime on top of the per-lock bonus, folded under the map's reward cap (Equity Package).",
+    "overtimePerSuperiorLockActive": "Each Superior Lock adds +{{hours}} overtime on top of the per-lock bonus, under the map cap (Equity Package).",
     "overtimePerSuperiorLockInactive": "No per-Superior-Lock overtime bonus.",
     "frozenLockBonus": "Frozen Lock Bonus",
     "frozenLockBonusActive": "Locking a ball while it is frozen pays x{{mult}} lock bonus (Frozen Assets).",
     "frozenLockBonusInactive": "No frozen-lock bonus.",
     "gravityLockBonus": "Gravity Lock Bonus",
-    "gravityLockBonusActive": "Locking a ball under gravity, in a live well or on a gravity map, pays x{{mult}} lock bonus (Free Fall).",
+    "gravityLockBonusActive": "Locking a ball under gravity pays x{{mult}} lock bonus (Free Fall).",
     "gravityLockBonusInactive": "No gravity-lock bonus.",
     "gravityBend": "Gravity Bend",
     "gravityBendActive": "Gravity bends your balls {{percent}}% less, in wells and on gravity maps (Escape Velocity).",
@@ -129,28 +129,28 @@
     "spawnFreezeActive": "Every map boots frozen: all balls hold still for the first {{seconds}}s (Cold Boot).",
     "spawnFreezeInactive": "Balls move from the first moment of every map.",
     "bugSquash": "Bug Squash",
-    "bugSquashActive": "Every wall hit has a {{percent}}% chance to squash the ball flat against the wall and stick it there for {{seconds}}s. A stuck ball counts as frozen: it cannot be moved, and locking it pays any frozen-lock bonus you own.",
+    "bugSquashActive": "Each wall hit has a {{percent}}% chance to squash the ball flat for {{seconds}}s. A squashed ball counts as frozen.",
     "bugSquashInactive": "No Bug Squash owned. Balls bounce off every wall.",
     "pickupChance": "Power-Up Tokens",
     "pickupChanceActive": "Power-up tokens appear more often than usual (Benefits Package).",
     "pickupChanceInactive": "Power-up tokens appear at their normal rate.",
     "pickupPayout": "Power-Up Payouts",
-    "pickupPayoutActive": "Claimed tokens pay out enhanced rewards, and split balls fly slower (Total Compensation level {{level}}).",
+    "pickupPayoutActive": "Claimed tokens pay more and split balls fly slower (Total Compensation level {{level}}).",
     "pickupPayoutInactive": "Power-up tokens pay their base rewards.",
     "pushBonus": "Push Payouts",
     "pushBonusActive": "Push-your-luck payouts are multiplied by x{{mult}}.",
     "pushBonusInactive": "Standard push-your-luck payouts.",
     "fenceSpeedPerLock": "Fence Speed per Lock",
-    "fenceSpeedPerLockActive": "Each ball locked this map speeds up fence generation by {{percent}}% for the rest of the map (Knowledge Transfer).",
+    "fenceSpeedPerLockActive": "Each lock this map speeds up fences by {{percent}}% (Knowledge Transfer).",
     "fenceSpeedPerLockInactive": "No per-lock fence speed bonus.",
     "simultaneousLockBonus": "Trap Multiplier Bonus",
-    "simultaneousLockBonusActive": "Every lock counts as {{count}} ball(s) bigger for the simultaneous-trap multiplier (Chain Reaction set bonus).",
+    "simultaneousLockBonusActive": "Every lock counts as {{count}} ball(s) bigger for the multi-trap multiplier (Chain Reaction set bonus).",
     "simultaneousLockBonusInactive": "No trap multiplier bonus.",
     "freezeNoCooldown": "Freeze Cooldown",
     "freezeNoCooldownActive": "Balls can be re-frozen the moment they thaw, no cooldown (Absolute Zero set bonus).",
     "freezeNoCooldownInactive": "Frozen balls have a re-freeze cooldown after thawing.",
     "fenceSpeedPerFence": "Fence Speed per Fence",
-    "fenceSpeedPerFenceActive": "Each fence you complete speeds up the next by {{percent}}% for the rest of the map (Continuous Delivery).",
+    "fenceSpeedPerFenceActive": "Each finished fence speeds up the next by {{percent}}% (Continuous Delivery).",
     "fenceSpeedPerFenceInactive": "No per-fence speed bonus.",
     "underParInstantFence": "Under-Par Carry",
     "underParInstantFenceActive": "Finishing a map under par grants +{{count}} instant fence(s) on the next map (Clean Release).",
@@ -180,23 +180,23 @@
     "timingHead": "Ship Early Countdown",
     "shipEarlyCountdown": "Countdown Timer",
     "shipEarlyCountdownValue": "up to +{{percent}}%",
-    "shipEarlyCountdownDesc": "A countdown bar sits above this panel while you play. Clear the map before it drains to earn up to +{{percent}}% of the map's overtime as a Ship Early bonus, paid on TOP of the usual cap: the sooner you finish, the more it pays. The payout drops at each white tick on the bar. Its windows scale with the number of balls on the map, and only active play counts - pauses, menus and the push prompt don't spend the clock.",
+    "shipEarlyCountdownDesc": "Clear the map before the countdown above drains for up to +{{percent}}% overtime, paid above the cap. Sooner pays more; each white tick is a step down. Only active play counts.",
     "shipEarlyWindow": "Ship Early Window",
     "shipEarlyWindowValue": "+{{seconds}}s/ball",
-    "shipEarlyWindowActive": "Every Ship Early bonus window lasts {{seconds}} extra seconds per ball on the map (Deadline Extension).",
+    "shipEarlyWindowActive": "Each Ship Early window lasts {{seconds}}s longer per ball on the map (Deadline Extension).",
     "shipEarlyWindowInactive": "No Ship Early window extension.",
     "shipEarlyMultiplier": "Ship Early Payout",
     "shipEarlyMultiplierActive": "Ship Early bonuses pay x{{mult}} on this map (Hard Deadline).",
     "shipEarlyMultiplierInactive": "Ship Early bonuses pay their normal rate.",
     "scopeCreepImmediate": "Instant Scope Creep",
-    "scopeCreepImmediateActive": "Scope Creep has no grace period on this map: balls start surging in speed from the first second (Hard Deadline).",
+    "scopeCreepImmediateActive": "No grace period: balls start speeding up from the first second (Hard Deadline).",
     "scopeCreepImmediateInactive": "Scope Creep starts after its normal grace period.",
     "on": "On",
     "off": "Off",
     "ballPathPrediction": "Ball Path Prediction",
     "bounceCount_one": "{{count}} bounce",
     "bounceCount_other": "{{count}} bounces",
-    "ballPathPredictionActive": "Draws a predicted trajectory {{bounceText}} ahead for the {{target}}. Helps you time fences to avoid collisions.",
+    "ballPathPredictionActive": "Shows the predicted path {{bounceText}} ahead for the {{target}}.",
     "ballPathPredictionInactive": "No trajectory preview active.",
     "ballPathTargetAll": "fastest balls",
     "ballPathTargetTop_one": "top {{count}} fastest ball",
@@ -267,44 +267,44 @@
     "restartRun": "Restart Run",
     "mainMenu": "Main Menu",
     "moverTutorialTitle": "⚠ Moving Obstacles",
-    "moverTutorialBody": "Orange obstacles slide along a track. Balls bounce off them, but if your fence touches one you lose a life. Time your cuts.",
+    "moverTutorialBody": "Orange obstacles patrol a track. Balls bounce off them; a fence that touches one costs a life.",
     "breakTutorialTitle": "✦ Breaking Things",
-    "breakTutorialBody": "Amber blocks shatter for bonus points, guide balls into them (the black ball is faster). You can't fence against them.",
+    "breakTutorialBody": "Amber blocks shatter for bonus points. Guide balls into them; you cannot fence against them.",
     "circuitTutorialTitle": "✦ Wire the Integration",
-    "circuitTutorialBody": "Draw a fence past a teal node to wake its sleeping ball. Sleepers hold their space shut until woken, then you trap them. Wake one at a time.",
+    "circuitTutorialBody": "Draw a fence past a teal node to wake its sleeping ball, then trap it. Sleepers hold their space shut until woken.",
     "boxIntroTitle": "✦ The Done Column",
-    "boxIntroBody": "One side of this box is a membrane: balls go in, and cannot come back out. Herd them in to fill it. Until it is full it holds its own floor off the board, so you cannot finish without feeding it.",
+    "boxIntroBody": "Balls go in through the membrane and never come out. Fill the box; until it is full its floor stays off the board.",
     "launcherIntroTitle": "The Launcher",
-    "launcherIntroBody": "Every ball on the map is in the barrel. Pull the band at its back and release: pull direction aims it, pull length sets the speed.\n\nThat speed never fades, and the map's base pay is multiplied by it. Pull hard for a richer, faster, harder map. You cannot fence until the barrel has emptied. The moment it is empty it breaks apart, and the ground it stood on is open floor like any other, but seal a ball inside before it clears and you lose a life.",
+    "launcherIntroBody": "Every ball is in the barrel. Pull the band and release: direction aims, length sets speed.\n\nThat speed never fades and multiplies the map's pay. No fences until the barrel empties; seal a ball inside first and you lose a life.",
     "launcherTutorialTitle": "The Launcher",
-    "launcherTutorialBody": "The whole roster sits in the barrel until you pull the band and let go. Speed never fades, so the power you fire at is both the map's difficulty and its base pay multiplier.",
+    "launcherTutorialBody": "The balls sit in the barrel until you pull the band and let go. Fire harder for a faster map that pays more.",
     "boxTutorialTitle": "✦ The Done Column",
-    "boxTutorialBody": "One side of this box is a membrane: balls go in, and cannot come back out. Herd them in to fill it. Until it is full it holds its own floor off the board, so you cannot finish without feeding it.",
+    "boxTutorialBody": "Balls go in through the membrane and never come out. Fill the box; until it is full its floor stays off the board.",
     "chargeTutorialTitle": "✦ Deploy Charge",
-    "chargeTutorialBody": "Draw a fence past a fuse to arm it. It blasts its slab away and opens space, but also frees nearby balls and breaks your fences in range.",
+    "chargeTutorialBody": "Draw a fence past a fuse to arm it. It blows its slab open, but also frees nearby balls and breaks your fences in range.",
     "streamTutorialTitle": "✦ Data Stream",
-    "streamTutorialBody": "Draw a fence ALONG the violet seam, not across it, to harvest bonus overtime. More coverage pays more, but tracing it loosens your trap.",
+    "streamTutorialBody": "Draw a fence ALONG the violet seam, not across it, to harvest overtime. More coverage pays more but loosens your trap.",
     "creepTutorialTitle": "⚠ Scope Creep",
-    "creepTutorialBody": "The balls speed up the longer you take, up to a cap. Finish inside the calm window and you never see it. The red top-bar gauge shows the surge.",
+    "creepTutorialBody": "Balls speed up the longer you take, up to a cap. Finish fast and you never feel it. The red gauge shows the surge.",
     "pickupTutorialTitle": "✦ Power-Ups",
-    "pickupTutorialBody": "Trap a ball in a pocket that also covers a power-up to grab its boost. Let it fade first and it's gone.",
+    "pickupTutorialBody": "Lock a ball in a pocket that also holds a power-up to claim it. Wait too long and it fades.",
     "gravityWellTutorialTitle": "Gravity Well",
-    "gravityWellTutorialBody": "A gravity well bends any ball that enters it toward the arrow, then lets go the moment the ball leaves. Speed never changes, so a ball can pass through one and come out somewhere completely new depending on where and how fast it went in.\n\nIt is a tool as much as a hazard. Aim a ball into a well to bend it toward a pocket you have already fenced.\n\nA frozen ball ignores gravity entirely, so freezing is a way to hold a ball still inside a well instead of watching it get dragged out.\n\nSome wells start dormant, drawn but inert, and switch on once you have cleared enough of the board.",
+    "gravityWellTutorialBody": "A gravity well bends any ball inside it toward the arrow, then lets go. Speed never changes. Use it to steer a ball into a pocket you already fenced.\n\nA frozen ball ignores gravity. Some wells start dormant and switch on once enough of the board is cleared.",
     "topBarTutorialTitle": "The Top Bar",
     "topBarTutorialBody": "Your level, lives and objectives sit up top. Tap it, or Specs, for your full run sheet.",
     "bottomBarTutorialTitle": "Your Specs",
     "bottomBarTutorialBody": "Tap Specs any time for every stat that shapes your run, explained plainly.",
     "fenceSlotsTutorialTitle": "Fence Slots",
-    "fenceSlotsTutorialBody": "The row under the board picks which KIND of fence your next cut draws. Slot 1 is the standard fence and never runs out; the other four hold the specials you unlock. Tap a slot and every cut is that type until you pick another. Press and hold a slot to read what it does.",
+    "fenceSlotsTutorialBody": "The row under the board picks which fence your next cut draws. Slot 1 is standard and never runs out; the others hold specials you unlock. Tap a slot and every cut is that type until you pick another. Hold a slot to read it.",
     "timeLimitTutorialTitle": "Time Limit",
-    "timeLimitTutorialBody": "Every map now has a time limit. Clear it before the bar empties or the run ends, lives won't save you. Finish early for bonus overtime.",
+    "timeLimitTutorialBody": "Every map now has a time limit. Beat the clock or the run ends, lives or not. Finish early for bonus overtime.",
     "infoUnlocked": "Info Unlocked",
     "lockInfo": {
       "title": "Superior Lock",
       "normalTitle": "Standard Lock",
-      "normalBody": "Seal a ball into its own pocket, cut off from the board. It pays its lock value; tougher balls pay more.",
+      "normalBody": "Seal a ball in its own pocket to lock it. It pays its lock value; tougher balls pay more.",
       "superiorTitle": "Superior Lock",
-      "superiorBody": "Seal a ball into an extra-tight pocket, well under half the usual size. It pays double and gets a gold star."
+      "superiorBody": "Seal a ball in a pocket well under half the usual size. Pays double, earns a gold star."
     },
     "lockExplainer": {
       "line": "Fence a ball into a tight pocket to lock it for extra points.",
@@ -383,73 +383,73 @@
     "info": {
       "level": {
         "title": "Level",
-        "body": "The map you just cleared. Later maps pay a higher base overtime and introduce new ball types and mechanics.",
-        "tip": "Keep your run alive to reach deeper, higher-paying maps. Upgrades bought between levels last the whole run."
+        "body": "The map you cleared. Later maps pay more and add new balls and mechanics.",
+        "tip": "Stay alive to reach deeper, richer maps. Upgrades last the whole run."
       },
       "remaining": {
         "title": "Remaining Space",
-        "body": "How much of the board was still open when you won. You clear a level by fencing off space until the open area drops below the map's target.",
-        "tip": "Clearing more than required feeds the Space Bonus, and meeting the target fast pays the Ship Early bonus."
+        "body": "Board still open when you won. Clear a map by fencing space until you are under its target.",
+        "tip": "Clearing extra feeds the Space Bonus; finishing fast pays Ship Early."
       },
       "fencesUsed": {
         "title": "Fences vs Par",
-        "body": "How many fences you used against the map's par. At or under par pays the full base overtime. Each fence over par scales it down (x0.75, x0.6, then x0.4), and 3 or more over par also switches off the Space Bonus.",
+        "body": "Fences used against par. Under par pays full base; each fence over scales it down (x0.75, x0.6, x0.4). 3 or more over also kills the Space Bonus.",
         "tip": "Favor fewer, bigger cuts. Finishing even one fence under par adds a bonus hour."
       },
       "spaceBonus": {
         "title": "Space Bonus",
-        "body": "Extra area removed beyond the map's requirement. The ladder pays +1h at 10% extra, +2h at 30% and +3h at 55%. It is disabled if you finish 3 or more fences over par.",
+        "body": "Extra space removed beyond the target: +1h at 10%, +2h at 30%, +3h at 55%. Off if you finish 3 or more fences over par.",
         "tip": "Before your winning cut, squeeze out a little more of the board. Near-total clears pay the top rung."
       },
       "baseOvertime": {
         "title": "Base Overtime",
-        "body": "The map's fixed payout, scaled by your fence performance. Every map pays a flat base, so the bonuses on this screen are where the real earnings are.",
+        "body": "The map's flat payout, scaled by fence performance. The bonuses are where the real money is.",
         "tip": "Stay at or under par to keep the full base, then stack bonuses on top of it."
       },
       "threadLocks": {
         "title": "Thread Locks",
-        "body": "You lock a ball by sealing it into its own small pocket of the board, cut off from everything else. Each locked ball pays its lock value, and tougher ball types pay more. Trapping several balls with a single cut multiplies the whole payout by the number caught: 2 at once pays double, 3 pays triple. Sealing a ball into an extra tight pocket upgrades it to a Superior Lock, which pays double.",
-        "tip": "Lock a green money ball early: it triples what every later lock this map pays. Then herd balls close together and close one cut around the whole group."
+        "body": "Seal a ball in its own pocket to lock it. Each pays its lock value; tougher balls pay more. Several in one cut multiply the payout (2 = double, 3 = triple). An extra-tight pocket makes it a Superior Lock, worth double.",
+        "tip": "Lock a green money ball early: it triples every later lock. Then herd balls together and close one cut around them."
       },
       "superiorLocks": {
         "title": "Superior Locks",
-        "body": "A Superior Lock is a lock with real craft: the pocket you sealed the ball into was well under half the size that would normally lock it. Superior locks pay double the lock value, and money-ball, frozen and multi-trap multipliers all stack on top.",
-        "tip": "Place your sealing cut as close to the ball as you dare. A roomy, lazy pocket only ever earns standard lock value; the tight cage is where the money is."
+        "body": "A Superior Lock is a pocket well under half the size that would normally lock. It pays double, and every other multiplier stacks on top.",
+        "tip": "Cut as close to the ball as you dare. Roomy pockets pay standard; the tight cage is where the money is."
       },
       "zoneLocks": {
         "title": "Zone Locks",
-        "body": "A map's coloured var, let and const boxes pay a multiplier (1.5x, 2x, 3x) on any ball locked inside them. It stacks with everything else, so a tight, Superior lock inside a const box is the biggest single payout in the game. This row shows only the hours the zone added; they are already counted in your lock income above.",
-        "tip": "The zone lights up the moment a lock counts. If it stays dark, the pocket you sealed did not land inside the box: aim for the ball to settle within the border, not merely near it."
+        "body": "Coloured var, let and const boxes pay 1.5x, 2x, 3x on any ball locked inside. It stacks with everything, so a Superior lock in a const box is the biggest payout in the game. Already counted in your lock income above.",
+        "tip": "The zone lights up when a lock counts. Dark means the pocket missed the box: settle the ball inside the border, not near it."
       },
       "multiLocks": {
         "title": "Multi-Lock",
-        "body": "Sealing several balls with a single cut multiplies that cut's lock income: two at once pays double, three pays triple, and every other multiplier stacks on top of it. This row shows only the hours the stacking added over locking the same balls one at a time; they are already counted in your lock income above.",
-        "tip": "Do not seal a pocket the moment it is safe. Let a second ball wander in first: one cut around two balls is worth two cuts around one."
+        "body": "Several balls in one cut multiply that cut's lock income: two pays double, three triple, and every other multiplier stacks. Only the extra hours over locking them one by one show here.",
+        "tip": "Do not seal a pocket the moment it is safe. Let a second ball in: one cut around two beats two cuts around one."
       },
       "bouncerHours": {
         "title": "Bumper Hours",
-        "body": "Each bumper holds a small bank of overtime and pays one hour every time a ball strikes it, until it runs dry: green while it still holds hours, red once it is spent. A green one also takes 5% off the ball, so it is the board's own brake on a ball that has been made too fast. A red one has no hours to pay with and kicks instead, speeding the ball up. These hours are paid on top of the map's cap, so every bump is worth exactly one hour.",
-        "tip": "This is the reward for NOT rushing, and the choice is which use you want: every brake is an hour you did not bank. Drain a cluster for the hours and it turns into a cluster that throws your balls around."
+        "body": "Each bumper holds a small bank of overtime and pays 1h per hit until it runs dry. Green ones also brake the ball 5%; red ones are spent and kick it faster instead. Paid above the map cap.",
+        "tip": "The reward for not rushing: every brake is an hour you did not bank. Drain a cluster and it starts throwing your balls around."
       },
       "breakBonus": {
         "title": "Demolition Bonus",
-        "body": "Overtime from smashing amber breakable blocks. Balls chip away at a breakable on contact until it shatters, and anything stacked on top falls with it.",
+        "body": "Overtime from smashing amber blocks. Balls chip at them until they shatter, and anything stacked on top falls.",
         "tip": "Steer balls into breakables with your cuts. The black ball smashes them in half the hits."
       },
       "shipEarly": {
         "title": "Ship Early",
-        "body": "A tempo bonus for meeting the win condition fast: +1h within 60 seconds, +2h within 40, +3h within 25. Only active play counts, menus and the push prompt don't.",
-        "tip": "Open with big, confident cuts instead of many small safe ones. Speed and precision are separate bonuses, so you can chase both."
+        "body": "A tempo bonus for winning fast: +1h within 60s, +2h within 40s, +3h within 25s. Only active play counts.",
+        "tip": "Open with big, confident cuts. Speed and precision are separate bonuses; chase both."
       },
       "pushBonus": {
         "title": "Push Bonus",
-        "body": "The push-your-luck reward. After meeting the map's target you can keep cutting instead of banking, and every extra slice of the board pays bonus overtime.",
+        "body": "The push-your-luck reward. After hitting the target, keep cutting instead of banking; every extra slice pays.",
         "tip": "Pushing is free money: if you fail mid-push you only lose the extra bonus, never your banked score."
       },
       "pickupBonus": {
         "title": "Power-Up Bonus",
-        "body": "Overtime from power-up tokens you sealed in with a lock. A token only pays when a ball locks in the pocket holding it: capture the token's area with no ball and it is wasted, and unclaimed tokens expire on their own.",
-        "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts.",
+        "body": "Overtime from power-up tokens sealed in with a lock. A token only pays if a ball locks in its pocket; unclaimed ones expire.",
+        "tip": "Herd a ball toward the token before sealing. Token overtime pays after the cap, so it always counts.",
         "effects": {
           "overtime": {
             "name": "Overtime +{{value}}h:",
@@ -487,68 +487,68 @@
       },
       "newHighscore": {
         "title": "New Highscore",
-        "body": "You beat this map's previous record, so the whole payout is multiplied by x1.25. It applies after the per-map cap, so breaking a record always pays extra.",
+        "body": "You beat this map's record, so the payout is x1.25. Applied after the cap, so it always pays extra.",
         "tip": "Records are kept per map. A strong upgrade build can beat your old scores map after map."
       },
       "totalBonus": {
         "title": "Total Bonus",
         "body": "All this level's bonuses added together: par, space, locks, demolition, tempo and push.",
-        "tip": "Bonuses fold under a per-map cap of twice the base payout, so spreading across several bonus types beats maxing out just one."
+        "tip": "Bonuses share a cap of twice the base, so spreading across several beats maxing one."
       },
       "overtimeEarned": {
         "title": "Overtime Earned",
-        "body": "What this level paid in total: the scaled base plus all bonuses, capped at twice the map's base payout. A new highscore multiplies past the cap. The number after the slash is the most this map could have paid you: the base plus every lane at its ceiling. It disappears when you took all of it.",
-        "tip": "If you hit the cap often, chase the highscore multiplier: it is applied after the cap, so it always pays."
+        "body": "The level's total: scaled base plus all bonuses, capped at twice the base. A highscore multiplies past the cap. The number after the slash is the most this map could have paid.",
+        "tip": "Hitting the cap often? Chase the highscore multiplier: it applies after the cap."
       },
       "totalOvertime": {
         "title": "Total Overtime",
-        "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
-        "tip": "Spending buys power and charges Budget Cycle boons, while a fat bank feeds Runway perks and War Chest. Your build decides which way to lean."
+        "body": "Your run's overtime so far. Spend it in the shop between levels; what is left banks when the run ends.",
+        "tip": "Spending buys power and charges Budget Cycle; a fat bank feeds Runway and War Chest. Your build decides."
       },
       "axis_delivery": {
         "title": "Delivery",
-        "body": "The share of the map's balls you actually sealed away. It is the baseline, not a tactic: it ignores how tight the pockets were, and it gates the other three style lanes, so a clear that locks nothing is worth its flat base and no more.",
-        "tip": "Lock every ball. A ball left loose costs you its share of Delivery AND the same share of Tempo, Thrift and Greed."
+        "body": "The share of the map's balls you sealed. The baseline: it gates the other lanes, so a clear that locks nothing earns the base and no more.",
+        "tip": "Lock every ball. A loose ball costs its share of Delivery AND of Tempo, Thrift and Greed."
       },
       "axis_craft": {
         "title": "Craft",
-        "body": "How good the locks were, not how many. A full lane is every ball sealed in a superior pocket, and colored areas, two balls in one cut, money balls and frozen locks all reach the same ceiling by other routes.",
-        "tip": "Tight pockets cost time and fences, so Craft is bought with Tempo and Thrift. Pick one pair and commit."
+        "body": "How good the locks were, not how many. Full lane: every ball in a superior pocket. Zones, multi-locks, money balls and frozen locks reach it by other routes.",
+        "tip": "Tight pockets cost time and fences: Craft is bought with Tempo and Thrift. Pick a pair and commit."
       },
       "axis_tempo": {
         "title": "Tempo",
-        "body": "How fast you first met the win condition, in active play seconds. The windows scale with the map's ball count, and pauses and the push prompt do not count.",
-        "tip": "Speed is bought by leaving pockets loose. If you want the Craft lane instead, ignore the clock entirely: it is worth about the same."
+        "body": "How fast you first met the win condition, in active seconds. Windows scale with the ball count; pauses do not count.",
+        "tip": "Speed is bought by leaving pockets loose. Want Craft instead? Ignore the clock; it is worth about the same."
       },
       "axis_thrift": {
         "title": "Thrift",
-        "body": "Finishing under par, measured as a fraction of par so a par-4 map and a par-10 map are equally winnable lanes.",
-        "tip": "Coarse cuts finish under par but leave loose pockets, so Thrift and Craft pull against each other. Pair Thrift with Tempo."
+        "body": "Finishing under par, as a fraction of par, so a par-4 and a par-10 map are equally winnable.",
+        "tip": "Coarse cuts finish under par but leave loose pockets: Thrift fights Craft. Pair it with Tempo."
       },
       "axis_greed": {
         "title": "Greed",
-        "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck hours. Switches off entirely at three fences over par.",
-        "tip": "Extra clearing costs fences and time. Greed pairs naturally with Craft, and fights Thrift for every cut."
+        "body": "Board you were allowed to leave but took anyway, plus push-your-luck hours. Off at three fences over par.",
+        "tip": "Extra clearing costs fences and time. Greed pairs with Craft and fights Thrift."
       },
       "axis_engagement": {
         "title": "Engagement",
-        "body": "The share of the map's own features you actually operated: breakables smashed (weighted by how many hits each was worth), coloured zones with a ball locked in them, terminals lit, seams harvested, boxes delivered into. It is a baseline like Delivery, not a tactic: if a map put a feature on the board, using it is part of finishing the map. Maps that offer none do not show this lane at all.",
-        "tip": "A map is only measured on the features it actually carries, and each family counts the same, so the one thing on the board is the whole lane. Operating them costs time and fences, which is what makes it a real decision against Tempo and Thrift."
+        "body": "The share of the map's features you actually used: breakables smashed, zones locked in, terminals lit, seams harvested, boxes filled. If the map put it there, using it is part of finishing. Maps with none hide this lane.",
+        "tip": "Each feature family counts the same, so the one thing on the board is the whole lane. Using them costs time and fences, against Tempo and Thrift."
       },
       "winBonus": {
         "title": "Win bonus",
-        "body": "Some maps ask for something harder than clearing the board: a ball sealed inside a coloured zone, a tight pocket, a named ball trapped. When a map's win conditions carry a premium, meeting them pays that percent on top of everything the map earned.",
-        "tip": "The premium is set per condition by the map, so it is the same for every route. It scales what you earned, which means playing a hard map well is worth more than scraping through it."
+        "body": "Some maps ask more than a clear: a ball in a zone, a tight pocket, a named ball. When those conditions carry a premium, meeting them pays that percent on top.",
+        "tip": "The premium is set per condition, so it is the same for every route. It scales what you earned, so playing a hard map well pays most."
       },
       "capBonus": {
         "title": "Comp Time",
-        "body": "Stock Options and Comp Time tokens raise the ceiling on what this map can pay, rather than paying hours themselves. On a map that never reaches its ceiling they change nothing; on a big one they are what lets the last hours through.",
-        "tip": "Worth most on a map you are already clearing well. If the payout is nowhere near the ceiling, a cap raise is dead weight."
+        "body": "Stock Options and Comp Time raise the ceiling on what a map can pay rather than paying hours themselves. They only matter on a map that reaches its cap.",
+        "tip": "Worth most on maps you already clear well. Far from the ceiling, a cap raise is dead weight."
       },
       "qualifiedOvertime": {
         "title": "Qualified Overtime",
-        "body": "Paid for sealing several balls in ONE cut. The lock stack is already N-squared, and Delivery and Craft fill up long before a four-ball pass is felt, so this channel pays that curve above the ceiling where it cannot be swallowed.",
-        "tip": "Herd the balls into one pocket and close it with a single fence. Two in a cut pays; four pays far more."
+        "body": "Paid for sealing several balls in ONE cut. Delivery and Craft fill up before a four-ball pass is felt, so this pays above the ceiling where it cannot be swallowed.",
+        "tip": "Herd balls into one pocket and close it with one fence. Two pays; four pays far more."
       }
     },
     "newPersonalBest": "New personal best, and you are still going!",
@@ -601,7 +601,7 @@
     "totalReset": "Total Reset",
     "back": "Back",
     "resetConfirmTitle": "Total Reset?",
-    "resetConfirmBody": "This deletes ALL game state: your score balance, certificates, achievements, records, unlocked features, saved run, and tutorial progress. Language and sound settings are kept. This action cannot be undone.",
+    "resetConfirmBody": "Deletes ALL game state: score, certificates, achievements, records, unlocked features, saved run and tutorials. Language and sound stay. Cannot be undone.",
     "cancel": "Cancel",
     "reset": "Reset"
   },
@@ -707,17 +707,17 @@
     "yourStatus": "Your Status",
     "livesRemaining": "Lives Remaining",
     "livesNone": "None!",
-    "livesDescription": "You lose a life when a ball hits your fence while it is growing. Run out of lives and you can spend a Continue to retry the level.",
+    "livesDescription": "A ball hitting your growing fence costs a life. Out of lives, a Continue lets you retry.",
     "continues": "Continues",
-    "continuesDescription": "Run out of lives and a Continue lets you retry this level with your overtime and upgrades intact. Runs start with none: buy the Golden Parachute upgrade, earn them through certificates, or complete level 20.",
+    "continuesDescription": "Out of lives? A Continue retries the level with your overtime and upgrades intact. Get them from Golden Parachute, certificates, or beating level 20.",
     "loadout": "Loadout",
     "certificatePoints": "Certificate Points",
     "certPointsEarned_one": "{{count}} point earned so far.",
     "certPointsEarned_other": "{{count}} points earned so far.",
-    "certPointsToGo_one": "Complete {{count}} more level to earn the next cert point and unlock upgrades in the Certificate Store.",
-    "certPointsToGo_other": "Complete {{count}} more levels to earn the next cert point and unlock upgrades in the Certificate Store.",
+    "certPointsToGo_one": "{{count}} more level to the next cert point.",
+    "certPointsToGo_other": "{{count}} more levels to the next cert point.",
     "ascensionDepth": "Ascension - Depth {{depth}}",
-    "ascensionDescription": "You looped past the final level. Balls are faster, every drafted mutator below is active, and each completed level counts {{multiplier}}× toward Certificate Hours.",
+    "ascensionDescription": "You looped past the final level. Faster balls, every drafted mutator active, and each level counts {{multiplier}}× toward Certificate Hours.",
     "activeUpgradesCount": "Active Upgrades ({{count}})",
     "currentlyReducingBallSpeed": "Currently reducing ball speed by {{percent}}%",
     "activeUpgrades": "Active Upgrades",
@@ -736,7 +736,7 @@
     "lifeCycle": "Life Cycle",
     "gotIt": "Got it!",
     "achievementsCertificatesTitle": "Achievements & Certificates",
-    "achievementsCertificatesBody": "Play more to unlock achievements and certificates. Achievements reward lifetime milestones with permanent run bonuses. Certificates are earned by mastering specific upgrades across multiple runs and can be purchased in the Certificate Store for lasting effects.",
+    "achievementsCertificatesBody": "Achievements reward lifetime milestones with permanent run bonuses. Certificates come from mastering upgrades across runs and are bought in the Certificate Store.",
     "controlsTitle": "Controls",
     "controlTouchLabel": "TOUCH",
     "controlMouseLabel": "MOUSE",
@@ -745,7 +745,7 @@
     "controlClickAndDrag": "Click and drag",
     "ballTypes": {
       "title": "Ball Types",
-      "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached - new colours unlock as you climb.",
+      "intro": "A ball's colour tells you what it does. New colours unlock as you climb.",
       "speed": "Speed {{speed}}",
       "unlocks": "From level {{level}}",
       "lock": "Lock ×{{mult}}",
@@ -766,27 +766,27 @@
       },
       "winCondition": {
         "title": "Win Condition",
-        "description": "Reduce the arena below the level's target size to win. Trap a ball in a small enough region and it locks away for a bonus!"
+        "description": "Shrink the arena below the target size to win. Trap a ball in a small enough pocket and it locks for a bonus!"
       },
       "breakObstacles": {
         "title": "Breaking Obstacles",
-        "description": "Later levels add amber breakable blocks. Guide balls into them to smash them for bonus overtime - stacked pieces fall when their support breaks. You still win by shrinking the board; breaking is extra. You can't fence against a breakable (it fizzles), and the black ball breaks things in half the hits."
+        "description": "Amber blocks smash for bonus overtime; stacks fall when their support breaks. Breaking is extra, shrinking the board still wins. You cannot fence against a breakable, and the black ball breaks them twice as fast."
       },
       "fenceTypes": {
         "title": "Fence Types",
-        "description": "Under the board sits a row of five slots that decides which kind of fence your next cut draws. Slot 1 is the standard fence, always there and never spent. The other four start empty and fill with specials bought through upgrades: one holds a ball still, one only seals a pocket with the right number of balls in it, one you pull back and fire like a slingshot. Every special builds slower than standard, and that is what it costs you. Tap a slot to select it, press and hold for details."
+        "description": "The five slots under the board choose your next fence. Slot 1 is standard and never spent; the other four fill with specials from upgrades. Every special builds slower than standard. Tap to select, hold for details."
       },
       "lives": {
         "title": "Lives",
-        "description": "You start each run with a set number of lives. Lose a life every time a ball hits your growing fence. Run out of lives and the run ends."
+        "description": "Each run starts with a set number of lives. A ball hitting your growing fence costs one. Out of lives, the run ends."
       },
       "checkpoints": {
         "title": "Checkpoints",
-        "description": "Every 5 levels is a checkpoint. When your run ends, your next run always restarts from the highest checkpoint you reached - you never lose all your progress."
+        "description": "Every 5 levels is a checkpoint. A new run restarts from the highest one you reached."
       },
       "headStartCertificates": {
         "title": "Head Start Certificates",
-        "description": "In the Certificate Store you can unlock Head Start certificates that permanently raise your starting level - so experienced players never have to replay early levels."
+        "description": "Head Start certificates in the Certificate Store permanently raise your starting level."
       }
     }
   },
@@ -834,13 +834,13 @@
     "group": {
       "required": "Goals:",
       "optional": "Optional:",
-      "either": "OR FINISH BY",
-      "trade": "A CHOICE TO MAKE",
+      "either": "Or:",
+      "trade": "Trade-off:",
       "fail": "Failure:"
     },
     "groupRequiredAll": "Goals:",
     "bonusArea": "Lock a ball in the {{area}} area for a {{mult}}x payout. Skipping it costs nothing.",
-    "tradeBudgetBonus": "Your fences are rationed. The optional pocket spends some of them, so it and a comfortable clear are competing for the same budget.",
+    "tradeBudgetBonus": "Your fences are rationed. The optional pocket and a comfortable clear compete for them.",
     "lock_one": "Lock at least {{count}} ball.",
     "lock_other": "Lock at least {{count}} balls.",
     "superiorLocks_one": "Land {{count}} superior lock (a tight pocket).",
@@ -909,12 +909,12 @@
     "continue": "Continue",
     "closedNotEnoughLocks": "Not enough balls locked",
     "closedInfoTitle": "Store closed",
-    "closedInfoBody": "The store opens only when you lock enough balls that round: one, or two on maps with three or more balls. Lock nothing and you skip it.",
+    "closedInfoBody": "The store opens only if you locked enough balls: one, or two on maps with three or more balls.",
     "tutorialTitle": "THE UPGRADE SHOP",
-    "tutorialBody": "Spend overtime hours on upgrades between maps, they multiply future earnings. Press and hold any upgrade for details.",
+    "tutorialBody": "Spend overtime on upgrades between maps. Hold any upgrade for details.",
     "certRuns": "{{current}}/{{required}} runs",
     "detailCertificate": "Certificate progress",
-    "detailCertificateBody": "Buying this in {{required}} separate runs unlocks the {{name}} certificate, a permanent bonus that applies to every run. Credited so far: {{current}} of {{required}}.",
+    "detailCertificateBody": "Buy this in {{required}} separate runs to unlock the {{name}} certificate, a permanent bonus. Credited: {{current}} of {{required}}.",
     "carouselLabel": "Upgrade offers",
     "prevOffer": "Previous offer",
     "nextOffer": "Next offer",
@@ -1049,13 +1049,13 @@
     "loadouts": "Loadouts",
     "admin": "Admin",
     "certLockedTitle": "Certificates Locked",
-    "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
+    "certLockedBody": "Certificates are permanent bonuses earned by mastering upgrade families across runs. Reach a family's top tier, or earn your first certificate by playing, and this store opens. Then spend Certificate Hours to level them up.",
     "certLockedGotIt": "Got it",
     "records": "Records",
     "dailyStandup": "Daily Stand-up",
     "newBadge": "NEW",
     "dailyIntroTitle": "Daily Stand-up",
-    "dailyIntroBody": "Every day everyone gets the exact same run from one shared seed: same levels, drafts, shops and obstacles. Your result lands on the daily leaderboard, and playing builds a streak. Starts at level 1.",
+    "dailyIntroBody": "Everyone gets the same run each day from one shared seed. Your result goes on the daily leaderboard, and playing builds a streak. Starts at level 1.",
     "dailyIntroStart": "Start today's run",
     "music": "Music"
   },
@@ -1070,7 +1070,7 @@
     "loading": "Loading...",
     "back": "Back",
     "unlockedModalTitle": "Loadouts Unlocked",
-    "unlockedModalBody": "You won your first run! From now on, every run starts with a loadout: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more.",
+    "unlockedModalBody": "First run won! Every run now starts with a loadout: a curse paired with a blessing. Win with different loadouts to unlock more.",
     "unlockedModalDismiss": "Got It"
   },
   "features": {
@@ -1078,19 +1078,19 @@
     "dismiss": "Got It",
     "achievements": {
       "name": "Achievements",
-      "body": "You cleared level 5! Achievements now track your milestones as you play, from clean clears to deep runs. Check your progress any time from the main menu."
+      "body": "Level 5 cleared! Achievements now track your milestones. Check them from the main menu."
     },
     "certificates": {
       "name": "Certificates",
-      "body": "You banked your first certificate hour! Spend hours in the Certificate store on permanent upgrades that carry across every run. More hours bank as you clear levels."
+      "body": "First certificate hour banked! Spend hours in the Certificate store on permanent upgrades. More bank as you clear levels."
     },
     "loadouts": {
       "name": "Loadouts",
-      "body": "You beat the game! From now on, every run starts with a loadout draft: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more."
+      "body": "You beat the game! Every run now starts with a loadout draft: a curse paired with a blessing. Win with different loadouts to unlock more."
     },
     "panicShockwave": {
       "name": "Panic Button",
-      "body": "You beat the first boss! From now on, every map starts with a free Shockwave. Fire it to blast the balls apart and get them moving again whenever they slow to a crawl. Chests can still grant more."
+      "body": "First boss beaten! Every map now starts with a free Shockwave: fire it to blast the balls apart when they slow down. Chests can grant more."
     }
   },
   "hallOfFame": {
@@ -1156,19 +1156,19 @@
     "hint": "Hold anything on the board to see what it is.",
     "pickup": {
       "title": "Power-up token",
-      "body": "Seal this inside a pocket when you lock a ball and you claim it. Capture it without a lock and it is wasted."
+      "body": "Lock a ball in a pocket that holds this to claim it. Captured without a lock, it is wasted."
     },
     "chestLoot": {
       "title": "Loot",
-      "body": "Dropped by a smashed chest, showing what you won. The reward is already yours, so there is nothing to collect."
+      "body": "Dropped by a smashed chest, showing what you won. It is already yours."
     },
     "dormantBall": {
       "title": "Sleeping ball",
-      "body": "Not in play yet, and fences pass straight through it. Route a fence through its terminal to wake it. It cannot be locked while it sleeps."
+      "body": "Not in play yet; fences pass through it. Run a fence through its terminal to wake it. It cannot be locked asleep."
     },
     "ball": {
       "title": "Ball",
-      "body": "Fence it into a small sealed pocket to lock it. Locks are where the money is; clearing empty space pays very little."
+      "body": "Fence it into a small sealed pocket to lock it. Locks are where the money is."
     },
     "terminal": {
       "title": "Circuit terminal",
@@ -1184,11 +1184,11 @@
     },
     "breakable": {
       "title": "Breakable block",
-      "body": "Takes a few hits before it shatters, and cracks as it weakens. Breaking it reopens the space underneath."
+      "body": "Takes a few hits to shatter and cracks as it weakens. Breaking it reopens the space under it."
     },
     "mirror": {
       "title": "Mirror",
-      "body": "Bounces balls off at hard angles, which makes their path hard to predict. The black ball can smash it."
+      "body": "Bounces balls off at hard angles, so their path is hard to read. The black ball can smash it."
     },
     "mover": {
       "title": "Moving block",
@@ -1196,24 +1196,24 @@
     },
     "phasing": {
       "title": "Phasing block",
-      "body": "Fades in and out on a cycle. Solid when visible, passable when not. A fence drawn through it while it is out will be cut when it returns."
+      "body": "Fades in and out. Solid when visible, passable when not. A fence drawn through it while it is out is cut when it returns."
     },
     "deformable": {
       "title": "Padded block",
-      "body": "It never breaks. Every hit dents it instead and takes 3% off the ball, so it is the board's own brake on a ball that has been made too fast. The dents stay, so its face shows how much traffic it has taken."
+      "body": "Never breaks. Every hit dents it and takes 3% off the ball, so it brakes anything that got too fast. The dents stay."
     },
     "obstacle": {
       "title": "Obstacle",
-      "body": "Solid. Balls bounce off it and fences stop dead against it, which makes it a good anchor for a pocket."
+      "body": "Solid. Balls bounce off it and fences stop against it: a good anchor for a pocket."
     },
     "area": {
       "title": "Marked zone",
-      "body": "Lock a ball with this zone captured and it pays a multiplier. On some maps it is the only way to win."
+      "body": "Lock a ball inside this zone for a multiplier. On some maps it is the only way to win."
     }
   },
   "gameMessages": {
-    "breakableAnchor": "A fence cannot anchor on something breakable. Smash it out of the way first, or run your cut to solid wall.",
-    "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
+    "breakableAnchor": "A fence cannot anchor on a breakable. Smash it first, or cut to solid wall.",
+    "fenceLimit": "You are growing as many fences as you can. Wait for one to finish, or upgrade.",
     "capturedStart": "Start your fence in open space. That ground has already been captured.",
     "wallInTheWay": "A fence is already anchored there. Start from open space a little further along.",
     "launcherLoaded": "The launcher is still firing. You cannot fence until every ball has left it.",

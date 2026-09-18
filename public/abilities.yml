@@ -67,7 +67,7 @@ abilities:
     factor: 0.5
     size: 230
     description: "Marks a patch where balls move at half speed, for the rest of the map."
-    howTo: "Tap to activate, then tap the board to place it. Put it where you want a lock, not where the balls are now."
+    howTo: "Tap to arm, then tap the board to place it. Put it where you want a lock, not where the balls are."
 
   # The counterpart to Scope Creep, and the bluntest thing in the catalogue: it
   # changes what the board IS rather than how it behaves. Two-sided by nature,
@@ -82,7 +82,7 @@ abilities:
     startLevel: 12
     targeted: true
     description: "Deletes one obstacle for good, turning it into space you can capture."
-    howTo: "Tap to activate, then tap the obstacle you want gone. Objectives and treasure chests cannot be descoped."
+    howTo: "Tap to arm, then tap the obstacle. Objectives and treasure chests cannot be descoped."
 
   - id: clearFences
     name: Clear Fences
@@ -90,8 +90,8 @@ abilities:
     color: "#ffd76b"
     weight: 2
     startLevel: 7
-    description: "Shatters every fence that is not sealing a lock, reopening its space. Locked pockets are untouched."
-    howTo: "Tap to clear the mess when a map gets away from you. The fences holding your locks are left standing."
+    description: "Shatters every fence not sealing a lock and reopens its space. Locked pockets stay."
+    howTo: "Tap when a map gets away from you. Fences holding your locks stay standing."
 
   # Magnet: pull every active ball toward a point YOU pick so they cluster -
   # set up a big multi-lock or wall off a large empty area. One-shot, targeted.
@@ -140,7 +140,7 @@ abilities:
     startLevel: 6
     targeted: true
     description: "Flings the balls it catches and breaks what it hits."
-    howTo: "Arm it, then drag on the board and let go. The further you pull, the harder the throw; a full pull breaks anything it catches."
+    howTo: "Arm it, drag on the board, let go. Pull further to throw harder; a full pull breaks what it catches."
 
   # Fence Overclock: your cuts build much faster for a few seconds - carve the
   # board aggressively (great right after a Freeze or Slow).

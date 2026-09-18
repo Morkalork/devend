@@ -937,7 +937,7 @@ upgrades:
   - id: budget_cycle_junior
     name: Budget Cycle
     tier: Junior
-    description: "Each chunk spent per visit buys an instant fence next map. Chunks start at 60h and rise with rates."
+    description: "Each 60h chunk spent per visit buys an instant fence next map. Chunk size rises with rates."
     unlockLevel: 10
     prerequisites:
       - expense_account
@@ -1479,7 +1479,7 @@ upgrades:
   - id: bug_squash_junior
     name: Bug Squash
     tier: Junior
-    description: "Every wall hit has a 5% chance to squash the ball flat against it and stick it there for 2s."
+    description: "Every wall hit has a 5% chance to squash the ball flat and stick it for 2s."
     unlockLevel: 7
     icon: bug
     tags: [freeze]

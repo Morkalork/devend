@@ -72,7 +72,7 @@ assignments:
       tiers:
         - { threshold: 12, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 20, label: "+10 overtime", reward: { type: overtime, hours: 10 } }
-    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably; a heavier block banks a bigger overtime bonus.
+    clarify: A small always-on speed tax for a payout that scales with balls sealed over the block. Two or three a map clears the first tier.
 
   - id: daily_standup
     name: Daily Standup
@@ -86,7 +86,7 @@ assignments:
       tiers:
         - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: Consistency over volume. A map counts once you lock two balls in it; hit that in three of five maps for an overtime bonus, all five for a free Senior upgrade.
+    clarify: "Consistency over volume. A map counts once you lock two balls in it: three of five maps pays overtime, all five a free Senior upgrade."
 
   - id: precision_review
     name: Precision Review
@@ -100,7 +100,7 @@ assignments:
       tiers:
         - { threshold: 4, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 8, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. Land eight superior locks over the block for a free Senior upgrade.
+    clarify: "Rewards tight pockets. Slower fences make them harder, which is the point. Eight superior locks over the block: free Senior upgrade."
 
   - id: under_budget
     name: Under Budget
@@ -114,7 +114,7 @@ assignments:
       tiers:
         - { threshold: 3, label: "+6 overtime", reward: { type: overtime, hours: 6 } }
         - { threshold: 5, label: "+11 overtime", reward: { type: overtime, hours: 11 } }
-    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut stings now; clean play across the block pays it back and then some.
+    clarify: Efficient cutting. A map counts when you finish at or under par. The overtime cut stings now; clean play pays it back.
 
   - id: sprint_review
     name: Sprint Review
@@ -128,7 +128,7 @@ assignments:
       tiers:
         - { threshold: 3, label: "+8 overtime", reward: { type: overtime, hours: 8 } }
         - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window. Clear inside 40 active seconds; sweep all five maps for a free Principal upgrade.
+    clarify: For fast cutters. Balls surge from the first second. Clear inside 40 active seconds; all five maps earns a free Principal upgrade.
 
   # ZERO INCIDENTS. The first mission about SURVIVING rather than producing.
   # Every other contract pays for throughput, which pushes toward aggressive
@@ -154,7 +154,7 @@ assignments:
         - threshold: 5
           label: "Pick an Architect upgrade"
           reward: { type: tierDraft, tier: Architect }
-    clarify: "A clean map is one you finished without a ball taking a life off you. The speed tax makes the careful line genuinely slower, so this is a contract about restraint, not about locking more."
+    clarify: "A clean map is one where no ball took a life. The speed tax makes the careful line slower, so this is about restraint."
 
   # BUDGET FREEZE. The only contract that is not about the board at all: you run
   # five maps on the build you walked in with, watching offers you cannot take.
@@ -181,7 +181,7 @@ assignments:
         - threshold: 5
           label: "Pick a Principal upgrade"
           reward: { type: tierDraft, tier: Principal }
-    clarify: "Every hour you do not spend stays banked. The store still opens and still tempts you; walking out empty handed is the whole task, and the payout at the end is bigger than most of what you passed on."
+    clarify: "Every hour you do not spend stays banked. The store still opens and tempts; walking out empty handed is the task, and it pays well."
 
   # DOUBLE DOWN. Push Your Luck is a decision layer no contract touched: two of
   # them FORBID pushing as a constraint, and none made it the point. This grades
@@ -219,7 +219,7 @@ assignments:
         - threshold: 5
           label: "Pick an Architect upgrade"
           reward: { type: tierDraft, tier: Architect }
-    clarify: "A push you bank counts; a push you lose does not, and now costs a life as well. Declining every offer is safe and scores nothing here, which is the point of taking the contract."
+    clarify: "A banked push counts; a lost push does not, and now costs a life. Declining every offer is safe and scores nothing."
 
   - id: named_delivery
     name: Named Delivery
@@ -233,7 +233,7 @@ assignments:
       tiers:
         - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 3, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: Client asked for one by name. The ball is picked from the types this block actually spawns, and it is the scarcest one that still leaves the top tier reachable, so expect to hunt for it. Two maps pays two lives; four of five earns a free Senior upgrade.
+    clarify: "The client wants one ball by name: the scarcest type this block spawns, so hunt for it. Two maps pays two lives; four of five a free Senior upgrade."
 
   # The opposite of every other mission here. Locks are the entire economy, so
   # a map cleared clean is a map you deliberately left money on the board for -
@@ -254,7 +254,7 @@ assignments:
       tiers:
         - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 3, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: Lock nothing, clear everything. Sealing a ball fails that map for the mission, and the store's lock toll means a clean map is one you cannot shop after, so the run's income comes entirely from space and speed. Maps whose win demands a lock cannot count, and the target shrinks to fit the block.
+    clarify: Lock nothing, clear everything. A lock fails that map, and a clean map cannot shop after, so income is space and speed only. Maps that require a lock do not count.
 
   # Every other mission rewards steering balls AWAY from things. This one asks
   # you to aim them into something, which is the same skill pointed backwards,
@@ -272,4 +272,4 @@ assignments:
       tiers:
         - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 4, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: Demolition work. Blocks break when balls hit them hard enough, and anything resting on one falls with it, so a well-aimed cut can bring down a stack. Slower fences make herding a ball into a block harder, which is the whole job. The target is sized to how many blocks the block's maps actually carry.
+    clarify: Demolition. Blocks break when hit hard enough and stacks fall with their support. Slower fences make herding harder, which is the job. Target sized to what the block carries.
