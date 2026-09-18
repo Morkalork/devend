@@ -6,6 +6,20 @@
 #
 # noneWeight: relative odds of "no objective this map" (objectives are a spice,
 # not every map). With the weights below, roughly half of eligible maps get one.
+#
+# SCALE. `reward` is overtime hours, paid on clear and folded under the per-map
+# backstop with the map mutator's hazard premium (scoring.ts `flatBonus`). This
+# file was MISSED by the hours-by-4 deflation (src/lib/economyDeflation.ts):
+# the rewards stayed at 3-6h while a good map's pay fell from ~136h to ~34h, so
+# a spice bonus quietly grew from 2-4% of a map to 9-18% of one, and a map
+# carrying an objective AND a mutator paid 29% of itself in flat bonuses.
+#
+# Rescaled here to 1h, or 2h for the two that ask for real work (vault's four
+# locks, surgical's two superior locks). Not a clean divide: 3/4 of an hour
+# cannot be authored, so the six values land on 1 and 2 rather than 0.75 and
+# 1.5, which keeps "the big ask pays double" and costs at most half an hour of
+# fidelity. Author a NEW objective against a good map's ~34h, never against
+# these numbers' history.
 noneWeight: 6
 
 objectives:
@@ -17,7 +31,7 @@ objectives:
     weight: 3
     params:
       count: 2
-    reward: 3
+    reward: 1
 
   - id: vault
     name: The Vault
@@ -28,7 +42,7 @@ objectives:
     weight: 2
     params:
       count: 4
-    reward: 6
+    reward: 2
 
   - id: precision
     name: Precision
@@ -38,7 +52,7 @@ objectives:
     weight: 3
     params:
       count: 1
-    reward: 4
+    reward: 1
 
   - id: surgical
     name: Surgical
@@ -49,7 +63,7 @@ objectives:
     weight: 2
     params:
       count: 2
-    reward: 6
+    reward: 2
 
   - id: under-budget
     name: Under Budget
@@ -59,7 +73,7 @@ objectives:
     weight: 2
     params:
       delta: 0
-    reward: 4
+    reward: 1
 
   - id: speed-run
     name: Speed Run
@@ -69,4 +83,4 @@ objectives:
     weight: 2
     params:
       seconds: 35
-    reward: 4
+    reward: 1

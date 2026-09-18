@@ -122,11 +122,12 @@ fences:
   # exactly one, Semaphore wants a crowd. Same field, opposite ends, the way ice
   # and flare are one ballSpeedStep with the sign flipped.
   #
-  # WHY THEY PAY OUTSIDE THE CAP. Lock income banks through delivery (30h) and
-  # craft (30h), so 60h is all the locks on a map can ever be worth. The
-  # simultaneous multiplier already pays N^2 - a four-ball pass earns 192h
+  # WHY THEY PAY OUTSIDE THE CAP. Lock income banks through delivery (8h) and
+  # craft (8h), so 16h is all the locks on a map can ever be worth. The
+  # simultaneous multiplier already pays N^2 - a four-ball pass earns 48h
   # nominal - and the ceiling eats nearly all of it, which is why going from
-  # three balls to four is today often worth exactly nothing. Both of these pay
+  # three balls to four is today often worth exactly nothing. (Those ceilings
+  # were 30/30/60/192 before hours were deflated by 4; the ratio is the same.) Both of these pay
   # into QUALIFIED overtime instead, which is added after the backstop.
   - id: mutex
     name: Mutex

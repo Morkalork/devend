@@ -1438,7 +1438,7 @@ levels:
         cy: 290
         radius: 46
         bouncer: true
-        bounceHours: 5
+        bounceHours: 1
       - id: escalation-b
         kind: wall
         shape: circle
@@ -1446,7 +1446,7 @@ levels:
         cy: 610
         radius: 46
         bouncer: true
-        bounceHours: 5
+        bounceHours: 1
       # ── Two quiet corners ─────────────────────────────────────────────────
       #
       # Slack, in the sense the difficulty contract means it: somewhere in each

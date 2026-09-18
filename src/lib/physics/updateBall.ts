@@ -267,7 +267,7 @@ function applyBouncer(
   //
   // A spent bumper still bounces. It is furniture that happened to be worth
   // something, not a coin that vanishes.
-  if (spec.hours > 0) {
+  if (spec.hours > 1e-9) {   // epsilon: the bank is spent in fifths, see bouncer.ts
     const paid = Math.min(BOUNCER_HOURS_PER_BUMP, spec.hours);
     spec.hours -= paid;
     game.bouncerOvertime = (game.bouncerOvertime ?? 0) + paid;

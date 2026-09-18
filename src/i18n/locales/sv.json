@@ -156,8 +156,8 @@
     "underParInstantFenceActive": "Att klara en karta under par ger +{{count}} direktstaket på nästa karta (Clean Release).",
     "underParInstantFenceInactive": "Ingen under par-bonus.",
     "bankedSlow": "Bankad övertid saktar ner",
-    "bankedSlowValue": "{{percent}}% / 50h",
-    "bankedSlowActive": "Bollar startar {{percent}}% långsammare för varje 50h på banken vid kartstart, upp till 8% (War Chest).",
+    "bankedSlowValue": "{{percent}}% / 13h",
+    "bankedSlowActive": "Bollar startar {{percent}}% långsammare för varje 13h på banken vid kartstart, upp till 8% (War Chest).",
     "bankedSlowInactive": "Ingen nedsaktning från bankad övertid.",
     "spaceBonusMultiplier": "Utrymmesbonusmultiplikator",
     "spaceBonusMultiplierActive": "Utrymmesoptimeringens bonusar betalar x{{mult}} (Tech Evangelist).",
@@ -1167,7 +1167,7 @@
       },
       "budget_cycle_junior": {
         "name": "Budgetcykel",
-        "description": "Varje utgiftsblock per besök köper ett direktstängsel på nästa karta. Blocken börjar på 60h och stiger."
+        "description": "Varje utgiftsblock per besök köper ett direktstängsel på nästa karta. Blocken börjar på 15h och stiger."
       },
       "budget_cycle_senior": {
         "name": "Budgetcykel",
@@ -1207,7 +1207,7 @@
       },
       "technical_debt_architect": {
         "name": "Teknisk skuld",
-        "description": "+20h till kartans övertidstak denna runda, så en staplad multiplikator betalar. Bollarna rör sig 25% snabbare."
+        "description": "+5h till kartans övertidstak denna runda, så en staplad multiplikator betalar. Bollarna rör sig 25% snabbare."
       },
       "cron_job_senior": {
         "name": "Schemalagt jobb",
@@ -1332,7 +1332,7 @@
       },
       "investment-strategy": {
         "name": "Investeringsstrategi",
-        "description": "Dina investeringar jobbar åt dig, bollarna rör sig 1% långsammare per 50h säkrade. En belöning för att ha bemästrat Landningsbanan."
+        "description": "Dina investeringar jobbar åt dig, bollarna rör sig 1% långsammare per 13h säkrade. En belöning för att ha bemästrat Landningsbanan."
       },
       "process-optimiser": {
         "name": "Processoptimerare",

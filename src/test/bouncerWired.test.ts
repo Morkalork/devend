@@ -36,7 +36,9 @@ vi.mock("@/lib/gameHaptics", () => ({
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_SLOW, bouncerCharge } from "@/lib/physics/bouncer";
+import {
+  BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_HOURS_PER_BUMP, BOUNCER_SLOW, bouncerCharge,
+} from "@/lib/physics/bouncer";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -183,24 +185,35 @@ describe("bumper hours", () => {
     return { paid: game.bouncerOvertime ?? 0, left: spec.hours };
   };
 
-  it("pays an hour for a bump", () => {
+  /**
+   * How many bumps a bank holds. Derived rather than written down: the payout
+   * rate and the bank are tuned separately (the rate carries the economy's
+   * scale, the count carries BOUNCER_SLOW's promise that one bumper cannot
+   * brake a ball below 0.95^5), so a test that hardcoded either would fail the
+   * next time one of them moved without anything being wrong.
+   */
+  const BUMPS = BOUNCER_HOURS / BOUNCER_HOURS_PER_BUMP;
+
+  it("pays a bump's worth for a bump", () => {
     const one = rally(1);
-    expect(one.paid, "a bump paid nothing").toBe(1);
-    expect(one.left).toBe(BOUNCER_HOURS - 1);
+    expect(one.paid, "a bump paid nothing").toBeCloseTo(BOUNCER_HOURS_PER_BUMP, 9);
+    expect(one.left).toBeCloseTo(BOUNCER_HOURS - BOUNCER_HOURS_PER_BUMP, 9);
   });
 
-  it("pays one per bump until the bank is empty", () => {
-    const full = rally(BOUNCER_HOURS);
-    expect(full.paid).toBe(BOUNCER_HOURS);
-    expect(full.left).toBe(0);
+  it("pays per bump until the bank is empty", () => {
+    const full = rally(BUMPS);
+    expect(full.paid).toBeCloseTo(BOUNCER_HOURS, 9);
+    expect(full.left).toBeCloseTo(0, 9);
   });
 
   it("pays nothing more once it is dry, however long the rally", () => {
     // The property that stops a bumper cluster being a place to park a ball
-    // and walk away.
-    const overrun = rally(BOUNCER_HOURS + 8);
-    expect(overrun.paid, "the bank kept paying after it emptied").toBe(BOUNCER_HOURS);
-    expect(overrun.left).toBe(0);
+    // and walk away. Also the one that catches the float residue a fractional
+    // rate leaves behind: five subtractions of 0.2 from 1 do not reach a clean
+    // zero, so `charged` is an epsilon test and this is what proves it.
+    const overrun = rally(BUMPS + 8);
+    expect(overrun.paid, "the bank kept paying after it emptied").toBeCloseTo(BOUNCER_HOURS, 9);
+    expect(overrun.left).toBeCloseTo(0, 9);
   });
 
   it("keeps kicking after the money runs out", () => {

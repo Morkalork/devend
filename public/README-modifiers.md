@@ -320,7 +320,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
 | `shipEarlySecondsPerBall` | `0` | Extra seconds PER BALL added to every Ship Early bonus window (Deadline Extension). With `2`, a 4-ball map's windows each gain 8s. | `2` |
 | `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (Hard Deadline door). | `1` |
-| `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `100` |
+| `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `25` |
 | `runwayConcurrentFenceAt` | `0` | Runway: while the bank is at/above this threshold, +1 concurrent fence. | `200` |
 | `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
 | `spendInstantFencePerChunk` | `0` | Budget Cycle (spend side): instant fences on the NEXT map per 15h spent in one shop visit (`SPEND_CHUNK_HOURS`, max 3 chunks counted; src/lib/treasury.ts). | `1` |

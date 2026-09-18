@@ -156,8 +156,8 @@
     "underParInstantFenceActive": "Terminar un mapa bajo par otorga +{{count}} valla(s) instantánea(s) en el siguiente mapa (Clean Release).",
     "underParInstantFenceInactive": "Sin bonificación de arrastre bajo par.",
     "bankedSlow": "Ralentización por banca",
-    "bankedSlowValue": "{{percent}}% / 50h",
-    "bankedSlowActive": "Las bolas aparecen un {{percent}}% más lentas por cada 50h en banca al inicio del mapa, hasta un 8% (War Chest).",
+    "bankedSlowValue": "{{percent}}% / 13h",
+    "bankedSlowActive": "Las bolas aparecen un {{percent}}% más lentas por cada 13h en banca al inicio del mapa, hasta un 8% (War Chest).",
     "bankedSlowInactive": "Sin ralentización por banca.",
     "spaceBonusMultiplier": "Multiplicador de bono de espacio",
     "spaceBonusMultiplierActive": "Los bonos de optimización de espacio pagan x{{mult}} (Tech Evangelist).",
@@ -1167,7 +1167,7 @@
       },
       "budget_cycle_junior": {
         "name": "Ciclo Presupuestario",
-        "description": "Cada bloque de gasto por visita compra una valla instantánea en el siguiente mapa. Empiezan en 60h y suben."
+        "description": "Cada bloque de gasto por visita compra una valla instantánea en el siguiente mapa. Empiezan en 15h y suben."
       },
       "budget_cycle_senior": {
         "name": "Ciclo Presupuestario",
@@ -1207,7 +1207,7 @@
       },
       "technical_debt_architect": {
         "name": "Deuda Técnica",
-        "description": "+20h al techo de horas extra por mapa de esta partida, para que el multiplicador pague. Bolas un 25% más rápidas."
+        "description": "+5h al techo de horas extra por mapa de esta partida, para que el multiplicador pague. Bolas un 25% más rápidas."
       },
       "cron_job_senior": {
         "name": "Tarea Programada",
@@ -1332,7 +1332,7 @@
       },
       "investment-strategy": {
         "name": "Estrategia de Inversión",
-        "description": "Tus inversiones trabajan por ti, las bolas aparecen un 1% más lentas por cada 50h acumuladas. Una recompensa por dominar la Pista de Despegue."
+        "description": "Tus inversiones trabajan por ti, las bolas aparecen un 1% más lentas por cada 13h acumuladas. Una recompensa por dominar la Pista de Despegue."
       },
       "process-optimiser": {
         "name": "Optimizador de Procesos",

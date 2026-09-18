@@ -211,7 +211,10 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       level: levels.length + 1,
       sizeThreshold: 40,
       expectedCuts: 5,
-      points: 100,
+      // Every shipped map is 5 (map.yml, DEFAULT_MAP_BASE_POINTS). At 100 the
+      // builder started every new map on a base twenty times the ladder's,
+      // which is how a stale economy gets authored into new content.
+      points: 5,
       balls: [{
         id: 'ball-1',
         initialSpeed: 300,

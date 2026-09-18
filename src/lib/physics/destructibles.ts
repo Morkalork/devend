@@ -57,9 +57,15 @@ const MIRROR_DEBRIS_COLOR = "#88ddff";
 const MOVER_DEBRIS_COLOR = "#ff8800";
 const BREAKABLE_DEBRIS_COLOR = "#ffb454";
 const OBSTACLE_FALL_COLOR = "#9aa3ad";
-// Bonus overtime hours for smashing a breakable (objective targets are worth more).
-const BREAK_BONUS_BASE = 5;
-const BREAK_BONUS_OBJECTIVE = 10;
+// Bonus overtime hours for smashing a breakable (objective targets are worth
+// more). Hours, and so quartered with the rest of the economy
+// (src/lib/economyDeflation.ts) rather than left at the 5/10 the YAML sweep
+// could not see; the 1:2 ratio between them is exact either way. These reach
+// the player only through the level-complete screen's legacy fallback sum
+// today, Engagement having taken over the paying, so this is about the number
+// shown being in the currency shown.
+const BREAK_BONUS_BASE = 1;
+const BREAK_BONUS_OBJECTIVE = 2;
 // Demolition multiplier: each smash compounds the map's pre-cap payout by this,
 // offsetting the ship-early time sacrificed to break things (issue #38).
 export const BREAK_MULTIPLIER_PER = 1.15;
@@ -570,8 +576,9 @@ function completeBreakable(
   if (d.objective) game.objectivesBroken++;
   // Recorded for the overlay and the run stats, NOT paid into Greed any more.
   // It used to be `greedBonus: pushBonus + game.breakBonus`, which is how the
-  // map's own content came to be worth nothing: Greed's 25h pot is shared with
-  // clearing, so on any map where you also cleared it was already full and
+  // map's own content came to be worth nothing: Greed's pot (6h today, 25h
+  // before the deflation) is shared with clearing, so on any map where you
+  // also cleared it was already full and
   // these hours evaporated. Engagement is its own axis now (scoreAxes.ts), paid
   // on the share of the map's breakables actually taken apart.
   game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;

@@ -3,8 +3,10 @@
  *
  * Everything else a map pays is bounded. `backstop = round(basePoints x
  * overtimeCapHeadroom) + every axis ceiling`, and lock income in particular
- * banks through delivery (30h) and craft (30h) - so sixty hours is all the
- * locks on a map can ever be worth, whatever you did to earn them.
+ * banks through delivery (8h) and craft (8h) - so sixteen hours is all the
+ * locks on a map can ever be worth, whatever you did to earn them. (30/30/60
+ * before hours were deflated by 4, which is what this paragraph used to say
+ * while the worked example below already used the deflated lockValue.)
  *
  * ── The number that makes this necessary ───────────────────────────────────
  *

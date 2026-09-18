@@ -35,7 +35,11 @@ export const ONBOARDING_MAP: LevelConfig = {
   level: 1,
   sizeThreshold: 40, // win at <= 40% of the board remaining
   expectedCuts: 2,
-  points: 20,
+  // The same base every shipped map carries (map.yml `points: 5`, and
+  // DEFAULT_MAP_BASE_POINTS). Authored at 20 and missed by the hours-by-4
+  // deflation, which swept map.yml but not a map written in code, so the very
+  // first map anyone plays paid four times what every later map pays.
+  points: 5,
   variety: 0,
   randomShapes: 0,
   pickupChance: 0,

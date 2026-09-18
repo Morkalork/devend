@@ -44,7 +44,7 @@
  * still has hours, so the two states the player can already see - green with
  * hours, red without - are two different machines:
  *
- *   GREEN pays an hour AND takes the edge off the ball. It is the reward for
+ *   GREEN pays out AND takes the edge off the ball. It is the reward for
  *     leaving a ball in play, and the board's own answer to a ball that has
  *     been made too fast.
  *   RED is the pop bumper described above, and it only speeds a ball up. A
@@ -54,9 +54,9 @@
  * ball, because "a bumper that braked a fast ball would be a damper wearing a
  * bumper's paint" and because it would make the launcher's wager - the speed is
  * permanent - quietly false. Both objections were about a brake that was FREE.
- * This one is not: it costs an hour out of a fixed, authored, per-map bank, so
- * a map can spend exactly as much braking as its designer put on the board and
- * no more, and every brake is an hour the player did not bank. The wager still
+ * This one is not: it is paid for out of a fixed, authored, per-map bank, so a
+ * map can spend exactly as much braking as its designer put on the board and
+ * no more, and every brake is overtime the player did not bank. The wager still
  * holds everywhere else; it now has a second answer beside ice, one the player
  * has to route the ball through and pay for.
  *
@@ -78,8 +78,8 @@ export interface BouncerSpec {
   /**
    * Overtime hours left in this bumper's bank.
    *
-   * A bumper pays ONE hour per bump until it runs dry, and then keeps bouncing
-   * for nothing. Mutable, and mutated in place: this object is shared by the
+   * A bumper pays BOUNCER_HOURS_PER_BUMP per bump until it runs dry, and then
+   * keeps bouncing for nothing. Mutable, and mutated in place: this object is shared by the
    * polygon map and every edge wall, so the bank cannot be double-spent by the
    * two collision systems seeing the same contact - which the one-kick-per-
    * contact cooldown already guarantees.
@@ -120,24 +120,44 @@ export const BOUNCER_KICK = 1.25;
 /**
  * What a CHARGED bumper multiplies a ball's speed by, instead of kicking it.
  *
- * Small on purpose. Five hours in a bank is five brakes, so one bumper can only
- * ever take a ball to 0.95^5 = 77% of what it arrived at, and undoing a
- * launcher shot means draining a whole cluster - paying the player the entire
- * time. A bigger number would let one well-placed bumper cancel that shot in
- * two bumps, which would make the shot not worth taking.
+ * Small on purpose. A bumper's bank is five bumps deep (BOUNCER_HOURS over
+ * BOUNCER_HOURS_PER_BUMP, below), so one bumper can only ever take a ball to
+ * 0.95^5 = 77% of what it arrived at, and undoing a launcher shot means
+ * draining a whole cluster - paying the player the entire time. A bigger
+ * number would let one well-placed bumper cancel that shot in two bumps,
+ * which would make the shot not worth taking.
  */
 export const BOUNCER_SLOW = 0.95;
 
 /**
  * Hours a bumper is worth, and how many it pays per bump.
  *
- * Five and one. The point is a reason NOT to take the quick win: Tempo pays for
- * shipping early, and until now nothing paid for staying. A bank rather than a
- * rate because a rate is farmable - a player who parked a ball in a bumper
- * cluster and went to make tea would out-earn one who played well.
+ * The point is a reason NOT to take the quick win: Tempo pays for shipping
+ * early, and until now nothing paid for staying. A bank rather than a rate
+ * because a rate is farmable - a player who parked a ball in a bumper cluster
+ * and went to make tea would out-earn one who played well.
+ *
+ * ── Why one hour in five payments rather than five in one ──────────────────
+ *
+ * This bank is TWO numbers wearing one coat. It is what the bumper pays, and -
+ * because a bumper brakes exactly while it has hours left (see `charged`
+ * below) - the count of brakes it has in it is `BOUNCER_HOURS /
+ * BOUNCER_HOURS_PER_BUMP`. BOUNCER_SLOW's note above depends on that count
+ * being five.
+ *
+ * It was 5 and 1, and the hours-by-4 deflation (src/lib/economyDeflation.ts)
+ * swept the YAML configs and never saw it, so a bumper kept paying five hours
+ * into an economy where a good map pays ~34h: a two-bumper map handed over a
+ * quarter of itself away in hazard pay.
+ *
+ * Quartering the bank alone would have taken the brakes with it - one brake,
+ * 0.95 instead of 0.95^5, and a bumper that can no longer meaningfully undo a
+ * launcher shot. So the payout moved and the brake count did not: a fifth of
+ * an hour per bump, five bumps, one hour a bumper. Both numbers say what they
+ * said before, in the currency that now exists.
  */
-export const BOUNCER_HOURS = 5;
-export const BOUNCER_HOURS_PER_BUMP = 1;
+export const BOUNCER_HOURS = 1;
+export const BOUNCER_HOURS_PER_BUMP = 0.2;
 export const BOUNCER_MAX_SPEED_SCALE = 2.2;
 
 /**
@@ -221,7 +241,10 @@ export function bouncerKick(ball: Ball, spec: BouncerSpec): BouncerHit {
   // the universal floor at the end of updateBall. Both would stop the ball from
   // crawling, but only this one makes the returned `speed` true - and that is
   // what the caller writes onto the ball and what the flash is scaled from.
-  const charged = spec.hours > 0;
+  // Epsilon, not `> 0`: the bank is spent in fifths of an hour, and five
+  // subtractions of 0.2 from 1 leave a float residue rather than a clean zero.
+  // Without this a drained bumper reads as charged for one extra bump.
+  const charged = spec.hours > 1e-9;
   const floor = Math.max(0, ball.minimumSpeed ?? 0);
   const next = charged
     ? Math.max(floor, speed * BOUNCER_SLOW)

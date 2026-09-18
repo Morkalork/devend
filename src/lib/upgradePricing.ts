@@ -25,11 +25,17 @@
  * by `blockInflation` below instead, which is the honest place for it.
  *
  * ANCHORED ON A GOOD RUN, not a perfect one. Measured through calculateScore
- * itself: flawless 184h, good 136h, ordinary 61h, scrappy 23h. 190 puts the
- * cheapest tier at 34h, so a good map buys one thing and a flawless one buys
- * one thing and banks half the next. Anchoring on the ceiling would price out
- * everyone who is not perfect; anchoring on an ordinary clear is what produced
- * the complaint.
+ * itself: flawless 47h, good 34h, ordinary 16h, scrappy 6h. An anchor of 48
+ * puts the cheapest tier at 34h, so a good map buys one thing and a flawless
+ * one buys one thing and banks half the next. Anchoring on the ceiling would
+ * price out everyone who is not perfect; anchoring on an ordinary clear is
+ * what produced the complaint.
+ *
+ * Those are post-deflation hours (src/lib/economyDeflation.ts). This paragraph
+ * used to quote the pre-deflation run (184/136/61/23) alongside the anchor 190
+ * and the post-deflation answer of 34h in one breath, which is three numbers
+ * from two economies and no way to tell: 190 x 0.70 is 133, and only 48 makes
+ * the sentence true.
  *
  * An explicit `cost:` on an upgrade overrides the formula entirely (the four
  * level-1 first hires, the two hand-priced specials, and the ascension trio
@@ -37,9 +43,18 @@
  */
 import { UpgradeTier, UpgradePricing } from '@/types/upgrade';
 
+/**
+ * The fallback, used by tests and for the moment before upgrades.yml loads.
+ *
+ * It MIRRORS the shipped `pricing:` block and is pinned to it by
+ * economyScale.test.ts. It was left at the pre-deflation 8/190 when the YAML
+ * went to 2/48, which is why the note above could say "190 puts the cheapest
+ * tier at 34h" while 190 x 0.70 is 133: the prose was quartered and the
+ * literal was not.
+ */
 export const DEFAULT_UPGRADE_PRICING: UpgradePricing = {
-  minCost: 8,
-  anchorHours: 190,
+  minCost: 2,
+  anchorHours: 48,
   // Mirrors public/upgrades.yml. Fractions of one good map: the cheapest tier
   // is a map, the top tier a little over two.
   tierFactor: {

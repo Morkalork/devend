@@ -6,6 +6,21 @@
 #
 # noneWeight: relative odds of "no mutator this map", so some maps stay vanilla.
 #
+# SCALE. `overtimePremium` is hazard pay in overtime hours, awarded on clear and
+# folded under the per-map backstop alongside an objective's reward (scoring.ts
+# `flatBonus`). This file was MISSED by the hours-by-4 deflation (see
+# src/lib/economyDeflation.ts): the premiums stayed at 2-4h while a good map's
+# pay fell from ~136h to ~34h, so hazard pay grew from 1.5-3% of a map to
+# 6-12% of one.
+#
+# All five are 1h now, and the old 2/3/4 gradient did not survive the rescale:
+# at this scale it would have to be 0.5/0.75/1, and the nearest integers with a
+# floor of 1 are all 1. Paying the harsher mutators 2h would have kept the
+# shape at twice the intended magnitude on the commonest case, which is the
+# worse trade - the difference being traded away is under an hour on a 34h map,
+# and a player cannot feel it. If hazard pay should ever be graded again, grade
+# it against what a map pays today rather than restoring these numbers.
+#
 # ── gravity: two models, per mutator ──────────────────────────────────────────
 #
 #   turnRate            STEERING (the default). The pull bends a heading and
@@ -36,7 +51,7 @@ mutators:
     params:
       perLockPercent: 7
       maxPercent: 56
-    overtimePremium: 3
+    overtimePremium: 1
 
   - id: overclock
     name: Overclock
@@ -46,7 +61,7 @@ mutators:
     weight: 2
     params:
       factor: 1.18
-    overtimePremium: 2
+    overtimePremium: 1
 
   # Steady down, with no rotating sequence and no quiet stretches, for the map
   # whose FLOOR answers the pull. gravity_well turns the pull through all four
@@ -75,7 +90,7 @@ mutators:
       topSpeedScale: 2.2
       period: 9
       sequence: [down]
-    overtimePremium: 4
+    overtimePremium: 1
 
   # The room turned, on a clock, with no quiet stretches.
   #
@@ -103,7 +118,7 @@ mutators:
       topSpeedScale: 2.2
       period: 10
       sequence: [down, right, up, left]
-    overtimePremium: 4
+    overtimePremium: 1
 
   - id: gravity_well
     name: Technical Gravity
@@ -116,4 +131,4 @@ mutators:
       turnRate: 1.1
       period: 9
       sequence: [down, none, left, none, up, none, right, none]
-    overtimePremium: 4
+    overtimePremium: 1

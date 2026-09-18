@@ -22,9 +22,9 @@ capstones:
 
   - id: stock_options
     name: Stock Options
-    description: The per-map overtime cap rises by 20h for the rest of the run. Big multiplier builds finally pay.
+    description: The per-map overtime cap rises by 5h for the rest of the run. Big multiplier builds finally pay.
     tag: risk
-    clarify: Overtime is capped per map, so multipliers past the cap are wasted. This raises the cap by 20h every map. Useless on a low-multiplier build, run-defining on a stacked one.
+    clarify: Overtime is capped per map, so multipliers past the cap are wasted. This raises the cap by 5h every map. Useless on a low-multiplier build, run-defining on a stacked one.
     modifiers:
       overtimeCapBonus: 5
 

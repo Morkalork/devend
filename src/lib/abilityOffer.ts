@@ -40,11 +40,27 @@ import type { UpgradeConfig, UpgradeTier } from "@/types/upgrade";
 /** Ability offers are synthetic upgrade cards; this marks their ids. */
 export const ABILITY_OFFER_PREFIX = "ability:";
 
-/** Overtime hours a retainer costs per map it will still pay out on. */
-export const ABILITY_HOURS_PER_MAP = 4;
+/**
+ * Overtime hours a retainer costs per map it will still pay out on.
+ *
+ * ONE, not the four it was authored at. This rate is in hours and it was
+ * missed by the hours-by-4 deflation (src/lib/economyDeflation.ts), which
+ * swept the YAML configs and could not see a constant living in code. At four,
+ * and skipping inflation as this file deliberately does, a retainer bought on
+ * map 2 of 35 cost 132h against a good map's ~34h and against 101h for the
+ * most expensive upgrade in the game: the shop slot was open, priced, and
+ * unbuyable for exactly the early maps where an ability changes a run most.
+ */
+export const ABILITY_HOURS_PER_MAP = 1;
 
-/** Floor, so a retainer bought on the last map is still a real transaction. */
-export const ABILITY_MIN_COST = 8;
+/**
+ * Floor, so a retainer bought on the last map is still a real transaction.
+ *
+ * Quartered with the rate above, which is what keeps "the floor is about two
+ * maps of the rate" true rather than preserving the number 8 into an economy
+ * where it had become a quarter of a good map for a single charge.
+ */
+export const ABILITY_MIN_COST = 2;
 
 export function abilityOfferId(abilityId: string): string {
   return `${ABILITY_OFFER_PREFIX}${abilityId}`;

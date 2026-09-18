@@ -639,7 +639,12 @@ upgrades:
   - id: venture_capital_architect_b
     name: Runway
     tier: Architect
-    description: "While you hold 150h or more, every spend chunk grants 2 instant fences."
+    # 38, not 150: the other three Runway gates were quartered by the
+    # hours-by-4 deflation (100 -> 25, 200 -> 50, 300 -> 75) and this one was
+    # missed, leaving the family's hardest gate six times its entry gate
+    # instead of one and a half times it, and asking for four good maps of
+    # untouched savings in a game that wants the bank spent. 37.5 rounded up.
+    description: "While you hold 38h or more, every spend chunk grants 2 instant fences."
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
@@ -647,7 +652,7 @@ upgrades:
     tags: [bank, risk]
     modifiers:
       spendInstantFencePerChunk: 2
-    condition: { kind: bankedAtLeast, value: 150 }
+    condition: { kind: bankedAtLeast, value: 38 }
 
 
   # ===============================
@@ -909,7 +914,7 @@ upgrades:
   - id: war_chest
     name: War Chest
     tier: Principal
-    description: "Balls spawn 2% slower per 50h banked, up to 8%. +0.5% per other bank upgrade (max 4)."
+    description: "Balls spawn 2% slower per 13h banked, up to 8%. +0.5% per other bank upgrade (max 4)."
     unlockLevel: 13
     prerequisites:
       - venture_capital_senior
@@ -937,7 +942,7 @@ upgrades:
   - id: budget_cycle_junior
     name: Budget Cycle
     tier: Junior
-    description: "Each 60h chunk spent per visit buys an instant fence next map. Chunk size rises with rates."
+    description: "Each 15h chunk spent per visit buys an instant fence next map. Chunk size rises with rates."
     unlockLevel: 10
     prerequisites:
       - expense_account
@@ -1277,7 +1282,7 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: "+20h to this run's per-map overtime ceiling. Balls move 25% faster."
+    description: "+5h to this run's per-map overtime ceiling. Balls move 25% faster."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal

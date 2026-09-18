@@ -13,16 +13,20 @@ certificates:
     name: Signing Bonus
     description: Start every run with overtime hours already banked.
     unlockType: always
-    # Three levels of +10, and they no longer buy what this note used to claim.
+    # Three levels of +3, and they no longer buy what this note used to claim.
     # "10h is most of a first upgrade" was true against a 30h shelf; the pricing
     # anchor has since been rebuilt against what a map actually pays (see
     # upgrades.yml `anchorHours`), so a first hire is 25h and a formula Junior
     # 34h. All three levels together are under half of one first hire.
     #
-    # Left at 10 on purpose rather than scaled quietly: this is a between-runs
-    # meta effect bought in a DIFFERENT currency (Certificate Hours), so it is
-    # its own balance question rather than part of the per-map one. Flagged
-    # here so the next person reads a true sentence.
+    # The paragraph that used to sit here said these were "left at 10 on purpose
+    # rather than scaled quietly", on the grounds that a between-runs effect
+    # bought in a DIFFERENT currency (Certificate Hours) is its own balance
+    # question. The hours-by-4 deflation then scaled them to 3 anyway and left
+    # the paragraph standing, so the file argued for a number it no longer had.
+    # Scaling them was right: the COST is in Certificate Hours, but what they
+    # GRANT is overtime, and overtime is the thing that was rescaled. What the
+    # cost should be is still its own question, and still open.
     # Counted in the run score like the Head Start certs.
     levels:
       - cost: 4
@@ -148,7 +152,7 @@ certificates:
 
   - id: investment-strategy
     name: Investment Strategy
-    description: Balls spawn 1% slower per 50h banked.
+    description: Balls spawn 1% slower per 13h banked.
     unlockType: upgrade-chain
     sourceUpgradeId: venture_capital_architect
     requiredRuns: 3

@@ -62,6 +62,20 @@ export interface PickupConfig {
   effects: PickupEffectDef[];
 }
 
+/**
+ * The fallback pool, used when game-config.yml has not loaded or omits a field
+ * (parsePickupConfig merges per-field over this, and GameCanvas takes it as a
+ * prop default).
+ *
+ * It MIRRORS the shipped `pickups:` block and is pinned to it by
+ * economyScale.test.ts. It had drifted three ways, all invisible because the
+ * YAML normally wins: `overtime` still paid a flat 4 after #68 made that value
+ * a multiple of the map's base, `capRaise` still granted 5 hours after the
+ * hours-by-4 deflation cut the shipped one to 1, and there was an `extraLife`
+ * entry the shipped pool deliberately does not have - game-config.yml says
+ * lives are not a pickup reward, so the fallback was the one place a token
+ * could still hand one out.
+ */
 export const DEFAULT_PICKUP_CONFIG: PickupConfig = {
   startLevel: 8,
   spawnCheckSeconds: 5,
@@ -69,14 +83,13 @@ export const DEFAULT_PICKUP_CONFIG: PickupConfig = {
   maxSimultaneous: 2,
   lifetimeSeconds: 14,
   effects: [
-    { effect: "overtime", weight: 4, value: 4 },
+    { effect: "overtime", weight: 4, value: 1.0 }, // x the map's base points (#68)
     { effect: "fork", weight: 2, value: 0 },
-    { effect: "capRaise", weight: 2, value: 5 },
+    { effect: "capRaise", weight: 2, value: 1 }, // hours added to this map's cap
     { effect: "freezeCharge", weight: 2, value: 3 },
     // One free item (the cheapest offer) in the next OPEN store (issue #48).
     { effect: "freeShopItem", weight: 1, value: 1 },
     // Stronger rewards so tokens stay worth chasing late (#52).
-    { effect: "extraLife", weight: 1, value: 1 },
     { effect: "overtimePercent", weight: 2, value: 15 }, // value = percent of banked overtime
     { effect: "rainbowConvert", weight: 1, value: 1 },
   ],
