@@ -817,13 +817,13 @@
     "shortHarvested": "cosecha {{count}} tramos",
     "bossPair": "Hay que enviar a los dos jefes. Atrapar a uno deja al otro suelto.",
     "group": {
-      "required": "OBLIGATORIO",
-      "optional": "OPCIONAL",
+      "required": "Objetivos:",
+      "optional": "Opcional:",
       "either": "O TERMINA ASÍ",
       "trade": "UNA ELECCIÓN QUE HACER",
-      "fail": "PIERDES UNA VIDA SI"
+      "fail": "Fallo:"
     },
-    "groupRequiredAll": "OBLIGATORIO, TODO ESTO",
+    "groupRequiredAll": "Objetivos:",
     "bonusArea": "Encierra una bola en el área {{area}} para cobrar {{mult}}x. Ignorarla no cuesta nada.",
     "tradeBudgetBonus": "Tus vallas están racionadas. El bolsillo opcional gasta algunas, así que él y un despeje cómodo compiten por el mismo presupuesto.",
     "lock_one": "Encierra al menos {{count}} bola.",

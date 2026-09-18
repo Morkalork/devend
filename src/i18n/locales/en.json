@@ -832,13 +832,13 @@
     "shortHarvested": "harvest {{count}} stretches",
     "bossPair": "Both bosses have to be shipped. Trapping one leaves the other loose.",
     "group": {
-      "required": "MUST DO",
-      "optional": "OPTIONAL",
+      "required": "Goals:",
+      "optional": "Optional:",
       "either": "OR FINISH BY",
       "trade": "A CHOICE TO MAKE",
-      "fail": "LOSE A LIFE IF"
+      "fail": "Failure:"
     },
-    "groupRequiredAll": "MUST DO, ALL OF THESE",
+    "groupRequiredAll": "Goals:",
     "bonusArea": "Lock a ball in the {{area}} area for a {{mult}}x payout. Skipping it costs nothing.",
     "tradeBudgetBonus": "Your fences are rationed. The optional pocket spends some of them, so it and a comfortable clear are competing for the same budget.",
     "lock_one": "Lock at least {{count}} ball.",

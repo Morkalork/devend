@@ -817,13 +817,13 @@
     "shortHarvested": "skorda {{count}} strackor",
     "bossPair": "Båda bossarna måste skeppas. Att fånga en lämnar den andra lös.",
     "group": {
-      "required": "MÅSTE GÖRAS",
-      "optional": "VALFRITT",
+      "required": "Mål:",
+      "optional": "Valfritt:",
       "either": "ELLER AVSLUTA SÅ HÄR",
       "trade": "ETT VAL ATT GÖRA",
-      "fail": "DU FÖRLORAR ETT LIV OM"
+      "fail": "Misslyckande:"
     },
-    "groupRequiredAll": "MÅSTE GÖRAS, ALLT DETTA",
+    "groupRequiredAll": "Mål:",
     "bonusArea": "Lås in en boll i {{area}}-området för {{mult}}x betalning. Att strunta i den kostar ingenting.",
     "tradeBudgetBonus": "Dina staket är ransonerade. Den valfria fickan kostar några av dem, så den och en bekväm rensning konkurrerar om samma budget.",
     "lock_one": "Lås in minst {{count}} boll.",
