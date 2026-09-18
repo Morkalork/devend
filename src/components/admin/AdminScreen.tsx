@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   MAX_DEBUG_ASCENSION, getDebugAscensionOverride, setDebugAscensionOverride,
@@ -15,9 +15,10 @@ interface AdminScreenProps {
   onAnimationTest: () => void;
   onUpgradeAtlas: () => void;
   onPairLoopback: () => void;
+  onNearbyDiagnostics: () => void;
 }
 
-export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback }: AdminScreenProps) {
+export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback, onNearbyDiagnostics }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [ascension, setAscension] = useState(getDebugAscensionOverride);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
@@ -113,6 +114,23 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 Two-player, on one device: two simulations over a link whose
                 latency, jitter and loss you set, with a button that breaks them
                 apart on purpose
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onNearbyDiagnostics}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Radar className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Nearby Diagnostics</div>
+              <div className="text-sm text-muted-foreground">
+                Which permission is missing, what the radios are doing, and every
+                phone they can see. Two real devices only: Nearby does not run in
+                an emulator
               </div>
             </div>
           </button>

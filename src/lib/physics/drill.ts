@@ -221,6 +221,7 @@ export function resumeDrillThrough(
     startTime: simNow(),
     // Still a drill, so it can chain: the next slab it reaches gets eaten too.
     fenceTypeId: wall.fenceTypeId,
+    player: wall.player,
   };
   game.activeWalls.push(continuation);
   return continuation;

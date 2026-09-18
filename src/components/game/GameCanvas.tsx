@@ -77,7 +77,7 @@ import {
   generateRegionId,
   computeBallTrajectory,
 } from "@/lib/gameUtils";
-import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { Wall, WALL_THICKNESS, isPlayerFence } from "@/lib/wallGeometry";
 import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
 import { fileManualEntry } from "@/lib/manual";
 import {
@@ -137,6 +137,26 @@ import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
+
+/**
+ * Fences drawn by each player, off the board itself.
+ *
+ * Counted from the walls rather than kept as a running pair of counters,
+ * because a counter and a board can disagree and the board is the thing the
+ * players looked at. Undefined solo: a row that said "you 7, partner 0" on a
+ * single-player card would be a worse answer than no row.
+ */
+function fencesByPlayer(
+  game: CanvasGameState, isPair: boolean,
+): [number, number] | undefined {
+  if (!isPair) return undefined;
+  const counts: [number, number] = [0, 0];
+  for (const w of game.walls) {
+    if (!isPlayerFence(w)) continue;
+    counts[w.player === 1 ? 1 : 0] += 1;
+  }
+  return counts;
+}
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -1776,6 +1796,10 @@ export function GameCanvas({
       startDissolveRef.current?.(() => {
         onLevelCompleteRef.current({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
+          // Who drew what, for a pair. Counted off the fences themselves so
+          // it cannot drift from the board; undefined solo, which hides the
+          // row rather than showing everything under one name.
+          fencesByPlayer: fencesByPlayer(game, !!lockstep?.()),
           expectedCuts: level.expectedCuts, basePoints: level.points,
           zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
           multipliedBase: breakdown.multipliedBase,

@@ -73,6 +73,12 @@ export interface Wall {
    */
   fenceTypeId?: string;
   /**
+   * Who drew it (lib/net/commands.ts). Solo play is all player 0; in a pair it
+   * is what gives each player's standard fences their own colour so a pair can
+   * see, at a glance, which half of the board is whose.
+   */
+  player?: import("@/lib/net/commands").PlayerId;
+  /**
    * The cut this segment came from. Shared by every segment of one gesture.
    *
    * One cut is several walls whenever it bounces, and there are rules that are

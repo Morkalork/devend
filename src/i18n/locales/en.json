@@ -1331,6 +1331,16 @@
     "lostSync": "The two boards drifted apart. Restarting this map.",
     "yourFences": "You",
     "theirFences": "Partner",
-    "savedRun": "You have a run in progress, on map {{level}}."
+    "savedRun": "You have a run in progress, on map {{level}}.",
+    "waitingFor": "Waiting for {{name}}",
+    "fencesDrawn": "Fences drawn",
+    "nearby": "Find nearby",
+    "nearbyHint": "Both phones tap this. No code, no Wi-Fi needed.",
+    "looking": "Looking for your partner",
+    "confirmToken": "Both phones should show {{token}}. Tap to join.",
+    "join": "Join",
+    "needPermission": "Dev/End needs one more permission to find nearby phones.",
+    "needLocation": "Android 11 and below need location switched on to find nearby phones. Dev/End never uses your location for anything else.",
+    "grant": "Allow"
   }
 }

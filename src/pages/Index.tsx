@@ -57,6 +57,8 @@ const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScr
 const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
 const PairLobby = lazy(() => import('@/components/game/PairLobby').then(m => ({ default: m.PairLobby })));
 const PairDecision = lazy(() => import('@/components/game/PairDecision').then(m => ({ default: m.PairDecision })));
+const PairLinkBanner = lazy(() => import('@/components/game/PairLinkBanner').then(m => ({ default: m.PairLinkBanner })));
+const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagnosticsPanel').then(m => ({ default: m.NearbyDiagnosticsPanel })));
 
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
@@ -363,6 +365,21 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               >
               <GameScreen
                 lockstep={pair.lockstep}
+                pairBanner={
+                  pair.phase === 'playing' && (pair.stalled || pair.dropped)
+                    ? (
+                        <Suspense fallback={null}>
+                          <PairLinkBanner
+                            stalled={pair.stalled}
+                            dropped={pair.dropped}
+                            remoteName={pair.remoteName}
+                            onRepair={leavePair}
+                            onContinueSolo={pair.continueSolo}
+                          />
+                        </Suspense>
+                      )
+                    : undefined
+                }
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
                 key={`game-${session.gameInstanceKey}`}
@@ -621,6 +638,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onAnimationTest={navigation.goToAnimationTest}
                   onUpgradeAtlas={navigation.goToUpgradeAtlas}
                   onPairLoopback={navigation.goToPairLoopback}
+                  onNearbyDiagnostics={navigation.goToNearbyDiagnostics}
                 />
               </Suspense>
             )}
@@ -658,6 +676,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onNew={pair.chooseNew}
                   onLeave={leavePair}
                 />
+              </Suspense>
+            )}
+            {adminUnlocked && navigation.currentScreen === 'nearbyDiagnostics' && (
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
+                <NearbyDiagnosticsPanel onBack={navigation.goToAdmin} />
               </Suspense>
             )}
             {adminUnlocked && navigation.currentScreen === 'pairLoopback' && (

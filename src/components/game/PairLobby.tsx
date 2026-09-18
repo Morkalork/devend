@@ -18,27 +18,37 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Users, WifiOff, QrCode, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, WifiOff, QrCode, Camera, Loader2, Radar } from "lucide-react";
 import qrcode from "qrcode-generator";
 import {
   WebRtcTransport, postAnswer, awaitAnswer, cancelRoom, CONNECT_TIMEOUT_MS,
 } from "@/lib/net/webrtc";
 import { buildPairUrl, parsePairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
 import { getDeviceId } from "@/lib/net/deviceId";
+import {
+  isNearbyAvailable, missingNearbyPermission, startNearbyPairing,
+  NearbyPlugin, NearbyTransport, type NearbyEndpoint,
+} from "@/lib/net/nearby";
 import { PROTOCOL_VERSION } from "@/lib/net/lockstep";
 import { BUILD_SHA } from "@/lib/buildInfo";
-import type { NetMessage } from "@/lib/net/transport";
+import type { NetMessage, Transport } from "@/lib/net/transport";
 import type { PlayerId } from "@/lib/net/commands";
 
 export type PairPhase =
-  | "choose"        // host or join
+  | "choose"        // host, or find nearby
   | "hosting"       // showing the code, waiting
   | "joining"       // answering an offer we arrived with
+  | "nearby"        // the radios are looking
   | "connected"
   | "failed";
 
 export interface PairedSession {
-  transport: WebRtcTransport;
+  /**
+   * The live link, as the interface rather than as whichever implementation
+   * produced it. Nearby on Android, WebRTC on the web and at the desk, and the
+   * lockstep above cannot tell which, which is what the interface was for.
+   */
+  transport: Transport;
   localPlayer: PlayerId;
   isHost: boolean;
   /** The other phone's device id, for the pair identity (step 6b). */
@@ -87,9 +97,16 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   const roomRef = useRef<string | null>(null);
   const transportRef = useRef<WebRtcTransport | null>(null);
 
+  // ── Nearby (step 9), where it exists ───────────────────────────────────
+  const [nearbyReady] = useState(isNearbyAvailable);
+  const [found, setFound] = useState<NearbyEndpoint[]>([]);
+  const [token, setToken] = useState<(NearbyEndpoint & { token: string }) | null>(null);
+  const [permissionNeeded, setPermissionNeeded] = useState<string | null>(null);
+  const stopNearbyRef = useRef<(() => void) | null>(null);
+
   /** Swap hellos, then hand the live link to the caller. */
   const completeHandshake = useCallback(async (
-    transport: WebRtcTransport, localPlayer: PlayerId, isHost: boolean,
+    transport: Transport, localPlayer: PlayerId, isHost: boolean,
   ) => {
     const deviceId = await getDeviceId();
     const theirs = await new Promise<Extract<NetMessage, { t: "hello" }>>((resolve, reject) => {
@@ -113,6 +130,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       // for ten seconds and then disagree about everything.
       throw new Error(t("pair.versionMismatch"));
     }
+    pendingRemoteRef.current = theirs.deviceId;
     setPhase("connected");
     onPaired({
       transport,
@@ -122,6 +140,61 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       remoteName: theirs.name || t("pair.partner"),
     });
   }, [onPaired, playerName, t]);
+
+  /**
+   * Nearby: both phones press this, the radios do the rest.
+   *
+   * Who ends up player 0 is settled by whose device id sorts lower, so both
+   * phones reach the same answer without either asking, and neither player is
+   * made to pick a role for a thing that has none.
+   */
+  const startNearby = useCallback(async () => {
+    setProblem(null);
+    setFound([]);
+    setToken(null);
+    const missing = await missingNearbyPermission();
+    if (missing) {
+      const granted = await NearbyPlugin.requestNearbyPermissions();
+      if (granted[missing as keyof typeof granted] !== "granted") {
+        setPermissionNeeded(missing);
+        return;
+      }
+    }
+    setPermissionNeeded(null);
+    setPhase("nearby");
+    try {
+      const myDevice = await getDeviceId();
+      stopNearbyRef.current = await startNearbyPairing(playerName, {
+        onFound: (e) => setFound(list => list.some(x => x.endpointId === e.endpointId) ? list : [...list, e]),
+        onLost: (id) => setFound(list => list.filter(x => x.endpointId !== id)),
+        onToken: (e) => setToken(e),
+        onConnected: async () => {
+          stopNearbyRef.current?.();
+          stopNearbyRef.current = null;
+          const transport = await NearbyTransport.attach();
+          // Lower device id hosts. Both phones compute it from the same two
+          // strings, so both get the same answer with nothing exchanged.
+          const theirDevice = pendingRemoteRef.current;
+          const isHost = theirDevice === null ? true : myDevice < theirDevice;
+          await completeHandshake(transport, isHost ? 0 : 1, isHost);
+        },
+        onFailed: (reason) => { setProblem(reason); setPhase("failed"); },
+      });
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+      setPhase("failed");
+    }
+  }, [completeHandshake, playerName]);
+
+  /**
+   * The other device's id, learned from the hello.
+   *
+   * Nearby settles who hosts from the two device ids, and the hello is where
+   * the second one arrives, so the decision is made inside completeHandshake
+   * rather than before it. Held in a ref because the connected callback closes
+   * over it.
+   */
+  const pendingRemoteRef = useRef<string | null>(null);
 
   /** Host: make an offer, show it, wait for the answer. */
   const startHosting = useCallback(async () => {
@@ -188,6 +261,8 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     transportRef.current?.close();
     transportRef.current = null;
     roomRef.current = null;
+    stopNearbyRef.current?.();
+    stopNearbyRef.current = null;
     setPairUrl(null);
     setPhase("choose");
   }, []);
@@ -196,6 +271,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   useEffect(() => () => {
     abortRef.current?.abort();
     if (roomRef.current) cancelRoom(roomRef.current);
+    stopNearbyRef.current?.();
   }, []);
 
   return (
@@ -213,6 +289,24 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
         {phase === "choose" && (
           <div className="flex-1 flex flex-col justify-center gap-4">
             <p className="text-sm text-muted-foreground">{t("pair.intro")}</p>
+            {/* Where the radios exist, this is the better door and goes first:
+                no code, no camera, no network. The QR stays for the web build
+                and for a phone that will not grant the permissions. */}
+            {nearbyReady && (
+              <button onClick={() => void startNearby()}
+                className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10"><Radar className="w-6 h-6 text-primary" /></div>
+                <div className="text-left">
+                  <div className="font-semibold">{t("pair.nearby")}</div>
+                  <div className="text-sm text-muted-foreground">{t("pair.nearbyHint")}</div>
+                </div>
+              </button>
+            )}
+            {permissionNeeded && (
+              <p className="text-sm text-amber-500 bg-amber-500/10 rounded-lg p-3">
+                {permissionNeeded === "location" ? t("pair.needLocation") : t("pair.needPermission")}
+              </p>
+            )}
             <button onClick={startHosting}
               className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4">
               <div className="p-3 rounded-lg bg-primary/10"><QrCode className="w-6 h-6 text-primary" /></div>
@@ -260,6 +354,44 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
               </div>
             )}
             <button onClick={() => { cancel(); onBack(); }}
+              className="w-full p-3 rounded-lg bg-muted hover:bg-muted/80 font-semibold">
+              {t("common.cancel")}
+            </button>
+          </div>
+        )}
+
+        {phase === "nearby" && (
+          <div className="flex-1 flex flex-col justify-center gap-4">
+            {token ? (
+              <>
+                <p className="text-sm text-center text-muted-foreground">
+                  {t("pair.confirmToken", { token: token.token })}
+                </p>
+                <div className="text-4xl font-mono font-bold text-center tracking-widest text-primary">
+                  {token.token}
+                </div>
+                <button
+                  onClick={() => { pendingRemoteRef.current = null; void NearbyPlugin.accept({ endpointId: token.endpointId }); }}
+                  className="w-full p-4 rounded-lg bg-card border border-primary/50 font-semibold"
+                >
+                  {t("pair.join")}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" /> {t("pair.looking")}
+                </div>
+                {found.map(e => (
+                  <button key={e.endpointId}
+                    onClick={() => void NearbyPlugin.connect({ endpointId: e.endpointId })}
+                    className="w-full p-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left">
+                    <span className="font-semibold">{e.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
+            <button onClick={() => { stopNearbyRef.current?.(); stopNearbyRef.current = null; setPhase("choose"); }}
               className="w-full p-3 rounded-lg bg-muted hover:bg-muted/80 font-semibold">
               {t("common.cancel")}
             </button>

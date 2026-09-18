@@ -89,6 +89,16 @@ function convexHull(pts: Pt[]): Pt[] {
   return [...build(p), ...build([...p].reverse())];
 }
 
+/**
+ * The partner's fence colour, for two-player (TWO_PLAYER_PLAN.md step 7).
+ *
+ * A warm amber against the board's cool accent: far enough round the wheel to
+ * be told apart at a glance and in peripheral vision, which is where the other
+ * player's half of the board mostly sits, and not a colour this game already
+ * spends on a warning.
+ */
+const PARTNER_FENCE = 0xffb347;
+
 export class WallLayer {
   readonly container = new Container();
 
@@ -224,7 +234,7 @@ export class WallLayer {
       // ever painted across a slab it should be interrupted by.
       for (const seg of this.clippedSegments(w, game)) {
         this.drawSegment(seg.start, seg.end, w.thickness, isEdge, light, w2s, scale,
-          false, this.tintOf(w.fenceTypeId));
+          false, this.tintOf(w.fenceTypeId, w.player));
       }
     }
 
@@ -296,8 +306,15 @@ export class WallLayer {
    * pins that standard's authored colour is PALETTE.accent, which is what lets
    * this branch be a no-op rather than a coincidence.
    */
-  private tintOf(fenceTypeId: string | undefined): number | null {
-    if (!fenceTypeId || fenceTypeId === STANDARD_FENCE_ID) return null;
+  private tintOf(fenceTypeId: string | undefined, player?: number): number | null {
+    if (!fenceTypeId || fenceTypeId === STANDARD_FENCE_ID) {
+      // The partner's STANDARD fences, and only those. A typed fence keeps its
+      // type's colour: which type is on the board is the more useful fact, and
+      // the type colours are already a vocabulary the player has learned. The
+      // standard fence has no colour of its own to lose, so it is the one that
+      // can carry whose it is.
+      return player ? PARTNER_FENCE : null;
+    }
     const hex = getFenceType(fenceTypeId).color.replace("#", "");
     const n = Number.parseInt(hex, 16);
     return Number.isFinite(n) ? n : null;
@@ -408,7 +425,7 @@ export class WallLayer {
     // The cut shows what it will BE, from the first frame. A fence that only
     // took its colour on completion would make the slot bar something you
     // verify afterwards rather than something you steer with.
-    const tint = this.tintOf(wall.fenceTypeId);
+    const tint = this.tintOf(wall.fenceTypeId, wall.player);
 
     // Walk each direction's completed legs, then the partial one it is on.
     const legs: Array<[Pt, Pt]> = [];

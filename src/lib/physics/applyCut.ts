@@ -250,6 +250,7 @@ export function applyCutFn(
         // segment rather than per cut because a fence is only ever read as
         // walls after this point - the GrowingWall is gone.
         fenceTypeId: wall.fenceTypeId ?? STANDARD_FENCE_ID,
+        player: wall.player ?? 0,
         cutId,
       };
       if (game.spaceGrid) {

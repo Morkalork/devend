@@ -59,6 +59,10 @@ export interface PairSession {
   runState: PairRunState | null;
   /** Handed to the game loop; null when not playing as a pair. */
   session: LockstepSession | null;
+  /** True while the lockstep is waiting on the other device. */
+  stalled: boolean;
+  /** True once the link is gone and will not come back by itself. */
+  dropped: boolean;
   /** Host only: take the saved run, or start a new one. */
   chooseContinue: () => void;
   chooseNew: () => void;
@@ -71,6 +75,7 @@ export interface PairSession {
 const IDLE: Omit<PairSession, "chooseContinue" | "chooseNew" | "recordMap" | "end"> = {
   phase: "idle", localPlayer: 0, isHost: true, remoteName: "",
   pairId: null, offeredSave: null, runState: null, session: null,
+  stalled: false, dropped: false,
 };
 
 export function usePairSession(paired: PairedSession | null) {
@@ -97,7 +102,16 @@ export function usePairSession(paired: PairedSession | null) {
         localPlayer: paired.localPlayer,
         isHost: paired.isHost,
         callbacks: {
-          onClose: () => setState(s => ({ ...s, phase: "ended" })),
+          // Dropped, not ended: the run is still there, and the player chooses
+          // between pairing again and carrying on alone.
+          onClose: () => setState(s => ({ ...s, dropped: true })),
+          onStall: (ticks: number) => {
+            // A stall of one or two ticks is the ordinary rhythm of a lockstep
+            // and saying anything about it would be noise. Past a tenth of a
+            // second the board has visibly stopped, and silence reads as a
+            // crash.
+            if (ticks === 12) setState(s => (s.stalled ? s : { ...s, stalled: true }));
+          },
           onHostMessage: (msg: NetMessage) => handleMessage(msg),
         },
       });
@@ -119,6 +133,8 @@ export function usePairSession(paired: PairedSession | null) {
       });
 
       setState({
+        stalled: false,
+        dropped: false,
         phase: "deciding",
         localPlayer: paired.localPlayer,
         isHost: paired.isHost,
@@ -212,6 +228,32 @@ export function usePairSession(paired: PairedSession | null) {
     );
   }, [state.pairId, state.runState, pairSave]);
 
+  /**
+   * Clear the stall flag once the pair is moving again.
+   *
+   * Polled rather than pushed: the lockstep announces a stall as it starts
+   * (it is the thing that noticed) but a stall ENDS by a tick simply running,
+   * and threading a callback through that path would put a React setState in
+   * the physics loop.
+   */
+  useEffect(() => {
+    if (!state.stalled) return;
+    const timer = setInterval(() => {
+      const live = sessionRef.current;
+      if (live && !live.isStalled) setState(s => ({ ...s, stalled: false }));
+    }, 120);
+    return () => clearInterval(timer);
+  }, [state.stalled]);
+
+  /** Drop the pair but keep playing: the partner is not coming back. */
+  const continueSolo = useCallback(() => {
+    setCommandSink(null);
+    setLocalPlayer(0);
+    sessionRef.current?.close();
+    sessionRef.current = null;
+    setState(s => ({ ...s, phase: "playing", session: null, dropped: false, stalled: false }));
+  }, []);
+
   const end = useCallback(() => {
     setCommandSink(null);
     setLocalPlayer(0);
@@ -226,10 +268,14 @@ export function usePairSession(paired: PairedSession | null) {
     chooseContinue,
     chooseNew,
     recordMap,
+    continueSolo,
     end,
     /** For the loop: the live session, read fresh each frame. */
     lockstep: useCallback(() => sessionRef.current, []),
-  } satisfies PairSession & { lockstep: () => LockstepSession | null };
+  } satisfies PairSession & {
+    lockstep: () => LockstepSession | null;
+    continueSolo: () => void;
+  };
 }
 
 /** Re-exported so callers do not have to know which file it came from. */

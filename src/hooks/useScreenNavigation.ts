@@ -108,6 +108,10 @@ export function useScreenNavigation() {
     setCurrentScreen('pairLobby');
   }, []);
 
+  const goToNearbyDiagnostics = useCallback(() => {
+    setCurrentScreen('nearbyDiagnostics');
+  }, []);
+
   const goToAchievements = useCallback(() => {
     setCurrentScreen('achievements');
   }, []);
@@ -149,5 +153,6 @@ export function useScreenNavigation() {
     goToUpgradeAtlas,
     goToPairLoopback,
     goToPairLobby,
+    goToNearbyDiagnostics,
   };
 }

@@ -119,10 +119,26 @@ describe("owning none of this changes nothing", () => {
 
   it("renders standard through the untinted expressions", () => {
     const src = read("src/lib/rendering/sleek/wallLayer.ts");
+    // Two-player gave the standard fence ONE colour it did not have before:
+    // the partner's, in a pair. Player 0 is still untinted, which is every
+    // solo fence ever drawn, so the claim this test makes is unchanged.
     expect(src, "the standard fence lost its own path")
-      .toMatch(/fenceTypeId === STANDARD_FENCE_ID\) return null/);
+      .toMatch(/fenceTypeId === STANDARD_FENCE_ID\)[\s\S]{0,600}?return player \? PARTNER_FENCE : null;/);
     expect(src, "the untinted accent core is gone")
       .toContain("mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb)");
+  });
+
+  it("leaves a typed fence its type's colour even in a pair", () => {
+    // Which TYPE is on the board is the more useful fact, and the type colours
+    // are already a vocabulary the player has learned. Only the standard
+    // fence, which has no colour of its own to lose, carries whose it is.
+    const src = read("src/lib/rendering/sleek/wallLayer.ts");
+    const tintOf = src.slice(src.indexOf("private tintOf("), src.indexOf("/** A wall's sub-segments"));
+    const marker = "return player ? PARTNER_FENCE : null;";
+    const afterStandard = tintOf.slice(tintOf.indexOf(marker) + marker.length);
+    expect(afterStandard, "the partner colour leaked past the standard branch")
+      .not.toMatch(/PARTNER_FENCE/);
+    expect(afterStandard).toContain("getFenceType(fenceTypeId).color");
   });
 
   it("costs standard nothing", () => {

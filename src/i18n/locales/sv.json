@@ -1879,6 +1879,16 @@
     "lostSync": "Spelplanerna gled isär. Banan startas om.",
     "yourFences": "Du",
     "theirFences": "Partner",
-    "savedRun": "Ni har ett pågående spel, på bana {{level}}."
+    "savedRun": "Ni har ett pågående spel, på bana {{level}}.",
+    "waitingFor": "Väntar på {{name}}",
+    "fencesDrawn": "Staket dragna",
+    "nearby": "Sök i närheten",
+    "nearbyHint": "Båda mobilerna trycker här. Ingen kod, inget Wi-Fi.",
+    "looking": "Söker efter din partner",
+    "confirmToken": "Båda mobilerna ska visa {{token}}. Tryck för att gå med.",
+    "join": "Gå med",
+    "needPermission": "Dev/End behöver en behörighet till för att hitta mobiler i närheten.",
+    "needLocation": "Android 11 och äldre kräver att platstjänster är på för att hitta mobiler i närheten. Dev/End använder aldrig din plats till något annat.",
+    "grant": "Tillåt"
   }
 }

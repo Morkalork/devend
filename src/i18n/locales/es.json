@@ -1879,6 +1879,16 @@
     "lostSync": "Los tableros se separaron. Reiniciando el mapa.",
     "yourFences": "Tú",
     "theirFences": "Pareja",
-    "savedRun": "Tenéis una partida en curso, en el mapa {{level}}."
+    "savedRun": "Tenéis una partida en curso, en el mapa {{level}}.",
+    "waitingFor": "Esperando a {{name}}",
+    "fencesDrawn": "Vallas trazadas",
+    "nearby": "Buscar cerca",
+    "nearbyHint": "Los dos móviles tocan esto. Sin código ni Wi-Fi.",
+    "looking": "Buscando a tu pareja",
+    "confirmToken": "Los dos móviles deben mostrar {{token}}. Toca para entrar.",
+    "join": "Entrar",
+    "needPermission": "Dev/End necesita un permiso más para encontrar móviles cercanos.",
+    "needLocation": "En Android 11 y anteriores hay que activar la ubicación para encontrar móviles cercanos. Dev/End no la usa para nada más.",
+    "grant": "Permitir"
   }
 }

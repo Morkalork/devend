@@ -2,7 +2,7 @@ import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 import type { BankedAxes } from "@/types/scoring";
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'doorDraft' | 'capstoneDraft' | 'tierDraft' | 'assignmentSummary' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'doorDraft' | 'capstoneDraft' | 'tierDraft' | 'assignmentSummary' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -519,6 +519,16 @@ export interface LevelScoreData {
   thresholdPercent?: number;
   pushFailed?: boolean; // true if player failed during push-your-luck mode
   pushBonus?: number; // bonus OT earned from push-your-luck area removal
+  /**
+   * Fences each player drew, for a pair (TWO_PLAYER_PLAN.md step 7).
+   *
+   * The ONE per-player stat this mode keeps. Anything more (points each, locks
+   * each, a winner) turns a co-op run into a scoreboard, which is a different
+   * game from the one two people playing on the same board asked for. This one
+   * earns its place because it answers the question a pair actually asks after
+   * a map: who was doing the work.
+   */
+  fencesByPlayer?: [number, number];
   /**
    * The Performance Review banking: what each axis paid and what it
    * could have paid. The overlay reads this to show which lanes the run
