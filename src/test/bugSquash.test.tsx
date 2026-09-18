@@ -464,7 +464,7 @@ describe("the Specs panel confirms it", () => {
     render(<ModifierBreakdown activeModifiers={{ ...DEFAULT_MODIFIERS, bugSquashChance: 8, bugSquashSeconds: 3 }} />);
     expect(screen.getByText("Bug Squash")).toBeTruthy();
     expect(screen.getByText("8%")).toBeTruthy();
-    expect(screen.getByText(/stick it there for 3s/)).toBeTruthy();
+    expect(screen.getByText(/squash the ball flat for 3s/)).toBeTruthy();
   });
 
   it("reads as inactive when not owned", () => {

@@ -29,9 +29,9 @@
     "selectLoadout": "Selecciona un equipamiento",
     "retireBankRun": "Retirarse - asegurar esta partida",
     "ascensionUnlocked": "Ascensión desbloqueada",
-    "tutorialIntro1": "Has superado todos los niveles. Asciende para empezar de nuevo en el nivel 1, más difícil, conservando tu profundidad, tus Horas de Certificado y un ",
+    "tutorialIntro1": "Todos los niveles superados. Asciende para reiniciar en el nivel 1, más difícil, conservando tu profundidad, tus Horas de Certificado y un ",
     "tutorialLoadoutWord": "equipamiento",
-    "tutorialIntro2": " por ascensión: una maldición con una bendición. Las mejoras y las horas extra NO se conservan, así que cada vuelta se reconstruye desde cero con una regla más. Retírate cuando quieras para guardarlo todo.",
+    "tutorialIntro2": " por ascensión: una maldición con una bendición. Mejoras y horas extra se reinician en cada bucle. Retírate cuando quieras y guárdalo todo.",
     "gotIt": "Entendido",
     "ladderTitle": "Ascensión {{depth}}",
     "alsoInForce": "También en vigor: {{names}}.",
@@ -40,8 +40,8 @@
     "congrats": "Enhorabuena. Has superado todos los niveles y entregado la hoja de ruta completa.",
     "congratsAscended": "Enhorabuena. Has vuelto a superar todos los niveles, en Ascensión {{depth}}.",
     "whatDepthAdds": "Qué añade la Ascensión {{depth}}",
-    "noNewRung": "Ninguna regla nueva. La escalera está completa, así que un bucle más profundo es más rápido y vale más, pero no añade nada más.",
-    "resetWarning": "Ascender inicia una partida NUEVA: se borran las mejoras, las horas extra y el Ascenso. Conservas tus equipamientos, tu nivel de ascensión y tus Horas de Certificado."
+    "noNewRung": "Sin regla nueva. La escalera está completa: los bucles más profundos son más rápidos y pagan más, nada más cambia.",
+    "resetWarning": "Ascender inicia una partida NUEVA: mejoras, horas extra y el Ascenso se borran. Cargas, profundidad y Horas de Certificado se conservan."
   },
   "bottomBar": {
     "ballSpeed": "Velocidad de bola",
@@ -64,31 +64,31 @@
     "ballSpeedDescMicro_other": ". MicroManager aplica una reducción adicional del {{reduction}}% por {{count}} bolas bloqueadas",
     "ballSpeedDescTail": ". Las bolas más lentas te dan más tiempo de reacción al trazar vallas.",
     "ballSize": "Tamaño de bola",
-    "ballSizeDesc": "Multiplicador de radio aplicado a cada bola. Las bolas más grandes son más difíciles de esquivar al trazar una valla, pero también cubren más del tablero para bloquear.",
+    "ballSizeDesc": "Multiplicador del tamaño de bola. Las bolas grandes son más difíciles de esquivar pero más fáciles de encerrar.",
     "fenceSpeed": "Velocidad de valla",
-    "fenceSpeedDesc": "Lo rápido que crece tu valla después de empezar a trazar. Una mayor velocidad de valla acorta el margen que tiene una bola para chocar con tu valla en progreso, haciendo los cortes más seguros.",
+    "fenceSpeedDesc": "Velocidad de crecimiento de la valla. Una valla rápida da a las bolas menos tiempo para golpearla.",
     "scoreMultiplier": "Multiplicador de puntuación",
-    "scoreMultiplierDesc": "Multiplicador global aplicado a todos los puntos ganados en esta partida. Se acumula de forma multiplicativa con los bonos de par por corte.",
+    "scoreMultiplierDesc": "Multiplica todos los puntos de esta partida. Se acumula con los bonos de par.",
     "instantFences": "Vallas instantáneas",
-    "instantFencesActive_one": "{{count}} valla se completa automáticamente al inicio de cada nivel, capturando territorio sin ningún riesgo.",
-    "instantFencesActive_other": "{{count}} vallas se completan automáticamente al inicio de cada nivel, capturando territorio sin ningún riesgo.",
+    "instantFencesActive_one": "{{count}} valla se completa sola al empezar cada nivel, sin riesgo.",
+    "instantFencesActive_other": "{{count}} vallas se completan solas al empezar cada nivel, sin riesgo.",
     "instantFencesInactive": "No hay vallas instantáneas activas. Compra mejoras para obtener vallas gratis en cada nivel.",
     "startingCapture": "Ventaja Inicial",
-    "startingCaptureActive": "Cada mapa empieza con el {{percent}}% del tablero ya capturado (Onboarding, Concesión de Acciones). El propio tablero es más pequeño desde el primer fotograma en lugar de mostrarse como territorio reclamado, así que este es el lugar donde comprobar que se aplicó.",
-    "startingCaptureInactive": "No tienes ninguna ventaja inicial. Compra Onboarding o el certificado Concesión de Acciones para empezar cada mapa con ventaja.",
+    "startingCaptureActive": "Cada mapa empieza con el {{percent}}% del tablero ya capturado (Onboarding, Equity Grant). El tablero es más pequeño desde el primer instante.",
+    "startingCaptureInactive": "Sin ventaja inicial. Compra Onboarding o el certificado Equity Grant para empezar cada mapa por delante.",
     "concurrentFences": "Vallas simultáneas",
-    "concurrentFencesActive": "Puedes trazar {{total}} vallas a la vez. Las vallas simultáneas adicionales te permiten cortar desde varios muros al mismo tiempo.",
+    "concurrentFencesActive": "Puedes trazar {{total}} vallas a la vez, desde distintas paredes.",
     "concurrentFencesInactive": "Por defecto: 1 valla activa a la vez.",
     "extraLives": "Vidas extra",
-    "extraLivesActive_one": "+{{count}} vida inicial adicional al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
-    "extraLivesActive_other": "+{{count}} vidas iniciales adicionales al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
+    "extraLivesActive_one": "+{{count}} vida extra al empezar cada partida.",
+    "extraLivesActive_other": "+{{count}} vidas extra al empezar cada partida.",
     "extraLivesInactive": "Sin vidas iniciales extra.",
     "runwayInstantFence": "Pista de despegue: valla instantánea",
     "runwayInstantFenceActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, una valla se completa al instante (Runway).",
     "runwayConcurrentFence": "Pista de despegue: valla extra",
-    "runwayConcurrentFenceActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, puedes hacer crecer una valla adicional a la vez (Runway).",
+    "runwayConcurrentFenceActive": "Con {{hours}}h o más en el banco al empezar un mapa, puedes trazar una valla extra a la vez (Runway).",
     "runwayFreeze": "Pista de despegue: congelar",
-    "runwayFreezeActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, tocar una bola la congela durante 2 segundos (Runway).",
+    "runwayFreezeActive": "Con {{hours}}h o más en el banco al empezar un mapa, tocar una bola la congela 2s (Runway).",
     "runwayInactive": "Ningún beneficio de Runway.",
     "budgetCycle": "Ciclo presupuestario",
     "budgetCycleValue": "por {{hours}}h gastadas",
@@ -104,20 +104,20 @@
     "shopRestocksInactive": "Sin reposición de tienda.",
     "microManager": "MicroManager",
     "microManagerValue": "{{percent}}% / bloqueo",
-    "microManagerActive_one": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, hasta un suelo del 50%). Ahora mismo {{count}} bola bloqueada → velocidad efectiva {{speed}}.",
-    "microManagerActive_other": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, hasta un suelo del 50%). Ahora mismo {{count}} bolas bloqueadas → velocidad efectiva {{speed}}.",
+    "microManagerActive_one": "Cada bola encerrada frena al resto un {{percent}}% (acumulable, mínimo 50%). {{count}} bola encerrada: velocidad {{speed}}.",
+    "microManagerActive_other": "Cada bola encerrada frena al resto un {{percent}}% (acumulable, mínimo 50%). {{count}} bolas encerradas: velocidad {{speed}}.",
     "microManagerInactive": "MicroManager no activo.",
     "overtimePerLock": "Horas extra por captura",
-    "overtimePerLockActive": "Cada bola que encierras añade +{{hours}} de horas extra, contadas bajo el tope de recompensa del mapa (Severance Package).",
+    "overtimePerLockActive": "Cada bola encerrada suma +{{hours}} horas extra, bajo el tope del mapa (Severance Package).",
     "overtimePerLockInactive": "Sin bonificación de horas extra por captura.",
     "overtimePerSuperiorLock": "Horas extra por Bloqueo superior",
-    "overtimePerSuperiorLockActive": "Cada Bloqueo superior (un rincón estrecho) paga +{{hours}} de horas extra además de la bonificación por captura, contadas bajo el tope de recompensa del mapa (Equity Package).",
+    "overtimePerSuperiorLockActive": "Cada Encierro Superior suma +{{hours}} horas extra además del bono por encierro, bajo el tope del mapa (Equity Package).",
     "overtimePerSuperiorLockInactive": "Sin bonificación de horas extra por Bloqueo superior.",
     "frozenLockBonus": "Bono por captura congelada",
     "frozenLockBonusActive": "Encerrar una bola mientras está congelada paga x{{mult}} el bono de captura (Frozen Assets).",
     "frozenLockBonusInactive": "Sin bono por captura congelada.",
     "gravityLockBonus": "Bono por captura con gravedad",
-    "gravityLockBonusActive": "Encerrar una bola bajo gravedad, en un pozo activo o en un mapa con gravedad, paga x{{mult}} el bono de captura (Free Fall).",
+    "gravityLockBonusActive": "Encerrar una bola bajo gravedad paga x{{mult}} de bono (Free Fall).",
     "gravityLockBonusInactive": "Sin bono de captura con gravedad.",
     "gravityBend": "Curvatura de la gravedad",
     "gravityBendActive": "La gravedad curva tus bolas un {{percent}}% menos, en pozos y en mapas con gravedad (Escape Velocity).",
@@ -129,28 +129,28 @@
     "spawnFreezeActive": "Cada mapa arranca congelado: todas las bolas se quedan quietas durante los primeros {{seconds}}s (Cold Boot).",
     "spawnFreezeInactive": "Las bolas se mueven desde el primer momento de cada mapa.",
     "bugSquash": "Aplasta Bichos",
-    "bugSquashActive": "Cada golpe contra una pared tiene un {{percent}}% de probabilidad de aplastar la bola contra ella y dejarla pegada durante {{seconds}}s. Una bola pegada cuenta como congelada: no se puede mover, y bloquearla paga cualquier bonificación por bloqueo congelado que tengas.",
+    "bugSquashActive": "Cada golpe contra una pared tiene un {{percent}}% de aplastar la bola durante {{seconds}}s. Una bola aplastada cuenta como congelada.",
     "bugSquashInactive": "No tienes Aplasta Bichos. Las bolas rebotan en todas las paredes.",
     "pickupChance": "Fichas potenciadoras",
     "pickupChanceActive": "Las fichas potenciadoras aparecen más a menudo de lo habitual (Benefits Package).",
     "pickupChanceInactive": "Las fichas potenciadoras aparecen a su ritmo normal.",
     "pickupPayout": "Pago de potenciadores",
-    "pickupPayoutActive": "Las fichas reclamadas dan recompensas mejoradas, y las bolas divididas vuelan más despacio (Total Compensation nivel {{level}}).",
+    "pickupPayoutActive": "Las fichas reclamadas pagan más y las bolas divididas vuelan más lento (Total Compensation nivel {{level}}).",
     "pickupPayoutInactive": "Las fichas potenciadoras dan sus recompensas base.",
     "pushBonus": "Pagos de presión",
     "pushBonusActive": "Los pagos de arriesgarse se multiplican por x{{mult}}.",
     "pushBonusInactive": "Pagos de arriesgarse estándar.",
     "fenceSpeedPerLock": "Velocidad de valla por captura",
-    "fenceSpeedPerLockActive": "Cada bola encerrada en este mapa acelera la generación de vallas un {{percent}}% durante el resto del mapa (Knowledge Transfer).",
+    "fenceSpeedPerLockActive": "Cada encierro en este mapa acelera las vallas un {{percent}}% (Knowledge Transfer).",
     "fenceSpeedPerLockInactive": "Sin bonificación de velocidad de valla por captura.",
     "simultaneousLockBonus": "Bono de multiplicador de trampa",
-    "simultaneousLockBonusActive": "Cada captura cuenta como {{count}} bola(s) más para el multiplicador de trampa simultánea (bono de conjunto Chain Reaction).",
+    "simultaneousLockBonusActive": "Cada encierro cuenta como {{count}} bola(s) más para el multiplicador de trampa múltiple (bono de conjunto Chain Reaction).",
     "simultaneousLockBonusInactive": "Sin bono de multiplicador de trampa.",
     "freezeNoCooldown": "Enfriamiento de congelación",
     "freezeNoCooldownActive": "Las bolas pueden volver a congelarse en cuanto se descongelan, sin enfriamiento (bono de conjunto Absolute Zero).",
     "freezeNoCooldownInactive": "Las bolas congeladas tienen un tiempo de enfriamiento tras descongelarse.",
     "fenceSpeedPerFence": "Velocidad de valla por valla",
-    "fenceSpeedPerFenceActive": "Cada valla que completas acelera la siguiente un {{percent}}% durante el resto del mapa (Continuous Delivery).",
+    "fenceSpeedPerFenceActive": "Cada valla terminada acelera la siguiente un {{percent}}% (Continuous Delivery).",
     "fenceSpeedPerFenceInactive": "Sin bonificación de velocidad por valla.",
     "underParInstantFence": "Arrastre bajo par",
     "underParInstantFenceActive": "Terminar un mapa bajo par otorga +{{count}} valla(s) instantánea(s) en el siguiente mapa (Clean Release).",
@@ -180,23 +180,23 @@
     "timingHead": "Cuenta atrás de entrega temprana",
     "shipEarlyCountdown": "Temporizador de cuenta atrás",
     "shipEarlyCountdownValue": "hasta +{{percent}}%",
-    "shipEarlyCountdownDesc": "Mientras juegas, una barra de cuenta atrás aparece sobre este panel. Supera el mapa antes de que se vacíe para ganar hasta +{{percent}}% de las horas extra del mapa como bono por entrega temprana, pagado POR ENCIMA del tope habitual: cuanto antes termines, más paga. El pago baja en cada marca blanca de la barra. Sus ventanas escalan con el número de bolas del mapa, y solo cuenta el juego activo: las pausas, los menús y la pantalla de presión no gastan el reloj.",
+    "shipEarlyCountdownDesc": "Limpia el mapa antes de que la cuenta atrás de arriba se agote y gana hasta +{{percent}}% de horas extra, por encima del tope. Cuanto antes, más paga; cada marca blanca baja un escalón. Solo cuenta el juego activo.",
     "shipEarlyWindow": "Ventana de entrega temprana",
     "shipEarlyWindowValue": "+{{seconds}}s/bola",
-    "shipEarlyWindowActive": "Cada ventana de bonificación de entrega temprana dura {{seconds}} segundos extra por bola en el mapa (Deadline Extension).",
+    "shipEarlyWindowActive": "Cada ventana de Ship Early dura {{seconds}}s más por bola en el mapa (Deadline Extension).",
     "shipEarlyWindowInactive": "Sin extensión de la ventana de entrega temprana.",
     "shipEarlyMultiplier": "Pago de entrega temprana",
     "shipEarlyMultiplierActive": "Los bonos de entrega temprana pagan x{{mult}} en este mapa (Hard Deadline).",
     "shipEarlyMultiplierInactive": "Los bonos de entrega temprana pagan su tasa normal.",
     "scopeCreepImmediate": "Corrupción del alcance instantánea",
-    "scopeCreepImmediateActive": "La corrupción del alcance no tiene periodo de gracia en este mapa: las bolas empiezan a acelerar desde el primer segundo (Hard Deadline).",
+    "scopeCreepImmediateActive": "Sin periodo de gracia: las bolas aceleran desde el primer segundo (Hard Deadline).",
     "scopeCreepImmediateInactive": "La corrupción del alcance empieza tras su periodo de gracia normal.",
     "on": "Activado",
     "off": "Apagado",
     "ballPathPrediction": "Predicción de trayectoria",
     "bounceCount_one": "{{count}} rebote",
     "bounceCount_other": "{{count}} rebotes",
-    "ballPathPredictionActive": "Dibuja una trayectoria prevista {{bounceText}} por delante para {{target}}. Te ayuda a cronometrar las vallas para evitar colisiones.",
+    "ballPathPredictionActive": "Muestra la trayectoria prevista {{bounceText}} por delante para {{target}}.",
     "ballPathPredictionInactive": "No hay vista previa de trayectoria activa.",
     "ballPathTargetAll": "las bolas más rápidas",
     "ballPathTargetTop_one": "la bola más rápida",
@@ -267,42 +267,44 @@
     "restartRun": "Reiniciar partida",
     "mainMenu": "Menú principal",
     "moverTutorialTitle": "⚠ Obstáculos móviles",
-    "moverTutorialBody": "Los obstaculos naranjas se deslizan por un carril. Las bolas rebotan en ellos, pero si tu valla toca uno pierdes una vida. Cronometra tus cortes.",
+    "moverTutorialBody": "Los obstáculos naranjas patrullan un carril. Las bolas rebotan en ellos; una valla que los toque cuesta una vida.",
+    "breakTutorialTitle": "✦ Romper cosas",
+    "breakTutorialBody": "Los bloques ámbar se rompen y dan puntos. Lleva bolas hasta ellos; no puedes vallar contra ellos.",
     "chargeTutorialTitle": "✦ Desplegar Carga",
-    "chargeTutorialBody": "Traza una valla junto a un detonador para armarlo. Vuela su losa y abre espacio, pero tambien libera bolas cercanas y rompe tus vallas en el radio.",
+    "chargeTutorialBody": "Traza una valla junto a una mecha para armarla. Vuela su losa y abre espacio, pero también libera bolas cercanas y rompe tus vallas en el radio.",
     "streamTutorialTitle": "✦ Flujo de Datos",
-    "streamTutorialBody": "Traza una valla A LO LARGO de la vena violeta, no a traves, para recolectar horas extra. Mas cobertura paga mas, pero seguirla afloja tu trampa.",
+    "streamTutorialBody": "Traza una valla A LO LARGO de la veta violeta, no a través, para cosechar horas extra. Más cobertura paga más pero afloja tu trampa.",
     "creepTutorialTitle": "⚠ Corrupción del alcance",
-    "creepTutorialBody": "Las bolas aceleran cuanto mas tardas, hasta un tope. Termina dentro de la ventana de calma y nunca lo veras. El medidor rojo de arriba muestra el aumento.",
+    "creepTutorialBody": "Las bolas aceleran cuanto más tardas, hasta un tope. Termina rápido y ni lo notarás. El medidor rojo muestra el aumento.",
     "pickupTutorialTitle": "✦ Potenciadores",
-    "pickupTutorialBody": "Atrapa una bola en un hueco que tambien cubra un potenciador para conseguirlo. Si se desvanece antes, se pierde.",
+    "pickupTutorialBody": "Encierra una bola en un hueco que también tenga un potenciador para reclamarlo. Si tardas, se desvanece.",
     "gravityWellTutorialTitle": "Pozo de gravedad",
-    "gravityWellTutorialBody": "Un pozo de gravedad curva hacia la flecha cualquier bola que entre en el, y la suelta en cuanto sale. La velocidad nunca cambia, asi que una bola puede atravesarlo y salir en una direccion completamente nueva segun por donde y a que velocidad entro.\n\nEs tanto una herramienta como un peligro. Dirige una bola hacia un pozo para curvarla hacia un hueco que ya hayas cercado.\n\nUna bola congelada ignora la gravedad por completo, asi que congelar sirve para mantener una bola quieta dentro de un pozo en vez de verla salir arrastrada.\n\nAlgunos pozos empiezan inactivos, dibujados pero inertes, y se activan cuando has despejado suficiente tablero.",
+    "gravityWellTutorialBody": "Un pozo de gravedad curva hacia la flecha cualquier bola que entre, y luego la suelta. La velocidad no cambia. Úsalo para guiar una bola a un hueco que ya vallaste.\n\nUna bola congelada ignora la gravedad. Algunos pozos empiezan inactivos y se activan al limpiar suficiente tablero.",
     "circuitTutorialTitle": "✦ Conecta la Integracion",
-    "circuitTutorialBody": "Traza una valla junto a un nodo turquesa para despertar su bola dormida. Las dormidas retienen su espacio hasta despertarlas; luego las atrapas. Una a una.",
+    "circuitTutorialBody": "Traza una valla junto a un nodo turquesa para despertar su bola dormida y luego atrápala. Las dormidas mantienen su espacio cerrado hasta despertar.",
     "boxIntroTitle": "✦ La columna Hecho",
-    "boxIntroBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
+    "boxIntroBody": "Las bolas entran por la membrana y no vuelven a salir. Llena la caja; hasta que esté llena, su suelo queda fuera del tablero.",
     "launcherIntroTitle": "El lanzador",
-    "launcherIntroBody": "Todas las bolas del mapa están en el cañón. Tira de la goma trasera y suelta: la dirección apunta, la distancia marca la velocidad.\n\nEsa velocidad nunca baja, y la paga base del mapa se multiplica por ella. Tira fuerte para un mapa más rico, más rápido y más difícil. No puedes trazar vallas hasta que el barril se vacie. En cuanto se vacia, el barril se deshace y el suelo donde estaba queda libre como cualquier otro, pero si sellas una bola dentro antes de que se vacie, pierdes una vida.",
+    "launcherIntroBody": "Todas las bolas están en el cañón. Tira de la banda y suelta: la dirección apunta, la longitud da la velocidad.\n\nEsa velocidad nunca baja y multiplica el pago del mapa. Sin vallas hasta que el cañón se vacíe; encierra una bola dentro antes y pierdes una vida.",
     "launcherTutorialTitle": "El lanzador",
-    "launcherTutorialBody": "Toda la plantilla espera en el cañón hasta que tiras de la goma y sueltas. La velocidad nunca baja, así que la potencia con la que disparas es a la vez la dificultad del mapa y el multiplicador de su paga base.",
+    "launcherTutorialBody": "Las bolas esperan en el cañón hasta que tiras de la banda y sueltas. Dispara más fuerte para un mapa más rápido que paga más.",
     "boxTutorialTitle": "✦ La columna Hecho",
-    "boxTutorialBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
+    "boxTutorialBody": "Las bolas entran por la membrana y no vuelven a salir. Llena la caja; hasta que esté llena, su suelo queda fuera del tablero.",
     "topBarTutorialTitle": "La barra superior",
     "topBarTutorialBody": "Tu nivel, vidas y objetivos estan arriba. Tocala, o Specs, para ver tu hoja de partida completa.",
     "bottomBarTutorialTitle": "Tu ficha",
     "bottomBarTutorialBody": "Toca Specs cuando quieras para ver cada estadistica de tu partida, explicada con claridad.",
     "fenceSlotsTutorialTitle": "Ranuras de valla",
-    "fenceSlotsTutorialBody": "La fila bajo el tablero elige QUE TIPO de valla dibuja tu proximo corte. La ranura 1 es la valla estandar y nunca se agota; las otras cuatro guardan las especiales que desbloqueas. Toca una ranura y cada corte es de ese tipo hasta que elijas otra. Manten pulsada una ranura para leer que hace.",
+    "fenceSlotsTutorialBody": "La fila bajo el tablero elige qué valla traza tu próximo corte. La ranura 1 es la estándar y nunca se agota; las demás guardan las especiales que desbloqueas. Toca una ranura y cada corte será de ese tipo hasta que elijas otra. Mantén pulsada una ranura para leerla.",
     "timeLimitTutorialTitle": "Límite de tiempo",
-    "timeLimitTutorialBody": "Ahora cada mapa tiene limite de tiempo. Complétalo antes de que la barra se vacie o la partida termina; las vidas no te salvan. Termina pronto para horas extra.",
+    "timeLimitTutorialBody": "Cada mapa tiene ahora un límite de tiempo. Vence al reloj o la partida termina, con vidas o sin ellas. Termina pronto para horas extra de bono.",
     "infoUnlocked": "Información desbloqueada",
     "lockInfo": {
       "title": "Bloqueo superior",
       "normalTitle": "Bloqueo estándar",
-      "normalBody": "Sella una bola en su propio hueco, aislada del tablero. Paga su valor de cierre; las bolas mas duras pagan mas.",
+      "normalBody": "Sella una bola en su propio hueco para encerrarla. Paga su valor de encierro; las bolas duras pagan más.",
       "superiorTitle": "Bloqueo superior",
-      "superiorBody": "Sella una bola en un hueco muy ajustado, bastante menos de la mitad del tamano habitual. Paga el doble y lleva una estrella dorada."
+      "superiorBody": "Sella una bola en un hueco de menos de la mitad del tamaño habitual. Paga el doble y gana una estrella dorada."
     },
     "lockExplainer": {
       "line": "Encierra una bola en un hueco ajustado para crear un cierre y ganar puntos extra.",
@@ -367,6 +369,7 @@
     "bouncerHours": "Horas de parachoques",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
+    "breakBonus": "Bono de demolición",
     "chestBonus": "Botín obtenido",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
     "newHighscore": "Nuevo récord",
@@ -380,73 +383,73 @@
     "info": {
       "level": {
         "title": "Nivel",
-        "body": "El mapa que acabas de superar. Los mapas posteriores pagan más horas extra base e introducen nuevos tipos de bolas y mecánicas.",
-        "tip": "Mantén viva tu partida para llegar a mapas más profundos y mejor pagados. Las mejoras compradas entre niveles duran toda la partida."
+        "body": "El mapa que acabas de limpiar. Los siguientes pagan más y añaden bolas y mecánicas nuevas.",
+        "tip": "Sigue con vida para llegar a mapas más profundos y ricos. Las mejoras duran toda la partida."
       },
       "remaining": {
         "title": "Espacio restante",
-        "body": "Cuánto tablero seguía abierto cuando ganaste. Superas un nivel cercando espacio hasta que el área abierta cae por debajo del objetivo del mapa.",
-        "tip": "Despejar más de lo requerido alimenta el bono de espacio, y alcanzar el objetivo rápido paga el bono de entrega temprana."
+        "body": "Tablero aún abierto al ganar. Limpias un mapa vallando espacio hasta quedar por debajo de su objetivo.",
+        "tip": "Limpiar de más alimenta el Bono de Espacio; terminar rápido paga Ship Early."
       },
       "fencesUsed": {
         "title": "Vallas contra par",
-        "body": "Cuántas vallas usaste frente al par del mapa. En par o por debajo cobras la base completa. Cada valla sobre par la reduce (x0.75, x0.6 y luego x0.4), y con 3 o más sobre par también se desactiva el bono de espacio.",
+        "body": "Vallas usadas frente al par. Bajo par paga la base completa; cada valla de más la reduce (x0,75, x0,6, x0,4). 3 o más de exceso también anulan el Bono de Espacio.",
         "tip": "Prefiere pocos cortes grandes. Terminar aunque sea una valla bajo par añade una hora de bonificación."
       },
       "spaceBonus": {
         "title": "Bono de espacio",
-        "body": "Área extra eliminada más allá de lo que exige el mapa. La escalera paga +1h con 10% extra, +2h con 30% y +3h con 55%. Se desactiva si terminas con 3 o más vallas sobre par.",
+        "body": "Espacio extra retirado más allá del objetivo: +1h al 10%, +2h al 30%, +3h al 55%. Se anula si terminas 3 o más vallas sobre par.",
         "tip": "Antes del corte ganador, arranca un poco más de tablero. Los despejes casi totales pagan el peldaño más alto."
       },
       "baseOvertime": {
         "title": "Horas extra base",
-        "body": "El pago fijo del mapa, escalado por tu rendimiento con las vallas. Cada mapa paga una base plana, así que los bonos de esta pantalla son donde están las ganancias reales.",
+        "body": "El pago fijo del mapa, escalado por tu rendimiento con vallas. Los bonos son donde está el dinero de verdad.",
         "tip": "Mantente en par o por debajo para conservar la base completa, y apila bonos encima."
       },
       "threadLocks": {
         "title": "Bloqueos de hilo",
-        "body": "Bloqueas una bola sellándola en su propio rincón del tablero, aislada de todo lo demás. Cada bola bloqueada paga su valor de bloqueo, y los tipos de bola más duros pagan más. Atrapar varias bolas con un solo corte multiplica todo el pago por el número capturado: 2 a la vez paga el doble, 3 el triple. Sellar una bola en un rincón muy estrecho lo convierte en un bloqueo superior, que paga el doble.",
-        "tip": "Bloquea una bola verde de dinero pronto: triplica lo que paga cada bloqueo posterior en este mapa. Después agrupa las bolas y cierra un solo corte alrededor del grupo."
+        "body": "Sella una bola en su propio hueco para encerrarla. Cada una paga su valor; las duras pagan más. Varias en un corte multiplican el pago (2 = doble, 3 = triple). Un hueco muy ajustado la convierte en Encierro Superior, que vale el doble.",
+        "tip": "Encierra pronto una bola verde de dinero: triplica cada encierro posterior. Luego junta bolas y cierra un corte alrededor de todas."
       },
       "superiorLocks": {
         "title": "Bloqueos superiores",
-        "body": "Un bloqueo superior es un bloqueo con oficio: el rincón donde sellaste la bola era mucho menor que la mitad del tamaño que normalmente basta para bloquear. Los bloqueos superiores pagan el doble del valor de bloqueo, y los multiplicadores de bola de dinero, congelación y captura múltiple se apilan encima.",
-        "tip": "Traza tu corte de sellado tan cerca de la bola como te atrevas. Un rincón amplio y perezoso solo gana el valor estándar; la jaula estrecha es donde está el dinero."
+        "body": "Un Encierro Superior es un hueco de menos de la mitad del tamaño que normalmente encierra. Paga el doble y los demás multiplicadores se acumulan encima.",
+        "tip": "Corta tan cerca de la bola como te atrevas. Los huecos amplios pagan lo normal; la jaula ajustada es donde está el dinero."
       },
       "zoneLocks": {
         "title": "Bloqueos de zona",
-        "body": "Las cajas de color var, let y const de un mapa pagan un multiplicador (1.5x, 2x, 3x) por cualquier bola bloqueada dentro. Se acumula con todo lo demás, así que un bloqueo superior y ajustado dentro de una caja const es el mayor pago individual del juego. Esta fila muestra solo las horas que añadió la zona; ya están contadas en tus ingresos de bloqueo de arriba.",
-        "tip": "La zona se ilumina en cuanto un bloqueo cuenta. Si sigue apagada, el rincón que sellaste no cayó dentro de la caja: busca que la bola quede dentro del borde, no solo cerca."
+        "body": "Las cajas de color var, let y const pagan 1,5x, 2x y 3x por cualquier bola encerrada dentro. Se acumula con todo, así que un Encierro Superior en una caja const es el mayor pago del juego. Ya está contado en tus ingresos por encierro de arriba.",
+        "tip": "La zona se ilumina cuando un encierro cuenta. Si sigue apagada, el hueco no cayó dentro de la caja: haz que la bola se asiente dentro del borde, no cerca."
       },
       "multiLocks": {
         "title": "Cierre múltiple",
-        "body": "Encerrar varias bolas con un solo corte multiplica los ingresos de ese corte: dos a la vez paga el doble, tres el triple, y el resto de multiplicadores se acumulan encima. Esta fila muestra solo las horas que aportó el acumulado frente a encerrarlas una a una; ya están contadas en tus ingresos por cierre de arriba.",
-        "tip": "No selles una bolsa en cuanto sea seguro. Deja que entre una segunda bola: un corte alrededor de dos bolas vale más que dos cortes alrededor de una."
+        "body": "Varias bolas en un corte multiplican el ingreso de ese corte: dos pagan el doble, tres el triple, y los demás multiplicadores se acumulan. Aquí solo aparecen las horas extra frente a encerrarlas una a una.",
+        "tip": "No selles un hueco en cuanto sea seguro. Deja entrar una segunda bola: un corte alrededor de dos vale más que dos cortes alrededor de una."
       },
       "bouncerHours": {
         "title": "Horas de parachoques",
-        "body": "Cada parachoques guarda un pequeño fondo de horas extra y paga una hora cada vez que una bola lo golpea, hasta agotarse: verde mientras le queden horas, rojo cuando se vacía. Uno verde también quita un 5% de velocidad a la bola, así que es el freno del propio tablero para una bola demasiado rápida. Uno rojo no tiene horas con las que pagar y en su lugar la impulsa, acelerándola. Estas horas se pagan por encima del tope del mapa, así que cada golpe vale exactamente una hora.",
-        "tip": "Es la recompensa por NO correr, y la decisión es para qué lo usas: cada frenada es una hora que no guardaste. Vacía un grupo por las horas y se convierte en un grupo que lanza tus bolas por todas partes."
+        "body": "Cada parachoques guarda un pequeño banco de horas y paga 1h por golpe hasta agotarse. Los verdes además frenan la bola un 5%; los rojos están gastados y la aceleran. Se paga por encima del tope del mapa.",
+        "tip": "La recompensa por no correr: cada frenada es una hora que no bancaste. Agota un grupo y empezará a lanzar tus bolas por todas partes."
       },
       "breakBonus": {
         "title": "Bono de demolición",
-        "body": "Horas extra por destrozar bloques ámbar rompibles. Las bolas desgastan un rompible con cada contacto hasta que se hace añicos, y lo que esté apilado encima cae con él.",
+        "body": "Horas extra por romper bloques ámbar. Las bolas los desgastan hasta romperlos, y lo apilado encima cae.",
         "tip": "Dirige las bolas hacia los rompibles con tus cortes. La bola negra los destroza en la mitad de golpes."
       },
       "shipEarly": {
         "title": "Entrega temprana",
-        "body": "Un bono de ritmo por cumplir la condición de victoria rápido: +1h en menos de 60 segundos, +2h en menos de 40, +3h en menos de 25. Solo cuenta el juego activo, los menús y la pantalla de presión no.",
-        "tip": "Abre con cortes grandes y decididos en lugar de muchos pequeños y seguros. Velocidad y precisión son bonos separados, así que puedes perseguir ambos."
+        "body": "Bono de ritmo por ganar rápido: +1h en menos de 60s, +2h en 40s, +3h en 25s. Solo cuenta el juego activo.",
+        "tip": "Abre con cortes grandes y decididos. Velocidad y precisión son bonos separados; persigue ambos."
       },
       "pushBonus": {
         "title": "Bono de presión",
-        "body": "La recompensa por arriesgar. Tras cumplir el objetivo del mapa puedes seguir cortando en lugar de asegurar, y cada porción extra del tablero paga horas extra de bonificación.",
+        "body": "La recompensa por arriesgar. Tras alcanzar el objetivo, sigue cortando en vez de bancar; cada porción extra paga.",
         "tip": "Presionar es dinero gratis: si fallas a mitad solo pierdes el bono extra, nunca tu puntuación asegurada."
       },
       "pickupBonus": {
         "title": "Bono de potenciadores",
-        "body": "Horas extra de fichas potenciadoras que sellaste junto a un bloqueo. Una ficha solo paga cuando una bola queda bloqueada en el bolsillo que la contiene: si capturas su zona sin bola se pierde, y las fichas sin reclamar caducan solas.",
-        "tip": "Guía una bola hacia la ficha antes de sellar el bolsillo. Sus horas se pagan después del tope por mapa, así que siempre cuentan.",
+        "body": "Horas extra de las fichas de potenciador selladas con un encierro. Una ficha solo paga si una bola se encierra en su hueco; las no reclamadas caducan.",
+        "tip": "Lleva una bola hacia la ficha antes de sellar. Las horas de fichas se pagan tras el tope, así que siempre cuentan.",
         "effects": {
           "overtime": {
             "name": "Horas extra +{{value}}h:",
@@ -484,68 +487,68 @@
       },
       "newHighscore": {
         "title": "Nuevo récord",
-        "body": "Superaste el récord anterior de este mapa, así que todo el pago se multiplica por x1.25. Se aplica después del tope por mapa, así que batir un récord siempre paga extra.",
+        "body": "Batiste el récord de este mapa, así que el pago es x1,25. Se aplica tras el tope, así que siempre suma.",
         "tip": "Los récords se guardan por mapa. Una buena build de mejoras puede batir tus marcas mapa tras mapa."
       },
       "totalBonus": {
         "title": "Bonificación total",
         "body": "Todos los bonos de este nivel sumados: par, espacio, bloqueos, demolición, ritmo y presión.",
-        "tip": "Los bonos se pliegan bajo un tope por mapa del doble del pago base, así que repartir entre varios tipos de bono rinde más que maximizar uno solo."
+        "tip": "Los bonos comparten un tope del doble de la base, así que repartir entre varios rinde más que maximizar uno."
       },
       "overtimeEarned": {
         "title": "Horas extra ganadas",
-        "body": "Lo que pagó este nivel en total: la base escalada más todos los bonos, con tope en el doble del pago base del mapa. Un nuevo récord multiplica por encima del tope. El numero tras la barra es lo maximo que este mapa podia pagarte: la base mas cada barra en su techo. Desaparece cuando te lo has llevado todo.",
-        "tip": "Si alcanzas el tope a menudo, persigue el multiplicador de récord: se aplica después del tope, así que siempre paga."
+        "body": "El total del nivel: base escalada más todos los bonos, con tope del doble de la base. Un récord multiplica más allá del tope. El número tras la barra es lo máximo que podía pagar este mapa.",
+        "tip": "¿Tocas el tope a menudo? Persigue el multiplicador de récord: se aplica después del tope."
       },
       "totalOvertime": {
         "title": "Horas extra totales",
-        "body": "Las horas extra de toda tu partida hasta ahora. Son la moneda que gastas en la tienda de mejoras entre niveles, y lo que se asegura cuando termina la partida.",
-        "tip": "Gastar compra poder y carga el ciclo presupuestario, mientras que un banco abultado alimenta los beneficios de Runway y War Chest. Tu build decide hacia dónde inclinarte."
+        "body": "Las horas extra de tu partida hasta ahora. Gástalas en la tienda entre niveles; lo que sobre se banca al terminar.",
+        "tip": "Gastar compra poder y carga Budget Cycle; un banco gordo alimenta Runway y War Chest. Tu build decide."
       },
       "axis_delivery": {
         "title": "Entrega",
-        "body": "La parte de las bolas del mapa que realmente encerraste. Es la base, no una tactica: ignora lo ajustados que fueran los bolsillos y condiciona las otras tres vias de estilo. Un despeje sin cierres vale su base fija y nada mas.",
-        "tip": "Encierra todas las bolas. Una bola suelta te cuesta su parte de Entrega Y la misma parte de Ritmo, Ahorro y Codicia."
+        "body": "La parte de las bolas del mapa que encerraste. Es la base: condiciona los demás carriles, así que limpiar sin encerrar nada gana la base y nada más.",
+        "tip": "Encierra todas las bolas. Una bola suelta te cuesta su parte de Entrega Y de Ritmo, Ahorro y Codicia."
       },
       "axis_craft": {
         "title": "Oficio",
-        "body": "Que tan buenos fueron los cierres, no cuantos. La via completa es cada bola sellada en un bolsillo superior, y las areas de color, dos bolas en un corte, las bolas de dinero y los cierres congelados alcanzan el mismo techo por otras rutas.",
-        "tip": "Los bolsillos ajustados cuestan tiempo y vallas, asi que el Oficio se paga con Ritmo y Ahorro. Elige un par y comprometete."
+        "body": "Lo buenos que fueron los encierros, no cuántos. Carril lleno: cada bola en un hueco superior. Zonas, encierros múltiples, bolas de dinero y congeladas llegan por otras vías.",
+        "tip": "Los huecos ajustados cuestan tiempo y vallas: la Maestría se compra con Ritmo y Ahorro. Elige un par y comprométete."
       },
       "axis_tempo": {
         "title": "Ritmo",
-        "body": "Con que rapidez cumpliste la condicion de victoria, en segundos de juego activo. Las ventanas escalan con el numero de bolas del mapa, y las pausas no cuentan.",
-        "tip": "La velocidad se compra dejando bolsillos flojos. Si prefieres la via del Oficio, ignora el reloj por completo: vale mas o menos lo mismo."
+        "body": "Lo rápido que cumpliste la condición de victoria, en segundos activos. Las ventanas escalan con el número de bolas; las pausas no cuentan.",
+        "tip": "La velocidad se compra dejando huecos amplios. ¿Prefieres Maestría? Ignora el reloj; vale casi lo mismo."
       },
       "axis_thrift": {
         "title": "Ahorro",
-        "body": "Terminar por debajo del par, medido como fraccion del par para que un mapa de par 4 y uno de par 10 sean vias igual de alcanzables.",
-        "tip": "Los cortes gruesos quedan bajo par pero dejan bolsillos flojos, asi que Ahorro y Oficio tiran en sentidos opuestos. Combina Ahorro con Ritmo."
+        "body": "Terminar bajo par, como fracción del par, para que un mapa de par 4 y uno de par 10 sean igual de alcanzables.",
+        "tip": "Los cortes gruesos terminan bajo par pero dejan huecos amplios: el Ahorro pelea con la Maestría. Combínalo con Ritmo."
       },
       "axis_greed": {
         "title": "Codicia",
-        "body": "Cuánto del tablero que podías dejar te has llevado igualmente, más las horas de arriesgar. Se apaga por completo a tres vallas por encima del par.",
-        "tip": "Despejar de mas cuesta vallas y tiempo. La Codicia se lleva bien con el Oficio y pelea con el Ahorro por cada corte."
+        "body": "Tablero que podías dejar pero tomaste igual, más las horas de arriesgar. Se anula con tres vallas sobre par.",
+        "tip": "Limpiar de más cuesta vallas y tiempo. La Codicia va con la Maestría y pelea con el Ahorro."
       },
       "axis_engagement": {
         "title": "Implicación",
-        "body": "La parte de las características propias del mapa que has usado de verdad: rompibles destrozados (ponderados por los golpes que costaba cada uno), zonas de color con una bola encerrada dentro, terminales encendidos, vetas cosechadas, cajas con entrega hecha. Es una base como la Entrega, no una táctica: si un mapa pone una característica en el tablero, usarla forma parte de terminarlo. Los mapas que no ofrecen ninguna no muestran esta barra.",
-        "tip": "Un mapa solo se mide por lo que de verdad lleva, y cada familia cuenta igual, así que lo único que hay en el tablero es toda la barra. Usarlas cuesta tiempo y vallas, y eso es lo que la convierte en una decisión real frente a Ritmo y Ahorro."
+        "body": "La parte de los elementos del mapa que usaste: bloques rotos, zonas con encierro, terminales encendidos, vetas cosechadas, cajas llenas. Si el mapa lo puso ahí, usarlo es parte de terminar. Los mapas sin ninguno ocultan este carril.",
+        "tip": "Cada familia de elementos cuenta igual, así que lo único que haya en el tablero es todo el carril. Usarlos cuesta tiempo y vallas, frente a Ritmo y Ahorro."
       },
       "winBonus": {
         "title": "Bono de victoria",
-        "body": "Algunos mapas piden algo mas dificil que despejar el tablero: una bola sellada dentro de una zona de color, un bolsillo ajustado, una bola concreta atrapada. Cuando las condiciones de victoria de un mapa llevan una prima, cumplirlas paga ese porcentaje sobre todo lo que el mapa gano.",
-        "tip": "La prima la fija el mapa por condicion, asi que es igual para cualquier ruta. Escala lo que ganaste, de modo que jugar bien un mapa dificil vale mas que pasarlo por los pelos."
+        "body": "Algunos mapas piden más que limpiar: una bola en una zona, un hueco ajustado, una bola concreta. Cuando esas condiciones llevan prima, cumplirlas paga ese porcentaje extra.",
+        "tip": "La prima la fija cada condición, así que es igual para toda ruta. Escala lo ganado, así que jugar bien un mapa difícil es lo que más paga."
       },
       "capBonus": {
         "title": "Tiempo Compensatorio",
-        "body": "Stock Options y las fichas de Tiempo Compensatorio elevan el techo de lo que este mapa puede pagar, en vez de pagar horas por sí mismas. En un mapa que nunca llega a su techo no cambian nada; en uno grande son lo que deja pasar las últimas horas.",
-        "tip": "Valen más en un mapa que ya estás despejando bien. Si el pago no se acerca al techo, subir el tope no sirve de nada."
+        "body": "Stock Options y Comp Time suben el techo de lo que un mapa puede pagar en vez de pagar horas. Solo importan en un mapa que alcanza su tope.",
+        "tip": "Vale más en mapas que ya limpias bien. Lejos del techo, subir el tope es peso muerto."
       },
       "qualifiedOvertime": {
         "title": "Horas Extra Cualificadas",
-        "body": "Se pagan por sellar varias bolas en UN solo corte. La pila de bloqueos ya es cuadrática, y Entrega y Oficio se llenan mucho antes de que se note un pase de cuatro bolas, así que este canal paga esa curva por encima del techo, donde no puede ser absorbida.",
-        "tip": "Reúne las bolas en un mismo hueco y ciérralo con una sola valla. Dos en un corte pagan; cuatro pagan muchísimo más."
+        "body": "Se paga por sellar varias bolas en UN corte. Entrega y Maestría se llenan antes de notar una pasada de cuatro bolas, así que esto paga por encima del techo donde no se pierde.",
+        "tip": "Junta las bolas en un hueco y ciérralo con una sola valla. Dos pagan; cuatro pagan mucho más."
       }
     },
     "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
@@ -598,7 +601,7 @@
     "totalReset": "Restablecimiento total",
     "back": "Atrás",
     "resetConfirmTitle": "¿Restablecimiento total?",
-    "resetConfirmBody": "Esto elimina TODO el estado del juego: tu saldo de puntuación, certificados, logros, récords, funciones desbloqueadas, la partida guardada y el progreso de los tutoriales. Se conservan los ajustes de idioma y sonido. Esta acción no se puede deshacer.",
+    "resetConfirmBody": "Borra TODO el estado del juego: puntuación, certificados, logros, récords, funciones desbloqueadas, partida guardada y tutoriales. Idioma y sonido se conservan. No se puede deshacer.",
     "cancel": "Cancelar",
     "reset": "Restablecer"
   },
@@ -704,17 +707,17 @@
     "yourStatus": "Tu estado",
     "livesRemaining": "Vidas restantes",
     "livesNone": "¡Ninguna!",
-    "livesDescription": "Pierdes una vida cuando una bola golpea tu valla mientras crece. Si te quedas sin vidas, puedes gastar una Continuación para reintentar el nivel.",
+    "livesDescription": "Una bola que golpea tu valla en crecimiento cuesta una vida. Sin vidas, un Continuar te deja reintentar.",
     "continues": "Continuaciones",
-    "continuesDescription": "Cuando te quedas sin vidas, una Continuación te permite reintentar este nivel con tus horas extra y mejoras intactas. Las partidas empiezan sin ninguna: compra la mejora Golden Parachute, consigue más con certificados, o completa el nivel 20.",
+    "continuesDescription": "¿Sin vidas? Un Continuar reintenta el nivel con tus horas y mejoras intactas. Consíguelos con Golden Parachute, certificados o superando el nivel 20.",
     "loadout": "Equipamiento",
     "certificatePoints": "Puntos de certificado",
     "certPointsEarned_one": "{{count}} punto ganado hasta ahora.",
     "certPointsEarned_other": "{{count}} puntos ganados hasta ahora.",
-    "certPointsToGo_one": "Completa {{count}} nivel más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
-    "certPointsToGo_other": "Completa {{count}} niveles más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
+    "certPointsToGo_one": "{{count}} nivel más para el siguiente punto de certificado.",
+    "certPointsToGo_other": "{{count}} niveles más para el siguiente punto de certificado.",
     "ascensionDepth": "Ascensión - Profundidad {{depth}}",
-    "ascensionDescription": "Diste la vuelta tras el nivel final. Las bolas son más rápidas, cada mutador elegido abajo está activo y cada nivel completado cuenta {{multiplier}}× para las horas de certificado.",
+    "ascensionDescription": "Superaste el último nivel. Bolas más rápidas, todos los mutadores elegidos activos, y cada nivel cuenta {{multiplier}}× para Horas de Certificado.",
     "activeUpgradesCount": "Mejoras activas ({{count}})",
     "currentlyReducingBallSpeed": "Reduciendo actualmente la velocidad de la bola un {{percent}}%",
     "activeUpgrades": "Mejoras activas",
@@ -733,13 +736,21 @@
     "lifeCycle": "Ciclo de vida",
     "gotIt": "¡Entendido!",
     "achievementsCertificatesTitle": "Logros y certificados",
-    "achievementsCertificatesBody": "Juega más para desbloquear logros y certificados. Los logros recompensan los hitos de por vida con bonificaciones permanentes de partida. Los certificados se ganan dominando mejoras específicas a lo largo de varias partidas y se pueden comprar en la Tienda de certificados para obtener efectos duraderos.",
+    "achievementsCertificatesBody": "Los logros premian hitos de por vida con bonos permanentes. Los certificados se ganan dominando mejoras en varias partidas y se compran en la Tienda de Certificados.",
     "controlsTitle": "Controles",
     "controlTouchLabel": "TÁCTIL",
     "controlMouseLabel": "RATÓN",
     "controlSwipeToCut": "Desliza para cortar",
     "controlSecondFinger": "Un segundo dedo mientras la valla crece la cancela",
     "controlClickAndDrag": "Haz clic y arrastra",
+    "ballTypes": {
+      "title": "Tipos de bola",
+      "intro": "El color de una bola dice lo que hace. Se desbloquean más al subir.",
+      "speed": "Velocidad {{speed}}",
+      "unlocks": "Desde el nivel {{level}}",
+      "lock": "Bloqueo ×{{mult}}",
+      "notEncounteredYet": "Aún no vista. Enciérrala para saber más."
+    },
     "steps": {
       "swipeToCut": {
         "title": "Desliza para cortar",
@@ -755,23 +766,27 @@
       },
       "winCondition": {
         "title": "Condición de victoria",
-        "description": "Reduce la arena a menos del 25% de su tamaño original para ganar. ¡La velocidad aumenta con cada corte!"
+        "description": "Reduce la arena por debajo del tamaño objetivo para ganar. Atrapa una bola en un hueco lo bastante pequeño y queda encerrada con bono."
+      },
+      "breakObstacles": {
+        "title": "Romper obstáculos",
+        "description": "Los bloques ámbar se rompen y dan horas extra; una pila cae si pierde su apoyo. Romper es extra: reducir el tablero sigue ganando. No puedes vallar contra ellos, y la bola negra los rompe el doble de rápido."
       },
       "fenceTypes": {
         "title": "Tipos de valla",
-        "description": "Bajo el tablero hay una fila de cinco ranuras que decide que tipo de valla dibuja tu proximo corte. La ranura 1 es la valla estandar, siempre esta y nunca se gasta. Las otras cuatro empiezan vacias y se llenan con especiales compradas con mejoras: una detiene una bola, otra solo cierra una zona con el numero correcto de bolas dentro, otra se estira y se dispara como un tirachinas. Toda especial se construye mas lenta que la estandar, y eso es lo que te cuesta. Toca una ranura para elegirla, manten pulsada para ver los detalles."
+        "description": "Las cinco ranuras bajo el tablero eligen tu próxima valla. La ranura 1 es la estándar y nunca se gasta; las otras cuatro se llenan con especiales de las mejoras. Toda especial se construye más lenta que la estándar. Toca para elegir, mantén para detalles."
       },
       "lives": {
         "title": "Vidas",
-        "description": "Empiezas cada partida con un número determinado de vidas. Pierdes una vida cada vez que una bola golpea tu valla en crecimiento. Si te quedas sin vidas, la partida termina."
+        "description": "Cada partida empieza con un número fijo de vidas. Una bola que golpea tu valla en crecimiento cuesta una. Sin vidas, la partida termina."
       },
       "checkpoints": {
         "title": "Puntos de control",
-        "description": "Cada 5 niveles hay un punto de control. Cuando tu partida termina, la siguiente siempre se reinicia desde el punto de control más alto que alcanzaste; nunca pierdes todo tu progreso."
+        "description": "Cada 5 niveles hay un punto de control. Una partida nueva empieza desde el más alto que alcanzaste."
       },
       "headStartCertificates": {
         "title": "Certificados de ventaja inicial",
-        "description": "En la Tienda de certificados puedes desbloquear certificados de ventaja inicial que aumentan permanentemente tu nivel de inicio, para que los jugadores experimentados nunca tengan que repetir los primeros niveles."
+        "description": "Los certificados Head Start de la Tienda de Certificados suben para siempre tu nivel inicial."
       }
     }
   },
@@ -819,13 +834,13 @@
     "group": {
       "required": "Objetivos:",
       "optional": "Opcional:",
-      "either": "O TERMINA ASÍ",
-      "trade": "UNA ELECCIÓN QUE HACER",
+      "either": "O bien:",
+      "trade": "Dilema:",
       "fail": "Fallo:"
     },
     "groupRequiredAll": "Objetivos:",
     "bonusArea": "Encierra una bola en el área {{area}} para cobrar {{mult}}x. Ignorarla no cuesta nada.",
-    "tradeBudgetBonus": "Tus vallas están racionadas. El bolsillo opcional gasta algunas, así que él y un despeje cómodo compiten por el mismo presupuesto.",
+    "tradeBudgetBonus": "Tus vallas están racionadas. El hueco opcional y una limpieza cómoda compiten por ellas.",
     "lock_one": "Encierra al menos {{count}} bola.",
     "lock_other": "Encierra al menos {{count}} bolas.",
     "superiorLocks_one": "Consigue {{count}} cierre superior (un hueco ajustado).",
@@ -894,12 +909,12 @@
     "continue": "Continuar",
     "closedNotEnoughLocks": "No has bloqueado suficientes bolas",
     "closedInfoTitle": "Tienda cerrada",
-    "closedInfoBody": "La tienda solo abre si encierras suficientes bolas en la ronda: una, o dos en mapas con tres o mas bolas. Si no encierras nada, te la saltas.",
+    "closedInfoBody": "La tienda solo abre si encerraste bolas suficientes: una, o dos en mapas con tres bolas o más.",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
-    "tutorialBody": "Gasta horas extra en mejoras entre mapas; multiplican tus ganancias futuras. Manten pulsada una mejora para ver detalles.",
+    "tutorialBody": "Gasta horas extra en mejoras entre mapas. Mantén pulsada cualquier mejora para ver detalles.",
     "certRuns": "{{current}}/{{required}} partidas",
     "detailCertificate": "Progreso de certificación",
-    "detailCertificateBody": "Comprar esto en {{required}} partidas distintas desbloquea la certificación {{name}}, una bonificación permanente que se aplica a todas las partidas. Acumulado hasta ahora: {{current}} de {{required}}.",
+    "detailCertificateBody": "Cómprala en {{required}} partidas distintas para desbloquear el certificado {{name}}, un bono permanente. Acreditadas: {{current}} de {{required}}.",
     "carouselLabel": "Ofertas de mejoras",
     "prevOffer": "Oferta anterior",
     "nextOffer": "Oferta siguiente",
@@ -1034,13 +1049,13 @@
     "loadouts": "Equipamientos",
     "admin": "Admin",
     "certLockedTitle": "Certificados bloqueados",
-    "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
+    "certLockedBody": "Los certificados son bonos permanentes que se ganan dominando familias de mejoras en varias partidas. Alcanza el nivel máximo de una familia, o gana tu primer certificado jugando, y esta tienda se abre. Luego gasta Horas de Certificado para subirlos.",
     "certLockedGotIt": "Entendido",
     "records": "Récords",
     "dailyStandup": "Reunión diaria",
     "newBadge": "NUEVO",
     "dailyIntroTitle": "Reunión diaria",
-    "dailyIntroBody": "Cada dia todos reciben la misma partida desde una semilla compartida: mismos niveles, sorteos, tiendas y obstaculos. Tu resultado va a la tabla diaria y jugar crea una racha. Empieza en el nivel 1.",
+    "dailyIntroBody": "Todos reciben la misma partida cada día a partir de una semilla compartida. Tu resultado entra en la clasificación diaria, y jugar acumula racha. Empieza en el nivel 1.",
     "dailyIntroStart": "Empezar la partida de hoy",
     "music": "Música"
   },
@@ -1603,7 +1618,7 @@
     "loading": "Cargando...",
     "back": "Atrás",
     "unlockedModalTitle": "Equipamientos desbloqueados",
-    "unlockedModalBody": "¡Ganaste tu primera partida! A partir de ahora, cada partida empieza con un equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más.",
+    "unlockedModalBody": "¡Primera partida ganada! Ahora cada partida empieza con una carga: una maldición unida a una bendición. Gana con cargas distintas para desbloquear más.",
     "unlockedModalDismiss": "Entendido"
   },
   "features": {
@@ -1611,19 +1626,19 @@
     "dismiss": "Entendido",
     "achievements": {
       "name": "Logros",
-      "body": "¡Superaste el nivel 5! Los logros ahora registran tus hitos mientras juegas, desde partidas impecables hasta rachas largas. Consulta tu progreso cuando quieras desde el menú principal."
+      "body": "¡Nivel 5 superado! Los logros ya registran tus hitos. Consúltalos desde el menú principal."
     },
     "certificates": {
       "name": "Certificados",
-      "body": "¡Acumulaste tu primera hora de certificado! Gasta horas en la tienda de Certificados en mejoras permanentes que se mantienen en cada partida. Acumulas más horas al superar niveles."
+      "body": "¡Primera hora de certificado en el banco! Gasta horas en la tienda de Certificados en mejoras permanentes. Bancarás más al superar niveles."
     },
     "loadouts": {
       "name": "Equipamientos",
-      "body": "¡Completaste el juego! A partir de ahora, cada partida empieza con una selección de equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más."
+      "body": "¡Te pasaste el juego! Ahora cada partida empieza con un reparto de carga: una maldición unida a una bendición. Gana con cargas distintas para desbloquear más."
     },
     "panicShockwave": {
       "name": "Boton de panico",
-      "body": "Venciste al primer jefe! A partir de ahora, cada mapa empieza con una Onda de choque gratis. Uselo para dispersar las bolas y ponerlas en movimiento cuando se vuelvan muy lentas. Los cofres aun pueden darte mas."
+      "body": "¡Primer jefe vencido! Ahora cada mapa empieza con una Onda de Choque gratis: dispárala para dispersar las bolas cuando se frenen. Los cofres pueden dar más."
     }
   },
   "hallOfFame": {
@@ -1689,19 +1704,19 @@
     "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",
     "pickup": {
       "title": "Ficha de mejora",
-      "body": "Enciérrala en un bolsillo al atrapar una bola y la reclamas. Capturarla sin un encierro la desperdicia."
+      "body": "Encierra una bola en un hueco que contenga esto para reclamarlo. Capturado sin encierro, se pierde."
     },
     "chestLoot": {
       "title": "Botín",
-      "body": "Cae de un cofre destrozado y muestra lo que ganaste. La recompensa ya es tuya, no hay que recogerla."
+      "body": "Lo soltó un cofre roto y muestra lo que ganaste. Ya es tuyo."
     },
     "dormantBall": {
       "title": "Bola dormida",
-      "body": "Aún no está en juego y las vallas la atraviesan. Pasa una valla por su terminal para despertarla. No puede encerrarse mientras duerme."
+      "body": "Aún no está en juego; las vallas la atraviesan. Pasa una valla por su terminal para despertarla. Dormida no se puede encerrar."
     },
     "ball": {
       "title": "Bola",
-      "body": "Enciérrala en un bolsillo pequeño y sellado. Los encierros son el dinero; despejar espacio vacío paga muy poco."
+      "body": "Váyala en un hueco pequeño y sellado para encerrarla. Los encierros son donde está el dinero."
     },
     "terminal": {
       "title": "Terminal del circuito",
@@ -1717,11 +1732,11 @@
     },
     "breakable": {
       "title": "Bloque rompible",
-      "body": "Aguanta varios golpes y se agrieta al debilitarse. Romperlo reabre el espacio que ocupa."
+      "body": "Aguanta unos golpes antes de romperse y se agrieta al debilitarse. Romperlo reabre el espacio de debajo."
     },
     "mirror": {
       "title": "Espejo",
-      "body": "Rebota las bolas en ángulos bruscos y hace su trayectoria impredecible. La bola negra puede romperlo."
+      "body": "Rebota las bolas en ángulos cerrados, así que su ruta es difícil de leer. La bola negra puede romperlo."
     },
     "mover": {
       "title": "Bloque móvil",
@@ -1729,24 +1744,24 @@
     },
     "phasing": {
       "title": "Bloque intermitente",
-      "body": "Aparece y desaparece por ciclos. Sólido cuando se ve, atravesable cuando no. Una valla trazada mientras no está se cortará al volver."
+      "body": "Aparece y desaparece en ciclo. Sólido cuando se ve, atravesable cuando no. Una valla trazada a través mientras no está se corta al volver."
     },
     "deformable": {
       "title": "Bloque acolchado",
-      "body": "Nunca se rompe. Cada golpe lo abolla y le quita un 3% de velocidad a la bola, así que es el freno del tablero para una bola demasiado rápida. Las abolladuras se quedan, así que su cara muestra cuánto tráfico ha aguantado."
+      "body": "Nunca se rompe. Cada golpe lo abolla y quita un 3% a la bola, así que frena lo que se volvió demasiado rápido. Las abolladuras se quedan."
     },
     "obstacle": {
       "title": "Obstáculo",
-      "body": "Sólido. Las bolas rebotan y las vallas se detienen contra él, lo que lo hace buen anclaje para un bolsillo."
+      "body": "Sólido. Las bolas rebotan y las vallas se detienen contra él: buen anclaje para un hueco."
     },
     "area": {
       "title": "Zona marcada",
-      "body": "Encierra una bola con esta zona capturada y pagará un multiplicador. En algunos mapas es la única forma de ganar."
+      "body": "Encierra una bola dentro de esta zona para un multiplicador. En algunos mapas es la única forma de ganar."
     }
   },
   "gameMessages": {
-    "breakableAnchor": "Una valla no puede anclarse en algo rompible. Rompelo primero, o lleva el corte hasta un muro solido.",
-    "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
+    "breakableAnchor": "Una valla no puede anclarse en un rompible. Rómpelo primero, o corta hasta pared sólida.",
+    "fenceLimit": "Ya trazas todas las vallas que puedes a la vez. Espera a que una termine, o mejora.",
     "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
     "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla.",
     "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas.",

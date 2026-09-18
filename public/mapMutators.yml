@@ -30,7 +30,7 @@ mutators:
   - id: crunch
     name: Crunch Time
     description: Everything speeds up with every ball you lock.
-    clarify: Each ball you lock this map ramps ball and obstacle speed a little more, up to a cap. Locking pays overtime, but raises the tempo. Lock decisively.
+    clarify: Each lock speeds up balls and obstacles a little more, up to a cap. Locking pays, but raises the tempo.
     behavior: crunch
     weight: 3
     params:
@@ -41,7 +41,7 @@ mutators:
   - id: overclock
     name: Overclock
     description: The whole board runs hot. Balls and movers are faster all map.
-    clarify: A flat speed boost for the entire map, from the first second. No ramp, just less time to think.
+    clarify: A flat speed boost for the whole map, from the first second.
     behavior: overclock
     weight: 2
     params:
@@ -56,7 +56,7 @@ mutators:
   - id: steady_gravity
     name: Downtime
     description: Everything falls, and it keeps falling.
-    clarify: "A constant pull downward, and things really fall: a ball picks up speed on the way down and sheds it on the way up. They gather along the floor and keep bouncing off it. Fence where the fall is taking them, not where they are."
+    clarify: "A constant pull down, and balls really fall: faster on the way down, slower up. They gather on the floor and keep bouncing. Fence where they are going."
     behavior: gravity
     weight: 0
     minLevel: 14
@@ -90,7 +90,7 @@ mutators:
   - id: tipping
     name: Standup
     description: The room turns a quarter every ten seconds, and down goes with it.
-    clarify: The pull never stops, it just changes which wall it points at, a quarter turn at a time. Nothing you have already fenced is at risk. What the turn takes from you is your plan, so read where the balls are going next, not where they are.
+    clarify: The pull turns a quarter every ten seconds. Finished fences are safe; your plan is not. Read where the balls go next.
     behavior: gravity
     weight: 0
     minLevel: 15
@@ -108,7 +108,7 @@ mutators:
   - id: gravity_well
     name: Technical Gravity
     description: Everything is pulled one way, and the way keeps changing.
-    clarify: A direction of pull rotates through the map with quiet stretches between. Balls arc toward it and pile along that edge, but they never slow down, so they keep bouncing. Fence where the pull is taking them, not where they are.
+    clarify: The pull rotates around the map with quiet stretches between. Balls arc toward it and pile up on that edge without slowing. Fence where they are going.
     behavior: gravity
     weight: 2
     minLevel: 14

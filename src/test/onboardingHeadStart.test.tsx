@@ -171,6 +171,6 @@ describe("the Specs panel now confirms it landed", () => {
   it("reads as inactive, not merely absent, when nobody owns it", () => {
     render(<ModifierBreakdown activeModifiers={modsWith(0)} />);
     expect(screen.getByText("Head Start")).toBeTruthy();
-    expect(screen.getByText(/No head start owned/)).toBeTruthy();
+    expect(screen.getByText(/No head start/)).toBeTruthy();
   });
 });
