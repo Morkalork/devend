@@ -285,10 +285,37 @@ export function gateTargets<T extends { state: string; isBoss?: boolean }>(
  * with none, mean the paint is not telling us - and not knowing is never a
  * reason to end someone's map.
  */
+/**
+ * Grid cells that are REMOVED because a reveal has not been broken yet.
+ *
+ * A breakable with `reveals` carves its area out of the board at init and hands
+ * it back the moment it breaks (destructibles.ts, completeBreakable). Until
+ * then those cells are REMOVED exactly like claimed ground, and to a reader of
+ * the grid alone they are indistinguishable from it. They are not the same
+ * thing: claimed ground is gone for good, and a curtain is a door the map
+ * expects to be opened. Level 8 keeps its whole var zone behind one.
+ */
+export function sealedPendingCells(
+  destructibles: ReadonlyArray<{ destroyed: boolean; sealedCells?: number[] }>,
+): Set<number> {
+  const out = new Set<number>();
+  for (const d of destructibles) {
+    if (d.destroyed || !d.sealedCells) {
+      continue;
+    }
+    for (const idx of d.sealedCells) {
+      out.add(idx);
+    }
+  }
+  return out;
+}
+
 export function anyGateTargetCanReach(
   grid: SpaceGrid,
   balls: ReadonlyArray<{ state: string; isBoss?: boolean; position: { x: number; y: number } }>,
   areas: ColoredArea[],
+  /** Cells behind a reveal that has not broken yet (sealedPendingCells). */
+  pending: ReadonlySet<number> = new Set(),
 ): boolean {
   if (areas.length === 0) return true;          // no zone to be cut off from
   const targets = gateTargets(balls);
@@ -299,7 +326,18 @@ export function anyGateTargetCanReach(
   const owners = new Set<string>();
   let activeZoneCells = 0;
   for (const idx of areaCellIndices(grid, areas)) {
-    if (grid.cells[idx] !== CellState.ACTIVE) continue;
+    if (grid.cells[idx] !== CellState.ACTIVE) {
+      // Behind an unbroken reveal: not open yet, and not gone. The map has
+      // not shown this ground, so it cannot have been lost. Keep playing.
+      //
+      // Level 8's var zone sits entirely behind its curtain, so on the
+      // un-rotated deal every zone cell read as claimed on the first frame,
+      // the map failed before the player had touched it, and the retry did
+      // the same: the failure overlay, dismissed, remounted straight into the
+      // failure overlay.
+      if (pending.has(idx)) return true;
+      continue;
+    }
     activeZoneCells++;
     const rid = grid.cellRegionIds[idx];
     if (rid !== null) owners.add(rid);

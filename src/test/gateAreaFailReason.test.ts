@@ -85,6 +85,9 @@ function harness(lives = 3) {
 function lockEveryBall(game: CanvasGameState): void {
   game.balls = game.balls.map(b => ({ ...b, state: "won", speed: 0 })) as typeof game.balls;
   game.lockedBallsCount = game.balls.length;
+  // A ball only locks behind a completed fence, and the stranding checks wait
+  // for the first one (a map cannot be stranded by a cut nobody has made).
+  game.wallCount = 1;
 }
 
 const endOf = (game: CanvasGameState, lvl: LevelConfig) => {

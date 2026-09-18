@@ -30,7 +30,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CellState, type SpaceGrid } from "@/lib/spaceGrid";
 import {
-  anyGateTargetCanReach, gateTargets, areaCellIndices,
+  anyGateTargetCanReach, gateTargets, areaCellIndices, sealedPendingCells,
 } from "@/lib/coloredAreas";
 import type { ColoredArea } from "@/types/level";
 
@@ -132,6 +132,43 @@ describe("claimed ground", () => {
   });
 });
 
+describe("ground behind an unbroken reveal", () => {
+  /**
+   * Level 8's whole var zone sits behind its curtain: every zone cell starts
+   * REMOVED, exactly like claimed ground, and is handed back when the curtain
+   * breaks. Reading it as claimed failed the map on its first frame, and the
+   * retry remounted into the same first frame: the failure overlay, dismissed,
+   * straight back into the failure overlay.
+   */
+  const sealed = () => {
+    const grid = board();
+    const cells = areaCellIndices(grid, [ZONE]);
+    for (const idx of cells) grid.cells[idx] = CellState.REMOVED;
+    return { grid, cells };
+  };
+
+  it("is not claimed: the map keeps going until the curtain opens", () => {
+    const { grid, cells } = sealed();
+    expect(anyGateTargetCanReach(grid, [IN_LEFT], [ZONE], new Set(cells))).toBe(true);
+  });
+
+  it("is claimed once the curtain is gone and the cells stayed removed", () => {
+    // The same board read without the pending set is the claimed-ground case
+    // above; the reveal is what made the difference, and only while unbroken.
+    const { grid } = sealed();
+    expect(anyGateTargetCanReach(grid, [IN_RIGHT], [ZONE], new Set())).toBe(false);
+  });
+
+  it("collects the cells of unbroken reveals only", () => {
+    const pending = sealedPendingCells([
+      { destroyed: false, sealedCells: [1, 2, 3] },
+      { destroyed: true, sealedCells: [4, 5] },        // already opened
+      { destroyed: false },                              // an ordinary breakable
+    ]);
+    expect([...pending].sort()).toEqual([1, 2, 3]);
+  });
+});
+
 describe("every uncertainty keeps the map alive", () => {
   it("says nothing when the zone's cells have no painted owner", () => {
     // Open ground the paint has no opinion about. Believing it would end a map
@@ -175,13 +212,14 @@ describe("a boss map", () => {
 describe("the wiring", () => {
   it("is the guard the win check actually runs", () => {
     const src = readFileSync(resolve(process.cwd(), "src/lib/physics/applyCut.ts"), "utf8");
-    // Zones read off the LEVEL, the same place the clause being tested came
-    // from. The runtime copy is assigned by the canvas and not by initGame, so
-    // sourcing from it made "no zones" mean "keep playing" - the guard turning
-    // itself off, which is how this landed as a green test suite and a broken
-    // guard the first time.
+    // Zones read off the GAME: the level's rectangles turned into this deal by
+    // initGame, which is what every lock is credited against. This pin used to
+    // demand `level.coloredAreas` on the argument that the runtime copy was
+    // assigned by the canvas; the authored rectangle is simply the wrong place
+    // on three deals in four, and holding it here is what let a green suite
+    // ship a guard that ended level 8 on an ordinary cut (gateZoneDeal.test.ts).
     expect(src).toMatch(
-      /if \(!anyGateTargetCanReach\(game\.spaceGrid, game\.balls, gateAreas\(level\.coloredAreas \?\? \[\]\)\)\)/);
+      /anyGateTargetCanReach\(game\.spaceGrid, game\.balls,\s*gateAreas\(game\.coloredAreas \?\? \[\]\), sealedPendingCells\(game\.destructibles\)\)/);
     expect(src, "the alive-only guard is back in the win check")
       .not.toMatch(/anyGateTargetInPlay\(game\.balls\)/);
   });

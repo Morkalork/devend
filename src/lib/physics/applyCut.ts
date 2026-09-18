@@ -41,7 +41,7 @@ import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
-import { anyGateTargetCanReach, gateAreas } from "@/lib/coloredAreas";
+import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost } from "@/lib/physics/smashReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -621,8 +621,18 @@ export function evaluateWinConditions(
   // the clear was told "The zone can no longer be reached" about a zone they
   // had already reached. The truthful reason there is the lock-out below, and
   // this is the same guard the smash check right after it already applies.
+  //
+  // ONLY ONCE THE PLAYER HAS CUT. Both stranding checks below (this one and the
+  // buried objective) describe what a fence did to the board, so before the
+  // first fence exists there is nothing for them to be true about. Their
+  // failure is also the one that loops: a map failing on a board property at
+  // frame one costs a life, shows the overlay, and the retry remounts into the
+  // same first frame and fails again, and again, until the lives are gone.
+  // Level 8 did exactly that (see below). A wrong guard can still cost one
+  // map after this; it can no longer eat a run without the player touching it.
+  const playerHasCut = game.wallCount > 0;
   const areaClause = spec.require.find(c => c.kind === "area");
-  if (areaClause && !evaluateWinCondition(areaClause, snap).met) {
+  if (playerHasCut && areaClause && !evaluateWinCondition(areaClause, snap).met) {
     // Dormant and frozen targets count as live - a dormant ball has not entered
     // play yet, a frozen one will thaw. See gateTargets for why the old
     // `speed > 0` test made a gate-area circuit map lose on its first frame.
@@ -635,13 +645,23 @@ export function evaluateWinConditions(
     // true and useless. anyGateTargetCanReach asks the question that was
     // actually being decided.
     //
-    // The zones come from the LEVEL, which is where resolveWinSpec got the
-    // clause being tested one line up. `game.coloredAreas` is the runtime copy
-    // and carries the same rectangles, but it is assigned by the canvas rather
-    // than by initGame - so reading it here would make the guard depend on
-    // something the clause does not, and "no zones" quietly means "keep
-    // playing", which is the guard switching itself off.
-    if (!anyGateTargetCanReach(game.spaceGrid, game.balls, gateAreas(level.coloredAreas ?? []))) {
+    // THE ZONES COME FROM THE GAME, NOT THE LEVEL. From level 4 up a map is
+    // dealt in one of four rotations, and `game.coloredAreas` is the level's
+    // zones turned into that deal by initGame - the same rectangles every
+    // lock is credited against. An earlier version read `level.coloredAreas`,
+    // the authored rectangles, on the argument that the runtime copy was
+    // assigned by the canvas; it is, and it is also what the harness carries,
+    // and the authored rectangle is simply the wrong place on three deals in
+    // four. Reported from level 8: one ordinary cut, nowhere near the zone,
+    // and "the zone can no longer be reached" - because the un-turned
+    // rectangle sat on the floor that cut had just claimed.
+    //
+    // Cells still behind an unbroken reveal are handed in as pending: they
+    // are REMOVED on the grid like claimed ground, and they are not claimed
+    // ground. Level 8's whole zone is behind its curtain.
+    const reachable = anyGateTargetCanReach(game.spaceGrid, game.balls,
+      gateAreas(game.coloredAreas ?? []), sealedPendingCells(game.destructibles));
+    if (!reachable) {
       // No target left that could still reach the zone. Nothing on the board
       // shows this - the map simply becomes unwinnable - so it has to be said.
       //
@@ -671,7 +691,7 @@ export function evaluateWinConditions(
   // reason is the lock-out below - the slab is unreachable because nothing is
   // moving, not because of where the fences went - and reporting the slab
   // would blame the last cut for a decision made several cuts earlier.
-  if (!isWinMet(spec, snap) && countBallsInPlay(game.balls) > 0
+  if (playerHasCut && !isWinMet(spec, snap) && countBallsInPlay(game.balls) > 0
       && smashRequirementLost(game, spec)) {
     failMapCostingALife(
       game, level, levelNumber, activeModifiers, callbacks,

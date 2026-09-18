@@ -87,6 +87,9 @@ it("carries the new kind in the exhaustive list", () => {
 
 /** Claim every cell in the slab's strike ring: the fence went round it. */
 function buryTheSlab(game: CanvasGameState): number {
+  // The burying fence is a completed cut, and the stranding checks wait for
+  // the first one (a map cannot be stranded by a cut nobody has made).
+  game.wallCount = 1;
   const grid = game.spaceGrid!;
   const d = game.destructibles!.find(x => x.kind === "breakable")!;
   let claimed = 0;
