@@ -100,6 +100,10 @@ export function useScreenNavigation() {
     setCurrentScreen('upgradeAtlas');
   }, []);
 
+  const goToPairLoopback = useCallback(() => {
+    setCurrentScreen('pairLoopback');
+  }, []);
+
   const goToAchievements = useCallback(() => {
     setCurrentScreen('achievements');
   }, []);
@@ -139,5 +143,6 @@ export function useScreenNavigation() {
     goToMapBuilder,
     goToAnimationTest,
     goToUpgradeAtlas,
+    goToPairLoopback,
   };
 }

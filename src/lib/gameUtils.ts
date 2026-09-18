@@ -46,6 +46,16 @@ export function resetMapIds(): void {
   wallIdCounter = 0;
 }
 
+/** Where the id counters stand. See simState.ts for why this is readable. */
+export function exportMapIdCounters(): { region: number; wall: number } {
+  return { region: regionIdCounter, wall: wallIdCounter };
+}
+
+export function importMapIdCounters(v: { region: number; wall: number }): void {
+  regionIdCounter = v.region;
+  wallIdCounter = v.wall;
+}
+
 // ── Direction helpers ─────────────────────────────────────────────────────
 
 export function getRandomDirection(): Vector2 {

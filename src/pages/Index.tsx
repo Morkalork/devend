@@ -52,6 +52,7 @@ const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m =
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
 const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScreen').then(m => ({ default: m.UpgradeAtlasScreen })));
+const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
 
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
@@ -571,6 +572,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onMapBuilder={navigation.goToMapBuilder}
                   onAnimationTest={navigation.goToAnimationTest}
                   onUpgradeAtlas={navigation.goToUpgradeAtlas}
+                  onPairLoopback={navigation.goToPairLoopback}
                 />
               </Suspense>
             )}
@@ -587,6 +589,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {adminUnlocked && navigation.currentScreen === 'upgradeAtlas' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <UpgradeAtlasScreen onBack={navigation.goToAdmin} />
+              </Suspense>
+            )}
+            {adminUnlocked && navigation.currentScreen === 'pairLoopback' && (
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
+                <PairLoopbackPanel onBack={navigation.goToAdmin} />
               </Suspense>
             )}
           </motion.div>
