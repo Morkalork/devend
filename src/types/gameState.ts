@@ -282,6 +282,46 @@ export interface CanvasGameState {
     pointerId: number;
   } | null;
 
+  /**
+   * A mover being driven by hand right now (Control Freak, moverControl.ts).
+   *
+   * Board state for the same reason slingDrag is: the grab starts on the canvas
+   * from the very pointerdown that would otherwise have begun a cut, so there is
+   * no overlay to mount and nothing to mount it from.
+   *
+   * The pointer is written in WORLD space by the input handler and read by the
+   * physics step, which is the only thing that converts it into a position on
+   * the rail. Input stays dumb about rails; physics stays the only author of
+   * where the mover actually is.
+   */
+  moverDrag?: {
+    moverId: string;
+    pointerId: number;
+    /** Latest pointer position, world space. */
+    pointer: Vector2;
+    /**
+     * railReading at the moment of the grab, minus the rail parameter then. The
+     * drive subtracts it so the part of the mover under the finger stays under
+     * the finger, instead of the body snapping its centre to the touch point.
+     */
+    ref: number;
+    /** Drive rate ceiling as a multiple of the mover's own speed; 0 = brake only. */
+    driveMultiplier: number;
+    /** Whether this grab is allowed to derail the mover at its end stop. */
+    canDerail: boolean;
+    /** Whether releasing this grab fires a bumper snap. */
+    canBand: boolean;
+    /** ms held against the end stop, for the derail. */
+    stopHoldMs: number;
+    /** Timestamp of the last frame the hold was counting, for the renderer. */
+    derailAt: number;
+  } | null;
+
+  /** Control Freak derails left THIS map (refills to moverDerailPerMap each map). */
+  moverDerailsRemaining: number;
+  /** Control Freak bumper snaps left THIS map (refills to moverBandPerMap each map). */
+  moverBandsRemaining: number;
+
   // ── Timing / loop ──────────────────────────────────────────────────────
   lastTime: number;
   accumulator: number;

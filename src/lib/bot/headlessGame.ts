@@ -30,7 +30,7 @@ import { castRayWithReflections } from "@/lib/wallGeometry";
 import { vec2Normalize } from "@/lib/polygon";
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
-import { tickPhasing } from "@/lib/physics/phasing";
+import { collectPhasedOut, tickPhasing } from "@/lib/physics/phasing";
 import { updateBall } from "@/lib/physics/updateBall";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import {
@@ -53,7 +53,19 @@ import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifier
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 
 import { tickMapBeats } from "@/lib/physics/mapBeats";
-import { mutatorById } from "@/lib/mapMutators";
+import { creepFactor } from "@/lib/scopeCreep";
+import { abilitySpeedFactor } from "@/lib/abilityEffects";
+import { updateMoverControlFn } from "@/lib/physics/moverControl";
+import { tickCages } from "@/lib/physics/cage";
+import { clearFreeze } from "@/lib/physics/fenceStrike";
+import { updateBallEffects } from "@/lib/ballEffects";
+import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
+import { tickChains } from "@/lib/physics/chain";
+import { updatePickups } from "@/lib/pickups";
+import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
+import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
+import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMutators";
+import { getRunRng, getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { normaliseGravity } from "@/lib/physics/gravity";
 /**
  * A clock the bot controls.
@@ -204,13 +216,58 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
 }
 
 /** Deal a map, ready to be played. */
+/**
+ * What weather to deal this board.
+ *
+ * `"roll"` is what a PLAYER gets: the boss's forced mutator, then the map's own
+ * pin, then the procedural roll off the run seed - the same expression, in the
+ * same order, that GameScreen uses. runBot asks for it, because a sweep has to
+ * play the map the player gets.
+ *
+ * Anything else holds the weather still: an id pins one, `null` forces a bare
+ * board, and OMITTING IT - the default - also gives a bare board.
+ *
+ * That default is deliberate and was learned the hard way. When the roll landed
+ * it was unconditional, and `getRunRng` falls through to `Math.random` when no
+ * run seed is armed. Eighteen test files build a board with createBotGame
+ * directly and arm no seed, so overnight every one of them at level 11 or above
+ * started drawing a random mutator per run - crunch, overclock or none - and
+ * the suite grew a flake that took a full-suite repeat to catch. A board dealt
+ * by a mechanic test is not a sweep and never wanted weather; a sweep asks for
+ * it by name.
+ */
+export type BotWeather = "roll" | string | null;
+
 export function createBotGame(
   level: LevelConfig, levelNumber: number, modifiers: GameModifiers = plainModifiers(),
+  opts: { mutator?: BotWeather } = {},
 ): BotGame {
-  // The map's own pull comes from the mutator it PINS. The procedural roll is
-  // deliberately not consulted: an unpinned mutator is a random visitor, and a
-  // sweep should report on the map rather than on the weather.
-  const pinnedMutator = level.mutator ? mutatorById(level.mutator) : null;
+  // A DEAL WITH NO RUN SEED IS A DEAL NOBODY CAN REPRODUCE, so arm one.
+  //
+  // createInitialGameData takes the map rotation, the variety draw and the ball
+  // types from getRunRng, which falls through to Math.random when no seed is
+  // armed. Eighteen test files deal a board here and arm nothing, so each of
+  // them was getting one of FOUR ROTATIONS at random, every run - which is the
+  // flake class the guidelines already describe as having cost two separate
+  // ~1-in-4 CI failures, still live, and measured again here at 0,1,2,3 across
+  // thirty deals of level 12.
+  //
+  // The rule those guidelines give ("any test that asserts a coordinate must
+  // pin the deal") is sound and has been quietly disobeyed eighteen times,
+  // which is the usual fate of a rule that has to be remembered. So the harness
+  // pins it instead: no seed armed means this one, and a caller that wants a
+  // particular deal arms its own beforehand exactly as runBot does.
+  //
+  // Deliberately NOT restored afterwards. The seed has to stay armed for the
+  // rest of the deal (createInitialGameData reads it below) and for the play
+  // that follows, and a test process that ends up deterministic is the outcome
+  // being asked for rather than a side effect to tidy away.
+  if (getRunSeedText() === null) setRunSeedText("bot-unseeded-deal");
+
+  const mutator = opts.mutator === "roll"
+    ? mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
+      ?? selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`))
+    : mutatorById(opts.mutator ?? undefined);
 
   const events: BotEvents = {
     levelComplete: false, gameOver: false, livesLost: 0,
@@ -223,23 +280,18 @@ export function createBotGame(
   const game = {
     ...runtimeDefaults(),
     creepConfig: DEFAULT_SCOPE_CREEP,
-    // The map's own pull, from the mutator it PINS. Left null for every map
-    // that pins none, which is all but one of them.
-    //
-    // Read here rather than left to the caller for the same reason tickMapBeats
-    // is ticked in stepBot: a sweep has to play the map the player gets. A
-    // gravity map measured without gravity is not a pessimistic reading of that
-    // map, it is a reading of a different map - and the procedural roll is
-    // deliberately NOT consulted, because an unpinned mutator is a visitor the
-    // sweep should not be reporting on.
+    // The map's own pull. Read here rather than left to the caller for the same
+    // reason tickMapBeats is ticked in stepBot: a sweep has to play the map the
+    // player gets. A gravity map measured without gravity is not a pessimistic
+    // reading of that map, it is a reading of a different map.
     // BOTH fields, and that is not belt and braces: `mapGravityActive` reads
     // `mapMutator.behavior === "gravity" && !!gravityConfig`, so a config
     // without the mutator beside it is inert. Set separately they went out of
     // step immediately - the sweep reported a gravity map whose cut counts were
     // identical to the same map with no gravity, which is what gave it away.
-    mapMutator: pinnedMutator,
-    gravityConfig: pinnedMutator?.behavior === "gravity"
-      ? normaliseGravity(pinnedMutator.gravity)
+    mapMutator: mutator,
+    gravityConfig: mutator?.behavior === "gravity"
+      ? normaliseGravity(mutator.gravity)
       : null,
     objective: null,
     ...createInitialGameData(level, levelNumber, modifiers),
@@ -269,6 +321,27 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   advanceClock(dt);
   game.activePlaySeconds = (game.activePlaySeconds ?? 0) + dt;
 
+  // SCOPE CREEP, and everything else that multiplies ball displacement.
+  //
+  // The single worst divergence this file has had, and the only one that was
+  // flattering rather than harsh. `game.creepFactor` multiplies `moveDt` inside
+  // updateBall; runtimeDefaults seeds it to 1 and nothing here ever moved it,
+  // so EVERY sweep this harness has ever produced was played on a board whose
+  // balls never sped up. Scope Creep is +8% a step from 30s, five steps, so a
+  // 60-second run finished 24% slower than the real thing and a long one 40%.
+  //
+  // It also silently disabled two other mechanics that ride the same field: a
+  // beat's `speedSpike` (level 17's crunch beat adds 15% and did nothing here)
+  // and the crunch/overclock mutators' whole effect on BALLS. The movers felt
+  // those mutators, because updateMovers reads mutatorSpeedFactor directly -
+  // which is exactly why forcing a mutator appeared to change a sweep and hid
+  // the fact that the balls were ignoring it.
+  const creepF = creepFactor(game.activePlaySeconds, game.creepConfig);
+  game.creepFactor = creepF
+    * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount)
+    * abilitySpeedFactor(game)
+    * (game.beatSpeedMult || 1);
+
   for (const ball of game.balls) {
     if (!ball.prevPosition) ball.prevPosition = { x: ball.position.x, y: ball.position.y };
     ball.prevPosition.x = ball.position.x;
@@ -288,10 +361,51 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   tickMapBeats(game, level, levelNumber);
 
   applyLodestones(game.balls, dt, game.frozenBallId ?? null);
+  // Control Freak decides whether the map gets to move a mover at all this
+  // step, so it runs before the movers do. Inert for the bot, which never
+  // grabs anything - and here because a pass the harness silently omits is how
+  // this file has gone wrong four times now.
+  updateMoverControlFn(dt, game, performance.now());
   updateMoversFn(dt, game);
   tickPhasing(game, game.activePlaySeconds);
+  // Cages own their mouths' phase, so this runs beside tickPhasing rather than
+  // inside it. Without it a caged ball's mouth never opens and the cage is a
+  // solid box: the mechanic ships on one retired map, so no sweep has ever
+  // exercised it.
+  tickCages(game, performance.now());
 
-  for (const ball of game.balls) updateBall(ball, dt, game);
+  // A freeze that outlived its window. In the browser this is a safety net for
+  // a setTimeout that got cleared by another path; headlessly there are no
+  // timeouts at all, so it is the ONLY thing that ever lifts a freeze - without
+  // it a tap-frozen ball stays frozen for the rest of the run.
+  if (game.frozenBallId && game.frozenBallReleaseAt !== null
+      && performance.now() > game.frozenBallReleaseAt) {
+    const stranded = game.balls.find(b => b.id === game.frozenBallId);
+    if (stranded) {
+      if (game.frozenBallVelocity) stranded.velocity = { ...game.frozenBallVelocity };
+      if (game.frozenBallPosition) stranded.position = { ...game.frozenBallPosition };
+    }
+    clearFreeze(game);
+  }
+
+  // One set for every ball this step, as the loop does it, rather than
+  // recomputed inside updateBall per ball.
+  const phasedOut = collectPhasedOut(game);
+  for (const ball of game.balls) {
+    // A frozen ball does not move and its effects still run. updateBall owns
+    // the held-ball decision, but the FROZEN one is the loop's, and skipping it
+    // here is what keeps a freeze meaning the same thing in both places.
+    if (game.frozenBallId && ball.id === game.frozenBallId) {
+      if (game.frozenBallPosition) ball.position = { ...game.frozenBallPosition };
+      updateBallEffects(ball.effects, dt, performance.now());
+      continue;
+    }
+    updateBall(ball, dt, game, phasedOut);
+  }
+  // Ball against ball. Missing since this harness was written, so every
+  // multi-ball map - which is most of them past level 3 - was swept with the
+  // balls passing through one another.
+  handleBallCollisions(game);
 
   // A fired barrel latches armed once its last ball has left, and until then
   // the input layer refuses every cut. The bot honours the same rule (runBot
@@ -310,6 +424,9 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   for (const ev of collectDeliveries(game)) {
     if (ev.satisfied) releaseReservedSpace(game, ev.box);
   }
+  // Chains solve AFTER ball physics so the rope reads the balls' new positions,
+  // tethers or snags them, and sweeps fences.
+  tickChains(game, dt, performance.now());
 
   // Growing fences, then the cuts any of them just finished. applyCutFn
   // removes the wall itself, so the list is snapshotted exactly as the loop
@@ -340,6 +457,31 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // this must change with it. Charges first, because a blast pushes its target
   // onto pendingDestroys and shredded fences onto pendingWallBreaks and both
   // should land the same frame.
+  // ── The once-per-frame passes ──────────────────────────────────────────
+  //
+  // The browser runs these outside the fixed-step loop, once per rAF frame.
+  // The bot steps exactly one PHYSICS_STEP per call, so one call IS one frame
+  // here - the same cadence a 120Hz device gives the real game - and that is
+  // what makes running them at this level faithful rather than double-rated.
+  //
+  // Pickups expire and roll on the active-play clock.
+  updatePickups(game);
+  // The `spawnTimedBalls` bundle, all four of it. Missing entirely, and the
+  // boss three are why: a BOSS MAP HAS NEVER BEEN PLAYABLE BY THIS HARNESS.
+  // The boss never changed phase, never spat, and never wiped the player's
+  // fences, so every boss sweep measured a stationary lump with a big health
+  // bar. Rainbow balls never spat their timed adds either, which is the whole
+  // reason a rainbow ball exists.
+  tickRainbowSpawns(game, levelNumber);
+  tickBossPhases(game, level, levelNumber);
+  tickBossSpit(game, level);
+  tickBossFenceWipe(game, level, () => {
+    // The browser clears the fences through a renderer-aware helper; headlessly
+    // the board state IS the whole game, so dropping the growing walls is the
+    // same act with nothing to repaint.
+    game.activeWalls.length = 0;
+  });
+
   tickCharges(game, {});
   // The drill chews here too. The bot never selects one, so this is dead on
   // every sweep today - and it is here anyway, because the harness exists to

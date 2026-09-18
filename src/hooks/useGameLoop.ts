@@ -27,6 +27,7 @@ import { tickDrills } from "@/lib/physics/drill";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
+import { updateMoverControlFn } from "@/lib/physics/moverControl";
 import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
@@ -400,6 +401,9 @@ export function createGameLoop(
       // order the list happens to be in.
       applyLodestones(game.balls, PHYSICS_STEP, game.frozenBallId ?? null);
 
+      // Control Freak first: what the player is doing to a mover decides
+      // whether the map gets to move it at all this step.
+      updateMoverControlFn(PHYSICS_STEP, game, timestamp);
       updateMoversFn(PHYSICS_STEP, game);
       // Phasing obstacles (#64): update solid<->intangible BEFORE ball physics so
       // the phased-out collision skips this step read the current phase.

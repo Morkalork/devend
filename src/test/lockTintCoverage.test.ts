@@ -35,7 +35,7 @@ const MODS: GameModifiers = {
   shopRestockCount: 0, extraAbilityOffers: 0, freeAbilityPerStore: 0, extraContinues: 0, extraCertificateHours: 0,
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0, fastestBallSlowPercent: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, disablePushYourLuck: 0, ballFreezeDuration: 0,
-  freezeUsesPerMap: 0, slowOneBallFactor: 0, freezePickups: 0, ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
+  freezeUsesPerMap: 0, moverBrake: 0, moverDrive: 0, moverDerailPerMap: 0, moverBandPerMap: 0, slowOneBallFactor: 0, freezePickups: 0, ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
   overtimePerLock: 0, overtimePerSuperiorLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0, gravityLockBonus: 0, gravityBendMultiplier: 1,
   simultaneousLockBonus: 0, freezeNoCooldown: 0, fenceSpeedPerFence: 0, fenceSpeedPerMapCleared: 0, underParInstantFence: 0, winRequiresSplitLocks: 0,
   bankedSlowPerStep: 0, spaceBonusMultiplier: 1, overtimeCapBonus: 0, freeCheapestOffer: 0,

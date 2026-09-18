@@ -11,6 +11,8 @@ import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, BOUNCER_HOURS_PER_BUMP, ty
 import { applyDent, deformReady, deformSlow, dentDepth, type DeformState } from "@/lib/physics/deformable";
 import { portalAt, portalExit, portalArrival, portalReady } from "@/lib/physics/portal";
 import { wellStep } from "@/lib/physics/gravityWells";
+import { moverBoundCentre, moverBoundRadius } from "@/lib/physics/moverState";
+import { moverSurfaceVelocity } from "@/lib/physics/moverControl";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
 import { steerHeading, steerWorldOf } from "@/lib/physics/steering";
 import { tickTurnTimer } from "@/lib/physics/turnTimer";
@@ -679,21 +681,41 @@ export function updateBall(
   // place each step, so full polygon collision on every step is wasted work
   // unless the ball is actually near the mover.
   for (const mover of game.movers) {
-    if (mover.boundRadius === undefined) {
-      mover.boundRadius = mover.shape === "circle"
-        ? (mover.radius ?? 0)
-        : Math.hypot(mover.width ?? 0, mover.height ?? 0) / 2;
-    }
-    const mdx = (mover.axis === "horizontal" ? mover.homeX + mover.offset : mover.homeX) - ball.position.x;
-    const mdy = (mover.axis === "vertical" ? mover.homeY + mover.offset : mover.homeY) - ball.position.y;
-    const reach = mover.boundRadius + ball.radius + 2;
+    // Radius and centre come from moverState rather than being recomputed here:
+    // a rotor pivots about `home` and its arm can reach far outside the bar's
+    // own half-diagonal, so the obvious formula misses the fastest-moving part
+    // of it entirely. See moverBoundRadius.
+    const centre = moverBoundCentre(mover);
+    const mdx = centre.x - ball.position.x;
+    const mdy = centre.y - ball.position.y;
+    const reach = moverBoundRadius(mover) + ball.radius + 2;
     if (mdx * mdx + mdy * mdy > reach * reach) continue;
 
-    const result = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, mover.polygon);
+    // Resolved in the MOVER'S frame, then put back into the board's.
+    //
+    // A mover has been static geometry at the instant of contact for the whole
+    // life of the game: the ball bounced off its surface at its own speed and
+    // took nothing from the motion. That is fine for a patrol (and five shipped
+    // maps are balanced on it) but useless for a bumper, whose entire job is to
+    // hit a ball harder than the ball arrived. Subtracting the surface velocity
+    // before the reflection and adding it back after is the whole of the fix,
+    // and it needs no contact normal.
+    //
+    // moverSurfaceVelocity is exactly zero unless a player is driving this
+    // mover, which makes the arithmetic below an exact no-op for every patrol
+    // on every existing map. That is deliberate: the new physics is confined to
+    // the new feature, so nothing already authored moves by a hair.
+    const surface = moverSurfaceVelocity(mover, ball.position.x, ball.position.y);
+    const approach = surface.x === 0 && surface.y === 0
+      ? ball.velocity
+      : { x: ball.velocity.x - surface.x, y: ball.velocity.y - surface.y };
+    const result = resolveBallPolygonCollisionOutward(ball.position, approach, ball.radius, mover.polygon);
     if (result.collided) {
       const vBefore = ball.velocity;
       ball.position = result.position;
-      ball.velocity = result.velocity;
+      ball.velocity = surface.x === 0 && surface.y === 0
+        ? result.velocity
+        : { x: result.velocity.x + surface.x, y: result.velocity.y + surface.y };
       surfaceHit = true;
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));

@@ -326,8 +326,11 @@ export function renderCriteria(t: TFunction, criteria: Criterion[]): string {
   for (const group of CRITERION_GROUPS) {
     const lines = criteria.filter(c => c.group === group);
     if (lines.length === 0) continue;
-    // "all of these" is only true when there is more than one, and a heading
-    // that says it over a single bullet reads as though something is missing.
+    // Two keys for the required group, because a heading that spells out "all
+    // of these" over a single bullet reads as though something is missing. In
+    // English both now say "Goals:", which needs no such hedge - the split is
+    // kept because it is the locale's to make, and a language that wants the
+    // plural to differ can still say so.
     const heading = group === "required" && lines.length > 1
       ? t("winConditions.groupRequiredAll")
       : t(`winConditions.group.${group}`);

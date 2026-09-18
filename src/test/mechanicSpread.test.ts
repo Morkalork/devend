@@ -123,6 +123,14 @@ describe("no mechanic is introduced and then dropped", () => {
     // BRITTLE joined on 17, where it MEETS as breakable's compressed sibling
     // (the first Demolition map, MAP_DESIGN_GUIDELINES.md section 11). It
     // comes off when the archetype's Use beat lands.
+    //
+    // ROTOR CAME OFF, on 18, and it is the one name here that arrived and left
+    // inside two commits. It joined on 17 (and came off the unused list below
+    // to do it: the engine had carried a full rotor implementation with no map
+    // authoring one, which is the worst of both lists), then 18 "On Call" built
+    // a windmill room around a second one. That is the rhythm this list exists
+    // to measure - a name is on it for exactly one map - happening on purpose
+    // for once rather than being noticed afterwards.
     expect(singles.map(w => w.key).sort())
       .toEqual(["brittle", "deformable", "gravityWell", "mirror", "mutator", "phasing"]);
   });
@@ -146,12 +154,13 @@ describe("no mechanic is introduced and then dropped", () => {
     // on level 11; BUMPER the second, on 12; MIRROR the third, on 13; PINNED
     // MUTATOR the fourth, on 14; GRAVITY WELL the fifth, on 15; DEFORMABLE and
     // PHASING the sixth and seventh, both on 16, which Meets one and
-    // compresses the other.
+    // compresses the other; ROTOR the eighth, on 17, where the Demolition
+    // map's wiper sweeps the airspace over the barrel.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
       .toEqual([
         "Ball gate", "Cage", "Charge", "Data stream",
         "Delivery box", "Fence ground", "Latch",
-        "One-way", "Portal", "Rotor",
+        "One-way", "Portal",
         "Terminals", "Thread lock", "WIP limit",
       ]);
   });

@@ -234,6 +234,25 @@ export interface GameModifiers {
   // The freeze fires automatically on a fixed interval (AUTO_FREEZE_INTERVAL_MS).
   autoFreezeDuration: number;
 
+  // ── Control Freak: taking a moving object by the hand ─────────────────
+  // A mover's position is one scalar on an authored rail, so these dials decide
+  // what a player may do to that scalar and never where the object may go: the
+  // rail is the same interval the automatic patrol already sweeps, which is why
+  // none of this can put a mover through a wall. See moverControl.ts.
+  //
+  // Additive (sum) — Junior: >0 = a press holds a mover still (the brake).
+  moverBrake: number;
+  // Additive (sum) — Senior: drive-rate ceiling as a multiple of the mover's own
+  // speed (0 = cannot drive it, 1 = up to exactly as fast as it patrols).
+  moverDrive: number;
+  // Additive (sum) — Principal A: derails allowed per map, refilled each map
+  // (0 = upgrade not owned). Held against its own end stop, the mover breaks.
+  moverDerailPerMap: number;
+  // Additive (sum) — Principal B: bumper snaps allowed per map, refilled each
+  // map (0 = upgrade not owned). Pull it off rest, let go, it snaps back and
+  // throws what it hits.
+  moverBandPerMap: number;
+
   // Additive (sum) — Benchmarking (#45): 0 = off, >0 = show the map-highscore
   // progress bar in the HUD (a second bar under the capture readout). Granted
   // by the `benchmarking` certificate, so once earned it is on for every run.
@@ -404,6 +423,10 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   freezePickups: 0,
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
+  moverBrake: 0,
+  moverDrive: 0,
+  moverDerailPerMap: 0,
+  moverBandPerMap: 0,
   showHighscoreProgress: 0,
 };
 

@@ -26,6 +26,7 @@ import {
 } from "@/lib/gameConstants";
 import { fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { loadedSlingAt, slingShape, fireSlingFence } from "@/lib/physics/slingFence";
+import { moverAt, railParam, railReading, releaseMover } from "@/lib/physics/moverControl";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -157,6 +158,17 @@ export function useGameInput(
         return;
       }
 
+      // Second-finger cancel for a mover grab, with the meaning the second
+      // finger already has everywhere else. A grab that cannot be called off is
+      // a grab nobody dares start on a bumper.
+      if (game.moverDrag && e.pointerId !== game.moverDrag.pointerId) {
+        const held = game.movers?.find(m => m.id === game.moverDrag!.moverId);
+        game.moverDrag = null;
+        if (held) held.driveRate = 0;
+        if (navigator.vibrate) navigator.vibrate(30);
+        return;
+      }
+
       // Second-finger cancel: if a swipe is in progress and a different pointer comes down, cancel it
       if (game.swipeStart && game.swipePointerId !== null && e.pointerId !== game.swipePointerId) {
         game.swipeStart       = null;
@@ -257,6 +269,43 @@ export function useGameInput(
         }
       }
 
+      // A press on a MOVER takes hold of it (Control Freak). Placed here for
+      // the same reason the sling grab is: this press would be refused by the
+      // cut path anyway (a press on an obstacle is "wall in the way"), so the
+      // gesture replaces a refusal rather than competing with a cut, and the
+      // one control the game has stays the fence.
+      //
+      // The finger is the cost. While it is on a mover it is not drawing, which
+      // is why the brake needs no ration of its own: holding a hazard still and
+      // carving the board are the same hand.
+      {
+        const grabbing = activeModifiers.moverBrake > 0 || activeModifiers.moverDrive > 0;
+        const c = getCanvasCoords(e);
+        if (grabbing && isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
+          const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+          const mover = moverAt(game, w.x, w.y);
+          if (mover) {
+            clearHold();
+            game.moverDrag = {
+              moverId: mover.id,
+              pointerId: e.pointerId,
+              pointer: w,
+              // The grip stays under the finger: subtract what the rail read at
+              // the moment of the grab, so the body does not snap its centre to
+              // the touch point.
+              ref: railReading(mover, w.x, w.y) - railParam(mover),
+              driveMultiplier: activeModifiers.moverDrive,
+              canDerail: activeModifiers.moverDerailPerMap > 0 && game.moverDerailsRemaining > 0,
+              canBand: activeModifiers.moverBandPerMap > 0 && game.moverBandsRemaining > 0,
+              stopHoldMs: 0,
+              derailAt: 0,
+            };
+            if (navigator.vibrate) navigator.vibrate(15);
+            return;
+          }
+        }
+      }
+
       // At the concurrent-fence limit, no new cut can start.
       if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) {
         onMessageRef?.current?.("fenceLimit");
@@ -316,6 +365,15 @@ export function useGameInput(
         if (dx * dx + dy * dy > HOLD_MOVE_SLOP * HOLD_MOVE_SLOP) clearHold();
       }
 
+      // A mover under the finger. Only the pointer is written here: turning it
+      // into a position on the rail is the physics step's job, so input stays
+      // ignorant of rails and physics stays the only author of where a mover is.
+      if (game.moverDrag && e.pointerId === game.moverDrag.pointerId) {
+        const c = getCanvasCoords(e);
+        game.moverDrag.pointer = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+        return;
+      }
+
       // A Redeploy fence being pulled back. Unclamped to the board on purpose:
       // the pull is a direction and a length, and clamping it at the edge would
       // silently cap the power of a throw aimed from near the frame.
@@ -352,6 +410,19 @@ export function useGameInput(
       // Releasing before the hold fires cancels the star explainer (a star press
       // never set swipeStart, so the cut block below is a no-op for it).
       clearHold();
+
+      // Let go of a mover. With a bumper fitted this fires the snap; without
+      // one the mover simply stays where it was parked and resumes patrolling
+      // from there.
+      if (game.moverDrag) {
+        const held = game.movers?.find(m => m.id === game.moverDrag!.moverId);
+        if (held) {
+          if (releaseMover(game, held) && navigator.vibrate) navigator.vibrate(25);
+        } else {
+          game.moverDrag = null;
+        }
+        return;
+      }
 
       // Let go of a Redeploy fence: it snaps forward and throws.
       const drag = game.slingDrag;

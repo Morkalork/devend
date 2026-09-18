@@ -3,6 +3,7 @@ import { updateMoverPolygon } from "./moverState";
 import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { moverSpeedAt } from "./moverEase";
 import { moverFenceDrag, type FrictionContact } from "./moverFriction";
+import { isPlayerControlled } from "./moverControl";
 
 export function updateMoversFn(dt: number, game: CanvasGameState): void {
   // Crunch/Overclock mutators (issue #54) speed movers too ("everything speeds
@@ -16,6 +17,11 @@ export function updateMoversFn(dt: number, game: CanvasGameState): void {
   const floor = game.moverFenceDragFloor ?? 1;
 
   for (const mover of game.movers) {
+    // A mover the player has hold of, or one snapping home as a bumper, is not
+    // the map's to move this step. Two authors writing one rail parameter in
+    // the same step is how you get a hazard that stutters under the finger.
+    if (isPlayerControlled(game, mover)) continue;
+
     // ROTORS turn; shuttles slide. Handled first and separately rather than
     // folded into the offset maths below, because almost nothing carries over:
     // `range` is an arc rather than a distance, the easing curve is calibrated

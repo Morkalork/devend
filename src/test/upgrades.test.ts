@@ -54,6 +54,7 @@ const EXPECTED_ROOTS = [
   "severance_package_junior",
   "code_review",
   "cold_boot",
+  "control_freak_junior",
   "moonshot",
   "benefits_package_junior",
   "free_fall_junior",

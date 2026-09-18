@@ -91,11 +91,26 @@ describe("every line lands in a named list", () => {
  *
  * The first cut of this shipped a group headed "COSTS A LIFE" over the bullet
  * "Finish within 60s.", which says that finishing on time is what costs you the
- * life. The grouping was right and the wording was not: the heading supplies the
- * consequence, so a bullet phrased as an INSTRUCTION composes into a lie.
+ * life. The grouping was right and the wording was not: a bullet phrased as an
+ * INSTRUCTION composes into a lie under any heading that introduces conditions.
  *
  * These read the real English rather than the key echo, because the bug was
  * entirely in the words.
+ *
+ * ── The headings are now plain labels ──────────────────────────────────────
+ *
+ * At the map owner's direction the three headings a player can actually reach
+ * became "Goals:", "Optional:" and "Failure:", replacing "MUST DO, ALL OF
+ * THESE", "OPTIONAL" and "LOSE A LIFE IF".
+ *
+ * That trades something away and it is worth being honest about which thing:
+ * the old fail heading NAMED THE PENALTY, and no bullet is allowed to restate
+ * it (the test below still holds that line), so the modal no longer says
+ * anywhere that the cost is a life. The player learns it from the lives counter
+ * and from the explainer they get the first time one is docked. The composition
+ * rule survives intact - "Failure: the 60s clock runs out" reads exactly as
+ * "Lose a life if: the 60s clock runs out" did - so what is tested below is
+ * still the thing that broke, minus the sentence that is no longer there.
  */
 describe("a heading and its bullets read as one sentence", () => {
   /** The winConditions block of a locale file: flat strings plus the group map. */
@@ -105,10 +120,21 @@ describe("a heading and its bullets read as one sentence", () => {
   ).winConditions as WinLocale;
   const EN = locale("en");
 
-  it("heads the fail list with the consequence", () => {
-    // Stated once, where it cannot attach to the wrong half.
-    expect(EN.group.fail, "the fail heading stopped naming the consequence")
-      .toMatch(/lose a life/i);
+  it("heads each list with a label, not with an instruction", () => {
+    // A heading that is itself a thing to DO ("Finish the map by...") would put
+    // the composition bug back in the other half of the sentence.
+    for (const g of ["required", "optional", "fail"] as const) {
+      expect(EN.group[g], `winConditions.group.${g} reads as an instruction`)
+        .not.toMatch(/^(Finish|Trap|Lock|Clear|Smash|Deliver|Light|Harvest|Land|Do)\b/);
+      expect(EN.group[g], `winConditions.group.${g} is empty`).toBeTruthy();
+    }
+  });
+
+  it("does not put the life cost back into a heading either", () => {
+    // The penalty is deliberately absent from this block now (see the note
+    // above). If it comes back it belongs in ONE place, and this test is where
+    // that decision should be re-made rather than drifting in.
+    expect(EN.group.fail).not.toMatch(/lose a life|costs a life/i);
   });
 
   /**
@@ -127,9 +153,9 @@ describe("a heading and its bullets read as one sentence", () => {
     "areaFailBoss_one", "areaFailBoss_other",
   ];
 
-  it("states the life cost in the heading and NOWHERE else", () => {
-    // A bullet that repeats it is a bullet that was written to stand alone,
-    // which is how the instruction phrasing got in.
+  it("keeps the life cost out of the bullets", () => {
+    // A bullet that names the penalty is a bullet that was written to stand
+    // alone, which is how the instruction phrasing got in the first time.
     for (const key of FAIL_KEYS) {
       expect(EN[key], `winConditions.${key} restates the penalty`)
         .not.toMatch(/lose a life|costs a life/i);

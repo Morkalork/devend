@@ -27,6 +27,9 @@ import { snapContour, hairline, type Pt } from "./pixelGrid";
 import { dashedLine } from "./dashedLine";
 import { BEARING_VECTOR, type ObstacleRule } from "@/lib/physics/obstacleRules";
 import { getBallType } from "@/lib/ballTypes";
+import { moverBoundRadius } from "@/lib/physics/moverState";
+import { derailProgress, railPull } from "@/lib/physics/moverControl";
+import { bandStretch } from "@/lib/rubberBand";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -178,6 +181,91 @@ export class EntityLayer {
     for (const m of game.movers) {
       this.drawRail(m, w2s, scale);
       this.drawMover(m, light, w2s, scale);
+      this.drawGrip(game, m, w2s, scale);
+    }
+  }
+
+  /**
+   * What the player's hand is doing to a mover (Control Freak).
+   *
+   * Three states, all drawn on the rims layer so they read as something ON the
+   * object rather than part of it:
+   *
+   *   HELD     a bright ring round the hub or the body. Without it a brake is
+   *            indistinguishable from a mover that happens to have paused, and
+   *            "did not fire" and "does not work" look the same from outside.
+   *   DERAIL   an arc filling as the hold against the end stop counts down. A
+   *            destructive verb with no windup is a verb people trip over.
+   *   BUMPER   the stretch, drawn from rest to where the mover has been pulled,
+   *            thickening with the stored power, so how hard the throw will be
+   *            is visible BEFORE the commitment rather than after it.
+   */
+  private drawGrip(
+    game: CanvasGameState,
+    m: CanvasGameState["movers"][number],
+    w2s: W2S,
+    scale: number,
+  ): void {
+    const drag = game.moverDrag;
+    const held = drag?.moverId === m.id;
+    if (!held && !m.snap) return;
+
+    const anchor = m.motion === "rotate"
+      ? w2s(m.homeX, m.homeY)
+      : w2s(
+          m.homeX + (m.axis === "horizontal" ? m.offset : 0),
+          m.homeY + (m.axis === "vertical" ? m.offset : 0),
+        );
+    const r = Math.max(6, moverBoundRadius(m) * scale * 0.28);
+
+    // The stretch, while a bumper is loaded and pulled off rest.
+    const pull = railPull(m);
+    const stretch = bandStretch(pull);
+    if (stretch > 0 && (m.snap || drag?.canBand)) {
+      const rest = m.motion === "rotate"
+        ? anchor
+        : w2s(m.homeX, m.homeY);
+      const here = m.motion === "rotate"
+        ? w2s(
+            m.homeX + Math.cos((m.angle ?? 0) - Math.PI / 2) * moverBoundRadius(m),
+            m.homeY + Math.sin((m.angle ?? 0) - Math.PI / 2) * moverBoundRadius(m),
+          )
+        : w2s(
+            m.homeX + (m.axis === "horizontal" ? m.offset : 0),
+            m.homeY + (m.axis === "vertical" ? m.offset : 0),
+          );
+      this.rims
+        .moveTo(rest.x, rest.y)
+        .lineTo(here.x, here.y)
+        .stroke({
+          width: Math.max(1.5, (1.5 + 3.5 * stretch) * scale),
+          color: 0x7fe3d4,
+          alpha: 0.35 + 0.5 * stretch,
+        });
+    }
+
+    // The grip itself.
+    this.rims
+      .circle(anchor.x, anchor.y, r)
+      .stroke({ width: Math.max(1.5, 2 * scale), color: 0xffe8b0, alpha: m.snap ? 0.5 : 0.85 });
+
+    // The derail windup.
+    const derail = derailProgress(drag ?? null);
+    if (held && derail > 0) {
+      const ring = r + Math.max(3, 5 * scale);
+      const steps = Math.max(6, Math.round(28 * derail));
+      for (let i = 0; i < steps; i++) {
+        const a0 = -Math.PI / 2 + (i / 28) * Math.PI * 2;
+        const a1 = -Math.PI / 2 + ((i + 0.7) / 28) * Math.PI * 2;
+        this.rims
+          .moveTo(anchor.x + Math.cos(a0) * ring, anchor.y + Math.sin(a0) * ring)
+          .lineTo(anchor.x + Math.cos(a1) * ring, anchor.y + Math.sin(a1) * ring);
+      }
+      this.rims.stroke({
+        width: Math.max(2, 3 * scale),
+        color: derail >= 1 ? 0xffffff : 0xff8f6a,
+        alpha: 0.55 + 0.45 * derail,
+      });
     }
   }
 

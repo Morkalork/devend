@@ -1016,6 +1016,7 @@ export function triggerLevelComplete(
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,
+        zoneCount: (game.coloredAreas ?? []).length,
         multiLockBonus: game.multiLockBonus, multiLockBest: game.multiLockBest,
         lockedByType: { ...(game.lockedByType ?? {}) },
         smashCount: game.breakablesSmashed ?? 0,

@@ -104,8 +104,23 @@ export function descopeRefusal(t: DescopeTarget | null): DescopeRefusal | null {
 export function descopeAt(game: CanvasGameState, x: number, y: number): boolean {
   const target = findDescopeTarget(game, x, y);
   if (descopeRefusal(target) !== null) return false;
-  const t = target as DescopeTarget;
+  return queueDescope(game, target as DescopeTarget);
+}
 
+/**
+ * Queue an already-resolved target for removal.
+ *
+ * Split out of descopeAt so a caller that already KNOWS what it is removing does
+ * not have to find it again by tapping its own coordinates. Control Freak's
+ * derail is exactly that caller: the player has been holding a specific mover
+ * against its end stop for half a second, so there is nothing to hit-test, and
+ * routing it through a point lookup would let it resolve to something else that
+ * happened to overlap.
+ *
+ * Refusals are the CALLER's to check (descopeRefusal), because what may be
+ * removed is a rule about the ability rather than about the queue.
+ */
+export function queueDescope(game: CanvasGameState, t: DescopeTarget): boolean {
   let dest = t.destructible;
   if (!dest) {
     // A plain wall has no destructible, because nothing could ever break it.

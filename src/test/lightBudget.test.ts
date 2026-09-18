@@ -26,7 +26,7 @@ import { WallLayer } from "@/lib/rendering/sleek/wallLayer";
 import { lightScope } from "@/lib/rendering/sleek/light";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { registerWallImpact, updateWallImpacts, clearWallImpacts } from "@/lib/wallImpactEffects";
-import { setLightLook, resetLightLookCache, DEFAULT_LIGHT_LOOK } from "@/lib/lightLook";
+import { setLightLook, resetLightLookCache, DEFAULT_LIGHT_LOOK, type LightLook } from "@/lib/lightLook";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Ball } from "@/types/game";
 
@@ -175,23 +175,51 @@ describe("the light budget on a board heavier than any that ships", () => {
   });
 
   it("costs a fraction of the frame it already spent, not a multiple of it", () => {
-    // The one timing check, measured OFF then ON in ONE process so it compares
-    // like with like on whatever machine is running it. Loose on purpose: it
-    // is here to catch an order-of-magnitude mistake, not to police percents.
+    // The one timing check in a file whose whole argument is that timing checks
+    // measure the runner. It survives on two conditions, and it broke both.
+    //
+    // It took ONE sample of each side, back to back, and asked for on < off x 2.
+    // Both halves are wall-clock on a box running 380 test files in parallel,
+    // so the two sides routinely get different slices of a contended CPU, and a
+    // GC landing in one of them decides the result. Measured in the wild at
+    // on=1057ms against off=422ms - a 2.5x "regression" on code that had not
+    // changed - and it failed three times in a day before it was pinned down.
+    //
+    // Two fixes, both about the measurement rather than the budget:
+    //
+    //   ALTERNATE AND TAKE THE MINIMUM. Interleaving puts both sides through
+    //   the same weather instead of giving them consecutive minutes of it, and
+    //   the fastest of several samples is the one that was least interrupted -
+    //   which is as close to the real cost as a shared box can report.
+    //
+    //   ASK AN ORDER-OF-MAGNITUDE QUESTION. The header already said this test
+    //   is "here to catch an order-of-magnitude mistake, not to police
+    //   percents", and then policed a factor of two. 4x is still far under the
+    //   emitter-per-wall class of error this exists to catch (which is 10x and
+    //   up), and far enough above the noise to stop reporting it as a finding.
+    //
+    // The COUNT guards in this file are the real budget and are exact. This one
+    // only has to notice the day the light pass stops being a fraction of the
+    // frame and starts being a multiple of it.
     const { step } = rig();
-    const run = () => {
-      for (let i = 0; i < 40; i++) step(performance.now());
+    const sample = (look: LightLook) => {
+      setLightLook(look);
+      for (let i = 0; i < 40; i++) step(performance.now());   // warm
       const t0 = performance.now();
       for (let i = 0; i < 120; i++) step(performance.now());
       return performance.now() - t0;
     };
-    setLightLook({
+    const dark: LightLook = {
       bounce: 0, reflected: 0, caustic: 0, flash: 0, tell: 0, ballShadows: 0,
       reaction: 0, motes: 0,
-    });
-    const off = run();
-    setLightLook(DEFAULT_LIGHT_LOOK);
-    const on = run();
-    expect(on).toBeLessThan(off * 2);
+    };
+
+    let off = Infinity, on = Infinity;
+    for (let i = 0; i < 5; i++) {
+      off = Math.min(off, sample(dark));
+      on = Math.min(on, sample(DEFAULT_LIGHT_LOOK));
+    }
+    expect(on, `light pass ${on.toFixed(1)}ms against ${off.toFixed(1)}ms dark`)
+      .toBeLessThan(off * 4);
   });
 });
