@@ -756,6 +756,18 @@ export function GameCanvas({
    */
   const activeModifiersRef = useRef(activeModifiers);
   activeModifiersRef.current = activeModifiers;
+
+  /**
+   * The pair's lockstep session, behind a ref.
+   *
+   * The loop is built once per map and has to read the session FRESH each
+   * frame anyway (it changes when a pair connects, drops, or the players carry
+   * on alone). Going through a ref says that, and keeps the accessor's
+   * identity out of the loop's dependency list, where a new one every render
+   * would rebuild the loop mid-map.
+   */
+  const lockstepRef = useRef(lockstep);
+  lockstepRef.current = lockstep;
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
   const gameRef = useRef<CanvasGameState>({
@@ -1543,7 +1555,7 @@ export function GameCanvas({
       // Everything a player command needs to reach React. Rebuilt per frame so
       // it always carries the CURRENT modifiers rather than the ones the loop
       // was constructed with.
-      lockstep: lockstep ?? (() => null),
+      lockstep: () => lockstepRef.current?.() ?? null,
       commandDeps: () => ({
         modifiers: activeModifiersRef.current,
         setCutCount,
@@ -1799,7 +1811,7 @@ export function GameCanvas({
           // Who drew what, for a pair. Counted off the fences themselves so
           // it cannot drift from the board; undefined solo, which hides the
           // row rather than showing everything under one name.
-          fencesByPlayer: fencesByPlayer(game, !!lockstep?.()),
+          fencesByPlayer: fencesByPlayer(game, !!lockstepRef.current?.()),
           expectedCuts: level.expectedCuts, basePoints: level.points,
           zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
           multipliedBase: breakdown.multipliedBase,
