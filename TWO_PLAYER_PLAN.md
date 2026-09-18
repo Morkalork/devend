@@ -169,9 +169,14 @@ The recipe, and where "no server" bends:
 
 2. **Signalling by QR code.** WebRTC needs the two sides to swap one offer and
    one answer before the channel exists, and that swap is what a signalling
-   server normally carries. Without one, the offer travels as a QR code. Host
-   shows a code, guest scans it, guest shows a code, host scans it, connected.
-   Two scans, once per session. Gather all ICE candidates before making the
+   server normally carries. Without one, the offer travels as a QR code.
+   **[CHANGED]** The first draft had two in-app scans (host shows, guest scans,
+   guest shows, host scans). After review the base flow is one QR that is a
+   plain **link**: the guest scans it with the phone's own camera app, the
+   link opens the game, and the answer travels back through a two-minute
+   mailbox on the existing server (step 5). No in-app scanner on either side,
+   nothing to install for the guest. The two-scan flow survives as the fully
+   offline fallback. Either way, gather all ICE candidates before making the
    code (no trickle: wait for `icegatheringstatechange` to reach `complete`),
    and strip the SDP to what the other side needs to rebuild it (ice-ufrag,
    ice-pwd, DTLS fingerprint, the host candidates: about 200 bytes instead of
@@ -196,8 +201,8 @@ The recipe, and where "no server" bends:
    and offers a re-pair, and the host's run continues single-player if the
    guest does not come back.
 
-**The optional relay.** Two QR scans is the truly server-free version and it is
-fine for a mode two friends set up once an evening. A room code ("tell your
+**The relay, now the mailbox.** **[CHANGED]** Two QR scans is the truly
+server-free version and remains the offline fallback. A room code ("tell your
 friend: FENCE") is nicer, and needs somewhere to park an offer for a minute.
 The production server already exists (`server/index.js`, zero dependencies,
 serves the app and the map-save endpoint); a `/api/room` that stores an offer
@@ -344,23 +349,60 @@ one ball on one side, and a readout of tick, hash agreement and resyncs. This
 is the control that makes the mode testable on one desktop with no phones,
 and it is the rig the tests run against.
 
-### Step 5 - Pairing  (M)
+### Step 5 - Pairing  (M)  **[CHANGED]**
 
-A `pairLobby` screen off the welcome menu ("Pair Programming"). Host taps
-Host, gets a QR; guest taps Join, scans, shows the answer QR; host scans;
-both see "Connected" with the other phone's name and a latency figure. The
-minimal-SDP encode/decode from section 3; `BarcodeDetector` with `jsQR`
-fallback; `CAMERA` in the Android manifest and the Capacitor permission
-prompt. A ten-second connect timeout that names the hotspot fix.
+The flow the author asked for, and the quickest one to build:
 
-The spike that gates the step: two real phones, one home Wi-Fi, one hotspot,
-one office network. Confirm the mDNS-vs-camera-permission behaviour on the
-WebView. If the WebView does not expose real addresses with the permission,
-the fallback is a candidate filter that keeps only IPv4 host candidates and a
-note that the mode needs mDNS-capable Wi-Fi or a hotspot.
+1. Player one taps **2-Player** on the welcome screen and gets a big QR code
+   with **Cancel** under it. Nothing else on the screen.
+2. Player two points the phone's camera app at it. The QR is a link to the
+   deployed game with the pairing data in the URL fragment:
+   `https://<host>/#pair=v1.<room>.<offer>`. The fragment never reaches any
+   server. The link opens the web build in the browser, so the second player
+   needs nothing installed; if the Android app is installed and the link is
+   registered as an App Link, it opens there instead. Same code either way.
+3. The guest's app reads the fragment, creates its peer connection, answers
+   the offer and posts the answer to `PUT /api/room/<room>` on the server
+   the game was loaded from. The host has been polling
+   `GET /api/room/<room>` since it showed the code; it gets the answer,
+   completes the connection, and both screens go to the map. Cancel stops the
+   polling, closes the connection and deletes the room.
+
+Why the answer needs a mailbox at all: the offer can ride in the link because
+the guest is about to read the link. The answer has to reach the host, and
+the host is not going to read anything the guest shows unless it scans it.
+So the choice is one in-app scan on the host, or a mailbox. The mailbox wins
+on the author's constraint that the guest only has to visit the link. The
+mailbox is thirty lines on `server/index.js` (zero dependencies, already
+serving the app and the map-save endpoint): an in-memory map from room to
+answer, two-minute expiry, nothing persisted, nothing about the game in it.
+It carries one message per pairing and is never on the path during play.
+In the dev server the same route is a sibling of the `/api/map` plugin, which
+is what makes the desk rig below work without a camera.
+
+Offline fallback: when the mailbox is unreachable (no internet at the table),
+the host screen offers **Scan their code instead**, the guest shows the
+answer as a QR, and the host scans it once with the in-app scanner
+(`BarcodeDetector`, `jsQR` fallback; `CAMERA` in the Android manifest). This
+is the only place the camera appears, and only on the host.
+
+The offer in the link is the minimal-SDP form from section 3: ice-ufrag,
+ice-pwd, DTLS fingerprint, host candidates, around 200 bytes before base64.
+The whole URL stays under 400 characters, a QR that scans first time from a
+phone screen at arm's length. The room id is eight random characters from the
+host; the guest's answer is accepted only once and only within two minutes.
+
+Cross-build versions: the host may be the Android app and the guest the web
+build, and the web build is always the newest. The hello message carries a
+protocol version and the app's build hash; a mismatch shows "update the app"
+on the older side rather than a desync ten seconds into the map.
+
+A ten-second connect timeout after the answer arrives means the two phones
+cannot reach each other on this network; the message names the hotspot fix.
 
 Admin: the lobby is reachable from the Playground with the `MemoryTransport`
-substituted, so the whole flow can be walked without a camera.
+substituted, so the whole flow can be walked without a second device; the
+Playground also shows the decoded contents of the QR the host is displaying.
 
 ### The desk rig: a phone and a computer  (part of steps 4 and 5)
 
@@ -389,14 +431,12 @@ What differs, and how each is handled:
    **cannot scan a QR** from that URL. `RTCPeerConnection` itself is not gated
    on a secure context in Chrome, so the data channel works; only the camera
    is out.
-2. **So the dev server does the signalling.** The `/api/map` dev-only plugin in
-   `vite.config.ts` gets a sibling, `/api/room`: park an offer under a code,
-   fetch it, post the answer, poll. The computer hosts, the phone taps Join
-   and types the four-letter code (or the lobby offers "join the host on this
-   server", since there is exactly one). No camera on either side. This is
-   step 8's relay written early in dev-only form, so step 8 is later a move
-   into `server/index.js` rather than new code. In the lobby it appears as a
-   third pairing option, shown only when the origin has the endpoint.
+2. **So the dev server carries the answer.** The `/api/map` dev-only plugin in
+   `vite.config.ts` gets a sibling, `/api/room`, the same mailbox step 5 puts
+   on the production server. The computer hosts and shows its QR; the phone,
+   already on the dev server's origin, scans it with the camera app and the
+   link opens there. No camera permission on either side, since the guest
+   never scans in-app.
 3. **The camera on the computer.** With the staging site on both devices (an
    https origin, so both are secure contexts), the QR flow works at the desk
    too: the phone scans the laptop screen, the laptop webcam scans the phone.
@@ -430,6 +470,58 @@ Certificate Hours: both phones bank the run's hours, each into their own
 meta-progression, and the run is flagged `pair` in the records so it lands on
 its own ladder (`HIGHSCORES.md` keeps solo records honest by not mixing them).
 
+### Step 6b - Saving and continuing a pair run  (S)
+
+The run save already exists and already has the right shape. `useRunSave`
+writes a `RunSave` at the start of every map (level sequence by id, level
+index, score, upgrades, lives, continues, carries, door and capstone by id,
+block stats) and the welcome screen offers Continue while one exists. Resume
+granularity is one map, which is also the only granularity a pair can resume
+at: the mid-map state is the thing this plan deliberately never serialises.
+
+A pair save is that record plus a pair identity, kept on **both** phones under
+its own key (`jezzball_pair_run_v1`), separate from the solo save so a pair
+run never overwrites a solo one:
+
+```
+pair: { pairId, runId, seed, devices: [idA, idB], savedAt }
+run:  RunSave          // the same object the solo Continue uses
+```
+
+**Binding it to the hardware.** A web page has no hardware identity (no
+IMEI, no MAC, nothing that survives a data clear), so the binding is a
+**device id** the app mints once and keeps: in the Android app,
+`Device.getId()` from `@capacitor/device`, which is Android's own per-app
+identifier and survives reinstalls of the same signed app; on the web, a
+random UUID in `localStorage` (with `navigator.storage.persist()` requested,
+so the browser is less inclined to evict it). Both phones send their device
+id in the hello. `pairId` is a hash of the two ids in sorted order, so it is
+the same pair whichever phone hosts next time. This is identity, not
+security: nothing about a couch co-op run needs protecting from a forged id.
+
+**On reconnect.** Both phones look up `pairId`. If either has a pair save,
+it says so in the hello, with `runId` and `currentLevelIndex`. Then:
+
+- both have the same `runId`: offer **Continue** and **New Game**. Highest
+  `currentLevelIndex` wins if they differ (one phone was closed before the
+  other's save landed); the phone that has it sends the full record.
+- only one has it: that copy is offered. This is why the save is kept on both
+  phones: one player clearing site data, or coming back on a different phone
+  with the app reinstalled, does not lose the run.
+- neither has one: straight to a new game.
+
+The host decides; the guest sees the same two buttons greyed with "waiting
+for your partner". Continue arms `coop:<seed>` and resumes at the start of
+the saved map through the same path the solo Continue uses. New Game deletes
+the pair save on both. The save is written by both phones at every map start
+from the `runState` message in step 6, so the two copies cannot disagree by
+more than one map. A pair run that ends (win, retire, loss) clears it, as the
+solo save does.
+
+The welcome screen's 2-Player button shows "Resume with <partner>" when a pair
+save exists locally, so the choice is visible before anyone scans anything;
+the actual decision still waits for the connection, because it needs both.
+
 ### Step 7 - Presentation  (M)
 
 Second accent colour for the guest's fences and swipe trail; the other
@@ -439,13 +531,12 @@ as the one per-player stat; the disconnect pause with re-pair or continue
 solo; sound plays for both players' events on both phones (it already would,
 since both sims run every event).
 
-### Step 8 - Room codes  (S, optional)
+### Step 8 - Room codes  (folded into step 5)  **[CHANGED]**
 
-The dev-only `/api/room` from the desk rig, moved onto the production server.
-`/api/room` on `server/index.js`: POST an offer, get a four-letter code; the
-guest GETs it and POSTs an answer; the host polls for the answer. Entries
-expire after two minutes and hold nothing but SDP. The lobby offers "Show
-code" next to "Show QR". Gameplay traffic never touches it.
+The mailbox that step 8 proposed as an optional extra is the base flow's
+return path, so it lands in step 5. What remains optional is a typed code as
+an alternative to the QR ("tell your friend: FENCE"), which is the same
+endpoint keyed by a shorter id.
 
 ---
 
@@ -498,10 +589,11 @@ sessions.
 | 2 seed the six | S | yes: seeded runs become fully seeded |
 | 3 commands | L | yes: replays and reproducible bug reports |
 | 4 lockstep + loopback rig | L | no |
-| 5 pairing | M | no |
+| 5 pairing, with the answer mailbox | M | no |
 | 6 run sync | M | no |
+| 6b pair save and continue | S | no |
 | 7 presentation | M | no |
-| 8 room codes | S | no |
+| 8 typed room codes | S, optional | no |
 
 ---
 
