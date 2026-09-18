@@ -14,6 +14,8 @@ import type { GameCallbacks } from "./gameCallbacks";
 import { pointToSegmentDistance } from "@/lib/polygon";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { playBossChargeSound } from "@/lib/gameAudio";
+import { simNow } from "@/lib/simClock";
+import { runStream } from "@/lib/runRng";
 
 /** The line segments of a just-committed cut (both grown halves of the fence). */
 function cutSegments(wall: GrowingWall): Array<[Vector2, Vector2]> {
@@ -65,11 +67,13 @@ function wakeBall(game: CanvasGameState, ballId: string): boolean {
 
   ball.state = "active";
   // Spring to life from its sleeping spot in a random direction at base speed.
-  const ang = Math.random() * Math.PI * 2;
+  // Seeded per ball: the direction a woken ball leaves in decides where it
+  // ends up, so it has to be the same direction on both devices.
+  const ang = runStream(`wake:${ballId}`)() * Math.PI * 2;
   const sp = ball.baseSpeed || ball.topSpeed || 200;
   ball.velocity = { x: Math.cos(ang) * sp, y: Math.sin(ang) * sp };
   ball.speed = sp;
-  ball.spawnTime = performance.now();
+  ball.spawnTime = simNow();
   // Re-home its region id from its current position (it was stale while asleep).
   const region = findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
   if (region) ball.regionId = region.id;

@@ -19,6 +19,7 @@ import {
   registerWallImpact, updateWallImpacts, getEffectsAtPoint, clearWallImpacts,
   registerObstacleImpact, updateObstacleImpacts, obstacleBulgeAt, clearObstacleImpacts,
 } from "@/lib/wallImpactEffects";
+import { advanceSimClock, resetSimClock } from "@/lib/simClock";
 
 const A = { x: 100, y: 400 };
 const B = { x: 700, y: 400 };
@@ -37,12 +38,10 @@ const give = (p = HIT) => {
  * immediately measures nothing at all - which is how the first version of this
  * managed to assert a 0.02-unit "bulge".
  */
-let clock = 0;
-const advanceToPeak = () => { clock += 85; };
+const advanceToPeak = () => advanceSimClock(85);
 
 beforeEach(() => {
-  clock = 1000;
-  vi.spyOn(performance, "now").mockImplementation(() => clock);
+  resetSimClock();
   clearWallImpacts();
   clearObstacleImpacts();
 });

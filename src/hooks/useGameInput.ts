@@ -43,6 +43,7 @@ import type { GameMessageId } from "@/lib/gameMessages";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
+import { simNow } from "@/lib/simClock";
 
 /**
  * The board's current rotation (issue #77), recomputed rather than cached.
@@ -132,7 +133,7 @@ export function useGameInput(
     // Nearest superior-lock star under a world point, or null. Only counts stars
     // that have finished fading in (elapsed >= SUPERIOR_LOCK_DURATION).
     const superiorStarAt = (game: CanvasGameState, world: { x: number; y: number }): boolean => {
-      const now = performance.now();
+      const now = simNow();
       for (const [, flash] of game.assimilations) {
         if (!flash.superior) continue;
         if (now - flash.startTime < SUPERIOR_LOCK_DURATION) continue;
@@ -490,7 +491,7 @@ export function useGameInput(
         const hasFreezeCharge = (game.freezeCharges ?? 0) > 0;
         if (dist < BASE_SWIPE_MIN_DISTANCE && (featureFreeze || hasFreezeCharge)) {
           const tap = game.swipeStart;
-          const now = performance.now();
+          const now = simNow();
           let target: Ball | null = null;
           let bestDist = Infinity;
           for (const ball of game.balls) {
@@ -566,7 +567,7 @@ export function useGameInput(
             // arbitrary rule into "only the drill bites into slabs".
             const mayAnchor = getFenceType(game.selectedFenceTypeId).anchorOnBreakable;
             if (!mayAnchor && cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
-              game.lastDudAt = performance.now();
+              game.lastDudAt = simNow();
               // The buzz and the flash say "no" without saying why, and this is
               // the refusal the player is most likely to read as a bug: the
               // fence grows all the way and then simply is not there.
@@ -602,7 +603,7 @@ export function useGameInput(
               thickness:          WALL_THICKNESS,
               isComplete:         isInstant,
               activeRegionId:     game.swipeRegionId!,
-              startTime:          isInstant ? undefined : performance.now(),
+              startTime:          isInstant ? undefined : simNow(),
               // Read ONCE, here. Switching slots while this grows must not
               // change the fence already on its way.
               fenceTypeId:        game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
@@ -613,7 +614,7 @@ export function useGameInput(
             game.swipeTrail = {
               start:     { ...game.swipeStart },
               end:       { ...game.currentSwipePos },
-              createdAt: performance.now(),
+              createdAt: simNow(),
             };
           }
         }

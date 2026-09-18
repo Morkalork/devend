@@ -28,6 +28,7 @@
 import { CanvasGameState } from "@/types/gameState";
 import { PhasingObjectState } from "@/types/game";
 import { polygonCentroid } from "@/lib/polygon";
+import { runStream } from "@/lib/runRng";
 
 const FADE = 0.1;             // fraction of the cycle each cosmetic fade takes
 const SOLID_FRACTION = 0.55;  // fraction of the cycle the object is solid (tangible)
@@ -121,7 +122,11 @@ function emitPhaseShockwave(game: CanvasGameState, obj: PhasingObjectState): voi
     let d = Math.hypot(dx, dy);
     if (d > PHASE_SHOCKWAVE_RADIUS) continue;
     const sp = (Math.hypot(b.velocity.x, b.velocity.y) || b.baseSpeed || 100) * PHASE_SHOCKWAVE_BOOST;
-    if (d < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.hypot(dx, dy) || 1; }
+    // Same degenerate case as a charge blast, seeded for the same reason.
+    if (d < 1) {
+      const roll = runStream("phaseShock");
+      dx = roll() - 0.5; dy = roll() - 0.5; d = Math.hypot(dx, dy) || 1;
+    }
     dx /= d; dy /= d;
     b.velocity.x = dx * sp; b.velocity.y = dy * sp; b.speed = sp;
   }

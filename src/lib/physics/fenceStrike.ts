@@ -29,6 +29,7 @@ import { handleGameOverFn, handlePushFailedFn } from "./handleGameOver";
 import { RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
+import { simNow } from "@/lib/simClock";
 
 /**
  * How long a post-break freeze may last before the loop lifts it regardless.
@@ -102,7 +103,7 @@ function flashAndShake(
 /** The window where a fresh fence cannot be punished for the same mistake. */
 function recover(game: CanvasGameState, callbacks: GameCallbacks): void {
   game.isRecovering = true;
-  game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
+  game.recoveryEndTime = simNow() + RECOVERY_WINDOW_MS;
   callbacks.setIsRecovering(true);
   setTimeout(() => {
     game.isRecovering = false;
@@ -171,7 +172,7 @@ export function ballStruckFence(
   // The deadline the loop falls back on if the shake timer is cancelled by
   // something that does not know about the freeze. Generous: the timer is
   // the normal path and must be allowed to win.
-  game.frozenBallReleaseAt = performance.now() + FREEZE_MAX_MS;
+  game.frozenBallReleaseAt = simNow() + FREEZE_MAX_MS;
   ball.velocity = { x: 0, y: 0 };
 
   const unfreezeAfterShake = () => {

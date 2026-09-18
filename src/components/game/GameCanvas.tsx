@@ -136,6 +136,7 @@ import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
+import { simNow } from "@/lib/simClock";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -207,7 +208,7 @@ export interface AbilityTimer {
   kind: string;
   name: string;
   color: string;
-  endMs: number;      // performance.now() at which it expires
+  endMs: number;      // simNow() at which it expires
   durationMs: number; // total length, for the fill ratio
 }
 
@@ -541,7 +542,7 @@ export function GameCanvas({
       // (game.dissolve is nulled on completion) to now, so it dissolves in fresh
       // when the modal is dismissed.
       if (game.dissolve && game.dissolve.reverse) {
-        game.dissolve.startTime = performance.now();
+        game.dissolve.startTime = simNow();
       }
       startGameLoop(game);
     }
@@ -1178,7 +1179,7 @@ export function GameCanvas({
       // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
       // so the spawn thaw carries no re-freeze cooldown.
       if (activeModifiers.spawnFreezeSeconds > 0) {
-        const thaw = performance.now() + activeModifiers.spawnFreezeSeconds * 1000;
+        const thaw = simNow() + activeModifiers.spawnFreezeSeconds * 1000;
         for (const ball of game.balls) ball.frozenUntil = thaw;
       }
       removedSamples = [];
@@ -1378,7 +1379,7 @@ export function GameCanvas({
         cctx.drawImage(canvas, 0, 0);
         if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
       }
-      game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: performance.now(), onComplete };
+      game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: simNow(), onComplete };
       startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
@@ -1412,14 +1413,14 @@ export function GameCanvas({
         // slide are never seen. The negative-elapsed window renders nothing
         // (tiles at full scatter, alpha clamped to 0), then the assemble
         // plays in full view.
-        startTime: performance.now() + 450,
+        startTime: simNow() + 450,
         // The board has finished flying in: reveal the tutorial overlay now.
         reverse: true, onComplete: () => { setBoardMaterialized(true); startGameLoop(game); },
       };
       startGameLoop(game);
       // Fade the shell's "Loading..." overlay out just as the first tiles fly
       // in (at dissolve.startTime), so the wait is covered end to end.
-      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - performance.now()));
+      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - simNow()));
     };
 
     // Build callbacks object for extracted physics functions
@@ -1452,19 +1453,19 @@ export function GameCanvas({
       // A circuit completed and its vault opened: flash the telegraph banner.
       onCircuitComplete: (announce?: string) => {
         if (!announce) return;
-        setBeatBanner({ key: performance.now(), announce });
+        setBeatBanner({ key: simNow(), announce });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
       },
       // A Deploy Charge fuse was armed by a routed fence: flash the wind-up cue.
       onChargeArmed: () => {
-        setBeatBanner({ key: performance.now(), announce: "game.chargeArmed" });
+        setBeatBanner({ key: simNow(), announce: "game.chargeArmed" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
       },
       // A Data Stream span was harvested by a fence running along it.
       onStreamHarvested: (_hours, announce) => {
-        setBeatBanner({ key: performance.now(), announce: announce ?? "game.streamHarvested" });
+        setBeatBanner({ key: simNow(), announce: announce ?? "game.streamHarvested" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
       },
@@ -1504,7 +1505,7 @@ export function GameCanvas({
       render,
       // A Deploy Charge detonated its slab: flash the payoff banner.
       onChargeBlown: (announce?: string) => {
-        setBeatBanner({ key: performance.now(), announce: announce ?? "game.chargeBlown" });
+        setBeatBanner({ key: simNow(), announce: announce ?? "game.chargeBlown" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
       },
@@ -1515,7 +1516,7 @@ export function GameCanvas({
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
       settleLaunchers: () =>
-        dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, performance.now()),
+        dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, simNow()),
       processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,
@@ -1554,7 +1555,7 @@ export function GameCanvas({
           clearAllFences(game, { repaintRegionCanvas, setRemainingPercent, fenceColor: "#ff5b5b" }),
         );
         tickMapBeats(game, level, levelNumber, (announce, effects) => {
-          setBeatBanner({ key: performance.now(), announce, effects });
+          setBeatBanner({ key: simNow(), announce, effects });
           if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
           // Outlasts the beat's lead, so the banner is still up when the effect
           // it described actually lands.
@@ -1576,7 +1577,7 @@ export function GameCanvas({
           lastTimeTierRef.current = tier;
           const announce = TIME_TIER_ANNOUNCE[tier];
           if (announce) {
-            setBeatBanner({ key: performance.now(), announce });
+            setBeatBanner({ key: simNow(), announce });
             if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
             beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
           }
@@ -1672,7 +1673,7 @@ export function GameCanvas({
     // assignment phase - seen in the wild as two Promotion drafts in a row).
     if (game.levelComplete) return;
     game.levelComplete = true;
-    game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
+    game.levelCompleteTime = simNow(); // anchors the space bar fade-out
     // Clear the prompt so the loop reaches its levelComplete branch (it bails
     // early while pushMode is "prompt") and the prompt overlay is dismissed,
     // revealing the board for the shimmer.
@@ -1681,7 +1682,7 @@ export function GameCanvas({
     // Same celebratory shimmer as a normal clear before the overlay mounts.
     // The push-your-luck prompt halted the rAF loop (it returns without
     // rescheduling), so restart it here or the shimmer window renders no frames.
-    game.shimmerStart = performance.now();
+    game.shimmerStart = simNow();
     game.shimmerFrozen = freezeOnCompleteRef.current;
     onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
     startGameLoop(game);
@@ -1827,7 +1828,7 @@ export function GameCanvas({
   // banked charge in the session. The button is disabled at 0 charges; the
   // lockout guards a rapid double-press from firing twice off one charge.
   const handleUseAbility = useCallback((abilityId: string) => {
-    const now = performance.now();
+    const now = simNow();
     if (now - abilityLockoutRef.current < 250) return;
     const game = gameRef.current;
     // Targeted abilities (Magnet) arm on tap and wait for a board tap; re-tapping
@@ -1875,7 +1876,7 @@ export function GameCanvas({
     setArmedAbility(null);
     gameRef.current.armedAbility = null;
     if (!abilityId || !worldPos) return;
-    const fired = fireTargetedAbility(abilityId, gameRef.current, performance.now(), worldPos);
+    const fired = fireTargetedAbility(abilityId, gameRef.current, simNow(), worldPos);
     if (fired) onSpendAbility?.(abilityId);
   }, [onSpendAbility]);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
@@ -1890,7 +1891,7 @@ export function GameCanvas({
     // A band that caught nothing spends nothing. The player can see the ring of
     // what it would catch while they drag, so an empty release is a decision
     // they changed their mind about, not a miss to charge them for.
-    if (fireRubberBand(gameRef.current, shape, performance.now())) {
+    if (fireRubberBand(gameRef.current, shape, simNow())) {
       onSpendAbility?.('rubberBand');
     }
   }, [onSpendAbility]);
@@ -1910,7 +1911,7 @@ export function GameCanvas({
     (gameRef.current.chestRewardsLog ??= []).push(rewardId);
     onGrantAbility?.(rewardId);
     const def = getAbility(rewardId);
-    setChestToast({ key: performance.now(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
+    setChestToast({ key: simNow(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
     if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
     chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
   }, [onGrantAbility]);
@@ -1921,7 +1922,7 @@ export function GameCanvas({
   // windows scale by it), and let the per-frame win check pick up the change.
   const handleTapRemove = useCallback((info: { x: number; y: number; color: string }) => {
     const game = gameRef.current;
-    (game.ballPops ??= []).push({ ...info, startTime: performance.now() });
+    (game.ballPops ??= []).push({ ...info, startTime: simNow() });
     setBallCount(game.balls.length || 1);
     playFenceBreakSound();
     vibrateFenceBreak();

@@ -8,6 +8,7 @@ import {
 import { Vector2, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { runStream } from "@/lib/runRng";
+import { simNow } from "@/lib/simClock";
 
 // ── Colour helpers ────────────────────────────────────────────────────────
 
@@ -318,7 +319,7 @@ export function trajectoryBallSnapshots(
   predicted: Ball,
   autoFrozenBallId: string | null,
 ): TrajectoryBall[] {
-  const now = performance.now();
+  const now = simNow();
   const out: TrajectoryBall[] = [];
   for (const b of balls) {
     if (b === predicted || b.state !== "active") continue;

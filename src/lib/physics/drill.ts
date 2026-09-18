@@ -40,6 +40,7 @@ import { castRayWithReflections } from "@/lib/wallGeometry";
 import { getFenceType } from "@/lib/fences";
 import { registerObjectHit } from "@/lib/physics/destructibles";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
+import { simNow } from "@/lib/simClock";
 
 /**
  * How close a drill fence has to be to a slab to be eating it.
@@ -94,7 +95,7 @@ function isDrill(wall: Wall): boolean {
  */
 export function tickDrills(game: CanvasGameState, dtSeconds: number): void {
   if (dtSeconds <= 0) return;
-  const now = performance.now();
+  const now = simNow();
   for (const wall of game.walls) {
     // ONE gate, not two. An `isDrill` check here as well read as belt and
     // braces and was neither: drillDamage is 0 for every other type, so the
@@ -217,7 +218,7 @@ export function resumeDrillThrough(
     thickness: wall.thickness,
     isComplete: false,
     activeRegionId: region.id,
-    startTime: performance.now(),
+    startTime: simNow(),
     // Still a drill, so it can chain: the next slab it reaches gets eaten too.
     fenceTypeId: wall.fenceTypeId,
   };

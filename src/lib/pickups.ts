@@ -27,8 +27,9 @@ import { createBallEffectState } from "@/lib/ballEffects";
 import { getBallType } from "@/lib/ballTypes";
 import { playPickupClaimedSound } from "@/lib/gameAudio";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { getRunRng } from "@/lib/runRng";
+import { getRunRng, runStream } from "@/lib/runRng";
 import { MAX_LIVE_BALLS } from "@/lib/gameConstants";
+import { simNow } from "@/lib/simClock";
 
 /** Token placement radius in world units (spawn clearance / claim geometry). */
 export const PICKUP_RADIUS = 14;
@@ -79,7 +80,7 @@ export function effectivePickupChance(
  */
 export function updatePickups(game: CanvasGameState): void {
   if (game.pickupFeedback && game.pickupFeedback.length > 0) {
-    const now = performance.now();
+    const now = simNow();
     game.pickupFeedback = game.pickupFeedback.filter(f => now - f.startTime < PICKUP_FEEDBACK_MS);
   }
 
@@ -196,7 +197,7 @@ function pushFeedback(
     effect,
     value,
     position: { ...token.position },
-    startTime: performance.now(),
+    startTime: simNow(),
     kind,
   });
 }
@@ -376,7 +377,9 @@ function convertRandomBallToRainbow(game: CanvasGameState): boolean {
   if (!rainbow) return false;
   const targets = game.balls.filter(b => b.state === "active" && b.speed > 0 && b.ability !== "rainbow");
   if (targets.length === 0) return false;
-  const ball = targets[Math.floor(Math.random() * targets.length)];
+  // Seeded: which ball turns rainbow decides where the extra balls come
+  // from for the rest of the map, so both devices must pick the same one.
+  const ball = targets[Math.floor(runStream("rainbowConvert")() * targets.length)];
   ball.typeId = rainbow.id;
   ball.ability = "rainbow";
   ball.color = rainbow.color;
@@ -413,7 +416,9 @@ function slowSplitBall(ball: Ball, factor: number): void {
 function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const free = game.balls.filter(b => b.state === "active" && b.speed > 0);
   if (free.length === 0) return false;
-  const src = free[Math.floor(Math.random() * free.length)];
+  // Seeded, for the same reason: a split doubles a ball, and which ball it
+  // was changes the board from here on.
+  const src = free[Math.floor(runStream("forkSource")() * free.length)];
   const speed = Math.hypot(src.velocity.x, src.velocity.y) || src.baseSpeed;
   const cloneCount = payoutLevel >= FORK_TRIPLE_LEVEL ? 2 : 1;
   const spawned: Ball[] = [];
@@ -431,7 +436,7 @@ function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
       // duplicated itself. Reported as a bug more than once, understandably.
       position: { x: spot.x, y: spot.y },
       velocity: { x: Math.cos(spot.angle) * speed, y: Math.sin(spot.angle) * speed },
-      rotation: Math.random() * Math.PI * 2,
+      rotation: runStream("ballSpin")() * Math.PI * 2,
       effects: createBallEffectState(),
       speedRange: src.speedRange ? [src.speedRange[0], src.speedRange[1]] : undefined,
       prevPosition: undefined,

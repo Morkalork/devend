@@ -31,6 +31,7 @@ const REAL_LEVELS = (yaml.load(
 import type { LevelConfig } from "@/types/level";
 import type { Ball } from "@/types/game";
 import type { MapObjective } from "@/types/objective";
+import { simNow } from "@/lib/simClock";
 
 const SHIP_IT: MapObjective = {
   id: "ship-it", name: "Ship It", description: "d", kind: "lockCount", reward: 8, params: { count: 2 },
@@ -279,7 +280,7 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
 
   it("stays attached to the parent's rim and grows while young", () => {
     const p = parent();
-    const b = bud(performance.now(), p);
+    const b = bud(simNow(), p);
     updateBall(b, 1 / 120, gameFor([p, b]));
     expect(b.birthParentId).toBe("boss");                    // still attached
     expect(b.radius).toBeLessThan(12);                       // still growing
@@ -288,7 +289,7 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
 
   it("follows the parent as it moves (a bud on the cell, not a free ball)", () => {
     const p = parent();
-    const b = bud(performance.now(), p);
+    const b = bud(simNow(), p);
     p.position = { x: 120, y: 90 }; // parent bounced elsewhere
     updateBall(b, 1 / 120, gameFor([p, b]));
     expect(Math.hypot(b.position.x - 120, b.position.y - 90)).toBeCloseTo(p.radius * 0.85, 0);
@@ -296,7 +297,7 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
 
   it("pinches off at full size and is released outward once grown", () => {
     const p = parent();
-    const b = bud(performance.now() - 2000, p); // past SPLIT_MS
+    const b = bud(simNow() - 2000, p); // past SPLIT_MS
     updateBall(b, 1 / 120, gameFor([p, b]));
     expect(b.birthParentId).toBeUndefined();
     expect(b.radius).toBe(12);
@@ -305,13 +306,13 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
 
   it("releases immediately if the parent is already gone", () => {
     const p = parent();
-    const b = bud(performance.now(), p);
+    const b = bud(simNow(), p);
     updateBall(b, 1 / 120, gameFor([b])); // parent not in the game
     expect(b.birthParentId).toBeUndefined();
   });
 
   it("breaks out with a full-stop wind-up, an arcing leap, then a landing splat", () => {
-    const now = performance.now();
+    const now = simNow();
     const mk = (dtBack: number) => ({
       ...activeBall("boss"), isBoss: true, position: { x: 100, y: 200 }, velocity: { x: 40, y: 0 },
       bossLeapAt: now - dtBack, leapFromX: 100, leapFromY: 200, leapToX: 300, leapToY: 200,
@@ -343,12 +344,12 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
     // ball is still exactly round on the frame it lands. So the axis is checked
     // here and the deformation one tick later.
     expect(getSquishEffect(land.effects).ny).toBeCloseTo(1, 3); // straight down
-    updateBallEffects(land.effects, 1 / 60, performance.now() + 60);
+    updateBallEffects(land.effects, 1 / 60, simNow() + 60);
     expect(getSquishEffect(land.effects).active).toBe(true);    // landing squash
   });
 
   it("the boss stops dead and swells ~25% mid-division, then restores", () => {
-    const now = performance.now();
+    const now = simNow();
     const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: now - 600 } as Ball;
     const normal = { ...activeBall("boss2"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
     updateBall(dividing, 1 / 120, gameFor([dividing]));

@@ -11,6 +11,7 @@ import type { Polygon } from "@/lib/polygon";
 import type { LaunchFacing, LaunchAim } from "@/lib/launcher";
 import { launchVelocity, clampLaunchPower, LAUNCH_SPREAD } from "@/lib/launcher";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
+import { simNow } from "@/lib/simClock";
 
 export interface LauncherState {
   id: string;
@@ -186,10 +187,11 @@ export function fanDirections(aim: LaunchAim, count: number): Vector2[] {
  * has to set state, velocity and a fresh regionId together or the ball wakes
  * up owning a region it is no longer standing in.
  *
- * Where wakeBall picks a random heading at base speed, this takes the player's.
- * That is the whole feature, and it also means a launcher map is reproducible
- * in a way a circuit map is not - wakeBall calls Math.random() rather than the
- * run's seeded stream.
+ * Where wakeBall picks a rolled heading at base speed, this takes the player's,
+ * which is the whole feature. (An older note here added that a launcher map was
+ * therefore reproducible in a way a circuit map was not, because wakeBall
+ * called Math.random(). It draws from the run's seeded stream now, so both
+ * are.)
  *
  * Returns the power actually used, or null when there was nothing to fire.
  */
@@ -208,7 +210,7 @@ export function fireLauncher(
     ball.state = "active";
     ball.velocity = launchVelocity({ ...aim, power, direction: headings[i] }, ball.baseSpeed || 250);
     ball.speed = Math.hypot(ball.velocity.x, ball.velocity.y);
-    ball.spawnTime = performance.now();
+    ball.spawnTime = simNow();
     const region = findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
     if (region) ball.regionId = region.id;
   });

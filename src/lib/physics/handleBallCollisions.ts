@@ -9,11 +9,12 @@ import { CanvasGameState } from "@/types/gameState";
 import { Ball } from "@/types/game";
 import { triggerBallHit } from "@/lib/ballEffects";
 import { playBallCollideSound } from "@/lib/gameAudio";
+import { simNow } from "@/lib/simClock";
 
 /** Resolve all pairwise ball-to-ball collisions for this physics step. */
 export function handleBallCollisions(game: CanvasGameState): void {
   const balls = game.balls;
-  const now = performance.now();
+  const now = simNow();
   for (let i = 0; i < balls.length; i++) {
     for (let j = i + 1; j < balls.length; j++) {
       const ball1 = balls[i];
@@ -103,7 +104,7 @@ export function handleBallCollisions(game: CanvasGameState): void {
 
           // Trigger ball-to-ball collision effect (strongest visual). Both balls
           // squash along the shared contact normal, scaled by the closing speed.
-          const now = performance.now();
+          const now = simNow();
           triggerBallHit(ball1.effects, now, nx, ny, relVelNormal);
           triggerBallHit(ball2.effects, now, nx, ny, relVelNormal);
 

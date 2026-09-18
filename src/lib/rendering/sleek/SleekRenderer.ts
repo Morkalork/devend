@@ -63,6 +63,7 @@ import { handoverProgress, lampSample } from "@/lib/lampBall";
 import type { Ball } from "@/types/game";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
+import { simNow } from "@/lib/simClock";
 
 export class SleekRenderer {
   private app = new Application();
@@ -228,7 +229,7 @@ export class SleekRenderer {
 
   render(game: CanvasGameState, rctx: RenderContext): void {
     if (!this.ready) return;
-    const now = performance.now();
+    const now = simNow();
 
     // ── Shatter owns the whole frame ────────────────────────────────────────
     if (game.dissolve) {

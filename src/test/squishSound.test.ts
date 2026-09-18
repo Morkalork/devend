@@ -21,6 +21,7 @@ import { createBotGame, stepBot, plainModifiers, installClock, releaseClock } fr
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
 import type { LevelConfig } from "@/types/level";
+import { simNow } from "@/lib/simClock";
 
 const BOARD: LevelConfig = {
   id: "squish-sound-board", level: 7, sizeThreshold: 30, expectedCuts: 4,
@@ -36,7 +37,7 @@ function play(chance: number, seconds: number) {
   let sticks = 0, wasStuck = false;
   for (let f = 0; f < seconds / PHYSICS_STEP; f++) {
     stepBot(ctx, PHYSICS_STEP);
-    const stuck = ball.bugSquashUntil !== undefined && performance.now() < ball.bugSquashUntil;
+    const stuck = ball.bugSquashUntil !== undefined && simNow() < ball.bugSquashUntil;
     if (stuck && !wasStuck) sticks++;
     wasStuck = stuck;
   }

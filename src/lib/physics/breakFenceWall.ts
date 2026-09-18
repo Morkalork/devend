@@ -29,6 +29,7 @@ import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
 import { Region } from "@/types/game";
 import { generateRegionId } from "@/lib/gameUtils";
+import { simNow } from "@/lib/simClock";
 
 export interface WallBreakCallbacks {
   repaintRegionCanvas: () => void;
@@ -117,7 +118,7 @@ const FRACTURE_DEBOUNCE_MS = 250; // one pass can't count as several fracture hi
  * (issue #64). Debounced per wall. After FENCE_FRACTURE_HITS the fence is queued
  * to break (subject to the void rule in processWallBreaksFn). No-op on board
  * edges / obstacle boundaries. Returns true when this hit actually landed (for
- * feedback), so callers can play a crack sound. `now` is performance.now().
+ * feedback), so callers can play a crack sound. `now` is simNow().
  */
 export function registerFenceFracture(game: CanvasGameState, wall: Wall, now: number): boolean {
   if (!isPlayerFence(wall)) return false;

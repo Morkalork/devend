@@ -16,6 +16,7 @@ import { Ball, ChainState } from "@/types/game";
 import { Vector2, Polygon, pointInPolygon, lineSegmentIntersection } from "@/lib/polygon";
 import { isPlayerFence } from "@/lib/wallGeometry";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
+import { simNow } from "@/lib/simClock";
 
 const CHAIN_NODES = 6;      // endpoints + interior
 const RELAX_PASSES = 4;
@@ -180,7 +181,7 @@ function sweepFences(game: CanvasGameState, ch: ChainState, now: number): void {
 
 /**
  * Advance every chain one physics step. `dt` is the fixed step in seconds,
- * `now` is performance.now() (for freeze + fence-fracture debounce).
+ * `now` is simNow() (for freeze + fence-fracture debounce).
  */
 export function tickChains(game: CanvasGameState, dt: number, now: number): void {
   const chains = game.chains;

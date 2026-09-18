@@ -56,6 +56,7 @@ import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
 import { holdOnBreakpoint } from "@/lib/physics/breakpointFence";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
+import { simNow } from "@/lib/simClock";
 /** Slack added to the wall-index query radius (world units). Comfortably
  *  covers the "+2" collision margin plus any small push-out drift within the
  *  wall loop, so the queried candidate set is never missing a reachable wall. */
@@ -377,7 +378,7 @@ export function updateBall(
 
   sanitise(ball, game);
 
-  const now = performance.now();
+  const now = simNow();
 
   // A held ball (tap-freeze, Cold Boot, a Breakpoint fence, Bug Squash) does
   // not move. Decided HERE and not only in the game loop: the browser loop

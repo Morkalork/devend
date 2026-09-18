@@ -42,6 +42,7 @@ import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
 import { generateRegionId } from "@/lib/gameUtils";
 import { wasteCapturedPickups } from "@/lib/pickups";
+import { simNow } from "@/lib/simClock";
 
 export const DESTRUCTIBLE_MAX_HITS = 3;
 const HIT_DEBOUNCE_MS = 250;     // one ball pass can't count as multiple hits
@@ -739,7 +740,7 @@ export function processDestroysFn(
   game.pendingDestroys = [];
   if (pending.length === 0) return;
 
-  const now = performance.now();
+  const now = simNow();
   let opened = 0;
 
   for (const d of pending) {

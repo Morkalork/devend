@@ -52,6 +52,7 @@ import { tell, warmup, speedStretch, WARMUP_EMBER, type Warmup } from "@/lib/ren
 import { getBallLook } from "@/lib/ballLook";
 import { getLightLook } from "@/lib/lightLook";
 import type { Pt } from "./pixelGrid";
+import { simNow } from "@/lib/simClock";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -232,7 +233,7 @@ export class BallLightPass {
    * so it is drivable headlessly and the geometry is testable.
    */
   build(
-    game: CanvasGameState, w2s: W2S, scale: number, now: number = performance.now(),
+    game: CanvasGameState, w2s: W2S, scale: number, now: number = simNow(),
     monitor?: LightScope,
   ): void {
     this.live = 0;

@@ -12,6 +12,7 @@
  */
 import { useState, useEffect } from 'react';
 import type { AbilityTimer } from './GameCanvas';
+import { simNow } from "@/lib/simClock";
 
 interface AbilityCountdownBarProps {
   timers: AbilityTimer[];
@@ -32,7 +33,7 @@ export function AbilityCountdownBar({ timers, visible }: AbilityCountdownBarProp
   }, [active]);
 
   if (!active) return null;
-  const now = performance.now();
+  const now = simNow();
   const live = timers.filter(tmr => tmr.endMs - now > 0);
   if (live.length === 0) return null;
 

@@ -55,7 +55,7 @@ export function runBot(
   // same seed, so "seed 7 on level 12" is one reproducible situation rather
   // than a policy replayed against a different board every time.
   setRunSeedText(`bot-${seed}`);
-  // The engine reads performance.now(); for the length of this run, that is
+  // The engine reads the sim clock; for the length of this run, that is
   // simulated time. Released in the finally below whatever happens, or every
   // later test in the file would inherit a frozen clock.
   installClock();

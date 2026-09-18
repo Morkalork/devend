@@ -15,6 +15,7 @@ import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityE
 import { MINIMUM_WALL_TIME } from "@/lib/gameConstants";
 import { cutSpeedFactor } from "@/lib/physics/fenceZones";
 import { getFenceType } from "@/lib/fences";
+import { simNow } from "@/lib/simClock";
 
 export { clearFreeze, FREEZE_MAX_MS };
 
@@ -100,7 +101,7 @@ export function updateFenceWallFn(
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   let growth: number;
   if (wall.startTime) {
-    const elapsed = (performance.now() - wall.startTime) / 1000;
+    const elapsed = (simNow() - wall.startTime) / 1000;
     const expectedDuration = longestHalf / wallSpeedFinal;
     const currT = Math.max(0, Math.min(1, elapsed / expectedDuration));
 
@@ -207,7 +208,7 @@ export function updateFenceWallFn(
   if (
     activeModifiers.fenceGraceMs > 0 &&
     wall.startTime &&
-    performance.now() - wall.startTime < activeModifiers.fenceGraceMs
+    simNow() - wall.startTime < activeModifiers.fenceGraceMs
   ) {
     return;
   }

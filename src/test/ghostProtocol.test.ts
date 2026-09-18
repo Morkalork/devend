@@ -32,6 +32,7 @@ import type { UpgradeConfig } from "@/types/upgrade";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Ball } from "@/types/game";
 import type { LevelConfig } from "@/types/level";
+import { simNow } from "@/lib/simClock";
 
 const upgrades = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8"),
@@ -159,7 +160,7 @@ function growingWall(startedMsAgo: number): GrowingWall {
     startPoint: { x: 300, y: 300 }, endPoint: { x: 300, y: 500 },
     targetStart: { x: 300, y: 100 }, targetEnd: { x: 300, y: 700 },
     thickness: 6, isComplete: false, activeRegionId: "r0",
-    startTime: performance.now() - startedMsAgo,
+    startTime: simNow() - startedMsAgo,
   } as unknown as GrowingWall;
 }
 

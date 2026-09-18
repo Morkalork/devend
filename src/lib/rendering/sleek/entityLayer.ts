@@ -30,6 +30,7 @@ import { getBallType } from "@/lib/ballTypes";
 import { moverBoundRadius } from "@/lib/physics/moverState";
 import { derailProgress, railPull } from "@/lib/physics/moverControl";
 import { bandStretch } from "@/lib/rubberBand";
+import { simNow } from "@/lib/simClock";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -346,7 +347,7 @@ export class EntityLayer {
     if (!(r > 0)) return;
 
     // How recently it fired, 1 at the moment of the kick down to 0.
-    const now = performance.now();
+    const now = simNow();
     let flare = 0;
     for (const f of game.bouncerFlashes ?? []) {
       if (f.id !== spec.id) continue;
