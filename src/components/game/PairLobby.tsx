@@ -24,7 +24,7 @@ import {
   WebRtcTransport, postAnswer, awaitAnswer, cancelRoom, CONNECT_TIMEOUT_MS,
 } from "@/lib/net/webrtc";
 import { buildPairUrl, parsePairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
-import { getDeviceId } from "@/lib/net/deviceId";
+import { getDeviceId, electPlayer } from "@/lib/net/deviceId";
 import {
   isNearbyAvailable, missingNearbyPermission, startNearbyPairing,
   NearbyPlugin, NearbyTransport, type NearbyEndpoint,
@@ -102,11 +102,25 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   const [found, setFound] = useState<NearbyEndpoint[]>([]);
   const [token, setToken] = useState<(NearbyEndpoint & { token: string }) | null>(null);
   const [permissionNeeded, setPermissionNeeded] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
   const stopNearbyRef = useRef<(() => void) | null>(null);
 
-  /** Swap hellos, then hand the live link to the caller. */
+  /**
+   * Swap hellos, settle who is player 0, then hand the live link to the caller.
+   *
+   * WebRTC knows the answer before it starts: whoever showed the code is the
+   * host. Nearby does not, because both phones advertise and discover at once
+   * and neither pressed a different button. There the answer is "whoever's
+   * device id sorts lower", and the other device's id arrives in the HELLO, so
+   * the decision has to happen here rather than at the call site.
+   *
+   * It used to happen at the call site, off a ref that the hello had not filled
+   * yet, so on a first Nearby connect both phones read null and both concluded
+   * they were the host. Two player zeros: every command from both stamped with
+   * the same number, and both sides believing they owned the repair.
+   */
   const completeHandshake = useCallback(async (
-    transport: Transport, localPlayer: PlayerId, isHost: boolean,
+    transport: Transport, role: { kind: "fixed"; localPlayer: PlayerId } | { kind: "elect" },
   ) => {
     const deviceId = await getDeviceId();
     const theirs = await new Promise<Extract<NetMessage, { t: "hello" }>>((resolve, reject) => {
@@ -130,12 +144,17 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       // for ten seconds and then disagree about everything.
       throw new Error(t("pair.versionMismatch"));
     }
-    pendingRemoteRef.current = theirs.deviceId;
+    // Both phones run this same comparison on the same two strings and reach
+    // the same answer, with nothing further exchanged to disagree about.
+    const elected = role.kind === "fixed" ? role.localPlayer : electPlayer(deviceId, theirs.deviceId);
+    if (elected === null) throw new Error(t("pair.sameDevice"));
+    const localPlayer: PlayerId = elected;
+
     setPhase("connected");
     onPaired({
       transport,
       localPlayer,
-      isHost,
+      isHost: localPlayer === 0,
       remoteDeviceId: theirs.deviceId,
       remoteName: theirs.name || t("pair.partner"),
     });
@@ -152,6 +171,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     setProblem(null);
     setFound([]);
     setToken(null);
+    setAccepting(false);
     const missing = await missingNearbyPermission();
     if (missing) {
       const granted = await NearbyPlugin.requestNearbyPermissions();
@@ -163,20 +183,24 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     setPermissionNeeded(null);
     setPhase("nearby");
     try {
-      const myDevice = await getDeviceId();
       stopNearbyRef.current = await startNearbyPairing(playerName, {
         onFound: (e) => setFound(list => list.some(x => x.endpointId === e.endpointId) ? list : [...list, e]),
         onLost: (id) => setFound(list => list.filter(x => x.endpointId !== id)),
-        onToken: (e) => setToken(e),
+        // A connection is being offered. Both phones advertise AND discover,
+        // so both can ask at the same moment and each ends up holding an
+        // offer; whoever accepts second would be accepting a second link.
+        // First offer wins on each phone, and the digits are the same either
+        // way, so the players compare the same number whichever request got
+        // there first.
+        onToken: (e) => setToken(prev => prev ?? e),
         onConnected: async () => {
           stopNearbyRef.current?.();
           stopNearbyRef.current = null;
           const transport = await NearbyTransport.attach();
-          // Lower device id hosts. Both phones compute it from the same two
-          // strings, so both get the same answer with nothing exchanged.
-          const theirDevice = pendingRemoteRef.current;
-          const isHost = theirDevice === null ? true : myDevice < theirDevice;
-          await completeHandshake(transport, isHost ? 0 : 1, isHost);
+          // Who is player 0 is settled inside the handshake, once the hello has
+          // brought the other device's id across. Neither phone picked a role,
+          // so neither can be told one here.
+          await completeHandshake(transport, { kind: "elect" });
         },
         onFailed: (reason) => { setProblem(reason); setPhase("failed"); },
       });
@@ -185,16 +209,6 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       setPhase("failed");
     }
   }, [completeHandshake, playerName]);
-
-  /**
-   * The other device's id, learned from the hello.
-   *
-   * Nearby settles who hosts from the two device ids, and the hello is where
-   * the second one arrives, so the decision is made inside completeHandshake
-   * rather than before it. Held in a ref because the connected callback closes
-   * over it.
-   */
-  const pendingRemoteRef = useRef<string | null>(null);
 
   /** Host: make an offer, show it, wait for the answer. */
   const startHosting = useCallback(async () => {
@@ -215,7 +229,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       await transport.acceptAnswer(answer);
       await transport.waitOpen();
       clearTimeout(slowTimer);
-      await completeHandshake(transport, 0, true);
+      await completeHandshake(transport, { kind: "fixed", localPlayer: 0 });
     } catch (err) {
       clearTimeout(slowTimer);
       if (abort.signal.aborted) return;
@@ -236,7 +250,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       await postAnswer(room, answer);
       await transport.waitOpen();
       clearTimeout(slowTimer);
-      await completeHandshake(transport, 1, false);
+      await completeHandshake(transport, { kind: "fixed", localPlayer: 1 });
     } catch (err) {
       clearTimeout(slowTimer);
       setProblem(err instanceof Error ? err.message : String(err));
@@ -371,7 +385,14 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
                   {token.token}
                 </div>
                 <button
-                  onClick={() => { pendingRemoteRef.current = null; void NearbyPlugin.accept({ endpointId: token.endpointId }); }}
+                  disabled={accepting}
+                  onClick={() => {
+                    // Guarded: a double tap on a slow phone would accept the
+                    // same offer twice, and the second accept fails in a way
+                    // that reads as the pairing breaking.
+                    setAccepting(true);
+                    void NearbyPlugin.accept({ endpointId: token.endpointId });
+                  }}
                   className="w-full p-4 rounded-lg bg-card border border-primary/50 font-semibold"
                 >
                   {t("pair.join")}
@@ -384,14 +405,20 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
                 </div>
                 {found.map(e => (
                   <button key={e.endpointId}
-                    onClick={() => void NearbyPlugin.connect({ endpointId: e.endpointId })}
+                    disabled={accepting}
+                    onClick={() => {
+                      // One request at a time. Tapping two partners, or the
+                      // same one twice, leaves connections nobody accepts.
+                      setAccepting(true);
+                      void NearbyPlugin.connect({ endpointId: e.endpointId });
+                    }}
                     className="w-full p-3 rounded-lg bg-card border border-border hover:border-primary/50 text-left">
                     <span className="font-semibold">{e.name}</span>
                   </button>
                 ))}
               </>
             )}
-            <button onClick={() => { stopNearbyRef.current?.(); stopNearbyRef.current = null; setPhase("choose"); }}
+            <button onClick={() => { stopNearbyRef.current?.(); stopNearbyRef.current = null; setAccepting(false); setPhase("choose"); }}
               className="w-full p-3 rounded-lg bg-muted hover:bg-muted/80 font-semibold">
               {t("common.cancel")}
             </button>

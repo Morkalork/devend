@@ -21,6 +21,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LockstepSession } from "@/lib/net/lockstep";
+import { modifierHash } from "@/lib/net/stateHash";
 import { setCommandSink, setLocalPlayer, type GameCommand, type PlayerId } from "@/lib/net/commands";
 import { setRunSeedText } from "@/lib/runRng";
 import type { NetMessage, Transport } from "@/lib/net/transport";
@@ -63,19 +64,44 @@ export interface PairSession {
   stalled: boolean;
   /** True once the link is gone and will not come back by itself. */
   dropped: boolean;
+  /**
+   * Set when the two devices are about to play a map under different
+   * modifiers, which means one player holds an unlock the other does not.
+   *
+   * Refusing to start is the whole point. The alternative is two boards that
+   * look identical for a second and then behave differently, which the hashes
+   * would report as a desync and repair for ever, because the cause is not on
+   * the board at all.
+   */
+  modifierMismatch: boolean;
+  /** Declare what this device is about to play under, at each map start. */
+  declareModifiers: (level: number, modifiers: Record<string, unknown>) => void;
   /** Host only: take the saved run, or start a new one. */
   chooseContinue: () => void;
   chooseNew: () => void;
-  /** Store the run at the start of each map, on both phones. */
+  /**
+   * Called at the start of each map on both phones.
+   *
+   * The host publishes its run and both phones save it. The guest does not
+   * publish: it has nothing to say about a run it does not own.
+   */
   recordMap: (run: RunSave) => void;
+  /**
+   * The host's run, newest first, for the guest to adopt.
+   *
+   * Bumped on every map, so the guest can tell a fresh publication from the
+   * one it already took. Null on the host, which is already playing its own.
+   */
+  adopt: { run: RunSave; at: number } | null;
   /** Tear the pair down (the player left, or the link died for good). */
   end: () => void;
 }
 
-const IDLE: Omit<PairSession, "chooseContinue" | "chooseNew" | "recordMap" | "end"> = {
+const IDLE: Omit<PairSession,
+  "chooseContinue" | "chooseNew" | "recordMap" | "declareModifiers" | "end"> = {
   phase: "idle", localPlayer: 0, isHost: true, remoteName: "",
   pairId: null, offeredSave: null, runState: null, session: null,
-  stalled: false, dropped: false,
+  stalled: false, dropped: false, adopt: null, modifierMismatch: false,
 };
 
 export function usePairSession(paired: PairedSession | null) {
@@ -135,6 +161,8 @@ export function usePairSession(paired: PairedSession | null) {
       setState({
         stalled: false,
         dropped: false,
+        adopt: null,
+        modifierMismatch: false,
         phase: "deciding",
         localPlayer: paired.localPlayer,
         isHost: paired.isHost,
@@ -190,6 +218,24 @@ export function usePairSession(paired: PairedSession | null) {
         pairSave.discard();
         return;
       }
+      // The host's run at the start of a map. Adopting it wholesale is what
+      // keeps the two devices playing the SAME run rather than two runs from
+      // one seed: whatever this phone's own shop or drafts did in between is
+      // overwritten, because the host owns the run and this device is
+      // mirroring it.
+      if (msg.t === "hostChoice" && msg.choice === "mapState") {
+        const run = msg.payload as RunSave;
+        setState(s => ({ ...s, adopt: { run, at: Date.now() } }));
+        return;
+      }
+      // What the other phone is about to play under. Compared against this
+      // one's; a difference stops the map rather than starting a game neither
+      // device is really playing.
+      if (msg.t === "modifiers") {
+        theirModifiersRef.current = msg;
+        compareModifiers();
+        return;
+      }
       if (msg.t === "runState") {
         // The guest takes the host's run whole. Arming the seed here rather
         // than at map start is deliberate: the board, the shop and the mutator
@@ -213,6 +259,29 @@ export function usePairSession(paired: PairedSession | null) {
     // pairSave's functions are stable (useCallback with no deps).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paired]);
+
+  // ── Modifier agreement ───────────────────────────────────────────────────
+
+  const myModifiersRef = useRef<{ level: number; hash: string } | null>(null);
+  const theirModifiersRef = useRef<{ level: number; hash: string } | null>(null);
+
+  const compareModifiers = useCallback(() => {
+    const mine = myModifiersRef.current;
+    const theirs = theirModifiersRef.current;
+    // Only meaningful once both have spoken ABOUT THE SAME MAP: during a map
+    // change one side is a level ahead for a moment, and a hash from two
+    // different maps is not a disagreement.
+    if (!mine || !theirs || mine.level !== theirs.level) return;
+    const same = mine.hash === theirs.hash;
+    setState(s => (s.modifierMismatch === !same ? s : { ...s, modifierMismatch: !same }));
+  }, []);
+
+  const declareModifiers = useCallback((level: number, modifiers: Record<string, unknown>) => {
+    const entry = { level, hash: modifierHash(modifiers) };
+    myModifiersRef.current = entry;
+    transportRef.current?.send({ t: "modifiers", level, hash: entry.hash });
+    compareModifiers();
+  }, [compareModifiers]);
 
   // ── The host's decision ──────────────────────────────────────────────────
 
@@ -262,7 +331,13 @@ export function usePairSession(paired: PairedSession | null) {
       { pairId, runId: runIdRef.current || `${pairId}-0`, seed, devices },
       run,
     );
-  }, [state.pairId, state.runState, pairSave]);
+    // Only the host publishes. The guest saving its own idea of the run would
+    // be saving a guess, and on the next reconnect that guess could win the
+    // "further along" comparison against the real thing.
+    if (state.isHost) {
+      transportRef.current?.send({ t: "hostChoice", choice: "mapState", payload: run });
+    }
+  }, [state.pairId, state.runState, state.isHost, pairSave]);
 
   /**
    * Clear the stall flag once the pair is moving again.
@@ -304,6 +379,7 @@ export function usePairSession(paired: PairedSession | null) {
     chooseContinue,
     chooseNew,
     recordMap,
+    declareModifiers,
     continueSolo,
     end,
     /** For the loop: the live session, read fresh each frame. */

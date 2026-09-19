@@ -1889,6 +1889,15 @@
     "join": "Entrar",
     "needPermission": "Dev/End necesita un permiso más para encontrar móviles cercanos.",
     "needLocation": "En Android 11 y anteriores hay que activar la ubicación para encontrar móviles cercanos. Dev/End no la usa para nada más.",
-    "grant": "Permitir"
+    "grant": "Permitir",
+    "sameDevice": "Los dos móviles dan el mismo identificador, así que no se pueden distinguir. Reinstala uno o empareja con el código.",
+    "host": {
+      "shopping": "{{name}} está en la tienda.",
+      "deciding": "{{name}} está eligiendo.",
+      "pushing": "{{name}} decide si seguir arriesgando.",
+      "continuing": "{{name}} decide si gastar una continuación."
+    },
+    "mismatchTitle": "No estáis jugando a lo mismo.",
+    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero."
   }
 }

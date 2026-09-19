@@ -96,6 +96,38 @@ export function topologyHash(game: CanvasGameState): string {
   return fnv1a(parts.join("\n"));
 }
 
+/**
+ * The modifier set both devices must be playing under.
+ *
+ * Every other hash in this file compares what the two boards DID. This one
+ * compares what they were set up to do, and it is the check that catches the
+ * one divergence the others only see afterwards: certificate bonuses,
+ * achievement bonuses and loadout bonuses all come from each phone's own
+ * storage and none of them travel in the run record, so a player with an
+ * unlock their partner lacks computes different fence speeds and lock
+ * thresholds from the very first tick.
+ *
+ * Numbers only, and sorted by key, so two devices hash the same set whatever
+ * order their objects were built in. Rounded to four places, because these are
+ * derived from multiplications and the last bit of a percentage is not a
+ * disagreement worth failing a pairing over.
+ */
+export function modifierHash(modifiers: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of Object.keys(modifiers).sort()) {
+    const value = modifiers[key];
+    if (typeof value === "number") {
+      parts.push(`${key}=${Number.isFinite(value) ? value.toFixed(4) : "nan"}`);
+    } else if (typeof value === "boolean" || typeof value === "string") {
+      parts.push(`${key}=${String(value)}`);
+    }
+    // Anything else (arrays, objects, functions) is not a tuning number and is
+    // deliberately skipped rather than stringified: a stable hash matters more
+    // than a complete one, and the motion hash catches what this misses.
+  }
+  return fnv1a(parts.join("|"));
+}
+
 // ── Resync ──────────────────────────────────────────────────────────────────
 
 /**

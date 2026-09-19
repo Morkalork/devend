@@ -41,6 +41,58 @@ it; and the plugin is Java rather than Kotlin, because the Android project is
 Java and adding the Kotlin Gradle plugin would have been a build change for
 one file.
 
+### The hardening pass
+
+An audit of the shipped code, before any two phones had met, found ten things
+that would have gone wrong. None of them could have been reproduced without two
+devices and several would have read as "the mode is broken" rather than as a
+bug, which is why they are listed rather than quietly fixed. All ten are closed
+and pinned in `pairHardening.test.ts`.
+
+Four would have broken the first session:
+
+1. **Nearby elected two hosts.** The election read the partner's device id from
+   a ref the hello had not filled yet, so on a first connect both phones read
+   null and both concluded they were the host. The election now happens inside
+   the handshake, after the id has arrived, and two identical ids are refused
+   rather than tie-broken: it means a cloned install, and both devices would be
+   player 0.
+2. **Abilities bypassed the command layer.** Firing reached into the game state
+   from the component that noticed the press, so an ability moved one board and
+   not the other, which no snapshot can repair. There are now three ability
+   commands, one per shape the game has, and the charge is spent where the
+   command applies so both devices' mirrors of the run agree.
+3. **The run synced once.** Enough for map one and wrong from map two: between
+   maps the two phones walked their own shop, drafts and assignment screens and
+   arrived at the next board with different upgrades. The host now publishes its
+   run at every map start and the guest adopts it whole.
+4. **Between-map decisions were not host-owned.** The guest could shop, answer
+   the push prompt and spend a continue, settling questions about one run twice.
+   The guest is now gated out of them, with a screen naming what the host is
+   deciding. It blocks rather than mirrors, which is the honest first version:
+   a read-only shop would mean teaching every screen a disabled mode.
+
+Three would have shown up quickly:
+
+5. **A stall banked time.** The accumulator filled while nothing drained it, so
+   a two-second wait ran two hundred ticks in the frame the partner came back
+   and every ball teleported. Held to one step during a stall.
+6. **A sleeping phone stalled its partner for ever.** A locked screen stops
+   sending and nothing about the socket says so. Twelve seconds of silence now
+   ends the link, which is what lets the other player choose between pairing
+   again and carrying on alone.
+7. **Per-device unlocks fed the physics.** Certificates, achievements and
+   loadout bonuses come from each phone's own storage and none of them travel in
+   the run record, so two players with different unlocks computed different
+   fence speeds from the first tick, on a board that looked identical. Both
+   phones now declare a modifier hash at each map start and the map refuses to
+   begin on a mismatch, because that is not drift and no snapshot carries it
+   away.
+
+And three rough edges: haptics fired for the partner's actions, a pair run filed
+on the solo ladder where two players cutting twice as fast would have taken it
+over within an evening, and Nearby could be raced into two connections.
+
 ### Where it all lives
 
 | | |

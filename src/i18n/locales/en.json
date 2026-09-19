@@ -1341,6 +1341,15 @@
     "join": "Join",
     "needPermission": "Dev/End needs one more permission to find nearby phones.",
     "needLocation": "Android 11 and below need location switched on to find nearby phones. Dev/End never uses your location for anything else.",
-    "grant": "Allow"
+    "grant": "Allow",
+    "sameDevice": "Both phones report the same device id, so neither can be told apart. Reinstall one, or pair with the code instead.",
+    "host": {
+      "shopping": "{{name}} is in the store.",
+      "deciding": "{{name}} is choosing.",
+      "pushing": "{{name}} is deciding whether to push on.",
+      "continuing": "{{name}} is deciding whether to spend a continue."
+    },
+    "mismatchTitle": "You are not playing the same game.",
+    "mismatchBody": "One of you has upgrades or certificates the other does not, so the two boards would behave differently. Play a run you both have, or catch up first."
   }
 }

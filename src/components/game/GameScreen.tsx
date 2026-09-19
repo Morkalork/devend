@@ -107,6 +107,8 @@ interface GameScreenProps {
    * healthy, which is nearly always.
    */
   pairBanner?: React.ReactNode;
+  /** True on the phone that is not the host of a pair run. */
+  isPairGuest?: boolean;
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
@@ -202,6 +204,7 @@ export function GameScreen({
   lives,
   lockstep,
   pairBanner,
+  isPairGuest,
   continuesRemaining = 0,
   onLivesChange,
   onGrantAbility,
@@ -1108,6 +1111,7 @@ export function GameScreen({
             totalScore={totalScore}
             lives={lives}
             lockstep={lockstep}
+            isPairGuest={isPairGuest}
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
             abilityCharges={abilityCharges ?? {}}

@@ -381,6 +381,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const runTrajectoryRef = useRef<number[]>([]);
   // Debug starts (?level= / forceLevel) never file on the ledger.
   const recordEligibleRef = useRef(true);
+
+  /**
+   * Keep a run off the solo ladder.
+   *
+   * Called by the pair session at the start of a two-player run
+   * (TWO_PLAYER_PLAN.md). A pair cuts roughly twice as fast, so pair runs would
+   * take over the records within an evening and the solo ladder would stop
+   * measuring solo play, which is the one thing it is for. Records for pairs
+   * are a separate ladder and a separate decision; until then they simply do
+   * not file.
+   */
+  const markRunIneligible = useCallback(() => {
+    recordEligibleRef.current = false;
+  }, []);
   // The mid-run "new personal best" banner fires once per run.
   const pbCelebratedRef = useRef(false);
   // Personal-best banner payload for the current level-complete overlay.
@@ -1154,40 +1168,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * "read the solo save and resume it" is the one thing it cannot do. Same
    * path otherwise, down to the seed being armed before the loads.
    */
-  const resumeRunFrom = useCallback(async (save: RunSave) => {
-
-    // Restore the run's seeded context (or lack of it) BEFORE loading: the
-    // shops/drafts/pickups ahead must keep rolling from the daily seed.
-    const savedDaily = save.dailyKey ?? null;
-    setRunSeedText(savedDaily ? dailySeedText(savedDaily) : null);
-    dailyKeyRef.current = savedDaily;
-    setDailyKey(savedDaily);
-
-    // Held across the WHOLE fetch, not just until the first pair land.
-    setBootingRun(true);
-    let levelsSuccess = false, upgradesSuccess = false;
-    try {
-      [levelsSuccess, upgradesSuccess] = await Promise.all([
-        loadLevels(),
-        loadUpgrades(),
-        loadCertificates(),
-        loadLoadouts(),
-        loadBallTypes(),
-        loadAbilities(),
-        loadFenceTypes(),
-        loadFeatures(),
-        loadDoors(),
-        loadCapstones(),
-        loadMapMutators(),
-        loadMapObjectives(),
-      ]);
-    } finally {
-      // finally, so a catalogue that rejects cannot leave the menu
-      // spinning forever with no way back.
-      setBootingRun(false);
-    }
-    if (!levelsSuccess || !upgradesSuccess) return;
-
+  /**
+   * Put the run into exactly the state a record describes.
+   *
+   * Split out of resumeRunFrom so a PAIR can do it at the start of EVERY map
+   * (TWO_PLAYER_PLAN.md step 6). The host owns the run; whatever the guest's
+   * own copy of the shop, the drafts or the score did between maps is
+   * overwritten by the host's, because two devices computing their own
+   * modifiers is two different games sharing a seed, and the difference shows
+   * up as physics rather than as a number on a screen.
+   *
+   * Everything here is state-setting. The catalogue loads and the navigation
+   * stay with the callers, because a mid-run sync needs neither: the
+   * catalogues are already in memory and the guest is already on the board.
+   */
+  const applyRunRecord = useCallback((save: RunSave) => {
     setTotalScore(save.totalScore);
     // Through the alias map: a checkpoint written before two upgrades were
     // merged still names the retired ids, and dropping them would silently
@@ -1237,11 +1232,47 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     restoreRunProgress(save.runLevelsCompleted);
     restoreSequence(save.levelSequenceIds, save.currentLevelIndex);
+  }, [restoreRunProgress, restoreSequence, bestScore]);
 
+  const resumeRunFrom = useCallback(async (save: RunSave) => {
+
+    // Restore the run's seeded context (or lack of it) BEFORE loading: the
+    // shops/drafts/pickups ahead must keep rolling from the daily seed.
+    const savedDaily = save.dailyKey ?? null;
+    setRunSeedText(savedDaily ? dailySeedText(savedDaily) : null);
+    dailyKeyRef.current = savedDaily;
+    setDailyKey(savedDaily);
+
+    // Held across the WHOLE fetch, not just until the first pair land.
+    setBootingRun(true);
+    let levelsSuccess = false, upgradesSuccess = false;
+    try {
+      [levelsSuccess, upgradesSuccess] = await Promise.all([
+        loadLevels(),
+        loadUpgrades(),
+        loadCertificates(),
+        loadLoadouts(),
+        loadBallTypes(),
+        loadAbilities(),
+        loadFenceTypes(),
+        loadFeatures(),
+        loadDoors(),
+        loadCapstones(),
+        loadMapMutators(),
+        loadMapObjectives(),
+      ]);
+    } finally {
+      // finally, so a catalogue that rejects cannot leave the menu
+      // spinning forever with no way back.
+      setBootingRun(false);
+    }
+    if (!levelsSuccess || !upgradesSuccess) return;
+
+    applyRunRecord(save);
     analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
-
     nav.goToGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, restoreRunProgress, restoreSequence, nav.goToGame, bestScore]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, applyRunRecord, nav.goToGame]);
+
 
   const handleContinueRun = useCallback(async () => {
     const save = readRun();
@@ -2422,6 +2453,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleContinueRun,
     /** Resume a run from a record (the pair save; see TWO_PLAYER_PLAN step 6b). */
     resumeRunFrom,
+    markRunIneligible,
+    /**
+     * Put the run into the state a record describes, without reloading the
+     * catalogues or navigating. What a pair's guest does at the start of every
+     * map, so the host's run is the only one either device is playing.
+     */
+    applyRunRecord,
     /**
      * The run as it stands, for anyone who needs to persist it somewhere else.
      *

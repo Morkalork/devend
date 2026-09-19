@@ -37,6 +37,15 @@ export type NetMessage =
   | { t: "resync"; tick: number; snapshot: unknown }
   /** Run-level state the host owns (step 6). */
   | { t: "runState"; payload: unknown }
+  /**
+   * The modifier set this device is about to play a map under (step 6).
+   *
+   * Sent at every map start and compared before anyone cuts. The other hashes
+   * notice a divergence a second after it happens; this one notices the class
+   * of divergence that is already baked in before the first tick, when two
+   * players hold different certificates or achievements.
+   */
+  | { t: "modifiers"; level: number; hash: string }
   /** A between-maps decision only the host makes (step 6). */
   | { t: "hostChoice"; choice: string; payload?: unknown }
   /** The partner's finger, for the preview (step 7). Not simulation state:

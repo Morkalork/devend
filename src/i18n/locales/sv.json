@@ -1889,6 +1889,15 @@
     "join": "Gå med",
     "needPermission": "Dev/End behöver en behörighet till för att hitta mobiler i närheten.",
     "needLocation": "Android 11 och äldre kräver att platstjänster är på för att hitta mobiler i närheten. Dev/End använder aldrig din plats till något annat.",
-    "grant": "Tillåt"
+    "grant": "Tillåt",
+    "sameDevice": "Båda mobilerna uppger samma enhets-id, så de går inte att skilja åt. Installera om den ena, eller para ihop med koden i stället.",
+    "host": {
+      "shopping": "{{name}} är i butiken.",
+      "deciding": "{{name}} väljer.",
+      "pushing": "{{name}} avgör om ni ska pressa på.",
+      "continuing": "{{name}} avgör om ni ska lägga en continue."
+    },
+    "mismatchTitle": "Ni spelar inte samma spel.",
+    "mismatchBody": "En av er har uppgraderingar eller certifikat som den andra saknar, så de två spelplanerna skulle bete sig olika. Kör ett spel ni båda har, eller kom ikapp först."
   }
 }

@@ -83,5 +83,25 @@ export function pairIdFor(a: string, b: string): string {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 
+/**
+ * Which player this device is, when nobody pressed a different button.
+ *
+ * The QR flow knows the answer before it starts: whoever showed the code is
+ * the host. Nearby does not, because both phones advertise and discover at
+ * once. There the rule is "lower device id is player 0", which both phones
+ * compute from the same two strings and therefore agree on with nothing
+ * exchanged.
+ *
+ * Null when the two ids are identical, which is not a tie to break but a
+ * signal: two devices that cannot be told apart would both be player 0, and
+ * every command from both would carry the same number. It means a cloned
+ * install or an id that did not persist, and the caller says so rather than
+ * starting a game that cannot work.
+ */
+export function electPlayer(mine: string, theirs: string): 0 | 1 | null {
+  if (mine === theirs) return null;
+  return mine < theirs ? 0 : 1;
+}
+
 /** For tests. */
 export function _resetDeviceIdCache(): void { cached = null; }

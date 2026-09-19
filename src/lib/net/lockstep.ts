@@ -49,6 +49,20 @@ export const MAX_DELAY_TICKS = 24;
  */
 export const RECORD_WINDOW_TICKS = 240;
 
+/**
+ * How long a stall may last before the link is treated as gone.
+ *
+ * A phone that locks its screen or goes to the home screen stops getting
+ * animation frames, so it stops sending ticks, and nothing about the socket
+ * says so: it is still open, and the partner waits on a device that has no
+ * intention of answering. Without this the other player sits on "Waiting for"
+ * for ever.
+ *
+ * Twelve seconds, because a pocketed phone should end the pair but a tunnel, a
+ * notification shade or a garbage-collection pause should not.
+ */
+export const STALL_GIVE_UP_MS = 12_000;
+
 export type DesyncStage = "motion" | "replay" | "restart";
 
 export interface LockstepCallbacks {
@@ -93,6 +107,9 @@ export class LockstepSession {
   /** The guest stops stepping between spotting a drift and being handed the
    *  host's board, so it does not run further on a board it knows is wrong. */
   private awaitingResync = false;
+  /** Wall-clock start of the current stall, for the give-up above. Real time,
+   *  not sim time: sim time is exactly what stops advancing during one. */
+  private stallStartedAt: number | null = null;
 
   readonly localPlayer: PlayerId;
   readonly remotePlayer: PlayerId;
@@ -172,11 +189,22 @@ export class LockstepSession {
     const local = record?.cmds[this.localPlayer];
     if (!remote || !local) {
       this.stalledFor++;
-      if (this.stalledFor === 1) this.stats.stalls++;
+      if (this.stalledFor === 1) {
+        this.stats.stalls++;
+        this.stallStartedAt = Date.now();
+      }
       this.cb.onStall?.(this.stalledFor);
+      if (this.stallStartedAt !== null && Date.now() - this.stallStartedAt > STALL_GIVE_UP_MS) {
+        // Gone, not slow. Ending it here is what lets the other player choose
+        // between pairing again and carrying on alone, instead of watching a
+        // spinner for a phone that is in a pocket.
+        this.closed = true;
+        this.cb.onClose?.("partner stopped responding");
+      }
       return false;
     }
     this.stalledFor = 0;
+    this.stallStartedAt = null;
 
     // Player order, always, so both devices apply a simultaneous pair the same
     // way round. Two cuts landing on the same tick is rare and exactly the

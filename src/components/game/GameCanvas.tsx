@@ -78,6 +78,7 @@ import {
   computeBallTrajectory,
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS, isPlayerFence } from "@/lib/wallGeometry";
+import { enqueueCommand, getLocalPlayer } from "@/lib/net/commands";
 import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
 import { fileManualEntry } from "@/lib/manual";
 import {
@@ -273,6 +274,9 @@ interface GameCanvasProps {
    * changes nothing about the loop.
    */
   lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
+  /** True on the phone that is NOT the host of a pair run: it plays the board
+   *  but answers none of the run's questions. */
+  isPairGuest?: boolean;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -372,6 +376,7 @@ export function GameCanvas({
   totalScore,
   lives,
   lockstep,
+  isPairGuest = false,
   onLivesChange,
   onGrantAbility,
   abilityCharges,
@@ -768,6 +773,14 @@ export function GameCanvas({
    */
   const lockstepRef = useRef(lockstep);
   lockstepRef.current = lockstep;
+
+  /** The level accent, for the shatter an ability's cleared fences leave. */
+  const accentColorRef = useRef(accentColor);
+  accentColorRef.current = accentColor;
+
+  /** Set below; held in a ref so the loop's deps can reach it without the
+   *  callback's identity rebuilding the loop mid-map. */
+  const abilityFiredRef = useRef<((abilityId: string) => void) | null>(null);
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
   const gameRef = useRef<CanvasGameState>({
@@ -1561,6 +1574,12 @@ export function GameCanvas({
         setCutCount,
         setFreezeUsesRemaining,
         onMessage: (id) => onMessageRef.current?.(id),
+        clearFences: {
+          repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
+          setRemainingPercent,
+          fenceColor: accentColorRef.current,
+        },
+        onAbilityFired: (abilityId) => abilityFiredRef.current?.(abilityId),
         onTapRemove: (info) => handleTapRemoveRef.current?.(info),
         vibrate: (pattern) => { if (navigator.vibrate) navigator.vibrate(pattern); },
       }),
@@ -1902,13 +1921,25 @@ export function GameCanvas({
       setArmedAbility(prev => (prev === abilityId ? null : abilityId));
       return;
     }
-    const fired = fireAbility(abilityId, game, now, {
-      repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
-      setRemainingPercent,
-      fenceColor: accentColor,
-    });
-    if (!fired) return;
+    // Sent, not fired. The effect lands when the command applies, on BOTH
+    // devices, which is what stops an ability from moving one board and not
+    // the other. The lockout stays here: a double-press is a refusal, and
+    // refusals belong where the finger is.
     abilityLockoutRef.current = now;
+    enqueueCommand(game, { kind: "ability", player: getLocalPlayer(), abilityId });
+  }, []);
+
+  /**
+   * An ability actually fired, on either player's command.
+   *
+   * Both devices run this, so both spend the charge from their mirror of the
+   * run and both show the burst. A magnet that flashed only on the phone that
+   * pressed it would, to the other player, look like their balls moving for no
+   * reason.
+   */
+  const handleAbilityFired = useCallback((abilityId: string) => {
+    const game = gameRef.current;
+    const now = simNow();
     onSpendAbility?.(abilityId);
     const def = getAbility(abilityId);
     // Icon burst at the board centre so each ability reads at a glance.
@@ -1933,7 +1964,10 @@ export function GameCanvas({
         setAbilityTimers(prev => prev.filter(t => !(t.kind === def.kind && t.endMs === endMs)));
       }, durationMs);
     }
-  }, [onSpendAbility, accentColor]);
+  }, [onSpendAbility]);
+  // Read through a ref by the loop's command deps, so a new callback identity
+  // cannot rebuild the loop in the middle of a map.
+  abilityFiredRef.current = handleAbilityFired;
 
   // A board tap while a targeted ability is armed (Magnet): fire it at the point
   // and spend the charge; a tap outside the board (id/pos null) just cancels.
@@ -1941,9 +1975,10 @@ export function GameCanvas({
     setArmedAbility(null);
     gameRef.current.armedAbility = null;
     if (!abilityId || !worldPos) return;
-    const fired = fireTargetedAbility(abilityId, gameRef.current, simNow(), worldPos);
-    if (fired) onSpendAbility?.(abilityId);
-  }, [onSpendAbility]);
+    enqueueCommand(gameRef.current, {
+      kind: "abilityTarget", player: getLocalPlayer(), abilityId, target: { ...worldPos },
+    });
+  }, []);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
 
   // The Rubber Band is the one targeted ability that takes a DRAG rather than a
@@ -1953,13 +1988,11 @@ export function GameCanvas({
   const handleBandFire = useCallback((shape: BandShape) => {
     setArmedAbility(null);
     gameRef.current.armedAbility = null;
-    // A band that caught nothing spends nothing. The player can see the ring of
-    // what it would catch while they drag, so an empty release is a decision
-    // they changed their mind about, not a miss to charge them for.
-    if (fireRubberBand(gameRef.current, shape, simNow())) {
-      onSpendAbility?.('rubberBand');
-    }
-  }, [onSpendAbility]);
+    // Whether it caught anything, and so whether it costs a charge, is decided
+    // where the command applies: both devices have to reach the same answer,
+    // and only one of them has the finger.
+    enqueueCommand(gameRef.current, { kind: "rubberBand", player: getLocalPlayer(), shape });
+  }, []);
 
   const handleBandCancel = useCallback(() => {
     setArmedAbility(null);
@@ -2335,7 +2368,10 @@ export function GameCanvas({
 
       <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />
 
-      {pushMode === "prompt" && clearedPercent !== null && (
+      {/* The push prompt halts the world on BOTH devices, so both see it; only
+          the host may answer it. A guest that could also answer would settle a
+          question about one run twice, and the two answers can differ. */}
+      {pushMode === "prompt" && clearedPercent !== null && !isPairGuest && (
         <PushYourLuckOverlay
           remainingPercent={clearedPercent}
           thresholdPercent={level.sizeThreshold}

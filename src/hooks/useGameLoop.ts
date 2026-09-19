@@ -439,7 +439,18 @@ export function createGameLoop(
       // Refused means the partner's phone has not been heard from yet: leave
       // the accumulator where it is and draw; the tick will run next frame.
       if (pair) {
-        if (!pair.tryReleaseTick(game)) break;
+        if (!pair.tryReleaseTick(game)) {
+          // The partner's commands for this tick are not in yet. Leaving the
+          // accumulator alone looks harmless and is not: it keeps filling at
+          // one frame per frame while nothing drains it, so a two-second wait
+          // banks two seconds, and the moment the partner speaks the board
+          // runs two hundred ticks in a single frame and every ball teleports.
+          //
+          // Held to one step instead. The pair resumes at the pace it stalled
+          // at, which is what a stutter should look like.
+          game.accumulator = Math.min(game.accumulator, PHYSICS_STEP);
+          break;
+        }
         if (deps) drainCommands(game, deps);
       }
 

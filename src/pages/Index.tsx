@@ -57,6 +57,8 @@ const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScr
 const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
 const PairLobby = lazy(() => import('@/components/game/PairLobby').then(m => ({ default: m.PairLobby })));
 const PairDecision = lazy(() => import('@/components/game/PairDecision').then(m => ({ default: m.PairDecision })));
+const PairMismatchNotice = lazy(() => import('@/components/game/PairMismatchNotice').then(m => ({ default: m.PairMismatchNotice })));
+const PairGuestGate = lazy(() => import('@/components/game/PairGuestGate').then(m => ({ default: m.PairGuestGate })));
 const PairLinkBanner = lazy(() => import('@/components/game/PairLinkBanner').then(m => ({ default: m.PairLinkBanner })));
 const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagnosticsPanel').then(m => ({ default: m.NearbyDiagnosticsPanel })));
 
@@ -112,7 +114,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   }, [pairPhase, pairRunState]);
 
   // A pair keeps its own copy of the run on BOTH phones, written on the same
-  // signal the solo save uses: a new map beginning.
+  // signal the solo save uses: a new map beginning. On the host that write is
+  // also a publication: the guest takes the host's run as the only run.
   const pairRecordMap = pair.recordMap;
   useEffect(() => {
     if (pairPhase !== 'playing' || navigation.currentScreen !== 'game') return;
@@ -123,6 +126,76 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     // this fires once per map rather than on every state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairPhase, navigation.currentScreen, session.currentLevelIndex, pairRecordMap]);
+
+  /**
+   * The guest takes the host's run at the start of every map.
+   *
+   * The run used to sync once, at the Continue-or-New decision, and never
+   * again. That is enough for map one and wrong from map two: between maps the
+   * two phones walked their own shop, their own drafts and their own
+   * assignment screens, so they arrived at the next board with different
+   * upgrades, computed different modifiers, and played two different games off
+   * one seed. Whatever this phone did in between is overwritten, because the
+   * host owns the run.
+   */
+  /**
+   * Both phones say what they are about to play under, at each map start.
+   *
+   * Certificates, achievements and loadout bonuses come from each phone's own
+   * storage and none of them travel in the run record, so two players with
+   * different unlocks would compute different fence speeds and lock thresholds
+   * before either of them touched the board. That is not a drift the hashes
+   * can repair, because the cause is not on the board.
+   */
+  const declareModifiers = pair.declareModifiers;
+  const activeModifiers = session.activeModifiers;
+  useEffect(() => {
+    if (pairPhase !== 'playing' || navigation.currentScreen !== 'game') return;
+    declareModifiers(session.currentLevelIndex, activeModifiers as unknown as Record<string, unknown>);
+  }, [pairPhase, navigation.currentScreen, session.currentLevelIndex, activeModifiers, declareModifiers]);
+
+  /**
+   * What the host is deciding right now, for the guest's gate.
+   *
+   * Null means nothing is: either this device IS the host, or it is on the
+   * board where both players act. Everything else in the run is a decision
+   * about one run, which one device has to own.
+   */
+  const guestGate: "shopping" | "deciding" | "pushing" | "continuing" | null =
+    pair.phase !== 'playing' || pair.isHost
+      ? null
+      : session.pendingDeathResult
+        ? "continuing"
+        : navigation.currentScreen === 'upgradeShop'
+          ? "shopping"
+          : navigation.currentScreen !== 'game'
+            ? "deciding"
+            : null;
+
+  /**
+   * A pair run never files on the solo ladder.
+   *
+   * Two players cut roughly twice as fast, so within an evening the records
+   * would stop measuring solo play, which is the only thing they are for.
+   * Armed once, when the run starts, rather than at banking time: by then the
+   * run is over and a missed call means a record that should not exist.
+   */
+  const markRunIneligible = session.markRunIneligible;
+  useEffect(() => {
+    if (pairPhase !== 'playing') return;
+    markRunIneligible();
+  }, [pairPhase, markRunIneligible]);
+
+  const pairAdopt = pair.adopt;
+  const applyRunRecord = session.applyRunRecord;
+  const adoptedAtRef = useRef(0);
+  useEffect(() => {
+    if (!pairAdopt || pair.isHost) return;
+    if (pairAdopt.at === adoptedAtRef.current) return;
+    adoptedAtRef.current = pairAdopt.at;
+    applyRunRecord(pairAdopt.run);
+    navigation.goToGame();
+  }, [pairAdopt, pair.isHost, applyRunRecord, navigation]);
 
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
@@ -365,6 +438,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               >
               <GameScreen
                 lockstep={pair.lockstep}
+                isPairGuest={pair.phase === 'playing' && !pair.isHost}
                 pairBanner={
                   pair.phase === 'playing' && (pair.stalled || pair.dropped)
                     ? (
@@ -701,6 +775,18 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           newlyUnlockedCerts={session.pendingCertUnlocks}
           pace={session.levelPace}
         />
+      )}
+
+      {pair.modifierMismatch && (
+        <Suspense fallback={null}>
+          <PairMismatchNotice remoteName={pair.remoteName} onLeave={leavePair} />
+        </Suspense>
+      )}
+
+      {guestGate && (
+        <Suspense fallback={null}>
+          <PairGuestGate what={guestGate} remoteName={pair.remoteName} />
+        </Suspense>
       )}
 
       <AnimatePresence>

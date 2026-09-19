@@ -41,6 +41,7 @@ import { joinProjection, outgoingDirection, incomingDirection } from "@/lib/phys
 import { slingShape, fireSlingFence } from "@/lib/physics/slingFence";
 import { railParam, railReading, releaseMover } from "@/lib/physics/moverControl";
 import { isTappableBall } from "@/lib/ballTypes";
+import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { simNow } from "@/lib/simClock";
 
@@ -116,7 +117,25 @@ export type GameCommand =
    */
   | { kind: "moverRelease"; player: PlayerId; cancel?: boolean }
   /** A different fence slot was chosen. */
-  | { kind: "selectFence"; player: PlayerId; fenceTypeId: string };
+  | { kind: "selectFence"; player: PlayerId; fenceTypeId: string }
+  /**
+   * An ability fired.
+   *
+   * Three shapes because the game has three: most abilities take no aim, the
+   * Magnet takes a point, and the Rubber Band takes a drag. All three used to
+   * reach into the game state from the component that noticed the press, which
+   * is fine for one player and an instant divergence for two: an ability that
+   * fires on one phone and not the other changes where every ball is inside a
+   * second, and no amount of position-patching puts that back.
+   *
+   * The CHARGE is spent by both devices when the command applies, not by the
+   * one that pressed: charges are a run resource, both devices mirror the
+   * run, and spending on only one would put the two mirrors out of step for
+   * the rest of the map.
+   */
+  | { kind: "ability"; player: PlayerId; abilityId: string }
+  | { kind: "abilityTarget"; player: PlayerId; abilityId: string; target: Vector2 }
+  | { kind: "rubberBand"; player: PlayerId; shape: import("@/lib/rubberBand").BandShape };
 
 /**
  * The few things a command needs that do not live on the game state.
@@ -131,9 +150,23 @@ export interface CommandDeps {
   setFreezeUsesRemaining?: (n: number) => void;
   onMessage?: (id: GameMessageId) => void;
   onTapRemove?: (info: { x: number; y: number; color: string }) => void;
-  /** Haptics. Only ever fired for the local player's own commands: a phone
-   *  buzzing for a fence the other player drew would read as a fault. */
+  /**
+   * Haptics.
+   *
+   * Only ever reaches the local player's own commands: applyCommand drops it
+   * for the partner's, because a phone buzzing for a fence the other player
+   * drew reads as a fault rather than as feedback.
+   */
   vibrate?: (pattern: number | number[]) => void;
+  /** What clearFences needs to repaint the board it just emptied. */
+  clearFences?: import("@/lib/abilityEffects").ClearFencesCallbacks;
+  /**
+   * An ability actually fired. Both devices run this, because both mirror the
+   * run's charges and both should show the burst: a magnet that only flashes
+   * on the phone that pressed it looks, to the other player, like their balls
+   * moved for no reason.
+   */
+  onAbilityFired?: (abilityId: string, player: PlayerId) => void;
 }
 
 /** Put a command where it should go: the local queue, or the pair's lockstep. */
@@ -172,7 +205,16 @@ export function drainCommands(game: CanvasGameState, deps: CommandDeps): void {
 }
 
 /** Apply one command. The only door between a player and the game state. */
-export function applyCommand(game: CanvasGameState, cmd: GameCommand, deps: CommandDeps): void {
+export function applyCommand(game: CanvasGameState, cmd: GameCommand, rawDeps: CommandDeps): void {
+  // Haptics belong to the hand that did the thing. Both devices apply both
+  // players' commands, so without this a phone buzzes when its PARTNER grabs a
+  // mover or lands a freeze, which reads as a fault rather than as feedback.
+  // Filtered here, once, rather than at each of the six call sites below,
+  // because "did I do this" is not a question any of them should have to ask.
+  const deps: CommandDeps = cmd.player === localPlayer
+    ? rawDeps
+    : { ...rawDeps, vibrate: undefined };
+
   switch (cmd.kind) {
     case "cut":          applyCut(game, cmd, deps); break;
     case "freezeTap":    applyFreezeTap(game, cmd, deps); break;
@@ -182,6 +224,48 @@ export function applyCommand(game: CanvasGameState, cmd: GameCommand, deps: Comm
     case "moverMove":    applyMoverMove(game, cmd); break;
     case "moverRelease": applyMoverRelease(game, cmd, deps); break;
     case "selectFence":  game.selectedFenceTypeId = cmd.fenceTypeId; break;
+    case "ability":      applyAbility(game, cmd, deps); break;
+    case "abilityTarget": applyAbilityTarget(game, cmd, deps); break;
+    case "rubberBand":   applyRubberBand(game, cmd, deps); break;
+  }
+}
+
+// ── abilities ───────────────────────────────────────────────────────────────
+
+function applyAbility(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "ability" }>,
+  deps: CommandDeps,
+): void {
+  // An ability that found nothing to do spends nothing, which is the rule the
+  // single-player path already had; it just used to be decided in a component.
+  const fired = fireAbility(cmd.abilityId, game, simNow(), deps.clearFences ?? {
+    repaintRegionCanvas: () => {},
+    setRemainingPercent: () => {},
+  });
+  if (fired) deps.onAbilityFired?.(cmd.abilityId, cmd.player);
+}
+
+function applyAbilityTarget(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "abilityTarget" }>,
+  deps: CommandDeps,
+): void {
+  if (fireTargetedAbility(cmd.abilityId, game, simNow(), cmd.target)) {
+    deps.onAbilityFired?.(cmd.abilityId, cmd.player);
+  }
+}
+
+function applyRubberBand(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "rubberBand" }>,
+  deps: CommandDeps,
+): void {
+  // A band that caught nothing spends nothing. The player could see the ring
+  // of what it would catch while they dragged, so an empty release is a change
+  // of mind rather than a miss to charge them for.
+  if (fireRubberBand(game, cmd.shape, simNow())) {
+    deps.onAbilityFired?.("rubberBand", cmd.player);
   }
 }
 
