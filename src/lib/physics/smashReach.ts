@@ -29,7 +29,8 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { DestructibleState } from "@/types/game";
 import type { SpaceGrid } from "@/lib/spaceGrid";
-import { CellState } from "@/lib/spaceGrid";
+import { CellState, rasterizeCutToGrid, captureUnreachableCells } from "@/lib/spaceGrid";
+import type { Vector2 } from "@/lib/polygon";
 import type { WinSpec } from "@/types/winSpec";
 
 /**
@@ -194,4 +195,73 @@ export function regionHoldsNeededSlab(
     }
   }
   return false;
+}
+
+/**
+ * Would this cut, if it landed, leave the map unable to meet its smash clause?
+ *
+ * The third rule, and the one the other two left a hole for. Sealing a pocket
+ * WITH a ball in it is refused as a lock; sealing one with no ball in it fails
+ * the map. That second case is correct when the clause asks for one slab out of
+ * many - you have to go out of your way to bury the only one that counts - and
+ * it turns vicious the moment the clause asks for HALF of them, because then an
+ * ordinary early cut across a run of bricks can put the map beyond reach on the
+ * second fence, at 88% of the board still live, with nothing having gone wrong
+ * that the player could see.
+ *
+ * Measured, on the eight-seed sweep, when act I's counts went to half: level 6
+ * fell from 7 wins to 3, level 7 from 7 to 4, level 13 from 8 to 3, and every
+ * single loss was objectiveBuried. The counts were not the problem - a map that
+ * asks you to break six of twelve bricks is a fine map - the problem was that
+ * getting the ORDER wrong cost a life instead of a cut.
+ *
+ * So the cut is refused instead, exactly as a ball-orphaning cut already is
+ * (applyCut's "reject walls that would orphan a ball"): the fence does not
+ * land, nothing is spent, and the board is unchanged. The player tries
+ * somewhere else, which is the correct lesson and a free one.
+ *
+ * ── The prediction ─────────────────────────────────────────────────────────
+ *
+ * Simulated on a COPY of the grid rather than reasoned about: rasterise the
+ * candidate segments, run the same capture the real cut would run, and count
+ * what could still be struck afterwards. The alternative - working out which
+ * slabs a line would orphan by geometry - is a second implementation of
+ * reachability that would be free to disagree with the first, and this rule is
+ * only as trustworthy as its agreement with what actually happens.
+ *
+ * A map whose clause is ALREADY beyond reach refuses nothing. That state
+ * belongs to smashRequirementLost, which ends the map and says why; refusing
+ * every subsequent cut instead would leave the player fencing at a board that
+ * silently declines to change.
+ */
+export function cutWouldBurySmashes(
+  game: CanvasGameState,
+  spec: WinSpec,
+  segments: ReadonlyArray<{ start: Vector2; end: Vector2 }>,
+  thickness: number,
+): boolean {
+  const need = requiredSmashes(spec);
+  if (need === 0) return false;
+  const grid = game.spaceGrid;
+  if (!grid || segments.length === 0) return false;
+  if (breakables(game).length === 0) return false;
+  // Already lost: not this cut's doing, and not this rule's to report.
+  if (smashesStillPossible(game) < need) return false;
+
+  const after: SpaceGrid = {
+    ...grid,
+    cells: Uint8Array.from(grid.cells),
+    cellRegionIds: [...grid.cellRegionIds],
+  };
+  for (const seg of segments) {
+    rasterizeCutToGrid(after, seg.start, seg.end, thickness);
+  }
+  captureUnreachableCells(after, game.balls, [...game.walls, ...segments]);
+
+  const probe = { ...game, spaceGrid: after } as CanvasGameState;
+  let possible = 0;
+  for (const d of breakables(game)) {
+    if (d.destroyed || canStillStrike(probe, d)) possible++;
+  }
+  return possible < need;
 }

@@ -86,17 +86,36 @@ three terminals. A clause with exactly as many objects as it requires makes
 every one of them load-bearing, so a single cut that buries one ends the map -
 usually with no sign on screen, and often many cuts before the game admits it.
 
-This is not a style preference. Measured across the built ladder:
+This is not a style preference. Measured across the ladder as it was when the
+rule was written, every map the bot lost to `objectiveBuried` had zero or one
+spare, and slack was the cheapest repair available: one entity per map, no code,
+and it converts *requires perfection* into *requires competence* without touching
+a single threshold.
 
-| slack on `smashed` | maps |
-|---|---|
-| **zero** (needs N, has N) | L5, L6, L7, L9, L12, L18, L19, L25, L29 - **nine** |
-| one spare | L11, L13, L32 - three |
+Act I has since been rebuilt on runs of one-touch bricks rather than single
+slabs, and its counts raised to about half of what each map carries (L5 asks 2
+of 4, L6 and L7 ask 6 of 12, L9 asks 6 of 11). By the count above that is slack
+five or six, which is the opposite of the problem this rule was written for.
 
-Every map the bot loses to `objectiveBuried` is on that list. Slack is the
-cheapest difficulty repair available: it is one entity per map, it changes no
-code, and it converts *requires perfection* into *requires competence* without
-touching a single threshold.
+#### Slack is in LANES, not in objects
+
+And it did not behave like slack. Raising those counts alone, on eight seeds:
+L6 fell from 7 wins to 3, L7 from 7 to 4, L13 from 8 to 3, and every single loss
+was `objectiveBuried`. Twelve bricks stacked into one divider share one pair of
+lanes, so a single ordinary fence can orphan the lot - nine spare objects and
+nothing to spare at all.
+
+Two things follow, and the second is the one worth remembering:
+
+- **Count the ways in, not the things.** A run of twelve behind one doorway has
+  the slack of one object. Spread the same twelve across two walls the balls
+  reach from different sides and it has real slack.
+- **A buried objective is now a refused cut, not a lost map.** `applyCut`
+  refuses a fence that would put the smash clause out of reach, exactly as it
+  already refuses one that would orphan a ball: nothing is spent and the board
+  is unchanged (`smashReach.cutWouldBurySmashes`). That is what makes counts at
+  half playable, and it is worth more than slack was: on the same sweep it took
+  L17 from 2 wins to 5 and L18 from 5 to 6 with their counts untouched.
 
 #### How to give a map a second answer
 
@@ -1335,6 +1354,7 @@ previously spread across a dozen test files and comment blocks.
 | Launcher shell | leaves the board the frame the barrel arms (`physics/launcherShell.ts`). Its slabs and walls go at once and its footprint comes back as capturable space, so a launcher adds to the board's space rather than subtracting from it; only the picture takes its time. | `launcherShell.test.ts` |
 | Gate zone behind a reveal | allowed, and level 8 is one: its whole `var` zone sits behind the curtain. The reachability guard reads cells behind an unbroken reveal as pending, not claimed (`sealedPendingCells`), and it reads the DEALT zones (`game.coloredAreas`, rotated), never the authored rectangle. Both were wrong once: level 8 failed on frame one of the un-rotated deal and on the first ordinary cut of the other three, and the retry remounted into the same failure. | `gateZoneDeal.test.ts` |
 | A win clause that names a PLACE can be stranded | `splitLocks`, `delivered`, `terminals` and `harvested` all need particular ground to still be usable, and the board can take that ground away: level 2's right-hand lock dies the moment the right half is captured with both balls on the left. `requirementReach.ts` asks the question for the whole union (can a ball still get there / is the ground still open to a fence) and fails the map as `requirementUnreachable`. Before it, level 2 simply ran forever - the tutorial band has no clock either. | `strandedRequirement.test.ts` |
+| A cut that would bury the win's slabs is refused | Not failed: the fence does not land, nothing is spent, and the board is unchanged, exactly as for a cut that would orphan a ball. Without it a map asking for half its bricks ends on an ordinary early fence at 88% remaining, charging a life for an order-of-play mistake the board never showed. `objectiveBuried` stays as the backstop for the paths a cut does not own (a lock's capture cascade, a destroy-recapture). | `smashCutRefusal.test.ts` |
 | Stranding checks wait for the first cut | `areaUnreachable`, `objectiveBuried` and `requirementUnreachable` never fire while `wallCount` is 0. A map cannot be stranded by a cut nobody has made, and a check that fires on an untouched board loops: fail, overlay, remount, fail. With the gate a wrong guard costs one map at most. | `gateZoneDeal.test.ts` |
 | Launcher bore | a turned barrel needs a bore of **~110 or more**. Reachability is ball-size aware and works on the rasterised grid, so a narrow bore at an angle rasterises to a staircase that erodes into disconnected cells: at 84 the balls inside were sealed off from the board and `captureUnreachableCells` wrote off everything outside the barrel. From about 110 up it stays connected on every rotation. | `launcherBarrel.test.ts` |
 | Tunnelling ceiling | ~5520 units/s; past it an 18-unit ball crosses a 6-unit fence between physics steps | `bouncer.ts` |

@@ -30,7 +30,7 @@ import {
   type ScreenQuad,
 } from "./quad";
 import { PALETTE } from "./palette";
-import { startupPulse, winTargetPulse } from "../startupPulse";
+import { startupPulse, winTargetPulse, refusalFlare } from "../startupPulse";
 import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
 import { clampZoneSpeed } from "@/lib/physics/fenceZones";
 import { mix } from "./palette";
@@ -371,6 +371,10 @@ export class AreaLayer {
     const targets = game.winHighlights ?? [];
     if (targets.length === 0) return;
     const { breathe } = winTargetPulse(game.activePlaySeconds ?? 0);
+    // A cut was just refused for trying to bury these. The refusal is silent
+    // by design (the fence simply does not land), so the marker answers the
+    // "why?" by pointing at what stopped it. See startupPulse.refusalFlare.
+    const flare = refusalFlare(game.activePlaySeconds ?? 0, game.smashRefusedAtSeconds);
     const color = Number.parseInt(accentColor.replace("#", ""), 16);
     // Two rings a few units apart: one line at this alpha reads as an edge the
     // map happens to have, two concentric ones read as a marker put there.
@@ -378,9 +382,9 @@ export class AreaLayer {
       const q = worldRectQuad(r.x, r.y, r.width, r.height, w2s);
       for (const [grow, mul] of [[-3, 1], [-9, 0.55]] as const) {
         shapeOf(this.pulseG, q, grow).stroke({
-          width: 1.5 + breathe * 1.5,
+          width: 1.5 + breathe * 1.5 + flare * 3,
           color,
-          alpha: (0.18 + breathe * 0.22) * mul,
+          alpha: (0.18 + breathe * 0.22 + flare * 0.5) * mul,
         });
       }
     }

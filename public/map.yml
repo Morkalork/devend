@@ -353,7 +353,7 @@ levels:
         - kind: space
           threshold: 28
         - kind: smashed
-          count: 1
+          count: 2
     entities:
       - id: jamb-top
         kind: wall
@@ -470,7 +470,7 @@ levels:
         - kind: space
           threshold: 25
         - kind: smashed
-          count: 1
+          count: 6
     entities:
       - id: anchor-top
         kind: wall
@@ -631,15 +631,17 @@ levels:
         - kind: space
           threshold: 22
         - kind: smashed
-          count: 2
+          count: 6
     entities:
       # The alcove is ONE wall now. It used to be two - a 141-long jamb hanging
       # off the top edge at x 585 and this 270-long lip - which left the only
       # way in as an 84-unit slot between the jamb's foot and the lip's top,
       # against a 36-wide ball. Legal by the gap rule and miserable in the
-      # hand: the chest is one of the two smashes this map REQUIRES, so the
-      # hardest steering on the board was guarding a mandatory objective rather
-      # than an optional prize.
+      # hand: the chest counted toward the smashes this map REQUIRED back when
+      # it asked for two, so the hardest steering on the board was guarding a
+      # mandatory objective rather than an optional prize. The clause asks for
+      # six of the twelve breakables now, which the eleven partitions answer on
+      # their own - the chest is a prize again.
       #
       # Dropping the jamb (the shorter of the two, so the shelf that defines
       # the alcove survives) opens the top-right to anything coming across from
@@ -912,7 +914,7 @@ levels:
         - kind: space
           threshold: 16
         - kind: smashed
-          count: 2
+          count: 6
     coloredAreas:
       - kind: var
         x: 45

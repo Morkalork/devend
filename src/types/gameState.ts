@@ -193,6 +193,18 @@ export interface CanvasGameState {
    */
   winHighlights?: import("@/lib/winHighlight").HighlightRect[];
   /**
+   * `activePlaySeconds` when a cut was last refused for burying the slabs the
+   * win still needs (smashReach.cutWouldBurySmashes).
+   *
+   * A refused cut is silent by default - the ball-orphaning refusal beside it
+   * always has been - and silence is affordable when the refusal is rare and
+   * self-explanatory. This one is neither: act I asks for half its bricks now,
+   * so it fires often enough that "my fence just did not appear" would be the
+   * player's whole experience of it. The win markers flare instead, which says
+   * WHICH slabs stopped it without inventing a second vocabulary.
+   */
+  smashRefusedAtSeconds?: number;
+  /**
    * The fence type the next cut will draw (FENCE_TYPES_PLAN.md).
    *
    * A MODE, not a consumable: it stays selected until the player changes it,

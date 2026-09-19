@@ -43,7 +43,7 @@ import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
-import { smashRequirementLost } from "@/lib/physics/smashReach";
+import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
 import { lostRequirement } from "@/lib/physics/requirementReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
@@ -214,7 +214,7 @@ export function applyCutFn(
     }
   }
 
-  // Reject walls that would orphan a ball
+  // Reject walls that would orphan a ball, or bury the map's smash clause
   {
     const allSegs: { start: Vector2; end: Vector2 }[] = [];
     for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -228,6 +228,20 @@ export function applyCutFn(
         game.activeWalls = game.activeWalls.filter(w => w !== wall);
         return;
       }
+    }
+    // The same refusal for the slabs the win still needs. Sealing a pocket WITH
+    // a ball in it already refuses to lock rather than stranding the slab
+    // inside it; this is that rule for the cut itself, and act I needs it now
+    // that its maps ask for half their bricks rather than one: at those counts
+    // an ordinary early fence across a run can put the map beyond reach on the
+    // second cut, and failing it there charges a life for an order-of-play
+    // mistake the board never showed. A refused cut costs nothing and teaches
+    // the same thing. See smashReach.cutWouldBurySmashes.
+    if (cutWouldBurySmashes(game, resolveWinSpec(level, activeModifiers), allSegs, wall.thickness)) {
+      game.activeWalls = game.activeWalls.filter(w => w !== wall);
+      // Flare the win markers, so the refusal points at what it protected.
+      game.smashRefusedAtSeconds = game.activePlaySeconds;
+      return;
     }
   }
 

@@ -92,3 +92,33 @@ export function winTargetPulse(activePlaySeconds: number): WinTargetPulse {
   const phase = (activePlaySeconds % BREATHE_PERIOD) / BREATHE_PERIOD;
   return { breathe: (1 - Math.cos(phase * Math.PI * 2)) / 2 };
 }
+
+/**
+ * How long the win markers flare after a cut was refused for burying them.
+ *
+ * Active-play seconds, like everything else here. Long enough to be seen by
+ * someone whose eyes were on the fence they just drew, short enough that it is
+ * over before the next cut.
+ */
+export const REFUSAL_FLARE_SECONDS = 1.1;
+
+/**
+ * Extra loudness for the win markers just after a cut was refused, 0..1.
+ *
+ * The refusal itself is silent - the fence simply does not land, exactly as a
+ * ball-orphaning cut does not - and on a map asking for half its bricks that
+ * happens often enough to need an answer to "why?". This is that answer, and
+ * it is deliberately the EXISTING marker rather than a new one: the cue points
+ * at the slabs that stopped the cut, which is the whole explanation.
+ *
+ * Decays rather than blinking off, so it reads as a response to what the player
+ * just did rather than as a state the board entered.
+ */
+export function refusalFlare(
+  activePlaySeconds: number, refusedAtSeconds: number | undefined,
+): number {
+  if (refusedAtSeconds === undefined) return 0;
+  const since = activePlaySeconds - refusedAtSeconds;
+  if (!(since >= 0) || since > REFUSAL_FLARE_SECONDS) return 0;
+  return 1 - since / REFUSAL_FLARE_SECONDS;
+}
