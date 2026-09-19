@@ -198,6 +198,11 @@ export function createGameLoop(
     // active path, or the first hold after a spell of play would see the whole
     // stretch as one elapsed frame.
     lastFrameTs = timestamp;
+    // The watchdog's heartbeat. Stamped FIRST, before any of the guards below
+    // can return, so "the loop body ran" is what it records - the loop being
+    // deliberately held still counts as alive, and only a loop that is not
+    // being called at all goes stale. See lib/loopWatchdog.
+    game.loopFrameAt = timestamp;
     // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
     // one. Frozen once the map is over (level complete / game over) so the
     // background code goes still with the board; it resumes when the next map's

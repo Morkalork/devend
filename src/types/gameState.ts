@@ -341,6 +341,15 @@ export interface CanvasGameState {
   accumulator: number;
   animationId: number;
   gameLoopFn: ((timestamp: number) => void) | null;
+  /**
+   * WALL-clock timestamp of the last frame the loop body ran, for the
+   * watchdog. Wall time on purpose: the question is whether the BROWSER has
+   * called the loop lately, which sim time cannot answer (see loopWatchdog).
+   * 0 = it has never run, which is a map still being built, not a stall.
+   */
+  loopFrameAt: number;
+  /** How many times the watchdog has had to restart a dead loop this session. */
+  loopRestarts: number;
   /** Active-play seconds this level (physics steps only; pause/prompt/menu excluded). */
   activePlaySeconds: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */

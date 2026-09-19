@@ -123,6 +123,36 @@ export function recordCut(ms: number): void {
 }
 
 /**
+ * Is the rAF loop actually turning, and if not, why is it allowed not to be?
+ *
+ * Here rather than in a debug panel of its own because of what this HUD is
+ * already good at: it is DOM, so it survives being screenshotted off a phone,
+ * which is the only way a stall reported from play has ever reached this
+ * codebase. Twice now a board has frozen mid-map with no menu and nothing on
+ * screen saying why, and both investigations started from a blank page.
+ *
+ * `hold` is the loop's own reason for being stopped (null = it should be
+ * running), `staleMs` how long since the loop body last ran, `restarts` how
+ * many times the watchdog has had to revive it. A screenshot with
+ * `loop  -/1200ms  x1` on it says, on its own, that the loop died and what
+ * revived it.
+ */
+let _loopHold: string | null = null;
+let _loopStaleMs = 0;
+let _loopRestarts = 0;
+
+export function recordLoopHealth(hold: string | null, staleMs: number, restarts: number): void {
+  _loopHold = hold;
+  _loopStaleMs = staleMs;
+  _loopRestarts = restarts;
+}
+
+/** The loop line, exported so a test can read it without a browser. */
+export function loopHealthLine(): string {
+  return `loop  ${_loopHold ?? "-"}/${Math.round(_loopStaleMs)}ms  x${_loopRestarts}`;
+}
+
+/**
  * The worst frame since the last reset, with its full attribution frozen at the
  * moment it happened.
  *
@@ -409,6 +439,7 @@ export function perfLines(): string[] {
 
   return [
     `FPS ${Math.round(fps)}  (min ${Math.round(fpsMin)})`,
+    loopHealthLine(),
     `frame ${f1(frameAvg)}ms  peak ${f1(framePeak)}`,
     `phys  ${f1(_physicsMs.avg())}  peak ${f1(_physicsMs.max())}`,
     `rend  ${f1(_renderMs.avg())}  peak ${f1(_renderMs.max())}`,

@@ -8,7 +8,9 @@
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "./headlessGame";
-import { checkInvariants, checkTerminal, type Violation } from "./invariants";
+import { checkInvariants, checkTerminal, winNotShipped, type Violation } from "./invariants";
+import { readWinSnapshot } from "@/lib/physics/applyCut";
+import { resolveWinSpec, requirementsMet, metAlternative } from "@/lib/winSpec";
 import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, seededRandom } from "./policy";
@@ -103,6 +105,13 @@ export function runBot(
   let bestRemaining = Infinity;
   let framesSinceProgress = 0;
 
+  // "The map is won and nothing happened" - the report this harness had no way
+  // to answer. Counted here rather than inside checkInvariants because it is
+  // the only rule that needs to persist across frames: one frame of it is the
+  // win landing, sixty of it is a stall. See winNotShipped.
+  const spec = resolveWinSpec(level, opts.modifiers ?? plainModifiers());
+  let framesWon = 0;
+
   try {
   for (let f = 0; f < maxFrames; f++) {
     if (ctx.game.levelComplete || ctx.game.gameOver) break;
@@ -124,6 +133,14 @@ export function runBot(
 
     stepBot(ctx, PHYSICS_STEP);
     record(checkInvariants(ctx.game));
+
+    const snap = readWinSnapshot(ctx.game, level);
+    const shipped = ctx.game.levelComplete || ctx.game.gameOver
+      || ctx.game.pushMode !== "none" || ctx.game.pushPromptPending;
+    framesWon = !shipped && (metAlternative(spec, snap) || requirementsMet(spec, snap))
+      ? framesWon + 1 : 0;
+    const unshipped = winNotShipped(framesWon > 0, framesWon);
+    if (unshipped) record([unshipped]);
 
     // BANK a Push Your Luck offer the moment it appears.
     //
