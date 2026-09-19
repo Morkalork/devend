@@ -334,6 +334,10 @@ describe("and it stays out of the way of every other map", () => {
    */
   const POSITIONAL = new Set(["splitLocks", "delivered", "terminals", "harvested"]);
 
+  // An explicit timeout, and not a generous default: this plays two real runs
+  // of every shipped map, which took 15s here and past vitest's 30s default on
+  // CI once the cut refusal (smashReach.cutWouldBurySmashes) started simulating
+  // each fence. A sweep that fails for being slow teaches nothing about maps.
   it("never strands a map that names no place", () => {
     const stranded: string[] = [];
     for (const level of LADDER) {
@@ -341,14 +345,14 @@ describe("and it stays out of the way of every other map", () => {
       const spec = resolveWinSpec(level, NO_RUN_RULES);
       const positional = spec.require.some(c => POSITIONAL.has(c.kind));
       for (const seed of [1, 2]) {
-        const result = runBot(level, n, seed, { maxFrames: 2400 });
+        const result = runBot(level, n, seed, { maxFrames: 1800 });
         if (result.failKind !== "requirementUnreachable") continue;
         stranded.push(`L${n} seed ${seed}${positional ? " (positional)" : ""}`);
         expect(positional, `level ${n} was stranded on a win with no place in it`).toBe(true);
       }
     }
     if (stranded.length > 0) console.log("stranded runs:", stranded.join(", "));
-  });
+  }, 180000);
 });
 
 describe("a map that never had a chance is not the player's fault", () => {
