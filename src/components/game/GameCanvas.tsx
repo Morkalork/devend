@@ -38,7 +38,7 @@ import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
 import { RubberBandOverlay, type BandTarget } from "@/components/game/RubberBandOverlay";
 import type { BandShape } from "@/lib/rubberBand";
-import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/rendering/perfStats";
+import { drawPerfOverlay, recordSurface, isPerfHudEnabled, recordLoopHealth } from "@/lib/rendering/perfStats";
 import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent, DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
@@ -132,6 +132,7 @@ import { processDestroysFn } from "@/lib/physics/destructibles";
 import { dematerializeArmedLaunchers } from "@/lib/physics/launcherShell";
 import { pushBonusEarned } from "@/lib/pushLuck";
 import { mapGoals, type Goal } from "@/lib/goalTracker";
+import { holdFlagsOf, loopHoldReason, loopNeedsRestart, WATCHDOG_INTERVAL_MS } from "@/lib/loopWatchdog";
 import { winHighlightRects } from "@/lib/winHighlight";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
@@ -580,6 +581,50 @@ export function GameCanvas({
     }
   }, [paused, pendingLaunch]);
 
+  /**
+   * Watchdog: the loop is not allowed to stay dead.
+   *
+   * The effect above is one of several places that must call startGameLoop
+   * again after the loop parked itself, and it is not the only one - a push
+   * prompt, a game over and a finished level each park the loop and each hand
+   * the obligation to restart it to different code. Miss any one and the board
+   * freezes on its last painted frame with nothing on screen to say why, which
+   * is what "the map just does nothing and I end up stuck with no post map
+   * menu" looks like from the player's side.
+   *
+   * So: if the loop body has not run for a second and NOTHING says it should be
+   * held, start it. The predicate asks the same questions the loop's own guards
+   * do, so it cannot restart a hold that is still meant to be in force. A net,
+   * not a diagnosis - loopRestarts counts them so a stall can be reported as
+   * one rather than staying invisible. See lib/loopWatchdog.
+   */
+  useEffect(() => {
+    const game = gameRef.current;
+    const id = window.setInterval(() => {
+      const flags = holdFlagsOf(game);
+      const now = performance.now();
+      // Reported whether or not anything is wrong, and BEFORE the returns
+      // below: the whole point is that a screenshot of a stalled board can say
+      // what the loop was doing. See recordLoopHealth.
+      recordLoopHealth(
+        loopHoldReason(flags),
+        game.loopFrameAt === 0 ? 0 : now - game.loopFrameAt,
+        game.loopRestarts,
+      );
+      // A hidden tab has no rAF at all, so every loop looks dead. Restarting
+      // there would count a restart per tick for as long as the phone is in
+      // someone's pocket; the visibility change starts it again anyway.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (!loopNeedsRestart(flags, game.loopFrameAt, now)) return;
+      game.loopRestarts++;
+      if (import.meta.env.DEV) {
+        console.warn(`[loop] restarted a dead game loop (${game.loopRestarts} this session)`);
+      }
+      startGameLoop(game);
+    }, WATCHDOG_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
   // The armed cup is published by the effect that BUILDS the map, further down,
   // and deliberately not by an effect of its own here.
   //
@@ -857,6 +902,8 @@ export function GameCanvas({
     shimmerStart: 0,
     shimmerFrozen: false,
     gameLoopFn: null as ((timestamp: number) => void) | null,
+    loopFrameAt: 0,
+    loopRestarts: 0,
     isRecovering: false,
     recoveryEndTime: 0,
     initialSamplePoints: [] as Vector2[],
@@ -1268,6 +1315,20 @@ export function GameCanvas({
       game.gameOver = false;
       game.levelComplete = false;
       game.pushPromptPending = false;
+      // pushMode with them, and React's mirror of it below.
+      //
+      // It was the one flag in this block's family that survived a map. Every
+      // route OUT of a push clears it - triggerLevelComplete and Bank &
+      // Continue both do - but every route that does NOT complete the map
+      // leaves it set: a life lost to the clock, a buried objective or a
+      // lock-out while the prompt was open or the push was running. The next
+      // attempt then opened with the previous map's push still in force, and
+      // "prompt" is the worst of the two to inherit, because the loop's own
+      // guard returns on it WITHOUT rescheduling - a board frozen on its first
+      // frame with no modal over it and no way back.
+      game.pushMode = "none";
+      setPushMode("none");
+      game.loopFrameAt = 0;
       game.shimmerStart = 0;
       game.shimmerFrozen = false;
       game.swipeStart = null;

@@ -35,7 +35,7 @@ const finite = (n: unknown): boolean => typeof n === "number" && Number.isFinite
 export const HARD_RULES: ReadonlySet<string> = new Set([
   "ball-position-nan", "ball-velocity-nan", "ball-speed-invalid",
   "ball-escaped", "region-area-invalid", "fence-pileup",
-  "won-and-lost", "no-legal-cut",
+  "won-and-lost", "no-legal-cut", "won-not-shipped",
 ]);
 
 /** True when this violation is a defect rather than a lead. */
@@ -101,6 +101,43 @@ export function checkInvariants(game: CanvasGameState): Violation[] {
   }
 
   return out;
+}
+
+/**
+ * Frames a map may sit WON on paper before that counts as a stall.
+ *
+ * Not zero. The win lands inside a frame and the ending is declared later in
+ * the same frame or the next one, and a lock flash can legitimately hold the
+ * declaration for the length of its animation. A second of game time is far
+ * longer than either and far shorter than a player would sit staring at a
+ * board wondering why nothing is happening.
+ */
+export const WIN_SHIP_GRACE_FRAMES = 60;
+
+/**
+ * The map is won and the game has not said so.
+ *
+ * Reported twice from play: "after winning, the map just does nothing and I
+ * end up stuck with no post map menu". The first investigation found the top
+ * bar printing CLEAR off its own clause while the map went on correctly
+ * waiting for another, and fixed the bar - but nothing was left behind that
+ * could tell the two apart the next time, so the second report had to start
+ * from the same blank page.
+ *
+ * This is that check. `shipped` deliberately counts the push prompt and the
+ * deferred prompt as endings: the map IS over at that point and the engine is
+ * waiting to be told whether to bank it, which is a decision and not a stall.
+ * What it will not accept is a map whose requirements are all met sitting in
+ * none of those states, frame after frame, with play continuing around it.
+ */
+export function winNotShipped(
+  metNow: boolean, framesMet: number, grace = WIN_SHIP_GRACE_FRAMES,
+): Violation | null {
+  if (!metNow || framesMet <= grace) return null;
+  return {
+    rule: "won-not-shipped",
+    detail: `every win requirement has been met for ${framesMet} frames and the map has not ended`,
+  };
 }
 
 /**
