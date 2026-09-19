@@ -38,7 +38,7 @@ import type { MoteLight } from "@/lib/rendering/motes";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
-import { webPoolTex, POOL_STOPS, WEB_POOL_BAKE, WEB_SPIN } from "./ballWeb";
+import { POOL_STOPS } from "./ballWeb";
 import { derivedLights, type DerivedLight } from "./derivedLight";
 import {
   causticFor, flashEnvelope, flashReach, FLASH_INTENSITY,
@@ -134,8 +134,8 @@ function poolTex(): Texture {
   const g = ctx.createRadialGradient(
     BAKE_RADIUS, BAKE_RADIUS, 0, BAKE_RADIUS, BAKE_RADIUS, BAKE_RADIUS,
   );
-  // The stops are shared with the webbed pool (ballWeb.ts) so the two mix
-  // linearly at any web strength; the long tail keeps the edge soft.
+  // The stops live in ballWeb.ts, where the shell's own gradient is baked
+  // from the same curve; the long tail keeps the edge soft.
   for (const [o, a] of POOL_STOPS) g.addColorStop(o, `rgba(255,255,255,${a})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
@@ -176,26 +176,25 @@ export function lightBufferPlan(rect: BoardRect): {
 
 interface Emitter {
   /**
-   * Holds the two pool sprites so a moving ball's light can be stretched
-   * along its heading.
+   * Holds the pool sprite so a moving ball's light can be stretched along its
+   * heading.
    *
-   * A container rather than scaling the sprites, because the two disagree
-   * about rotation: the plain pool has none, and the webbed one is turned by
-   * the shell's spin. Stretching a parent applies to both, and the shear it
-   * puts on the spun gobo is a smear of the web pattern along the direction
-   * of travel - which is what motion blur on a pattern actually looks like.
-   * The shade stays OUTSIDE it: shadows are screen-space geometry and must
-   * not be stretched with the thing casting them.
+   * A container rather than scaling the sprite directly, so the stretch is one
+   * transform on the pool as a whole and anything added inside it inherits the
+   * same heading for free. The shade stays OUTSIDE it: shadows are
+   * screen-space geometry and must not be stretched with the thing casting
+   * them.
+   *
+   * There used to be a second sprite in here - a gobo, the pool textured with
+   * the shell's cracked-web pattern and spun by the ball's rotation. It read
+   * as a revolving texture rather than as light, which is the failure mode a
+   * gobo always has when nothing in the scene casts it: a pattern that turns
+   * with the emitter tells you the emitter is turning, and the one thing a
+   * player never needs to know is which way a ball is spinning. Light is the
+   * channel; a pattern in it is noise on that channel.
    */
   pool: Container;
   glow: Sprite;
-  /**
-   * The same pool with the shell's web shadowed into it (ballWeb.ts), turned
-   * by the ball's rotation. Both pools are additive, so mixing their alphas
-   * by the web strength is a linear blend between plain light and webbed
-   * light, and a strength of zero is exactly today's pool.
-   */
-  gobo: Sprite;
   shade: Graphics;
 }
 
@@ -264,7 +263,6 @@ export class BallLightPass {
       const warm = tellGain > 0.001 ? warmup(now, ball.spawnTime) : FULLY_WARM;
       light.intensity *= beat * (1 - (1 - warm.gain) * tellGain);
       light.color = mix(WARMUP_EMBER, light.color, warm.hue);
-      const webbed = look.web;
       // A light source travelling fast does not light a circle. Stretching
       // the pool along the heading puts SPEED in the largest, softest,
       // most peripherally visible thing on the board, which is the one
@@ -281,17 +279,7 @@ export class BallLightPass {
       // The bake is a fixed radius; scale it to this ball's reach.
       e.glow.scale.set(light.reach / BAKE_RADIUS);
       e.glow.tint = light.color;
-      e.glow.alpha = light.intensity * flick * (1 - webbed);
-
-      e.gobo.visible = webbed > 0.001;
-      if (e.gobo.visible) {
-        e.gobo.texture = webPoolTex();
-        e.gobo.position.set(0, 0);
-        e.gobo.scale.set(light.reach / (WEB_POOL_BAKE / 2));
-        e.gobo.rotation = ball.rotation * WEB_SPIN;
-        e.gobo.tint = light.color;
-        e.gobo.alpha = light.intensity * flick * webbed;
-      }
+      e.glow.alpha = light.intensity * flick;
 
       e.shade.visible = true;
       this.drawShadows(e.shade, light, p, game, w2s, scale, ball);
@@ -397,7 +385,6 @@ export class BallLightPass {
 
     for (let i = this.live; i < this.emitters.length; i++) {
       this.emitters[i].glow.visible = false;
-      this.emitters[i].gobo.visible = false;
       this.emitters[i].shade.visible = false;
     }
     this.sprite.visible = this.live > 0;
@@ -411,10 +398,6 @@ export class BallLightPass {
    * this pass has is that a light's shadows sit directly after that light, so
    * the next light paints back over them. Hand-rolling that per source is how
    * you get a shadow eating a light it has nothing to do with.
-   *
-   * None of them take the gobo. The web is a pattern on one ball's shell, and
-   * carrying it crisply through a reflection, a portal or a beam focused by
-   * the ball's own body would claim more than second-hand light can support.
    */
   private place(
     e: Emitter, light: PlacedLight, tex: Texture, world: { x: number; y: number },
@@ -431,7 +414,6 @@ export class BallLightPass {
     e.glow.scale.set(light.reach / BAKE_RADIUS);
     e.glow.tint = light.color;
     e.glow.alpha = light.intensity;
-    e.gobo.visible = false;
     e.shade.visible = true;
     this.drawShadows(e.shade, light, world, game, w2s, scale, skip, derived);
     this.note(world.x, world.y, light, scale, 1);
@@ -566,13 +548,11 @@ export class BallLightPass {
     if (!e) {
       const glow = new Sprite();
       glow.anchor.set(0.5);
-      const gobo = new Sprite();
-      gobo.anchor.set(0.5);
       const pool = new Container();
-      pool.addChild(glow, gobo);
+      pool.addChild(glow);
       const shade = new Graphics();
       this.stage.addChild(pool, shade);
-      e = { pool, glow, gobo, shade };
+      e = { pool, glow, shade };
       this.emitters[i] = e;
     }
     return e;
