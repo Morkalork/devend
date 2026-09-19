@@ -50,7 +50,7 @@ import {
 import { webTex, clearWebTextures, WEB_SPIN } from "./ballWeb";
 import { getBallLook } from "@/lib/ballLook";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
-import { getHeadingChevrons } from "@/lib/rendering/headingChevrons";
+import { getHeadingCue } from "@/lib/rendering/headingCue";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
 import { contactFor, shadowFor, type LightScope } from "./light";
@@ -924,22 +924,33 @@ export class SleekBallLayer {
       this.overlays.stroke({ width: Math.max(1, scale), color: PALETTE.frost, alpha: 0.55 });
     }
 
-    // ── Heading chevrons: which way a held ball will leave ──────────────────
+    // ── Heading cue: which way a held ball will leave ───────────────────────
     // Every hold, not just the tap-freeze: a motionless circle carries no
     // heading, and Cold Boot in particular starts the map with a board of them
     // the player has never seen move. Skipped on a Bug Squash splat, whose
-    // "behind" is the wall it is stuck to.
+    // heading is into the wall it is stuck to.
+    //
+    // Drawn LAST of the ball's overlays and in the ball's own glow colour with
+    // a dark backing stroke under it, because the first version of this cue was
+    // invisible in play for exactly these reasons: it was thinner than the
+    // ball's bloom is bright, and it sat where the bloom is strongest.
     if (!squashed && ball.frozenUntil !== undefined && this.now < ball.frozenUntil) {
-      for (const chevron of getHeadingChevrons(c, ball.velocity, r, this.now)) {
-        this.overlays
-          .moveTo(chevron.left.x, chevron.left.y)
-          .lineTo(chevron.apex.x, chevron.apex.y)
-          .lineTo(chevron.right.x, chevron.right.y)
-          .stroke({
-            width: Math.max(1, 1.4 * scale),
-            color: PALETTE.frost,
-            alpha: chevron.alpha,
-          });
+      const cue = getHeadingCue(c, ball.velocity, r, this.now);
+      if (cue) {
+        const trace = (g: typeof this.overlays) => g
+          .moveTo(cue.shaft.from.x, cue.shaft.from.y)
+          .lineTo(cue.shaft.to.x, cue.shaft.to.y)
+          .moveTo(cue.head.left.x, cue.head.left.y)
+          .lineTo(cue.head.apex.x, cue.head.apex.y)
+          .lineTo(cue.head.right.x, cue.head.right.y);
+        // The backing: a wider dark stroke, so the cue keeps its shape over the
+        // ball's corona, over a lit region and over the grid alike.
+        trace(this.overlays).stroke({
+          width: Math.max(3, 6.4 * scale), color: 0x000000, alpha: cue.alpha * 0.55,
+        });
+        trace(this.overlays).stroke({
+          width: Math.max(2, 3.2 * scale), color: PALETTE.frost, alpha: cue.alpha,
+        });
       }
     }
 

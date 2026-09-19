@@ -1535,7 +1535,7 @@ upgrades:
   - id: cold_boot
     name: Cold Boot
     tier: Junior
-    description: "Every map starts frozen for 2s. +0.25s per other freeze upgrade (max 4)."
+    description: "Every map starts frozen for 2s, each ball pointing where it goes. +0.25s per other freeze (max 4)."
     unlockLevel: 3
     icon: power
     tags: [freeze]
