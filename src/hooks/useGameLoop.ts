@@ -607,7 +607,7 @@ export function createGameLoop(
       // ball pass, not the render pass: they deflect balls, so they are world
       // state, and a frame that skipped them would move balls against rubble
       // that had not moved.
-      updateRubble(game, PHYSICS_STEP, performance.now());
+      updateRubble(game, PHYSICS_STEP, simNow());
 
       // Deliveries: a ball that has crossed a box's membrane is taken out of
       // play and counted. Runs after ball movement so a ball that arrived this
