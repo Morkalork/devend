@@ -24,7 +24,8 @@ import {
   SHELL_SECTION_STEP_MS, SHELL_TILE_FLIGHT_MS, shellShatterDurationMs,
 } from "@/lib/physics/launcherShell";
 import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
-import { CellState } from "@/lib/spaceGrid";
+import { CellState, gridIndexToWorld } from "@/lib/spaceGrid";
+import { pointInPolygon } from "@/lib/polygon";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LaunchFacing } from "@/lib/launcher";
@@ -93,9 +94,19 @@ describe("the shell leaves the model the frame the barrel arms", () => {
       expect(game.obstaclePolygons).not.toContain(poly);
     }
     expect(shellWalls(game)).toHaveLength(0);
-    // The three slabs are 18 thick around a 120 x 240 interior: well over a
-    // hundred 15-unit cells of footprint and seal ring come back.
-    expect(activeCells(game)).toBeGreaterThan(before + 100);
+    // Every cell the slabs stood on is playable again. Asserted as a PROPERTY
+    // rather than a cell count: the count used to be calibrated against the fat
+    // seal ring createSpaceGrid drew around each obstacle, so tightening that
+    // seal moved a number that was never about the shell.
+    for (const poly of cup.shell!) {
+      for (let i = 0; i < game.spaceGrid!.cells.length; i++) {
+        if (!pointInPolygon(gridIndexToWorld(game.spaceGrid!, i), poly)) continue;
+        expect(game.spaceGrid!.cells[i]).toBe(CellState.ACTIVE);
+      }
+    }
+    // And it is real ground, not a rounding: three slabs 18 thick, two of them
+    // 240 long and one 120, is dozens of 15-unit cells however it is sealed.
+    expect(activeCells(game)).toBeGreaterThan(before + 80);
     expect(cb.repaintRegionCanvas).toHaveBeenCalled();
     expect(cb.setRemainingPercent).toHaveBeenCalled();
     // The picture is queued for the renderer.

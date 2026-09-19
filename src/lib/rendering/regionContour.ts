@@ -184,12 +184,26 @@ export function snapContoursToWalls(
   const maxSq = maxDist * maxDist;
   // A caller that left `fullDist` alone gets the original hard tests, exactly.
   const fading = fullDist < maxDist;
+  // Each wall's reach box, once. This is O(points x walls) and the wall set now
+  // carries every edge of every obstacle - a 64-gon bumper is 64 of them - so
+  // the common case, a point nowhere near this wall, gets four comparisons
+  // instead of a projection. Pure speed: the box is the segment's bounds grown
+  // by the reach, so nothing inside `maxDist` is ever rejected.
+  const box = walls.map(w => ({
+    minX: Math.min(w.start.x, w.end.x) - maxDist,
+    maxX: Math.max(w.start.x, w.end.x) + maxDist,
+    minY: Math.min(w.start.y, w.end.y) - maxDist,
+    maxY: Math.max(w.start.y, w.end.y) + maxDist,
+  }));
   return loops.map(loop => {
     const moved = loop.map(p => {
       let best: ContourPoint | null = null;
       let bestSq = maxSq;
       let bestFade = 1;
-      for (const w of walls) {
+      for (let wi = 0; wi < walls.length; wi++) {
+        const b = box[wi];
+        if (p.x < b.minX || p.x > b.maxX || p.y < b.minY || p.y > b.maxY) continue;
+        const w = walls[wi];
         const dx = w.end.x - w.start.x;
         const dy = w.end.y - w.start.y;
         const lenSq = dx * dx + dy * dy;
@@ -217,7 +231,25 @@ export function snapContoursToWalls(
         }
         const qx = w.start.x + t * dx;
         const qy = w.start.y + t * dy;
-        const dSq = (p.x - qx) * (p.x - qx) + (p.y - qy) * (p.y - qy);
+        // RANK by how far the point is from the wall ITSELF, not from the foot
+        // on its infinite line. In "segment" mode t is deliberately left
+        // unclamped, so the foot can sit far off the end - and a line whose
+        // foot is nowhere near the wall still scored as the nearest one, won
+        // the point, and then had its pull cancelled by the overshoot fade. The
+        // wall the point actually sits against never got a say.
+        //
+        // Invisible on long fences, where a point close to the line is close to
+        // the segment too. Fatal on a many-sided outline: a point a few units
+        // outside a circle is closer to the CHORD LINE a third of the way round
+        // the circle than to the chord it is standing on, so nothing outside a
+        // round obstacle ever snapped to it.
+        //
+        // "clamp" mode clamps t, so its foot IS the nearest point on the wall
+        // and this reads exactly as it did before.
+        const ct = t < 0 ? 0 : t > 1 ? 1 : t;
+        const cxp = p.x - (w.start.x + ct * dx);
+        const cyp = p.y - (w.start.y + ct * dy);
+        const dSq = cxp * cxp + cyp * cyp;
         if (dSq < bestSq) {
           bestSq = dSq;
           best = { x: qx, y: qy };

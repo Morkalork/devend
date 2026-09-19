@@ -294,11 +294,21 @@ export class BoardLayer {
     // to half a cell diagonal (~0.7 cells) off the line; a reach of ~1 cell left
     // those corners unsnapped and they showed as a comb of teeth along every
     // diagonal cut. 1.8 cells clears them with margin.
-    // Only FENCES and board edges. Snapping the live-space outline to obstacle
-    // boundaries buys nothing - the obstacle's own body is painted over that
-    // outline anyway - while doubling the chances of a point being dragged
-    // somewhere it does not belong.
-    const boundingWalls = game.walls.filter(w => !w.isObstacleBoundary);
+    // OBSTACLE outlines are in the set too, and they are the reason a round
+    // obstacle looked wrong. This used to pass fences and board edges only, on
+    // the reasoning that an obstacle's own body is painted over its outline
+    // anyway. It is not: the grid removes the cells the obstacle crosses, so
+    // the hole is up to half a lattice diagonal wider than the solid standing
+    // in it, and that sliver renders as captured ground in a ring nobody took.
+    // On a straight edge it reads as a seam; on a circle it reads as a SQUARE,
+    // because a lattice has four directions and a circle has none.
+    //
+    // A solid's outline is also the safest thing in this set to snap to. The
+    // warning about points being dragged somewhere they do not belong is about
+    // a wall's ENDS - a fence tip stops in open space, so the ground past it is
+    // live and must not be pulled onto the line. An obstacle edge ends on the
+    // next obstacle edge; there is no open space past it to be pulled out of.
+    const boundingWalls = game.walls;
     // The shared outline snap, which every LOOKED-AT contour uses: the pull is
     // full strength within a cell and fades to nothing by 1.8. Without that
     // fade this call tore notches the size of its reach into the outline

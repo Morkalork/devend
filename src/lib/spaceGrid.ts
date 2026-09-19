@@ -158,17 +158,10 @@ export function createSpaceGrid(
   // falls inside an obstacle leaves a sparse, non-4-connected barrier for thin or
   // diagonal obstacles (mirrors especially): grid connectivity then leaks across
   // the obstacle, so space it physically separates stays one region and is never
-  // isolated or captured (the persistent "shadow behind the obstacle"). Rasterize
-  // each obstacle edge into a connected band of REMOVED cells — the same sealing
-  // the game already applies to fence cuts — so the grid matches physical
-  // reachability. Paths *around* a partial obstacle stay connected, since only
-  // cells along the boundary are removed.
-  for (const obstacle of obstacles) {
-    const vs = obstacle.vertices;
-    for (let i = 0; i < vs.length; i++) {
-      rasterizeCutToGrid(grid, vs[i], vs[(i + 1) % vs.length], cellSize);
-    }
-  }
+  // isolated or captured (the persistent "shadow behind the obstacle"). Sealing
+  // each edge closes that gap; see sealPolygonToGrid for why the seal is the
+  // obstacle's own footprint and not a fence-style band.
+  for (const obstacle of obstacles) sealPolygonToGrid(grid, obstacle);
   grid.initialActiveCount = grid.activeCount;
 
   return grid;
@@ -307,6 +300,94 @@ export function rasterizeCutToGrid(
   }
   
   return removedIndices;
+}
+
+/**
+ * How far from an obstacle edge its seal can reach a cell CENTRE.
+ *
+ * Half the lattice diagonal, and exactly that: a cell the edge only clips at a
+ * corner has its centre that far from the edge, and a cell the edge misses
+ * entirely is never further in. Callers that have to recognise the seal ring
+ * after the fact (reopening a broken obstacle's footprint) read the bound from
+ * here rather than guessing a margin, because a margin guessed too wide reopens
+ * ground some OTHER wall is holding shut.
+ */
+export function obstacleSealReach(cellSize: number): number {
+  return cellSize * Math.SQRT1_2;
+}
+
+/**
+ * Seal a solid's outline into the grid: REMOVE exactly the cells its edges
+ * cross, and no more.
+ *
+ * ── Why this is not rasterizeCutToGrid ──────────────────────────────────────
+ *
+ * It used to be. Each obstacle edge went through the fence rasterizer with
+ * `thickness = cellSize`, which removes every cell whose centre is within
+ * `thickness / 2 + cellSize / 2` of the line - a full cell of dead ground on
+ * BOTH sides of the outline. On the outside that band is live space the player
+ * can see a ball roll through and can never claim, and the fill renders it as
+ * territory nobody took: a 46-unit bumper wore a hole 68 units across, which
+ * reads as a dark ring, and reads SQUARE because the ring is drawn on the
+ * lattice rather than on the circle. Every obstacle had it; a round one just
+ * made it obvious.
+ *
+ * The band was never sized for a reason - it was borrowed from the cut
+ * rasterizer, where the thickness is the fence's actual width and the ground it
+ * eats is ground the fence occupies. An obstacle already states its own width:
+ * its outline. So the seal is the outline's supercover - every cell the edge
+ * passes through - which is the smallest cell set that still contains the
+ * solid.
+ *
+ * It is also still a barrier, which is the whole point of sealing an edge at
+ * all: a supercover is 4-connected (a segment leaves a cell through a side, or
+ * through a corner, and a corner crossing takes all four cells at that corner),
+ * so a flood fill cannot slip between two cells of it and read space the
+ * obstacle physically separates as one region.
+ */
+export function sealPolygonToGrid(grid: SpaceGrid, polygon: Polygon): void {
+  const vs = polygon.vertices;
+  for (let i = 0; i < vs.length; i++) {
+    sealSegmentToGrid(grid, vs[i], vs[(i + 1) % vs.length]);
+  }
+}
+
+/**
+ * REMOVE every cell the segment passes through (its supercover).
+ *
+ * Segment-vs-cell is the separating-axis test on three axes - the two grid axes
+ * and the segment's own normal - which is exact for an axis-aligned box, so a
+ * cell the edge merely grazes is included and a cell it misses by a hair is
+ * not. Scans the segment's bounding cells only; the old whole-grid scan per
+ * edge cost a 64-gon bumper 64 passes over every cell on the board.
+ */
+export function sealSegmentToGrid(grid: SpaceGrid, start: Vector2, end: Vector2): void {
+  const { cellSize, originX, originY, width, height, cells } = grid;
+  const half = cellSize / 2;
+  // Half-extent of the segment, and its midpoint: the SAT form wants both.
+  const hx = (end.x - start.x) / 2, hy = (end.y - start.y) / 2;
+  const ahx = Math.abs(hx), ahy = Math.abs(hy);
+  const mx = (start.x + end.x) / 2, my = (start.y + end.y) / 2;
+
+  const c0 = Math.max(0, Math.floor((Math.min(start.x, end.x) - originX) / cellSize));
+  const c1 = Math.min(width - 1, Math.floor((Math.max(start.x, end.x) - originX) / cellSize));
+  const r0 = Math.max(0, Math.floor((Math.min(start.y, end.y) - originY) / cellSize));
+  const r1 = Math.min(height - 1, Math.floor((Math.max(start.y, end.y) - originY) / cellSize));
+
+  for (let row = r0; row <= r1; row++) {
+    for (let col = c0; col <= c1; col++) {
+      const index = row * width + col;
+      if (cells[index] === CellState.REMOVED) continue;
+      // Segment midpoint relative to the cell's centre.
+      const px = mx - (originX + col * cellSize + half);
+      const py = my - (originY + row * cellSize + half);
+      if (Math.abs(px) > half + ahx) continue;
+      if (Math.abs(py) > half + ahy) continue;
+      if (Math.abs(px * hy - py * hx) > half * (ahx + ahy)) continue;
+      cells[index] = CellState.REMOVED;
+      grid.activeCount--;
+    }
+  }
 }
 
 /**
