@@ -1305,7 +1305,10 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, yellow]
+    ballTypeIds:
+      - red
+      - blue
+      - yellow
     ballSpeedScale: 0.75
     win:
       require:
@@ -1328,14 +1331,6 @@ levels:
         'y': 200
         width: 20
         height: 300
-        mirror: true
-      - id: mirror-b
-        kind: wall
-        shape: rect
-        x: 200
-        'y': 620
-        width: 300
-        height: 20
         mirror: true
       - id: governor-a
         kind: wall
