@@ -36,6 +36,7 @@ import {
   moteAlpha, binDims, moteRandom, MOTE_PEAK_ALPHA,
   type MoteField, type MoteLight,
 } from "@/lib/rendering/motes";
+import { claimResidue, pruneResidueSeen } from "./residue";
 import { getLightLook } from "@/lib/lightLook";
 import type { Pt } from "./pixelGrid";
 
@@ -112,7 +113,8 @@ export class MoteLayer {
   private rnd = moteRandom(20260914);
   private last = 0;
   /** Events already turned into residue, so one break is one burst. */
-  private seen = new Set<string>();
+  /** Event key -> its start time, for the length of the freshness window. */
+  private seen = new Map<string, number>();
 
   /**
    * Compose this frame's field.
@@ -182,32 +184,31 @@ export class MoteLayer {
    * Read from state the game already keeps rather than hooked into the physics:
    * debris and lock dust are both already spawned and already carry a start
    * time, so a burst is a read of something that happened rather than a new
-   * thing to remember to fire. The `seen` set is what keeps one break from
-   * spraying a burst on every frame of its animation.
+   * thing to remember to fire. `claimResidue` is what keeps one break from
+   * spraying a burst on every frame of its animation - and, since neither list
+   * is ever pruned, what keeps a lock that happened two minutes ago from
+   * spraying again the moment a bounded cache is emptied. See residue.ts.
    */
   private collectResidue(game: CanvasGameState, now: number): void {
     const f = this.field;
     if (!f) return;
     for (const d of game.objectDebris ?? []) {
-      const key = `d${d.startTime}`;
-      if (this.seen.has(key)) continue;
-      this.seen.add(key);
+      if (!claimResidue(this.seen, `d${d.startTime}`, d.startTime, now)) continue;
       this.residueTint = parseColor(d.color);
       spawnResidue(f, avgX(d.particles), avgY(d.particles), 26,
         this.residueTint, 90, d.durationMs, this.rnd);
     }
     for (const [id, a] of game.assimilations ?? new Map()) {
-      const key = `a${id}${a.startTime}`;
-      if (this.seen.has(key)) continue;
-      this.seen.add(key);
+      if (!claimResidue(this.seen, `a${id}${a.startTime}`, a.startTime, now)) continue;
       this.residueTint = parseColor(a.zoneColor ?? a.ballColor);
       spawnResidue(f, a.centroid.x, a.centroid.y, 34,
         this.residueTint, 70, 900, this.rnd);
     }
-    // The set is the only thing here that grows, so it is trimmed rather than
-    // left to collect every event of a long run.
-    if (this.seen.size > 200) this.seen.clear();
-    void now;
+    // Pruned by AGE, not by size. Neither list above is ever pruned - a lock
+    // and its debris stand in them for the rest of the map - so a cache emptied
+    // by size made every one of them read as new again and spray a second time,
+    // and a third. See lib/rendering/sleek/residue.
+    pruneResidueSeen(this.seen, now);
   }
 
   private build(ambient: number, residue: number): void {
