@@ -76,14 +76,58 @@ export const SPEED_STRETCH_REF = 320;
  *
  * Volume-preserving, near enough: what is added to the long axis comes off the
  * short one, so a fast ball's pool covers about the same board as a slow one's
- * and speed reads as SHAPE rather than as the board getting brighter. Brighter
- * would be the wrong signal entirely, since brightness already means how close
- * a ball is.
+ * and speed reads as SHAPE.
+ *
+ * This used to say that speed must not touch brightness at all, on the grounds
+ * that brightness already means how close a ball is. That is the right
+ * instinct and the wrong conclusion, and speedGain below is where the line
+ * actually falls: proximity is read from the GRADIENT inside one pool, which
+ * spans better than ten to one from the core to the rim, so scaling a whole
+ * pool by a fraction of that leaves the gradient intact. What would destroy
+ * the read is a swing wide enough to make a dim near ball and a bright far one
+ * look alike, which is why the gain below is bounded well inside it.
  */
 export function speedStretch(speed: number, gain: number): { along: number; across: number } {
   if (!(speed > 0) || gain <= 0.001) return { along: 1, across: 1 };
   const k = SPEED_STRETCH * gain * Math.min(1, speed / SPEED_STRETCH_REF);
   return { along: 1 + k, across: 1 / (1 + k) };
+}
+
+/** The speed at which the energy lift is fully spent, world units per second. */
+export const SPEED_GAIN_REF = 380;
+
+/**
+ * What a ball at a standstill keeps, and what one at the reference gains.
+ *
+ * A 1.6:1 swing end to end, against the better-than-10:1 span the falloff
+ * gives across a single pool. Deliberately modest: the job is that a board
+ * where everything is moving looks like a board where everything is moving,
+ * not that speed becomes a second brightness channel.
+ */
+export const SPEED_GAIN_FLOOR = 0.82;
+export const SPEED_GAIN_PEAK = 1.3;
+
+/**
+ * How hard a ball's own speed drives its output.
+ *
+ * Until this existed, the ONE thing about a ball that never reached its light
+ * was how much was happening: a ball fresh off a slingshot, a boss at full
+ * tilt and one nudging along a fence all emitted the same 0.55, and only the
+ * pool's SHAPE moved. So a board at rest and a board in full flight were the
+ * same brightness, which is the opposite of what a room does.
+ *
+ * Linear in speed rather than in v-squared, though energy is the thing being
+ * described. Two curves cancel: energy goes as the square, and the eye's
+ * response to light is nearer logarithmic, so a straight ramp on speed is
+ * closer to how much energy a board READS as than either end of that.
+ *
+ * Exactly 1 at gain 0, so the dial off is the board as it was.
+ */
+export function speedGain(speed: number, gain: number): number {
+  if (gain <= 0.001) return 1;
+  const t = Math.min(1, Math.max(0, speed) / SPEED_GAIN_REF);
+  const lift = SPEED_GAIN_FLOOR + (SPEED_GAIN_PEAK - SPEED_GAIN_FLOOR) * t;
+  return 1 + (lift - 1) * gain;
 }
 
 export interface Warmup {

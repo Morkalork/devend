@@ -54,6 +54,30 @@ export interface LightLook {
    */
   reaction: number;
   /**
+   * How hard a ball's own SPEED drives how brightly it burns (ballTell.ts
+   * speedGain). 0 leaves every ball at one output whatever it is doing, which
+   * is what it was: only the pool's shape moved with speed.
+   */
+  energy: number;
+  /**
+   * Local exposure (exposure.ts): how much a light is rolled off by how
+   * crowded the board is where it stands, so four pools in one corner stop
+   * summing into a flat white patch. 0 is the uncontrolled sum it was.
+   */
+  exposure: number;
+  /**
+   * Directional shading (faceLight.ts): a wall's face answering the light in
+   * front of it, graded by which way the face is turned. 0 leaves every
+   * surface lit by distance alone, which is the flat-disc look it had.
+   */
+  facing: number;
+  /**
+   * Soft shadows (ballLight.ts shadowQuad): the penumbra a ball throws as an
+   * AREA source, widening with distance from whatever is casting it. 0 is the
+   * hard point-light edge it had.
+   */
+  softShadows: number;
+  /**
    * Motes in the air (motes.ts): how much of the ambient field is present.
    * Scales the COUNT rather than the brightness, because dimming is what the
    * light already means. 0 is a board with no air in it, which is what it was.
@@ -63,7 +87,8 @@ export interface LightLook {
 
 const KEY = "devend.lightLook";
 export const DEFAULT_LIGHT_LOOK: LightLook = {
-  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1, motes: 0.8,
+  bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1,
+  energy: 0.85, exposure: 1, facing: 0.9, softShadows: 0.9, motes: 0.8,
 };
 
 let current: LightLook | null = null;
@@ -81,6 +106,10 @@ function sanitise(l: LightLook): LightLook {
     tell: unit(l.tell, DEFAULT_LIGHT_LOOK.tell),
     ballShadows: unit(l.ballShadows, DEFAULT_LIGHT_LOOK.ballShadows),
     reaction: unit(l.reaction, DEFAULT_LIGHT_LOOK.reaction),
+    energy: unit(l.energy, DEFAULT_LIGHT_LOOK.energy),
+    exposure: unit(l.exposure, DEFAULT_LIGHT_LOOK.exposure),
+    facing: unit(l.facing, DEFAULT_LIGHT_LOOK.facing),
+    softShadows: unit(l.softShadows, DEFAULT_LIGHT_LOOK.softShadows),
     motes: unit(l.motes, DEFAULT_LIGHT_LOOK.motes),
   };
 }

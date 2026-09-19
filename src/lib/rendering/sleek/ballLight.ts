@@ -80,6 +80,15 @@ export interface BallLight {
   intensity: number;
   /** Emitter colour, already whitened. */
   color: number;
+  /**
+   * The emitter's own screen radius, for the penumbra in `shadowQuad`.
+   *
+   * Optional, and absent means a point source and therefore a hard shadow,
+   * which is what everything here did before it existed. Only a BALL fills it
+   * in: a lock flash has no body, a caustic is a focused core rather than a
+   * disc, and a fence tip is a point by construction.
+   */
+  source?: number;
 }
 
 function whiten(color: number, amount: number): number {
@@ -131,6 +140,9 @@ export function ballLight(ball: Ball, screen: Pt, radius: number, color: number)
     reach,
     intensity,
     color: whiten(color, WHITEN),
+    // The ball's drawn radius, so a grown ball softens its shadows by as much
+    // as it brightens them. `radius` is already screen-scaled by the caller.
+    source: radius,
   };
 }
 
@@ -139,10 +151,38 @@ export function ballLight(ball: Ball, screen: Pt, radius: number, color: number)
  * projecting both endpoints directly away from the light, out past the pool's
  * edge.
  *
+ * `spread` is the emitter's radius, and it is what turns this from a point
+ * light's shadow into an AREA light's. A ball is about eighteen world units
+ * across, which is a fifth of its own pool, so treating it as a point was the
+ * single most obviously wrong thing left in the shadow: every edge was equally
+ * razor-sharp whether the wall casting it was touching the ball or most of a
+ * pool away. Passing a spread pushes the far corners apart by the angle the
+ * source subtends at each endpoint, and calling this twice - once at zero, once
+ * at the radius - gives two quads that bracket the penumbra.
+ *
+ * TWO THINGS COME OUT OF THAT, and both are cues nothing else on the board
+ * carries:
+ *
+ *   ALONG the shadow, the fringe is nothing at the wall and widens the further
+ *     out you go. That is the contact-shadow read: a shadow is sharp where the
+ *     object meets the floor and softens away from it, which is why the NEAR
+ *     corners stay exactly on the wall here. Rounding those off is the classic
+ *     way soft shadows start looking like fog.
+ *   BETWEEN shadows, a wall the ball is CLOSE to flares faster than one it is
+ *     far from, because the source subtends spread/distance at each endpoint
+ *     and that angle is what opens the quad. This is the part that reads
+ *     backwards until you look at a real lamp: a light almost touching an
+ *     object throws an enormous soft shadow, and the same object held at arm's
+ *     length throws a tight one. So the softness says how far the LIGHT is
+ *     from the occluder, and the gradient along it says how far the occluder
+ *     is from the floor it is falling on.
+ *
+ * Defaults to 0, so every existing caller gets exactly the shadow it had.
+ *
  * Returns null when the segment is out of reach or the light sits on its line.
  */
 export function shadowQuad(
-  light: BallLight, ax: number, ay: number, bx: number, by: number,
+  light: BallLight, ax: number, ay: number, bx: number, by: number, spread = 0,
 ): [Pt, Pt, Pt, Pt] | null {
   const adx = ax - light.x, ady = ay - light.y;
   const bdx = bx - light.x, bdy = by - light.y;
@@ -185,16 +225,52 @@ export function shadowQuad(
   const cosHalf = Math.max(0.02, Math.sqrt(Math.max(0, (1 + cosFull) / 2)));
   const far = (light.reach * 1.25) / cosHalf;
 
+  let faX = light.x + (adx / da) * far, faY = light.y + (ady / da) * far;
+  let fbX = light.x + (bdx / db) * far, fbY = light.y + (bdy / db) * far;
+
+  if (spread > 0.01) {
+    // Outward is along the line joining the two far corners: away from B for
+    // A's corner and away from A for B's. Taking the axis from the CORNERS
+    // rather than from the wall keeps it right when the wall is nearly
+    // end-on to the light, where the wall's own direction points almost at
+    // the light and would push the corners forward instead of apart.
+    const ox = faX - fbX, oy = faY - fbY;
+    const ol = Math.hypot(ox, oy);
+    if (ol > 1e-6) {
+      // Small-angle penumbra half-width: the source subtends about
+      // spread/distance at each endpoint, and the shadow has `far` to spread
+      // over. Divided by the endpoint's OWN distance, so the wall the ball is
+      // hugging - where that distance is smallest - is the one whose shadow
+      // opens out fastest past it, which is what a wide source does.
+      const ux = ox / ol, uy = oy / ol;
+      const sa = (far * spread) / da;
+      const sb = (far * spread) / db;
+      faX += ux * sa; faY += uy * sa;
+      fbX -= ux * sb; fbY -= uy * sb;
+    }
+  }
+
   // Walk order (a, aFar, bFar, b), so it fills as a simple quadrilateral.
   // Endpoint order (a, b, aFar, bFar) gives a bow-tie that fills as two
   // triangles with a gap between them: the classic way this looks broken.
   return [
     { x: ax, y: ay },
-    { x: light.x + (adx / da) * far, y: light.y + (ady / da) * far },
-    { x: light.x + (bdx / db) * far, y: light.y + (bdy / db) * far },
+    { x: faX, y: faY },
+    { x: fbX, y: fbY },
     { x: bx, y: by },
   ];
 }
+
+/**
+ * How dark the penumbra fringe is against the umbra it surrounds.
+ *
+ * The fringe is drawn first and the umbra over it, so the umbra ends up at
+ * full black either way and this is only the half-shadow outside it. Under
+ * half, because a penumbra is by definition light that is partly getting
+ * through - and because the pass draws the board at half resolution, so the
+ * bilinear upscale is already softening the fringe's own outer edge for free.
+ */
+export const PENUMBRA_ALPHA = 0.4;
 
 /** Distance from a point to a segment. Exported: the light pass filters occluders with it. */
 export function segmentDistance(

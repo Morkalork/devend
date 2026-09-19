@@ -52,6 +52,7 @@ import { AreaLayer } from "./areaLayer";
 import { SleekBallLayer, clearSphereCache } from "./ballLayer";
 import { BallLightPass, clearPoolTexture } from "./ballLightPass";
 import { BounceLayer, clearBounceTextures } from "./bounceLayer";
+import { FaceLightLayer, clearFaceLightTexture } from "./faceLightLayer";
 import { MoteLayer, clearMoteTexture } from "./moteLayer";
 import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
@@ -89,6 +90,7 @@ export class SleekRenderer {
   private board = new BoardLayer();
   private areas = new AreaLayer();
   private bounce = new BounceLayer();
+  private faceLight = new FaceLightLayer();
   private motes = new MoteLayer();
   private props = new PropLayer();
   private entities = new EntityLayer();
@@ -159,6 +161,12 @@ export class SleekRenderer {
       this.entities.container,
       this.objects.container,
       this.walls.container,
+      // Directional shading: a wall's face answering the light in front of it
+      // (faceLightLayer.ts). Above the walls for the same reason the bounce
+      // is - the light buffer is composited UNDER them, so a wall's own face
+      // is the one surface in the scene it cannot reach. Below the bounce,
+      // which is the sharper and rarer of the two and should win at contact.
+      this.faceLight.container,
       // Bounce light lands ON the surface it comes off, so each half sits
       // directly above the layer that drew that surface: the bands over the
       // walls, the return light over the balls (bounceLayer.ts).
@@ -321,6 +329,10 @@ export class SleekRenderer {
     // After the pass, because the motes catch exactly the emitters it just
     // built - handed over rather than recomputed (ballLightPass.worldLights).
     this.motes.sync(game, this.ballLights.worldLights, w2s, scale, now);
+    // Same list, same reason: the faces answer the emitters the pass just
+    // built, flicker, tell, exposure and all. A face that held steady while
+    // the pool lighting it stuttered would read as a second, unrelated source.
+    this.faceLight.sync(game, this.ballLights.worldLights, w2s, scale);
 
     this.probeForBeams(now);
 
@@ -505,6 +517,7 @@ export class SleekRenderer {
     clearSphereCache();
     clearPoolTexture();
     clearBounceTextures();
+    clearFaceLightTexture();
     clearMoteTexture();
     this.sweep.teardown();
     this.shatter.clear();
@@ -516,6 +529,7 @@ export class SleekRenderer {
     this.objects.destroy();
     this.walls.destroy();
     this.bounce.destroy();
+    this.faceLight.destroy();
     this.motes.destroy();
     this.fx.destroy();
     this.balls.destroy();
