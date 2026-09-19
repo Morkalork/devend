@@ -22,6 +22,7 @@
  */
 import { updateLauncherArming } from "@/lib/physics/launcher";
 import { dematerializeArmedLaunchers } from "@/lib/physics/launcherShell";
+import { updateRubble } from "@/lib/physics/rubble";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { runtimeDefaults } from "./runtimeDefaults";
 import { DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
@@ -417,6 +418,11 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // board: a barrel footprint that reopens in the browser and not here would
   // make every launcher sweep read a different space count from the player.
   dematerializeArmedLaunchers(game, callbacks, performance.now());
+
+  // The same slide the browser loop runs. Rubble deflects balls, so a harness
+  // that skipped it would have the bot playing a board whose physics differ
+  // from the one the player gets.
+  updateRubble(game, dt, performance.now());
 
   // Deliveries: a ball that has crossed a box's membrane is taken out of play
   // and counted. After ball movement so a ball that entered this step counts

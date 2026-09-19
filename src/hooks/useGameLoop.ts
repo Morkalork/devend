@@ -33,6 +33,7 @@ import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
 import { launchPending, updateLauncherArming } from "@/lib/physics/launcher";
+import { updateRubble } from "@/lib/physics/rubble";
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
@@ -502,6 +503,12 @@ export function createGameLoop(
       // so the ground the barrel stood on is playable the same frame a fence
       // first becomes legal.
       callbacks.settleLaunchers?.();
+
+      // Pieces shed by breakables slide and fade (physics/rubble.ts). With the
+      // ball pass, not the render pass: they deflect balls, so they are world
+      // state, and a frame that skipped them would move balls against rubble
+      // that had not moved.
+      updateRubble(game, PHYSICS_STEP, performance.now());
 
       // Deliveries: a ball that has crossed a box's membrane is taken out of
       // play and counted. Runs after ball movement so a ball that arrived this

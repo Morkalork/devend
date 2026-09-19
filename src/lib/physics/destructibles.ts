@@ -26,6 +26,7 @@ import { getBallType } from "@/lib/ballTypes";
 import { resumeDrillThrough } from "@/lib/physics/drill";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { getRunRng } from "@/lib/runRng";
+import { spawnRubble } from "@/lib/physics/rubble";
 import { makeChestLoot } from "@/lib/chests";
 import { rollCappedAbilityReward } from "@/lib/abilities";
 import { Polygon, pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
@@ -69,7 +70,21 @@ const BREAK_BONUS_OBJECTIVE = 2;
 // Demolition multiplier: each smash compounds the map's pre-cap payout by this,
 // offsetting the ship-early time sacrificed to break things (issue #38).
 export const BREAK_MULTIPLIER_PER = 1.15;
-const MAX_DENTS = 6;             // most recent impacts kept for rendering
+/**
+ * Wear steps a slab shows on its way to breaking, and the cap on its scars.
+ *
+ * A scar is cut when the slab loses another 1/MAX_DENTS of its integrity, not
+ * when it is touched. That is the difference between damage that ADDS UP and
+ * damage that wanders: this used to keep the six most recent CONTACTS and drop
+ * the oldest, so a slab taking a long rally of small chips healed its first
+ * bite to make room for its seventh, and the deformation appeared to move
+ * around the slab rather than accumulate. Reported as "they just deform
+ * slightly after the first hit and the deformation just moves around".
+ *
+ * Six also bounds the list without any dropping, because a slab can only cross
+ * six sixths of its own integrity.
+ */
+const MAX_DENTS = 6;
 
 // ── Physics-based impact damage (issue #38 force model) ──────────────────────
 // damage = k · mass · vₙ^EXP, with mass = density · (radius/BASE)² and vₙ the
@@ -103,6 +118,43 @@ export function ballImpactDamage(ball: Ball, normalSpeed: number): number {
 /** Map a hit's damage to a dent depth/size multiplier (~0.5 chip .. ~1.3 smash). */
 function dentStrength(damage: number): number {
   return 0.5 + Math.min(1, damage / 1.5) * 0.8;
+}
+
+/**
+ * How much deeper a scar cuts for being a LATE one.
+ *
+ * A slab one hit from breaking should not be wearing six bites of the same
+ * size as its first. Scaling with how far gone it already is makes the last
+ * scars the ones that take real chunks out, so the silhouette degrades faster
+ * than linearly and "nearly dead" is readable from the shape alone.
+ */
+/**
+ * Damage below which a contact wears a slab but knocks nothing off it.
+ *
+ * The chip floor is 0.15 and a square hit is about 1.0, so this sits where a
+ * glancing scrape stops and a real blow starts.
+ */
+const CHUNK_MIN_DAMAGE = 0.5;
+
+/**
+ * Largest hit budget a slab can have and still shed pieces.
+ *
+ * A slab is architecture or it is a block, and its budget says which. The
+ * ladder's breakables are authored at 2 or 3 - things meant to come apart in a
+ * rally - while level 15's launcher rail is 14, because a rail exists to be
+ * RIDDEN and has to survive a ball grinding along it for a whole map.
+ *
+ * Rubble off a rail is not a near-miss, it is a contradiction: the lane a ball
+ * rides is on the slab's outward side, which is exactly where a knocked-off
+ * piece goes, so the rail kept firing deflectors into its own lane and the shot
+ * bounced off its own debris instead of following the bend. Caught by
+ * launcherRail.test.ts, which measures the fraction of a flight spent on the
+ * rail and watched it fall by a third.
+ */
+const CHUNK_MAX_BUDGET = 6;
+
+function wearDepth(fraction: number): number {
+  return 0.75 + Math.max(0, Math.min(1, fraction)) * 1.05;
 }
 
 export interface DestroyCallbacks {
@@ -197,9 +249,21 @@ export function registerObjectHit(
   d.hits = Math.min(d.maxHits, d.hits + amount);
   // Remember where it was struck (and how hard) so the border dents inward
   // there scaled by force, and shed a burst of chips for tactile feedback.
+  let newScar = false;
   if (impact) {
-    (d.dents ??= []).push({ x: impact.x, y: impact.y, s: dentStrength(amount) });
-    if (d.dents.length > MAX_DENTS) d.dents.shift();
+    // A scar per WEAR STEP, never per contact, and never removed: see MAX_DENTS.
+    // A slab always shows its first hit (ceil pins the first scar to any damage
+    // at all), and can never show more scars than steps it has crossed.
+    const fraction = d.maxHits > 0 ? d.hits / d.maxHits : 1;
+    const want = Math.min(MAX_DENTS, Math.max(1, Math.ceil(fraction * MAX_DENTS)));
+    d.dents ??= [];
+    if (d.dents.length < want) {
+      d.dents.push({
+        x: impact.x, y: impact.y,
+        s: dentStrength(amount) * wearDepth(fraction),
+      });
+      newScar = true;
+    }
     // Non-fatal hits shed chips here; the fatal hit's full shatter (spawnDebris
     // in processDestroysFn) already covers the last one.
     if (d.hits < d.maxHits) {
@@ -215,6 +279,23 @@ export function registerObjectHit(
       const color = d.kind === 'mirror' ? MIRROR_DEBRIS_COLOR : BREAKABLE_DEBRIS_COLOR;
       game.objectDebris.push(spawnImpactChips(impact, ax, ay, color, now, amount));
       if (game.objectDebris.length > MAX_OBJECT_DEBRIS) game.objectDebris.shift();
+      // A piece actually comes off, and it is still there afterwards
+      // (physics/rubble.ts). Tied to the SCAR rather than to the contact, so
+      // the rubble on the floor is the material the silhouette just lost
+      // rather than a second, unrelated shower: one bite out of the slab, one
+      // thing to trip over. A heavy hit sheds two.
+      //
+      // A BLOW sheds, a SCRAPE only wears, and a RAIL never sheds at all (see
+      // both constants). Either way the surface still scars from what hit it,
+      // which is right: a ridden rail should look worn. It just does not throw
+      // lumps into the lane being ridden.
+      if (newScar && amount >= CHUNK_MIN_DAMAGE && d.maxHits <= CHUNK_MAX_BUDGET) {
+        spawnRubble(
+          game, impact, ax, ay, color, now,
+          getRunRng(`rubble:${d.id}:${d.dents?.length ?? 0}`),
+          amount >= 1 ? 2 : 1,
+        );
+      }
     }
   }
   if (d.hits >= d.maxHits) {

@@ -8,6 +8,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, BOUNCER_HOURS_PER_BUMP, type BouncerSpec } from "@/lib/physics/bouncer";
+import { deflectOffRubble } from "@/lib/physics/rubble";
 import { applyDent, deformReady, deformSlow, dentDepth, type DeformState } from "@/lib/physics/deformable";
 import { portalAt, portalExit, portalArrival, portalReady } from "@/lib/physics/portal";
 import { wellStep } from "@/lib/physics/gravityWells";
@@ -1080,6 +1081,12 @@ export function updateBall(
       }
     }
   }
+
+  // Pieces knocked off breakables turn a ball, after every wall and obstacle
+  // has had its say and the position is settled. Last because a chunk is the
+  // softest thing on the board: a ball resolved out of a wall and into a chunk
+  // should end up beside the chunk, never back inside the wall.
+  deflectOffRubble(game, ball, now);
 
   const ballRegion = game.regions.find(r => r.id === ball.regionId);
   if (!ballRegion) return;

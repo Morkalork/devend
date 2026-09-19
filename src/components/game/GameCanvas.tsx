@@ -832,6 +832,7 @@ export function GameCanvas({
     pendingDestroys: [] as import("@/types/game").DestructibleState[],
     objectDebris: [] as import("@/types/game").ObjectDebrisState[],
     shellShatters: [] as import("@/types/game").ShellShatterState[],
+    rubble: [] as import("@/types/game").RubbleChunk[],
     stackObjects: [] as import("@/types/game").StackObject[],
     fallingObjects: [] as import("@/types/game").FallingObject[],
     objectivesTotal: 0,
@@ -1006,6 +1007,7 @@ export function GameCanvas({
       game.pendingDestroys = [];
       game.objectDebris = [];
       game.shellShatters = [];
+      game.rubble = [];
       game.fallingObjects = [];
       game.objectivesBroken = 0;
       game.breakBonus = 0;

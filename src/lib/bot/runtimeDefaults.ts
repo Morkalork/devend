@@ -124,6 +124,7 @@ export function runtimeDefaults() {
     pendingDestroys: [],
     objectDebris: [],
     shellShatters: [],
+    rubble: [],
     stackObjects: [],
     fallingObjects: [],
     objectivesTotal: 0,

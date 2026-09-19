@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, ShellShatterState, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState, SlowArea } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, ShellShatterState, RubbleChunk, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState, SlowArea } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { WallGrid } from "@/lib/physics/wallGrid";
 import { Polygon, Vector2 } from "@/lib/polygon";
@@ -665,6 +665,13 @@ export interface CanvasGameState {
   pendingDestroys: DestructibleState[];
   /** Active collapse animations (rendered then culled). */
   objectDebris: ObjectDebrisState[];
+  /**
+   * Pieces knocked off breakables, still on the board (physics/rubble.ts).
+   *
+   * Deflects balls and nothing else: not in `walls`, not in the space grid,
+   * never consulted by a win condition or a reachability check.
+   */
+  rubble: RubbleChunk[];
   /** Launcher shells mid-dematerialization (rendered then culled). */
   shellShatters: ShellShatterState[];
 

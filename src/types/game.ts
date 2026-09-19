@@ -341,6 +341,30 @@ export interface ImpactDent {
   s: number;   // depth/size multiplier for this hit
 }
 
+/**
+ * A piece knocked off a breakable, sliding across the board (physics/rubble.ts).
+ *
+ * A real deflector while it lasts - a ball bounces off it - and deliberately
+ * nothing else: never a wall, never in the space grid, never an occluder for
+ * reachability. It can change where a ball goes; it can never change what the
+ * map wants.
+ */
+export interface RubbleChunk {
+  id: string;
+  x: number; y: number;
+  vx: number; vy: number;
+  /** World units. Collision radius and draw size are the same number. */
+  radius: number;
+  rotation: number;
+  rotSpeed: number;
+  bornAt: number;
+  lifeMs: number;
+  color: string;
+  /** Cooldown bookkeeping, so one contact is one deflection. */
+  lastBallId?: string;
+  lastHitAt?: number;
+}
+
 export interface DestructibleState {
   id: string;                  // stable id (the level entity id)
   kind: 'mirror' | 'mover' | 'breakable';
@@ -355,7 +379,16 @@ export interface DestructibleState {
   obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
   objective?: boolean;         // breakable: smashing it awards more bonus
   brittle?: boolean;           // breakable: the first debounced contact breaks it, whatever the damage
-  dents?: ImpactDent[];        // world-space impact points — rendered as inward dents
+  /**
+   * World-space wear, rendered as inward bites and cracks.
+   *
+   * PERMANENT and monotonic: one is cut each time the slab loses another
+   * fraction of its integrity, and none is ever removed. It used to be a ring
+   * buffer of the six most recent CONTACTS, which is why a slab that had been
+   * hit a lot did not look it - the seventh contact healed the first bite, so
+   * the damage appeared to wander around the slab instead of adding up.
+   */
+  dents?: ImpactDent[];
   fenceStyle?: boolean;        // breakable: render as a barrier/fence line, not a block
   /**
    * The drill fence that was eating this slab when it died, so the fence can

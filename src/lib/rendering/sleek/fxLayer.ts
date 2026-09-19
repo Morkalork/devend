@@ -29,6 +29,7 @@ import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
 import { mirrorOwner } from "./derivedLight";
+import { rubbleAlpha } from "@/lib/physics/rubble";
 import { getLightLook } from "@/lib/lightLook";
 import { REACH_RADII } from "./ballLight";
 import { closestOnSegment } from "./ballBounce";
@@ -107,6 +108,7 @@ export class FxLayer {
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
+    this.drawRubble(game, light, w2s, scale, now);
     this.drawMirrorGlints(game, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
     this.drawShellShatters(game, light, w2s, scale, now);
@@ -853,6 +855,52 @@ export class FxLayer {
         .stroke({ width: 3.2 * scale, color, alpha: 0.5 * glint, cap: "round" })
         .moveTo(x0, y0).lineTo(x1, y1)
         .stroke({ width: 1.2 * scale, color: 0xffffff, alpha: 0.65 * glint, cap: "round" });
+    }
+  }
+
+  /**
+   * Pieces knocked off a breakable, lying where they stopped.
+   *
+   * Drawn as solid lit rock rather than as the translucent flecks the chip
+   * burst uses, and that difference is the point: a chip is a picture of an
+   * impact and this is a thing on the board a ball will bounce off. If it
+   * looked like debris nobody would expect it to do anything, and the first
+   * deflection would read as a bug.
+   *
+   * A shadow under each, for the same reason everything else standing on this
+   * board has one - it is what puts an object ON the floor rather than painted
+   * over it.
+   */
+  private drawRubble(
+    game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number,
+  ): void {
+    for (const c of game.rubble ?? []) {
+      const alpha = rubbleAlpha(c, now);
+      if (alpha <= 0.01) continue;
+      const s = w2s(c.x, c.y);
+      const r = c.radius * scale;
+      const amb = ambientAt(light, s.x, s.y);
+      const body = parseColor(c.color, PALETTE.obstacle);
+
+      // Five sides, turned by the chunk's own spin: enough to read as a broken
+      // shard at this size, where a circle would read as a pebble or a ball.
+      const pts: Pt[] = [];
+      for (let i = 0; i < 5; i++) {
+        // The radii alternate slightly so it is a chip, not a pentagon.
+        const a = c.rotation + (i / 5) * Math.PI * 2;
+        const rr = r * (i % 2 === 0 ? 1 : 0.72);
+        pts.push({ x: s.x + Math.cos(a) * rr, y: s.y + Math.sin(a) * rr });
+      }
+
+      const cast = shadowFor(light, s.x, s.y, r * 0.5);
+      this.under
+        .poly(pts.map(p => ({ x: p.x + cast.dx * cast.length, y: p.y + cast.dy * cast.length })))
+        .fill({ color: PALETTE.shadow, alpha: cast.alpha * alpha });
+      this.over
+        .poly(pts)
+        .fill({ color: mix(PALETTE.shadow, body, 0.4 + amb * 0.5), alpha })
+        .poly(pts)
+        .stroke({ width: Math.max(1, 1.1 * scale), color: body, alpha: 0.75 * alpha });
     }
   }
 
