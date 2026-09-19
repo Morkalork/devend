@@ -52,6 +52,7 @@ import { tickCircuitOnCut } from "@/lib/physics/circuit";
 import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
+import { anyLockFlashActive } from "@/lib/lockFlash";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 import {
   resolveWinSpec, isWinMet, winReasonFor, winBonusPercent, metAlternative, requirementsMet,
@@ -900,12 +901,7 @@ export function checkSpaceWin(
     // If a lock flash is still playing (the winning cut usually locked a ball),
     // hold the world and let it finish before the modal mounts; the game loop
     // opens the prompt when the flash ends. Otherwise open it right away.
-    const now = simNow();
-    let flashActive = false;
-    for (const [, f] of game.assimilations) {
-      if (now - f.startTime < LOCK_TOTAL_DURATION) { flashActive = true; break; }
-    }
-    if (flashActive) {
+    if (anyLockFlashActive(game.assimilations.values(), simNow())) {
       game.pushPromptPending = true;
     } else {
       game.pushMode = "prompt";

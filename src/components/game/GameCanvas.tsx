@@ -601,14 +601,23 @@ export function GameCanvas({
    */
   useEffect(() => {
     const game = gameRef.current;
+    // When the CURRENT hold reason began, so the HUD can report its age. A
+    // frozen board turned out to be a loop running perfectly with its sim clock
+    // stopped, where "time since the last frame" reads a healthy 16ms and the
+    // hold's age is the only number that says anything.
+    let heldReason: string | null = null;
+    let heldSince = 0;
     const id = window.setInterval(() => {
       const flags = holdFlagsOf(game);
       const now = performance.now();
+      const reason = loopHoldReason(flags);
+      if (reason !== heldReason) { heldReason = reason; heldSince = now; }
       // Reported whether or not anything is wrong, and BEFORE the returns
       // below: the whole point is that a screenshot of a stalled board can say
       // what the loop was doing. See recordLoopHealth.
       recordLoopHealth(
-        loopHoldReason(flags),
+        reason,
+        reason === null ? 0 : now - heldSince,
         game.loopFrameAt === 0 ? 0 : now - game.loopFrameAt,
         game.loopRestarts,
       );
