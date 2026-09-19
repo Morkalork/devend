@@ -16,6 +16,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import { DEFAULT_LIGHT_LOOK } from "@/lib/lightLook";
+import { DEFAULT_BALL_LOOK } from "@/lib/ballLook";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const PLAYGROUND = read("src/components/admin/PlaygroundScreen.tsx");
@@ -47,6 +49,50 @@ describe("every modifier has a Playground knob", () => {
     expect(entry).not.toMatch(/max:/);
   });
 });
+
+describe("every look dial has a Playground slider", () => {
+  // A NEW CLASS of thing for this file, added with the four dials that made it
+  // necessary. The rule in CLAUDE.md is about anything that changes how the
+  // game plays, and a rendering dial does not - but the reason behind it does
+  // apply: a light model with an unreachable term is a term nobody ever looks
+  // at, which is how the ball gobo survived being obviously wrong for as long
+  // as it did. Every dial must reach 0, so the before/after is a drag rather
+  // than a rebuild, and every dial must be findable.
+  //
+  // The dials are the keys of the two look objects, so this cannot be
+  // satisfied by remembering to update a list: adding a key to either
+  // interface fails here until its slider exists.
+  const dials: [string, string][] = [
+    ...Object.keys(DEFAULT_LIGHT_LOOK).map(k => [k, `light-${kebab(k)}`] as [string, string]),
+    ...Object.keys(DEFAULT_BALL_LOOK).filter(k => k !== "flicker")
+      .map(k => [k, `ball-${kebab(k)}-strength`] as [string, string]),
+  ];
+
+  it("is checking a real set of dials", () => {
+    expect(dials.length).toBeGreaterThanOrEqual(9);
+  });
+
+  for (const [key, id] of dials) {
+    it(`${key} has a slider that reaches 0`, () => {
+      expect(PLAYGROUND, `no input id="${id}"`).toContain(`id="${id}"`);
+      // The setter must name this key, or the slider is wired to another dial.
+      expect(PLAYGROUND).toMatch(new RegExp(`\\{\\s*${key}:\\s*Number\\(e\\.target\\.value\\)`));
+      // min 0 on the input that owns this id: the block is written in one
+      // shape throughout, so the id and its min sit within a few lines.
+      const at = PLAYGROUND.indexOf(`id="${id}"`);
+      expect(PLAYGROUND.slice(at, at + 220)).toMatch(/min=\{0\}/);
+    });
+  }
+
+  it("the flicker is a toggle rather than a slider, and is still reachable", () => {
+    expect(PLAYGROUND).toMatch(/setBallLook\(\{ flicker:/);
+  });
+});
+
+/** `softShadows` -> `soft-shadows`, which is how the ids are spelled. */
+function kebab(k: string): string {
+  return k.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`);
+}
 
 describe("every URL dev flag has an admin control", () => {
   // A flag is a parse<Name>Param in devFlags.ts. Its live getter must be set

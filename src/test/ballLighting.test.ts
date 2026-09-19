@@ -22,6 +22,7 @@ import { BallLightPass, lightBufferPlan, LIGHT_RESOLUTION } from "@/lib/renderin
 import { PALETTE } from "@/lib/rendering/sleek/palette";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
+import { setLightLook, resetLightLookCache } from "@/lib/lightLook";
 import type { Pt } from "@/lib/rendering/sleek/pixelGrid";
 
 const AT: Pt = { x: 400, y: 300 };
@@ -215,6 +216,13 @@ const w2s = (x: number, y: number) => ({ x, y });
 
 describe("the light pass", () => {
   it("shadows the walls inside a pool and ignores the ones outside it", () => {
+    // Hard shadows for this one, because it counts QUADS to count walls and a
+    // soft shadow is two quads per wall - the umbra and the penumbra fringe
+    // around it. What is under test here is which walls are in reach; the
+    // fringe has its own pins in dynamicLight.test.ts.
+    localStorage.clear();
+    resetLightLookCache();
+    setLightLook({ softShadows: 0 });
     const reach = R * REACH_RADII;
     const pass = new BallLightPass();
     pass.build(state({
@@ -237,6 +245,8 @@ describe("the light pass", () => {
     expect(shades.length).toBeGreaterThan(0);
     expect(fillCount(shades[0]), "the pass shadowed the wrong number of walls").toBe(2);
     pass.destroy();
+    localStorage.clear();
+    resetLightLookCache();
   });
 
   it("emits nothing at all for a board of sleepers", () => {

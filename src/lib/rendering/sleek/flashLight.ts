@@ -134,6 +134,14 @@ export interface PlacedLight {
   reach: number;
   intensity: number;
   color: number;
+  /**
+   * The emitter's own screen radius, for the penumbra in shadowQuad. Absent
+   * means a point source and therefore a hard shadow, which is what every
+   * light placed through this interface is: a lock flash has no body, a
+   * caustic is a focused core rather than a disc, and a fence tip is a point
+   * by construction. Only a ball's own pool (BallLight) fills it in.
+   */
+  source?: number;
 }
 
 /**

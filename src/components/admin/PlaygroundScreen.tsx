@@ -1623,6 +1623,87 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
               </div>
 
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-energy" style={{ color: lightLook.energy > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Speed drives brightness: {Math.round(lightLook.energy * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A ball burns harder the faster it moves. 0 is one output whatever the board is doing.
+                  </span>
+                </label>
+                <input
+                  id="light-energy"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.energy * 100)}
+                  onChange={e => setLightLookState(setLightLook({ energy: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-exposure" style={{ color: lightLook.exposure > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Local exposure: {Math.round(lightLook.exposure * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Rolls a light off by how crowded the board is around it, so four pools in a corner stop summing to white.
+                  </span>
+                </label>
+                <input
+                  id="light-exposure"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.exposure * 100)}
+                  onChange={e => setLightLookState(setLightLook({ exposure: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-facing" style={{ color: lightLook.facing > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Directional shading: {Math.round(lightLook.facing * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A wall's face lights up when a ball is in front of it, not merely near it. 0 is the flat disc.
+                  </span>
+                </label>
+                <input
+                  id="light-facing"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.facing * 100)}
+                  onChange={e => setLightLookState(setLightLook({ facing: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-soft-shadows" style={{ color: lightLook.softShadows > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Soft shadows: {Math.round(lightLook.softShadows * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A ball is an area source, so its shadow spreads with distance from whatever cast it. 0 is a hard edge.
+                  </span>
+                </label>
+                <input
+                  id="light-soft-shadows"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.softShadows * 100)}
+                  onChange={e => setLightLookState(setLightLook({ softShadows: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
               <div className="px-5 pt-3 flex-shrink-0">
                 <label className="block text-xs font-semibold mb-1" htmlFor="light-motes" style={{ color: lightLook.motes > 0 ? accent : 'hsl(var(--foreground))' }}>
                   Motes in the air: {Math.round(lightLook.motes * 100)}%
