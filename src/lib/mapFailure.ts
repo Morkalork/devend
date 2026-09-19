@@ -83,7 +83,23 @@ export type MapFailKind =
    * player needs to be told which: a zone you can no longer deliver to and a
    * slab you can no longer hit are different mistakes with different lessons.
    */
-  | "objectiveBuried";
+  | "objectiveBuried"
+  /**
+   * A requirement the map still needs was put out of reach by the board.
+   *
+   * The general form of the two above, for the clauses that never had a guard
+   * of their own: a split side whose ground no ball can enter, a delivery box
+   * sealed away, a terminal or a seam span buried under claimed space. See
+   * physics/requirementReach.ts, which owns the question and explains why the
+   * remaining clause kinds cannot be lost this way.
+   *
+   * Level 2 is why it exists. Its win wants a lock on each side of the midline,
+   * closing the doorway with both balls on one side makes the other side
+   * impossible forever, and levels 1-3 have no deadline - so the map neither
+   * ended nor failed, and the only exit was to lock the last ball on the wrong
+   * side on purpose.
+   */
+  | "requirementUnreachable";
 
 /**
  * Every kind, as a runtime list.
@@ -102,6 +118,7 @@ const ALL_FAIL_KINDS: Record<MapFailKind, true> = {
   moverHitFence: true,
   lockedOut: true,
   objectiveBuried: true,
+  requirementUnreachable: true,
 };
 
 export const MAP_FAIL_KINDS = Object.keys(ALL_FAIL_KINDS) as MapFailKind[];

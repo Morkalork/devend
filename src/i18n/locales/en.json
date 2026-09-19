@@ -1251,6 +1251,7 @@
     "needTerminals": "Light {{target}} terminals (you had {{current}})",
     "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})",
     "objectiveBuried": "You fenced off a breakable you still had to smash",
+    "requirementUnreachable": "You fenced off something this map still needs",
     "needSplitLocks": "Lock {{each}} on each side of the board (you covered {{current}} of {{target}} sides)"
   },
   "winGate": {

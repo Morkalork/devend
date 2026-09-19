@@ -44,6 +44,7 @@ import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost } from "@/lib/physics/smashReach";
+import { lostRequirement } from "@/lib/physics/requirementReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
@@ -698,6 +699,28 @@ export function evaluateWinConditions(
     failMapCostingALife(
       game, level, levelNumber, activeModifiers, callbacks,
       mapFailure("objectiveBuried", spec, snap));
+    return null;
+  }
+
+  // And the same question for every OTHER clause that names a place.
+  //
+  // The two checks above were written one per mechanic, which left level 2 with
+  // none: its win wants a lock on each side of the midline, one cut can put the
+  // far side beyond every ball forever, and levels 1-3 have no deadline to end
+  // the map afterwards - so it neither finished nor failed, and the only exit
+  // was to lock the last ball on the wrong side on purpose. requirementReach
+  // asks what all three are asking (where does this clause need something to
+  // happen, and is that ground still usable) across the whole union, so the
+  // next clause kind cannot ship without an answer.
+  //
+  // Same guards, for the same reasons: after a cut, because this describes what
+  // a fence did to the board; with a ball still in play, because with none the
+  // truer reason is the lock-out below.
+  if (playerHasCut && !isWinMet(spec, snap) && countBallsInPlay(game.balls) > 0
+      && lostRequirement(game, spec, snap)) {
+    failMapCostingALife(
+      game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("requirementUnreachable", spec, snap));
     return null;
   }
 

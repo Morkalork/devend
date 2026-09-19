@@ -1799,6 +1799,7 @@
     "needTerminals": "Enciende {{target}} terminales (tenias {{current}})",
     "needHarvested": "Cosecha {{target}} tramos del flujo (tenias {{current}})",
     "objectiveBuried": "Has cercado un objeto destructible que aún tenías que romper",
+    "requirementUnreachable": "Has cercado algo que este mapa aún necesita",
     "needSplitLocks": "Encerrar {{each}} en cada lado del tablero (cubriste {{current}} de {{target}} lados)"
   },
   "winGate": {

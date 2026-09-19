@@ -87,8 +87,15 @@ describe("what a fence break is allowed to cost", () => {
     // added - which is the moment to decide what IT costs, before it ships
     // with whatever the nearest copy happened to do.
     expect([...MAP_FAIL_KINDS].sort()).toEqual([
+      // requirementUnreachable costs a LIFE and restarts the map, like the two
+      // strandings it generalises (areaUnreachable, objectiveBuried) and unlike
+      // a fence break, which can be paid for with a shield. The map is over
+      // either way - what it asked for cannot happen on this board any more -
+      // so the only question was whether to end the run, and a stranding is a
+      // mistake a replay fixes.
       "areaUnreachable", "ballHitFence", "launcherPrematureLock",
-      "lockedOut", "moverHitFence", "objectiveBuried", "outOfFences", "timeUp",
+      "lockedOut", "moverHitFence", "objectiveBuried", "outOfFences",
+      "requirementUnreachable", "timeUp",
     ]);
   });
 });

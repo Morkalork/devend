@@ -444,6 +444,18 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
           `Asks for ${c.count} seams harvested, but the map's stream has ${segments}.`);
       }
     }
+    if (c.kind === "delivered") {
+      // The one clause of this family that had no check, found while giving the
+      // runtime its stranding guard (physics/requirementReach.ts). Capacity
+      // across every box, because a delivery counts wherever it landed.
+      const capacity = (level.entities ?? [])
+        .filter(e => e.kind === "box")
+        .reduce((n, e) => n + ((e as { capacity?: number }).capacity ?? 0), 0);
+      if (c.count > capacity) {
+        problems.push(
+          `Asks for ${c.count} delivered, but the map's boxes hold ${capacity}.`);
+      }
+    }
     if (c.kind === "underPar" && level.expectedCuts + c.delta < 1) {
       problems.push("The cut budget this allows is less than one cut.");
     }

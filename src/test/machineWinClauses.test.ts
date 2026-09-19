@@ -108,6 +108,33 @@ describe("harvesting the stream", () => {
   });
 });
 
+describe("delivery, the clause that had no authoring check", () => {
+  /**
+   * Found while giving the runtime its stranding guard
+   * (physics/requirementReach.ts): every other counted clause was refused when
+   * a map asked for more than it carried, and `delivered` was not, so a map
+   * wanting three deliveries from two boxes shipped as silently unfinishable.
+   * The runtime guard deliberately keeps its hands off that case - nothing can
+   * be LOST that was never there - which leaves it to this.
+   */
+  it("flags a map asked for more deliveries than its boxes hold", () => {
+    const level = {
+      entities: [
+        { kind: "box", capacity: 1 }, { kind: "box", capacity: 1 },
+        { kind: "wall" },
+      ],
+    } as unknown as LevelConfig;
+    expect(winSpecProblems(spec([{ kind: "delivered", count: 3 }]), level).join(" "))
+      .toMatch(/boxes hold 2/);
+    expect(winSpecProblems(spec([{ kind: "delivered", count: 2 }]), level)).toEqual([]);
+  });
+
+  it("flags a delivery clause on a map with no boxes at all", () => {
+    expect(winSpecProblems(spec([{ kind: "delivered", count: 1 }]), {} as LevelConfig).join(" "))
+      .toMatch(/boxes hold 0/);
+  });
+});
+
 describe("the clauses read what the game already keeps", () => {
   /**
    * The point of the whole addition. A clause that needed a NEW counter would

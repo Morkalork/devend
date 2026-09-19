@@ -1799,6 +1799,7 @@
     "needTerminals": "Tand {{target}} terminaler (du hade {{current}})",
     "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})",
     "objectiveBuried": "Du stängde in ett förstörbart objekt du fortfarande måste krossa",
+    "requirementUnreachable": "Du stängde in något som den här kartan fortfarande behöver",
     "needSplitLocks": "Lås in {{each}} på varje sida av planen (du klarade {{current}} av {{target}} sidor)"
   },
   "winGate": {
