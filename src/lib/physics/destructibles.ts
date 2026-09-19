@@ -38,6 +38,7 @@ import {
   getRegionCellPositions,
   gridIndexToWorld,
   captureUnreachableCells,
+  obstacleSealReach,
 } from "@/lib/spaceGrid";
 import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
@@ -511,13 +512,15 @@ export function floodSealedShadow(
 export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   const grid = game.spaceGrid;
   if (!grid) return [];
-  // createSpaceGrid seals each obstacle EDGE as a band of REMOVED cells reaching
-  // ~cellSize beyond the polygon (rasterizeCutToGrid margin: thickness/2 +
-  // cellSize/2). Reopen that band too, not just the interior footprint: leaving
-  // the ring REMOVED grid-isolates the reopened interior even though physics
+  // createSpaceGrid seals each obstacle EDGE by removing the cells that edge
+  // crosses, which reaches half a lattice diagonal past the outline at most
+  // (obstacleSealReach). Reopen that ring too, not just the interior footprint:
+  // leaving it REMOVED grid-isolates the reopened interior even though physics
   // lets balls roll right over it, and the follow-up unreachable-capture in
   // processDestroysFn would then wrongly swallow reachable reopened space.
-  const margin = grid.cellSize;
+  // Read from the seal rather than guessed: a margin wider than the seal reaches
+  // cells no seal ever removed, and hands back ground another wall is holding.
+  const margin = obstacleSealReach(grid.cellSize);
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const v of poly.vertices) {
     if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
