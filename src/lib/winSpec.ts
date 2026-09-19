@@ -19,9 +19,14 @@ import type {
   WinCondition, WinConditionProgress, WinSnapshot, WinSpec,
 } from "@/types/winSpec";
 import type { WinReason } from "@/types/game";
+import type { SplitAxis } from "@/types/winSpec";
+import { rotateSplitLine, ROTATION_MIN_LEVEL, type MapRotation } from "@/lib/mapRotation";
 import { gateAreas } from "@/lib/coloredAreas";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
+
+/** The one clause that names a PLACE, spelled out once. */
+type SplitClause = Extract<WinCondition, { kind: "splitLocks" }>;
 
 /** The alternative win every non-boss, non-gate map has always had. */
 const ALL_LOCKED: WinCondition = { kind: "allLocked" };
@@ -161,9 +166,36 @@ function withRunClauses(
  * the board's own centre on the chosen axis is where a map that divides itself
  * down the middle already puts its divider.
  */
-export function splitLine(c: Extract<WinCondition, { kind: "splitLocks" }>): number {
+export function splitLine(c: SplitClause): number {
   if (typeof c.at === "number") return c.at;
   return (c.axis === "horizontal" ? BOARD_HEIGHT : BOARD_WIDTH) / 2;
+}
+
+/** The clause's axis as authored, with the default filled in. */
+export function splitAxis(c: SplitClause): SplitAxis {
+  return c.axis === "horizontal" ? "horizontal" : "vertical";
+}
+
+/**
+ * The clause's line as the DEALT board has it.
+ *
+ * A map from level 4 up is dealt in one of four rotations, and a clause that
+ * names a place is written against the authored board. Two deals in four turn a
+ * vertical divider into a horizontal one, so a clause read without this splits
+ * left from right on a board divided top from bottom - a rule the player can
+ * only learn by losing, and the reason this clause could previously ship only
+ * on the maps that never turn.
+ *
+ * Everything that compares a LOCK POSITION or a GRID CELL to the line goes
+ * through here, because both of those are in dealt coordinates. Authoring
+ * checks (winSpecProblems, the builder's preview) keep reading `splitLine`
+ * straight: they are asking what the map SAYS, not what one deal of it looks
+ * like.
+ */
+export function dealtSplit(
+  c: SplitClause, rotation: MapRotation,
+): { axis: SplitAxis; at: number } {
+  return rotateSplitLine(splitAxis(c), splitLine(c), rotation);
 }
 
 /**
@@ -180,11 +212,15 @@ export function splitLine(c: Extract<WinCondition, { kind: "splitLocks" }>): num
  * than a case to tune for.
  */
 export function splitLockCounts(
-  c: Extract<WinCondition, { kind: "splitLocks" }>,
+  c: SplitClause,
   points: { x: number; y: number }[],
+  rotation: MapRotation = 0,
 ): [number, number] {
-  const line = splitLine(c);
-  const along = (p: { x: number; y: number }) => (c.axis === "horizontal" ? p.y : p.x);
+  // The DEALT line, because the points are where locks actually landed on the
+  // board the player is looking at. Defaulted to the standard orientation so
+  // the authoring tools, which have no deal, still read the map's own words.
+  const { axis, at: line } = dealtSplit(c, rotation);
+  const along = (p: { x: number; y: number }) => (axis === "horizontal" ? p.y : p.x);
   let before = 0, after = 0;
   for (const p of points) {
     if (along(p) < line) before += 1;
@@ -230,7 +266,7 @@ export function evaluateWinCondition(
       // ball tally would show 2/2 on a map that cannot now be finished. Sides
       // is the honest measure and it reads directly - "1 of 2" after the first
       // pocket, whichever side it was in.
-      const [near, far] = splitLockCounts(condition, snap.lockPoints);
+      const [near, far] = splitLockCounts(condition, snap.lockPoints, snap.mapRotation);
       const done = (near >= condition.count ? 1 : 0) + (far >= condition.count ? 1 : 0);
       return accumulate(done, 2);
     }
@@ -394,7 +430,26 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       const line = splitLine(c);
       if (line <= margin || line >= span - margin) {
         problems.push(
-          `The ${c.axis === "horizontal" ? "horizontal" : "vertical"} split at ${Math.round(line)} is outside the play area (${Math.round(margin)} to ${Math.round(span - margin)}), so every lock lands on the same side of it.`);
+          `The ${splitAxis(c)} split at ${Math.round(line)} is outside the play area (${Math.round(margin)} to ${Math.round(span - margin)}), so every lock lands on the same side of it.`);
+      }
+      // A map that TURNS cannot be told which way it is divided.
+      //
+      // From level 4 up the board is dealt in one of four rotations, and two of
+      // them turn a vertical divider into a horizontal one. dealtSplit turns
+      // the line to match, so the clause is checked against the board the
+      // player sees - but the WORDING cannot follow, because the "how to win"
+      // sentence is written before any deal exists. "Lock a ball on each side"
+      // is true of a board split either way; "top and bottom" is true of one
+      // deal in two.
+      //
+      // So on a rotating map `horizontal` is not a second option, it is the
+      // same option with a wrong caption: it only means "vertical in the other
+      // two deals". Refusing it costs an author nothing and is the only way the
+      // sentence can be right every time.
+      if (c.axis === "horizontal" && (level.level ?? 0) >= ROTATION_MIN_LEVEL && !level.neverRotates) {
+        problems.push(
+          `A horizontal split needs a map that never turns: level ${level.level} is dealt in four rotations, `
+          + `so "top and bottom" names the halves of one deal in two. Use the default vertical split, which reads "each side".`);
       }
     }
     if (c.kind === "lockType") {

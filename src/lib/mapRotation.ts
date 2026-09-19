@@ -20,6 +20,7 @@
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
 import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell, WellPull } from "@/types/level";
+import type { SplitAxis } from "@/types/winSpec";
 import { rotateAngle, rotateBend, rotateBendAxis, rotateCurves } from "./bendRotation";
 import type { FenceZone } from "./physics/fenceZones";
 
@@ -40,6 +41,48 @@ export function rotatePoint(x: number, y: number, r: MapRotation): { x: number; 
     case 2: return { x: SIZE - x,   y: SIZE - y }; // upside down  (180°)
     case 3: return { x: SIZE - y,   y: x        }; // turned right (CW 90°)
     default: return { x, y };
+  }
+}
+
+/**
+ * Turn an authored `splitLocks` line into the one the dealt board has.
+ *
+ * Every other piece of authored geometry is rotated at load and the engine
+ * never thinks about it again. A win clause is not geometry, so it is not
+ * rotated - and `splitLocks` is the one clause that names a PLACE, which left
+ * it usable only on the tutorial band where nothing turns. That is why the
+ * clause shipped on level 2 and nowhere else: on any map from level 4 up, two
+ * deals in four turn the map's divider through 90 degrees while the clause goes
+ * on splitting left from right, so the line lands across a board that is
+ * divided top from bottom. A rule the player can only learn by losing, which is
+ * exactly what the clause's own design note forbids.
+ *
+ * Derived from rotatePoint rather than guessed. Under a CCW turn (x, y) becomes
+ * (y, SIZE - x), so the vertical line x = a is the set of points whose image
+ * has y = SIZE - a: a horizontal line. The rest follow the same way.
+ *
+ * Which side is which is deliberately not tracked. Both sides of a `splitLocks`
+ * clause owe the same count, so a deal that swaps left and right asks the same
+ * question, and a "near/far" that flipped per deal would be a distinction with
+ * nothing behind it.
+ */
+export function rotateSplitLine(
+  axis: SplitAxis, at: number, r: MapRotation,
+): { axis: SplitAxis; at: number } {
+  const vertical = axis === "vertical";
+  switch (r) {
+    case 1: // turned left (CCW): a vertical line becomes a horizontal one
+      return vertical
+        ? { axis: "horizontal", at: SIZE - at }
+        : { axis: "vertical", at };
+    case 2: // upside down: same axis, mirrored across the centre
+      return { axis, at: SIZE - at };
+    case 3: // turned right (CW)
+      return vertical
+        ? { axis: "horizontal", at }
+        : { axis: "vertical", at: SIZE - at };
+    default:
+      return { axis, at };
   }
 }
 

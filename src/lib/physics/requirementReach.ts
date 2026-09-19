@@ -66,7 +66,7 @@
  */
 import { CellState, worldToGridIndex, type SpaceGrid } from "@/lib/spaceGrid";
 import { sealedPendingCells } from "@/lib/coloredAreas";
-import { splitLine, splitLockCounts, evaluateWinCondition } from "@/lib/winSpec";
+import { dealtSplit, splitLockCounts, evaluateWinCondition } from "@/lib/winSpec";
 import type { WinCondition, WinSpec, WinSnapshot } from "@/types/winSpec";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -225,9 +225,11 @@ export function clauseStillPossible(
       // sealed in. How MANY balls could get there is deliberately not asked -
       // one pocket can take more than one ball, and balls still to spawn are
       // not on the board to count.
-      const line = splitLine(c);
-      const axis = c.axis === "horizontal" ? "horizontal" : "vertical";
-      const [before, after] = splitLockCounts(c, snap.lockPoints);
+      // The DEALT line: halfCells walks the space grid, which is in the dealt
+      // board's coordinates, and on two deals in four the authored axis is not
+      // the one the board is divided along. See dealtSplit.
+      const { axis, at: line } = dealtSplit(c, snap.mapRotation);
+      const [before, after] = splitLockCounts(c, snap.lockPoints, snap.mapRotation);
       for (const side of [true, false]) {
         const paid = side ? before : after;
         if (paid >= c.count) continue;

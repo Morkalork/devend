@@ -802,6 +802,9 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     areaTargets: game.coloredAreaTargets ?? 0,
     lockedByType: game.lockedByType ?? {},
     lockPoints: game.lockPoints ?? [],
+    // The deal, so a clause that names a place can be turned into the board the
+    // player is looking at. See dealtSplit.
+    mapRotation: game.mapRotation ?? 0,
     bossDefeated: game.bossDefeated,
     allLocked: areAllBallsWon(game),
     cuts: game.wallCount,
