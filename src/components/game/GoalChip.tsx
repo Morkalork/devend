@@ -53,10 +53,21 @@ interface Props {
    */
   onHoldStart?: () => void;
   onHoldEnd?: () => void;
+  /**
+   * Is every requirement on this map met (goalTracker.everyRequirementMet)?
+   *
+   * The space chip's "CLEAR" speaks for the whole MAP, not for its own clause,
+   * so it needs to know what its siblings are doing. It used to print CLEAR
+   * whenever the space goal alone was done, which on level 13 ("clear to 14%
+   * AND smash one slab") told the player they had won while the map went on
+   * correctly waiting for the slab.
+   */
+  winMet?: boolean;
 }
 
 export function GoalChip({
   goal, accentColor, atRisk = false, onExplain, flashKey = 0, onHoldStart, onHoldEnd,
+  winMet = false,
 }: Props) {
   const { t } = useTranslation();
   const Icon = ICONS[goal.kind as keyof typeof ICONS] ?? Diamond;
@@ -108,7 +119,7 @@ export function GoalChip({
         className={`font-display text-sm font-bold tabular-nums${flashKey > 0 ? ' animate-stat-flash' : ''}`}
         style={{ color, textShadow: glow ? `0 0 10px ${glow}88` : 'none' }}
       >
-        {goal.done && goal.kind === 'space' ? t('topBar.clear') : value}
+        {goal.done && goal.kind === 'space' && winMet ? t('topBar.clear') : value}
       </span>
       {/* The name is what teaches the rule, so it is not behind a hold.
           Truncated rather than wrapped: this row is one line on a phone. */}

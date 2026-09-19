@@ -103,14 +103,29 @@ describe("the requirement chip", () => {
     expect(screen.queryByText("2/0")).toBeNull();
   });
 
-  it("says CLEAR rather than a fraction once space is satisfied", () => {
+  it("says CLEAR rather than a fraction once the map is won", () => {
     // The one readout with a word instead of a number, kept from the old bar
-    // because "CLEAR" is what a player looks for.
-    render(<GoalChip goal={gate({
+    // because "CLEAR" is what a player looks for. It needs `winMet` because
+    // the word speaks for the MAP and the chip only knows its own clause.
+    render(<GoalChip winMet goal={gate({
       kind: "space", tier: "requirement", labelKey: "winGate.space",
       unit: "percent", current: 88, target: 85, done: true,
     })} accentColor={ACCENT} />);
     expect(screen.getByText("CLEAR")).toBeTruthy();
+  });
+
+  it("keeps the number on a cleared board whose map wants something else", () => {
+    // Level 13: "clear to 14% AND smash one slab". Reported as "after winning,
+    // the map just does nothing and I end up stuck with no post map menu" - the
+    // board was clear, the chip said CLEAR, the slab was still standing, and
+    // the gate was right to go on waiting. The chip was the only thing lying,
+    // so with a requirement outstanding it goes back to reporting its number.
+    render(<GoalChip goal={gate({
+      kind: "space", tier: "requirement", labelKey: "winGate.space",
+      unit: "percent", current: 88, target: 85, done: true,
+    })} accentColor={ACCENT} />);
+    expect(screen.queryByText("CLEAR"), "the bar announced a win the map had not granted").toBeNull();
+    expect(screen.getByText("88/85%")).toBeTruthy();
   });
 
   it("marks a percent goal as a percentage", () => {

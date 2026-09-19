@@ -198,3 +198,27 @@ export function goalAtRisk(goal: Goal, ballsInPlay: number): boolean {
   if (ALWAYS_SHOWN.includes(goal.kind as WinConditionKind)) return false;
   return ballsInPlay <= 1;
 }
+
+/**
+ * Is EVERY requirement on this map met, so the map is genuinely won?
+ *
+ * The top bar's space chip prints "CLEAR", and that word speaks for the whole
+ * map rather than for one clause. It used to be shown whenever the SPACE goal
+ * alone was done, which on a map that also asks for something else is a lie
+ * the player has no way to see through.
+ *
+ * Reported from level 13, whose win is "clear to 14% AND smash one slab":
+ * "after winning, the map just does nothing and I end up stuck with no post
+ * map menu". The map was not won. The board had been cleared, the chip said
+ * CLEAR, the slab was still standing, and the game went on correctly waiting
+ * for it - so the only thing wrong was the bar announcing a win that had not
+ * happened.
+ *
+ * `outstandingGoals` is the same question asked the other way round; this is
+ * the one the chip needs, and it lives here rather than in the component so
+ * the bar and the win check cannot come to disagree about what winning means.
+ */
+export function everyRequirementMet(goals: readonly Goal[]): boolean {
+  const required = goals.filter(g => g.tier === "requirement");
+  return required.length > 0 && required.every(g => g.done);
+}

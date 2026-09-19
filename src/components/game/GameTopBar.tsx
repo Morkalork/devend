@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, ClipboardList, Info, X } from 'lucide-react';
 import { GoalChip } from '@/components/game/GoalChip';
-import { goalAtRisk, type Goal } from '@/lib/goalTracker';
+import { everyRequirementMet, goalAtRisk, type Goal } from '@/lib/goalTracker';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -80,6 +80,8 @@ export function GameTopBar({
   // re-render this bar, and the read is a cached in-memory set.
   const manualUnread = unreadManualCount();
   const { t } = useTranslation();
+  // One answer to "is this map won", shared by every chip that claims it.
+  const winMet = everyRequirementMet(goals ?? []);
   const swipeStartYRef = useRef<number | null>(null);
 
   // Space readout hold-detail: exact remaining/cleared numbers behind the
@@ -268,6 +270,9 @@ export function GameTopBar({
             key={g.key}
             goal={g}
             accentColor={accentColor}
+            // The space chip says CLEAR for the whole map, so it is told
+            // whether the whole map is actually won. See everyRequirementMet.
+            winMet={winMet}
             atRisk={goalAtRisk(g, ballsInPlay)}
             flashKey={g.kind === 'space' ? spaceFlashKey : g.kind === 'locks' ? locksFlashKey : 0}
             // Space keeps its own hold-for-detail readout (exact remaining and

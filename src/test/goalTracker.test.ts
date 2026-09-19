@@ -15,10 +15,13 @@
  * isWinMet rather than against their own arithmetic.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
-  mapGoals, extraGoals, outstandingGoals, goalAtRisk,
+  mapGoals, extraGoals, outstandingGoals, goalAtRisk, everyRequirementMet,
 } from "@/lib/goalTracker";
-import { isWinMet } from "@/lib/winSpec";
+import { isWinMet, resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
+import { LADDER, byLevel } from "./fixtures/maps";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
@@ -238,5 +241,106 @@ describe("the readouts against the gate itself", () => {
     const s = snap({ allLocked: true, remainingPercent: 40 });
     expect(isWinMet(L32, s), "the alternative no longer wins the map").toBe(true);
     expect(outstandingGoals(extraGoals(mapGoals(L32, s))).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the word CLEAR, which speaks for the whole map", () => {
+  /**
+   * Reported from play: "level 13, I can't finish it. After winning, the map
+   * just does nothing and I end up stuck with no post map menu."
+   *
+   * The map was not won, and nothing in the engine was wrong. Level 13's win is
+   * "clear to 14% AND smash one slab"; the board had been cleared, one slab was
+   * still standing, and the gate went on waiting for it exactly as authored.
+   * What was wrong was the bar: the space chip printed the map-wide word CLEAR
+   * the moment the SPACE goal alone was done, so the player read a win off the
+   * HUD that the map had never granted, and every further cut looked like a
+   * dead game rather than an unfinished requirement.
+   *
+   * This is the failure the top of this file names - a readout disagreeing with
+   * the gate - arriving through a chip that was telling the truth about itself
+   * and a lie about the map. So the answer lives next to the goals rather than
+   * in the component: one function, asked by the chip, that means what the gate
+   * means.
+   */
+  const L13 = resolveWinSpec(byLevel(LADDER, 13)!, NO_RUN_RULES);
+  const goalsOf = (spec: WinSpec, s: WinSnapshot) => mapGoals(spec, s);
+
+  it("reads level 13 as unwon while the slab still stands", () => {
+    // THE regression, against the shipped map rather than a lookalike.
+    const cleared = snap({ remainingPercent: 0, smashed: 0 });
+    expect(find(L13, "space", cleared).done, "the space clause is not met on a cleared board")
+      .toBe(true);
+    expect(everyRequirementMet(goalsOf(L13, cleared)), "the bar would say CLEAR on an unwon map")
+      .toBe(false);
+    expect(isWinMet(L13, cleared), "level 13 no longer wants its slab").toBe(false);
+  });
+
+  it("agrees the moment the last requirement lands", () => {
+    const both = snap({ remainingPercent: 0, smashed: 1 });
+    expect(everyRequirementMet(goalsOf(L13, both))).toBe(true);
+    expect(isWinMet(L13, both)).toBe(true);
+  });
+
+  it("never claims a win the gate would refuse, over every state of level 13", () => {
+    // The property, swept: CLEAR may only appear where the real win check
+    // agrees. The converse is deliberately not asserted - a map won by its
+    // alsoWinIf alternative never met its requirements, and the post-map screen
+    // arrives on its own there.
+    for (const remainingPercent of [40, 14, 0]) {
+      for (const smashed of [0, 1, 2]) {
+        const s = snap({ remainingPercent, smashed });
+        if (everyRequirementMet(goalsOf(L13, s))) {
+          expect(isWinMet(L13, s), `CLEAR at ${remainingPercent}% / ${smashed} smashed, but the map would not win`)
+            .toBe(true);
+        }
+      }
+    }
+  });
+
+  it("still says CLEAR on an ordinary map the moment the board is done", () => {
+    // The fix must not cost the word its ordinary use. On a map whose only
+    // requirement is space, a cleared board IS the win.
+    const plainSpace: WinSpec = {
+      require: [{ kind: "space", threshold: 10 }], alsoWinIf: [], authored: false,
+    };
+    expect(everyRequirementMet(goalsOf(plainSpace, snap({ remainingPercent: 40 })))).toBe(false);
+    expect(everyRequirementMet(goalsOf(plainSpace, snap({ remainingPercent: 0 })))).toBe(true);
+  });
+
+  it("is not held back by the budget or the tallies", () => {
+    // Par is a budget and loose locks are a tally; neither can lose a map, so
+    // neither may withhold the word. PLAIN at 0% with its two locks is won
+    // whatever the cut count says.
+    const over = snap({ remainingPercent: 0, lockedBalls: 2, cuts: 99, par: 6 });
+    expect(find(PLAIN, "par", over).over, "par is no longer blown here").toBe(true);
+    expect(everyRequirementMet(goalsOf(PLAIN, over))).toBe(true);
+  });
+
+  it("says nothing at all before the goals exist", () => {
+    // An empty row is a bar that has not been handed a spec yet, not a won map.
+    expect(everyRequirementMet([])).toBe(false);
+  });
+});
+
+describe("the chip actually asks", () => {
+  /**
+   * Source pins. The function above is only a fix if the chip consults it, and
+   * the chip's condition is one line that read correctly for three years on
+   * every map with a single requirement.
+   */
+  const read = (rel: string) =>
+    readFileSync(resolve(__dirname, rel), "utf8");
+
+  it("gates CLEAR on the whole map being won", () => {
+    const chip = read("../components/game/GoalChip.tsx");
+    expect(chip, "the space chip prints CLEAR off its own goal again")
+      .toContain("goal.done && goal.kind === 'space' && winMet");
+  });
+
+  it("is told by the bar, which computes it once for the row", () => {
+    const bar = read("../components/game/GameTopBar.tsx");
+    expect(bar).toContain("everyRequirementMet(goals ?? [])");
+    expect(bar, "the chip is left to guess").toContain("winMet={winMet}");
   });
 });
