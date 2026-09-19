@@ -17,6 +17,7 @@ import { createBall } from '@/lib/initGame';
 import { MAX_LIVE_BALLS } from '@/lib/gameConstants';
 import { spawnClearOfParent } from '@/lib/physics/spawnPlacement';
 import { runStream } from "@/lib/runRng";
+import { simNow } from "@/lib/simClock";
 
 let _rainbowCounter = 0;
 
@@ -68,7 +69,7 @@ export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): v
       // child is the SAME size as its parent and its type is picked at random,
       // so being born on top of it read as the ball duplicating itself.
       const position = spawnClearOfParent(game, rb);
-      const child = createBall(type, position, speedScale, rb.radius, `${type.id}-rainbow-${++_rainbowCounter}`, performance.now(), game.activePlaySeconds);
+      const child = createBall(type, position, speedScale, rb.radius, `${type.id}-rainbow-${++_rainbowCounter}`, simNow(), game.activePlaySeconds);
       child.regionId = rb.regionId; // born in the parent's region
       game.balls.push(child);
     }

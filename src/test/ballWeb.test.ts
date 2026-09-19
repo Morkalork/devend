@@ -2,10 +2,12 @@
  * The web on the shell and the light that flickers inside (ballWeb.ts,
  * ballLife.ts flicker, ballLook.ts), through the real layers.
  *
- * The pattern is drawn twice from one bake: multiplied over the body, and
- * shadowed into the ball's light pool, both turned by the ball's rotation so
- * they roll together. The strength is a Playground slider and zero is
- * exactly the plain bulb of before, which is what most of this pins.
+ * The pattern is SHELL ONLY: multiplied over the body and turned by the ball's
+ * rotation. It used to be drawn a second time into the ball's light pool as a
+ * spinning gobo, and that read as a revolving texture rather than as light, so
+ * the pool is a plain radial falloff again. The last describe below is what
+ * keeps it that way: the web strength must not reach the light at all.
+ * The strength is a Playground slider and zero is exactly the plain bulb.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { Graphics } from "pixi.js";
@@ -140,32 +142,44 @@ describe("the web on the body", () => {
   });
 });
 
-describe("the web in the light", () => {
-  it("shadows the pool in proportion to the strength, turned with the ball", () => {
+describe("the light pool is plain", () => {
+  it("carries no pattern, at any web strength", () => {
+    // One emitter, one sprite in it. The gobo was a SECOND sprite parented to
+    // the same pool, so a child count of one is the durable way to say the
+    // pattern is gone - a stronger pin than any alpha, because it also catches
+    // the pattern coming back as a different texture on a new sprite.
     const b = ball({ rotation: 1.2 });
     const { game, w2s } = scene(b);
     const pass = new BallLightPass();
     pass.build(game, w2s, 1, 5000);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = (pass as unknown as any).emitters[0];
-    expect(e.gobo.visible).toBe(true);
-    expect(e.gobo.rotation).toBeCloseTo(1.2 * WEB_SPIN, 6);
-    expect(e.gobo.position.x).toBeCloseTo(e.glow.position.x, 6);
-    const web = getBallLook().web;
-    expect(e.gobo.alpha / (e.gobo.alpha + e.glow.alpha)).toBeCloseTo(web, 5);
+    expect(e.pool.children.length).toBe(1);
+    expect(e.pool.children[0]).toBe(e.glow);
+    // And the pool does not turn with the ball. The container rotates with the
+    // ball's HEADING for the speed stretch, which is a different thing: this
+    // ball is not moving, so nothing here should be at an angle.
+    expect(e.glow.rotation).toBe(0);
+    expect(e.pool.rotation).toBe(0);
   });
-  it("at zero strength the pool is exactly the plain one", () => {
-    setBallLook({ web: 0, flicker: false });
-    const b = ball();
-    const { game, w2s } = scene(b);
-    const pass = new BallLightPass();
-    pass.build(game, w2s, 1, 5000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const e = (pass as unknown as any).emitters[0];
-    expect(e.gobo.visible).toBe(false);
-    expect(e.glow.alpha).toBeGreaterThan(0);
+  it("is the same light whatever the web slider says", () => {
+    const { game, w2s } = scene(ball({ rotation: 1.2 }));
+    const alphaAt = (web: number) => {
+      setBallLook({ web, flicker: false });
+      const pass = new BallLightPass();
+      pass.build(game, w2s, 1, 5000);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (pass as unknown as any).emitters[0].glow.alpha as number;
+    };
+    const off = alphaAt(0);
+    expect(off).toBeGreaterThan(0);
+    // The web used to take (1 - strength) out of the plain pool and hand it to
+    // the gobo, so a full-strength web left the glow at zero. It is now a
+    // shell dial and the light does not hear it.
+    expect(alphaAt(1)).toBeCloseTo(off, 6);
+    expect(alphaAt(0.6)).toBeCloseTo(off, 6);
   });
-  it("dims with the flicker, both pools together", () => {
+  it("dims with the flicker", () => {
     setBallLook({ web: 0.5, flicker: true });
     const b = ball();
     const { game, w2s } = scene(b);
@@ -182,12 +196,9 @@ describe("the web in the light", () => {
     }
     expect(tDim).toBeGreaterThanOrEqual(0);
     pass.build(game, w2s, 1, tSteady);
-    const steady = { glow: emitter().glow.alpha, gobo: emitter().gobo.alpha };
+    const steady = emitter().glow.alpha;
     pass.build(game, w2s, 1, tDim);
-    const dim = { glow: emitter().glow.alpha, gobo: emitter().gobo.alpha };
-    expect(dim.glow + dim.gobo).toBeLessThan(0.75 * (steady.glow + steady.gobo));
-    // The web's share of the light is untouched by the flicker.
-    expect(dim.gobo / dim.glow).toBeCloseTo(steady.gobo / steady.glow, 6);
+    expect(emitter().glow.alpha).toBeLessThan(0.75 * steady);
   });
 });
 

@@ -120,9 +120,14 @@ describe("no mechanic is introduced and then dropped", () => {
     // against one that is the same forever and forgets nothing). They come off
     // when 17 onward develop them, on the same rhythm as bouncer and launcher.
     //
-    // BRITTLE joined on 17, where it MEETS as breakable's compressed sibling
-    // (the first Demolition map, MAP_DESIGN_GUIDELINES.md section 11). It
-    // comes off when the archetype's Use beat lands.
+    // BRITTLE CAME OFF, and not by the route this list expected. It joined on
+    // 17 as breakable's compressed sibling, waiting for the Demolition
+    // archetype's Use beat to develop it. What actually happened is that act I
+    // was reauthored to TEACH breaking on it: 5, 6, 7 and 9 open their walls
+    // with runs of one-touch bricks, so the player meets the verb on the
+    // gentlest material there is and meets force later. So brittle now Meets
+    // at 5 and 17 is where it is compressed, which is the ordinary shape of a
+    // ladder entry and the opposite of the order it shipped in.
     //
     // ROTOR CAME OFF, on 18, and it is the one name here that arrived and left
     // inside two commits. It joined on 17 (and came off the unused list below
@@ -132,7 +137,7 @@ describe("no mechanic is introduced and then dropped", () => {
     // to measure - a name is on it for exactly one map - happening on purpose
     // for once rather than being noticed afterwards.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["brittle", "deformable", "gravityWell", "mirror", "mutator", "phasing"]);
+      .toEqual(["deformable", "gravityWell", "mirror", "mutator", "phasing"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

@@ -160,3 +160,57 @@ describe("a phone can reach the knobs", () => {
     expect(PLAYGROUND).toMatch(/key\.toLowerCase\(\)\.includes\(q\)/);
   });
 });
+
+/**
+ * A new CLASS of thing appeared with two-player: something that only misbehaves
+ * when there are two DEVICES, which is the one class the Playground's knobs
+ * cannot reach. CLAUDE.md says to extend this file when that happens, so:
+ *
+ *   - anything that needs a second device gets a rig that fakes one, or a
+ *     panel that says what the hardware is doing, and it is reachable from the
+ *     admin screen;
+ *   - because "did not desync" and "is not running" look identical from the
+ *     outside, and so do "found nobody" and "was never allowed to look".
+ */
+describe("anything that needs a second device is testable without one", () => {
+  const ADMIN = read("src/components/admin/AdminScreen.tsx");
+  const LOOPBACK = read("src/components/admin/PairLoopbackPanel.tsx");
+  const NEARBY = read("src/components/admin/NearbyDiagnosticsPanel.tsx");
+
+  it("reaches both rigs from the admin screen", () => {
+    expect(ADMIN, "Pair Loopback is not on the admin screen").toContain("onPairLoopback");
+    expect(ADMIN, "Nearby Diagnostics is not on the admin screen").toContain("onNearbyDiagnostics");
+  });
+
+  it("runs two real simulations rather than a mock of one", () => {
+    // A rig that faked the second board would pass whatever the first board
+    // did, which is the opposite of the thing being tested.
+    expect(LOOPBACK).toContain("createBotGame");
+    expect(LOOPBACK).toContain("LockstepSession");
+    expect(LOOPBACK).toContain("MemoryTransport");
+  });
+
+  it("can make the link bad on purpose", () => {
+    // A mode that is only ever exercised on a perfect link is a mode whose
+    // first real bug arrives in someone's living room.
+    expect(LOOPBACK).toMatch(/latencyMs/);
+    expect(LOOPBACK).toMatch(/jitterMs/);
+    expect(LOOPBACK).toMatch(/loss/);
+    expect(LOOPBACK, "there is no way to force a desync").toMatch(/forceDesync/);
+  });
+
+  it("shows whether the two boards still agree, and every repair", () => {
+    expect(LOOPBACK).toContain("motionHash");
+    expect(LOOPBACK).toContain("topologyHash");
+    expect(LOOPBACK).toMatch(/BOARDS DISAGREE/);
+    expect(LOOPBACK).toMatch(/resyncs/);
+  });
+
+  it("names the missing permission rather than just failing to find anyone", () => {
+    expect(NEARBY).toContain("permissionState");
+    expect(NEARBY, "the panel does not say which permission is missing")
+      .toMatch(/bluetooth[\s\S]{0,200}wifi[\s\S]{0,200}location/);
+    expect(NEARBY, "a build without the plugin looks the same as a failure")
+      .toContain("isNearbyAvailable");
+  });
+});

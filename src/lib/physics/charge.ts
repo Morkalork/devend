@@ -15,6 +15,8 @@ import { pointToSegmentDistance, polygonCentroid } from "@/lib/polygon";
 import { isPlayerFence, FENCE_FRACTURE_HITS } from "@/lib/wallGeometry";
 import { findObstacleDestructibleById } from "@/lib/physics/destructibles";
 import { playBossChargeSound, playBossLandSound, playFenceBreakSound } from "@/lib/gameAudio";
+import { simNow } from "@/lib/simClock";
+import { runStream } from "@/lib/runRng";
 
 /** How much faster a flung ball leaves the blast than it arrived. */
 const BLAST_BOOST = 1.4;
@@ -72,7 +74,7 @@ export function tickCharges(game: CanvasGameState, callbacks: ChargeBlowCallback
   const charges = game.charges;
   if (!charges || charges.length === 0) return;
 
-  const now = performance.now();
+  const now = simNow();
   for (const c of charges) {
     if (c.blown || c.armedAt === null) continue;
     if (game.activePlaySeconds - c.armedAt < c.delaySeconds) continue;
@@ -109,7 +111,13 @@ function detonate(
     let d = Math.hypot(dx, dy);
     if (d > c.blastRadius) continue;
     const sp = (Math.hypot(b.velocity.x, b.velocity.y) || b.baseSpeed || 100) * BLAST_BOOST;
-    if (d < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.hypot(dx, dy) || 1; }
+    // Degenerate case: a ball sitting exactly on the blast centre has no
+    // outward direction, so one is invented. Seeded, or the two devices
+    // invent different ones and the ball leaves on different headings.
+    if (d < 1) {
+      const roll = runStream("chargeBlast");
+      dx = roll() - 0.5; dy = roll() - 0.5; d = Math.hypot(dx, dy) || 1;
+    }
     dx /= d; dy /= d;
     b.velocity.x = dx * sp; b.velocity.y = dy * sp; b.speed = sp;
   }

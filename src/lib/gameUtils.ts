@@ -8,6 +8,7 @@ import {
 import { Vector2, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { runStream } from "@/lib/runRng";
+import { simNow } from "@/lib/simClock";
 
 // ── Colour helpers ────────────────────────────────────────────────────────
 
@@ -43,6 +44,16 @@ export function generateWallId(): string {
 export function resetMapIds(): void {
   regionIdCounter = 0;
   wallIdCounter = 0;
+}
+
+/** Where the id counters stand. See simState.ts for why this is readable. */
+export function exportMapIdCounters(): { region: number; wall: number } {
+  return { region: regionIdCounter, wall: wallIdCounter };
+}
+
+export function importMapIdCounters(v: { region: number; wall: number }): void {
+  regionIdCounter = v.region;
+  wallIdCounter = v.wall;
 }
 
 // ── Direction helpers ─────────────────────────────────────────────────────
@@ -318,7 +329,7 @@ export function trajectoryBallSnapshots(
   predicted: Ball,
   autoFrozenBallId: string | null,
 ): TrajectoryBall[] {
-  const now = performance.now();
+  const now = simNow();
   const out: TrajectoryBall[] = [];
   for (const b of balls) {
     if (b === predicted || b.state !== "active") continue;

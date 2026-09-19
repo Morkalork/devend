@@ -33,4 +33,28 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Two-player over Nearby Connections (TWO_PLAYER_PLAN.md step 9). The
+         set differs by Android version, which is why it is spelled out rather
+         than left to a library: Bluetooth split into three runtime permissions
+         at 31, Wi-Fi peer discovery got its own at 33, and everything below 31
+         still needs fine location with location services switched on. That last
+         one is the prompt that surprises people, so maxSdkVersion keeps it off
+         phones that do not need it, and the 2-Player screen explains it on the
+         ones that do. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Legacy Bluetooth, for phones below 31. -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
 </manifest>

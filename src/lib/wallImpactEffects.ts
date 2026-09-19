@@ -14,6 +14,7 @@ import {
   circuitPalette,
 } from './rendering/wallSkeleton';
 import { taperFactor, buildFenceTaper } from './rendering/wallChains';
+import { simNow } from "@/lib/simClock";
 
 // Renderers sample this many points along a wall when a bulge is nearby.
 export const N_NODES = 16;
@@ -138,7 +139,7 @@ export function registerWallImpact(
   // a fast ball in a tight corner bent whole fences into curves. Refreshing the
   // nearby one instead keeps a flurry reading as one live impact, which is what
   // this effect was ever meant to be.
-  const now = performance.now();
+  const now = simNow();
   for (const live of activeImpacts) {
     if (live.dir !== dir) continue;
     if (Math.abs(live.impactT * live.wallLen - impactT * wallLen) > COALESCE_ALONG) continue;
@@ -173,7 +174,7 @@ export function registerWallImpact(
 export function updateWallImpacts(): boolean {
   if (activeImpacts.length === 0) return false;
 
-  const now = performance.now();
+  const now = simNow();
 
   activeImpacts = activeImpacts.filter(impact => {
     const elapsed = now - impact.startTime;
@@ -302,7 +303,7 @@ export function registerObstacleImpact(
     // closer than half a sigma are the same dome, and letting both live is how
     // a ball pressing a corner stacked give on give.
     if (dx * dx + dy * dy < OBS_COALESCE * OBS_COALESCE) {
-      o.startTime = performance.now();
+      o.startTime = simNow();
       o.strength = Math.max(o.strength, s);
       o.nx = outwardNx; o.ny = outwardNy;
       return;
@@ -312,7 +313,7 @@ export function registerObstacleImpact(
     point: { ...hitPoint },
     nx: outwardNx, ny: outwardNy,
     strength: s,
-    startTime: performance.now(),
+    startTime: simNow(),
     amp: 0,
   });
   if (obstacleImpacts.length > MAX_OBS_IMPACTS) obstacleImpacts.shift();
@@ -320,7 +321,7 @@ export function registerObstacleImpact(
 
 export function updateObstacleImpacts(): boolean {
   if (obstacleImpacts.length === 0) return false;
-  const now = performance.now();
+  const now = simNow();
   obstacleImpacts = obstacleImpacts.filter(o => {
     const elapsed = now - o.startTime;
     o.amp = OBS_BULGE_MAX_WORLD * o.strength * bulgeEnvelope(elapsed);

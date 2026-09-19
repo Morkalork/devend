@@ -19,22 +19,21 @@ import {
   registerWallImpact, updateWallImpacts, getEffectsAtPoint, hasNearbyImpacts,
   clearWallImpacts, getActiveImpactCount, N_NODES,
 } from "@/lib/wallImpactEffects";
+import { advanceSimClock, resetSimClock } from "@/lib/simClock";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
 
 /**
- * The envelope is wall-clock driven (performance.now), and it peaks 85ms after
+ * The envelope is sim-clock driven (simClock.ts), and it peaks 85ms after
  * the hit. Two probes registered microseconds apart therefore sit at
  * essentially zero amplitude, where timing jitter is larger than the thing
  * being measured: the first version of the strength test compared 0.0043
  * against 0.0011 and called the louder hit weaker. Driving the clock makes both
  * probes read the same point on the curve.
  */
-let clock = 0;
-const advance = (ms: number) => { clock += ms; };
+const advance = (ms: number) => advanceSimClock(ms);
 
 beforeEach(() => {
-  clock = 1000;
-  vi.spyOn(performance, "now").mockImplementation(() => clock);
+  resetSimClock();
 });
 afterEach(() => vi.restoreAllMocks());
 

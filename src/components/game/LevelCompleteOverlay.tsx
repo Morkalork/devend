@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown, Layers } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown, Layers, Users } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
@@ -551,6 +551,22 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 </span>
                 <span className="font-bold text-fuchsia-300">
                   {Math.min(zoneLockCount, zoneCount)}/{zoneCount}
+                </span>
+              </div>
+            )}
+
+            {/* Who drew what, for a pair. Absent solo, which is every other
+                run, so nothing about the single-player card changes. */}
+            {scoreData.fencesByPlayer && (
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Users className="w-3 h-3 text-primary" />
+                  {t('pair.fencesDrawn')}
+                </span>
+                <span className="font-bold">
+                  <span className="text-primary">{scoreData.fencesByPlayer[0]}</span>
+                  <span className="text-muted-foreground"> / </span>
+                  <span style={{ color: '#ffb347' }}>{scoreData.fencesByPlayer[1]}</span>
                 </span>
               </div>
             )}

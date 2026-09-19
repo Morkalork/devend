@@ -29,13 +29,14 @@ import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { installClock, advanceClock, releaseClock } from "@/lib/bot/headlessGame";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
+import { simNow } from "@/lib/simClock";
 
 const LOOP_SRC = readFileSync(resolve(process.cwd(), "src/hooks/useGameLoop.ts"), "utf8");
 
 describe("the game loop routes held balls THROUGH updateBall", () => {
   it("never skips a ball on frozenUntil before updateBall can see it", () => {
     // The exact line that caused this, verbatim as it stood:
-    //   if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
+    //   if (ball.frozenUntil && simNow() < ball.frozenUntil) continue;
     // Any `continue` guarded on frozenUntil is the same bug wearing a different
     // condition, so the check is on the shape rather than on that one string.
     const offenders = LOOP_SRC.split("\n")
@@ -75,7 +76,7 @@ describe("stepping a held ball the way the loop now does animates it", () => {
   /** A minimal board: one ball, stuck, nothing else to collide with. */
   function heldBall() {
     const effects = createBallEffectState();
-    const now = performance.now();
+    const now = simNow();
     triggerWallHit(effects, now, -300, 0, 300);
     pinSquish(effects, now, 2000);
     const ball = {

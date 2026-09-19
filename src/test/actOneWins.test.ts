@@ -21,6 +21,7 @@ import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import { goalAtRisk, type Goal } from "@/lib/goalTracker";
 import type { LevelConfig, LevelData } from "@/types/level";
+import { entityIsDestructible } from "@/lib/physics/destructibles";
 
 const LEVELS = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
@@ -29,8 +30,9 @@ const LEVELS = (yaml.load(
 const ACT_ONE = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 
+// Through the engine's own reading, so a brick counts as something to smash.
 const breakables = (l: LevelConfig) =>
-  (l.entities ?? []).filter(e => e.kind === "wall" && e.breakable).length;
+  (l.entities ?? []).filter(entityIsDestructible).length;
 
 describe("every act I map states its own win", () => {
   it("authors a win rather than inheriting one from legacy fields", () => {
@@ -191,29 +193,47 @@ describe("the last ball is flagged before it strands the map", () => {
  * deal MORE than six touches in practice, which is how level 5 came to read as
  * hardcore on the map that introduces breaking at all.
  *
- * Three is the ceiling for act I. The Meet/Fight escalation lives inside that
- * range rather than above it.
+ * Three is the ceiling for act I, and it applies to whatever act I still
+ * authors as a hit count: the chests on 7 and 9. The maps that TEACH breaking
+ * do not use hit counts at all any more. 5, 6, 7 and 9 open their walls with
+ * runs of brittle bricks, which go on one touch, so the player meets the verb
+ * before meeting the idea that some things need a real strike. Amber, and the
+ * force it asks for, now Meets in act II.
  */
 describe("act I breakables stay inside three solid hits", () => {
-  const breakables = (l: LevelConfig) =>
+  const amber = (l: LevelConfig) =>
     (l.entities ?? []).filter(
-      (e): e is Extract<typeof e, { kind: "wall" }> => e.kind === "wall" && !!e.breakable,
+      (e): e is Extract<typeof e, { kind: "wall" }> =>
+        e.kind === "wall" && !!e.breakable && !e.brittle,
     );
+  const bricks = (l: LevelConfig) =>
+    (l.entities ?? []).filter(e => e.kind === "wall" && !!e.brittle).length;
 
   it.each(ACT_ONE)("level %i asks for no more than three", (n) => {
-    for (const e of breakables(at(n))) {
+    for (const e of amber(at(n))) {
       expect(e.hitsToBreak ?? 1, `level ${n} ${e.id} takes ${e.hitsToBreak} hits`)
         .toBeLessThanOrEqual(3);
     }
   });
 
+  it("teaches the verb on the gentlest material there is", () => {
+    // The map that introduces breaking must not also introduce force. A slab
+    // that needs a real strike is a second lesson, and it used to arrive in
+    // the same breath as the first.
+    for (const n of [5, 6]) {
+      expect(bricks(at(n)), `level ${n} has no one-touch bricks`).toBeGreaterThan(0);
+      expect(amber(at(n)), `level ${n} still asks for force while teaching the verb`)
+        .toEqual([]);
+    }
+  });
+
   it("still escalates: the map that introduces breaking is the gentlest", () => {
-    // A flat 3 everywhere would satisfy the cap and teach nothing. Level 5 is
-    // the Meet, level 6 the Fight, and the Fight has to cost more.
-    const meet = breakables(at(5)).map(e => e.hitsToBreak ?? 1);
-    const fight = breakables(at(6)).map(e => e.hitsToBreak ?? 1);
-    expect(Math.max(...meet), "the first breakable is not the gentlest")
-      .toBeLessThan(Math.max(...fight));
+    // A flat anything everywhere would satisfy the rules above and teach
+    // nothing. The escalation used to be a hit count; with one material it is
+    // how much of the board the wall is. Level 5 is a short column beside a
+    // wide doorway, level 6 is the divider the map is built around.
+    expect(bricks(at(5)), "the Fight's wall is no bigger than the Meet's")
+      .toBeLessThan(bricks(at(6)));
   });
 
   // "leaves the late-ladder set-pieces alone" used to live here, pinning level

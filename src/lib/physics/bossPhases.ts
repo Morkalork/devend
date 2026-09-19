@@ -19,6 +19,7 @@ import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 import { gateAreas } from "@/lib/coloredAreas";
 import { runStream } from "@/lib/runRng";
+import { simNow } from "@/lib/simClock";
 
 let _bossAddCounter = 0;
 
@@ -65,7 +66,7 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
   const interval = bb.spitIntervalSeconds ?? 0;
   if (interval <= 0) return;
   const maxMinions = bb.maxMinions ?? 4;
-  const nowMs = performance.now();
+  const nowMs = simNow();
 
   const bosses = game.balls.filter((b) => b.isBoss && b.state === "active" && b.speed > 0);
   if (bosses.length === 0) return;
@@ -192,7 +193,7 @@ function maybePanicDash(game: CanvasGameState, boss: Ball, nowMs: number): void 
  * A pair is driven by its first boss and both freeze during the wind-up.
  */
 export function tickBossFenceWipe(
-  game: CanvasGameState, level: LevelConfig, doWipe: () => void, nowMs = performance.now(),
+  game: CanvasGameState, level: LevelConfig, doWipe: () => void, nowMs = simNow(),
 ): void {
   const bb = level.boss?.bossBall;
   if (!bb || !bb.fenceWipeSeconds || bb.fenceWipeSeconds <= 0) return;
@@ -253,7 +254,7 @@ export function spawnAdds(
     // Match the run's speed scaling from the anchor (as rainbowSpawner does).
     const speedScale = anchorType && anchorType.baseSpeed > 0 ? anchor.baseSpeed / anchorType.baseSpeed : 1;
     const type = spawnable[Math.floor(runStream("bossSpitType")() * spawnable.length)];
-    const nowMs = performance.now();
+    const nowMs = simNow();
     const angle = runStream("bossSpitAngle")() * Math.PI * 2;
     const dir = { x: Math.cos(angle), y: Math.sin(angle) };
     const position = mode === "rim"

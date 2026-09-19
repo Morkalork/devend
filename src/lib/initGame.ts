@@ -40,6 +40,7 @@ import {
 } from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
+import { entityIsDestructible } from "@/lib/physics/destructibles";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
@@ -62,7 +63,6 @@ import {
   resetRunSeed,
   setRunSeed,
 } from "@/lib/varietySystem";
-import { getRunSeedText, getRunRng, runStream, hashString } from "@/lib/runRng";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -82,6 +82,8 @@ import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFact
 import { BIG_BALL_MIN_LEVEL, BIG_BALL_CHANCE, BIG_BALL_RADIUS_SCALE, BIG_BALL_LOCK_BONUS, CHAINED_MIN_LEVEL, CHAINED_CHANCE, canAnchorChain } from "@/lib/ballGifts";
 import { makeChain } from "@/lib/physics/chain";
 import { clampWeather } from "@/lib/rendering/motes";
+import { simNow } from "@/lib/simClock";
+import { getRunSeedText, getRunRng, runStream, hashString } from "@/lib/runRng";
 
 /**
  * Build one ball of a given type at a position. Shared by map init and the
@@ -113,7 +115,10 @@ export function createBall(
     topSpeed: speed, // flat speed; the danger tint uses an absolute reference
     color: type.color,
     regionId: "", // assigned after regions are created (or inherited by a spawner)
-    rotation: Math.random() * Math.PI * 2,
+    // Seeded like the heading above it: cosmetic today, but a ball's spin
+    // is drawn from the same state two devices must agree on, and one line
+    // here is cheaper than finding out later that it was not cosmetic.
+    rotation: runStream("ballSpin")() * Math.PI * 2,
     flashIntensity: 0,
     effects: createBallEffectState(),
     state: 'active' as const,
@@ -782,9 +787,11 @@ export function createInitialGameData(
         // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
         // the #37 path above and don't participate in break-stacks.
         if (!isMirror) {
-          // A treasure chest is a breakable too, even if `breakable` is omitted,
-          // and so is a brittle brick: both flags describe HOW it breaks.
-          const isBreakable = !!entity.breakable || !!entity.chest || !!entity.brittle;
+          // A treasure chest is a breakable too, even if `breakable` is
+          // omitted, and so is a brittle brick: both flags describe HOW it
+          // breaks. The rule is entityIsDestructible's, not this line's, so
+          // everything that asks the question gets the same answer.
+          const isBreakable = entityIsDestructible(entity);
           obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: isBreakable });
           if (isBreakable) {
             const dest: DestructibleState = {
@@ -954,7 +961,7 @@ export function createInitialGameData(
       : speedScale
   );
 
-  const spawnTime  = performance.now();
+  const spawnTime  = simNow();
 
   // Keep spawned balls from overlapping each other (findValidSpawnPosition only
   // avoids walls/obstacles, not other balls).
@@ -1057,7 +1064,9 @@ export function createInitialGameData(
   // velocity would be undone).
   const slowFactor = activeModifiers.slowOneBallFactor;
   if (slowFactor > 0 && slowFactor < 1 && balls.length > 0) {
-    const victim = balls[Math.floor(Math.random() * balls.length)];
+    // Seeded per map: which ball gets crippled changes how the map plays,
+    // so a shared seed has to cripple the same one for both players.
+    const victim = balls[Math.floor(getRunRng(`slowOne:${level.id}`)() * balls.length)];
     victim.speed *= slowFactor;
     victim.baseSpeed *= slowFactor;
     victim.topSpeed *= slowFactor;

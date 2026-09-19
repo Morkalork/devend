@@ -25,6 +25,7 @@ import yaml from "js-yaml";
 import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import type { LevelConfig } from "@/types/level";
+import { entityIsDestructible } from "@/lib/physics/destructibles";
 import { LADDER } from "./fixtures/maps";
 
 const LEVELS = LADDER;
@@ -32,8 +33,11 @@ const LEVELS = LADDER;
 /** Bosses state their win as the boss and are out of scope here. */
 const PLAYABLE = LEVELS.filter(l => !l.boss && l.level != null);
 
+// Through the engine's own reading: a brittle brick is content a lock cannot
+// produce just as much as a slab is, and counting only `breakable` reported
+// levels 5 and 6 as carrying nothing the moment their slabs became bricks.
 const breakables = (l: LevelConfig) =>
-  (l.entities ?? []).filter(e => e.kind === "wall" && e.breakable).length;
+  (l.entities ?? []).filter(entityIsDestructible).length;
 const terminals = (l: LevelConfig) => (l.circuit?.terminals ?? []).length;
 const seams = (l: LevelConfig) => Math.max(0, (l.dataStream?.path?.length ?? 0) - 1);
 const boxes = (l: LevelConfig) => (l.entities ?? []).filter(e => e.kind === "box").length;

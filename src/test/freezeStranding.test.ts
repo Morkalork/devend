@@ -127,7 +127,7 @@ describe("the post-break freeze always lets go", () => {
     // nothing to enforce and the timer is the only way out.
     const src = read("src/lib/physics/fenceStrike.ts");
     const freezes = [...src.matchAll(/game\.frozenBallId\s*=\s*ball\.id;/g)].length;
-    const deadlines = [...src.matchAll(/game\.frozenBallReleaseAt\s*=\s*performance\.now\(\)/g)].length;
+    const deadlines = [...src.matchAll(/game\.frozenBallReleaseAt\s*=\s*simNow\(\)/g)].length;
     expect(freezes, "no freeze site found").toBeGreaterThan(0);
     expect(deadlines, "a freeze was set without a deadline").toBe(freezes);
   });
@@ -158,7 +158,7 @@ describe("the post-break freeze always lets go", () => {
     // cancelled timer would still strand the ball.
     const loop = read("src/hooks/useGameLoop.ts");
     expect(loop, "the loop never compares the deadline to the clock")
-      .toMatch(/performance\.now\(\)\s*>\s*game\.frozenBallReleaseAt/);
+      .toMatch(/simNow\(\)\s*>\s*game\.frozenBallReleaseAt/);
     const idx = loop.indexOf("game.frozenBallReleaseAt !== null");
     expect(idx).toBeGreaterThan(-1);
     const block = loop.slice(idx, idx + 1400);

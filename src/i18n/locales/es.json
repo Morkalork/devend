@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Cargando...",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "back": "Atrás",
+    "cancel": "Cancelar"
   },
   "game": {
     "paused": "EN PAUSA",
@@ -269,7 +271,7 @@
     "moverTutorialTitle": "⚠ Obstáculos móviles",
     "moverTutorialBody": "Los obstáculos naranjas patrullan un carril. Las bolas rebotan en ellos; una valla que los toque cuesta una vida.",
     "breakTutorialTitle": "✦ Romper cosas",
-    "breakTutorialBody": "Los bloques ámbar se rompen y dan puntos. Lleva bolas hasta ellos; no puedes vallar contra ellos.",
+    "breakTutorialBody": "El cristal se rompe al primer toque, el ámbar necesita varios. Lleva bolas hasta ellos; no puedes vallar contra ellos.",
     "chargeTutorialTitle": "✦ Desplegar Carga",
     "chargeTutorialBody": "Traza una valla junto a una mecha para armarla. Vuela su losa y abre espacio, pero también libera bolas cercanas y rompe tus vallas en el radio.",
     "streamTutorialTitle": "✦ Flujo de Datos",
@@ -433,8 +435,8 @@
       },
       "breakBonus": {
         "title": "Bono de demolición",
-        "body": "Horas extra por romper bloques ámbar. Las bolas los desgastan hasta romperlos, y lo apilado encima cae.",
-        "tip": "Dirige las bolas hacia los rompibles con tus cortes. La bola negra los destroza en la mitad de golpes."
+        "body": "Horas extra por romper bloques. El cristal cae al primer toque, el ámbar tarda unos cuantos, y lo que se apoye encima cae con él.",
+        "tip": "Dirige las bolas hacia ellos con tus cortes. La bola negra rompe el ámbar en la mitad de golpes."
       },
       "shipEarly": {
         "title": "Entrega temprana",
@@ -770,7 +772,7 @@
       },
       "breakObstacles": {
         "title": "Romper obstáculos",
-        "description": "Los bloques ámbar se rompen y dan horas extra; una pila cae si pierde su apoyo. Romper es extra: reducir el tablero sigue ganando. No puedes vallar contra ellos, y la bola negra los rompe el doble de rápido."
+        "description": "Los ladrillos de cristal caen al primer toque, los bloques ámbar tardan varios; las pilas se derrumban cuando cede su soporte. Romper es extra, reducir el tablero sigue bastando para ganar. No puedes vallar contra ninguno."
       },
       "fenceTypes": {
         "title": "Tipos de valla",
@@ -1852,5 +1854,50 @@
       "band": "Niveles {{from}}-{{to}}",
       "credits": "Créditos finales"
     }
+  },
+  "pair": {
+    "title": "2 jugadores",
+    "intro": "Un tablero, dos móviles, uno al lado del otro. Muestra el código y que el otro jugador lo escanee con su cámara.",
+    "showCode": "Mostrar el código",
+    "showCodeHint": "Tu pareja lo escanea y entra",
+    "scanMe": "Escanea esto con la cámara del otro móvil.",
+    "preparing": "Preparando el código",
+    "joining": "Entrando con tu pareja",
+    "connected": "Conectados. Empieza el mapa.",
+    "failed": "No se pudo contactar con el otro móvil.",
+    "slowHint": "Los dos móviles deben estar en la misma Wi-Fi. Si ya lo están, activa un punto de acceso en uno y conecta el otro.",
+    "tryAgain": "Reintentar",
+    "partner": "Pareja",
+    "versionMismatch": "Un móvil tiene una versión antigua. Actualízalo y vuelve a intentarlo.",
+    "resumeWith": "Seguir con {{name}}",
+    "continueRun": "Continuar",
+    "newGame": "Partida nueva",
+    "waitingForPartner": "Esperando a tu pareja",
+    "reconnecting": "Reconectando",
+    "partnerLeft": "Tu pareja se ha desconectado.",
+    "continueSolo": "Seguir en solitario",
+    "lostSync": "Los tableros se separaron. Reiniciando el mapa.",
+    "yourFences": "Tú",
+    "theirFences": "Pareja",
+    "savedRun": "Tenéis una partida en curso, en el mapa {{level}}.",
+    "waitingFor": "Esperando a {{name}}",
+    "fencesDrawn": "Vallas trazadas",
+    "nearby": "Buscar cerca",
+    "nearbyHint": "Los dos móviles tocan esto. Sin código ni Wi-Fi.",
+    "looking": "Buscando a tu pareja",
+    "confirmToken": "Los dos móviles deben mostrar {{token}}. Toca para entrar.",
+    "join": "Entrar",
+    "needPermission": "Dev/End necesita un permiso más para encontrar móviles cercanos.",
+    "needLocation": "En Android 11 y anteriores hay que activar la ubicación para encontrar móviles cercanos. Dev/End no la usa para nada más.",
+    "grant": "Permitir",
+    "sameDevice": "Los dos móviles dan el mismo identificador, así que no se pueden distinguir. Reinstala uno o empareja con el código.",
+    "host": {
+      "shopping": "{{name}} está en la tienda.",
+      "deciding": "{{name}} está eligiendo.",
+      "pushing": "{{name}} decide si seguir arriesgando.",
+      "continuing": "{{name}} decide si gastar una continuación."
+    },
+    "mismatchTitle": "No estáis jugando a lo mismo.",
+    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero."
   }
 }

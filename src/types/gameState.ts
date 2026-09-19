@@ -229,6 +229,17 @@ export interface CanvasGameState {
   paused: boolean;
 
   // ── Input / swipe ──────────────────────────────────────────────────────
+  /**
+   * Player actions waiting to be applied, drained at the top of a frame
+   * (lib/net/commands.ts).
+   *
+   * A pointer handler no longer reaches into this state directly; it queues
+   * what the player did and the loop applies it. Solo play queues and drains
+   * in the same frame, so nothing about the feel changes; a pair queues one
+   * device's actions and the other's, and both drain the same list in the same
+   * order, which is the whole of what keeps two boards identical.
+   */
+  pending?: import("@/lib/net/commands").GameCommand[];
   swipeStart: Vector2 | null;
   swipeRegionId: string | null;
   currentSwipePos: Vector2 | null;
@@ -315,6 +326,9 @@ export interface CanvasGameState {
     stopHoldMs: number;
     /** Timestamp of the last frame the hold was counting, for the renderer. */
     derailAt: number;
+    /** Whose finger. A grab is exclusive, so a move or release from the other
+     *  player is ignored while this one holds it. */
+    player: import("@/lib/net/commands").PlayerId;
   } | null;
 
   /** Control Freak derails left THIS map (refills to moverDerailPerMap each map). */

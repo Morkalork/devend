@@ -346,6 +346,15 @@ export function resetGridRegionIds(): void {
   regionIdCounter = 0;
 }
 
+/** Where the counter stands. See simState.ts for why this is readable. */
+export function exportGridRegionIdCounter(): number {
+  return regionIdCounter;
+}
+
+export function importGridRegionIdCounter(v: number): void {
+  regionIdCounter = v;
+}
+
 export function findGridRegions(grid: SpaceGrid): GridRegion[] {
   const regions: GridRegion[] = [];
   const visited = new Uint8Array(grid.cells.length);

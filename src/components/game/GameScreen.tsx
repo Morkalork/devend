@@ -95,6 +95,20 @@ interface GameScreenProps {
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
   lives: number;
+  /**
+   * The lockstep session, when this map is being played by a pair
+   * (TWO_PLAYER_PLAN.md). Passed straight through to the canvas; absent means
+   * solo, which is every other path into this screen.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
+  /**
+   * Overlay for the state of the pair's link, drawn over the board
+   * (TWO_PLAYER_PLAN.md step 7). Absent in solo play and while the link is
+   * healthy, which is nearly always.
+   */
+  pairBanner?: React.ReactNode;
+  /** True on the phone that is not the host of a pair run. */
+  isPairGuest?: boolean;
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
@@ -188,6 +202,9 @@ export function GameScreen({
   ownedUpgradeIds,
   upgrades,
   lives,
+  lockstep,
+  pairBanner,
+  isPairGuest,
   continuesRemaining = 0,
   onLivesChange,
   onGrantAbility,
@@ -1083,12 +1100,18 @@ export function GameScreen({
               </div>
             );
           })()}
+          {/* The pair's link, when it needs saying. Inside the board's own
+              stacking context so a dropped link covers the board rather than
+              the whole app. */}
+          {pairBanner}
           <GameCanvas
             level={level}
             levelNumber={levelNumber}
             totalLevels={totalLevels}
             totalScore={totalScore}
             lives={lives}
+            lockstep={lockstep}
+            isPairGuest={isPairGuest}
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
             abilityCharges={abilityCharges ?? {}}

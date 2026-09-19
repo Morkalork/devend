@@ -56,6 +56,7 @@ import { ModifierBreakdown } from "@/components/game/ModifierBreakdown";
 import type { LevelConfig } from "@/types/level";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
+import { simNow } from "@/lib/simClock";
 
 const UPGRADES = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8"),
@@ -291,7 +292,7 @@ function play(
   }> = [];
   for (let f = 0; f < seconds / PHYSICS_STEP; f++) {
     stepBot(ctx, PHYSICS_STEP);
-    const now = performance.now();
+    const now = simNow();
     log.push({
       t: now, x: ball.position.x, y: ball.position.y, vx: ball.velocity.x, vy: ball.velocity.y,
       stuck: ball.bugSquashUntil !== undefined && now < ball.bugSquashUntil,
@@ -391,7 +392,7 @@ describe("a stuck ball stays put and then carries on", () => {
     const ctx = createBotGame(BOARD, 7, plainModifiers());
     const ball = ctx.game.balls[0];
     stepBot(ctx, PHYSICS_STEP);
-    ball.frozenUntil = performance.now() + 1000;
+    ball.frozenUntil = simNow() + 1000;
     const { x, y } = ball.position;
     for (let f = 0; f < 60; f++) stepBot(ctx, PHYSICS_STEP);
     expect(ball.position.x).toBe(x);

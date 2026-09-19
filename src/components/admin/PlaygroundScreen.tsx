@@ -1445,7 +1445,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 <label className="block text-xs font-semibold mb-1" htmlFor="ball-web-strength" style={{ color: ballLook.web > 0 ? accent : 'hsl(var(--foreground))' }}>
                   Ball web: {Math.round(ballLook.web * 100)}%
                   <span className="block text-[10px] font-normal opacity-60">
-                    The pattern on the shell and its shadow in the ball's light. 0 is today's plain bulb.
+                    The pattern on the shell. The light pool is plain and does not hear this. 0 is a bare bulb.
                   </span>
                 </label>
                 <input

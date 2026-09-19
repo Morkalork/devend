@@ -47,6 +47,7 @@ import { qualifiedHoursFor } from "@/lib/qualifiedOvertime";
 import type { WinSpec } from "@/types/winSpec";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 import { runStream } from "@/lib/runRng";
+import { simNow } from "@/lib/simClock";
 
 // ── Boss ball helpers (issue #56) ────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ function breakBossOut(
 
   ball.leapFromX = ball.position.x; ball.leapFromY = ball.position.y;
   ball.leapToX = landing.x; ball.leapToY = landing.y;
-  ball.bossLeapAt = performance.now();
+  ball.bossLeapAt = simNow();
   ball.bossLeapLaunched = false;
   // Aim it inward for the moment it lands, so it heads into open space.
   const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
@@ -573,7 +574,7 @@ export function checkAndUpdateBallWonStates(
         // Defeating the boss SHIPS it: pop any live minions (and the just-locked
         // partner) so the board clears with the boss instead of leaving hotfixes
         // bouncing after the win.
-        const defeatNow = performance.now();
+        const defeatNow = simNow();
         for (const m of game.balls) {
           if (m.id !== ball.id && m.state === 'active') {
             m.state = 'won';
@@ -611,14 +612,14 @@ export function checkAndUpdateBallWonStates(
       if (hit) {
         // Re-stamped on every credited lock, not just the first, so a second
         // ball into an already-used zone still visibly confirms it counted.
-        hit.satisfiedAt = performance.now();
+        hit.satisfiedAt = simNow();
         hit.satisfied = true;
         lockAreaById.set(ball.id, hit);
       }
     }
 
     ball.state = 'won';
-    ball.wonTime = performance.now();
+    ball.wonTime = simNow();
     ball.velocity = { x: 0, y: 0 };
     ball.speed = 0;
 
@@ -746,7 +747,7 @@ export function checkAndUpdateBallWonStates(
         cellIndices: [...ballRegion.cellIndices],
         contours,
         centroid: { ...ballRegion.centroid },
-        startTime: performance.now(),
+        startTime: simNow(),
         ballPos: catchPos,
         ballColor: ball.color,
         particles,
@@ -815,7 +816,7 @@ export function checkAndUpdateBallWonStates(
       // Frozen Assets: a ball locked while still frozen pays a multiplied lock
       // bonus (wonTime is "now" for this pass, so compare frozenUntil to it).
       const lockedWhileFrozen =
-        b.frozenUntil !== undefined && b.frozenUntil > (b.wonTime ?? performance.now());
+        b.frozenUntil !== undefined && b.frozenUntil > (b.wonTime ?? simNow());
       const frozenMult =
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus

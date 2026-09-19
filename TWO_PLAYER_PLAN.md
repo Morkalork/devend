@@ -4,9 +4,112 @@ The plan for **Pair Programming**: two players, two phones, one board. Both
 players see the same map and both can draw fences; every fence appears on both
 phones. The two players sit next to each other.
 
-Status: **PROPOSED**, nothing built. This is an investigation of the engine as
-it stands (commit `f85ded6`) and a build order that gets to a shippable mode.
-Where the doc says "today", it means that commit.
+Status: **BUILT**, all nine steps. The plan below is kept as written, with the
+places the build departed from it marked **[CHANGED]** and the reason given: a
+plan quietly edited to match what happened is a plan that never taught anybody
+anything.
+
+The investigation was made against commit `f85ded6`; where the doc says
+"today" it means that commit, before any of this existed.
+
+Seven departures, and the three that matter most were forced by tests rather
+than noticed by reading:
+
+1. **The resync has to REWIND, not paste.** The plan said a drifted guest
+   adopts the host's motion "before the next tick". It cannot: by the time the
+   snapshot lands the guest is several ticks past the one it describes, and
+   pasting positions onto a later tick leaves the hashes still disagreeing,
+   which is exactly what the first version did. The guest now rewinds to the
+   host's tick and replays forward out of a retained command window.
+2. **Positions are not the whole of the state.** The plan's snapshot carried
+   balls and movers. Three things the simulation needs live outside the game
+   state: the clock, the seeded streams' cursors and the region and wall id
+   counters. Without the last of those the next split names a region the host
+   has never heard of. `src/lib/net/simState.ts` gathers all three, and the
+   same file explains why two simulations in one process have to take turns
+   with them, which is a property of the test bench and not of two phones.
+3. **The audit's list of six unseeded rolls was two short.** The scan written
+   to guard the fix found `pickups.ts` choosing which ball turns rainbow and
+   which ball a split forks from, both of which decide where balls are for the
+   rest of a map. Written down in `determinism.test.ts`, which may only shrink.
+
+The other four: the pairing QR became a LINK with a mailbox for the answer
+rather than two scans (section 3 and step 5); step 8's room relay folded into
+step 5 because it is the base flow's return path; the in-progress swipe stayed
+local rather than becoming per-player state, because nothing in a tick reads
+it; and the plugin is Java rather than Kotlin, because the Android project is
+Java and adding the Kotlin Gradle plugin would have been a build change for
+one file.
+
+### The hardening pass
+
+An audit of the shipped code, before any two phones had met, found ten things
+that would have gone wrong. None of them could have been reproduced without two
+devices and several would have read as "the mode is broken" rather than as a
+bug, which is why they are listed rather than quietly fixed. All ten are closed
+and pinned in `pairHardening.test.ts`.
+
+Four would have broken the first session:
+
+1. **Nearby elected two hosts.** The election read the partner's device id from
+   a ref the hello had not filled yet, so on a first connect both phones read
+   null and both concluded they were the host. The election now happens inside
+   the handshake, after the id has arrived, and two identical ids are refused
+   rather than tie-broken: it means a cloned install, and both devices would be
+   player 0.
+2. **Abilities bypassed the command layer.** Firing reached into the game state
+   from the component that noticed the press, so an ability moved one board and
+   not the other, which no snapshot can repair. There are now three ability
+   commands, one per shape the game has, and the charge is spent where the
+   command applies so both devices' mirrors of the run agree.
+3. **The run synced once.** Enough for map one and wrong from map two: between
+   maps the two phones walked their own shop, drafts and assignment screens and
+   arrived at the next board with different upgrades. The host now publishes its
+   run at every map start and the guest adopts it whole.
+4. **Between-map decisions were not host-owned.** The guest could shop, answer
+   the push prompt and spend a continue, settling questions about one run twice.
+   The guest is now gated out of them, with a screen naming what the host is
+   deciding. It blocks rather than mirrors, which is the honest first version:
+   a read-only shop would mean teaching every screen a disabled mode.
+
+Three would have shown up quickly:
+
+5. **A stall banked time.** The accumulator filled while nothing drained it, so
+   a two-second wait ran two hundred ticks in the frame the partner came back
+   and every ball teleported. Held to one step during a stall.
+6. **A sleeping phone stalled its partner for ever.** A locked screen stops
+   sending and nothing about the socket says so. Twelve seconds of silence now
+   ends the link, which is what lets the other player choose between pairing
+   again and carrying on alone.
+7. **Per-device unlocks fed the physics.** Certificates, achievements and
+   loadout bonuses come from each phone's own storage and none of them travel in
+   the run record, so two players with different unlocks computed different
+   fence speeds from the first tick, on a board that looked identical. Both
+   phones now declare a modifier hash at each map start and the map refuses to
+   begin on a mismatch, because that is not drift and no snapshot carries it
+   away.
+
+And three rough edges: haptics fired for the partner's actions, a pair run filed
+on the solo ladder where two players cutting twice as fast would have taken it
+over within an evening, and Nearby could be raced into two connections.
+
+### Where it all lives
+
+| | |
+|---|---|
+| Sim clock | `src/lib/simClock.ts` |
+| Commands | `src/lib/net/commands.ts` |
+| Transport interface, in-memory pipe | `src/lib/net/transport.ts` |
+| Lockstep | `src/lib/net/lockstep.ts` |
+| Hashes and the resync snapshot | `src/lib/net/stateHash.ts`, `simState.ts` |
+| WebRTC link, minimal SDP | `src/lib/net/webrtc.ts`, `sdp.ts` |
+| Nearby link | `src/lib/net/nearby.ts`, `android/.../NearbyPlugin.java` |
+| Device and pair identity | `src/lib/net/deviceId.ts` |
+| The 2-Player screens | `src/components/game/PairLobby.tsx`, `PairDecision.tsx`, `PairLinkBanner.tsx` |
+| The run and the pair save | `src/hooks/usePairSession.ts`, `usePairRunSave.ts` |
+| The answer mailbox | `server/pairRooms.js`, and the same route in `vite.config.ts` |
+| Admin | Pair Loopback, Nearby Diagnostics |
+| Tests | `determinism`, `commands`, `lockstep`, `pairing` |
 
 The question that prompted it: **can this be done without a server in the
 middle?** Short answer, yes. The long answer is section 3.

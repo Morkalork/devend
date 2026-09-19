@@ -30,6 +30,7 @@ import {
 import { rebuildRegionsKeepAll, spawnFenceShatter, pushReopenedSamplePoints } from "@/lib/physics/destructibles";
 import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
+import { simNow } from "@/lib/simClock";
 
 // Fallback params if a YAML entry omits them.
 const DEFAULT_FREEZE_SECONDS = 3;
@@ -435,7 +436,7 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
 
   // Shatter them into flying shards (like the map-clear shatter), so they break
   // apart instead of just vanishing.
-  const now = performance.now();
+  const now = simNow();
   const color = callbacks.fenceColor ?? "#00ff88";
   game.objectDebris ??= [];
   for (const w of fences.slice(0, MAX_FENCE_SHATTERS)) {

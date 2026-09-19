@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Loading...",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back",
+    "cancel": "Cancel"
   },
   "game": {
     "paused": "PAUSED",
@@ -269,7 +271,7 @@
     "moverTutorialTitle": "⚠ Moving Obstacles",
     "moverTutorialBody": "Orange obstacles patrol a track. Balls bounce off them; a fence that touches one costs a life.",
     "breakTutorialTitle": "✦ Breaking Things",
-    "breakTutorialBody": "Amber blocks shatter for bonus points. Guide balls into them; you cannot fence against them.",
+    "breakTutorialBody": "Glass breaks on one touch, amber needs a few. Steer balls in; you cannot fence against them.",
     "circuitTutorialTitle": "✦ Wire the Integration",
     "circuitTutorialBody": "Draw a fence past a teal node to wake its sleeping ball, then trap it. Sleepers hold their space shut until woken.",
     "boxIntroTitle": "✦ The Done Column",
@@ -433,8 +435,8 @@
       },
       "breakBonus": {
         "title": "Demolition Bonus",
-        "body": "Overtime from smashing amber blocks. Balls chip at them until they shatter, and anything stacked on top falls.",
-        "tip": "Steer balls into breakables with your cuts. The black ball smashes them in half the hits."
+        "body": "Overtime from smashing blocks. Glass goes on one touch, amber takes a few, and whatever rests on top falls with it.",
+        "tip": "Steer balls into them with your cuts. The black ball breaks amber in half the hits."
       },
       "shipEarly": {
         "title": "Ship Early",
@@ -770,7 +772,7 @@
       },
       "breakObstacles": {
         "title": "Breaking Obstacles",
-        "description": "Amber blocks smash for bonus overtime; stacks fall when their support breaks. Breaking is extra, shrinking the board still wins. You cannot fence against a breakable, and the black ball breaks them twice as fast."
+        "description": "Glass bricks go on one touch, amber blocks take a few; stacks fall when their support breaks. Breaking is extra, shrinking the board still wins. You cannot fence against either."
       },
       "fenceTypes": {
         "title": "Fence Types",
@@ -1304,5 +1306,50 @@
       "band": "Levels {{from}}-{{to}}",
       "credits": "End credits"
     }
+  },
+  "pair": {
+    "title": "2 Player",
+    "intro": "One board, two phones, side by side. Show the code and let the other player scan it with their camera.",
+    "showCode": "Show the code",
+    "showCodeHint": "Your partner scans it and joins",
+    "scanMe": "Scan this with the other phone's camera.",
+    "preparing": "Getting the code ready",
+    "joining": "Joining your partner",
+    "connected": "Connected. Starting the map.",
+    "failed": "Could not reach the other phone.",
+    "slowHint": "Both phones must be on the same Wi-Fi. If they are, turn on a hotspot on one and join it with the other.",
+    "tryAgain": "Try again",
+    "partner": "Partner",
+    "versionMismatch": "One phone is running an older build. Update it and try again.",
+    "resumeWith": "Resume with {{name}}",
+    "continueRun": "Continue",
+    "newGame": "New game",
+    "waitingForPartner": "Waiting for your partner",
+    "reconnecting": "Reconnecting",
+    "partnerLeft": "Your partner dropped out.",
+    "continueSolo": "Carry on alone",
+    "lostSync": "The two boards drifted apart. Restarting this map.",
+    "yourFences": "You",
+    "theirFences": "Partner",
+    "savedRun": "You have a run in progress, on map {{level}}.",
+    "waitingFor": "Waiting for {{name}}",
+    "fencesDrawn": "Fences drawn",
+    "nearby": "Find nearby",
+    "nearbyHint": "Both phones tap this. No code, no Wi-Fi needed.",
+    "looking": "Looking for your partner",
+    "confirmToken": "Both phones should show {{token}}. Tap to join.",
+    "join": "Join",
+    "needPermission": "Dev/End needs one more permission to find nearby phones.",
+    "needLocation": "Android 11 and below need location switched on to find nearby phones. Dev/End never uses your location for anything else.",
+    "grant": "Allow",
+    "sameDevice": "Both phones report the same device id, so neither can be told apart. Reinstall one, or pair with the code instead.",
+    "host": {
+      "shopping": "{{name}} is in the store.",
+      "deciding": "{{name}} is choosing.",
+      "pushing": "{{name}} is deciding whether to push on.",
+      "continuing": "{{name}} is deciding whether to spend a continue."
+    },
+    "mismatchTitle": "You are not playing the same game.",
+    "mismatchBody": "One of you has upgrades or certificates the other does not, so the two boards would behave differently. Play a run you both have, or catch up first."
   }
 }

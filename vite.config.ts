@@ -32,6 +32,55 @@ function buildIdentity(): { sha: string; builtAt: string; repo: string } {
   };
 }
 
+/**
+ * Dev-only plugin: the pairing mailbox, same routes the production server
+ * carries (server/pairRooms.js).
+ *
+ * The desk rig depends on this. A phone loading the dev server does so over
+ * plain http on a LAN address, which is not a secure context, so it cannot
+ * open the camera to scan anything; the data channel itself is fine. With the
+ * mailbox here the host shows its QR, the phone's own camera app opens the
+ * link on this same origin, and the answer comes back through this route with
+ * no in-app camera on either side.
+ */
+function pairRoomPlugin(): Plugin {
+  return {
+    name: "pair-room-api",
+    async configureServer(server) {
+      const rooms = await import("./server/pairRooms.js");
+      server.middlewares.use("/api/room/", (req, res, next) => {
+        const id = (req.url ?? "/").replace(/^\//, "").split("?")[0];
+        const send = (status: number, body: unknown) => {
+          res.statusCode = status;
+          if (body === null) { res.end(); return; }
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(body));
+        };
+        if (req.method === "GET") {
+          const out = rooms.takeAnswer(id);
+          return send(out.status, out.body);
+        }
+        if (req.method === "DELETE") { rooms.dropRoom(id); return send(204, null); }
+        if (req.method === "PUT") {
+          const chunks: Buffer[] = [];
+          req.on("data", (c: Buffer) => chunks.push(c));
+          req.on("end", () => {
+            try {
+              const { answer } = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+              const out = rooms.putAnswer(id, answer);
+              send(out.status, out.body);
+            } catch {
+              send(400, { error: "bad JSON" });
+            }
+          });
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 /** Dev-only plugin: exposes GET /api/map and PUT /api/map for saving map.yml from the admin UI */
 function mapApiPlugin(): Plugin {
   const mapPath = path.resolve(__dirname, "public/map.yml");
@@ -114,6 +163,7 @@ export default defineConfig(({ mode }) => {
     mode === "development" && fullReloadGameEngine(),
     react(),
     mode === "development" && mapApiPlugin(),
+    mode === "development" && pairRoomPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {

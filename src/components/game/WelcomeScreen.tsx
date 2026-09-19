@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X, Music } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X, Music, Users } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
@@ -29,6 +29,16 @@ interface WelcomeScreenProps {
   showDailyIntro?: boolean;
   /** Marks the Daily Stand-up intro as seen (persisted tutorial flag). */
   onDailyIntroSeen?: () => void;
+  /**
+   * Opens the 2-Player lobby (TWO_PLAYER_PLAN.md). Absent = the mode is off.
+   */
+  onTwoPlayer?: () => void;
+  /**
+   * The partner's name when a pair run is waiting on THIS phone, so the button
+   * says which it is before anyone scans anything. The choice itself still
+   * waits for the connection, because Continue or New is a decision for two.
+   */
+  pairPartnerName?: string;
   /** Attendance streak shown on the daily button (0 = hidden). */
   dailyStreak?: number;
   /** True when today's stand-up already has a banked run (shows a check). */
@@ -60,6 +70,8 @@ export function WelcomeScreen({
   onLoadouts,
   onHallOfFame,
   onDaily,
+  onTwoPlayer,
+  pairPartnerName,
   showDailyIntro = false,
   onDailyIntroSeen,
   dailyStreak = 0,
@@ -359,6 +371,23 @@ export function WelcomeScreen({
                 </span>
               )}
               {dailyDoneToday && <Check className="w-4 h-4 text-success" />}
+            </motion.button>
+          )}
+          {/* 2-Player: one board across two phones. Says whose run is waiting
+              when this phone is holding a pair save, so the player knows what
+              they are walking into before the codes come out. */}
+          {onTwoPlayer && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2"
+              onClick={onTwoPlayer}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <Users className="w-5 h-5" />
+              {pairPartnerName
+                ? t('pair.resumeWith', { name: pairPartnerName })
+                : t('pair.title')}
             </motion.button>
           )}
           <motion.button

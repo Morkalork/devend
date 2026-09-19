@@ -38,6 +38,17 @@ import { applyLodestones } from "@/lib/physics/lodestone";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
+import { simNow, advanceSimClock } from "@/lib/simClock";
+import { drainCommands, type CommandDeps } from "@/lib/net/commands";
+import { runStream } from "@/lib/runRng";
+
+/**
+ * The longest stretch a single frame may hand the simulation, in milliseconds.
+ * A backgrounded tab returns with a gap of seconds; without this the board
+ * would fast-forward through it. The accumulator has always clamped here; the
+ * sim clock's hold frames use the same ceiling so the two cannot disagree.
+ */
+const MAX_FRAME_MS = 50;
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -73,6 +84,23 @@ export interface GameLoopCallbacks {
   onPushPrompt?: () => void;
   /** Renderer-owned "blank the board" (Pixi path; the 2D path clearRects its ctx). */
   renderEmpty?: () => void;
+  /**
+   * What an applied player command needs: the run's modifiers, and the few
+   * callbacks that carry a result back to React. Read fresh each frame so a
+   * modifier that changes mid-map (an ability firing, a pickup claimed) is
+   * the one the next command sees.
+   */
+  commandDeps?: () => CommandDeps;
+  /**
+   * The lockstep session, when this map is being played by a pair.
+   *
+   * Absent in solo play, which is why nothing below changes for it. Present,
+   * it decides which ticks may run: the loop still owns the accumulator and
+   * the rendering, but a tick only happens once both devices' commands for it
+   * are in. A tick that cannot run is a stutter, never a divergence, and the
+   * frame is drawn anyway so the board does not appear to freeze.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
 }
 
 /**
@@ -147,7 +175,29 @@ export function createGameLoop(
    */
   const lootSegments: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
+  /**
+   * Sim-clock bookkeeping for the frames that never reach the physics step.
+   *
+   * An active frame advances sim time one PHYSICS_STEP at a time inside the
+   * step loop, which is what makes tick N the same instant on every device.
+   * The hold frames (the dissolve/assemble, a finished level playing out its
+   * locks, the deferred push prompt) run no steps at all, and their animations
+   * still have to play, so they advance the clock by their own elapsed frame
+   * time instead. `game.paused` deliberately advances nothing: with a modal up,
+   * or a launcher wager open, the clock does not run.
+   */
+  let lastFrameTs = 0;
+  const holdElapsedMs = (timestamp: number): number => {
+    const ms = lastFrameTs === 0 ? 0 : Math.min(timestamp - lastFrameTs, MAX_FRAME_MS);
+    lastFrameTs = timestamp;
+    return ms;
+  };
+
   const gameLoopBody = (timestamp: number): void => {
+    // Keep the hold cursor level with the frame even on frames that take the
+    // active path, or the first hold after a spell of play would see the whole
+    // stretch as one elapsed frame.
+    lastFrameTs = timestamp;
     // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
     // one. Frozen once the map is over (level complete / game over) so the
     // background code goes still with the board; it resumes when the next map's
@@ -163,8 +213,9 @@ export function createGameLoop(
 
     // Dissolve animation always runs regardless of gameOver/levelComplete state
     if (game.dissolve) {
+      advanceSimClock(holdElapsedMs(timestamp));
       const d       = game.dissolve;
-      const elapsed = (performance.now() - d.startTime) / 1000;
+      const elapsed = (simNow() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
       // Reverse (run-intro assemble): play the same kinematics backwards, so
       // the tiles fly IN from their scattered end-state and settle in place.
@@ -267,18 +318,19 @@ export function createGameLoop(
     // After level complete, keep rendering until all lock animations finish and
     // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
+      advanceSimClock(holdElapsedMs(timestamp));
       if (game.assimilations.size > 0) {
-        applyLockGlide(game, performance.now());
+        applyLockGlide(game, simNow());
         for (const ball of game.balls) {
           if (ball.state === 'won') {
-            const elapsed = performance.now() - ball.wonTime;
+            const elapsed = simNow() - ball.wonTime;
             ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
           }
         }
       }
       const shimmerActive =
         game.shimmerStart > 0 &&
-        performance.now() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
+        simNow() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
       // Freeze mode (dev/playground): render every frame through the sweep, then a
       // final clamped full-drain frame, and stop scheduling so the board holds.
       if (game.shimmerFrozen) {
@@ -298,7 +350,8 @@ export function createGameLoop(
     // (no physics, input blocked via pushPromptPending) but keep rendering so
     // the flash and the lock glide play out, then open the modal.
     if (game.pushPromptPending) {
-      const now = performance.now();
+      advanceSimClock(holdElapsedMs(timestamp));
+      const now = simNow();
       let flashEnd = 0;
       for (const [, f] of game.assimilations) {
         flashEnd = Math.max(flashEnd, f.startTime + LOCK_TOTAL_DURATION);
@@ -319,13 +372,13 @@ export function createGameLoop(
 
     const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
     game.lastTime   = timestamp;
-    game.accumulator += Math.min(dt, 0.05);
+    game.accumulator += Math.min(dt, MAX_FRAME_MS / 1000);
 
     // Cron Job: on a fixed interval, freeze one random eligible ball. Reuses the
     // same frozenUntil/freezeReadyAt path as the tap-driven Feature Freeze, so
     // the physics loop below (and rendering) already hold and visualise it.
     if (autoFreezeDuration > 0 && !game.isRecovering) {
-      const now = performance.now();
+      const now = simNow();
       if (game.lastAutoFreezeAt === 0) {
         // First active frame of the map — start the clock so the first freeze
         // lands one full interval in, not immediately at map start.
@@ -337,7 +390,9 @@ export function createGameLoop(
           !(b.freezeReadyAt && now < b.freezeReadyAt)     // not on thaw cooldown
         );
         if (eligible.length > 0) {
-          const target = eligible[Math.floor(Math.random() * eligible.length)];
+          // Seeded: Cron Job picking a different ball on each device would
+          // put the two boards on different paths within seconds.
+          const target = eligible[Math.floor(runStream("autoFreeze")() * eligible.length)];
           const durationMs = autoFreezeDuration * 1000;
           target.frozenUntil   = now + durationMs;
           // Absolute Zero (freeze set bonus): no re-freeze cooldown after thaw.
@@ -351,6 +406,27 @@ export function createGameLoop(
       }
     }
 
+    // Player actions land HERE, at the top of the frame, before anything
+    // moves. They used to land wherever the pointer handler happened to run,
+    // which is the same instant in practice for one player and no instant at
+    // all for two: a pair has to apply both devices' actions in one agreed
+    // order, and this is that order.
+    //
+    // Solo, the queue is whatever this device's fingers put there and it is
+    // drained now. In a pair the lockstep owns the queue: it fills it one tick
+    // at a time inside the step loop below, from both devices' commands, and
+    // this drain handles only what is already waiting.
+    const deps = callbacks.commandDeps?.();
+    const pair = callbacks.lockstep?.() ?? null;
+    if (pair && !pair.beginFrame(game)) {
+      // Waiting to be put back on the host's board. Draw, do not step.
+      game.lastTime = timestamp;
+      callbacks.render();
+      schedule();
+      return;
+    }
+    if (deps && !pair) drainCommands(game, deps);
+
     // Rebuild the wall spatial index once per frame. `game.walls` is immutable
     // across this frame's substeps (movers carry their own polygons; fences
     // only commit/break at frame boundaries), so one build serves every
@@ -360,6 +436,29 @@ export function createGameLoop(
     let _physSteps = 0;
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
+      // In a pair, a tick runs only when both devices' commands for it are in.
+      // Refused means the partner's phone has not been heard from yet: leave
+      // the accumulator where it is and draw; the tick will run next frame.
+      if (pair) {
+        if (!pair.tryReleaseTick(game)) {
+          // The partner's commands for this tick are not in yet. Leaving the
+          // accumulator alone looks harmless and is not: it keeps filling at
+          // one frame per frame while nothing drains it, so a two-second wait
+          // banks two seconds, and the moment the partner speaks the board
+          // runs two hundred ticks in a single frame and every ball teleports.
+          //
+          // Held to one step instead. The pair resumes at the pace it stalled
+          // at, which is what a stutter should look like.
+          game.accumulator = Math.min(game.accumulator, PHYSICS_STEP);
+          break;
+        }
+        if (deps) drainCommands(game, deps);
+      }
+
+      // One step of sim time per physics step: the whole point of the sim
+      // clock. Advanced FIRST so everything this step stamps or compares sees
+      // the instant the step lands on, not the one it left.
+      advanceSimClock(PHYSICS_STEP * 1000);
       _physSteps++;
 
       // Time factor: tick the active-play clock (physics steps only, so pause,
@@ -412,7 +511,7 @@ export function createGameLoop(
       // Cages own their mouths' phase, so this runs beside tickPhasing rather
       // than inside it: one of them knows the clock, the other knows whether a
       // ball is in the box.
-      tickCages(game, performance.now());
+      tickCages(game, simNow());
 
       // A freeze that outlived its window is lifted here, whatever happened to
       // its timer.
@@ -428,7 +527,7 @@ export function createGameLoop(
       // The timer is still the normal path - the deadline is well past it - so
       // this only ever fires for a freeze that was going to be permanent.
       if (game.frozenBallId && game.frozenBallReleaseAt !== null
-          && performance.now() > game.frozenBallReleaseAt) {
+          && simNow() > game.frozenBallReleaseAt) {
         const stranded = game.balls.find(b => b.id === game.frozenBallId);
         if (stranded) {
           // Give back the velocity it was carrying. Without this the ball
@@ -447,7 +546,7 @@ export function createGameLoop(
       for (const ball of game.balls) {
         // WON balls keep full physics but visually disintegrate
         if (ball.state === 'won') {
-          const elapsed = performance.now() - ball.wonTime;
+          const elapsed = simNow() - ball.wonTime;
           ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
         }
 
@@ -466,7 +565,7 @@ export function createGameLoop(
           // being drawn, and an effect envelope that is not ticked does not
           // pause - it stops mid-curve and stays there. See the frozenUntil
           // note below, which is the same bug with a longer history.
-          updateBallEffects(ball.effects, PHYSICS_STEP, performance.now());
+          updateBallEffects(ball.effects, PHYSICS_STEP, simNow());
           continue;
         }
 
@@ -476,7 +575,7 @@ export function createGameLoop(
         //
         // This line used to read:
         //
-        //   if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
+        //   if (ball.frozenUntil && simNow() < ball.frozenUntil) continue;
         //
         // and it skipped the ball before updateBall could be reached. updateBall
         // has its own held-ball branch which returns early AND ticks the ball's
@@ -519,16 +618,17 @@ export function createGameLoop(
       }
       // Chains (#64): solve the verlet rope AFTER ball physics so it reads the
       // balls' new positions, tethers/snags them, and sweeps fences.
-      tickChains(game, PHYSICS_STEP, performance.now());
+      tickChains(game, PHYSICS_STEP, simNow());
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
+      pair?.endTick(game);
     }
 
     // The Lamp: which ball is lighting the board. Once per frame rather than
     // per physics step, because it is a rendering fact, and because the only
     // thing that can change it is a ball leaving play, which cannot happen
     // twice inside one frame.
-    game.lamp = advanceLamp(game.lamp, game.balls, game.gridRegions, performance.now());
+    game.lamp = advanceLamp(game.lamp, game.balls, game.gridRegions, simNow());
 
     // Pickups: expire stale tokens and roll spawns. Once per frame (not per
     // physics step) — all its timing keys off game.activePlaySeconds, so the
@@ -605,7 +705,7 @@ export function createGameLoop(
       ball.renderPosition.x = prev.x + (ball.position.x - prev.x) * alpha;
       ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
-    applyLockGlide(game, performance.now());
+    applyLockGlide(game, simNow());
 
     const _physMs = performance.now() - _physStart;
 

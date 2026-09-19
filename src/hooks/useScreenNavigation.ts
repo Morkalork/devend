@@ -100,6 +100,18 @@ export function useScreenNavigation() {
     setCurrentScreen('upgradeAtlas');
   }, []);
 
+  const goToPairLoopback = useCallback(() => {
+    setCurrentScreen('pairLoopback');
+  }, []);
+
+  const goToPairLobby = useCallback(() => {
+    setCurrentScreen('pairLobby');
+  }, []);
+
+  const goToNearbyDiagnostics = useCallback(() => {
+    setCurrentScreen('nearbyDiagnostics');
+  }, []);
+
   const goToAchievements = useCallback(() => {
     setCurrentScreen('achievements');
   }, []);
@@ -139,5 +151,8 @@ export function useScreenNavigation() {
     goToMapBuilder,
     goToAnimationTest,
     goToUpgradeAtlas,
+    goToPairLoopback,
+    goToPairLobby,
+    goToNearbyDiagnostics,
   };
 }

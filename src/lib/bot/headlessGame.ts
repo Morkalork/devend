@@ -68,41 +68,42 @@ import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/b
 import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMutators";
 import { getRunRng, getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { normaliseGravity } from "@/lib/physics/gravity";
+import { advanceSimClock, setSimNow, simNow, SIM_CLOCK_START_MS } from "@/lib/simClock";
+import { drainCommands, enqueueCommand } from "@/lib/net/commands";
+import { STANDARD_FENCE_ID } from "@/lib/fences";
 /**
  * A clock the bot controls.
  *
- * The engine reads wall-clock time in several places - fence growth is
- * `performance.now() - wall.startTime`, and the boss leap, the lock glide and
- * the freeze all key off it too. That is correct in the browser, where a frame
- * takes a frame. Headlessly it is fatal: the bot steps thousands of frames in a
- * few milliseconds of real time, so `elapsed` stays near zero, fences never
- * finish, and the bot sits watching a board that cannot change.
+ * The engine reads SIM time, not wall time (src/lib/simClock.ts): fence growth
+ * is `simNow() - wall.startTime`, and the boss leap, the lock glide and the
+ * freeze all key off the same clock. In the browser the game loop advances it
+ * one physics step per step. Headlessly the bot does, which is what lets a bot
+ * step thousands of frames in a few milliseconds of real time and still see a
+ * board that changes, and what makes a run independent of how fast the machine
+ * is, so a seed reproduces a finding exactly.
  *
- * So simulated time IS the clock while a run is in progress. The engine is
- * untouched and still reads performance.now(); it just gets told the time the
- * simulation is at. That also makes a run independent of how fast the machine
- * is, which is what lets a seed reproduce a finding exactly.
+ * Before the sim clock existed this monkeypatched `performance.now`. It no
+ * longer needs to: the engine reads the clock the harness owns by design
+ * rather than by substitution. The three functions keep their names and their
+ * contract so every caller reads the same.
  */
-let virtualNowMs = 0;
-let realNow: (() => number) | null = null;
+let clockInstalled = false;
 
-/** Take over the clock. Must be paired with releaseClock in a finally. */
-export function installClock(startMs = 1000): void {
-  if (realNow) return;
-  realNow = performance.now.bind(performance);
-  virtualNowMs = startMs;
-  performance.now = () => virtualNowMs;
+/** Take over the clock. Must be paired with releaseClock in a finally.
+ *  A no-op while a clock is already installed, so nesting cannot rewind it. */
+export function installClock(startMs = SIM_CLOCK_START_MS): void {
+  if (clockInstalled) return;
+  clockInstalled = true;
+  setSimNow(startMs);
 }
 
 export function releaseClock(): void {
-  if (!realNow) return;
-  performance.now = realNow;
-  realNow = null;
+  clockInstalled = false;
 }
 
-/** Move simulated time forward. */
+/** Move the bot's clock forward by `seconds` of simulated time. */
 export function advanceClock(seconds: number): void {
-  virtualNowMs += seconds * 1000;
+  advanceSimClock(seconds * 1000);
 }
 
 /** Everything the bot did and everything the game told it, for the report. */
@@ -317,6 +318,10 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   const { game, level, levelNumber, modifiers, callbacks } = ctx;
   if (game.levelComplete || game.gameOver) return;
 
+  // Player actions first, exactly where the loop drains them: at the top of
+  // the frame, before anything moves.
+  drainCommands(game, { modifiers });
+
   // Time moves before anything reads it, so a fence started on the previous
   // frame sees a non-zero elapsed on this one.
   advanceClock(dt);
@@ -366,21 +371,21 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // step, so it runs before the movers do. Inert for the bot, which never
   // grabs anything - and here because a pass the harness silently omits is how
   // this file has gone wrong four times now.
-  updateMoverControlFn(dt, game, performance.now());
+  updateMoverControlFn(dt, game, simNow());
   updateMoversFn(dt, game);
   tickPhasing(game, game.activePlaySeconds);
   // Cages own their mouths' phase, so this runs beside tickPhasing rather than
   // inside it. Without it a caged ball's mouth never opens and the cage is a
   // solid box: the mechanic ships on one retired map, so no sweep has ever
   // exercised it.
-  tickCages(game, performance.now());
+  tickCages(game, simNow());
 
   // A freeze that outlived its window. In the browser this is a safety net for
   // a setTimeout that got cleared by another path; headlessly there are no
   // timeouts at all, so it is the ONLY thing that ever lifts a freeze - without
   // it a tap-frozen ball stays frozen for the rest of the run.
   if (game.frozenBallId && game.frozenBallReleaseAt !== null
-      && performance.now() > game.frozenBallReleaseAt) {
+      && simNow() > game.frozenBallReleaseAt) {
     const stranded = game.balls.find(b => b.id === game.frozenBallId);
     if (stranded) {
       if (game.frozenBallVelocity) stranded.velocity = { ...game.frozenBallVelocity };
@@ -398,7 +403,7 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
     // here is what keeps a freeze meaning the same thing in both places.
     if (game.frozenBallId && ball.id === game.frozenBallId) {
       if (game.frozenBallPosition) ball.position = { ...game.frozenBallPosition };
-      updateBallEffects(ball.effects, dt, performance.now());
+      updateBallEffects(ball.effects, dt, simNow());
       continue;
     }
     updateBall(ball, dt, game, phasedOut);
@@ -417,7 +422,7 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // loop does the same (settleLaunchers), and the bot has to see the same
   // board: a barrel footprint that reopens in the browser and not here would
   // make every launcher sweep read a different space count from the player.
-  dematerializeArmedLaunchers(game, callbacks, performance.now());
+  dematerializeArmedLaunchers(game, callbacks, simNow());
 
   // The same slide the browser loop runs. Rubble deflects balls, so a harness
   // that skipped it would have the bot playing a board whose physics differ
@@ -432,7 +437,7 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   }
   // Chains solve AFTER ball physics so the rope reads the balls' new positions,
   // tethers or snags them, and sweeps fences.
-  tickChains(game, dt, performance.now());
+  tickChains(game, dt, simNow());
 
   // Growing fences, then the cuts any of them just finished. applyCutFn
   // removes the wall itself, so the list is snapshotted exactly as the loop
@@ -551,29 +556,28 @@ export function tryCut(ctx: BotGame, origin: Vector2, direction: Vector2): boole
   if (!Number.isFinite(dir.x) || !Number.isFinite(dir.y)) return false;
   const neg = { x: -dir.x, y: -dir.y };
 
+  // The rays are cast twice: once here, to answer "is there a cut to make at
+  // all", and once by the command, which is the thing that actually makes it.
+  // Cheap, and the alternative is the harness owning a second copy of the
+  // fence-building code - which is exactly what it used to own, thickness 4
+  // and all, on a board whose fences are WALL_THICKNESS wide.
   const forward = castRayWithReflections(origin, dir, game.walls);
   const backward = castRayWithReflections(origin, neg, game.walls);
-  const endWaypoints = forward.waypoints;
-  const startWaypoints = backward.waypoints;
-  if (endWaypoints.length < 2 || startWaypoints.length < 2) return false;
+  if (forward.waypoints.length < 2 || backward.waypoints.length < 2) return false;
 
-  game.wallCount = (game.wallCount ?? 0) + 1;
-  game.activeWalls.push({
-    origin: { ...origin },
-    direction: dir,
-    startWaypoints,
-    endWaypoints,
-    startSegmentIndex: 0,
-    endSegmentIndex: 0,
-    startPoint: { ...origin },
-    endPoint: { ...origin },
-    targetStart: startWaypoints[startWaypoints.length - 1],
-    targetEnd: endWaypoints[endWaypoints.length - 1],
-    thickness: 4,
-    isComplete: false,
-    activeRegionId: region.id,
-    startTime: performance.now(),
-  } as unknown as GrowingWall);
+  const before = game.activeWalls.length;
+  enqueueCommand(game, {
+    kind: "cut",
+    player: 0,
+    start: { ...origin },
+    // Any point along the heading will do: the command normalises the drag.
+    end: { x: origin.x + dir.x * 100, y: origin.y + dir.y * 100 },
+    path: null,
+    regionId: region.id,
+    fenceTypeId: game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
+  });
+  drainCommands(game, { modifiers: ctx.modifiers });
+  if (game.activeWalls.length === before) return false;   // refused on a breakable anchor
   ctx.events.cutsMade += 1;
   return true;
 }

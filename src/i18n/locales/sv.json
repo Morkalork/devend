@@ -255,7 +255,9 @@
   },
   "common": {
     "loading": "Laddar...",
-    "close": "Stäng"
+    "close": "Stäng",
+    "back": "Tillbaka",
+    "cancel": "Avbryt"
   },
   "game": {
     "paused": "PAUSAD",
@@ -269,7 +271,7 @@
     "moverTutorialTitle": "⚠ Rörliga hinder",
     "moverTutorialBody": "Orange hinder patrullerar ett spår. Bollar studsar på dem; ett staket som nuddar ett kostar ett liv.",
     "breakTutorialTitle": "✦ Krossa saker",
-    "breakTutorialBody": "Bärnstensblock krossas för bonuspoäng. Styr bollar in i dem; du kan inte staketa mot dem.",
+    "breakTutorialBody": "Glas spricker vid minsta kontakt, bärnsten kräver några träffar. Styr in bollar; du kan inte staketa mot dem.",
     "chargeTutorialTitle": "✦ Spräng laddningen",
     "chargeTutorialBody": "Dra ett staket förbi en stubin för att osäkra den. Den spränger sin platta och öppnar yta, men släpper också lösa bollar i närheten och bryter dina staket inom räckhåll.",
     "streamTutorialTitle": "✦ Dataström",
@@ -433,8 +435,8 @@
       },
       "breakBonus": {
         "title": "Rivningsbonus",
-        "body": "Övertid från att krossa bärnstensblock. Bollar nöter på dem tills de splittras, och allt staplat ovanpå faller.",
-        "tip": "Styr bollarna mot blocken med dina snitt. Den svarta bollen krossar dem på hälften så många träffar."
+        "body": "Övertid för krossade block. Glas går sönder vid minsta kontakt, bärnsten tar några träffar, och det som vilar ovanpå följer med.",
+        "tip": "Styr bollar in i dem med dina snitt. Den svarta bollen krossar bärnsten på halva antalet träffar."
       },
       "shipEarly": {
         "title": "Tidig leverans",
@@ -770,7 +772,7 @@
       },
       "breakObstacles": {
         "title": "Krossa hinder",
-        "description": "Bärnstensblock krossas för bonusövertid; en stapel faller när stödet går. Att krossa är extra: att krympa planen vinner ändå. Du kan inte staketa mot dem, och den svarta bollen krossar dubbelt så fort."
+        "description": "Glastegel går sönder vid minsta kontakt, bärnstensblock tar några träffar; staplar rasar när stödet ger vika. Att krossa är extra, att krympa planen räcker ändå för att vinna. Du kan inte staketa mot någotdera."
       },
       "fenceTypes": {
         "title": "Stängseltyper",
@@ -1852,5 +1854,50 @@
       "band": "Nivå {{from}}-{{to}}",
       "credits": "Eftertexter"
     }
+  },
+  "pair": {
+    "title": "2 spelare",
+    "intro": "En spelplan, två mobiler, sida vid sida. Visa koden och låt den andra spelaren skanna den med kameran.",
+    "showCode": "Visa koden",
+    "showCodeHint": "Din partner skannar den och hoppar in",
+    "scanMe": "Skanna den här med den andra mobilens kamera.",
+    "preparing": "Förbereder koden",
+    "joining": "Ansluter till din partner",
+    "connected": "Anslutna. Banan startar.",
+    "failed": "Kunde inte nå den andra mobilen.",
+    "slowHint": "Båda mobilerna måste vara på samma Wi-Fi. Är de det redan, slå på en surfzon på den ena och anslut den andra.",
+    "tryAgain": "Försök igen",
+    "partner": "Partner",
+    "versionMismatch": "En mobil kör en äldre version. Uppdatera den och försök igen.",
+    "resumeWith": "Fortsätt med {{name}}",
+    "continueRun": "Fortsätt",
+    "newGame": "Nytt spel",
+    "waitingForPartner": "Väntar på din partner",
+    "reconnecting": "Återansluter",
+    "partnerLeft": "Din partner kopplade ner.",
+    "continueSolo": "Kör vidare ensam",
+    "lostSync": "Spelplanerna gled isär. Banan startas om.",
+    "yourFences": "Du",
+    "theirFences": "Partner",
+    "savedRun": "Ni har ett pågående spel, på bana {{level}}.",
+    "waitingFor": "Väntar på {{name}}",
+    "fencesDrawn": "Staket dragna",
+    "nearby": "Sök i närheten",
+    "nearbyHint": "Båda mobilerna trycker här. Ingen kod, inget Wi-Fi.",
+    "looking": "Söker efter din partner",
+    "confirmToken": "Båda mobilerna ska visa {{token}}. Tryck för att gå med.",
+    "join": "Gå med",
+    "needPermission": "Dev/End behöver en behörighet till för att hitta mobiler i närheten.",
+    "needLocation": "Android 11 och äldre kräver att platstjänster är på för att hitta mobiler i närheten. Dev/End använder aldrig din plats till något annat.",
+    "grant": "Tillåt",
+    "sameDevice": "Båda mobilerna uppger samma enhets-id, så de går inte att skilja åt. Installera om den ena, eller para ihop med koden i stället.",
+    "host": {
+      "shopping": "{{name}} är i butiken.",
+      "deciding": "{{name}} väljer.",
+      "pushing": "{{name}} avgör om ni ska pressa på.",
+      "continuing": "{{name}} avgör om ni ska lägga en continue."
+    },
+    "mismatchTitle": "Ni spelar inte samma spel.",
+    "mismatchBody": "En av er har uppgraderingar eller certifikat som den andra saknar, så de två spelplanerna skulle bete sig olika. Kör ett spel ni båda har, eller kom ikapp först."
   }
 }

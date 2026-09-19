@@ -34,6 +34,7 @@ import { startupPulse, winTargetPulse } from "../startupPulse";
 import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
 import { clampZoneSpeed } from "@/lib/physics/fenceZones";
 import { mix } from "./palette";
+import { simNow } from "@/lib/simClock";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -438,7 +439,7 @@ export class AreaLayer {
 
   private drawPulse(areas: CanvasGameState["coloredAreas"], light: LightScope, w2s: W2S): void {
     const list = areas ?? [];
-    const now = performance.now();
+    const now = simNow();
     let pulsing = false;
 
     this.pulseG.clear();

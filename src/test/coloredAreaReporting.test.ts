@@ -42,6 +42,7 @@ import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
 import type { ColoredArea, LevelConfig } from "@/types/level";
+import { simNow } from "@/lib/simClock";
 
 const MODS = new Proxy({}, {
   get: (_t, p) => (String(p).includes("Multiplier") ? 1 : 0),
@@ -170,13 +171,13 @@ describe("the lock is legible the moment it happens", () => {
    * which is what the player reported being unable to read.
    */
   it("stamps when the zone was activated, not just that it was", () => {
-    const before = performance.now();
+    const before = simNow();
     const { game } = sealCorner([LET]);
     const area = game.coloredAreas!.find(a => a.kind === "let")!;
 
     expect(area.satisfied).toBe(true);
     expect(area.satisfiedAt).toBeGreaterThanOrEqual(before);
-    expect(area.satisfiedAt).toBeLessThanOrEqual(performance.now());
+    expect(area.satisfiedAt).toBeLessThanOrEqual(simNow());
   });
 
   it("leaves an untouched zone unstamped", () => {

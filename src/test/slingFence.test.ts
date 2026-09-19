@@ -277,7 +277,10 @@ describe("the gesture is actually wired up", () => {
     const src = read("src/hooks/useGameInput.ts");
     expect(src, "nothing grabs a fence").toMatch(/loadedSlingAt\(/);
     expect(src, "the pull is never followed").toMatch(/slingDrag\.current\s*=/);
-    expect(src, "letting go never throws").toMatch(/fireSlingFence\(/);
+    // Letting go is a command now, so the throw itself is one file over.
+    const commands = read("src/lib/net/commands.ts");
+    expect(src, "letting go never sends the throw").toMatch(/kind: "slingRelease"/);
+    expect(commands, "letting go never throws").toMatch(/fireSlingFence\(/);
   });
 
   it("grabs BEFORE the cut path can refuse the press", () => {

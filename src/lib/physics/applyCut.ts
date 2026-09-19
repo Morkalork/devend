@@ -58,6 +58,7 @@ import {
 } from "@/lib/winSpec";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 import { deliveredCount } from "@/lib/physics/deliveryBox";
+import { simNow } from "@/lib/simClock";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -179,7 +180,7 @@ function recordClaimFlash(game: CanvasGameState, before: Uint8Array | null): voi
     grid.cellSize,
   );
   if (contours.length === 0) return;
-  (game.claimFlashes ??= []).push({ contours, startTime: performance.now() });
+  (game.claimFlashes ??= []).push({ contours, startTime: simNow() });
 }
 
 export function applyCutFn(
@@ -237,7 +238,7 @@ export function applyCutFn(
   // spent per FENCE.
   const cutId = generateWallId();
   const addSegmentWalls = (waypoints: Vector2[]) => {
-    const now = performance.now();
+    const now = simNow();
     for (let i = 0; i < waypoints.length - 1; i++) {
       const segment: Wall = {
         id: generateWallId(),
@@ -249,6 +250,7 @@ export function applyCutFn(
         // segment rather than per cut because a fence is only ever read as
         // walls after this point - the GrowingWall is gone.
         fenceTypeId: wall.fenceTypeId ?? STANDARD_FENCE_ID,
+        player: wall.player ?? 0,
         cutId,
       };
       if (game.spaceGrid) {
@@ -864,7 +866,7 @@ export function checkSpaceWin(
     // pushMode is still "none" here, so these would be pixel-identical repaints.
     // The two redundant full renders spiked this frame to 4 redraws and caused a
     // visible twitch right as the push-your-luck modal mounted.
-    game.levelClearedTime = performance.now();
+    game.levelClearedTime = simNow();
     // Ship Early: freeze the tempo clock at the first win moment, so time spent
     // in the prompt or pushing is never taxed. Only reachable once per map
     // (guarded by pushMode === "none" / pushPromptPending).
@@ -875,7 +877,7 @@ export function checkSpaceWin(
     // If a lock flash is still playing (the winning cut usually locked a ball),
     // hold the world and let it finish before the modal mounts; the game loop
     // opens the prompt when the flash ends. Otherwise open it right away.
-    const now = performance.now();
+    const now = simNow();
     let flashActive = false;
     for (const [, f] of game.assimilations) {
       if (now - f.startTime < LOCK_TOTAL_DURATION) { flashActive = true; break; }
@@ -909,7 +911,7 @@ export function triggerLevelComplete(
 ): void {
   if (game.levelComplete) return;
   game.levelComplete = true;
-  game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
+  game.levelCompleteTime = simNow(); // anchors the space bar fade-out
   playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
@@ -993,7 +995,7 @@ export function triggerLevelComplete(
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   // Celebratory beat: after any lock animations settle, sweep a shimmer down the
   // whole board (fences, obstacles and all) before the completion overlay mounts.
-  game.shimmerStart = performance.now() + lockDelay;
+  game.shimmerStart = simNow() + lockDelay;
   game.shimmerFrozen = callbacks.freezeOnComplete?.() ?? false;
   callbacks.onMapComplete?.(); // freeze the background code for the "dead" beat
   // Dev/playground freeze: play the shimmer, then hold the drained frame instead

@@ -77,7 +77,8 @@ import {
   generateRegionId,
   computeBallTrajectory,
 } from "@/lib/gameUtils";
-import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { Wall, WALL_THICKNESS, isPlayerFence } from "@/lib/wallGeometry";
+import { enqueueCommand, getLocalPlayer } from "@/lib/net/commands";
 import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
 import { fileManualEntry } from "@/lib/manual";
 import {
@@ -136,6 +137,27 @@ import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
+import { simNow } from "@/lib/simClock";
+
+/**
+ * Fences drawn by each player, off the board itself.
+ *
+ * Counted from the walls rather than kept as a running pair of counters,
+ * because a counter and a board can disagree and the board is the thing the
+ * players looked at. Undefined solo: a row that said "you 7, partner 0" on a
+ * single-player card would be a worse answer than no row.
+ */
+function fencesByPlayer(
+  game: CanvasGameState, isPair: boolean,
+): [number, number] | undefined {
+  if (!isPair) return undefined;
+  const counts: [number, number] = [0, 0];
+  for (const w of game.walls) {
+    if (!isPlayerFence(w)) continue;
+    counts[w.player === 1 ? 1 : 0] += 1;
+  }
+  return counts;
+}
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -207,7 +229,7 @@ export interface AbilityTimer {
   kind: string;
   name: string;
   color: string;
-  endMs: number;      // performance.now() at which it expires
+  endMs: number;      // simNow() at which it expires
   durationMs: number; // total length, for the fill ratio
 }
 
@@ -246,6 +268,15 @@ interface GameCanvasProps {
    *  Passed true only for the first map of a run. */
   introAssemble?: boolean;
   onGameStateChange?: (state: GameStateInfo) => void;
+  /**
+   * The lockstep session, when a pair is playing this map
+   * (TWO_PLAYER_PLAN.md step 4). Read fresh each frame; null is solo play and
+   * changes nothing about the loop.
+   */
+  lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
+  /** True on the phone that is NOT the host of a pair run: it plays the board
+   *  but answers none of the run's questions. */
+  isPairGuest?: boolean;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -344,6 +375,8 @@ export function GameCanvas({
   totalLevels,
   totalScore,
   lives,
+  lockstep,
+  isPairGuest = false,
   onLivesChange,
   onGrantAbility,
   abilityCharges,
@@ -541,7 +574,7 @@ export function GameCanvas({
       // (game.dissolve is nulled on completion) to now, so it dissolves in fresh
       // when the modal is dismissed.
       if (game.dissolve && game.dissolve.reverse) {
-        game.dissolve.startTime = performance.now();
+        game.dissolve.startTime = simNow();
       }
       startGameLoop(game);
     }
@@ -718,6 +751,36 @@ export function GameCanvas({
   }, []);
   const onMessageRef = useRef<((id: GameMessageId) => void) | null>(null);
   onMessageRef.current = raiseGameMessage;
+
+  /**
+   * The live modifier set, for the command layer.
+   *
+   * The loop is built once per map but modifiers change inside one (an ability
+   * fires, a pickup is claimed), and a command applied three frames later must
+   * see the set that is current then, not the one the loop closed over.
+   */
+  const activeModifiersRef = useRef(activeModifiers);
+  activeModifiersRef.current = activeModifiers;
+
+  /**
+   * The pair's lockstep session, behind a ref.
+   *
+   * The loop is built once per map and has to read the session FRESH each
+   * frame anyway (it changes when a pair connects, drops, or the players carry
+   * on alone). Going through a ref says that, and keeps the accessor's
+   * identity out of the loop's dependency list, where a new one every render
+   * would rebuild the loop mid-map.
+   */
+  const lockstepRef = useRef(lockstep);
+  lockstepRef.current = lockstep;
+
+  /** The level accent, for the shatter an ability's cleared fences leave. */
+  const accentColorRef = useRef(accentColor);
+  accentColorRef.current = accentColor;
+
+  /** Set below; held in a ref so the loop's deps can reach it without the
+   *  callback's identity rebuilding the loop mid-map. */
+  const abilityFiredRef = useRef<((abilityId: string) => void) | null>(null);
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
   const gameRef = useRef<CanvasGameState>({
@@ -1180,7 +1243,7 @@ export function GameCanvas({
       // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
       // so the spawn thaw carries no re-freeze cooldown.
       if (activeModifiers.spawnFreezeSeconds > 0) {
-        const thaw = performance.now() + activeModifiers.spawnFreezeSeconds * 1000;
+        const thaw = simNow() + activeModifiers.spawnFreezeSeconds * 1000;
         for (const ball of game.balls) ball.frozenUntil = thaw;
       }
       removedSamples = [];
@@ -1380,7 +1443,7 @@ export function GameCanvas({
         cctx.drawImage(canvas, 0, 0);
         if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
       }
-      game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: performance.now(), onComplete };
+      game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: simNow(), onComplete };
       startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
@@ -1414,14 +1477,14 @@ export function GameCanvas({
         // slide are never seen. The negative-elapsed window renders nothing
         // (tiles at full scatter, alpha clamped to 0), then the assemble
         // plays in full view.
-        startTime: performance.now() + 450,
+        startTime: simNow() + 450,
         // The board has finished flying in: reveal the tutorial overlay now.
         reverse: true, onComplete: () => { setBoardMaterialized(true); startGameLoop(game); },
       };
       startGameLoop(game);
       // Fade the shell's "Loading..." overlay out just as the first tiles fly
       // in (at dissolve.startTime), so the wait is covered end to end.
-      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - performance.now()));
+      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - simNow()));
     };
 
     // Build callbacks object for extracted physics functions
@@ -1454,19 +1517,19 @@ export function GameCanvas({
       // A circuit completed and its vault opened: flash the telegraph banner.
       onCircuitComplete: (announce?: string) => {
         if (!announce) return;
-        setBeatBanner({ key: performance.now(), announce });
+        setBeatBanner({ key: simNow(), announce });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
       },
       // A Deploy Charge fuse was armed by a routed fence: flash the wind-up cue.
       onChargeArmed: () => {
-        setBeatBanner({ key: performance.now(), announce: "game.chargeArmed" });
+        setBeatBanner({ key: simNow(), announce: "game.chargeArmed" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
       },
       // A Data Stream span was harvested by a fence running along it.
       onStreamHarvested: (_hours, announce) => {
-        setBeatBanner({ key: performance.now(), announce: announce ?? "game.streamHarvested" });
+        setBeatBanner({ key: simNow(), announce: announce ?? "game.streamHarvested" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
       },
@@ -1504,9 +1567,27 @@ export function GameCanvas({
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
       render,
+      // Everything a player command needs to reach React. Rebuilt per frame so
+      // it always carries the CURRENT modifiers rather than the ones the loop
+      // was constructed with.
+      lockstep: () => lockstepRef.current?.() ?? null,
+      commandDeps: () => ({
+        modifiers: activeModifiersRef.current,
+        setCutCount,
+        setFreezeUsesRemaining,
+        onMessage: (id) => onMessageRef.current?.(id),
+        clearFences: {
+          repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
+          setRemainingPercent,
+          fenceColor: accentColorRef.current,
+        },
+        onAbilityFired: (abilityId) => abilityFiredRef.current?.(abilityId),
+        onTapRemove: (info) => handleTapRemoveRef.current?.(info),
+        vibrate: (pattern) => { if (navigator.vibrate) navigator.vibrate(pattern); },
+      }),
       // A Deploy Charge detonated its slab: flash the payoff banner.
       onChargeBlown: (announce?: string) => {
-        setBeatBanner({ key: performance.now(), announce: announce ?? "game.chargeBlown" });
+        setBeatBanner({ key: simNow(), announce: announce ?? "game.chargeBlown" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
       },
@@ -1517,7 +1598,7 @@ export function GameCanvas({
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
       settleLaunchers: () =>
-        dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, performance.now()),
+        dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, simNow()),
       processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,
@@ -1556,7 +1637,7 @@ export function GameCanvas({
           clearAllFences(game, { repaintRegionCanvas, setRemainingPercent, fenceColor: "#ff5b5b" }),
         );
         tickMapBeats(game, level, levelNumber, (announce, effects) => {
-          setBeatBanner({ key: performance.now(), announce, effects });
+          setBeatBanner({ key: simNow(), announce, effects });
           if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
           // Outlasts the beat's lead, so the banner is still up when the effect
           // it described actually lands.
@@ -1578,7 +1659,7 @@ export function GameCanvas({
           lastTimeTierRef.current = tier;
           const announce = TIME_TIER_ANNOUNCE[tier];
           if (announce) {
-            setBeatBanner({ key: performance.now(), announce });
+            setBeatBanner({ key: simNow(), announce });
             if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
             beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
           }
@@ -1674,7 +1755,7 @@ export function GameCanvas({
     // assignment phase - seen in the wild as two Promotion drafts in a row).
     if (game.levelComplete) return;
     game.levelComplete = true;
-    game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
+    game.levelCompleteTime = simNow(); // anchors the space bar fade-out
     // Clear the prompt so the loop reaches its levelComplete branch (it bails
     // early while pushMode is "prompt") and the prompt overlay is dismissed,
     // revealing the board for the shimmer.
@@ -1683,7 +1764,7 @@ export function GameCanvas({
     // Same celebratory shimmer as a normal clear before the overlay mounts.
     // The push-your-luck prompt halted the rAF loop (it returns without
     // rescheduling), so restart it here or the shimmer window renders no frames.
-    game.shimmerStart = performance.now();
+    game.shimmerStart = simNow();
     game.shimmerFrozen = freezeOnCompleteRef.current;
     onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
     startGameLoop(game);
@@ -1748,6 +1829,10 @@ export function GameCanvas({
       startDissolveRef.current?.(() => {
         onLevelCompleteRef.current({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
+          // Who drew what, for a pair. Counted off the fences themselves so
+          // it cannot drift from the board; undefined solo, which hides the
+          // row rather than showing everything under one name.
+          fencesByPlayer: fencesByPlayer(game, !!lockstepRef.current?.()),
           expectedCuts: level.expectedCuts, basePoints: level.points,
           zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
           multipliedBase: breakdown.multipliedBase,
@@ -1829,7 +1914,7 @@ export function GameCanvas({
   // banked charge in the session. The button is disabled at 0 charges; the
   // lockout guards a rapid double-press from firing twice off one charge.
   const handleUseAbility = useCallback((abilityId: string) => {
-    const now = performance.now();
+    const now = simNow();
     if (now - abilityLockoutRef.current < 250) return;
     const game = gameRef.current;
     // Targeted abilities (Magnet) arm on tap and wait for a board tap; re-tapping
@@ -1838,13 +1923,25 @@ export function GameCanvas({
       setArmedAbility(prev => (prev === abilityId ? null : abilityId));
       return;
     }
-    const fired = fireAbility(abilityId, game, now, {
-      repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
-      setRemainingPercent,
-      fenceColor: accentColor,
-    });
-    if (!fired) return;
+    // Sent, not fired. The effect lands when the command applies, on BOTH
+    // devices, which is what stops an ability from moving one board and not
+    // the other. The lockout stays here: a double-press is a refusal, and
+    // refusals belong where the finger is.
     abilityLockoutRef.current = now;
+    enqueueCommand(game, { kind: "ability", player: getLocalPlayer(), abilityId });
+  }, []);
+
+  /**
+   * An ability actually fired, on either player's command.
+   *
+   * Both devices run this, so both spend the charge from their mirror of the
+   * run and both show the burst. A magnet that flashed only on the phone that
+   * pressed it would, to the other player, look like their balls moving for no
+   * reason.
+   */
+  const handleAbilityFired = useCallback((abilityId: string) => {
+    const game = gameRef.current;
+    const now = simNow();
     onSpendAbility?.(abilityId);
     const def = getAbility(abilityId);
     // Icon burst at the board centre so each ability reads at a glance.
@@ -1869,7 +1966,10 @@ export function GameCanvas({
         setAbilityTimers(prev => prev.filter(t => !(t.kind === def.kind && t.endMs === endMs)));
       }, durationMs);
     }
-  }, [onSpendAbility, accentColor]);
+  }, [onSpendAbility]);
+  // Read through a ref by the loop's command deps, so a new callback identity
+  // cannot rebuild the loop in the middle of a map.
+  abilityFiredRef.current = handleAbilityFired;
 
   // A board tap while a targeted ability is armed (Magnet): fire it at the point
   // and spend the charge; a tap outside the board (id/pos null) just cancels.
@@ -1877,9 +1977,10 @@ export function GameCanvas({
     setArmedAbility(null);
     gameRef.current.armedAbility = null;
     if (!abilityId || !worldPos) return;
-    const fired = fireTargetedAbility(abilityId, gameRef.current, performance.now(), worldPos);
-    if (fired) onSpendAbility?.(abilityId);
-  }, [onSpendAbility]);
+    enqueueCommand(gameRef.current, {
+      kind: "abilityTarget", player: getLocalPlayer(), abilityId, target: { ...worldPos },
+    });
+  }, []);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
 
   // The Rubber Band is the one targeted ability that takes a DRAG rather than a
@@ -1889,13 +1990,11 @@ export function GameCanvas({
   const handleBandFire = useCallback((shape: BandShape) => {
     setArmedAbility(null);
     gameRef.current.armedAbility = null;
-    // A band that caught nothing spends nothing. The player can see the ring of
-    // what it would catch while they drag, so an empty release is a decision
-    // they changed their mind about, not a miss to charge them for.
-    if (fireRubberBand(gameRef.current, shape, performance.now())) {
-      onSpendAbility?.('rubberBand');
-    }
-  }, [onSpendAbility]);
+    // Whether it caught anything, and so whether it costs a charge, is decided
+    // where the command applies: both devices have to reach the same answer,
+    // and only one of them has the finger.
+    enqueueCommand(gameRef.current, { kind: "rubberBand", player: getLocalPlayer(), shape });
+  }, []);
 
   const handleBandCancel = useCallback(() => {
     setArmedAbility(null);
@@ -1912,7 +2011,7 @@ export function GameCanvas({
     (gameRef.current.chestRewardsLog ??= []).push(rewardId);
     onGrantAbility?.(rewardId);
     const def = getAbility(rewardId);
-    setChestToast({ key: performance.now(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
+    setChestToast({ key: simNow(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
     if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
     chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
   }, [onGrantAbility]);
@@ -1923,7 +2022,7 @@ export function GameCanvas({
   // windows scale by it), and let the per-frame win check pick up the change.
   const handleTapRemove = useCallback((info: { x: number; y: number; color: string }) => {
     const game = gameRef.current;
-    (game.ballPops ??= []).push({ ...info, startTime: performance.now() });
+    (game.ballPops ??= []).push({ ...info, startTime: simNow() });
     setBallCount(game.balls.length || 1);
     playFenceBreakSound();
     vibrateFenceBreak();
@@ -2271,7 +2370,10 @@ export function GameCanvas({
 
       <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />
 
-      {pushMode === "prompt" && clearedPercent !== null && (
+      {/* The push prompt halts the world on BOTH devices, so both see it; only
+          the host may answer it. A guest that could also answer would settle a
+          question about one run twice, and the two answers can differ. */}
+      {pushMode === "prompt" && clearedPercent !== null && !isPairGuest && (
         <PushYourLuckOverlay
           remainingPercent={clearedPercent}
           thresholdPercent={level.sizeThreshold}

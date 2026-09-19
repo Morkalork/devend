@@ -48,9 +48,10 @@ ledger, the combination matrix, the per-map conventions, the engine
 constraints a map must satisfy, and the map archetypes in section 11),
 **FENCE_TYPES_PLAN.md** for the design of the fence-slot bar (built),
 **DEMOLITION_PLAN.md** for the plan and build record of level 17, the first
-Demolition map (built), **TWO_PLAYER_PLAN.md** for the investigation and build
-order of the two-phone co-op mode (proposed, not built), and **ANDROID.md**
-for Capacitor/Play-Store packaging.
+Demolition map (built), **TWO_PLAYER_PLAN.md** for the design and build record
+of Pair Programming, the two-phone co-op mode (built; deterministic lockstep
+over a WebRTC or Nearby Connections link, no server in play), and
+**ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions
 
