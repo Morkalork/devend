@@ -187,7 +187,7 @@ Every mechanic gets a status, and the status decides what it costs.
 |---|---|---|---|---|---|
 | colored area (bonus) | D | Meet | 3 | 5 | 9, 14, 17, 21, 22, 24, 26, 28, 29, 31, 33 |
 | mover | C | Meet | 4 | 5 | 7, 9, 13, 22, 23, 29, 33 |
-| breakable | A | Meet | 5 | 6 | 7-9, 11-13, 16, 18, 19, 25, 29, 32 |
+| breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
@@ -195,7 +195,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | bumper | C | Compressed | 12 | 13 | - |
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
-| brittle | A | Compressed | 17 | - | - |
+| brittle | A | Meet | 5 | 6 | 7, 9, 17 |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 19 | - | 31 |
@@ -449,9 +449,9 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
 | 3 | **Meet** colored area (bonus) | topology | A pink box that pays 1.5x and costs nothing to ignore. |
 | 4 | **Meet** mover | Fight topology | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". |
-| 5 | **Meet** breakable | Use mover, Use colored area | Six hits buy a second doorway the patrol never reaches. |
-| 6 | - | Fight breakable | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
-| 7 | **Compressed** chest | Use breakable, Fight mover | An open alcove worth two different things, and they compete for the same ball. |
+| 5 | **Meet** brittle | Use mover, Use colored area | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached. |
+| 6 | - | Fight brittle | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
+| 7 | **Compressed** chest | Use brittle, Fight mover | An open alcove worth two different things, and they compete for the same ball. The chest is the map's first block that does NOT go on one touch. |
 | 8 | **Compressed** reveals, **Meet** colored area (gate) | Break colored area | The box stops being optional: clear to 81% AND lock a ball in it, on ground that does not exist until you pay for it. |
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
@@ -1795,9 +1795,25 @@ substitute for it.
 **Premise in one sentence:** *the balls are your hammer as well as your enemy,
 and the map is about what you break, not only what you trap.*
 
-**Status:** the Meet beat is built as level 17 "Deprecation" (section 5; plan
-and build record in `DEMOLITION_PLAN.md`). Drops, ball buffs and the targeted
-clause are unbuilt.
+**Status:** built at both ends of the ladder, and in the opposite order to the
+one planned. The archetype's set-piece is level 17 "Deprecation" (section 5;
+plan and build record in `DEMOLITION_PLAN.md`), but the one-touch brick it is
+built from now MEETS in act I: 5, 6, 7 and 9 open their walls with runs of
+them, so a player meets the verb on the gentlest material there is and meets
+force later. Drops, ball buffs and the targeted clause are unbuilt.
+
+**Why act I teaches on the brick, not the slab.** A slab asks two things at
+once: that you aim a ball at it, and that you hit it hard enough. Act I's job
+is the first of those, and pairing it with the second is how level 5 came to
+read as hardcore on the map that introduces breaking at all. A brick asks only
+the first. The slab, and the force it wants, now Meets on 8 and is developed
+on 11-13, which is where the build can answer it.
+
+It also removed a failure mode nobody had named. The required smash used to be
+ONE object, so a single cut on the wrong side of it buried the win: the bot won
+level 7 on none of eight seeds. Spread across eleven bricks there is no single
+object to bury, and the same sweep reads 7 of 8. Levels 5, 6 and 9 moved 5-to-6,
+5-to-7 and 4-to-8 on the same measurement.
 
 #### What it adds to the ladder
 
@@ -1811,7 +1827,9 @@ launcher, their bumpers and their mirror.
 Demolition makes the smash the subject, and it changes three things:
 
 1. **The wall is many small objects, not one slab.** A breakable that goes in
-   one touch, in a run of them. The wall opens *where the balls happen to hit
+   one touch, in a run of them. (Act I uses the same part in its simplest
+   arrangement: a single column standing in for a divider, where 17 uses three
+   rows standing in for a wall.) The wall opens *where the balls happen to hit
    it*, so the chamber it forms is a different chamber every ten seconds and
    the read a player took at second five has expired by second thirty. That is
    family A's grammar ("this wall will not be the same wall in a minute")

@@ -271,7 +271,7 @@
     "moverTutorialTitle": "⚠ Obstáculos móviles",
     "moverTutorialBody": "Los obstáculos naranjas patrullan un carril. Las bolas rebotan en ellos; una valla que los toque cuesta una vida.",
     "breakTutorialTitle": "✦ Romper cosas",
-    "breakTutorialBody": "Los bloques ámbar se rompen y dan puntos. Lleva bolas hasta ellos; no puedes vallar contra ellos.",
+    "breakTutorialBody": "El cristal se rompe al primer toque, el ámbar necesita varios. Lleva bolas hasta ellos; no puedes vallar contra ellos.",
     "chargeTutorialTitle": "✦ Desplegar Carga",
     "chargeTutorialBody": "Traza una valla junto a una mecha para armarla. Vuela su losa y abre espacio, pero también libera bolas cercanas y rompe tus vallas en el radio.",
     "streamTutorialTitle": "✦ Flujo de Datos",
@@ -435,8 +435,8 @@
       },
       "breakBonus": {
         "title": "Bono de demolición",
-        "body": "Horas extra por romper bloques ámbar. Las bolas los desgastan hasta romperlos, y lo apilado encima cae.",
-        "tip": "Dirige las bolas hacia los rompibles con tus cortes. La bola negra los destroza en la mitad de golpes."
+        "body": "Horas extra por romper bloques. El cristal cae al primer toque, el ámbar tarda unos cuantos, y lo que se apoye encima cae con él.",
+        "tip": "Dirige las bolas hacia ellos con tus cortes. La bola negra rompe el ámbar en la mitad de golpes."
       },
       "shipEarly": {
         "title": "Entrega temprana",
@@ -772,7 +772,7 @@
       },
       "breakObstacles": {
         "title": "Romper obstáculos",
-        "description": "Los bloques ámbar se rompen y dan horas extra; una pila cae si pierde su apoyo. Romper es extra: reducir el tablero sigue ganando. No puedes vallar contra ellos, y la bola negra los rompe el doble de rápido."
+        "description": "Los ladrillos de cristal caen al primer toque, los bloques ámbar tardan varios; las pilas se derrumban cuando cede su soporte. Romper es extra, reducir el tablero sigue bastando para ganar. No puedes vallar contra ninguno."
       },
       "fenceTypes": {
         "title": "Tipos de valla",

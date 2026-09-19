@@ -271,7 +271,7 @@
     "moverTutorialTitle": "⚠ Moving Obstacles",
     "moverTutorialBody": "Orange obstacles patrol a track. Balls bounce off them; a fence that touches one costs a life.",
     "breakTutorialTitle": "✦ Breaking Things",
-    "breakTutorialBody": "Amber blocks shatter for bonus points. Guide balls into them; you cannot fence against them.",
+    "breakTutorialBody": "Glass breaks on one touch, amber needs a few. Steer balls in; you cannot fence against them.",
     "circuitTutorialTitle": "✦ Wire the Integration",
     "circuitTutorialBody": "Draw a fence past a teal node to wake its sleeping ball, then trap it. Sleepers hold their space shut until woken.",
     "boxIntroTitle": "✦ The Done Column",
@@ -435,8 +435,8 @@
       },
       "breakBonus": {
         "title": "Demolition Bonus",
-        "body": "Overtime from smashing amber blocks. Balls chip at them until they shatter, and anything stacked on top falls.",
-        "tip": "Steer balls into breakables with your cuts. The black ball smashes them in half the hits."
+        "body": "Overtime from smashing blocks. Glass goes on one touch, amber takes a few, and whatever rests on top falls with it.",
+        "tip": "Steer balls into them with your cuts. The black ball breaks amber in half the hits."
       },
       "shipEarly": {
         "title": "Ship Early",
@@ -772,7 +772,7 @@
       },
       "breakObstacles": {
         "title": "Breaking Obstacles",
-        "description": "Amber blocks smash for bonus overtime; stacks fall when their support breaks. Breaking is extra, shrinking the board still wins. You cannot fence against a breakable, and the black ball breaks them twice as fast."
+        "description": "Glass bricks go on one touch, amber blocks take a few; stacks fall when their support breaks. Breaking is extra, shrinking the board still wins. You cannot fence against either."
       },
       "fenceTypes": {
         "title": "Fence Types",

@@ -659,6 +659,26 @@ export function rebuildRegionsKeepAll(game: CanvasGameState): void {
   paintCellRegionIds(grid, game.regions);
 }
 
+/**
+ * Will the engine build a destructible for this authored entity?
+ *
+ * Three flags say "this breaks", and they say different things about HOW: a
+ * hit count, a reward inside, a brick that goes on one touch. Only one of them
+ * is named `breakable`, and reading that field alone is a mistake three places
+ * had made independently - a brittle brick was invisible to the win
+ * highlight's fixture, to the ladder's "does this map carry content" check,
+ * and to act I's hit-count cap, all of which then reported an act I map as
+ * carrying nothing to smash while the player was smashing it.
+ *
+ * So the rule lives here, once, beside the code that acts on it, and initGame
+ * reads it rather than repeating it.
+ */
+export function entityIsDestructible(
+  e: { kind?: string; breakable?: boolean; chest?: boolean; brittle?: boolean },
+): boolean {
+  return e.kind === "wall" && (!!e.breakable || !!e.chest || !!e.brittle);
+}
+
 // ── Treasure chests (#38) ────────────────────────────────────────────────────
 
 /**

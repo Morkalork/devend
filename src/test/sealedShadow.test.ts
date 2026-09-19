@@ -48,11 +48,31 @@ function board(levelNumber: number) {
   return {
     ...data, activeWalls: [], objectDebris: [], pendingDestroys: [],
     chestLoot: [], pickups: [], pickupFeedback: [], coloredAreas: [],
+    // A brick run is a STACK: each brick rests on the one below it, so
+    // breaking a low one topples the rest, exactly as level 17's rows do. The
+    // fixture needs somewhere for those to fall.
+    fallingObjects: [],
   } as unknown as CanvasGameState;
 }
 
-const bounds = (d: DestructibleState) => {
-  const vs = d.obstaclePolygon!.vertices;
+/**
+ * Level 7's partition, which is a RUN of one-touch bricks rather than one
+ * slab since act I was reauthored to teach breaking on the gentlest material
+ * there is.
+ *
+ * The wall it makes is the same wall in the same footprint, so everything this
+ * file claims still holds; it is simply held up by eleven objects instead of
+ * one, and the pocket behind it is given back a brick at a time. Taking the
+ * whole run is what keeps this a test about a WALL coming down.
+ */
+const partitionRun = (game: CanvasGameState): DestructibleState[] => {
+  const run = game.destructibles.filter(d => d.id.startsWith("partition-"));
+  if (run.length === 0) throw new Error("level 7 has no partition run: has it been re-cut?");
+  return run;
+};
+
+const bounds = (d: DestructibleState | DestructibleState[]) => {
+  const vs = (Array.isArray(d) ? d : [d]).flatMap(x => x.obstaclePolygon!.vertices);
   return {
     minX: Math.min(...vs.map(v => v.x)), maxX: Math.max(...vs.map(v => v.x)),
     minY: Math.min(...vs.map(v => v.y)), maxY: Math.max(...vs.map(v => v.y)),
@@ -81,16 +101,20 @@ function capture(game: CanvasGameState, pick: (x: number, y: number) => boolean)
 describe("the pocket a breakable was holding shut", () => {
   it("comes back when the breakable does down", () => {
     const game = board(7);
-    const part = game.destructibles.find(d => d.id === "partition")!;
-    const b = bounds(part);
+    const run = partitionRun(game);
+    const b = bounds(run);
     const grid = game.spaceGrid!;
     const shadow = capture(game, (x, y) =>
       x > b.maxX + grid.cellSize && y >= b.minY && y <= b.maxY);
     expect(shadow.length, "the fixture sealed nothing: has level 7 been re-cut?")
       .toBeGreaterThan(100);
 
-    part.destroyed = true;
-    game.pendingDestroys.push(part);
+    // The whole wall, because the claim is about a wall coming down. A single
+    // brick gives back only its own share, which is the mechanic working.
+    for (const part of run) {
+      part.destroyed = true;
+      game.pendingDestroys.push(part);
+    }
     processDestroysFn(game, CB, 7, DEFAULT_MODIFIERS);
 
     const back = shadow.filter(i => grid.cells[i] === CellState.ACTIVE).length;
@@ -112,8 +136,8 @@ describe("the pocket a breakable was holding shut", () => {
     // nowhere - which is the OTHER way this passes for the wrong reason.
     const game = board(7);
     const grid = game.spaceGrid!;
-    const part = game.destructibles.find(d => d.id === "partition")!;
-    const b = bounds(part);
+    const run = partitionRun(game);
+    const b = bounds(run);
 
     // Everything beyond the wall, captured.
     capture(game, x => x > b.maxX + grid.cellSize);
@@ -124,8 +148,9 @@ describe("the pocket a breakable was holding shut", () => {
     } as never);
 
     // What detachObstacle does before it asks which cells to reopen.
-    game.obstaclePolygons = game.obstaclePolygons.filter(p => p !== part.obstaclePolygon);
-    game.walls = game.walls.filter(w => !w.id.startsWith("obstacle-partition-edge-"));
+    const runPolys = new Set(run.map(d => d.obstaclePolygon));
+    game.obstaclePolygons = game.obstaclePolygons.filter(p => !runPolys.has(p));
+    game.walls = game.walls.filter(w => !w.id.startsWith("obstacle-partition-"));
 
     const seed: number[] = [];
     for (let i = 0; i < grid.cells.length; i++) {
@@ -149,10 +174,10 @@ describe("the pocket a breakable was holding shut", () => {
     // ground, which is what makes the zero above mean something.
     const open = board(7);
     const openGrid = open.spaceGrid!;
-    const openPart = open.destructibles.find(d => d.id === "partition")!;
+    const openRun = new Set(partitionRun(open).map(d => d.obstaclePolygon));
     capture(open, x => x > b.maxX + openGrid.cellSize);
-    open.obstaclePolygons = open.obstaclePolygons.filter(p => p !== openPart.obstaclePolygon);
-    open.walls = open.walls.filter(w => !w.id.startsWith("obstacle-partition-edge-"));
+    open.obstaclePolygons = open.obstaclePolygons.filter(p => !openRun.has(p));
+    open.walls = open.walls.filter(w => !w.id.startsWith("obstacle-partition-"));
     expect(floodSealedShadow(open, openGrid, seed).filter(beyond).length,
       "the flood reaches nothing even unfenced, so the test proves nothing").toBeGreaterThan(100);
   });
@@ -161,7 +186,9 @@ describe("the pocket a breakable was holding shut", () => {
     // The half that already worked has to keep working: this change adds to
     // the reopen, it does not replace it.
     const game = board(7);
-    const part = game.destructibles.find(d => d.id === "partition")!;
+    // One brick this time: the ground a single brick stood on is exactly the
+    // ground its own break has to give back.
+    const part = partitionRun(game)[0];
     const b = bounds(part);
     const grid = game.spaceGrid!;
     const centre = {

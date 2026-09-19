@@ -20,6 +20,7 @@ import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinSpec } from "@/types/winSpec";
 import type { LevelConfig, LevelData } from "@/types/level";
+import { entityIsDestructible } from "@/lib/physics/destructibles";
 
 const LEVELS = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
@@ -113,10 +114,13 @@ describe("every act I requirement has something to point at", () => {
   it.each([5, 6, 7, 8, 9])("level %i announces what its win needs", (n) => {
     const level = at(n);
     const built = winHighlightRects(resolveWinSpec(level, NO_RUN_RULES), board({
-      // The runtime shape, standing in for initGame: one breakable per authored
-      // breakable entity, and the map's own areas.
+      // The runtime shape, standing in for initGame: one breakable per
+      // authored destructible, and the map's own areas. Through the engine's
+      // own reading of "destructible", not a second copy of it: a fixture that
+      // only knew about `breakable` reported act I's brittle bricks as nothing
+      // to point at, on the two maps that introduce breaking.
       destructibles: (level.entities ?? [])
-        .filter(e => e.kind === "wall" && e.breakable)
+        .filter(entityIsDestructible)
         .map(e => slab(String(e.id))),
       coloredAreas: level.coloredAreas ?? [],
     } as unknown as Partial<CanvasGameState>));

@@ -40,6 +40,7 @@ import {
 } from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
+import { entityIsDestructible } from "@/lib/physics/destructibles";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
@@ -786,9 +787,11 @@ export function createInitialGameData(
         // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
         // the #37 path above and don't participate in break-stacks.
         if (!isMirror) {
-          // A treasure chest is a breakable too, even if `breakable` is omitted,
-          // and so is a brittle brick: both flags describe HOW it breaks.
-          const isBreakable = !!entity.breakable || !!entity.chest || !!entity.brittle;
+          // A treasure chest is a breakable too, even if `breakable` is
+          // omitted, and so is a brittle brick: both flags describe HOW it
+          // breaks. The rule is entityIsDestructible's, not this line's, so
+          // everything that asks the question gets the same answer.
+          const isBreakable = entityIsDestructible(entity);
           obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: isBreakable });
           if (isBreakable) {
             const dest: DestructibleState = {
