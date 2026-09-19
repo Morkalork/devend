@@ -203,7 +203,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   // manage zoom themselves. Mounted here rather than on the game screen because
   // it has to be the default: a pinch that lands on the shop or a draft card is
   // the same accident with the same un-undoable result. See lib/zoomGuard.
-  useZoomGuard(navigation.currentScreen);
+  // Returns whether a zoom got through anyway and would not go back (see
+  // lib/viewportZoom): the game screen pauses the map on it rather than letting
+  // the balls play on behind a view the player cannot read.
+  const viewportZoomStuck = useZoomGuard(navigation.currentScreen);
   // Admin is on automatically where the game is being BUILT rather than played:
   // the local dev server, and the staging deploy. Everywhere else it is still
   // unlocked by the secret gesture (tap the welcome-screen ball 10 times), so no
@@ -437,6 +440,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onRecover={navigation.goToWelcome}
               >
               <GameScreen
+                viewportZoomStuck={viewportZoomStuck}
                 lockstep={pair.lockstep}
                 isPairGuest={pair.phase === 'playing' && !pair.isHost}
                 pairBanner={

@@ -39,6 +39,29 @@ export interface AutoPauseState {
  */
 export function shouldAutoPause(state: AutoPauseState): boolean {
   if (!state.hidden) return false;
+  return pauseIsWelcome(state);
+}
+
+/**
+ * Whether a viewport that is stuck zoomed should pause the game.
+ *
+ * The fourth report of an accidental zoom came with "it is breaking
+ * everything", and it is the right description: the board no longer fits the
+ * screen, half the HUD is outside it, and the balls carry on regardless. The
+ * page cannot always be un-zoomed (lib/viewportZoom explains why not), but it
+ * can always stop costing the player lives while they sort the view out.
+ *
+ * Same three exemptions as hiding, for the same reasons, and it never RESUMES
+ * either: coming back is a deliberate tap, because a board that springs to life
+ * as the view settles is the same surprise this is trying to prevent.
+ */
+export function shouldPauseForZoom(state: AutoPauseState & { zoomStuck: boolean }): boolean {
+  if (!state.zoomStuck) return false;
+  return pauseIsWelcome(state);
+}
+
+/** The conditions under which an automatic pause is not an interruption. */
+function pauseIsWelcome(state: AutoPauseState): boolean {
   if (state.alreadyPaused) return false;
   if (state.modalActive) return false;
   if (state.levelEnded) return false;

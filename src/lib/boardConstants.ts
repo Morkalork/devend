@@ -47,9 +47,44 @@ export function getDprCeiling(): number {
   return dprCeiling;
 }
 
-/** Effective device pixel ratio, capped at the current (adaptive) DPR ceiling. */
+/**
+ * The device's own pixel ratio, as last read while the page was NOT zoomed.
+ *
+ * `window.devicePixelRatio` is not a property of the screen alone: on iOS
+ * Safari it moves with the page's zoom, so a board re-sized while the reader is
+ * pinched in bakes its canvas, its board rect and every cached sprite at a
+ * ratio that belongs to the gesture rather than to the device - and bakes them
+ * back again on the way out. Remembering the unzoomed reading costs one number
+ * and makes a zoom cosmetic to everything downstream of it.
+ */
+let nativeDpr = 0;
+
+/**
+ * Effective device pixel ratio, capped at the current (adaptive) DPR ceiling.
+ *
+ * Reads the live ratio while the page sits at scale 1 and remembers it; while
+ * the page is zoomed it hands back what it remembered, so nothing re-sizes
+ * itself around a gesture. See lib/viewportZoom for the rest of that story.
+ */
 export function getDevicePixelRatio(): number {
-  return Math.min(window.devicePixelRatio || 1, dprCeiling);
+  return Math.min(nativeDevicePixelRatio(), dprCeiling);
+}
+
+/** The uncapped native ratio, zoom excluded. Exported for the canvas sizing. */
+export function nativeDevicePixelRatio(): number {
+  const live = window.devicePixelRatio || 1;
+  const scale = window.visualViewport?.scale ?? 1;
+  // Only a reading taken at rest can be trusted to be the device's own, so a
+  // zoomed page keeps whatever was last seen at rest. The first reading always
+  // wins if the page opens zoomed: one wrong number is still better than a
+  // ratio that changes under every pinch.
+  if (nativeDpr === 0 || Math.abs(scale - 1) <= 0.02) nativeDpr = live;
+  return nativeDpr;
+}
+
+/** Forget the remembered ratio. Tests only; nothing in the game needs it. */
+export function resetNativeDevicePixelRatio(): void {
+  nativeDpr = 0;
 }
 
 export interface BoardRect {

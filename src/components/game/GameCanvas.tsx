@@ -113,6 +113,7 @@ import {
   screenToWorld,
   isPointInBoard,
   getDevicePixelRatio,
+  nativeDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupFeedback, PickupEffect, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
@@ -1322,7 +1323,10 @@ export function GameCanvas({
       const { width, height } = container.getBoundingClientRect();
       // Native device resolution (3x sanity cap saturates any panel); the
       // emergency 2D board keeps the capped + adaptive DPR.
-      const dpr = !useFallback2d ? Math.min(window.devicePixelRatio || 1, 3) : getDevicePixelRatio();
+      // nativeDevicePixelRatio, not window.devicePixelRatio: on iOS the latter
+      // moves with the page zoom, so a resize during a pinch would rebuild the
+      // backing store and every scale-keyed bake around the gesture.
+      const dpr = !useFallback2d ? Math.min(nativeDevicePixelRatio(), 3) : getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       pixiSizeRef.current = { w: physW, h: physH };

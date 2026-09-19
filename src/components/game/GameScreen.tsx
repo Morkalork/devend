@@ -34,7 +34,7 @@ import { STANDARD_FENCE_ID } from '@/lib/fences';
 import { GameMessageBar } from './GameMessageBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel, type PanelFocus } from './TopBarDetailsPanel';
-import { shouldAutoPause } from '@/lib/autoPause';
+import { shouldAutoPause, shouldPauseForZoom } from '@/lib/autoPause';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -95,6 +95,13 @@ interface GameScreenProps {
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
   lives: number;
+  /**
+   * The browser's zoom got through and would not go back (useZoomGuard).
+   *
+   * The map pauses on it: a board that no longer fits the screen must not go on
+   * costing lives while the player fights the view. See lib/viewportZoom.
+   */
+  viewportZoomStuck?: boolean;
   /**
    * The lockstep session, when this map is being played by a pair
    * (TWO_PLAYER_PLAN.md). Passed straight through to the canvas; absent means
@@ -202,6 +209,7 @@ export function GameScreen({
   ownedUpgradeIds,
   upgrades,
   lives,
+  viewportZoomStuck = false,
   lockstep,
   pairBanner,
   isPairGuest,
@@ -879,6 +887,27 @@ export function GameScreen({
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [isPaused, modalOverlayActive]);
 
+  /**
+   * Pause when the browser's zoom got through and stuck.
+   *
+   * Reported a fourth time as "I still accidentally zoom out some times and it
+   * is breaking everything", which is the accurate half nobody had acted on:
+   * three rounds of prevention all tried to stop the gesture and none of them
+   * did anything about the board once it had happened. The page un-zooms itself
+   * where it can (lib/viewportZoom) and this is what happens when it cannot -
+   * the same hold a hidden page gets, for the same reason, and it resumes the
+   * same way: by hand.
+   */
+  useEffect(() => {
+    if (shouldPauseForZoom({
+      zoomStuck: viewportZoomStuck,
+      hidden: false,
+      alreadyPaused: isPaused,
+      modalActive: modalOverlayActive,
+      levelEnded: levelEndedRef.current,
+    })) setIsPaused(true);
+  }, [viewportZoomStuck, isPaused, modalOverlayActive]);
+
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -1462,6 +1491,14 @@ export function GameScreen({
           >
             {t('game.paused')}
           </p>
+          {/* Why, when the player did not ask for this. A pause nobody chose is
+              a bug unless it says what it is: the view is zoomed, the game is
+              waiting, pinch back and carry on. */}
+          {viewportZoomStuck && (
+            <p className="max-w-xs text-center text-sm opacity-80 px-6" style={{ color: accentColor }}>
+              {t('game.pausedZoom')}
+            </p>
+          )}
           <button
             className="arcade-button-primary px-8 py-3 rounded-lg flex items-center gap-2 text-base font-bold"
             onClick={() => setIsPaused(false)}

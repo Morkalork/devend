@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- minimum-scale is here for the direction that kept being reported: without
+         it every browser that reads this tag was told it could scale DOWN as far
+         as it liked. Kept in step with VIEWPORT_META_CONTENT (src/lib/viewportZoom.ts),
+         which re-asserts this exact string to undo a zoom that got through. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0f0a" />
     <title>Dev/End</title>
     <meta name="description" content="Slice. Trap. Survive." />

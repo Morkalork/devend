@@ -261,6 +261,7 @@
   },
   "game": {
     "paused": "PAUSED",
+    "pausedZoom": "The view was zoomed, so the map is on hold. Pinch back to normal, then resume.",
     "resume": "Resume",
     "pause": "Pause",
     "gameMenu": "Game menu",

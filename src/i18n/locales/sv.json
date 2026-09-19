@@ -261,6 +261,7 @@
   },
   "game": {
     "paused": "PAUSAD",
+    "pausedZoom": "Vyn zoomades, så kartan är pausad. Nyp tillbaka till normal storlek och fortsätt.",
     "resume": "Återuppta",
     "pause": "Pausa",
     "gameMenu": "Spelmeny",

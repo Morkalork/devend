@@ -261,6 +261,7 @@
   },
   "game": {
     "paused": "EN PAUSA",
+    "pausedZoom": "La vista se amplio, asi que el mapa esta en pausa. Vuelve al tamano normal y continua.",
     "resume": "Reanudar",
     "pause": "Pausar",
     "gameMenu": "Menú del juego",
