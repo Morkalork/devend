@@ -79,7 +79,7 @@ import {
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS, isPlayerFence } from "@/lib/wallGeometry";
 import { enqueueCommand, getLocalPlayer } from "@/lib/net/commands";
-import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
+import { rotatePoint, rotateColoredArea, rotateGravityWell, type MapRotation } from "@/lib/mapRotation";
 import { fileManualEntry } from "@/lib/manual";
 import {
   registerWallImpact,
@@ -601,14 +601,23 @@ export function GameCanvas({
    */
   useEffect(() => {
     const game = gameRef.current;
+    // When the CURRENT hold reason began, so the HUD can report its age. A
+    // frozen board turned out to be a loop running perfectly with its sim clock
+    // stopped, where "time since the last frame" reads a healthy 16ms and the
+    // hold's age is the only number that says anything.
+    let heldReason: string | null = null;
+    let heldSince = 0;
     const id = window.setInterval(() => {
       const flags = holdFlagsOf(game);
       const now = performance.now();
+      const reason = loopHoldReason(flags);
+      if (reason !== heldReason) { heldReason = reason; heldSince = now; }
       // Reported whether or not anything is wrong, and BEFORE the returns
       // below: the whole point is that a screenshot of a stalled board can say
       // what the loop was doing. See recordLoopHealth.
       recordLoopHealth(
-        loopHoldReason(flags),
+        reason,
+        reason === null ? 0 : now - heldSince,
         game.loopFrameAt === 0 ? 0 : now - game.loopFrameAt,
         game.loopRestarts,
       );
@@ -919,6 +928,8 @@ export function GameCanvas({
     coloredAreaTargets: 0,
     lockedByType: {},
     lockPoints: [],
+    // Replaced per map by the level effect below, from initGame's own deal.
+    mapRotation: 0 as MapRotation,
     superiorLockCount: 0,
     superiorLockBonus: 0,
     breakablesSmashed: 0,
@@ -1200,6 +1211,10 @@ export function GameCanvas({
       game.pickupSpots = data.pickupSpots;
       game.coloredAreas = data.coloredAreas;
       game.gravityWells = data.gravityWells;
+      // The deal itself, for the one thing initGame cannot rotate on the way
+      // past: a win clause that names a PLACE is authored text, not geometry.
+      // See dealtSplit.
+      game.mapRotation = data.mapRotation;
       // Bug Squash. Copied like everything else in this block: updateBall reads
       // them off the game (it is never handed modifiers), and the harness gets
       // the same two numbers from the same builder.

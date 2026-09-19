@@ -39,6 +39,8 @@ import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 import { simNow, advanceSimClock } from "@/lib/simClock";
+import { createHoldClock } from "@/lib/holdClock";
+import { anyLockFlashActive, lockFlashEnd } from "@/lib/lockFlash";
 import { drainCommands, type CommandDeps } from "@/lib/net/commands";
 import { runStream } from "@/lib/runRng";
 
@@ -186,18 +188,19 @@ export function createGameLoop(
    * time instead. `game.paused` deliberately advances nothing: with a modal up,
    * or a launcher wager open, the clock does not run.
    */
-  let lastFrameTs = 0;
-  const holdElapsedMs = (timestamp: number): number => {
-    const ms = lastFrameTs === 0 ? 0 : Math.min(timestamp - lastFrameTs, MAX_FRAME_MS);
-    lastFrameTs = timestamp;
-    return ms;
-  };
+  const hold = createHoldClock(MAX_FRAME_MS);
 
   const gameLoopBody = (timestamp: number): void => {
-    // Keep the hold cursor level with the frame even on frames that take the
-    // active path, or the first hold after a spell of play would see the whole
+    // Open the frame for the hold clock. Once, here, on EVERY frame - active
+    // ones too, or the first hold after a spell of play would see the whole
     // stretch as one elapsed frame.
-    lastFrameTs = timestamp;
+    //
+    // This used to be a bare `lastFrameTs = timestamp` beside a reader that
+    // moved the same cursor when it was asked, and the two cancelled: every
+    // hold frame was worth exactly 0ms of sim time, so a finished map never
+    // dissolved, its overlay never mounted and the board sat rendering one
+    // frame for ever. See lib/holdClock for the whole story.
+    hold.beginFrame(timestamp);
     // The watchdog's heartbeat. Stamped FIRST, before any of the guards below
     // can return, so "the loop body ran" is what it records - the loop being
     // deliberately held still counts as alive, and only a loop that is not
@@ -218,7 +221,7 @@ export function createGameLoop(
 
     // Dissolve animation always runs regardless of gameOver/levelComplete state
     if (game.dissolve) {
-      advanceSimClock(holdElapsedMs(timestamp));
+      advanceSimClock(hold.elapsed());
       const d       = game.dissolve;
       const elapsed = (simNow() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
@@ -323,7 +326,7 @@ export function createGameLoop(
     // After level complete, keep rendering until all lock animations finish and
     // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
-      advanceSimClock(holdElapsedMs(timestamp));
+      advanceSimClock(hold.elapsed());
       if (game.assimilations.size > 0) {
         applyLockGlide(game, simNow());
         for (const ball of game.balls) {
@@ -343,7 +346,12 @@ export function createGameLoop(
         if (shimmerActive) schedule();
         return;
       }
-      if (game.assimilations.size > 0 || shimmerActive) {
+      // A flash that has PLAYED OUT is not a reason to keep drawing. This read
+      // `assimilations.size > 0`, and nothing ever removes a flash - the map
+      // clears them all when the next one is built - so on any map where a ball
+      // locked, a finished level rendered and rescheduled for ever behind the
+      // results screen. See lib/lockFlash.
+      if (anyLockFlashActive(game.assimilations.values(), simNow()) || shimmerActive) {
         callbacks.render();
         schedule();
       }
@@ -355,12 +363,9 @@ export function createGameLoop(
     // (no physics, input blocked via pushPromptPending) but keep rendering so
     // the flash and the lock glide play out, then open the modal.
     if (game.pushPromptPending) {
-      advanceSimClock(holdElapsedMs(timestamp));
+      advanceSimClock(hold.elapsed());
       const now = simNow();
-      let flashEnd = 0;
-      for (const [, f] of game.assimilations) {
-        flashEnd = Math.max(flashEnd, f.startTime + LOCK_TOTAL_DURATION);
-      }
+      const flashEnd = lockFlashEnd(game.assimilations.values());
       if (now < flashEnd) {
         applyLockGlide(game, now);
         game.lastTime = timestamp;

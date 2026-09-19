@@ -138,18 +138,43 @@ export function recordCut(ms: number): void {
  * revived it.
  */
 let _loopHold: string | null = null;
+let _loopHoldMs = 0;
 let _loopStaleMs = 0;
 let _loopRestarts = 0;
 
-export function recordLoopHealth(hold: string | null, staleMs: number, restarts: number): void {
+/**
+ * A hold this long is not a hold any more.
+ *
+ * Every legitimate one is an animation with an end: the longest is the level
+ * clear (lock flashes, then a shimmer, then a held beat, then the shatter),
+ * and all of it together is a few seconds. Fifteen is far past any of them and
+ * far short of a player's patience, so a hold still in force at that point is
+ * the thing to photograph.
+ */
+export const HOLD_STUCK_MS = 15000;
+
+export function recordLoopHealth(
+  hold: string | null, holdMs: number, staleMs: number, restarts: number,
+): void {
   _loopHold = hold;
+  _loopHoldMs = holdMs;
   _loopStaleMs = staleMs;
   _loopRestarts = restarts;
 }
 
-/** The loop line, exported so a test can read it without a browser. */
+/**
+ * The loop line, exported so a test can read it without a browser.
+ *
+ * HOW LONG THE HOLD HAS LASTED is the field that matters, and the field the
+ * first version of this line did not have. A frozen board reported from play
+ * was a loop rendering happily at 60fps with its sim clock stopped, so "time
+ * since the loop body ran" read a healthy 16ms and said nothing at all. The
+ * hold's own age says everything: `levelComplete 47.0s STUCK` names the bug.
+ */
 export function loopHealthLine(): string {
-  return `loop  ${_loopHold ?? "-"}/${Math.round(_loopStaleMs)}ms  x${_loopRestarts}`;
+  const stuck = _loopHold !== null && _loopHoldMs > HOLD_STUCK_MS ? " STUCK" : "";
+  return `loop  ${_loopHold ?? "-"} ${(_loopHoldMs / 1000).toFixed(1)}s`
+    + `  stale ${Math.round(_loopStaleMs)}ms  x${_loopRestarts}${stuck}`;
 }
 
 /**

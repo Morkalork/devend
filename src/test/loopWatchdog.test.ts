@@ -22,7 +22,7 @@ import { resolve } from "node:path";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import { ENGINE_MAPS } from "./fixtures/maps";
-import { recordLoopHealth, loopHealthLine } from "@/lib/rendering/perfStats";
+import { recordLoopHealth, loopHealthLine, HOLD_STUCK_MS } from "@/lib/rendering/perfStats";
 
 const RUNNING: HoldFlags = {
   paused: false, gameOver: false, levelComplete: false,
@@ -155,11 +155,22 @@ describe("a map starts with no push in force", () => {
 describe("a stalled board can say what it was doing", () => {
   it("puts the loop's state on the perf HUD, which screenshots", () => {
     // The only channel a stall reported from play has ever reached this
-    // codebase through is a photo of a phone. Both earlier reports arrived
-    // that way and neither could name the cause.
-    recordLoopHealth(null, 1200, 1);
-    expect(loopHealthLine()).toBe("loop  -/1200ms  x1");
-    recordLoopHealth("pushPrompt", 40, 0);
-    expect(loopHealthLine()).toBe("loop  pushPrompt/40ms  x0");
+    // codebase through is a photo of a phone. Three reports arrived that way
+    // and none of them could name the cause.
+    recordLoopHealth(null, 0, 1200, 1);
+    expect(loopHealthLine()).toBe("loop  - 0.0s  stale 1200ms  x1");
+    recordLoopHealth("pushPrompt", 400, 16, 0);
+    expect(loopHealthLine()).toBe("loop  pushPrompt 0.4s  stale 16ms  x0");
+  });
+
+  it("calls out a hold that has outlasted every animation it could be", () => {
+    // The shape of the freeze that three reports could not name: the loop
+    // running perfectly - 16ms since the last frame, no restarts - while the
+    // hold it is in never ends. Without the hold's AGE on the line there is
+    // nothing on the readout to notice.
+    recordLoopHealth("levelComplete", HOLD_STUCK_MS + 1, 16, 0);
+    expect(loopHealthLine()).toContain("STUCK");
+    recordLoopHealth("levelComplete", 2000, 16, 0);
+    expect(loopHealthLine()).not.toContain("STUCK");
   });
 });

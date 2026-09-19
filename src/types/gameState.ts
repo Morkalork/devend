@@ -9,6 +9,7 @@ import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
 import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, ShellShatterState, RubbleChunk, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState, SlowArea } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { WallGrid } from "@/lib/physics/wallGrid";
+import type { MapRotation } from "@/lib/mapRotation";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
@@ -403,6 +404,16 @@ export interface CanvasGameState {
    * the warning. Empty on maps whose beats carry no `announce`.
    */
   pendingBeats: { id: string; dueActiveSeconds: number }[];
+  /**
+   * Which of the four orientations this map was dealt in (0 = as authored).
+   *
+   * initGame has always picked one and rotated the concrete geometry into it,
+   * after which "the rest of the engine never needs to know" (mapRotation.ts).
+   * A win clause that names a PLACE is the exception: it is authored text, not
+   * geometry, so nothing rotates it and the reader has to. Kept on the state so
+   * readWinSnapshot can hand it to every such reader at once.
+   */
+  mapRotation: MapRotation;
   /**
    * Colored Areas for this map (gate AND bonus), in world space, already
    * rotated (mapRotation). Gate-only consumers filter with gateAreas().

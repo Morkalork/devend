@@ -1,3 +1,4 @@
+import type { MapRotation } from "@/lib/mapRotation";
 /**
  * What a map asks of you, as data instead of as control flow.
  *
@@ -199,6 +200,15 @@ export interface WinSnapshot {
    * so this is a handful of points at most.
    */
   lockPoints: { x: number; y: number }[];
+  /**
+   * The orientation this map was dealt in (0-3), because `lockPoints` are in
+   * the DEALT board's coordinates and a clause that names a place is written in
+   * the AUTHORED board's. Carried on the snapshot rather than asked of the game
+   * state by each reader: the HUD, the win gate and the stranding check all
+   * divide the same points by the same line, and a reader that forgot to turn
+   * the line would disagree with the other two about who had paid which side.
+   */
+  mapRotation: MapRotation;
   /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
   delivered: number;
   /** The map's breakable obstacles that have been destroyed. */

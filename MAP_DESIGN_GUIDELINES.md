@@ -448,7 +448,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 1 | - (the doorway) | - | Two rooms, one doorway, one ball. Locking every ball wins outright, so the corner nook is a button marked "finish now". |
 | 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
 | 3 | **Meet** colored area (bonus) | topology | A pink box that pays 1.5x and costs nothing to ignore. |
-| 4 | **Meet** mover | Fight topology | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". |
+| 4 | **Meet** mover | Fight topology, **Use** split locks | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". Map 2 asked for one lock in each half against a doorway on your own schedule; this one asks it against a doorway somebody is standing in. |
 | 5 | **Meet** brittle | Use mover, Use colored area | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached. |
 | 6 | - | Fight brittle | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
 | 7 | **Compressed** chest | Use brittle, Fight mover | An open alcove worth two different things, and they compete for the same ball. The chest is the map's first block that does NOT go on one touch. |
@@ -707,7 +707,7 @@ preferred direction to lose, so this is the first live-edge map that needs no
 means nothing to smash - which made it, for one map, the only act II board that
 did not ask for a smash. 16 is the second.
 
-#### 16 "Tech Debt" - Meet phasing, Compressed deformable, Use bumper  *(built)*
+#### 16 "Tech Debt" - Meet phasing, Compressed deformable, Use bumper, Fight split locks  *(built)*
 
 **Three objects that disagree about how fast the balls are.** 14 and 15 were
 terrain maps, bare boards where the whole read was a pull. 16 puts the furniture
@@ -1218,11 +1218,42 @@ The clause carries its own division, so it is not tied to any one map's shape:
 | `axis` | `vertical` (a left and a right) or `horizontal` (a top and a bottom) | `vertical` |
 | `at` | where the line sits, in world units along that axis | the board's centre, 450 |
 
-Level 2 sets `count` alone, because its jamb column is already centred on 450.
-A map divided by a shelf asks for `axis: horizontal`; a map whose divider is
-off-centre puts its own coordinate in `at` rather than being told its geometry
-is wrong. `winSpecProblems` rejects a line outside the play area, which is the
-one way to author this clause so it can never be met.
+Levels 2, 4 and 16 all set `count` alone, because all three are divided on the
+board's own midline. A map divided by a shelf asks for `axis: horizontal`; a map
+whose divider is off-centre puts its own coordinate in `at` rather than being
+told its geometry is wrong. `winSpecProblems` rejects a line outside the play
+area, which is the one way to author this clause so it can never be met.
+
+**The line turns with the deal, and the wording cannot.** From level 4 up a map
+is dealt in one of four rotations, and two of them put a vertical divider on the
+horizontal. Every other authored thing is rotated at load; a win clause is not
+geometry, so for a long time nothing rotated this one - which is the whole
+reason the clause shipped on level 2 and stayed there. `dealtSplit` turns it
+now, and everything comparing a lock position or a grid cell to the line goes
+through that; `splitLine` and `splitAxis` still answer what the MAP says, for
+the authoring tools, which have no deal to read.
+
+What cannot follow is the sentence. "Lock a ball on each side" is true of a
+board split either way, and "top and bottom" is true of one deal in two, and the
+"how to win" text is written before any deal exists. So on a map that turns,
+`axis: horizontal` is not a second option - it is the same option with a wrong
+caption, meaning only "vertical in the other two deals" - and `winSpecProblems`
+refuses it. Author the default, or pin the map with `neverRotates`.
+
+**The three maps, and why each is a different question.**
+
+| map | the divider | what makes the clause new there |
+|---|---|---|
+| 2 | a masonry jamb | Meet. The doorway is on your schedule, so the only cost is deciding. |
+| 4 | the same jamb, wider, with a patrol across it | Use. The trip across has a window rather than a price. |
+| 16 | a column whose top and bottom thirds phase out | Fight. The two halves are only two halves some of the time, and three balls mean a spare - the first time the clause is not "seal everything you have". |
+
+Measured against the bot at eight seeds, all three sit together: 6/8, 5/8, 6/8,
+with the losses in `requirementUnreachable` (and one `lockedOut` on 4). Level 4
+and 16 each cleared 8/8 with the plain `locks` clause they replaced, so that gap
+is the clause's difficulty, not the placement's - and it is the stranding column
+section 8 says to watch, which is the price this clause charges by design: its
+fail state IS the decision it exists to create.
 
 Two rules for using it:
 
@@ -1372,6 +1403,13 @@ From **level 4** up, a map is dealt in one of four rotations
 - **Any test that asserts a coordinate must pin the deal**, either by using a
   level number below 4 or by seeding the rotation rng. This has caused two
   separate ~1-in-4 CI flakes; see `corridorNoFalseLock.test.ts`.
+- **A win clause that names a PLACE has to be turned by hand.** initGame rotates
+  the concrete geometry and "the rest of the engine never needs to know"
+  (mapRotation.ts) - but a clause is authored text, not geometry, so nothing
+  rotates it. `splitLocks` is the only one so far; `dealtSplit` turns its line
+  and `readWinSnapshot` carries the deal on the snapshot so the HUD, the win
+  gate and the stranding check cannot disagree about which side was paid. A
+  future clause naming a zone or a coordinate inherits the same obligation.
 
 ### 7.3b Live outer walls, and the two ways they go wrong
 

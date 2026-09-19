@@ -248,12 +248,31 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    # USE split locks, and the reason this map is where they come back.
+    #
+    # Map 2 asked the same question against a doorway on YOUR schedule: the
+    # jamb is fixed, the gap is always there, and the only cost of getting a
+    # ball into the far half is deciding to. Here the same 210-unit gap is
+    # swept by a patrol, so the trip across has a window rather than a price,
+    # and the map's own lesson - "not can I draw this fence, but can I draw it
+    # NOW" - is asked of the ball as well as of the fence.
+    #
+    # `locks: 2` is retired rather than kept beside it. On a two-ball map "one
+    # on each side" already means both, so the pair would be the same demand
+    # twice in the goal row, which is the reasoning map 2 wrote down. The
+    # requirement COUNT is unchanged: this is the same ask with a place
+    # attached, not an extra thing to do on a tutorial map.
+    #
+    # The line is left to default to 450, where the jamb column already sits
+    # (x 437-463). First rotating map to carry the clause: see dealtSplit for
+    # why the line turns with the deal, and winSpecProblems for why a rotating
+    # map may not author the horizontal one.
     win:
       require:
         - kind: space
           threshold: 31
-        - kind: locks
-          count: 2
+        - kind: splitLocks
+          count: 1
     entities:
       - id: jamb-top
         kind: wall
@@ -1305,7 +1324,10 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, yellow]
+    ballTypeIds:
+      - red
+      - blue
+      - yellow
     ballSpeedScale: 0.75
     win:
       require:
@@ -1328,14 +1350,6 @@ levels:
         'y': 200
         width: 20
         height: 300
-        mirror: true
-      - id: mirror-b
-        kind: wall
-        shape: rect
-        x: 200
-        'y': 620
-        width: 300
-        height: 20
         mirror: true
       - id: governor-a
         kind: wall
@@ -1587,11 +1601,34 @@ levels:
     # which is the one thing this map must not be. Starting slow is what makes
     # the additions legible, and it is the same lesson 14 learned about kicks.
     ballSpeedScale: 0.8
+    # FIGHT split locks: the divider is the thing that will not hold still.
+    #
+    # The map's own note above says a bumper, a slab and a pillar have no state
+    # that records whether you engaged with them, so none of them can carry a
+    # clause and `space + locks` is the honest ask. That is right about content
+    # and wrong about this clause: `splitLocks` names no content at all, only a
+    # division - and this board has one. `flake-top`, `the-slab` and
+    # `flake-bottom` are a column at x 425-475, straight down the middle of a
+    # board whose centre is 450.
+    #
+    # Which makes it the column's map, not a second lock tally. Map 2's jamb is
+    # masonry and map 4's doorway is merely guarded; two thirds of THIS divider
+    # goes intangible on a cycle, so the two halves are only two halves some of
+    # the time, and a ball that was safely on the far side is not. Seal one each
+    # side while the pillars are solid, or spend a ball chasing a wall that was
+    # there when you started the cut.
+    #
+    # Three balls, so the ask is one lock per side and a spare - the first time
+    # the clause is not simply "seal everything you have". The spare is what
+    # pays for the bonus pocket in the corner, and choosing between them is the
+    # map's one real decision.
+    #
+    # Same requirement count as the `locks: 1` it replaces.
     win:
       require:
         - kind: space
           threshold: 13
-        - kind: locks
+        - kind: splitLocks
           count: 1
     # The one thing on the board that is worth more than the board.
     #

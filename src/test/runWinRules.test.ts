@@ -35,7 +35,7 @@ const plainWin = { require: [{ kind: "space", threshold: 30 }], alsoWinIf: [] };
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 100, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, lockPoints: [], delivered: 0, smashed: 0, terminals: 0,
+  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: 0, terminals: 0,
   harvested: 0, bossDefeated: false, allLocked: false, cuts: 0, par: 5,
   activeSeconds: 0, ...over,
 });
