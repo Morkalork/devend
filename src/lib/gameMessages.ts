@@ -41,7 +41,20 @@ export type GameMessageId =
    */
   | "lifeLostBall"
   /** A moving block ran through the fence you were drawing, and it cost a life. */
-  | "lifeLostMover";
+  | "lifeLostMover"
+  /**
+   * The finished cut would have sealed a ball away from the board.
+   *
+   * The two below are the refusals this file's opening note did not cover.
+   * They happen at COMPLETION rather than at the start, in applyCut rather
+   * than in the input layer, so the fence draws itself all the way across and
+   * THEN vanishes - which reads even less like a rule than a cut that never
+   * started. Reported from play on level 9, with the cut sketched on a
+   * screenshot and the question "could there be an invisible object there?".
+   */
+  | "cutWouldTrapBall"
+  /** The finished cut would have put the slabs the win needs out of reach. */
+  | "cutWouldBurySlabs";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -102,6 +115,8 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   launcherLoaded: true,
   lifeLostBall: true,
   lifeLostMover: true,
+  cutWouldTrapBall: true,
+  cutWouldBurySlabs: true,
 };
 
 export const GAME_MESSAGE_IDS = Object.keys(ALL_MESSAGE_IDS) as GameMessageId[];

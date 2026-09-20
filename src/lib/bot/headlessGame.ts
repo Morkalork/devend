@@ -48,6 +48,7 @@ import { findRegionContainingPoint } from "@/lib/gameUtils";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { GrowingWall, Vector2, GameResult } from "@/types/game";
 import type { MapFailKind, MapFailure } from "@/lib/mapFailure";
+import type { GameMessageId } from "@/lib/gameMessages";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifiers";
@@ -124,6 +125,16 @@ export interface BotEvents {
    * is about the map.
    */
   failKind?: MapFailKind;
+  /**
+   * Every refusal the game explained, in order.
+   *
+   * Recorded rather than stubbed because a refusal IS the game telling the
+   * player something, and the two that happen when a cut completes are silent
+   * on the board without it: the fence draws the whole way across and then
+   * vanishes. A harness that dropped these could not tell a cut refused with
+   * an explanation from one refused without.
+   */
+  messages: GameMessageId[];
 }
 
 export interface BotGame {
@@ -169,6 +180,7 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
       events.failKind ??= result.failure?.kind;
     },
     onLivesChange: () => { events.livesLost += 1; },
+    onGameMessage: (id: GameMessageId) => { events.messages.push(id); },
 
     // ── things that only exist to paint ──────────────────────────────────
     // Enumerated rather than proxied on purpose: a Proxy returning a function
@@ -273,7 +285,7 @@ export function createBotGame(
 
   const events: BotEvents = {
     levelComplete: false, gameOver: false, livesLost: 0,
-    cutsMade: 0, locks: 0, remainingPercent: 100,
+    cutsMade: 0, locks: 0, remainingPercent: 100, messages: [],
   };
   // The runtime fields first, then the map's own data over the top - the same
   // order GameCanvas builds its gameRef in. createInitialGameData describes a

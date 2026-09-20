@@ -226,6 +226,11 @@ export function applyCutFn(
     for (const seg of allSegs) {
       if (wouldWallTrapBallCheck(seg.start, seg.end, game)) {
         game.activeWalls = game.activeWalls.filter(w => w !== wall);
+        // Say so. Both refusals in this block happen at COMPLETION, so the
+        // fence draws the whole way across and then vanishes - which reads
+        // less like a rule than a cut that never started, and was reported as
+        // "could there be an invisible object there?". See lib/gameMessages.
+        callbacks.onGameMessage?.("cutWouldTrapBall");
         return;
       }
     }
@@ -239,8 +244,13 @@ export function applyCutFn(
     // the same thing. See smashReach.cutWouldBurySmashes.
     if (cutWouldBurySmashes(game, resolveWinSpec(level, activeModifiers), allSegs, wall.thickness)) {
       game.activeWalls = game.activeWalls.filter(w => w !== wall);
-      // Flare the win markers, so the refusal points at what it protected.
+      // Flare the win markers, so the refusal points at what it protected...
       game.smashRefusedAtSeconds = game.activePlaySeconds;
+      // ...and say it in words, because the markers can be anywhere. The cut
+      // that prompted this was drawn in the right-hand chamber of level 9
+      // while the slabs it would have orphaned were in the left one, so the
+      // only cue fired where the player was not looking.
+      callbacks.onGameMessage?.("cutWouldBurySlabs");
       return;
     }
   }
