@@ -85,12 +85,44 @@ export interface WinTargetPulse {
 /** Seconds for one full breath in and out. */
 const BREATHE_PERIOD = 1.8;
 
-export function winTargetPulse(activePlaySeconds: number): WinTargetPulse {
+export function winTargetPulse(
+  activePlaySeconds: number,
+  /**
+   * 0..1 offset into the breath, so two markers need not breathe together.
+   *
+   * The sine was chosen to read as breathing rather than blinking, and with
+   * ONE marker on the board it does. Act I's maps now ask for half their
+   * bricks instead of one, so a map can carry twelve at once - and twelve
+   * rings sharing a clock do not read as twelve things breathing, they read as
+   * the board itself pulsing once every 1.8 seconds. Reported as "blinking
+   * maps".
+   *
+   * The caller derives this from something that does not move (the slab's own
+   * position), not from the marker's index: the set shrinks as slabs are
+   * smashed or sealed away, and an index would re-phase every survivor each
+   * time one left.
+   */
+  phaseOffset = 0,
+): WinTargetPulse {
   if (!(activePlaySeconds >= 0)) return { breathe: 0 };
   // 0..1, peaking mid-period. Sine rather than a triangle so it reads as
   // breathing rather than blinking.
-  const phase = (activePlaySeconds % BREATHE_PERIOD) / BREATHE_PERIOD;
+  const phase = ((activePlaySeconds / BREATHE_PERIOD) + phaseOffset) % 1;
   return { breathe: (1 - Math.cos(phase * Math.PI * 2)) / 2 };
+}
+
+/**
+ * A marker's place in the breath, from where it stands on the board.
+ *
+ * Deterministic and stateless, so a marker keeps its phase for the whole map
+ * however the set around it changes, and two slabs a board apart are reliably
+ * out of step. The multipliers are small irrationals-by-eye: any pair of
+ * numbers that do not share a factor with the lattice would do, and these
+ * spread act I's brick rows rather than landing them all on the same beat.
+ */
+export function winTargetPhase(x: number, y: number): number {
+  const p = (x * 0.00731 + y * 0.01117) % 1;
+  return p < 0 ? p + 1 : p;
 }
 
 /**

@@ -159,3 +159,55 @@ describe("the highlight is wired in, not just computed", () => {
     expect(layer).toMatch(/ring\(r, false\)/);
   });
 });
+
+describe("a marker points only at something the player can act on", () => {
+  /**
+   * Reported as "blinking maps, after I have fenced off an area with a
+   * destructible in it".
+   *
+   * The marker set only ever dropped a slab when it was DESTROYED, so a slab
+   * sealed into claimed ground kept a ring breathing over it for the rest of
+   * the map - an instruction to do something that can no longer be done. That
+   * was a footnote while a map asked for one brick. Act I now asks for half of
+   * twelve, so the clause stays unmet for most of the map, every un-smashed
+   * brick carries a ring, and one fence across a run seals several away at
+   * once: measured on level 7, a single cut took the set from 12 to 5.
+   */
+  const grid = () => ({
+    cellSize: 10, width: 100, height: 100, originX: 0, originY: 0,
+    cells: new Uint8Array(10000).fill(0),      // 0 = ACTIVE
+    cellRegionIds: new Array(10000).fill("r1"),
+    activeCount: 10000, initialActiveCount: 10000,
+  });
+
+  const withGrid = (over: Partial<CanvasGameState> = {}) => board({
+    spaceGrid: grid() as never,
+    balls: [{ id: "b", state: "active", radius: 18 }] as never,
+    ...over,
+  });
+
+  const smash = spec([{ kind: "smashed", count: 1 }]);
+
+  it("points at a slab a ball can still reach", () => {
+    expect(winHighlightRects(smash, withGrid({
+      destructibles: [slab("s")] as never,
+    }))).toHaveLength(1);
+  });
+
+  it("stops pointing at one sealed into claimed ground", () => {
+    // Every cell around the slab taken, which is what a fence across its run
+    // leaves behind once the capture has run.
+    const g = withGrid({ destructibles: [slab("s")] as never });
+    g.spaceGrid!.cells.fill(1);               // 1 = REMOVED
+    expect(winHighlightRects(smash, g),
+      "a slab nothing can reach is still being pointed at").toHaveLength(0);
+  });
+
+  it("keeps pointing when it cannot tell", () => {
+    // No grid to read: unknown is not lost, the same direction canStillStrike
+    // takes everywhere else. A board that cannot answer keeps the marker.
+    expect(winHighlightRects(smash, board({
+      destructibles: [slab("s")] as never,
+    }))).toHaveLength(1);
+  });
+});
