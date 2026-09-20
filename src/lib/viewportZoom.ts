@@ -30,7 +30,11 @@
  *   HOLD      if it is still zoomed after that, the map pauses (GameScreen,
  *             beside the pause for a hidden page). The board being wrong is not
  *             a reason to lose a life to it, and a player wrestling with a
- *             zoomed view is not playing.
+ *             zoomed view is not playing. Unlike the undo this does NOT wait
+ *             for the fingers to lift, and the fifth report is why: "I
+ *             accidentally zoomed out again while drawing a fence". A fence is
+ *             a drag, so the finger is down throughout, so gating both halves
+ *             on the lift meant the game sat out the one case it was built for.
  *
  * ── Why the undo is best-effort and the pause is not ───────────────────────
  *
@@ -147,9 +151,10 @@ export interface ZoomWatchCallbacks {
 /**
  * Watch the visual viewport, undo what can be undone, and report what cannot.
  *
- * The undo is attempted on every change and the callback waits out the grace
- * window, so a zoom the browser lets us take back never reaches the game at
- * all - the player sees the board jump back and nothing else happens.
+ * The undo is attempted on every change between gestures and the callback waits
+ * out the grace window, so a zoom the browser lets us take back never reaches
+ * the game at all - the player sees the board jump back and nothing else
+ * happens. The report runs whether or not a finger is down; see `onChange`.
  *
  * Returns a teardown. Safe to install where `visualViewport` does not exist
  * (older WebViews, jsdom): it simply never fires.
@@ -166,35 +171,59 @@ export function watchViewportZoom(doc: Document, cb: ZoomWatchCallbacks): () => 
     if (timer !== null) { clearTimeout(timer); timer = null; }
   };
 
-  /** Decide what to do about the viewport as it stands. */
-  const settle = () => {
+  /**
+   * Decide what to do about the viewport as it stands.
+   *
+   * `mayUndo` is the finger gate and it covers the UNDO only. Noticing and
+   * holding are not gestures to be fought and run whatever the hands are doing;
+   * see the note on `onChange` below for the report that separated them.
+   */
+  const settle = (mayUndo: boolean) => {
     if (!isViewportZoomed(vv)) {
       clearTimer();
       if (stuck) { stuck = false; cb.onClear?.(); }
       return;
     }
-    restoreViewportZoom(doc);
+    if (mayUndo) restoreViewportZoom(doc);
     if (stuck || timer !== null) return;
     timer = setTimeout(() => {
       timer = null;
       // Read again rather than trusting the reading that armed this: the whole
-      // point of the wait is that the undo may have worked in the meantime.
+      // point of the wait is that the undo may have worked in the meantime, and
+      // mid-gesture it is that the reader may have let the pinch go. This is
+      // what keeps a pinch that snaps back by itself from pausing anything.
       if (!isViewportZoomed(vv)) return;
       stuck = true;
       cb.onStuck();
     }, ZOOM_GRACE_MS);
   };
 
-  // Nothing is undone while a finger is still on the glass. A pinch fires these
-  // continuously, and a page that snapped back on every frame of a gesture the
-  // reader is still making would feel broken in a new way rather than fixed -
-  // and would be fighting the one person it is supposed to be helping, who may
-  // be zooming on purpose. The lift is what asks the question.
-  const onChange = () => { if (fingersDown === 0) settle(); };
+  /**
+   * Nothing is UNDONE while a finger is still on the glass. A pinch fires these
+   * continuously, and a page that snapped back on every frame of a gesture the
+   * reader is still making would feel broken in a new way rather than fixed -
+   * and would be fighting the one person it is supposed to be helping, who may
+   * be zooming on purpose. The lift is what asks that question.
+   *
+   * The HOLD is not gated the same way, and the report that says why is "I
+   * accidentally zoomed out again WHILE DRAWING A FENCE". A fence is a drag,
+   * so the finger is down for the whole of it, so the one situation this was
+   * built for was the one situation it sat out: the grace timer was never even
+   * armed, and the board went on bouncing balls and taking lives behind a view
+   * the player could not read, for as long as they kept drawing.
+   *
+   * Holding mid-gesture is also the right thing on its own terms. A reader
+   * deliberately magnifying the page is not playing either, and 450ms of live
+   * pinch is long past an accident. Nothing pauses on a flick that settles by
+   * itself, because the timer re-reads the viewport before it reports.
+   */
+  const onChange = () => { settle(fingersDown === 0); };
   const onTouchStart = (e: Event) => { fingersDown = (e as TouchEvent).touches?.length ?? 1; };
   const onTouchEnd = (e: Event) => {
     fingersDown = (e as TouchEvent).touches?.length ?? 0;
-    if (fingersDown === 0) settle();
+    // The lift is the undo's cue, and it re-reads rather than trusting the
+    // last change event: the viewport may have moved since.
+    if (fingersDown === 0) settle(true);
   };
 
   vv.addEventListener("resize", onChange);

@@ -403,3 +403,134 @@ describe("it never fights a finger that is still down", () => {
     expect(onStuck, "a torn-down watcher still reports").not.toHaveBeenCalled();
   });
 });
+
+describe("the zoom that happens mid-fence", () => {
+  /**
+   * The fifth report, and the first that says WHEN: "I accidentally zoomed out
+   * again while drawing a fence."
+   *
+   * That when is the whole finding. A fence is drawn by putting a finger down
+   * and dragging, so the finger is down for the entire cut - and the recovery
+   * above gated BOTH of its halves on the last finger lifting. The undo being
+   * gated is right and stays. The hold being gated meant the grace timer was
+   * never even armed while a cut was in progress, so in the one situation this
+   * module was written for the game was never told anything at all: the board
+   * went on bouncing balls and taking lives behind a view the player could not
+   * read, for as long as they kept drawing.
+   *
+   * So the two halves are now separate. Undo waits for the hands; noticing and
+   * holding do not.
+   */
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  function touch(name: string, remaining: number): void {
+    const e = new Event(name, { bubbles: true });
+    Object.defineProperty(e, "touches", { value: new Array(remaining).fill({}) });
+    document.dispatchEvent(e);
+  }
+
+  /** A finger goes down to draw, a second lands, the page zooms out. */
+  function pinchMidDrag(fake: ReturnType<typeof fakeViewport>): void {
+    touch("touchstart", 1);
+    touch("touchstart", 2);
+    fake.vv.scale = 0.55;
+    fake.fire();
+  }
+
+  it("holds the map while the finger is still on the board", () => {
+    const fake = fakeViewport();
+    install(fake.vv);
+    const onStuck = vi.fn();
+    const stop = watchViewportZoom(document, { onStuck });
+
+    pinchMidDrag(fake);
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    expect(onStuck, "the board ran on, zoomed, for the rest of the cut")
+      .toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("still does not fight the fingers that are making it", () => {
+    // The half that was right all along. Separating the two must not quietly
+    // turn the undo back on mid-pinch, which is the behaviour the reader who
+    // is magnifying on purpose would experience as a page tearing itself away.
+    const fake = fakeViewport();
+    install(fake.vv);
+    const stop = watchViewportZoom(document, { onStuck: () => {} });
+
+    pinchMidDrag(fake);
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    expect(window.scrollTo, "it undid a zoom the fingers were still making")
+      .not.toHaveBeenCalled();
+    expect(metaContent(), "it rewrote the viewport mid-gesture")
+      .toBe(VIEWPORT_META_CONTENT);
+    stop();
+  });
+
+  it("says nothing about a wobble that settles before the grace is up", () => {
+    // The reason holding mid-gesture is safe: the timer re-reads the viewport
+    // rather than trusting the reading that armed it. A pinch the browser
+    // snaps back on its own never reaches the game, fingers down or not.
+    const fake = fakeViewport();
+    install(fake.vv);
+    const onStuck = vi.fn();
+    const stop = watchViewportZoom(document, { onStuck });
+
+    pinchMidDrag(fake);
+    fake.vv.scale = 1;
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    expect(onStuck, "a zoom that fixed itself paused the map").not.toHaveBeenCalled();
+    stop();
+  });
+
+  it("undoes it the moment the cut ends, as it always did", () => {
+    const fake = fakeViewport();
+    install(fake.vv);
+    const onStuck = vi.fn();
+    const stop = watchViewportZoom(document, { onStuck });
+
+    pinchMidDrag(fake);
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    expect(onStuck).toHaveBeenCalledTimes(1);
+
+    touch("touchend", 1);
+    touch("touchend", 0);
+    expect(window.scrollTo, "the lift did not ask the question").toHaveBeenCalled();
+    stop();
+  });
+
+  it("reports the hold once, not once per frame of the pinch", () => {
+    const fake = fakeViewport();
+    install(fake.vv);
+    const onStuck = vi.fn();
+    const stop = watchViewportZoom(document, { onStuck });
+
+    pinchMidDrag(fake);
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    for (let i = 0; i < 20; i++) { fake.vv.scale -= 0.01; fake.fire(); }
+    vi.advanceTimersByTime(ZOOM_GRACE_MS * 3);
+    expect(onStuck).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("clears when the view comes back, even with a finger still down", () => {
+    const fake = fakeViewport();
+    install(fake.vv);
+    const onStuck = vi.fn();
+    const onClear = vi.fn();
+    const stop = watchViewportZoom(document, { onStuck, onClear });
+
+    pinchMidDrag(fake);
+    vi.advanceTimersByTime(ZOOM_GRACE_MS + 1);
+    expect(onStuck).toHaveBeenCalledTimes(1);
+
+    fake.vv.scale = 1;
+    fake.fire();
+    expect(onClear, "the page was straight again and nothing said so")
+      .toHaveBeenCalledTimes(1);
+    // Not a resume: autoPause never resumes by itself (shouldPauseForZoom), so
+    // clearing only means the NEXT zoom can pause again.
+    stop();
+  });
+});
