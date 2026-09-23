@@ -69,6 +69,7 @@ import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/b
 import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMutators";
 import { getRunRng, getRunSeedText, setRunSeedText } from "@/lib/runRng";
 import { normaliseGravity } from "@/lib/physics/gravity";
+import { resolveBoardEdges } from "@/lib/physics/boardEdges";
 import { advanceSimClock, setSimNow, simNow, SIM_CLOCK_START_MS } from "@/lib/simClock";
 import { drainCommands, enqueueCommand } from "@/lib/net/commands";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
@@ -310,6 +311,8 @@ export function createBotGame(
     objective: null,
     ...createInitialGameData(level, levelNumber, modifiers),
   } as unknown as CanvasGameState;
+  // Same rule GameCanvas applies: a full-gravity map bounces on every side.
+  game.boardEdges = resolveBoardEdges(game.boardEdges, mutator?.behavior === "gravity");
   return {
     game, level, levelNumber, modifiers,
     callbacks: recordingCallbacks(events),

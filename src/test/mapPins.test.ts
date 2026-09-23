@@ -68,7 +68,7 @@ describe("a pinned mutator names a real one", () => {
 
   it("pins an id, never a behavior name", () => {
     // The exact confusion that produced the bug: the behaviors are crunch,
-    // overclock and gravity; the ids are crunch, overclock and gravity_well.
+    // overclock and gravity; the ids are crunch, overclock and tipping.
     // Two of the three collide, so "it worked when I tried it" proves nothing.
     const behaviors = new Set<string>(CATALOGUE.map(m => m.behavior));
     const ids = new Set<string>(CATALOGUE.map(m => m.id));

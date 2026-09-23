@@ -16,6 +16,7 @@ import {
   eligibleMutators,
   mutatorSpeedFactor,
   mutatorOvertimePremium,
+  isRollable,
 } from "@/lib/mapMutators";
 import { calculateScore } from "@/lib/scoring";
 import type { MapMutator, ActiveMapMutator } from "@/types/mapMutator";
@@ -28,12 +29,17 @@ const OVERCLOCK: MapMutator = {
   id: "overclock", name: "Overclock", description: "d", behavior: "overclock",
   weight: 1, params: { factor: 1.18 }, overtimePremium: 2,
 };
-/** The level-gated entry, so the eligibility range is tested against a real one. */
-const GRAVITY: MapMutator = {
-  id: "gravity_well", name: "Technical Gravity", description: "d", behavior: "gravity",
-  minLevel: 14, weight: 50, overtimePremium: 4,
+/** A level-gated entry, so the eligibility range has something to gate. */
+const GATED: MapMutator = {
+  id: "gated", name: "Gated", description: "d", behavior: "overclock",
+  minLevel: 14, weight: 50, params: { factor: 1.1 }, overtimePremium: 1,
 };
-const POOL = [CRUNCH, OVERCLOCK, GRAVITY];
+/** Full-map gravity, weighted to win every roll if the roll ever allowed it. */
+const GRAVITY: MapMutator = {
+  id: "tipping", name: "Standup", description: "d", behavior: "gravity",
+  weight: 1000, overtimePremium: 1,
+};
+const POOL = [CRUNCH, OVERCLOCK, GATED];
 
 describe("selectMapMutator (#54)", () => {
   it("returns null below the procedural band", () => {
@@ -47,16 +53,30 @@ describe("selectMapMutator (#54)", () => {
     expect(a).not.toBeNull();
   });
 
-  it("respects the eligible level range (gravity is level 14+)", () => {
-    expect(eligibleMutators(12, POOL).map(m => m.id)).not.toContain("gravity_well");
-    expect(eligibleMutators(14, POOL).map(m => m.id)).toContain("gravity_well");
+  it("respects the eligible level range", () => {
+    expect(eligibleMutators(12, POOL).map(m => m.id)).not.toContain("gated");
+    expect(eligibleMutators(14, POOL).map(m => m.id)).toContain("gated");
     // At level 12 it can never be picked even though its weight is huge.
     for (const s of ["1", "2", "3", "4", "5", "6", "7", "8"]) {
-      expect(selectMapMutator(12, createRng(s), POOL, 0)?.id).not.toBe("gravity_well");
+      expect(selectMapMutator(12, createRng(s), POOL, 0)?.id).not.toBe("gated");
     }
     // At level 14 its heavy weight means it shows up across seeds.
     const picks = ["1", "2", "3", "4", "5", "6"].map(s => selectMapMutator(14, createRng(s), POOL, 0)?.id);
-    expect(picks).toContain("gravity_well");
+    expect(picks).toContain("gated");
+  });
+
+  it("never rolls full-map gravity, whatever its weight", () => {
+    // Full-map gravity is pinned by the maps built around it and nowhere else.
+    // The random version put an unexplained pull on level 16.
+    expect(isRollable(GRAVITY)).toBe(false);
+    for (const level of [11, 14, 16, 20, 30]) {
+      for (const s of ["1", "2", "3", "4", "5", "6", "7", "8"]) {
+        expect(selectMapMutator(level, createRng(s), [...POOL, GRAVITY], 0)?.behavior)
+          .not.toBe("gravity");
+      }
+    }
+    // Alone in the pool it leaves the map vanilla rather than pulling.
+    expect(selectMapMutator(16, createRng("s"), [GRAVITY], 0)).toBeNull();
   });
 
   it("never mutates below the band even with a level-1 minLevel entry", () => {

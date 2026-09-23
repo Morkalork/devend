@@ -49,7 +49,7 @@ import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
-import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
+import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -505,7 +505,8 @@ export function GameCanvas({
     gameRef.current.mapMutator = mapMutator ?? null;
     gameRef.current.gravityConfig = mapMutator?.behavior === "gravity"
       ? normaliseGravity(mapMutator.gravity) : null;
-  }, [mapMutator]);
+    gameRef.current.boardEdges = resolveBoardEdges(level.boardEdges, mapMutator?.behavior === "gravity");
+  }, [mapMutator, level.boardEdges]);
   // The map's authored light. Lives on the game state rather than being read
   // from the level inside the renderer, so the renderer keeps taking one object
   // and nothing has to thread a LevelConfig down through the layers.
@@ -1274,7 +1275,8 @@ export function GameCanvas({
       // other built field: initGame returning it is not the same as the running
       // game having it, and a live floor that never reached the game would be a
       // map whose whole premise silently did nothing.
-      game.boardEdges         = data.boardEdges;
+      // A full-gravity map gets a bouncer on every side it did not author.
+      game.boardEdges         = resolveBoardEdges(data.boardEdges, mapMutator?.behavior === "gravity");
       game.weather            = data.weather;
       game.originalArea       = data.originalArea;
       game.basePlayableArea   = data.basePlayableArea;

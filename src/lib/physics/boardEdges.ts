@@ -130,3 +130,37 @@ export function applyBoardEdge(ball: Ball, spec: BoardEdgeSpec | undefined): voi
   ball.velocity.x = vx;
   ball.velocity.y = vy;
 }
+
+/**
+ * The kick every side gets on a full-gravity map that does not author its own.
+ * Level 14's number: under a pull that accelerates, the fall supplies the speed
+ * and the edge only has to put back what each bounce loses.
+ */
+export const FULL_GRAVITY_EDGE_KICK = 1.05;
+
+/**
+ * The edges a map actually plays with.
+ *
+ * A full-gravity map always has four live sides. Gravity drives every ball into
+ * whichever wall is "down" right now, and a plain wall there is where balls end
+ * up sliding and pooling; a bouncer on every side keeps them moving whichever
+ * way the room has turned. Authored sides win, so a map can still give one side
+ * a bearing or a heavier kick, and only the missing ones are filled in.
+ *
+ * Every other map keeps exactly what it authored (including nothing).
+ */
+export function resolveBoardEdges(
+  authored: BoardEdgeSpecs | undefined,
+  fullGravity: boolean,
+): BoardEdgeSpecs | undefined {
+  if (!fullGravity) {
+    return authored;
+  }
+  const edges: BoardEdgeSpecs = { ...(authored ?? {}) };
+  for (const side of BOARD_SIDES) {
+    if (!edges[side]) {
+      edges[side] = { kick: FULL_GRAVITY_EDGE_KICK };
+    }
+  }
+  return edges;
+}

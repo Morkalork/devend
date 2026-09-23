@@ -638,6 +638,14 @@ just `[down]`. The shipped `gravity_well` turns the pull through all four
 directions, which is the right feel for a map about being pushed around and the
 wrong one for a map whose floor answers the pull.
 
+**Superseded.** Level 14 now pins `tipping`, and both mutators named above are
+gone. Gravity comes in two kinds only: gravity **wells** (local, `gravityWells`
+on a map) and **full-map gravity** (a `behavior: gravity` mutator). Full-map
+gravity is never rolled at random (`isRollable` in `mapMutators.ts`), always
+tilts (its sequence turns through more than one direction) and always gets a
+bouncer on all four sides (`resolveBoardEdges`), filled in for any side the map
+does not author.
+
 The greed hook is the `var` pocket in the TOP left: under a downward pull, high
 ground is the expensive ground.
 

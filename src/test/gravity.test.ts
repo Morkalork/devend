@@ -231,66 +231,61 @@ describe("reading an authored config", () => {
 // ── The catalogue entry ─────────────────────────────────────────────────────
 
 /**
- * The authored mutator, checked against the real file. A gravity map whose
- * config the normaliser rejects would silently play as an ordinary map with a
- * scary name on the card, which is the failure worth catching here.
+ * The authored full-map gravity, checked against the real file. A gravity map
+ * whose config the normaliser rejects would silently play as an ordinary map
+ * with a scary name on the card, which is the failure worth catching here.
+ *
+ * Gravity comes in two kinds: wells (local, authored on a map) and full-map
+ * gravity (a `behavior: gravity` mutator). Every full-map one is pin-only and
+ * turns the room, so these run over ALL of them rather than one by id.
  */
-describe("the Technical Gravity mutator", () => {
+describe("full-map gravity mutators", () => {
   const MUTATORS = (yaml.load(
     readFileSync(resolve(__dirname, "../../public/mapMutators.yml"), "utf8"),
   ) as { mutators: { id: string; behavior: string; name: string; description: string;
         clarify?: string; gravity?: RawGravityConfig }[] }).mutators;
-  // BY ID. This read `find(behavior === "gravity")` and so described whichever
-  // gravity mutator happened to be first in the file - which stopped being this
-  // one the day a second was added, and the assertions below (it shifts, it has
-  // quiet stretches) are true of Technical Gravity and deliberately false of
-  // the steady pull level 14 pins.
-  const entry = MUTATORS.find(m => m.id === "gravity_well")!;
-  const steady = MUTATORS.find(m => m.id === "steady_gravity")!;
+  const FULL = MUTATORS.filter(m => m.behavior === "gravity");
 
-  it("exists and carries a gravity block", () => {
-    expect(entry, "no gravity mutator authored").toBeTruthy();
-    expect(entry.gravity).toBeTruthy();
+  it("exist, and each carries a gravity block", () => {
+    expect(FULL.length, "no full-map gravity authored").toBeGreaterThan(0);
+    for (const m of FULL) {
+      expect(m.gravity, `${m.id} has no gravity block`).toBeTruthy();
+    }
   });
 
-  it("has a STEADY sibling, and the two say different things", () => {
-    // Level 14 answers a downward pull with a live floor, and a pull that
-    // rotates would put the trampoline on a side wall three quarters of the
-    // time. So the steady one exists, and it is pin-only: weight 0 keeps it out
-    // of the procedural roll, where "everything falls forever" is not a
-    // surprise anybody asked for.
-    expect(steady, "the steady pull is gone").toBeTruthy();
-    expect(steady.behavior).toBe("gravity");
-    expect(steady.gravity?.sequence).toEqual(["down"]);
-    expect((steady as { weight?: number }).weight,
-      "a steady pull turning up as a random visitor").toBe(0);
-    expect(entry.gravity?.sequence!.length,
-      "the two mutators have collapsed into the same thing")
-      .toBeGreaterThan(steady.gravity!.sequence!.length);
+  it("are gone as random visitors", () => {
+    // gravity_well put an unexplained pull on ordinary maps; steady_gravity was
+    // a pull that never turned. Neither is a kind of gravity the game has now.
+    const ids = MUTATORS.map(m => m.id);
+    expect(ids).not.toContain("gravity_well");
+    expect(ids).not.toContain("steady_gravity");
   });
 
-  it("survives the normaliser, so the map actually pulls", () => {
-    const cfg = normaliseGravity(entry.gravity);
-    expect(cfg, `${entry.id}'s gravity block is rejected and would play as vanilla`).not.toBeNull();
-    expect(cfg!.turnRate).toBeGreaterThan(0);
-    expect(cfg!.period).toBeGreaterThan(0);
+  it("survive the normaliser, so the map actually pulls", () => {
+    for (const m of FULL) {
+      const cfg = normaliseGravity(m.gravity);
+      expect(cfg, `${m.id}'s gravity block is rejected and would play as vanilla`).not.toBeNull();
+      expect(cfg!.period).toBeGreaterThan(0);
+    }
   });
 
-  it("shifts, rather than pulling one way forever", () => {
-    const cfg = normaliseGravity(entry.gravity)!;
-    expect(new Set(cfg.sequence).size).toBeGreaterThan(1);
+  it("always tilt: the pull turns through more than one direction", () => {
+    // The board turns to meet the pull, so a one-direction sequence is a map
+    // that never tilts. Full-map gravity always does.
+    for (const m of FULL) {
+      const cfg = normaliseGravity(m.gravity)!;
+      const directions = new Set(cfg.sequence.filter(d => d !== "none"));
+      expect(directions.size, `${m.id} never turns the room`).toBeGreaterThan(1);
+    }
   });
 
-  it("has gravity-free stretches, so the shift is felt", () => {
-    const cfg = normaliseGravity(entry.gravity)!;
-    expect(cfg.sequence).toContain("none");
-  });
-
-  it("says what it does, with no em-dashes in displayed text", () => {
-    expect(entry.name.trim()).toBeTruthy();
-    expect(entry.description.trim()).toBeTruthy();
-    for (const field of [entry.name, entry.description, entry.clarify ?? ""]) {
-      expect(field).not.toContain("\u2014");
+  it("say what they do, with no em-dashes in displayed text", () => {
+    for (const m of FULL) {
+      expect(m.name.trim()).toBeTruthy();
+      expect(m.description.trim()).toBeTruthy();
+      for (const field of [m.name, m.description, m.clarify ?? ""]) {
+        expect(field).not.toContain("\u2014");
+      }
     }
   });
 });
