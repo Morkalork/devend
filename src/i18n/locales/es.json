@@ -1769,7 +1769,9 @@
     "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla.",
     "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas.",
     "lifeLostBall": "Una bola atraveso tu valla. Vida perdida.",
-    "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida."
+    "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
+    "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
+    "cutWouldBurySlabs": "Ese corte habria dejado fuera de alcance los bloques que aun debes romper, asi que no se aplico."
   },
   "mapFailure": {
     "title": "Mapa fallido",

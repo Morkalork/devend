@@ -84,8 +84,11 @@ export function strikeCells(
   return out;
 }
 
+/** What canStillStrike reads, so a caller that has less can still ask. */
+export type StrikeBoard = Pick<CanvasGameState, "spaceGrid" | "balls">;
+
 /** Smallest radius among the balls still in play; the game's default when none. */
-function strikingRadius(game: CanvasGameState): number {
+function strikingRadius(game: StrikeBoard): number {
   const live = game.balls.filter(b => b.state !== "won");
   if (live.length === 0) return 18;
   return Math.min(...live.map(b => b.radius));
@@ -101,7 +104,7 @@ function strikingRadius(game: CanvasGameState): number {
  * Reusing that beats a second flood fill which could disagree with it.
  */
 export function canStillStrike(
-  game: CanvasGameState, d: DestructibleState,
+  game: StrikeBoard, d: DestructibleState,
 ): boolean {
   const grid = game.spaceGrid;
   if (!grid) return true;

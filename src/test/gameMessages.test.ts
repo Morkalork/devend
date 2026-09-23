@@ -137,6 +137,12 @@ describe("the refusals actually raise one", () => {
     "../lib/net/commands.ts",
     "../lib/physics/updateFenceWall.ts",
     "../lib/physics/fenceStrike.ts",
+    // The two refusals that happen when a cut COMPLETES rather than when it
+    // starts: a fence that would seal a ball away, or put the slabs the win
+    // needs out of reach. They live with the cut itself because they are
+    // judged against the whole finished shape, not against where a finger
+    // went down.
+    "../lib/physics/applyCut.ts",
   ].map(f => readFileSync(resolve(__dirname, f), "utf8")).join("\n");
 
   it.each(GAME_MESSAGE_IDS)("raises %s somewhere", (id: GameMessageId) => {

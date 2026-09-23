@@ -42,7 +42,11 @@ import { setRunSeedText } from "@/lib/runRng";
 import { cutWouldBurySmashes } from "@/lib/physics/smashReach";
 import { refusalFlare, REFUSAL_FLARE_SECONDS } from "@/lib/rendering/startupPulse";
 import { CellState, type SpaceGrid } from "@/lib/spaceGrid";
+import { createInitialGameData } from "@/lib/initGame";
+import { applyCutFn } from "@/lib/physics/applyCut";
 import type { CanvasGameState } from "@/types/gameState";
+import type { GrowingWall } from "@/types/game";
+import type { LevelConfig } from "@/types/level";
 import type { WinSpec } from "@/types/winSpec";
 
 const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
@@ -246,5 +250,122 @@ describe("the ladder's counts", () => {
       const id = body.slice(0, body.indexOf("\n"));
       expect(count, `level ${id} has no brick to spare`).toBeLessThan(breakables);
     }
+  });
+});
+
+describe("the board says why, in words", () => {
+  /**
+   * The flare alone was not enough, and play said so: a cut drawn in level 9's
+   * right-hand chamber was refused while the slabs it would have orphaned sat
+   * in the LEFT one, so the only cue the game gave fired where the player was
+   * not looking. What they saw was a fence that drew all the way across and
+   * then vanished, and what they asked was "could there be an invisible object
+   * there?" - which is the exact question a silent rule produces.
+   *
+   * Both refusals in applyCut now raise a line in the message bar. This test
+   * drives the real applyCutFn rather than the predicate, because the predicate
+   * was never the part that was broken.
+   */
+  const LEVEL: LevelConfig = {
+    id: "refusal-speaks", level: 9, sizeThreshold: 40, expectedCuts: 5, points: 40,
+    maxBalls: 1,
+    entities: [
+      // Both bricks in the right half, so one vertical fence orphans the pair.
+      { id: "brick-a", kind: "wall", shape: "rect", x: 620, y: 300, width: 60, height: 40, breakable: true },
+      { id: "brick-b", kind: "wall", shape: "rect", x: 620, y: 420, width: 60, height: 40, breakable: true },
+    ],
+    win: { require: [{ kind: "space", threshold: 40 }, { kind: "smashed", count: 2 }] },
+    // Level 9 is above ROTATION_MIN_LEVEL, so without this the loader deals the
+    // board a quarter turn and every coordinate written below lands somewhere
+    // else. A fixture that has to be re-derived per deal is testing the dealer.
+    neverRotates: true,
+    randomShapes: 0,
+    variety: 0,
+  } as unknown as LevelConfig;
+
+  function makeGame(): CanvasGameState {
+    const data = createInitialGameData(LEVEL, 9, plainModifiers());
+    return {
+      ...data,
+      activeWalls: [], gameOver: false, levelComplete: false, wallCount: 0,
+      screenSize: { width: 900, height: 900 },
+      boardRect: { left: 0, top: 0, width: 900, height: 900, scale: 1 },
+      pushMode: "none", bestRemainingPercent: 100, pushStartPercent: 100,
+      lockedBallsCount: 0, assimilations: new Map(), objectDebris: [],
+      pendingDestroys: [], pendingWallBreaks: [], fallingObjects: [],
+      bonusCutCells: new Set(), objectivesBroken: 0, activePlaySeconds: 3,
+      lockWinThresholdPercent: 85, lockMinRegionCells: 0,
+    } as unknown as CanvasGameState;
+  }
+
+  /** A finished fence down x, which puts the right-hand bricks out of reach. */
+  function fenceDown(x: number): GrowingWall {
+    return {
+      origin: { x, y: 450 }, direction: { x: 0, y: 0 },
+      startWaypoints: [{ x, y: 450 }, { x, y: 0 }],
+      endWaypoints: [{ x, y: 450 }, { x, y: 900 }],
+      startSegmentIndex: 0, endSegmentIndex: 0,
+      startPoint: { x, y: 0 }, endPoint: { x, y: 900 },
+      targetStart: { x, y: 0 }, targetEnd: { x, y: 900 },
+      thickness: 6, isComplete: true, activeRegionId: "",
+    } as unknown as GrowingWall;
+  }
+
+  function recorder() {
+    const said: string[] = [];
+    const callbacks = new Proxy({}, {
+      get: (_t, prop) => {
+        if (prop === "then") return undefined;
+        if (prop === "onGameMessage") return (id: string) => { said.push(id); };
+        return () => {};
+      },
+    }) as never;
+    return { said, callbacks };
+  }
+
+  it("says the cut would bury the slabs, rather than nothing at all", () => {
+    const game = makeGame();
+    // The one ball on the LEFT, so the fence is legal for balls and refused
+    // only by the smash rule - the situation the screenshot showed.
+    game.balls = game.balls.slice(0, 1);
+    game.balls[0].position = { x: 150, y: 450 };
+    game.balls[0].velocity = { x: 60, y: 40 };
+
+    const { said, callbacks } = recorder();
+    const wall = fenceDown(450);
+    game.activeWalls = [wall];
+    applyCutFn(wall, game, LEVEL, 9, plainModifiers(), false, false, 0, callbacks);
+
+    expect(said, "the refusal was silent, which reads as an invisible object")
+      .toContain("cutWouldBurySlabs");
+    expect(game.activeWalls, "the refused fence was left on the board").toHaveLength(0);
+    expect(game.wallCount, "a refused cut still spent a fence").toBe(0);
+  });
+
+  it("stays quiet on a cut it allows", () => {
+    const game = makeGame();
+    game.balls = game.balls.slice(0, 1);
+    game.balls[0].position = { x: 150, y: 450 };
+    game.balls[0].velocity = { x: 60, y: 40 };
+
+    const { said, callbacks } = recorder();
+    // Far left, well clear of the bricks: nothing to protect, nothing to say.
+    const wall = fenceDown(60);
+    game.activeWalls = [wall];
+    applyCutFn(wall, game, LEVEL, 9, plainModifiers(), false, false, 0, callbacks);
+
+    expect(said, "an ordinary cut explained itself").toHaveLength(0);
+  });
+
+  it("wires both of applyCut's completion-time refusals, not just one", () => {
+    // The ball refusal is the older of the two and was silent for longer. A
+    // source check rather than a scenario: building a board where a fence
+    // orphans a ball AND nothing else intervenes is a map-authoring exercise,
+    // and what matters here is only that the call is there.
+    const cut = read("src/lib/physics/applyCut.ts");
+    const block = cut.slice(cut.indexOf("Reject walls that would orphan a ball"));
+    const refusal = block.slice(0, block.indexOf("Commit fence segments"));
+    expect(refusal).toContain('onGameMessage?.("cutWouldTrapBall")');
+    expect(refusal).toContain('onGameMessage?.("cutWouldBurySlabs")');
   });
 });

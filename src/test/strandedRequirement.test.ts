@@ -32,10 +32,10 @@ import { setRunSeedText } from "@/lib/runRng";
 import { lostRequirement, clauseStillPossible } from "@/lib/physics/requirementReach";
 import { evaluateWinConditions, readWinSnapshot } from "@/lib/physics/applyCut";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
-import { CellState, findGridRegions, type SpaceGrid } from "@/lib/spaceGrid";
+import { CellState, findGridRegions, markCellRemoved, type SpaceGrid } from "@/lib/spaceGrid";
 import { BOARD_WIDTH } from "@/lib/boardConstants";
 import type { CanvasGameState } from "@/types/gameState";
-import type { WinCondition, WinSnapshot } from "@/types/winSpec";
+import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 
 /** Give every surviving cell the id of the region it is actually in. */
 function repaintRegions(grid: SpaceGrid): void {
@@ -328,9 +328,11 @@ describe("and it stays out of the way of every other map", () => {
    * win names no place (a clear, a lock count, a smash, a boss) must never see
    * this ending, whatever the bot does to their boards.
    *
-   * Level 2 is excluded from the assertion rather than from the sweep - it is
-   * the one shipped map that CAN legitimately end this way, which is the whole
-   * point - and the run is printed so a sudden crop of them is visible.
+   * A map whose win DOES name a place is excluded from the assertion rather
+   * than from the sweep - those are the maps that can legitimately end this
+   * way, which is the whole point - and the run is printed so a sudden crop of
+   * them is visible. Derived from the spec rather than listed by id, which is
+   * what let levels 4 and 16 pick up `splitLocks` without touching this.
    */
   const POSITIONAL = new Set(["splitLocks", "delivered", "terminals", "harvested"]);
 
@@ -417,5 +419,58 @@ describe("a map that never had a chance is not the player's fault", () => {
     ] as WinCondition[]) {
       expect(clauseStillPossible(game, c, snap()), `${c.kind} survived a buried board`).toBe(false);
     }
+  });
+});
+
+describe("the reach question is asked of the board, not of the frame", () => {
+  /**
+   * The per-frame win check's most expensive question by a wide margin: a
+   * `splitLocks` side still owed walks every cell on its half of the board -
+   * some eighteen hundred on a real one - reading each cell's state and its
+   * region, per unpaid side, sixty times a second. Level 2 was the only map
+   * paying it; putting the clause on 4 and 16 tripled that, and the ladder
+   * sweep above went over CI's default timeout.
+   *
+   * So it is not re-asked until activeCount moves. What follows is the property
+   * that matters: the gate changes WHEN the work happens, never what it
+   * concludes.
+   */
+  // Inside the 100x100 fixture board, which the default line (450) is not.
+  const spec: WinSpec = {
+    require: [{ kind: "splitLocks", count: 1, at: 50 }], alsoWinIf: [], authored: true,
+  };
+
+  it("says nothing is lost on an open board, asked once or twice", () => {
+    const game = boardWith({});
+    expect(lostRequirement(game, spec, snap())).toBeNull();
+    // The second call is the one the gate answers from its own record. Same
+    // board, same verdict.
+    expect(lostRequirement(game, spec, snap())).toBeNull();
+  });
+
+  it("re-asks, and changes its mind, when the board actually moves", () => {
+    const game = boardWith({});
+    const grid = game.spaceGrid!;
+    expect(lostRequirement(game, spec, snap())).toBeNull();
+    // Bury the far side through the REAL mutator, so activeCount moves exactly
+    // as a cut or a capture moves it.
+    for (let row = 0; row < grid.height; row++) {
+      for (let col = 5; col < grid.width; col++) markCellRemoved(grid, row * grid.width + col);
+    }
+    const lost = lostRequirement(game, spec, snap());
+    expect(lost?.kind, "a side with no ground left is not payable").toBe("splitLocks");
+  });
+
+  it("is gated on a count every production mutator keeps exact", () => {
+    // The gate's whole premise. markCellRemoved, removeRegion,
+    // rasterizeCutToGrid, sealSegmentToGrid and captureUnreachableCells all
+    // decrement it; restoreCells increments it. Ground cannot change hands
+    // without moving this number.
+    const grid = openGrid();
+    const before = grid.activeCount;
+    markCellRemoved(grid, 0);
+    expect(grid.activeCount).toBe(before - 1);
+    markCellRemoved(grid, 0);  // already gone: no double count
+    expect(grid.activeCount).toBe(before - 1);
   });
 });

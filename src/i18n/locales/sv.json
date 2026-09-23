@@ -1769,7 +1769,9 @@
     "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort.",
     "launcherLoaded": "Avfyraren skjuter fortfarande. Du kan inte dra stangsel forran alla bollar har lamnat den.",
     "lifeLostBall": "En boll gick genom ditt staket. Ett liv forlorat.",
-    "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat."
+    "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat.",
+    "cutWouldTrapBall": "Det snittet hade stangt in en boll utan vag ut, sa det lades inte. Lamna en vag.",
+    "cutWouldBurySlabs": "Det snittet hade satt blocken du fortfarande maste krossa utom rackhall, sa det lades inte."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",

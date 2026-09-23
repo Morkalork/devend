@@ -26,6 +26,7 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinSpec } from "@/types/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
+import { canStillStrike } from "@/lib/physics/smashReach";
 
 /** A board-space rectangle to draw an announcement around. */
 export interface HighlightRect {
@@ -69,6 +70,7 @@ export function winHighlightRects(
   game: Pick<
     CanvasGameState,
     "destructibles" | "coloredAreas" | "deliveryBoxes" | "circuit" | "dataStream"
+    | "spaceGrid" | "balls"
   >,
 ): HighlightRect[] {
   const out: HighlightRect[] = [];
@@ -79,6 +81,25 @@ export function winHighlightRects(
       // destructible too and are scenery, not a job.
       for (const d of game.destructibles ?? []) {
         if (d.kind !== "breakable" || d.destroyed) continue;
+        // ...and only while it can still be hit.
+        //
+        // The marker is an instruction, and the argument against pointing at a
+        // slab that is already rubble is the same one against pointing at a
+        // slab sealed into claimed ground: the player cannot act on it, so the
+        // ring is telling them to do something impossible. Until now the set
+        // only dropped a slab when it was DESTROYED, so fencing one off left
+        // its marker breathing for the rest of the map.
+        //
+        // That went from a footnote to the common case when act I's maps moved
+        // from asking for one brick to asking for half of twelve: the clause
+        // stays unmet for most of the map, so every un-smashed brick carries a
+        // ring, and a fence across a run seals several of them away at once.
+        //
+        // `canStillStrike` is the predicate the win gate itself uses, so the
+        // board cannot go on pointing at something the gate has written off.
+        // It is a local read of the slab's own strike ring - no flood - which
+        // is what makes it affordable on a set recomputed every frame.
+        if (!canStillStrike(game, d)) continue;
         const poly = d.obstaclePolygon;
         const rect = poly ? polygonBounds(poly.vertices) : null;
         if (rect) out.push(rect);

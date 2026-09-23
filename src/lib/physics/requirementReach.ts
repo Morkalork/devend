@@ -323,12 +323,47 @@ export function clauseStillPossible(
  * where the locks ALREADY are, and ground going away afterwards takes nothing
  * back.
  */
+/**
+ * The board state each game was last given a reach answer at.
+ *
+ * A WeakMap rather than a field on CanvasGameState: it is a pure cache of a
+ * question that is always re-askable, it must not be serialised with the run,
+ * and a game that goes away takes its entry with it. Keyed on the game object,
+ * which is built once and mutated per map - a new map whose activeCount
+ * happens to equal the last one's costs one frame of staleness and nothing
+ * else.
+ */
+const lastAnsweredAt = new WeakMap<CanvasGameState, number>();
+
 export function lostRequirement(
   game: CanvasGameState, spec: WinSpec, snap: WinSnapshot,
 ): WinCondition | null {
+  // Only when the BOARD has moved since the last answer.
+  //
+  // This is the per-frame win check's most expensive question by a wide
+  // margin: a `splitLocks` side that is still owed walks every cell on its half
+  // of the board - some eighteen hundred of them - reading each one's state and
+  // its region, and it does that for each unpaid side. Sixty times a second,
+  // for the whole map.
+  //
+  // Nothing about it can change while the board does not. Every clause here
+  // asks whether some ground is still usable, and ground stops being usable
+  // through a cut, a capture or a break - all three of which move activeCount,
+  // which the grid's mutators already keep exact for the progress bar. A ball
+  // moving is not a change: it stays inside its own connected component, and
+  // the component is what reachability is over.
+  //
+  // If some future input ever changes without moving activeCount, the cost is
+  // that the answer arrives one board-change late, never that it is wrong - and
+  // late is the safe direction for a check that takes a life, which is the same
+  // argument ballCanReach makes about counting one ball too many as able.
+  const active = game.spaceGrid?.activeCount;
+  if (active !== undefined && lastAnsweredAt.get(game) === active) return null;
+
   for (const c of spec.require) {
     if (evaluateWinCondition(c, snap).met) continue;
     if (!clauseStillPossible(game, c, snap)) return c;
   }
+  if (active !== undefined) lastAnsweredAt.set(game, active);
   return null;
 }
