@@ -88,13 +88,22 @@ const labelKeyFor = (kind: WinConditionKind | "par"): string =>
  * cut into a top and a bottom. The row and the "how to win" sentence read the
  * same field, so they cannot end up describing different halves.
  */
-const clauseLabelKey = (c: WinCondition): string =>
-  c.kind === "splitLocks" && c.axis === "horizontal"
-    ? "winGate.splitLocksHorizontal"
-    : labelKeyFor(c.kind);
+const clauseLabelKey = (c: WinCondition): string => {
+  if (c.kind === "splitLocks" && c.axis === "horizontal") return "winGate.splitLocksHorizontal";
+  // A smash clause names its class for the same reason splitLocks names its
+  // halves: "Smashed" over one of two rows tells the player nothing about
+  // which one, and on a mixed map the two rows are the whole point.
+  if (c.kind === "smashed" && c.of && c.of !== "any") return `winGate.smashed_${c.of}`;
+  return labelKeyFor(c.kind);
+};
 
-const keyFor = (c: WinCondition): string =>
-  c.kind === "lockType" ? `lockType:${c.ballType}` : c.kind;
+const keyFor = (c: WinCondition): string => {
+  if (c.kind === "lockType") return `lockType:${c.ballType}`;
+  // A mixed map carries TWO smashed clauses, and a bare "smashed" key would
+  // make them one row that flickered between two sets of numbers.
+  if (c.kind === "smashed") return `smashed:${c.of ?? "any"}`;
+  return c.kind;
+};
 
 /** One required clause, as a row. */
 function requirementGoal(c: WinCondition, snap: WinSnapshot): Goal {

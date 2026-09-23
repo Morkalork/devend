@@ -24,6 +24,8 @@ import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 
 import { LADDER } from "./fixtures/maps";
+import { noSmashes } from "@/lib/destructibleClass";
+import { everySmashed } from "./fixtures/smashCounts";
 const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
   id: "l", level: 5, sizeThreshold: 20, expectedCuts: 6, points: 20,
   balls: [], maxBalls: 3,
@@ -32,7 +34,7 @@ const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 100, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: 0, terminals: 0, harvested: 0, bossDefeated: false, allLocked: false,
+  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: noSmashes(), terminals: 0, harvested: 0, bossDefeated: false, allLocked: false,
   cuts: 0, par: 6, activeSeconds: 0,
   ...over,
 });
@@ -257,7 +259,7 @@ describe("reporting the reason", () => {
   const won = snap({
     remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
     lockedByType: { black: 9 }, lockPoints: [{ x: 100, y: 100 }, { x: 800, y: 800 }],
-    delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true, par: 9,
+    delivered: 0, smashed: everySmashed(9), terminals: 9, harvested: 9, bossDefeated: true, allLocked: true, par: 9,
   });
 
   it("maps every condition kind to a stored reason", () => {

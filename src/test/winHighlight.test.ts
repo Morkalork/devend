@@ -26,8 +26,18 @@ const LEVELS = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 
-const slab = (id: string, destroyed = false) => ({
-  id, kind: "breakable" as const, hits: 0, maxHits: 3, lastHitAt: 0, destroyed,
+/**
+ * One runtime breakable. `brittle` decides its CLASS, so the fixture has to
+ * carry it: a marker now matches the clause's `of` (lib/destructibleClass) and
+ * a fixture that dropped the flag would report every shard as a monolith.
+ *
+ * Exactly the bug this file's own act I case already records one field back -
+ * a fixture that only knew about `breakable` called the brittle bricks nothing
+ * to point at. Same lesson, so the runtime shape is built from the entity here
+ * rather than stamped uniformly.
+ */
+const slab = (id: string, destroyed = false, brittle = false) => ({
+  id, kind: "breakable" as const, hits: 0, maxHits: 3, lastHitAt: 0, destroyed, brittle,
   obstaclePolygon: {
     vertices: [{ x: 100, y: 200 }, { x: 140, y: 200 }, { x: 140, y: 400 }, { x: 100, y: 400 }],
   },
@@ -121,7 +131,7 @@ describe("every act I requirement has something to point at", () => {
       // to point at, on the two maps that introduce breaking.
       destructibles: (level.entities ?? [])
         .filter(entityIsDestructible)
-        .map(e => slab(String(e.id))),
+        .map(e => slab(String(e.id), false, !!(e as { brittle?: boolean }).brittle)),
       coloredAreas: level.coloredAreas ?? [],
     } as unknown as Partial<CanvasGameState>));
 

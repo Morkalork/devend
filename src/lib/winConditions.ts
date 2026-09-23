@@ -181,7 +181,13 @@ function winConditionParts(
         must(t("winConditions.allLocked"));
         break;
       case "smashed":
-        must(t("winConditions.smashed", { count: c.count }));
+        // Each class explains ITS cost in the sentence - one touch versus a
+        // few solid hits - which is the fact that makes two counts read as two
+        // jobs rather than as one bill split in half.
+        must(t(
+          c.of === "shards" ? "winConditions.smashedShards"
+            : c.of === "monoliths" ? "winConditions.smashedMonoliths"
+            : "winConditions.smashed", { count: c.count }));
         break;
       case "terminals":
         must(t("winConditions.terminals", { count: c.count }));
@@ -283,7 +289,10 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
       : "winConditions.shortSplitLocks", { count: c.count });
     case "boss": return t("winConditions.shortBoss");
     case "allLocked": return t("winConditions.shortAllLocked");
-    case "smashed": return t("winConditions.shortSmashed", { count: c.count });
+    case "smashed": return t(
+      c.of === "shards" ? "winConditions.shortSmashedShards"
+        : c.of === "monoliths" ? "winConditions.shortSmashedMonoliths"
+        : "winConditions.shortSmashed", { count: c.count });
     case "terminals": return t("winConditions.shortTerminals", { count: c.count });
     case "harvested": return t("winConditions.shortHarvested", { count: c.count });
     case "delivered": return t("winConditions.shortDelivered", { count: c.count });

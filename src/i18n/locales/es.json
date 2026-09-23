@@ -869,7 +869,13 @@
     "shortSplitLocks": "encierra {{count}} en cada lado",
     "splitLocksHorizontal_one": "Encierra una bola en cada mitad, arriba y abajo.",
     "splitLocksHorizontal_other": "Encierra {{count}} bolas en cada mitad, arriba y abajo.",
-    "shortSplitLocksHorizontal": "encierra {{count}} arriba y {{count}} abajo"
+    "shortSplitLocksHorizontal": "encierra {{count}} arriba y {{count}} abajo",
+    "shortSmashedShards": "rompe {{count}} fragmentos",
+    "shortSmashedMonoliths": "rompe {{count}} monolitos",
+    "smashedShards_one": "Rompe {{count}} de los fragmentos de vidrio del mapa. Caen con un solo toque.",
+    "smashedShards_other": "Rompe {{count}} de los fragmentos de vidrio del mapa. Caen con un solo toque.",
+    "smashedMonoliths_one": "Rompe {{count}} de los monolitos ámbar del mapa. Cada uno aguanta varios golpes.",
+    "smashedMonoliths_other": "Rompe {{count}} de los monolitos ámbar del mapa. Cada uno aguanta varios golpes."
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
@@ -1771,7 +1777,7 @@
     "lifeLostBall": "Una bola atraveso tu valla. Vida perdida.",
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
-    "cutWouldBurySlabs": "Ese corte habria dejado fuera de alcance los bloques que aun debes romper, asi que no se aplico."
+    "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó."
   },
   "mapFailure": {
     "title": "Mapa fallido",
@@ -1803,7 +1809,9 @@
     "needHarvested": "Cosecha {{target}} tramos del flujo (tenias {{current}})",
     "objectiveBuried": "Has cercado un objeto destructible que aún tenías que romper",
     "requirementUnreachable": "Has cercado algo que este mapa aún necesita",
-    "needSplitLocks": "Encerrar {{each}} en cada lado del tablero (cubriste {{current}} de {{target}} lados)"
+    "needSplitLocks": "Encerrar {{each}} en cada lado del tablero (cubriste {{current}} de {{target}} lados)",
+    "needSmashedShards": "Rompe {{target}} fragmentos (tenías {{current}})",
+    "needSmashedMonoliths": "Rompe {{target}} monolitos (tenías {{current}})"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1821,7 +1829,9 @@
     "space": "Despejado",
     "locks": "Sellados",
     "splitLocks": "Ambos lados",
-    "splitLocksHorizontal": "Arriba y abajo"
+    "splitLocksHorizontal": "Arriba y abajo",
+    "smashed_shards": "Fragmentos",
+    "smashed_monoliths": "Monolitos"
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",

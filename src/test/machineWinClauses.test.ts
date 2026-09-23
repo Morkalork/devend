@@ -20,10 +20,11 @@ import { winHighlightRects } from "@/lib/winHighlight";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
+import { noSmashes } from "@/lib/destructibleClass";
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 50, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: 0, terminals: 0, harvested: 0,
+  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: noSmashes(), terminals: 0, harvested: 0,
   bossDefeated: false, allLocked: false, cuts: 0, par: 6, activeSeconds: 0,
   ...over,
 });

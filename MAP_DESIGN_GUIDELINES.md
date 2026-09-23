@@ -86,6 +86,10 @@ three terminals. A clause with exactly as many objects as it requires makes
 every one of them load-bearing, so a single cut that buries one ends the map -
 usually with no sign on screen, and often many cuts before the game admits it.
 
+Counted **per class** for `smashed`: `2 of monoliths` on a board of thirty
+shards and two monoliths has no slack at all, whatever the total says. See
+section 1.1.
+
 This is not a style preference. Measured across the ladder as it was when the
 rule was written, every map the bot lost to `objectiveBuried` had zero or one
 spare, and slack was the cheapest repair available: one entity per map, no code,
@@ -96,6 +100,73 @@ Act I has since been rebuilt on runs of one-touch bricks rather than single
 slabs, and its counts raised to about half of what each map carries (L5 asks 2
 of 4, L6 and L7 ask 6 of 12, L9 asks 6 of 11). By the count above that is slack
 five or six, which is the opposite of the problem this rule was written for.
+
+
+#### 1.1 Shards and Monoliths
+
+> A map's breakables are **two** things, and a clause that counts them together
+> makes one of them pointless.
+
+| | Shard | Monolith |
+|---|---|---|
+| flag | `brittle: true` | `breakable: true` |
+| costs | any single contact | three hits of accumulated damage |
+| reads as | pale glass | warm amber |
+| authored | 4 to 34, in runs and squares | 1 to 4, as structure |
+
+The rule is the break **cost**, not the size: a shard is something a ball does
+to you on its way somewhere else, a monolith is a plan. `lib/destructibleClass`
+owns that rule, and it is the only place that decides.
+
+Why the split exists, in the words it was reported in: *"if you have to smash
+five objects and there are six small bricks and one large yellow object, why
+would you ever go for the big one?"* You would not. Against one counter the
+monolith is strictly the worse buy, so a mixed map was really a shard map with
+decoration.
+
+**So a clause says which:**
+
+```yaml
+- kind: smashed
+  count: 6
+  of: shards        # shards | monoliths | any
+```
+
+`of` may be omitted, and then it means `any`, which is what every clause
+authored before the split meant. **On a map holding BOTH classes it may not be
+omitted** - `winSpecProblems` refuses that spec, because it is exactly the one
+in the question above. A map that wants both carries two clauses and both are
+independently reachable: the cut refusal, the stranding check and the markers
+all ask per class, so a fence that orphans the last monolith is refused even
+with every shard still in reach.
+
+**Monolith is a singular word.** "Break the monolith" reads; "break three of
+the monoliths" does not, quite. Prefer `count: 1` on a monolith clause and put
+the volume in the shard clause, which is what 12 and 13 do.
+
+**A shard square is not a free swap for a monolith.** Converting one is a
+geometry change before it is a content change: a 130x24 bar is a barrier the
+cutting plays around and a 62x66 square of four shards is not. Measured on
+level 18, that swap alone cost 6/8 wins to 4/8 on the eight-seed sweep with the
+clause held equivalent, and the conversion was reverted. Convert the redundant
+object, never the structural one, and sweep before and after.
+
+**How the ladder uses them** (after the split):
+
+| shape | maps | what it teaches |
+|---|---|---|
+| shards only | 5, 6, 7, 9, 17 | the cheap break, in volume |
+| monoliths only | 8, 11*, 13*, 18 | the deliberate break |
+| both, one billed | 11 | they are different: the square is there and unwanted |
+| both, both billed | 12, 13 | two bills, neither pays the other |
+
+\* 11 and 13 carry a shard square as well; the entry above says which of their
+clauses bills it.
+
+The chest is a monolith by the rule (amber, three hits) and is **loot**, so no
+shipped clause names monoliths on a chest map: a reward you would open anyway
+must not double as a required objective. Levels 7, 9 and 17 all say
+`of: shards` for this reason.
 
 #### Slack is in LANES, not in objects
 
@@ -214,7 +285,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | bumper | C | Compressed | 12 | 13 | - |
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
-| brittle | A | Meet | 5 | 6 | 7, 9, 17 |
+| brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 19 | - | 31 |
