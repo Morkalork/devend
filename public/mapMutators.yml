@@ -33,12 +33,26 @@
 #   topSpeedScale       it goes, clamped at `topSpeedScale` x the ball's own base
 #                       speed. Reads as real gravity; costs the constant-speed
 #                       invariant, which is a per-map decision and not a global
-#                       one. Only steady_gravity (level 14) uses it.
+#                       one. `tipping` uses it.
 #
 # An accelerating map's `strength` is not just a feel knob. Heavier gravity packs
 # every ball into a thin band along the floor, everything above them captures
 # freely, and anything the win needs up there gets buried. Sweep the bot before
-# changing it; see the note on steady_gravity below.
+# changing it.
+#
+# ── full-map gravity is never rolled ─────────────────────────────────────────
+#
+# Gravity comes in exactly two kinds: gravity WELLS (local patches, authored as
+# `gravityWells` on a map) and FULL-MAP gravity (a `behavior: gravity` mutator
+# here). Full-map gravity is pinned by the maps built around it (`mutator:` in
+# map.yml) and never handed out by the random roll, whatever its weight: see
+# `isRollable` in src/lib/mapMutators.ts. Every full-map gravity map also gets a
+# bouncer on all four sides (resolveBoardEdges) and must turn the room, so its
+# `sequence` names more than one direction.
+#
+# There used to be a random one, `gravity_well` ("Technical Gravity"), which put
+# an unexplained pull on ordinary maps from level 14 on, and `steady_gravity`,
+# a straight-down pull that never turned and that no map pinned any more.
 noneWeight: 2
 
 mutators:
@@ -63,41 +77,10 @@ mutators:
       factor: 1.18
     overtimePremium: 1
 
-  # Steady down, with no rotating sequence and no quiet stretches, for the map
-  # whose FLOOR answers the pull. gravity_well turns the pull through all four
-  # directions, which is the right feel for a map about being pushed around and
-  # the wrong one for a map with a live floor: three quarters of the cycle the
-  # trampoline would be a side wall. Same turnRate, so the arc reads the same.
-  - id: steady_gravity
-    name: Downtime
-    description: Everything falls, and it keeps falling.
-    clarify: "A constant pull down, and balls really fall: faster on the way down, slower up. They gather on the floor and keep bouncing. Fence where they are going."
-    behavior: gravity
-    weight: 0
-    minLevel: 14
-    gravity:
-      # Real falling, not a steered heading. Reported from play as "clearly
-      # doesn't have normal gravity, feels super weird", which is what a
-      # constant-speed pull looks like to anyone who has seen a ball fall:
-      # the arc is right and the pace never changes, so it reads as a ball on a
-      # string rather than a ball dropping.
-      #
-      # `strength` is world units per second squared against an 810-unit board,
-      # so a fall down the full height lands well short of terminal, and `topSpeedScale` is the ceiling fenceTouch and the bouncers
-      # already use rather than a new number.
-      accelerate: true
-      strength: 280
-      topSpeedScale: 2.2
-      period: 9
-      sequence: [down]
-    overtimePremium: 1
-
-  # The room turned, on a clock, with no quiet stretches.
+  # Full-map gravity: the room turned, on a clock, with no quiet stretches.
   #
-  # gravity_well is "a pull that moves", with `none` phases between so the map
-  # reads as being pushed around occasionally. This one is the OTHER half of
-  # that idea: the pull never stops and never eases, it just gets a quarter turn
-  # every ten seconds. What the player is reading is not the pull, it is the
+  # The pull never stops and never eases, it just gets a quarter turn every ten
+  # seconds, and the board tilts with it so down is always screen-down. What the player is reading is not the pull, it is the
   # eight settled seconds between turns, which is exactly as long as it takes to
   # pick a cut and commit to it.
   #
@@ -107,28 +90,14 @@ mutators:
     description: The room turns a quarter every ten seconds, and down goes with it.
     clarify: The pull turns a quarter every ten seconds. Finished fences are safe; your plan is not. Read where the balls go next.
     behavior: gravity
+    # Never rolled (full-map gravity is pinned only), so no weight or minLevel.
     weight: 0
-    minLevel: 15
     gravity:
-      # Real falling, same as steady_gravity: the map this pairs with teaches
-      # that things accelerate, and a turning room whose balls did NOT would
-      # undo the lesson one map later.
+      # Real falling, not a steered heading: a turning room whose balls did not
+      # accelerate reads as a ball on a string rather than a ball dropping.
       accelerate: true
       strength: 280
       topSpeedScale: 2.2
       period: 10
       sequence: [down, right, up, left]
-    overtimePremium: 1
-
-  - id: gravity_well
-    name: Technical Gravity
-    description: Everything is pulled one way, and the way keeps changing.
-    clarify: The pull rotates around the map with quiet stretches between. Balls arc toward it and pile up on that edge without slowing. Fence where they are going.
-    behavior: gravity
-    weight: 2
-    minLevel: 14
-    gravity:
-      turnRate: 1.1
-      period: 9
-      sequence: [down, none, left, none, up, none, right, none]
     overtimePremium: 1

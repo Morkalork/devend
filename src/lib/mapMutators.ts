@@ -140,6 +140,19 @@ export function eligibleMutators(levelNumber: number, pool: MapMutator[] = liveM
 }
 
 /**
+ * Whether the procedural roll may ever hand out this mutator.
+ *
+ * Full-map gravity is never random. A map with a global pull is authored around
+ * it (bare board, bouncy sides, `neverRotates`), and dropping one onto a map
+ * that was not reads as the map being broken: a pull nothing on the board
+ * explains. It is pinned by the maps that want it (`mutator:` in map.yml) and
+ * only there, whatever weight the catalogue gives it.
+ */
+export function isRollable(m: MapMutator): boolean {
+  return m.behavior !== "gravity";
+}
+
+/**
  * Pick one mutator for a map (or null for a vanilla map), deterministically
  * from `rng`. A synthetic "none" bucket of weight `noneWeight` leaves some maps
  * unmodified. Returns null when
@@ -151,7 +164,8 @@ export function selectMapMutator(
   pool: MapMutator[] = liveMutators,
   noneWeight: number = liveNoneWeight,
 ): ActiveMapMutator | null {
-  const chosen = weightedPick(eligibleMutators(levelNumber, pool), noneWeight, rng);
+  const rollable = eligibleMutators(levelNumber, pool).filter(isRollable);
+  const chosen = weightedPick(rollable, noneWeight, rng);
   // null = drew the "none" bucket; a `none`-behavior entry is also a vanilla map.
   if (!chosen || chosen.behavior === "none") return null;
   return resolveMutator(chosen);

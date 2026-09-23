@@ -1991,7 +1991,7 @@ levels:
     # could not affect the outcome.
     # Pinned, not hoped for. The whole map is authored around a live pull; a
     # gravity map that only sometimes pulls is a different map most of the time.
-    mutator: gravity_well
+    mutator: tipping
     coloredAreas:
       - kind: const
         x: 350

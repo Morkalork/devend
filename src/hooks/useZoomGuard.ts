@@ -14,7 +14,7 @@
  */
 import { useEffect, useState } from "react";
 import type { GameScreen } from "@/types/game";
-import { installZoomGuard, zoomAllowedOn } from "@/lib/zoomGuard";
+import { installZoomGuard, zoomAllowedOn, dragIsAlwaysGameplay } from "@/lib/zoomGuard";
 import { watchViewportZoom } from "@/lib/viewportZoom";
 
 export function useZoomGuard(screen: GameScreen): boolean {
@@ -28,7 +28,10 @@ export function useZoomGuard(screen: GameScreen): boolean {
       setZoomStuck(false);
       return;
     }
-    const removeGuard = installZoomGuard(document);
+    // On a playing screen the guard also refuses the browser's one-finger pan,
+    // which is the gesture a fence started outside the board was being taken
+    // for. See DRAG_IS_ALWAYS_GAMEPLAY.
+    const removeGuard = installZoomGuard(document, dragIsAlwaysGameplay(screen));
     const stopWatching = watchViewportZoom(document, {
       onStuck: () => setZoomStuck(true),
       onClear: () => setZoomStuck(false),

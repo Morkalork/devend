@@ -44,7 +44,7 @@ import { traceActiveContours } from "@/lib/rendering/regionContour";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 /**
  * The real contour tracer, wrapped so the bake can be COUNTED.
@@ -121,7 +121,7 @@ function state(level: LevelConfig): CanvasGameState {
 const TURNED = Math.PI / 8;
 
 describe("cached geometry follows the board round", () => {
-  const level = levels.find(l => l.id === "level-19")!;
+  const level = RETIRED.find(l => l.id === "level-19")!; // the retired one: the ladder has its own level-19 now
   const light = lightScope(BOARD_RECT, 0);
 
   beforeEach(() => { vi.mocked(traceActiveContours).mockClear(); });

@@ -49,7 +49,7 @@ import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
-import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
+import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -505,7 +505,8 @@ export function GameCanvas({
     gameRef.current.mapMutator = mapMutator ?? null;
     gameRef.current.gravityConfig = mapMutator?.behavior === "gravity"
       ? normaliseGravity(mapMutator.gravity) : null;
-  }, [mapMutator]);
+    gameRef.current.boardEdges = resolveBoardEdges(level.boardEdges, mapMutator?.behavior === "gravity");
+  }, [mapMutator, level.boardEdges]);
   // The map's authored light. Lives on the game state rather than being read
   // from the level inside the renderer, so the renderer keeps taking one object
   // and nothing has to thread a LevelConfig down through the layers.
@@ -1274,7 +1275,8 @@ export function GameCanvas({
       // other built field: initGame returning it is not the same as the running
       // game having it, and a live floor that never reached the game would be a
       // map whose whole premise silently did nothing.
-      game.boardEdges         = data.boardEdges;
+      // A full-gravity map gets a bouncer on every side it did not author.
+      game.boardEdges         = resolveBoardEdges(data.boardEdges, mapMutator?.behavior === "gravity");
       game.weather            = data.weather;
       game.originalArea       = data.originalArea;
       game.basePlayableArea   = data.basePlayableArea;
@@ -2229,7 +2231,19 @@ export function GameCanvas({
   }, []);
 
   return (
-    <div className={`flex flex-col w-full h-full ${isShaking ? "animate-shake" : ""}`}>
+    // `touch-none` on the whole play region, not only on the canvas inside it.
+    // A browser decides what a touch IS at touchdown, from the element under
+    // the finger at that moment, and never reassigns it: with the canvas set to
+    // `none` and everything around it inheriting the root's `pan-x pan-y`, a
+    // fence begun on the margin or the HUD and swiped onto the board was a page
+    // pan for its whole life and never reached the game. Reported as "start
+    // creating a fence from outside of the gameboard, then swipe into it".
+    //
+    // Safe to widen because nothing in this subtree scrolls - the bars that do
+    // live in GameScreen's fixed stack, outside it. The zoom guard covers the
+    // rest of the screen with a handler, since `touch-action` intersects down
+    // the tree and could not make the one exception the slot bar needs.
+    <div className={`flex flex-col w-full h-full touch-none ${isShaking ? "animate-shake" : ""}`}>
       {screenFlash === "red" && <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />}
 
       {process.env.NODE_ENV === "development" && (
