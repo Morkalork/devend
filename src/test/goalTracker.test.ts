@@ -23,10 +23,12 @@ import {
 import { isWinMet, resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import { LADDER, byLevel } from "./fixtures/maps";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
+import { noSmashes } from "@/lib/destructibleClass";
+import { everySmashed } from "./fixtures/smashCounts";
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 40, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: 0, terminals: 0, harvested: 0,
+  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: noSmashes(), terminals: 0, harvested: 0,
   bossDefeated: false, allLocked: false, cuts: 0, par: 6, activeSeconds: 0, ...over,
 });
 
@@ -98,7 +100,7 @@ describe("what lands in the row", () => {
     const spec: WinSpec = {
       require: [{ kind: "smashed", count: 3 }], alsoWinIf: [], authored: true,
     };
-    const at = (n: number) => find(spec, "smashed", snap({ smashed: n }));
+    const at = (n: number) => find(spec, "smashed", snap({ smashed: everySmashed(n) }));
     expect([at(0).current, at(0).target, at(0).done]).toEqual([0, 3, false]);
     expect([at(2).current, at(2).target, at(2).done]).toEqual([2, 3, false]);
     expect([at(3).current, at(3).target, at(3).done]).toEqual([3, 3, true]);
@@ -268,7 +270,7 @@ describe("the word CLEAR, which speaks for the whole map", () => {
 
   it("reads level 13 as unwon while the slab still stands", () => {
     // THE regression, against the shipped map rather than a lookalike.
-    const cleared = snap({ remainingPercent: 0, smashed: 0 });
+    const cleared = snap({ remainingPercent: 0, smashed: noSmashes() });
     expect(find(L13, "space", cleared).done, "the space clause is not met on a cleared board")
       .toBe(true);
     expect(everyRequirementMet(goalsOf(L13, cleared)), "the bar would say CLEAR on an unwon map")
@@ -277,7 +279,13 @@ describe("the word CLEAR, which speaks for the whole map", () => {
   });
 
   it("agrees the moment the last requirement lands", () => {
-    const both = snap({ remainingPercent: 0, smashed: 1 });
+    // Two smash clauses now (`1 of monoliths` and `2 of shards`), so the state
+    // that meets level 13 has to meet the LARGER of them. Derived from the
+    // biggest count the spec asks for rather than pinned at a literal, because
+    // the number belongs to the map and this test is about the readout.
+    const most = Math.max(...L13.require
+      .map(c => (c.kind === "smashed" ? c.count : 0)));
+    const both = snap({ remainingPercent: 0, smashed: everySmashed(most) });
     expect(everyRequirementMet(goalsOf(L13, both))).toBe(true);
     expect(isWinMet(L13, both)).toBe(true);
   });
@@ -289,7 +297,7 @@ describe("the word CLEAR, which speaks for the whole map", () => {
     // arrives on its own there.
     for (const remainingPercent of [40, 14, 0]) {
       for (const smashed of [0, 1, 2]) {
-        const s = snap({ remainingPercent, smashed });
+        const s = snap({ remainingPercent, smashed: everySmashed(smashed) });
         if (everyRequirementMet(goalsOf(L13, s))) {
           expect(isWinMet(L13, s), `CLEAR at ${remainingPercent}% / ${smashed} smashed, but the map would not win`)
             .toBe(true);

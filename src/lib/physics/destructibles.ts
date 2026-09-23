@@ -99,7 +99,22 @@ const NOMINAL_SPEED = 250;       // red/blue baseSpeed = the reference solid hit
 const DAMAGE_EXP = 1.6;          // >1 so speed matters more than linearly
 const DAMAGE_K = 1 / Math.pow(NOMINAL_SPEED, DAMAGE_EXP);
 const MIN_CHIP_DAMAGE = 0.15;    // a crawling graze still chips a little
-const MAX_HIT_DAMAGE = 2.0;      // cap so one rocket can't trivialise everything
+/**
+ * Most damage one contact can do, however fast the ball was going.
+ *
+ * Was 2.0, on the reasoning that "one rocket can't trivialise everything" - and
+ * the ladder's ordinary slab is authored at 3, so the cap said in effect that
+ * NO ball, at any speed, may break a slab in one. That is the wrong half of the
+ * trade to protect: a fast ball is hard to fence around and hard to lock, and
+ * the compensation for living with one has to be worth something. Reported as
+ * exactly that.
+ *
+ * At 3.0 the arithmetic works out to about 495 units/s head-on for a standard
+ * ball (mass 1) to take a 3-hit slab in one contact, which is nearly twice the
+ * red/blue base speed - reachable off a bumper, a Scope Creep rally or a
+ * purple, and never by accident.
+ */
+const MAX_HIT_DAMAGE = 3.0;
 
 /** Relative mass of a ball: density × (radius / base radius)². */
 export function ballMass(ball: Ball): number {
@@ -115,6 +130,59 @@ export function ballMass(ball: Ball): number {
 export function ballImpactDamage(ball: Ball, normalSpeed: number): number {
   const raw = DAMAGE_K * ballMass(ball) * Math.pow(Math.max(0, normalSpeed), DAMAGE_EXP);
   return Math.max(MIN_CHIP_DAMAGE, Math.min(MAX_HIT_DAMAGE, raw));
+}
+
+/**
+ * Closing speed, along the surface normal, at which a ball stops bouncing off
+ * something it has just destroyed and carries straight on through it.
+ *
+ * Asked for as "if it is really fast, it should go straight through an object
+ * as it breaks (not otherwise)", and both halves of that are the rule:
+ *
+ *   AS IT BREAKS   the contact has to be the one that spends the object's last
+ *                  integrity. A ball that merely dents a slab bounces off it
+ *                  like anything else, whatever its speed.
+ *   REALLY FAST    420 is 1.7x the red/blue base and well past what a rally
+ *                  produces on its own, so this is a thing that happens to a
+ *                  ball somebody made fast rather than a thing that happens.
+ *
+ * It is where SPEED finally means something on a brittle brick. Act I's runs go
+ * on one contact whatever the force model says (see `d.brittle` in
+ * registerObjectHit), so the damage curve - the game's whole answer to "does a
+ * fast ball hit harder" - has no effect on them at all: a crawling graze and a
+ * rocket both take exactly one brick. A rocket takes one and keeps going.
+ */
+const PUNCH_THROUGH_SPEED = 420;
+
+/**
+ * Should a ball that just destroyed something carry on through it?
+ *
+ * Speed only, deliberately, though mass is right there in the damage model: two
+ * conditions a player can hold in their head ("fast" and "it broke") beat three
+ * that are individually more physical, and the mass already decided whether the
+ * thing broke at all.
+ */
+export function punchesThrough(normalSpeed: number): boolean {
+  return normalSpeed >= PUNCH_THROUGH_SPEED;
+}
+
+/**
+ * How long a ball stays intangible to the thing it just punched through, in ms.
+ *
+ * Long enough to cover the rest of the step and the one after it - the wreck is
+ * cleared by processDestroys at the end of the frame - and short enough that it
+ * can never be mistaken for a mechanic: nothing else on the board is affected,
+ * and the ball is solid again before it has crossed a ball's width at speed.
+ */
+export const PUNCH_THROUGH_GRACE_MS = 120;
+
+/** Is this ball still passing through the wreck of something it destroyed? */
+export function punchingThrough(
+  ball: { punchThroughId?: string; punchThroughUntil?: number }, now: number,
+): boolean {
+  return ball.punchThroughId !== undefined
+    && ball.punchThroughUntil !== undefined
+    && now < ball.punchThroughUntil;
 }
 
 /** Map a hit's damage to a dent depth/size multiplier (~0.5 chip .. ~1.3 smash). */

@@ -86,6 +86,10 @@ three terminals. A clause with exactly as many objects as it requires makes
 every one of them load-bearing, so a single cut that buries one ends the map -
 usually with no sign on screen, and often many cuts before the game admits it.
 
+Counted **per class** for `smashed`: `2 of monoliths` on a board of thirty
+shards and two monoliths has no slack at all, whatever the total says. See
+section 1.1.
+
 This is not a style preference. Measured across the ladder as it was when the
 rule was written, every map the bot lost to `objectiveBuried` had zero or one
 spare, and slack was the cheapest repair available: one entity per map, no code,
@@ -96,6 +100,73 @@ Act I has since been rebuilt on runs of one-touch bricks rather than single
 slabs, and its counts raised to about half of what each map carries (L5 asks 2
 of 4, L6 and L7 ask 6 of 12, L9 asks 6 of 11). By the count above that is slack
 five or six, which is the opposite of the problem this rule was written for.
+
+
+#### 1.1 Shards and Monoliths
+
+> A map's breakables are **two** things, and a clause that counts them together
+> makes one of them pointless.
+
+| | Shard | Monolith |
+|---|---|---|
+| flag | `brittle: true` | `breakable: true` |
+| costs | any single contact | three hits of accumulated damage |
+| reads as | pale glass | warm amber |
+| authored | 4 to 34, in runs and squares | 1 to 4, as structure |
+
+The rule is the break **cost**, not the size: a shard is something a ball does
+to you on its way somewhere else, a monolith is a plan. `lib/destructibleClass`
+owns that rule, and it is the only place that decides.
+
+Why the split exists, in the words it was reported in: *"if you have to smash
+five objects and there are six small bricks and one large yellow object, why
+would you ever go for the big one?"* You would not. Against one counter the
+monolith is strictly the worse buy, so a mixed map was really a shard map with
+decoration.
+
+**So a clause says which:**
+
+```yaml
+- kind: smashed
+  count: 6
+  of: shards        # shards | monoliths | any
+```
+
+`of` may be omitted, and then it means `any`, which is what every clause
+authored before the split meant. **On a map holding BOTH classes it may not be
+omitted** - `winSpecProblems` refuses that spec, because it is exactly the one
+in the question above. A map that wants both carries two clauses and both are
+independently reachable: the cut refusal, the stranding check and the markers
+all ask per class, so a fence that orphans the last monolith is refused even
+with every shard still in reach.
+
+**Monolith is a singular word.** "Break the monolith" reads; "break three of
+the monoliths" does not, quite. Prefer `count: 1` on a monolith clause and put
+the volume in the shard clause, which is what 12 and 13 do.
+
+**A shard square is not a free swap for a monolith.** Converting one is a
+geometry change before it is a content change: a 130x24 bar is a barrier the
+cutting plays around and a 62x66 square of four shards is not. Measured on
+level 18, that swap alone cost 6/8 wins to 4/8 on the eight-seed sweep with the
+clause held equivalent, and the conversion was reverted. Convert the redundant
+object, never the structural one, and sweep before and after.
+
+**How the ladder uses them** (after the split):
+
+| shape | maps | what it teaches |
+|---|---|---|
+| shards only | 5, 6, 7, 9, 17 | the cheap break, in volume |
+| monoliths only | 8, 11*, 13*, 18 | the deliberate break |
+| both, one billed | 11 | they are different: the square is there and unwanted |
+| both, both billed | 12, 13 | two bills, neither pays the other |
+
+\* 11 and 13 carry a shard square as well; the entry above says which of their
+clauses bills it.
+
+The chest is a monolith by the rule (amber, three hits) and is **loot**, so no
+shipped clause names monoliths on a chest map: a reward you would open anyway
+must not double as a required objective. Levels 7, 9 and 17 all say
+`of: shards` for this reason.
 
 #### Slack is in LANES, not in objects
 
@@ -214,7 +285,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | bumper | C | Compressed | 12 | 13 | - |
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
-| brittle | A | Meet | 5 | 6 | 7, 9, 17 |
+| brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 19 | - | 31 |
@@ -493,11 +564,12 @@ back, and its footprint is ordinary floor. A launcher is therefore never a
 piece of furniture: it does not shape the board after the shot, and a design
 that wants a wall where the barrel stood has to put one there.
 
-The aim is the second half of the same decision. The barrel sits in one corner
-and the curtain over the paying pocket is in the far one, inside the aim cone
-(LAUNCH_SPREAD is 35 degrees either side, and the curtain is 3 degrees off the
-axis). So the shot can be spent opening the pocket, or spent putting the roster
-somewhere useful, and it cannot be spent on both.
+The line is the second half of the same decision, and it is the map's rather
+than the player's: the barrel sits in one corner and the curtain over the paying
+pocket is in the far one, 3 degrees off the barrel's axis, so the shot opens the
+pocket. What the pull decides is how fast the roster arrives there and what the
+map is bought at. The aim cone that used to sit here (35 degrees either side)
+was removed with the fan it justified: see the launcher row in section 7.1.
 
 **The greed hook is the reveal, and it is the Use beat it was owed.** Level 8
 met `reveals` as the map that hides its own board; here it is the thing you
@@ -830,8 +902,9 @@ cross the whole board on the way back. A horizontal cut below the lowest ball
 captures a strip of floor (space) and shortens the bounce (smash), so the
 ordinary way to clear this map is also the fast way to break it, and a player
 who understands that seals from the bottom up. The serve is the launcher's
-Fight beat: the pull is the opening volley into the front row, aimed within
-the cone, and the roster then falls back onto a board you have not cut yet.
+Fight beat: the pull is the opening volley straight up into the front row (the
+barrel's line runs through brick-b6 dead centre), and the roster then falls back
+onto a board you have not cut yet.
 
 **The one rule, and it is visible.** A horizontal cut ABOVE every ball
 captures the wall's region with the wall in it, and the map ends as
@@ -1362,6 +1435,8 @@ previously spread across a dozen test files and comment blocks.
 | Launcher shell | leaves the board the frame the barrel arms (`physics/launcherShell.ts`). Its slabs and walls go at once and its footprint comes back as capturable space, so a launcher adds to the board's space rather than subtracting from it; only the picture takes its time. | `launcherShell.test.ts` |
 | Gate zone behind a reveal | allowed, and level 8 is one: its whole `var` zone sits behind the curtain. The reachability guard reads cells behind an unbroken reveal as pending, not claimed (`sealedPendingCells`), and it reads the DEALT zones (`game.coloredAreas`, rotated), never the authored rectangle. Both were wrong once: level 8 failed on frame one of the un-rotated deal and on the first ordinary cut of the other three, and the retry remounted into the same failure. | `gateZoneDeal.test.ts` |
 | A win clause that names a PLACE can be stranded | `splitLocks`, `delivered`, `terminals` and `harvested` all need particular ground to still be usable, and the board can take that ground away: level 2's right-hand lock dies the moment the right half is captured with both balls on the left. `requirementReach.ts` asks the question for the whole union (can a ball still get there / is the ground still open to a fence) and fails the map as `requirementUnreachable`. Before it, level 2 simply ran forever - the tutorial band has no clock either. | `strandedRequirement.test.ts` |
+| A launcher fires down its own line, every ball of it | There is no aim cone: the pull sets the POWER and the barrel sets the direction, so the runway a designer reads is the shot a player takes. The roster leaves together and comes apart because it is stacked down the bore, crossing the muzzle one after another. The fan that used to spread it across the cone made the launch preview draw one path for a shot that went several ways, which is what it was reported as. | `launcher.test.ts`, `launcherBarrel.test.ts` |
+| A fast ball goes THROUGH what it breaks | At 420+ units/s along the contact normal, a ball whose hit destroys a breakable keeps its heading instead of bouncing, and stays intangible to that wreck for 120ms. Only on the killing contact, so a dent still bounces. It is what makes speed worth anything against a `brittle` brick (those go on any contact, so the damage curve never applies to them), and it means a run of bricks can be CROSSED by a fast ball rather than only chipped at. | `punchThrough.test.ts` |
 | A cut that would bury the win's slabs is refused | Not failed: the fence does not land, nothing is spent, and the board is unchanged, exactly as for a cut that would orphan a ball. Without it a map asking for half its bricks ends on an ordinary early fence at 88% remaining, charging a life for an order-of-play mistake the board never showed. `objectiveBuried` stays as the backstop for the paths a cut does not own (a lock's capture cascade, a destroy-recapture). | `smashCutRefusal.test.ts` |
 | Stranding checks wait for the first cut | `areaUnreachable`, `objectiveBuried` and `requirementUnreachable` never fire while `wallCount` is 0. A map cannot be stranded by a cut nobody has made, and a check that fires on an untouched board loops: fail, overlay, remount, fail. With the gate a wrong guard costs one map at most. | `gateZoneDeal.test.ts` |
 | Launcher bore | a turned barrel needs a bore of **~110 or more**. Reachability is ball-size aware and works on the rasterised grid, so a narrow bore at an angle rasterises to a staircase that erodes into disconnected cells: at 84 the balls inside were sealed off from the board and `captureUnreachableCells` wrote off everything outside the barrel. From about 110 up it stays connected on every rotation. | `launcherBarrel.test.ts` |

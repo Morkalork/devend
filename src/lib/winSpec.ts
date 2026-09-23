@@ -14,7 +14,7 @@
  * five fields a second time and reach its own conclusion, so a map could tell
  * the player one thing and check another. Both now read one spec.
  */
-import type { LevelConfig, ColoredArea } from "@/types/level";
+import type { LevelConfig, ColoredArea, LevelEntity } from "@/types/level";
 import type {
   WinCondition, WinConditionProgress, WinSnapshot, WinSpec,
 } from "@/types/winSpec";
@@ -22,6 +22,10 @@ import type { WinReason } from "@/types/game";
 import type { SplitAxis } from "@/types/winSpec";
 import { rotateSplitLine, ROTATION_MIN_LEVEL, type MapRotation } from "@/lib/mapRotation";
 import { gateAreas } from "@/lib/coloredAreas";
+import {
+  DEFAULT_SMASH_CLASS, destructibleClass, classesPresent, matchesSmashClass,
+  type SmashClassFilter,
+} from "@/lib/destructibleClass";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 
@@ -277,7 +281,10 @@ export function evaluateWinCondition(
     case "delivered":
       return accumulate(snap.delivered, condition.count);
     case "smashed":
-      return accumulate(snap.smashed, condition.count);
+      // Indexed by the clause's own field, so a clause that names a class can
+      // never be answered by the total. An omitted `of` reads "any", which is
+      // what it meant before the split existed.
+      return accumulate(snap.smashed[condition.of ?? DEFAULT_SMASH_CLASS], condition.count);
     case "terminals":
       return accumulate(snap.terminals, condition.count);
     case "harvested":
@@ -477,11 +484,38 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       // The same three flags initGame builds a breakable from: `chest` and
       // `brittle` each imply it, and a wall of glass bricks written without
       // `breakable: true` used to count as zero here and flag the map.
-      const breakables = (level.entities ?? [])
-        .filter(e => e.kind === "wall" && (e.breakable || e.chest || e.brittle)).length;
-      if (c.count > breakables) {
+      // Narrowed to the wall entities, which are the only ones carrying these
+      // flags; a mover is destructible scenery and never a smash objective.
+      const all = (level.entities ?? [])
+        .filter((e): e is Extract<LevelEntity, { kind: "wall" }> =>
+          e.kind === "wall" && !!(e.breakable || e.chest || e.brittle));
+      const of = c.of ?? DEFAULT_SMASH_CLASS;
+      // Per CLASS, which is the point of the whole split. The old rule counted
+      // the map's breakables into one number, so `smashed 5 of monoliths` on a
+      // board of thirty shards and four monoliths passed a check that was
+      // reading thirty-four.
+      const matching = all.filter(e => matchesSmashClass({ brittle: !!e.brittle }, of));
+      const noun = of === "any" ? "breakable" : of === "shards" ? "shard" : "monolith";
+      if (c.count > matching.length) {
         problems.push(
-          `Asks for ${c.count} smashed, but the map has ${breakables} breakable ${breakables === 1 ? "obstacle" : "obstacles"}.`);
+          `Asks for ${c.count} ${noun}${c.count === 1 ? "" : "s"} smashed, but the map has ${matching.length}.`);
+      }
+      // THE rule this whole change exists for. On a map holding both classes an
+      // unsaid `of` means "any", and "any" on a mixed map is the bug that was
+      // reported: six shards and one monolith, a clause asking for five, and no
+      // reason to ever spend three drives on the monolith when one incidental
+      // contact settles the same bill. It is an authoring fault and it is
+      // catchable here, so it never has to be balanced around on the board.
+      //
+      // Only on a MIXED map. On a single-class map `any` and that class are the
+      // same set, so an omitted `of` says nothing that could be misread, and
+      // forcing every author to spell it out would be noise.
+      const present = classesPresent(all.map(e => ({ brittle: !!e.brittle, kind: "breakable" as const })));
+      if (of === "any" && present.size > 1) {
+        problems.push(
+          `Asks for ${c.count} smashed without saying of what, on a map holding both shards and monoliths. ` +
+          `Say \`of: shards\` or \`of: monoliths\`, or split it into one clause each: counted together, ` +
+          `the monoliths are never worth breaking.`);
       }
     }
     if (c.kind === "terminals") {

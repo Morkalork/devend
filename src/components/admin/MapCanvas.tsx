@@ -6,7 +6,7 @@ import { BOUNCER_HOURS } from '@/lib/physics/bouncer';
 import { subdivideOutline } from '@/lib/physics/deformable';
 import { deformPlies } from '@/lib/rendering/sleek/deformSkin';
 import {
-  muzzleRay, launcherRunway, LAUNCH_SPREAD, MIN_LAUNCH_RUNWAY_FRACTION,
+  muzzleRay, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
 } from '@/lib/launcher';
 import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
@@ -796,23 +796,10 @@ export function MapCanvas({
         origin.x + direction.x * shown, origin.y + direction.y * shown,
       );
 
-      // The cone the player can actually steer within, so a designer can see
-      // that a blocked centre line may still have a way out.
-      const base = Math.atan2(direction.y, direction.x);
-      ctx.strokeStyle = hexToRgba(colour, 0.3);
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 6]);
-      for (const sign of [-1, 1]) {
-        const a = base + sign * LAUNCH_SPREAD;
-        const edge = worldToScreen(
-          origin.x + Math.cos(a) * shown, origin.y + Math.sin(a) * shown,
-        );
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(edge.x, edge.y);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
+      // No cone any more: the shot leaves straight down this line, every ball
+      // of the roster on it, and the only thing the player picks is how fast
+      // (lib/launcher.ts). The runway drawn above IS the shot, which is the
+      // whole reason a designer should be reading it.
 
       // The shot itself.
       ctx.strokeStyle = colour;

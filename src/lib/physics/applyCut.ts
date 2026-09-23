@@ -44,6 +44,7 @@ import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
+import { smashCounts } from "@/lib/destructibleClass";
 import { lostRequirement } from "@/lib/physics/requirementReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
@@ -811,13 +812,13 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     lockedBalls: game.lockedBallsCount,
     superiorLocks: game.superiorLockCount,
     delivered: deliveredCount(game),
-    // Breakables only, and derived from the list rather than from a counter:
-    // a destroyed destructible is NOT spliced out, it stays with
+    // Breakables only, by class, and derived from the list rather than from a
+    // counter: a destroyed destructible is NOT spliced out, it stays with
     // destroyed: true, so both halves of the fraction come from one place and
     // cannot drift. Mirrors and movers are destructible too and deliberately
-    // excluded - they are scenery a ball happens to hit.
-    smashed: (game.destructibles ?? [])
-      .filter(d => d.kind === "breakable" && d.destroyed).length,
+    // excluded - they are scenery a ball happens to hit. See
+    // lib/destructibleClass for why shards and monoliths are counted apart.
+    smashed: smashCounts(game.destructibles ?? []),
     // Both derived from the runtime lists rather than from counters kept
     // alongside them, for the reason `smashed` is: a second copy of the same
     // fact needs every path that can light or harvest to remember to bump it.

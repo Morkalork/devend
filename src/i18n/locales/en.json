@@ -869,7 +869,13 @@
     "shortSplitLocks": "lock {{count}} on each side",
     "splitLocksHorizontal_one": "Lock a ball in each half, top and bottom.",
     "splitLocksHorizontal_other": "Lock {{count}} balls in each half, top and bottom.",
-    "shortSplitLocksHorizontal": "lock {{count}} in each of the top and bottom"
+    "shortSplitLocksHorizontal": "lock {{count}} in each of the top and bottom",
+    "shortSmashedShards": "break {{count}} shards",
+    "shortSmashedMonoliths": "break {{count}} monoliths",
+    "smashedShards_one": "Break {{count}} of the map's glass shards. They go on a single touch.",
+    "smashedShards_other": "Break {{count}} of the map's glass shards. They go on a single touch.",
+    "smashedMonoliths_one": "Break {{count}} of the map's amber monoliths. Each takes a few solid hits.",
+    "smashedMonoliths_other": "Break {{count}} of the map's amber monoliths. Each takes a few solid hits."
   },
   "upgradeShop": {
     "storeLabel": "Store",
@@ -1223,7 +1229,7 @@
     "lifeLostBall": "A ball cut through your fence. Life lost.",
     "lifeLostMover": "A moving block cut through your fence. Life lost.",
     "cutWouldTrapBall": "That cut would have sealed a ball away with no way out, so it did not land. Leave it a route.",
-    "cutWouldBurySlabs": "That cut would have put the blocks you still need to smash out of reach, so it did not land."
+    "cutWouldBurySlabs": "That cut would have put what you still need to break out of reach, so it did not land."
   },
   "mapFailure": {
     "title": "Map failed",
@@ -1255,7 +1261,9 @@
     "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})",
     "objectiveBuried": "You fenced off a breakable you still had to smash",
     "requirementUnreachable": "You fenced off something this map still needs",
-    "needSplitLocks": "Lock {{each}} on each side of the board (you covered {{current}} of {{target}} sides)"
+    "needSplitLocks": "Lock {{each}} on each side of the board (you covered {{current}} of {{target}} sides)",
+    "needSmashedShards": "Break {{target}} shards (you had {{current}})",
+    "needSmashedMonoliths": "Break {{target}} monoliths (you had {{current}})"
   },
   "winGate": {
     "superiorLocks": "Superior",
@@ -1273,11 +1281,14 @@
     "space": "Cleared",
     "locks": "Locked",
     "splitLocks": "Both sides",
-    "splitLocksHorizontal": "Top and bottom"
+    "splitLocksHorizontal": "Top and bottom",
+    "smashed_shards": "Shards",
+    "smashed_monoliths": "Monoliths"
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",
-    "basePay": "Base x{{multiplier}}"
+    "basePay": "Base x{{multiplier}}",
+    "ballsOnTheLine": "x{{count}} balls"
   },
   "rubberBand": {
     "pullToFire": "Drag and release to fling",

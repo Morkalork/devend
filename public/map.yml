@@ -354,6 +354,7 @@ levels:
           threshold: 28
         - kind: smashed
           count: 2
+          of: shards
     entities:
       - id: jamb-top
         kind: wall
@@ -471,6 +472,7 @@ levels:
           threshold: 25
         - kind: smashed
           count: 6
+          of: shards
     entities:
       - id: anchor-top
         kind: wall
@@ -632,6 +634,7 @@ levels:
           threshold: 22
         - kind: smashed
           count: 6
+          of: shards
     entities:
       # The alcove is ONE wall now. It used to be two - a 141-long jamb hanging
       # off the top edge at x 585 and this 270-long lip - which left the only
@@ -915,6 +918,7 @@ levels:
           threshold: 16
         - kind: smashed
           count: 6
+          of: shards
     coloredAreas:
       - kind: var
         x: 45
@@ -1161,6 +1165,7 @@ levels:
           threshold: 16
         - kind: smashed
           count: 1
+          of: monoliths
     coloredAreas:
       - kind: var
         x: 640
@@ -1194,15 +1199,38 @@ levels:
         height: 200
         breakable: true
         hitsToBreak: 3
-      - id: sump
+      - id: grit-1
         kind: wall
         shape: rect
-        x: 640
-        'y': 620
-        width: 155
-        height: 26
-        breakable: true
-        hitsToBreak: 3
+        x: 686
+        'y': 600
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-2
+        kind: wall
+        shape: rect
+        x: 722
+        'y': 600
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-3
+        kind: wall
+        shape: rect
+        x: 686
+        'y': 638
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-4
+        kind: wall
+        shape: rect
+        x: 722
+        'y': 638
+        width: 26
+        height: 28
+        brittle: true
       - id: curtain-jamb
         kind: wall
         shape: rect
@@ -1252,6 +1280,10 @@ levels:
           threshold: 15
         - kind: smashed
           count: 1
+          of: monoliths
+        - kind: smashed
+          count: 2
+          of: shards
     entities:
       - id: barrel
         kind: launcher
@@ -1292,15 +1324,38 @@ levels:
         height: 170
         breakable: true
         hitsToBreak: 3
-      - id: ledge
+      - id: grit-1
         kind: wall
         shape: rect
-        x: 760
-        'y': 380
+        x: 742
+        'y': 437
         width: 26
-        height: 180
-        breakable: true
-        hitsToBreak: 3
+        height: 28
+        brittle: true
+      - id: grit-2
+        kind: wall
+        shape: rect
+        x: 778
+        'y': 437
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-3
+        kind: wall
+        shape: rect
+        x: 742
+        'y': 475
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-4
+        kind: wall
+        shape: rect
+        x: 778
+        'y': 475
+        width: 26
+        height: 28
+        brittle: true
       - id: sump
         kind: wall
         shape: rect
@@ -1337,6 +1392,10 @@ levels:
           threshold: 14
         - kind: smashed
           count: 1
+          of: monoliths
+        - kind: smashed
+          count: 2
+          of: shards
     coloredAreas:
       - kind: var
         x: 660
@@ -1385,15 +1444,38 @@ levels:
         height: 26
         breakable: true
         hitsToBreak: 3
-      - id: ledge
+      - id: grit-1
         kind: wall
         shape: rect
-        x: 560
-        'y': 700
-        width: 200
-        height: 26
-        breakable: true
-        hitsToBreak: 3
+        x: 629
+        'y': 680
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-2
+        kind: wall
+        shape: rect
+        x: 665
+        'y': 680
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-3
+        kind: wall
+        shape: rect
+        x: 629
+        'y': 718
+        width: 26
+        height: 28
+        brittle: true
+      - id: grit-4
+        kind: wall
+        shape: rect
+        x: 665
+        'y': 718
+        width: 26
+        height: 28
+        brittle: true
     beats:
       - id: deadline
         atSpaceRemaining: 20
@@ -1780,6 +1862,7 @@ levels:
           threshold: 12
         - kind: smashed
           count: 16
+          of: shards
     beats:
       - id: crunch
         atSpaceRemaining: 30
@@ -2137,6 +2220,7 @@ levels:
           threshold: 11
         - kind: smashed
           count: 2
+          of: monoliths
     coloredAreas:
       - kind: const
         x: 340

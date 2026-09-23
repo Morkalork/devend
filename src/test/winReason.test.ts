@@ -17,6 +17,7 @@ import type { WinReason } from "@/types/game";
 import type { WinCondition, WinConditionKind, WinSnapshot } from "@/types/winSpec";
 import { WIN_CONDITION_KINDS } from "@/types/winSpec";
 import { winReasonFor } from "@/lib/winSpec";
+import { everySmashed } from "./fixtures/smashCounts";
 
 const applyCutSrc = readFileSync(resolve(process.cwd(), "src/lib/physics/applyCut.ts"), "utf8");
 const canvasSrc = readFileSync(resolve(process.cwd(), "src/components/game/GameCanvas.tsx"), "utf8");
@@ -38,7 +39,7 @@ describe("win reason reaches the results screen", () => {
   it("maps every win condition kind to a reason", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: { black: 9 }, lockPoints: [{ x: 100, y: 100 }, { x: 800, y: 800 }], mapRotation: 0, delivered: 0, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
+      lockedByType: { black: 9 }, lockPoints: [{ x: 100, y: 100 }, { x: 800, y: 800 }], mapRotation: 0, delivered: 0, smashed: everySmashed(9), terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const sample: Record<WinConditionKind, WinCondition> = {
@@ -67,7 +68,7 @@ describe("win reason reaches the results screen", () => {
   it("uses every reason somewhere", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 9, smashed: 9, terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
+      lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 9, smashed: everySmashed(9), terminals: 9, harvested: 9, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const reasonOf = (c: WinCondition) =>

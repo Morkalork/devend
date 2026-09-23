@@ -15,7 +15,14 @@
 #   lockMultiplier lock-bonus multiplier when this ball is locked away
 #   density        relative weight for the breakable force model (default 1). Impact
 #                  damage = density x (radius/18)^2 x speed^1.6, so a heavy grey/black
-#                  cracks breakables in fewer hits than a light yellow at the same speed
+#                  cracks breakables in fewer hits than a light yellow at the same speed.
+#                  One contact can do at most 3.0, which is an ordinary slab's whole
+#                  budget: a fast heavy ball takes one in a single hit, nothing takes
+#                  level 15's 14-hit rail. And at 420+ along the surface normal, a ball
+#                  that BREAKS something carries straight on through the wreck instead
+#                  of bouncing (physics/destructibles.ts, punchesThrough) - which is
+#                  where speed finally means something against a brittle brick, since
+#                  those go on any contact at all whatever the force model says.
 #   ability        one of: none | variableSpeed | slowOthers | moneyBall | slowDown | breakObjects
 #   speedReduction (slowOthers only) speed each struck ball loses per hit (down to its minimumSpeed)
 #   description    one-line ability summary shown in the tutorial

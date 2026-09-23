@@ -27,6 +27,7 @@ import type { SplitAxis } from '@/types/winSpec';
 import { resolveWinSpec, winSpecProblems, areasGatingWin, splitLine, NO_RUN_RULES } from '@/lib/winSpec';
 import { winConditionsBody } from '@/lib/winConditions';
 import { getAllBallTypes } from '@/lib/ballTypes';
+import type { SmashClassFilter } from '@/lib/destructibleClass';
 
 /** Short editor labels. Distinct from the player-facing sentences on purpose:
  *  the author needs the mechanic named, the player needs it explained. */
@@ -40,7 +41,7 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   boss: 'Defeat the boss',
   allLocked: 'Lock every ball',
   delivered: 'Deliver N balls into a box',
-  smashed: 'Smash N breakables',
+  smashed: 'Break N shards or monoliths',
   terminals: 'Light N circuit terminals',
   harvested: 'Harvest N stream seams',
   underPar: 'Finish under par',
@@ -295,10 +296,40 @@ function ConditionParams({ condition, onChange }: {
   switch (condition.kind) {
     case 'space':
       return num(condition.threshold, n => onChange({ ...condition, threshold: n }), '% of the board left');
+    // "How many" is the whole clause for each of these. `delivered`,
+    // `terminals` and `harvested` had no case at all until now: the kind picker
+    // listed them and then offered no way to set the number, so their counts
+    // were authored in YAML and nowhere else.
     case 'locks':
     case 'superiorLocks':
     case 'area':
+    case 'delivered':
+    case 'terminals':
+    case 'harvested':
       return num(condition.count, n => onChange({ ...condition, count: n }), 'How many');
+    case 'smashed':
+      // Two controls: how many, and of WHAT. The class picker is the clause's
+      // whole point (lib/destructibleClass) - counted together, a map's
+      // monoliths are never worth the three drives they cost - so it has to be
+      // reachable from the panel and not only from the YAML.
+      return (
+        <>
+          {num(condition.count, n => onChange({ ...condition, count: n }), 'How many')}
+          <select
+            value={condition.of ?? 'any'}
+            title="Which class of breakable this clause counts"
+            onChange={(e) => onChange({
+              ...condition,
+              of: e.target.value as SmashClassFilter,
+            })}
+            className="w-24 px-1.5 py-1 rounded bg-background border border-border text-[11px] shrink-0"
+          >
+            <option value="any">any breakable</option>
+            <option value="shards">shards</option>
+            <option value="monoliths">monoliths</option>
+          </select>
+        </>
+      );
     case 'lockType':
       return (
         <>

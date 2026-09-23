@@ -132,6 +132,21 @@ export interface Ball {
   lastDeformAt?: number;
   /** When this ball last came out of a portal, so a pair cannot become a loop. */
   lastPortalAt?: number;
+  /**
+   * The obstacle this ball is currently punching through, and until when.
+   *
+   * A ball fast enough to destroy something outright carries straight on
+   * through it rather than bouncing (destructibles.punchesThrough). The wreck
+   * is not gone yet at that instant - it is queued, and processDestroys clears
+   * its walls and its polygon after the step - so without this the ball would
+   * bounce off the far side of a slab that no longer exists, which is the
+   * opposite of what it just earned.
+   *
+   * Same shape as lastPortalAt above, and for the same kind of reason: a
+   * short, ball-local grace that lets one contact mean what it should.
+   */
+  punchThroughId?: string;
+  punchThroughUntil?: number;
   leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)
   leapToX?: number;   leapToY?: number;   // arc end (open-space landing spot)
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────

@@ -55,7 +55,7 @@ function callbacks() {
 /** Fire the cup and carry every ball well clear of it, so the next arming pass latches. */
 function emptyTheBarrel(game: CanvasGameState): LauncherState {
   const cup = game.launchers![0];
-  const fired = fireLauncher(game, cup, { direction: { x: 0, y: -1 }, power: 1, clamped: false });
+  const fired = fireLauncher(game, cup, { direction: { x: 0, y: -1 }, power: 1 });
   expect(fired).not.toBeNull();
   for (const b of game.balls) {
     b.position = { x: 750, y: 750 };
@@ -130,7 +130,7 @@ describe("the shell leaves the model the frame the barrel arms", () => {
     expect(cup.dematerialized).toBe(false);
     expect(shellWalls(game)).toHaveLength(12);
 
-    fireLauncher(game, cup, { direction: { x: 0, y: -1 }, power: 1, clamped: false });
+    fireLauncher(game, cup, { direction: { x: 0, y: -1 }, power: 1 });
     updateLauncherArming(game);   // the balls have not moved: still inside
     expect(cup.armed).toBe(false);
     dematerializeArmedLaunchers(game, cb, 1000);

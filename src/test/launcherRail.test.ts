@@ -11,16 +11,20 @@
  * Against a convex face every hit throws it further away, which is what a bend
  * bowed the wrong way gives you and what it looks like on screen: a bounce.
  *
- * On top of that the launcher deliberately FANS its shots across half its aim
- * cone (fanDirections, LAUNCH_SPREAD * 0.5, so +/-17.5 degrees), because a
- * barrel that fired its whole roster along one line would send a column of
- * balls that never separates. Two balls therefore never take the same line,
- * and a single curved face that carries one of them throws the other off.
+ * The launcher used to FAN its shots across half its aim cone, because a barrel
+ * firing its whole roster along one line sends a column of balls that never
+ * separates - so two balls never took the same line, and a single curved face
+ * that carried one of them threw the other off. The fan is gone (the preview
+ * could not tell the truth about it, see lib/launcher.ts) and the roster does
+ * now leave down one line, which makes a channel MORE reliable here, not less.
  *
- * A channel does not have that problem. With walls on both sides, a ball that
- * enters the mouth is committed whatever angle it entered on, and the arc it
- * traces out is the arc the designer drew. That is what this file guards,
- * measured as "how much of its flight did the ball spend beside the guide".
+ * A channel is what this file guards either way. With walls on both sides, a
+ * ball that enters the mouth is committed whatever angle it entered on, and the
+ * arc it traces out is the arc the designer drew - measured as "how much of its
+ * flight did the ball spend beside the guide". Two of the aims below are
+ * deliberately off the barrel's own line, which no pull can produce any more,
+ * and they stay: a rail has to hold a ball that arrives off-axis after a bounce
+ * just as much as one fired straight into it.
  *
  * ── Why a fixture and not a shipped map ─────────────────────────────────────
  *
@@ -123,7 +127,7 @@ function ride(aimDegrees: number, steps = 300) {
   const rad = (aimDegrees * Math.PI) / 180;
   const fired = fireLauncher(
     game, launcher,
-    { direction: { x: Math.cos(rad), y: Math.sin(rad) }, power: 2, clamped: false },
+    { direction: { x: Math.cos(rad), y: Math.sin(rad) }, power: 2 },
   );
 
   const beside = game.balls.map(() => 0);

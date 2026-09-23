@@ -18,6 +18,7 @@ import { resolve } from "node:path";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { DEFAULT_LIGHT_LOOK } from "@/lib/lightLook";
 import { DEFAULT_BALL_LOOK } from "@/lib/ballLook";
+import { SMASH_CLASS_FILTERS } from "@/lib/destructibleClass";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const PLAYGROUND = read("src/components/admin/PlaygroundScreen.tsx");
@@ -258,5 +259,42 @@ describe("anything that needs a second device is testable without one", () => {
       .toMatch(/bluetooth[\s\S]{0,200}wifi[\s\S]{0,200}location/);
     expect(NEARBY, "a build without the plugin looks the same as a failure")
       .toContain("isNearbyAvailable");
+  });
+});
+
+describe("a win clause's class picker", () => {
+  /**
+   * `smashed` grew an `of` field (shards / monoliths / any) and the rule this
+   * file exists for applies: a tester has to be able to reach it.
+   *
+   * It matters more than most. The class is the difference between a clause
+   * that asks for one deliberate break and one that six incidental contacts
+   * settle, and "did not fire" and "does not work" look identical from the
+   * outside on a chance-free mechanic too. A clause authored only in YAML is
+   * exactly as testable as it is discoverable.
+   *
+   * Three of the count kinds had no editor at all when this was written -
+   * delivered, terminals and harvested were listed in the kind picker and then
+   * offered no way to set their number - so they are pinned here too.
+   */
+  const PANEL = read("src/components/admin/WinConditionsPanel.tsx");
+
+  it("offers every class the clause accepts", () => {
+    for (const of of SMASH_CLASS_FILTERS) {
+      expect(PANEL, `the panel cannot author \`of: ${of}\``)
+        .toContain(`value="${of}"`);
+    }
+  });
+
+  it("writes the field the clause actually reads", () => {
+    expect(PANEL).toContain("of: e.target.value as SmashClassFilter");
+  });
+
+  it("lets a tester set the count on every counting clause", () => {
+    const params = PANEL.slice(PANEL.indexOf("function ConditionParams"));
+    for (const kind of ["smashed", "delivered", "terminals", "harvested"]) {
+      expect(params, `${kind} has no count editor: its number is YAML-only`)
+        .toContain(`case '${kind}':`);
+    }
   });
 });

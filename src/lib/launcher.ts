@@ -147,63 +147,66 @@ export const LAUNCH_FULL_PULL = 220;
 export const LAUNCH_DEAD_PULL = 24;
 
 /**
- * How far off its facing a launcher can be aimed, in radians.
+ * ── Why the shot has no aim any more ───────────────────────────────────────
  *
- * Not zero, because a pure power slider wastes the other dimension of a drag
- * and makes every launcher map open the same way. Not free, because a launcher
- * that can fire anywhere is just a ball spawn with extra steps: the cup's
- * opening is a design statement about which part of the board this map wants
- * you to open with, and a 35 degree cone keeps that statement true while still
- * letting a player pick a lane.
+ * It used to: a 35 degree cone, and the argument for it was that "a pure power
+ * slider wastes the other dimension of a drag and makes every launcher map open
+ * the same way". That is true and it was worth less than what it cost.
+ *
+ * The cost is the barrel holds the whole roster. Every ball fired on one line
+ * at one speed would travel as a single column forever - nothing here damps
+ * anything - so the shot FANNED them across the cone to break them apart, and
+ * the preview drew one line while three balls left on three different ones.
+ * Reported as exactly that: "because there are often more than one ball in
+ * there, it seldom shows what you get... otherwise all you get is chaos."
+ *
+ * A preview that lies about the one irreversible decision on the map is worse
+ * than a decision with one dimension instead of two. So the shot goes straight
+ * out of the barrel, every ball on that line, and the only thing the pull
+ * decides is how fast - which is the thing that was always being paid for
+ * anyway (see the payout note above). The balls come apart because they are
+ * STACKED down the barrel and leave the muzzle one after another, which is the
+ * same separation the fan was reaching for and is visible in the tube before a
+ * finger is on the band.
+ *
+ * Past the muzzle nothing about them is special: ordinary balls, ordinary
+ * bounces, and the first fence the player draws is what breaks the column up.
  */
-export const LAUNCH_SPREAD = (35 * Math.PI) / 180;
 
 export interface LaunchAim {
-  /** Unit vector the ball will leave along, already clamped to the cone. */
+  /** Unit vector the ball will leave along: the barrel's own line, always. */
   direction: Vector2;
   /** Multiple of base speed, in [LAUNCH_MIN_POWER, LAUNCH_MAX_POWER]. */
   power: number;
-  /** True when the aim wanted to go wider than the cone allows. */
-  clamped: boolean;
 }
 
 /**
  * Read a pull into an aim.
  *
- * `pull` is the vector from where the finger went down to where it is now, so
- * the ball fires along its REVERSE: you draw the plunger back and it springs
- * forward, which is the gesture every slingshot in every game has taught.
+ * `pull` is the vector from where the finger went down to where it is now, and
+ * only the part of it that STRETCHES THE BAND counts: the component pointing
+ * back down the barrel. Pull straight back and the band draws fully; pull
+ * across the barrel and it barely draws at all, which is what a band strung
+ * across a cup actually does and what keeps the slingshot gesture honest now
+ * that the direction is not up for negotiation.
+ *
  * Returns null for a pull too short to mean anything, which the caller shows as
- * "not yet a launch" rather than as a weak one.
+ * "not yet a launch" rather than as a weak one. A sideways drag reads as that
+ * too, rather than as a full-power shot the player never asked for.
  */
 export function launchAim(
   pull: Vector2, facing: LaunchFacing, angleDeg = 0,
 ): LaunchAim | null {
-  const len = Math.hypot(pull.x, pull.y);
-  if (!(len > LAUNCH_DEAD_PULL)) return null;
-
   const bearing = muzzleVector(facing, angleDeg);
-  // Fire opposite the pull.
-  const wanted = { x: -pull.x / len, y: -pull.y / len };
+  // How far the band is drawn: the pull projected onto the reverse of the
+  // muzzle. Negative (a push toward the muzzle) is no draw at all.
+  const draw = -(pull.x * bearing.x + pull.y * bearing.y);
+  if (!(draw > LAUNCH_DEAD_PULL)) return null;
 
-  // Angle between the wanted heading and the cup's facing, signed so the clamp
-  // knows which edge of the cone to fall back to.
-  const base = Math.atan2(bearing.y, bearing.x);
-  const want = Math.atan2(wanted.y, wanted.x);
-  let delta = want - base;
-  // Normalise to (-pi, pi] so a wrap across the branch cut does not read as a
-  // huge deflection and slam the aim into the wrong edge of the cone.
-  while (delta <= -Math.PI) delta += 2 * Math.PI;
-  while (delta > Math.PI) delta -= 2 * Math.PI;
-
-  const clamped = Math.abs(delta) > LAUNCH_SPREAD;
-  const used = clamped ? Math.sign(delta) * LAUNCH_SPREAD : delta;
-  const angle = base + used;
-
-  const t = Math.min(1, (len - LAUNCH_DEAD_PULL) / (LAUNCH_FULL_PULL - LAUNCH_DEAD_PULL));
+  const t = Math.min(1, (draw - LAUNCH_DEAD_PULL) / (LAUNCH_FULL_PULL - LAUNCH_DEAD_PULL));
   const power = LAUNCH_MIN_POWER + t * (LAUNCH_MAX_POWER - LAUNCH_MIN_POWER);
 
-  return { direction: { x: Math.cos(angle), y: Math.sin(angle) }, power, clamped };
+  return { direction: bearing, power };
 }
 
 /** Clamp any power to the legal range, for values arriving from config or a save. */
@@ -346,10 +349,10 @@ function distanceToBox(origin: Vector2, dir: Vector2, b: Blocker): number {
  * Breakables are skipped entirely. See the note on Blocker: firing into one is
  * a legitimate opening, and on the breakable-teaching map it is the point.
  *
- * The straight shot is the worst case on purpose. A player can steer up to
- * LAUNCH_SPREAD either side, so a barrel whose centre line is blocked may still
- * be playable - but a launcher whose ONLY good shots are at the edge of the
- * cone is a launcher that punishes using it as it looks.
+ * The straight shot is no longer the worst case, it is the ONLY case. When
+ * there was an aim cone this measured the centre line and argued that a blocked
+ * one might still be playable off to the side; the shot leaves down the barrel
+ * now, so what this measures and what the player gets are the same line.
  */
 export function launcherRunway(
   cup: LauncherPlacement,
