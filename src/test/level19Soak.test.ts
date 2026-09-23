@@ -45,7 +45,7 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 const levels = ENGINE_MAPS;
 
@@ -162,7 +162,7 @@ function soak(game: CanvasGameState, seconds: number): Wedge | null {
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe("level 19, soaked over many spawns", () => {
-  const level = levels.find(l => l.id === "level-19")!;
+  const level = RETIRED.find(l => l.id === "level-19")!; // the retired one: the ladder has its own level-19 now
 
   for (const gravity of [false, true]) {
     const label = gravity ? "with the gravity mutator" : "without gravity";

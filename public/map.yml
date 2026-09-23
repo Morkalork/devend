@@ -2313,3 +2313,138 @@ levels:
         breakable: true
         hitsToBreak: 2
     balls: []
+
+  # 19 "Hotfix" - act II's SKILL CHECK. Nothing new: the pull from 14, the mover
+  # from 4, the chest from 17, all at once.
+  # Built for the tilt. The room turns a quarter every ten seconds, so the board
+  # has the same symmetry: four patrol bars in a pinwheel, one in front of each
+  # wall, all sweeping the same way round. Whichever side is down, the floor
+  # looks the same - a bar sweeping above it and a chest sitting on it - so a
+  # turn never deals you a different MAP, only a different floor, and the plan
+  # you read before the turn is still the right shape after it.
+  # The eye of the pinwheel is the quiet chamber: no bar ever enters the middle,
+  # so cuts there are safe, but the balls are never there either. They fall to
+  # the ring, where the bars patrol and a fence growing into one costs a life.
+  # The chests are on the floor of each side, so the pull brings the balls to
+  # a chest every phase and smashing them is the win. Two of four are needed;
+  # the other two are the greed hook, and cracking one means fencing near a
+  # bar. Four bouncy sides at 1.05, like 14, so nothing pools dead on a floor.
+  - id: level-19
+    level: 19
+    sizeThreshold: 10
+    expectedCuts: 8
+    points: 5
+    maxBalls: 4
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey, red]
+    pickupChance: 0
+    mutator: tipping
+    neverRotates: true
+    boardEdges:
+      top:
+        kick: 1.05
+      bottom:
+        kick: 1.05
+      left:
+        kick: 1.05
+      right:
+        kick: 1.05
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 2
+          of: monoliths
+    beats:
+      - id: crunch
+        atSpaceRemaining: 40
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: bar-n
+        kind: mover
+        shape: rect
+        x: 375
+        'y': 240
+        width: 150
+        height: 22
+        axis: horizontal
+        range: 300
+        speed: 150
+        phase: 0
+      - id: bar-e
+        kind: mover
+        shape: rect
+        x: 638
+        'y': 375
+        width: 22
+        height: 150
+        axis: vertical
+        range: 300
+        speed: 150
+        phase: 0
+      - id: bar-s
+        kind: mover
+        shape: rect
+        x: 375
+        'y': 638
+        width: 150
+        height: 22
+        axis: horizontal
+        range: 300
+        speed: 150
+        phase: 1
+      - id: bar-w
+        kind: mover
+        shape: rect
+        x: 240
+        'y': 375
+        width: 22
+        height: 150
+        axis: vertical
+        range: 300
+        speed: 150
+        phase: 1
+      - id: chest-s
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 760
+        width: 80
+        height: 60
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: chest-n
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 80
+        width: 80
+        height: 60
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: chest-w
+        kind: wall
+        shape: rect
+        x: 80
+        'y': 410
+        width: 60
+        height: 80
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      - id: chest-e
+        kind: wall
+        shape: rect
+        x: 760
+        'y': 410
+        width: 60
+        height: 80
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+    balls: []

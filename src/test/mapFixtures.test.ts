@@ -59,9 +59,12 @@ describe("the map fixtures", () => {
     // room with neither. So a test that wanted "the map with a cage on it" and
     // reached for level 18 by number now gets a board with no cage at all,
     // while the same id in RETIRED still has one.
+    // level-19 joins as act II's skill check, a gravity pinwheel; the retired
+    // level-19 is the one the gravity soak and renderer tests were written
+    // against, so those three read RETIRED by name.
     expect(shared).toEqual([
       "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
-      "level-17", "level-18",
+      "level-17", "level-18", "level-19",
     ]);
   });
 

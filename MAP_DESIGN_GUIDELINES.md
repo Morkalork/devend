@@ -276,9 +276,9 @@ Every mechanic gets a status, and the status decides what it costs.
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
 | colored area (bonus) | D | Meet | 3 | 5 | 9, 14, 17, 21, 22, 24, 26, 28, 29, 31, 33 |
-| mover | C | Meet | 4 | 5 | 7, 9, 13, 22, 23, 29, 33 |
+| mover | C | Meet | 4 | 5 | 7, 9, 13, 19, 22, 23, 29, 33 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
-| chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 23, 27, 32 |
+| chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | 17 |
@@ -288,11 +288,11 @@ Every mechanic gets a status, and the status decides what it costs.
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 19 | - | 31 |
-| portal | B | Meet | 19 | - | - |
-| WIP limit | D | Meet | 19 | - | 32 |
-| cage | E | Compressed | 19 | 29 | - |
-| thread lock | D | Compressed | 19 | - | - |
+| terminals | E | Meet | 21 | - | 31 |
+| portal | B | Meet | 21 | - | - |
+| WIP limit | D | Meet | 21 | - | 32 |
+| cage | E | Compressed | 21 | 29 | - |
+| thread lock | D | Compressed | 21 | - | - |
 | gravity well | C | Meet | 15 | 21 | 22, 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
 | delivery box | E | Meet | 23 | - | - |
@@ -301,8 +301,8 @@ Every mechanic gets a status, and the status decides what it costs.
 | latch | A | Compressed | 26 | 31 | - |
 | data stream | E | Meet | 26 | 27 | - |
 | ball gate | B | Compressed | 33 | 34 | - |
-| pinned mutator | D | Seasoning | 14 | - | - |
-| live outer walls | D | Meet | 14 | 15 | - |
+| pinned mutator | D | Seasoning | 14 | 19 | - |
+| live outer walls | D | Meet | 14 | 15 | 19 |
 | colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
@@ -546,7 +546,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-18 built, 19-20 to come)*
+### Act II - The Sprint (11-20)  *(rebuilding: 11-19 built, 20 to come)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -748,10 +748,10 @@ now a summary of them rather than a rival to them.
 | 14 | **Meet** real gravity, a turning room, live outer walls (symmetric) | Use pinned mutator | An empty board, four identical bouncy walls, a pull that actually accelerates and a quarter turn every ten seconds. Catch one in flight, on a floor that will be a wall before you finish. *(built)* |
 | 15 | **Meet** gravity well | Use live outer walls | Two patches that pull, on a board where nothing else does. 14 is the pull you cannot escape; this is the pull you can walk around, and choose not to. *(built)* |
 | 16 | **Meet** phasing, **Compressed** deformable | Use bumper | Three objects that disagree about how fast the balls are: two that hand speed out, one that drinks it and keeps the marks, and two pillars that are not always there. *(built)* |
-| 17 | **Compressed** brittle | Fight launcher, Use chest | The launcher fires the roster at a wall that breaks on touch, and the win wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so does the map. *(built, ladder ends here)* |
+| 17 | **Compressed** brittle | Fight launcher, Use chest | The launcher fires the roster at a wall that breaks on touch, and the win wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so does the map. *(built)* |
 | 18 | *(none)* | **Fight** rotor, **Use** const area | A windmill owns the middle of the board, and the room it turns in is the pocket that pays triple. Its two doors are corner necks the arm closes in turn, and a fence grown into a mover costs a life, so every cut across the centre is a bet on where the arm will be. *(built)* |
-| 19 | **Compressed** cage *(was 18; act II now has one slot fewer, so cage or thread lock has to wait)* | Fight WIP limit, Use mirror | Eleven fences, four balls, and somewhere to put one. |
-| 19 | *(skill check brief, displaced)* **Compressed** thread lock | Break breakable, Use reveals | Act II's skill check. Four balls, nine percent, and a lock that only counts somewhere specific. |
+| 19 | *(none: the skill check)* | **Fight** mover, **Use** pinned mutator, Use chest | A pinwheel of four patrol bars on a board that turns a quarter every ten seconds. The layout has the same symmetry as the tilt, so every turn deals the same room with a different floor, and the pull brings the balls to a chest every phase. *(built, ladder ends here)* |
+| - | *(displaced from 19)* **Compressed** cage, **Compressed** thread lock, and the WIP limit, terminals and portal Meets | - | Moved to act III (21+): act II's skill check is gravity with movers now, and a skill check introduces nothing. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
 
 #### 15 "Standup" - Meet live outer walls (symmetric), Use pinned mutator  *(built)*
@@ -1022,6 +1022,44 @@ the bot never goes for multipliers.
 the mechanic ledger for the four-budget sweep that settled it; the short version
 is that this ladder's bot needs 21-36 cuts against a par of 8, so no budget can
 be both teaching-strength and survivable, and the WIP limit moved to 19.
+
+#### 19 "Hotfix" - Fight mover, Use pinned mutator, Use chest  *(built, skill check)*
+
+**A pinwheel of four patrol bars on a board that turns a quarter every ten
+seconds.** Act II's skill check, so nothing on it is new: the accelerating,
+turning pull from 14, the mover from 4, the chest from 17 and four bouncy walls.
+
+**It has the tilt's symmetry, on purpose.** `tipping` turns the room a quarter
+every ten seconds, so the layout is four-fold symmetric: one bar in front of
+each wall, all four sweeping the same way round, and a chest on each floor.
+Turn the board a quarter and it lands on itself. A tilt therefore deals a
+different floor but never a different map, and the read you made before the
+turn is still the right shape after it. A lopsided board would make each of
+the four phases its own map and turn the tilt into noise.
+`level19Pinwheel.test.ts` pins the symmetry, so an edit that breaks it fails.
+
+**The eye is safe and empty.** No bar patrols into the middle square, so a cut
+there never meets a mover, but the pull keeps the balls out of the middle too.
+They fall to the ring, where the bars sweep and a fence grown into one costs a
+life. Cutting safely and cutting where the balls are are two different places.
+
+**The win is two chests of four.** The pull brings the balls to a chest every
+phase, so the smash comes to you; the other two are the greed hook, and each
+one means fencing next to a bar. Chests (monoliths) rather than plain
+breakables, because act II already has breakable, brittle and colored areas on
+four of its maps each and a fifth would let one idea own the act.
+
+**Turn:** a 12% speed spike at 40% remaining, announced.
+
+**Bot sweep, 8 seeds, 60s: 6 of 8**, 15 to 26 winning cuts (median about 20)
+against par 8. Level 18 sweeps 7 of 8 on the same harness. The two losses are a
+timeout with the space already cleared and a run whose cuts kept dying on the
+bars. A 4-seed, 40s soak with the bars moving found no ball stopped for a
+quarter second.
+
+It displaced the drafted 19 briefs (cage, thread lock, WIP limit, terminals,
+portal): those Meets moved to act III in the ledger, since a skill check
+introduces nothing.
 
 ### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
 

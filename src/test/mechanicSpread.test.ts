@@ -85,11 +85,7 @@ describe("no mechanic is introduced and then dropped", () => {
     //   Mirror    level 13 only, which is where it MEETS. A mechanic on its
     //             first map is on this list by definition, and it comes off
     //             when a later map gives it a second.
-    //   Mutator   level 14 only, which pins one. A pinned mutator is Seasoning
-    //             rather than a headline idea, so it is here as a count and not
-    //             as a debt: it comes off when a second map wants a set-piece
-    //             built around its own weather, and nothing is wrong if that
-    //             takes a while.
+    //   MUTATOR CAME OFF on 19, the second map to pin full-map gravity.
     //
     // BOUNCER CAME OFF on 13, LAUNCHER on 12, REVEALS on 11 - each one map
     // after arriving. Three in a row is the rebuild's rhythm rather than luck:
@@ -137,7 +133,7 @@ describe("no mechanic is introduced and then dropped", () => {
     // to measure - a name is on it for exactly one map - happening on purpose
     // for once rather than being noticed afterwards.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["deformable", "gravityWell", "mirror", "mutator", "phasing"]);
+      .toEqual(["deformable", "gravityWell", "mirror", "phasing"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

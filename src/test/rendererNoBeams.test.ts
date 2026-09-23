@@ -41,7 +41,7 @@ import type { Ball } from "@/types/game";
 import { boardAngleFor } from "@/lib/boardTilt";
 import { tiltWorldPoint } from "@/lib/boardConstants";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 const levels = ENGINE_MAPS;
 
@@ -181,7 +181,7 @@ function stateWithCompass(level: LevelConfig, seconds: number, gravity = false):
 }
 
 describe("no layer of the renderer draws across the board", () => {
-  const level = levels.find(l => l.id === "level-19")!;
+  const level = RETIRED.find(l => l.id === "level-19")!; // the retired one: the ladder has its own level-19 now
 
   it("holds for every layer, over a whole compass cycle", () => {
     const w2s = W2S;
