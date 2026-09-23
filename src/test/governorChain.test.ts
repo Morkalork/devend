@@ -40,6 +40,7 @@ import { resolve } from "node:path";
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { fireLauncher, pendingLauncher } from "@/lib/physics/launcher";
+import { muzzleVector } from "@/lib/launcher";
 import { setRunSeedText } from "@/lib/runRng";
 import { BOUNCER_SLOW } from "@/lib/physics/bouncer";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -79,13 +80,18 @@ function fire(level: LevelConfig, seed: string, steps = 900) {
   const launcher = pendingLauncher(game);
   if (!launcher) { setRunSeedText(null); throw new Error("level 11 has no plunger"); }
 
-  // The barrel's own aim, dealt with the board: a straight pull, which is the
-  // shot the map is built around.
-  const rad = (((launcher.angle ?? 0)) * Math.PI) / 180;
+  // The barrel's own line, dealt with the board - which is now the ONLY line a
+  // shot can take (lib/launcher.ts), so this is the shot a player makes.
+  //
+  // muzzleVector, not the angle alone. The angle is only the whole story on a
+  // deal that left the cup facing right: rotations 1 and 3 turn the facing, and
+  // reading the angle by itself fired this test 90 degrees across the barrel's
+  // own bore. It passed anyway while the shot fanned across a 35 degree cone
+  // and the balls could ricochet out of the cup, which is exactly the sort of
+  // thing a fan hides.
+  const dir = muzzleVector(launcher.facing, launcher.angle);
   const before = game.balls.map(b => b.baseSpeed * 3);
-  fireLauncher(game, launcher, {
-    direction: { x: Math.cos(rad), y: Math.sin(rad) }, power: 3, clamped: false,
-  });
+  fireLauncher(game, launcher, { direction: dir, power: 3 });
 
   for (let i = 0; i < steps; i++) {
     for (const b of game.balls) if (b.state === "active") updateBall(b, 1 / 120, game);

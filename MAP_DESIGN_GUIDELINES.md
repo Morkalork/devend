@@ -493,11 +493,12 @@ back, and its footprint is ordinary floor. A launcher is therefore never a
 piece of furniture: it does not shape the board after the shot, and a design
 that wants a wall where the barrel stood has to put one there.
 
-The aim is the second half of the same decision. The barrel sits in one corner
-and the curtain over the paying pocket is in the far one, inside the aim cone
-(LAUNCH_SPREAD is 35 degrees either side, and the curtain is 3 degrees off the
-axis). So the shot can be spent opening the pocket, or spent putting the roster
-somewhere useful, and it cannot be spent on both.
+The line is the second half of the same decision, and it is the map's rather
+than the player's: the barrel sits in one corner and the curtain over the paying
+pocket is in the far one, 3 degrees off the barrel's axis, so the shot opens the
+pocket. What the pull decides is how fast the roster arrives there and what the
+map is bought at. The aim cone that used to sit here (35 degrees either side)
+was removed with the fan it justified: see the launcher row in section 7.1.
 
 **The greed hook is the reveal, and it is the Use beat it was owed.** Level 8
 met `reveals` as the map that hides its own board; here it is the thing you
@@ -822,8 +823,9 @@ cross the whole board on the way back. A horizontal cut below the lowest ball
 captures a strip of floor (space) and shortens the bounce (smash), so the
 ordinary way to clear this map is also the fast way to break it, and a player
 who understands that seals from the bottom up. The serve is the launcher's
-Fight beat: the pull is the opening volley into the front row, aimed within
-the cone, and the roster then falls back onto a board you have not cut yet.
+Fight beat: the pull is the opening volley straight up into the front row (the
+barrel's line runs through brick-b6 dead centre), and the roster then falls back
+onto a board you have not cut yet.
 
 **The one rule, and it is visible.** A horizontal cut ABOVE every ball
 captures the wall's region with the wall in it, and the map ends as
@@ -1354,6 +1356,7 @@ previously spread across a dozen test files and comment blocks.
 | Launcher shell | leaves the board the frame the barrel arms (`physics/launcherShell.ts`). Its slabs and walls go at once and its footprint comes back as capturable space, so a launcher adds to the board's space rather than subtracting from it; only the picture takes its time. | `launcherShell.test.ts` |
 | Gate zone behind a reveal | allowed, and level 8 is one: its whole `var` zone sits behind the curtain. The reachability guard reads cells behind an unbroken reveal as pending, not claimed (`sealedPendingCells`), and it reads the DEALT zones (`game.coloredAreas`, rotated), never the authored rectangle. Both were wrong once: level 8 failed on frame one of the un-rotated deal and on the first ordinary cut of the other three, and the retry remounted into the same failure. | `gateZoneDeal.test.ts` |
 | A win clause that names a PLACE can be stranded | `splitLocks`, `delivered`, `terminals` and `harvested` all need particular ground to still be usable, and the board can take that ground away: level 2's right-hand lock dies the moment the right half is captured with both balls on the left. `requirementReach.ts` asks the question for the whole union (can a ball still get there / is the ground still open to a fence) and fails the map as `requirementUnreachable`. Before it, level 2 simply ran forever - the tutorial band has no clock either. | `strandedRequirement.test.ts` |
+| A launcher fires down its own line, every ball of it | There is no aim cone: the pull sets the POWER and the barrel sets the direction, so the runway a designer reads is the shot a player takes. The roster leaves together and comes apart because it is stacked down the bore, crossing the muzzle one after another. The fan that used to spread it across the cone made the launch preview draw one path for a shot that went several ways, which is what it was reported as. | `launcher.test.ts`, `launcherBarrel.test.ts` |
 | A fast ball goes THROUGH what it breaks | At 420+ units/s along the contact normal, a ball whose hit destroys a breakable keeps its heading instead of bouncing, and stays intangible to that wreck for 120ms. Only on the killing contact, so a dent still bounces. It is what makes speed worth anything against a `brittle` brick (those go on any contact, so the damage curve never applies to them), and it means a run of bricks can be CROSSED by a fast ball rather than only chipped at. | `punchThrough.test.ts` |
 | A cut that would bury the win's slabs is refused | Not failed: the fence does not land, nothing is spent, and the board is unchanged, exactly as for a cut that would orphan a ball. Without it a map asking for half its bricks ends on an ordinary early fence at 88% remaining, charging a life for an order-of-play mistake the board never showed. `objectiveBuried` stays as the backstop for the paths a cut does not own (a lock's capture cascade, a destroy-recapture). | `smashCutRefusal.test.ts` |
 | Stranding checks wait for the first cut | `areaUnreachable`, `objectiveBuried` and `requirementUnreachable` never fire while `wallCount` is 0. A map cannot be stranded by a cut nobody has made, and a check that fires on an untouched board loops: fail, overlay, remount, fail. With the gate a wrong guard costs one map at most. | `gateZoneDeal.test.ts` |

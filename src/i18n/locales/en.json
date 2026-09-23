@@ -1277,7 +1277,8 @@
   },
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",
-    "basePay": "Base x{{multiplier}}"
+    "basePay": "Base x{{multiplier}}",
+    "ballsOnTheLine": "x{{count}} balls"
   },
   "rubberBand": {
     "pullToFire": "Drag and release to fling",

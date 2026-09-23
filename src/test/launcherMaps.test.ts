@@ -20,7 +20,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
-  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION, LAUNCH_SPREAD,
+  muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
   type LaunchFacing, type Blocker,
 } from "@/lib/launcher";
 import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
@@ -131,17 +131,18 @@ describe("level 11 pays for the launcher it gained", () => {
     expect(l11.maxBalls).toBe(3);
   });
 
-  it("puts the curtain inside the cone the player can actually aim in", () => {
+  it("puts the curtain ON the line the barrel fires down", () => {
     // The map's shape IS the shot. The barrel sits in one corner and the thing
     // worth shooting at - the curtain over the paying pocket - is in the far
-    // one, so opening it with the launch is a line the player can take, and
-    // every other aim in the cone is them choosing not to.
+    // one, so opening it with the launch is what the map is for.
     //
-    // Checked against LAUNCH_SPREAD rather than against the barrel's centre
-    // line, because the cone is what the player has: a drag is aimed anywhere
-    // within it, and an assertion on the axis alone would demand the map be
-    // built for the one shot nobody has to take. Measured from the MUZZLE - the
-    // barrel is canted, so its middle sits nowhere near the height it fires at.
+    // This used to allow anything inside the 35 degree aim cone, because a drag
+    // could be pointed anywhere in it. There is no cone now (lib/launcher.ts):
+    // the shot leaves straight down the barrel and the pull only decides how
+    // fast, so the map has to put the target on that line rather than merely
+    // within reach of it. Level 11 already did, at 3 degrees off. Measured from
+    // the MUZZLE - the barrel is canted, so its middle sits nowhere near the
+    // height it fires at.
     const cup = cupsOf(l11)[0];
     const curtain = (l11.entities ?? []).find(e => e.id === "curtain") as
       unknown as { x: number; y: number; width: number; height: number };
@@ -159,8 +160,9 @@ describe("level 11 pays for the launcher it gained", () => {
     let off = Math.abs(toTarget - axis);
     if (off > Math.PI) off = 2 * Math.PI - off;
 
-    expect(off, `the curtain is ${(off * 180 / Math.PI).toFixed(0)} degrees off the barrel`)
-      .toBeLessThan(LAUNCH_SPREAD);
+    expect(off * 180 / Math.PI,
+      `the curtain is ${(off * 180 / Math.PI).toFixed(0)} degrees off the barrel's line`)
+      .toBeLessThan(8);
   });
 
   it("leaves the centre line clear all the way there", () => {

@@ -32,9 +32,9 @@ import { captureUnreachableCells, CellState } from "@/lib/spaceGrid";
 import type { LevelConfig } from "@/types/level";
 import {
   muzzleVector, bandEnds, bandAnchor, launchAim, bearingVector,
-  LAUNCH_SPREAD, LAUNCH_FULL_PULL,
+  LAUNCH_FULL_PULL,
 } from "@/lib/launcher";
-import { fanDirections } from "@/lib/physics/launcher";
+import { fireLauncher } from "@/lib/physics/launcher";
 import type { LaunchAim, LaunchFacing } from "@/lib/launcher";
 
 import { ENGINE_MAPS } from "./fixtures/maps";
@@ -76,21 +76,20 @@ describe("the turn reaches the shot, not only the picture", () => {
     }
   });
 
-  it("aims the cone around the TURNED muzzle", () => {
-    // The bug this exists for: a canted barrel whose cone is still centred on
-    // the bare facing. A pull straight down the barrel would then read as an
-    // off-axis shot and be clamped away from where the barrel points.
+  it("fires down the TURNED muzzle, not the bare facing", () => {
+    // The bug this exists for predates the cone's removal and outlives it: a
+    // canted barrel whose shot is computed from the facing alone fires across
+    // its own bore, so the barrel and the ball disagree on screen.
     const straightDownTheBarrel = muzzleVector("right", -24);
     const aim = launchAim(
       { x: -straightDownTheBarrel.x * 120, y: -straightDownTheBarrel.y * 120 },
       "right", -24,
     )!;
-    expect(aim.clamped, "a shot straight down the barrel was clamped").toBe(false);
     expect(Math.abs(offBy(angleOf(aim.direction), angleOf(straightDownTheBarrel))))
       .toBeLessThan(1e-6);
   });
 
-  it("still refuses to fire outside the cone, at any barrel angle", () => {
+  it("fires down that line whatever direction the pull came from", () => {
     for (const deg of [-40, -24, 0, 31]) {
       const base = angleOf(muzzleVector("right", deg));
       for (let d = 0; d < 360; d += 11) {
@@ -98,7 +97,7 @@ describe("the turn reaches the shot, not only the picture", () => {
         const aim = launchAim({ x: Math.cos(th) * 150, y: Math.sin(th) * 150 }, "right", deg);
         if (!aim) continue;
         expect(Math.abs(offBy(angleOf(aim.direction), base)), `${deg}deg barrel, pull ${d}deg`)
-          .toBeLessThanOrEqual(LAUNCH_SPREAD + 1e-9);
+          .toBeLessThan(1e-9);
       }
     }
   });
@@ -160,50 +159,71 @@ describe("the band sits across the closed end", () => {
   });
 });
 
-describe("the fan spreads a stack without breaking the cone", () => {
-  const aimAt = (deg: number): LaunchAim => ({
-    direction: { x: Math.cos((deg * Math.PI) / 180), y: Math.sin((deg * Math.PI) / 180) },
-    power: 2, clamped: false,
+describe("a loaded barrel empties down one line", () => {
+  /**
+   * The fan is gone. It used to spread the roster across half the aim cone,
+   * because balls sharing a heading and a speed never separate - and that made
+   * the launch preview a lie: one drawn path, three balls going three ways.
+   * Reported as "because there are often more than one ball in there, it seldom
+   * shows what you get... otherwise all you get is chaos".
+   *
+   * What separates them now is the barrel. They are stacked down the bore, so
+   * they cross the muzzle one after another with the gap they were loaded at
+   * still between them.
+   */
+  const barrelBall = (id: string, x: number) => ({
+    id, state: "dormant", position: { x, y: 300 }, velocity: { x: 0, y: 0 },
+    speed: 0, baseSpeed: 250, radius: 18,
   });
 
-  it("fires a single ball dead on the aim", () => {
-    const aim = aimAt(0);
-    expect(fanDirections(aim, 1)).toEqual([aim.direction]);
-  });
+  function firedGame(count: number) {
+    const balls = Array.from({ length: count }, (_, i) => barrelBall(`b${i}`, 400 - i * 60));
+    const game = {
+      balls, regions: [], launchers: [], launchPower: 1,
+    } as unknown as import("@/types/gameState").CanvasGameState;
+    const launcher = {
+      id: "cup", inner: { x: 200, y: 280, width: 240, height: 40 },
+      facing: "right" as LaunchFacing, ballIds: balls.map(b => b.id), fired: false,
+    };
+    const power = fireLauncher(game, launcher as never, { direction: { x: 1, y: 0 }, power: 2 });
+    return { game, power, balls };
+  }
 
-  it("gives every ball its own heading", () => {
-    const dirs = fanDirections(aimAt(0), 3);
-    expect(dirs).toHaveLength(3);
-    const keys = new Set(dirs.map(d => `${d.x.toFixed(6)},${d.y.toFixed(6)}`));
-    expect(keys.size, "the stack leaves as one ball and never separates").toBe(3);
-  });
-
-  it("keeps the whole fan inside the aim cone", () => {
-    // Otherwise a ball leaves somewhere the player could not have aimed, which
-    // is the one thing the cone exists to prevent.
-    for (const count of [2, 3, 5, 8]) {
-      for (const deg of [0, 90, -137]) {
-        const aim = aimAt(deg);
-        const base = angleOf(aim.direction);
-        for (const d of fanDirections(aim, count)) {
-          expect(Math.abs(offBy(angleOf(d), base)), `${count} balls at ${deg}deg`)
-            .toBeLessThanOrEqual(LAUNCH_SPREAD + 1e-9);
-        }
-      }
+  it("sends every ball down exactly the same heading", () => {
+    const { balls } = firedGame(3);
+    for (const b of balls) {
+      const v = (b as unknown as { velocity: { x: number; y: number } }).velocity;
+      expect(angleOf(v), "a ball left on a heading of its own").toBeCloseTo(0, 9);
     }
   });
 
-  it("stays centred on the aim, so the shot goes where it was pointed", () => {
-    const aim = aimAt(0);
-    const dirs = fanDirections(aim, 5);
-    const mean = dirs.reduce((s, d) => s + offBy(angleOf(d), 0), 0) / dirs.length;
-    expect(Math.abs(mean), "the fan is lopsided").toBeLessThan(1e-9);
+  it("gives every ball the same speed, so the column keeps its spacing", () => {
+    const { balls } = firedGame(3);
+    const speeds = balls.map(b => (b as unknown as { speed: number }).speed);
+    for (const s of speeds) expect(s).toBeCloseTo(speeds[0], 6);
+    expect(speeds[0]).toBeCloseTo(500, 6);   // base 250 at power 2
   });
 
-  it("emits unit vectors, so power is the only thing setting speed", () => {
-    for (const d of fanDirections(aimAt(41), 4)) {
-      expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 9);
+  it("keeps them apart by the gap they were loaded at", () => {
+    // What replaces the fan: the stack IS the separation, and it is visible in
+    // the tube before a finger touches the band.
+    const { balls } = firedGame(3);
+    const xs = balls.map(b => (b as unknown as { position: { x: number } }).position.x);
+    expect(xs[0] - xs[1]).toBeCloseTo(60, 6);
+    expect(xs[1] - xs[2]).toBeCloseTo(60, 6);
+  });
+
+  it("wakes every one of them", () => {
+    const { balls } = firedGame(4);
+    for (const b of balls) {
+      expect((b as unknown as { state: string }).state).toBe("active");
     }
+  });
+
+  it("buys the map at the power fired", () => {
+    const { game, power } = firedGame(2);
+    expect(power).toBe(2);
+    expect(game.launchPower).toBe(2);
   });
 });
 
@@ -296,5 +316,56 @@ describe("the loaded barrel stays part of the board", () => {
         }
       }
     }
+  });
+});
+
+describe("the preview is the shot", () => {
+  /**
+   * The complaint this whole change answers: "because there are often more
+   * than one ball in there, it seldom shows what you get... otherwise all you
+   * get is chaos."
+   *
+   * The overlay draws ONE predicted path. That is honest only while every ball
+   * in the barrel takes it, so the two ends of that promise are pinned here -
+   * the drawing end and the firing end - because they live in different files
+   * and nothing else would notice them parting company.
+   */
+  const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
+  const overlay = read("src/components/game/LaunchOverlay.tsx");
+
+  it("draws the barrel's line rather than a cone of maybes", () => {
+    expect(overlay, "the aim cone is back").not.toContain("LAUNCH_SPREAD");
+    expect(overlay).toContain("The barrel's line: where the shot goes");
+  });
+
+  it("predicts from the same aim the shot is fired with", () => {
+    const canvas = read("src/components/game/GameCanvas.tsx");
+    expect(canvas).toContain("const v = { x: aim.direction.x * speed, y: aim.direction.y * speed };");
+    expect(canvas).toContain("fireLauncher(game, pendingLaunch, aim);");
+  });
+
+  it("says how many balls are coming down it", () => {
+    // One line, three balls: the count is the only part of "what you get" the
+    // path itself cannot show.
+    expect(overlay).toContain("loadedCount");
+    expect(read("src/components/game/GameCanvas.tsx")).toContain("loadedCount={loaded.length}");
+    for (const lang of ["en", "es", "sv"]) {
+      const locale = JSON.parse(read(`src/i18n/locales/${lang}.json`));
+      expect(locale.launcher.ballsOnTheLine, `${lang} has no words for it`).toBeTruthy();
+    }
+  });
+
+  it("has nothing left that spreads a shot", () => {
+    const physics = read("src/lib/physics/launcher.ts")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").map(l => l.replace(/\/\/.*$/, "")).join("\n");
+    expect(physics, "the fan is back").not.toContain("fanDirections");
+    // Scoped to the firing function: the barrel's own rotation is trigonometry
+    // too (pointInLauncherInterior), and sweeping the whole file for it would
+    // be a test about arithmetic rather than about headings.
+    const fire = physics.slice(physics.indexOf("export function fireLauncher"));
+    expect(fire, "the shot computes a heading of its own again").not.toContain("Math.cos(");
+    expect(fire, "a ball is given something other than the aim")
+      .toContain("launchVelocity({ ...aim, power }");
   });
 });

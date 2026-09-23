@@ -7,18 +7,23 @@
  * transform breaks viewport coordinates, which is the bug the interactive
  * tutorial overlay was already carrying when it was moved in here.
  *
- * The drag is read as a slingshot - the ball leaves OPPOSITE the pull - because
- * that is the gesture every catapult in every game has taught, and because
- * pulling toward yourself keeps the finger off the part of the board you are
- * aiming at. The cone, the power and the clamp all come from lib/launcher.ts;
- * nothing here decides anything about the shot.
+ * The drag is read as a slingshot - pull the band back down the barrel and let
+ * go - because that is the gesture every catapult in every game has taught, and
+ * because pulling toward yourself keeps the finger off the part of the board
+ * you are about to fire into.
+ *
+ * The shot goes straight out of the muzzle and the pull decides only how fast
+ * (see lib/launcher.ts for why the aim cone went). That is what lets this
+ * overlay be honest: the line drawn here is the line EVERY ball in the barrel
+ * takes, where the old cone drew one path for a shot that went several ways.
+ * Nothing here decides anything about the shot.
  */
 import { useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '@/lib/boardConstants';
 import {
-  launchAim, muzzleVector, bandEnds, LAUNCH_SPREAD, LAUNCH_MAX_POWER, LAUNCH_MIN_POWER,
+  launchAim, muzzleVector, bandEnds, LAUNCH_MAX_POWER, LAUNCH_MIN_POWER,
   LAUNCH_FULL_PULL,
   type LaunchAim, type LaunchFacing,
 } from '@/lib/launcher';
@@ -32,6 +37,8 @@ interface Props {
   canvasOffsetLeft: number;
   /** Where the muzzle-end ball is sitting, in world units. */
   ballPosition: Vector2;
+  /** How many balls the barrel will send down this line. */
+  loadedCount?: number;
   /** The barrel's interior, in its own axis-aligned frame. */
   inner: { x: number; y: number; width: number; height: number };
   /** The barrel's turn in degrees; the muzzle is `facing` turned by this. */
@@ -45,7 +52,7 @@ interface Props {
 
 export function LaunchOverlay({
   canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft,
-  ballPosition, inner, angle, facing, predict, onFire,
+  ballPosition, inner, angle, facing, predict, onFire, loadedCount = 1,
 }: Props) {
   const { t } = useTranslation();
   const [aim, setAim] = useState<LaunchAim | null>(null);
@@ -107,15 +114,14 @@ export function LaunchOverlay({
     y: (bandA.y + bandB.y) / 2 - bearing.y * draw,
   };
 
-  // Cone edges, drawn so the limit on the aim is visible rather than felt as
-  // the shot refusing to go where the finger asked.
-  const coneLen = Math.max(60, canvasWidth * 0.32);
-  const coneEdge = (sign: number) => ({
-    x: bx + Math.cos(baseAngle + sign * LAUNCH_SPREAD) * coneLen,
-    y: by + Math.sin(baseAngle + sign * LAUNCH_SPREAD) * coneLen,
-  });
-  const edgeA = coneEdge(-1);
-  const edgeB = coneEdge(1);
+  // The line the shot leaves on, drawn whether or not a pull has started: the
+  // barrel decides the direction now, so it can be shown before the player
+  // touches anything rather than discovered by pulling.
+  const lineLen = Math.max(60, canvasWidth * 0.32);
+  const lineEnd = {
+    x: bx + Math.cos(baseAngle) * lineLen,
+    y: by + Math.sin(baseAngle) * lineLen,
+  };
 
   const path = aim ? predict(aim) : [];
   const powerT = aim
@@ -135,9 +141,9 @@ export function LaunchOverlay({
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ overflow: 'visible' }}
       >
-        {/* The cone the cup will accept. */}
+        {/* The barrel's line: where the shot goes, before and during the pull. */}
         <path
-          d={`M ${edgeA.x} ${edgeA.y} L ${bx} ${by} L ${edgeB.x} ${edgeB.y}`}
+          d={`M ${bx} ${by} L ${lineEnd.x} ${lineEnd.y}`}
           fill="none"
           stroke="rgba(255,179,71,0.35)"
           strokeWidth={2}
@@ -175,7 +181,7 @@ export function LaunchOverlay({
         <path
           d={`M ${bandA.x} ${bandA.y} Q ${bandMid.x} ${bandMid.y} ${bandB.x} ${bandB.y}`}
           fill="none"
-          stroke={aim?.clamped ? '#ff6b6b' : '#ffb347'}
+          stroke="#ffb347"
           strokeWidth={aim ? 9 : 6}
           strokeLinecap="round"
         />
@@ -191,7 +197,7 @@ export function LaunchOverlay({
         )}
         <circle
           cx={bandMid.x} cy={bandMid.y} r={aim ? 14 : 11}
-          fill={aim?.clamped ? '#ff6b6b' : '#ffb347'}
+          fill="#ffb347"
           stroke="rgba(0,0,0,0.55)" strokeWidth={2}
         />
 
@@ -223,6 +229,17 @@ export function LaunchOverlay({
             <span className="text-sm font-bold tabular-nums" style={{ color: '#ffb347' }}>
               {t('launcher.basePay', { multiplier: aim.power.toFixed(1) })}
             </span>
+            {/* The roster, because the drawn path is now every one of their
+                paths: a player about to spend their only shot should be able
+                to read "this line, three times" off the screen. Kept to two
+                words - at phone width the row already carries the power bar
+                and the multiplier, and a sentence here wrapped onto a second
+                line over the board. */}
+            {loadedCount > 1 && (
+              <span className="text-sm font-bold tabular-nums opacity-80" style={{ color: '#ffb347' }}>
+                {t('launcher.ballsOnTheLine', { count: loadedCount })}
+              </span>
+            )}
           </div>
         )}
       </div>

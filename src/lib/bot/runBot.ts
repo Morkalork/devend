@@ -75,13 +75,13 @@ export function runBot(
   //
   // The POWER is drawn from the run's seeded rng rather than pinned at full, so
   // the playtest panel samples the whole wager across its seeds instead of only
-  // ever reporting how the map plays at 3x. Straight down the cup's facing: the
-  // aim cone is a player's tool and a bot picking angles would be testing the
-  // bot, not the map.
+  // ever reporting how the map plays at 3x. Straight down the cup's facing,
+  // which is now the only line a shot can take anyway - the aim cone is gone
+  // (lib/launcher.ts), so what the bot fires is what a player fires.
   for (const launcher of ctx.game.launchers ?? []) {
     const power = LAUNCH_MIN_POWER + rng() * (LAUNCH_MAX_POWER - LAUNCH_MIN_POWER);
     fireLauncher(ctx.game, launcher, {
-      direction: bearingVector(launcher.facing), power, clamped: false,
+      direction: bearingVector(launcher.facing), power,
     });
   }
 

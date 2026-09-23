@@ -2390,9 +2390,9 @@ export function GameCanvas({
           const loaded = pendingLaunch.ballIds
             .map(id => game.balls.find(b => b.id === id))
             .filter((b): b is NonNullable<typeof b> => !!b);
-          // The ball at the muzzle is the one the preview follows: it is the
-          // first thing out and the only one whose path is not perturbed by the
-          // fan behind it.
+          // The ball at the muzzle is the one the preview follows, and since
+          // the shot has no fan any more it is speaking for all of them: every
+          // ball in the barrel leaves along this same line (physics/launcher).
           const ball = loaded[0];
           if (!ball) return null;
           return (
@@ -2402,6 +2402,7 @@ export function GameCanvas({
               canvasOffsetTop={canvasOffsetTop}
               canvasOffsetLeft={canvasOffsetLeft}
               ballPosition={ball.position}
+              loadedCount={loaded.length}
               inner={pendingLaunch.inner}
               angle={pendingLaunch.angle}
               facing={pendingLaunch.facing}

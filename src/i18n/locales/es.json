@@ -1825,7 +1825,8 @@
   },
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",
-    "basePay": "Base x{{multiplier}}"
+    "basePay": "Base x{{multiplier}}",
+    "ballsOnTheLine": "x{{count}} bolas"
   },
   "rubberBand": {
     "pullToFire": "Arrastra y suelta para lanzar",

@@ -6,9 +6,10 @@
  *   THE SHOT LEAVES OPPOSITE THE PULL. A slingshot read the other way round is
  *     not a control scheme with a different sign, it is a game that fires the
  *     ball into the wall behind you every time.
- *   THE CONE IS REAL. The cup's open side is a design statement about which
- *     part of the board a map wants you to open with. An aim that can go
- *     anywhere makes a launcher a ball spawn with extra steps.
+ *   THE SHOT IS THE BARREL'S LINE. There is no aim cone any more: a barrel
+ *     holds the whole roster, and a cone meant the preview drew one path for a
+ *     shot that went several ways. The pull decides how fast and nothing else,
+ *     so what is drawn is what happens (see lib/launcher.ts).
  *   THE POWER IS THE PAY. Everything about why this feature exists is that a
  *     harder shot buys a more valuable map, and the multiplier has to land
  *     somewhere no axis ceiling can swallow it.
@@ -17,7 +18,7 @@ import { describe, it, expect } from "vitest";
 import {
   launchAim, bearingVector, launchVelocity, launchPayMultiplier, clampLaunchPower,
   maxSafeLaunchPower,
-  LAUNCH_MIN_POWER, LAUNCH_MAX_POWER, LAUNCH_SPREAD, LAUNCH_DEAD_PULL, LAUNCH_FULL_PULL,
+  LAUNCH_MIN_POWER, LAUNCH_MAX_POWER, LAUNCH_DEAD_PULL, LAUNCH_FULL_PULL,
   type LaunchFacing,
 } from "@/lib/launcher";
 import { BEARING_VECTOR } from "@/lib/physics/obstacleRules";
@@ -39,18 +40,38 @@ describe("which way a cup points", () => {
 });
 
 describe("reading a pull", () => {
-  it("fires OPPOSITE the pull", () => {
-    // Pull down-and-left out of a cup facing right, and the ball goes up-right.
+  it("draws the band by pulling BACK down the barrel", () => {
+    // The slingshot half of the gesture survives the cone's removal: you pull
+    // away from the muzzle and the shot springs the other way.
     const aim = launchAim({ x: -100, y: 0 }, "right");
     expect(aim).not.toBeNull();
     expect(aim!.direction.x).toBeGreaterThan(0.99);
   });
 
+  it("reads only the part of the pull that stretches the band", () => {
+    // A band strung across a cup draws when it is pulled back, not when it is
+    // dragged across. Without this a sideways swipe would be a full-power shot
+    // the player never asked for - and the direction no longer absorbs it.
+    const straight = launchAim({ x: -LAUNCH_FULL_PULL, y: 0 }, "right")!;
+    const skewed = launchAim(
+      { x: -LAUNCH_FULL_PULL * Math.SQRT1_2, y: -LAUNCH_FULL_PULL * Math.SQRT1_2 }, "right",
+    )!;
+    expect(skewed.power).toBeLessThan(straight.power);
+    expect(launchAim({ x: 0, y: -300 }, "right"), "a pull across the barrel fired")
+      .toBeNull();
+    expect(launchAim({ x: 300, y: 0 }, "right"), "a push toward the muzzle fired")
+      .toBeNull();
+  });
+
   it("fires nothing at all for a pull too short to be deliberate", () => {
-    // A launch cannot be taken back, so a stray tap must not spend it.
+    // A launch cannot be taken back, so a stray tap must not spend it. The
+    // pulls here are NEGATIVE x because the cup faces right: drawing the band
+    // means going back down the barrel. The same test used to pass with a
+    // positive one, which was a finger pushing toward the muzzle firing a shot
+    // - invisible while the aim was free to point anywhere.
     expect(launchAim({ x: 0, y: 0 }, "right")).toBeNull();
-    expect(launchAim({ x: LAUNCH_DEAD_PULL - 1, y: 0 }, "right")).toBeNull();
-    expect(launchAim({ x: LAUNCH_DEAD_PULL + 2, y: 0 }, "right")).not.toBeNull();
+    expect(launchAim({ x: -(LAUNCH_DEAD_PULL - 1), y: 0 }, "right")).toBeNull();
+    expect(launchAim({ x: -(LAUNCH_DEAD_PULL + 2), y: 0 }, "right")).not.toBeNull();
   });
 
   it("pays the weakest shot at the dead zone and the strongest at full pull", () => {
@@ -76,58 +97,44 @@ describe("reading a pull", () => {
   });
 });
 
-describe("the cone", () => {
-  it("lets a modest angle through untouched", () => {
-    const aim = launchAim({ x: -100, y: 20 }, "right")!;
-    expect(aim.clamped).toBe(false);
-    expect(Math.abs(angleOf(aim.direction))).toBeLessThan(LAUNCH_SPREAD);
-  });
-
-  it("clamps an aim that wants to go wider, and says so", () => {
-    // Straight up out of a cup facing right is 90 degrees off.
-    const aim = launchAim({ x: 0, y: 100 }, "right")!;
-    expect(aim.clamped).toBe(true);
-    expect(angleOf(aim.direction)).toBeCloseTo(-LAUNCH_SPREAD, 6);
-  });
-
-  it("never lets a shot leave outside the cone, from any pull, on any facing", () => {
-    // The property that matters: whatever the drag, the ball leaves through the
-    // open side. A cup that can fire backwards has no closed sides at all.
+describe("the line the shot takes", () => {
+  it("is the barrel's own, whatever direction the pull came from", () => {
+    // THE change. It used to be the pull's heading, clamped into a 35 degree
+    // cone; with the whole roster in the barrel that meant a fan, and a preview
+    // that showed one of the paths a three-ball shot would take.
     for (const facing of FACINGS) {
-      const base = angleOf(bearingVector(facing));
-      for (let deg = 0; deg < 360; deg += 7) {
+      const bearing = bearingVector(facing);
+      for (let deg = 0; deg < 360; deg += 11) {
         const th = (deg * Math.PI) / 180;
         const aim = launchAim({ x: Math.cos(th) * 150, y: Math.sin(th) * 150 }, facing);
-        if (!aim) continue;
-        let off = angleOf(aim.direction) - base;
-        while (off <= -Math.PI) off += 2 * Math.PI;
-        while (off > Math.PI) off -= 2 * Math.PI;
-        expect(Math.abs(off), `${facing} at ${deg}deg escaped the cone`)
-          .toBeLessThanOrEqual(LAUNCH_SPREAD + 1e-9);
+        if (!aim) continue;   // a pull with no draw in it is not a shot
+        expect(aim.direction.x, `${facing} at ${deg}deg left the barrel's line`)
+          .toBeCloseTo(bearing.x, 9);
+        expect(aim.direction.y).toBeCloseTo(bearing.y, 9);
       }
     }
   });
 
-  it("clamps to the NEAR edge of the cone, not across it", () => {
-    // Signed clamping. Taking the absolute value would send a shot aimed just
-    // past the left edge out of the right one, which plays as the launcher
-    // ignoring the aim entirely at exactly the moment it matters.
-    const justPastLeft = -(LAUNCH_SPREAD + 0.2);
-    const pullAngle = justPastLeft + Math.PI; // pull is opposite the shot
-    const aim = launchAim(
-      { x: Math.cos(pullAngle) * 150, y: Math.sin(pullAngle) * 150 }, "right",
-    )!;
-    expect(aim.clamped).toBe(true);
-    expect(angleOf(aim.direction)).toBeCloseTo(-LAUNCH_SPREAD, 6);
+  it("follows the barrel's own turn, not just its facing", () => {
+    // A cup drawn at an angle fires along the angle. This was already true of
+    // the cone's centre line and is now the whole of the shot.
+    const aim = launchAim({ x: -150, y: 0 }, "right", 30)!;
+    expect(Math.atan2(aim.direction.y, aim.direction.x)).toBeCloseTo((30 * Math.PI) / 180, 9);
   });
 
-  it("does not read a wrap past 180 degrees as a huge deflection", () => {
-    // atan2 branch cut. Without normalising, a pull just clockwise of a cup
-    // facing left computes a delta near 2*pi and clamps to the wrong edge.
-    const aim = launchAim({ x: 150, y: -1 }, "left")!;
-    const off = angleOf(aim.direction) - angleOf(bearingVector("left"));
-    const wrapped = Math.abs(((off + Math.PI) % (2 * Math.PI)) - Math.PI);
-    expect(wrapped).toBeLessThanOrEqual(LAUNCH_SPREAD + 1e-9);
+  it("can never fire out of the cup's closed side", () => {
+    // The property the cone was there to guarantee, now guaranteed by there
+    // being nothing to steer: every shot leaves through the open side.
+    for (const facing of FACINGS) {
+      const bearing = bearingVector(facing);
+      for (let deg = 0; deg < 360; deg += 7) {
+        const th = (deg * Math.PI) / 180;
+        const aim = launchAim({ x: Math.cos(th) * 200, y: Math.sin(th) * 200 }, facing);
+        if (!aim) continue;
+        const dot = aim.direction.x * bearing.x + aim.direction.y * bearing.y;
+        expect(dot, `${facing} at ${deg}deg fired backwards`).toBeGreaterThan(0.999);
+      }
+    }
   });
 });
 

@@ -251,7 +251,7 @@ export type BoxRectEntity = BoxEntity & RectShape;
  */
 export interface LauncherEntity extends BaseEntity, BendShapeFields {
   kind: "launcher";
-  /** The open side. The ball fires out of it, within a cone (LAUNCH_SPREAD). */
+  /** The open side. The whole roster fires straight out of it, in the order it is stacked. */
   facing: "up" | "down" | "left" | "right";
   /**
    * Ball type loaded into the cup. Defaults to the map's first selected type,

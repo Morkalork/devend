@@ -1825,7 +1825,8 @@
   },
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",
-    "basePay": "Bas x{{multiplier}}"
+    "basePay": "Bas x{{multiplier}}",
+    "ballsOnTheLine": "x{{count}} bollar"
   },
   "rubberBand": {
     "pullToFire": "Dra och släpp för att slunga",

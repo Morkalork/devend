@@ -9,7 +9,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Vector2 } from "@/types/game";
 import type { Polygon } from "@/lib/polygon";
 import type { LaunchFacing, LaunchAim } from "@/lib/launcher";
-import { launchVelocity, clampLaunchPower, LAUNCH_SPREAD } from "@/lib/launcher";
+import { launchVelocity, clampLaunchPower } from "@/lib/launcher";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { simNow } from "@/lib/simClock";
 
@@ -154,33 +154,20 @@ export function pendingLauncher(
 }
 
 /**
- * Spread the barrel's shots so a stack does not leave as one ball.
+ * Fire a barrel: every ball in it leaves at once, down one line.
  *
- * Every ball fired on exactly the aim would travel the same line at the same
- * speed forever - the engine damps nothing - so the roster would arrive as a
- * single moving column and never separate. Fanning them across the cone is what
- * turns one pull into a map full of balls, and it uses the SAME cone the aim is
- * clamped to, so nothing leaves anywhere the player could not have aimed.
+ * ONE LINE, and the balls come apart anyway. They used to be fanned across the
+ * aim cone, because balls sharing a heading and a speed never separate on their
+ * own - and the preview then drew a single line for a shot that went three
+ * ways, which is the whole of the complaint this answers ("it seldom shows what
+ * you get... otherwise all you get is chaos").
  *
- * A single ball fires dead on the aim; the fan only appears when there is
- * something to fan.
- */
-export function fanDirections(aim: LaunchAim, count: number): Vector2[] {
-  if (count <= 1) return [aim.direction];
-  const base = Math.atan2(aim.direction.y, aim.direction.x);
-  // Half the cone, so even the outermost shot stays well inside it.
-  const spread = LAUNCH_SPREAD * 0.5;
-  const out: Vector2[] = [];
-  for (let i = 0; i < count; i++) {
-    const t = count === 1 ? 0 : (i / (count - 1)) * 2 - 1; // -1..1
-    const a = base + t * spread;
-    out.push({ x: Math.cos(a), y: Math.sin(a) });
-  }
-  return out;
-}
-
-/**
- * Fire a barrel: every ball in it leaves at once.
+ * What replaces the fan is the barrel itself. The roster is STACKED down the
+ * bore, muzzle-end first, so releasing them together still has them cross the
+ * muzzle one after another, spaced by the gap they were loaded at - the column
+ * the fan existed to break up is a queue instead, and it is a queue the player
+ * can see in the tube before they pull. Past the muzzle they are ordinary balls
+ * and the first fence drawn across their line is what ends the convoy.
  *
  * Deliberately the same shape as circuit.ts's wakeBall, and for the same
  * reason: a dormant ball holds its region uncapturable, so bringing it to life
@@ -205,10 +192,9 @@ export function fireLauncher(
   if (loaded.length === 0) return null;
 
   const power = clampLaunchPower(aim.power);
-  const headings = fanDirections(aim, loaded.length);
-  loaded.forEach((ball, i) => {
+  loaded.forEach((ball) => {
     ball.state = "active";
-    ball.velocity = launchVelocity({ ...aim, power, direction: headings[i] }, ball.baseSpeed || 250);
+    ball.velocity = launchVelocity({ ...aim, power }, ball.baseSpeed || 250);
     ball.speed = Math.hypot(ball.velocity.x, ball.velocity.y);
     ball.spawnTime = simNow();
     const region = findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
