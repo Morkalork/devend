@@ -46,7 +46,7 @@ import {
 import { playWallHitSound, playSquishSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit, bounceImpact, pinSquish } from "@/lib/ballEffects";
 import { captureSplatScene } from "@/lib/splatScene";
-import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
+import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage, punchesThrough, PUNCH_THROUGH_GRACE_MS, punchingThrough } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
 import { queryWallsNear } from "@/lib/physics/wallGrid";
@@ -769,6 +769,14 @@ export function updateBall(
 
   for (const obstacle of game.obstaclePolygons) {
     if (phasedOut && phasedOut.polys.has(obstacle)) continue;
+    // The wreck this ball is punching through, in the second collision system.
+    // Honouring it in only one would give an obstacle a ball passes through the
+    // middle of and bounces off the edges of, which is the trap the pass rule
+    // below already warns about.
+    if (punchingThrough(ball, now)
+      && findObstacleDestructibleById(game, ball.punchThroughId ?? "")?.obstaclePolygon === obstacle) {
+      continue;
+    }
     // A portal is open to balls at its face...
     if (game.portals?.has(obstacle)) continue;
     // One-way membranes and ball-type gates. Checked before the cheap AABB
@@ -868,6 +876,10 @@ export function updateBall(
     // systems would give a portal balls fall into and then bounce off the rim
     // of, which is the trap the pass-rule comment above already warns about.
     if (wall.portal) continue;
+    // The obstacle this ball is punching through is wreckage: its walls are
+    // still in the list until processDestroys runs, and bouncing off them
+    // would take back the thing the ball just earned.
+    if (punchingThrough(ball, now) && obstacleIdFromWallId(wall.id) === ball.punchThroughId) continue;
 
     const vBefore = { x: ball.velocity.x, y: ball.velocity.y };
     const impactPoint = collideBallWithWall(ball, wall);
@@ -942,7 +954,29 @@ export function updateBall(
             const vn = Math.abs(ball.velocity.x * nvx + ball.velocity.y * nvy);
             const dmg = ballImpactDamage(ball, vn);
             if (d.kind === 'breakable') {
+              const wasWhole = !d.destroyed;
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
+              // PUNCH THROUGH. A ball fast enough to destroy something outright
+              // does not bounce off it: the wall it was reflected by is wreckage
+              // now, so the reflection is undone and the ball carries on along
+              // the line it arrived on.
+              //
+              // Both halves of the rule matter. Only on the contact that BREAKS
+              // it - a fast ball that merely dents a slab bounces like anything
+              // else - and only when the ball was really moving, which is the
+              // whole point: speed is otherwise worth nothing against act I's
+              // brittle bricks, since those go on any contact at all.
+              //
+              // The wreck is not gone yet (processDestroys clears its walls and
+              // its polygon after the step), so the ball is made intangible to
+              // THIS obstacle for a moment - otherwise it would sail on and
+              // bounce off the far side of something that no longer exists.
+              if (wasWhole && d.destroyed && punchesThrough(vn)) {
+                ball.velocity = { x: vBefore.x, y: vBefore.y };
+                ball.speed = vec2Length(ball.velocity);
+                ball.punchThroughId = oid;
+                ball.punchThroughUntil = now + PUNCH_THROUGH_GRACE_MS;
+              }
             } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             }

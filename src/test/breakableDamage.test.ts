@@ -36,9 +36,16 @@ describe("impact damage", () => {
     expect(ballImpactDamage(ball("black"), 200)).toBeGreaterThan(ballImpactDamage(ball("yellow"), 200));
   });
 
-  it("clamps: a crawling graze still chips, a rocket can't one-shot everything", () => {
-    expect(ballImpactDamage(ball("red"), 5)).toBeCloseTo(0.15, 5);   // MIN_CHIP floor
-    expect(ballImpactDamage(ball("black"), 900)).toBeCloseTo(2.0, 5); // MAX_HIT cap
+  it("clamps: a crawling graze still chips, and a rocket tops out at one slab", () => {
+    // The cap was 2.0 against a slab authored at 3, which meant no ball at any
+    // speed could break an ordinary one in a single contact - the compensation
+    // for living with a fast ball stopped just short of the only thing that
+    // would have felt like compensation. 3.0 takes a slab and still leaves
+    // level 15's 14-hit launcher rail needing a rally.
+    expect(ballImpactDamage(ball("red"), 5)).toBeCloseTo(0.15, 5);    // MIN_CHIP floor
+    expect(ballImpactDamage(ball("black"), 900)).toBeCloseTo(3.0, 5); // MAX_HIT cap
+    expect(ballImpactDamage(ball("black"), 900), "a rocket now trivialises a rail")
+      .toBeLessThan(14);
   });
 
   it("three high-speed hits break more than three low-speed hits (the whole point)", () => {
