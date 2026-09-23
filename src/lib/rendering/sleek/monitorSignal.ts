@@ -37,14 +37,41 @@ export function pulseMonitor(strength = 1, durationMs = 180): void {
 }
 
 /**
- * Idle shimmer: three incommensurable sines plus a slow drift. Amplitude is
- * deliberately tiny (~4%) - enough that the board is never perfectly static,
- * far too little to read as "flashing" while the player is aiming a cut.
+ * Idle shimmer: three incommensurable sines, slow enough to read as breathing.
+ *
+ * ── Why the periods are the whole of this function ─────────────────────────
+ *
+ * The old ones were 97, 211 and 1301, and the comment above them said the
+ * amplitude was "deliberately tiny (~4%) - far too little to read as flashing".
+ * The amplitude was never the problem. `sin(t / 97)` with t in milliseconds has
+ * a period of 2*pi*97ms, which is 1.64 Hz: the board's brightness turned around
+ * 328 times in 100 seconds, a median of 313ms between reversals. That is not a
+ * shimmer, it is a pulse at roughly the rate of a fast heartbeat, and a couple
+ * of percent of modulation at that rate is far above what an eye ignores on a
+ * large flat field.
+ *
+ * Reported as exactly that: "fenced off areas still blink in quick pace". The
+ * captured ground is where it shows first because it is the biggest, flattest,
+ * darkest thing on the board - live space is busier and the balls take the eye,
+ * so the same ripple hides there.
+ *
+ * The wash makes it worse on the way through, which is why this is measured in
+ * delivered brightness rather than in `level`. The sprite's alpha is
+ * `1 + nominal - level` about a nominal of 0.45, so a 4.8% swing in the level
+ * arrives as an 11% swing in the alpha (boardWash.washSpriteAlpha).
+ *
+ * So the periods move and the amplitude stays. The fastest component is now
+ * about 0.25 Hz - one swell every four seconds - and the slowest is a drift
+ * over a quarter of a minute. The board is still never perfectly static, which
+ * is the whole point of having this at all; it just no longer blinks.
+ * monitorFlicker.test.ts measures the delivered brightness and holds it there.
+ *
+ * Still incommensurable, so the three never line up into a visible loop.
  */
 function idleShimmer(t: number): number {
-  const a = Math.sin(t / 97.0) * 0.014;
-  const b = Math.sin(t / 211.0) * 0.011;
-  const c = Math.sin(t / 1301.0) * 0.017;
+  const a = Math.sin(t / 641.0) * 0.014;
+  const b = Math.sin(t / 1301.0) * 0.011;
+  const c = Math.sin(t / 2749.0) * 0.017;
   return a + b + c;
 }
 
