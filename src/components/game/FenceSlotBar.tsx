@@ -33,6 +33,7 @@ import {
 import { hasSeenFenceType, markFenceTypeSeen } from '@/lib/fenceSeen';
 import { fileManualEntry } from '@/lib/manual';
 import { FenceTypeInfoModal } from './FenceTypeInfoModal';
+import { PAN_OPT_OUT_ATTR } from '@/lib/zoomGuard';
 
 const LONG_PRESS_MS = 450;
 
@@ -135,7 +136,12 @@ export function FenceSlotBar({
           fits and starts at the left edge once it does not. A centred flex row
           that overflows puts its first item off-screen with no way to scroll
           back to it, which is the exact bug this is fixing. */}
+      {/* `data-pans`: this row is the one thing on a playing screen that still
+          wants the browser's own drag. The zoom guard refuses every other
+          one-finger drag there, because a fence begun beside the board was
+          being taken for a page pan and never reached the board at all. */}
       <div
+        {...{ [PAN_OPT_OUT_ATTR]: "" }}
         className="pointer-events-auto overflow-x-auto scrollbar-hide"
         style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
       >
@@ -186,6 +192,13 @@ export function FenceSlotBar({
                 // the edge unreachable by the only gesture that reaches them.
                 // Vertical panning stays blocked, so a press still cannot drag
                 // the page, and a sideways drag already cancels the long-press.
+                //
+                // The `data-pans` beside it is the same statement made where
+                // the zoom guard can read it. On a playing screen the guard
+                // refuses every one-finger drag the browser would take for a
+                // pan, and `touch-action` cannot carve out an exception - it
+                // intersects down the tree, so a root that says `none` silences
+                // a child that says `pan-x`. This attribute is the exception.
                 touchAction: 'pan-x',
               }}
             >

@@ -2231,7 +2231,19 @@ export function GameCanvas({
   }, []);
 
   return (
-    <div className={`flex flex-col w-full h-full ${isShaking ? "animate-shake" : ""}`}>
+    // `touch-none` on the whole play region, not only on the canvas inside it.
+    // A browser decides what a touch IS at touchdown, from the element under
+    // the finger at that moment, and never reassigns it: with the canvas set to
+    // `none` and everything around it inheriting the root's `pan-x pan-y`, a
+    // fence begun on the margin or the HUD and swiped onto the board was a page
+    // pan for its whole life and never reached the game. Reported as "start
+    // creating a fence from outside of the gameboard, then swipe into it".
+    //
+    // Safe to widen because nothing in this subtree scrolls - the bars that do
+    // live in GameScreen's fixed stack, outside it. The zoom guard covers the
+    // rest of the screen with a handler, since `touch-action` intersects down
+    // the tree and could not make the one exception the slot bar needs.
+    <div className={`flex flex-col w-full h-full touch-none ${isShaking ? "animate-shake" : ""}`}>
       {screenFlash === "red" && <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />}
 
       {process.env.NODE_ENV === "development" && (

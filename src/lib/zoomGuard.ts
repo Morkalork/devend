@@ -120,6 +120,88 @@ export function zoomAllowedOn(screen: GameScreen): boolean {
 /** Panning yes, pinch-zoom and double-tap-zoom no. */
 export const GUARDED_TOUCH_ACTION = "pan-x pan-y";
 
+/**
+ * The screens where a one-finger drag is ALWAYS gameplay and never a page
+ * gesture, so the guard also refuses the browser's pan.
+ *
+ * The fifth zoom report is what this is for, and it is the first one that says
+ * where the gesture starts: "when you start creating a fence from outside of
+ * the gameboard, then swipe into it". That is a different bug from the pinch
+ * and the double-tap, and the cause is a boundary rather than a gesture.
+ *
+ * The canvas carries `touch-action: none`, so a drag that BEGINS on the board
+ * is the game's and the browser never competes for it. Everything around the
+ * canvas - the HUD, the margins, the gap above the ability bar - inherits the
+ * root's `pan-x pan-y`, which says "a drag here is a page pan". A browser
+ * decides which gesture a touch is at TOUCHDOWN, from the touch-action of the
+ * element under the finger at that moment, and it does not hand the gesture
+ * back when the finger later crosses onto the canvas. So the whole swipe
+ * belongs to the browser, the fence never starts, and the page moves instead.
+ *
+ * `pan-x pan-y` is right on a screen that scrolls (the shop, the manual, the
+ * map list). It has never been right on this one: the game screen does not
+ * scroll, and there is nothing a pan could do here except this.
+ */
+export const DRAG_IS_ALWAYS_GAMEPLAY: readonly GameScreen[] = ["game", "tutorial", "pairLoopback"];
+
+/** Is a bare one-finger drag on this screen always the game's? */
+export function dragIsAlwaysGameplay(screen: GameScreen): boolean {
+  return DRAG_IS_ALWAYS_GAMEPLAY.includes(screen);
+}
+
+/**
+ * Marks a subtree that pans on purpose, and must keep doing so.
+ *
+ * `touch-action` cannot express this: the effective value is the INTERSECTION
+ * down the ancestor chain, so a root set to `none` silences every descendant
+ * however they declare themselves, and the fence-slot row would lose the only
+ * gesture that reaches the types past its edge. The refusal below is a handler
+ * rather than a style precisely so it can make an exception, and this attribute
+ * is how an element asks for one.
+ *
+ * The attribute is the OVERRIDE, not the mechanism. `touchStartsInAPanner`
+ * below also lets a drag through when it begins inside something that is
+ * actually scrollable right now, which is the question that matters and the
+ * one that keeps working when a scrolling overlay is added later without
+ * anyone remembering this file. The attribute covers the case that answer
+ * misses: a row that wants the pan while it happens to fit.
+ */
+export const PAN_OPT_OUT_ATTR = "data-pans";
+
+/**
+ * Can this element be scrolled by a drag, right now?
+ *
+ * Measured rather than declared. A scrolling overlay that nobody thought to
+ * mark is the failure mode to design against here: the level-complete sheet
+ * comes up while the screen is still `game`, so a refusal keyed only on an
+ * attribute would have taken its scrolling away the first time it appeared,
+ * and the next scrolling thing added would break the same way.
+ *
+ * One pixel of slack, because a box whose content matches its height to the
+ * pixel reports a one-off difference on some zoom levels and is not scrollable
+ * in any sense a finger would notice.
+ */
+function canScroll(el: Element): boolean {
+  return el.scrollHeight - el.clientHeight > 1 || el.scrollWidth - el.clientWidth > 1;
+}
+
+/**
+ * Does this touch begin somewhere the browser's own drag is still wanted?
+ *
+ * Walks up from the target, so a finger anywhere inside a scrolling panel is
+ * covered, not only one that lands on the panel itself. Stops at the body: the
+ * document does not scroll during play (index.css pins it), and treating the
+ * root as scrollable would hand every drag straight back to the browser.
+ */
+export function touchStartsInAPanner(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  if (target.closest(`[${PAN_OPT_OUT_ATTR}]`)) return true;
+  for (let el: Element | null = target; el && el !== el.ownerDocument.body; el = el.parentElement) {
+    if (canScroll(el)) return true;
+  }
+  return false;
+}
+
 /** Safari's pinch events, which touch-action does not reach. */
 const GESTURE_EVENTS = ["gesturestart", "gesturechange", "gestureend"] as const;
 
@@ -147,7 +229,7 @@ const DOUBLE_TAP_MAX_DISTANCE_PX = 40;
  * several things adjusting it, and clobbering it to "" on the way out would be
  * a bug that only shows up on whatever ran first.
  */
-export function installZoomGuard(doc: Document): () => void {
+export function installZoomGuard(doc: Document, holdEveryDrag = false): () => void {
   const root = doc.documentElement;
   const previousTouchAction = root.style.touchAction;
   root.style.touchAction = GUARDED_TOUCH_ACTION;
@@ -171,6 +253,17 @@ export function installZoomGuard(doc: Document): () => void {
   // ever one touch it could mean.
   let dragZoomCandidate = false;
 
+  /**
+   * Did the touch now down begin inside something that pans on purpose?
+   *
+   * Read at TOUCHDOWN and held for the life of the contact, which is the same
+   * moment and the same span the browser itself uses to decide what a gesture
+   * is. Asking again mid-drag would reintroduce the bug from the other side:
+   * a fence drawn from the board onto the slot bar would become a pan halfway
+   * through.
+   */
+  let startedInPanner = false;
+
   // A pinch is the only multi-touch this game has a use for stopping, and the
   // check is on the EVENT rather than on a remembered "are we pinching" flag: a
   // finger can arrive or leave mid-gesture, and a flag would have to be right
@@ -186,6 +279,14 @@ export function installZoomGuard(doc: Document): () => void {
     // zoom has already happened, so its OWN move has to be refused too, not
     // just its touchend - see onTouchStart for where the candidate is set.
     if (dragZoomCandidate && count === 1 && e.cancelable) e.preventDefault();
+    // And on a screen where every drag is gameplay, the browser gets no
+    // one-finger gesture at all unless it started somewhere that pans on
+    // purpose. This is the half that reaches a drag beginning OUTSIDE the
+    // canvas: `touch-action` there says "pan", the browser commits to that at
+    // touchdown, and refusing the first move is what stops it committing.
+    if (holdEveryDrag && count === 1 && !startedInPanner && e.cancelable) {
+      e.preventDefault();
+    }
   };
 
   // ctrl+wheel is a trackpad pinch and the desktop zoom shortcut. A plain wheel
@@ -209,6 +310,10 @@ export function installZoomGuard(doc: Document): () => void {
   // not this one's.
   const onTouchStart = (e: Event) => {
     const touch = e as TouchEvent;
+    // Recorded for every touchstart, including the second finger of a pinch:
+    // whichever contact the browser ends up acting on, the answer has to be
+    // about where the hand actually is.
+    startedInPanner = touchStartsInAPanner(e.target);
     if ((touch.touches?.length ?? 0) !== 1 || touch.changedTouches?.length !== 1) {
       dragZoomCandidate = false;
       return;

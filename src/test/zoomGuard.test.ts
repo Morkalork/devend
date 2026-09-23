@@ -24,10 +24,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   installZoomGuard, zoomAllowedOn, ZOOM_ALLOWED_SCREENS, GUARDED_TOUCH_ACTION,
+  dragIsAlwaysGameplay, PAN_OPT_OUT_ATTR, touchStartsInAPanner,
 } from "@/lib/zoomGuard";
 import type { GameScreen } from "@/types/game";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+const readSrc = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
 
 /** A touchmove carrying `count` fingers, and whether anything blocked it. */
 function touchMove(doc: Document, count: number): boolean {
@@ -320,5 +323,224 @@ describe("the guard is wired in, not just written", () => {
     // screen is how the next screen ships unprotected.
     const call = INDEX.slice(INDEX.indexOf("useZoomGuard("));
     expect(call.slice(0, 60)).not.toMatch(/=== ['"]game['"]/);
+  });
+});
+
+describe("a fence begun outside the board", () => {
+  /**
+   * The fifth zoom report, and the first that says WHERE the gesture starts:
+   * "seems to be when you start creating a fence from outside of the gameboard,
+   * then swipe into it."
+   *
+   * That is a boundary, not a gesture, and it is why four rounds of refusing
+   * gestures never touched it. The canvas carries `touch-action: none`, so a
+   * drag that BEGINS on the board is the game's and the browser never competes.
+   * Everything around it inherited the root's `pan-x pan-y`, which says a drag
+   * here is a page pan - and a browser decides what a touch is at TOUCHDOWN,
+   * from the element under the finger at that moment. It does not hand the
+   * gesture back when the finger crosses onto the canvas. So the whole swipe
+   * belonged to the browser: no fence, and the page moved instead.
+   *
+   * Two halves, because neither reaches the whole screen alone. `touch-none`
+   * on the play region is the compositor's copy and needs no handler to run.
+   * The refusal below covers the rest of the screen, where `touch-action`
+   * could not be used: it intersects down the tree, so a root set to `none`
+   * would silence the fence-slot row along with everything else.
+   */
+  function touchAt(name: string, target: EventTarget, count: number): Event {
+    const e = new Event(name, { bubbles: true, cancelable: true });
+    Object.defineProperty(e, "touches", { value: new Array(count).fill({ clientX: 0, clientY: 0 }) });
+    Object.defineProperty(e, "changedTouches", { value: [{ clientX: 0, clientY: 0 }] });
+    Object.defineProperty(e, "target", { value: target });
+    return e;
+  }
+
+  /** A bit of chrome beside the board, and a row that pans on purpose. */
+  function layout() {
+    const hud = document.createElement("div");
+    const bar = document.createElement("div");
+    bar.setAttribute(PAN_OPT_OUT_ATTR, "");
+    const slot = document.createElement("button");
+    bar.appendChild(slot);
+    document.body.append(hud, bar);
+    return { hud, slot, clean: () => { hud.remove(); bar.remove(); } };
+  }
+
+  it("refuses the browser's pan when the drag starts beside the board", () => {
+    const { hud, clean } = layout();
+    const stop = installZoomGuard(document, true);
+
+    document.dispatchEvent(touchAt("touchstart", hud, 1));
+    const move = touchAt("touchmove", hud, 1);
+    document.dispatchEvent(move);
+    expect(move.defaultPrevented, "the swipe was still the browser's to pan with")
+      .toBe(true);
+
+    stop(); clean();
+  });
+
+  it("leaves that same drag alone on a screen that scrolls", () => {
+    // The shop, the manual, the map list. Refusing the pan there would be the
+    // `touch-action: none` mistake the guard has always declined to make.
+    const { hud, clean } = layout();
+    const stop = installZoomGuard(document, false);
+
+    document.dispatchEvent(touchAt("touchstart", hud, 1));
+    const move = touchAt("touchmove", hud, 1);
+    document.dispatchEvent(move);
+    expect(move.defaultPrevented, "an ordinary screen lost its scrolling").toBe(false);
+
+    stop(); clean();
+  });
+
+  it("still lets the fence-slot row pan, which is the one exception", () => {
+    const { slot, clean } = layout();
+    const stop = installZoomGuard(document, true);
+
+    document.dispatchEvent(touchAt("touchstart", slot, 1));
+    const move = touchAt("touchmove", slot, 1);
+    document.dispatchEvent(move);
+    expect(move.defaultPrevented, "the types past the row's edge are unreachable now")
+      .toBe(false);
+
+    stop(); clean();
+  });
+
+  it("holds the verdict for the life of the contact, not per move", () => {
+    // The bug from the other side: a fence drawn FROM the board onto the slot
+    // bar must not become a pan halfway through. The answer is taken at
+    // touchdown, which is the same moment the browser takes its own.
+    const { hud, slot, clean } = layout();
+    const stop = installZoomGuard(document, true);
+
+    document.dispatchEvent(touchAt("touchstart", hud, 1));
+    const overBar = touchAt("touchmove", slot, 1);
+    document.dispatchEvent(overBar);
+    expect(overBar.defaultPrevented, "the drag changed its mind mid-swipe").toBe(true);
+
+    stop(); clean();
+  });
+
+  it("clears the verdict when the next touch starts somewhere else", () => {
+    const { hud, slot, clean } = layout();
+    const stop = installZoomGuard(document, true);
+
+    document.dispatchEvent(touchAt("touchstart", slot, 1));
+    document.dispatchEvent(touchAt("touchend", slot, 0));
+    document.dispatchEvent(touchAt("touchstart", hud, 1));
+    const move = touchAt("touchmove", hud, 1);
+    document.dispatchEvent(move);
+    expect(move.defaultPrevented, "a drag beside the board inherited the bar's pass")
+      .toBe(true);
+
+    stop(); clean();
+  });
+
+  it("still refuses a pinch on a scrolling screen, as it always did", () => {
+    // The drag hold is an addition, not a replacement.
+    const { hud, clean } = layout();
+    const stop = installZoomGuard(document, false);
+
+    document.dispatchEvent(touchAt("touchstart", hud, 2));
+    const pinch = touchAt("touchmove", hud, 2);
+    document.dispatchEvent(pinch);
+    expect(pinch.defaultPrevented).toBe(true);
+
+    stop(); clean();
+  });
+});
+
+describe("which screens hold every drag", () => {
+  it("holds them where the board is, and nowhere that scrolls", () => {
+    for (const s of ["game", "tutorial"] as GameScreen[]) {
+      expect(dragIsAlwaysGameplay(s), `${s} still lets the browser pan`).toBe(true);
+    }
+    for (const s of ["upgradeShop", "loadouts", "achievements", "hallOfFame",
+                     "options", "jukebox", "welcome"] as GameScreen[]) {
+      expect(dragIsAlwaysGameplay(s), `${s} scrolls and must keep panning`).toBe(false);
+    }
+  });
+
+  it("never holds a drag on the screens that zoom on purpose", () => {
+    // The map builder implements its own pan and pinch. Both mechanisms have
+    // to agree about that or the guard would fight it from one side.
+    for (const s of ZOOM_ALLOWED_SCREENS) {
+      expect(dragIsAlwaysGameplay(s), `${s} zooms itself and must not be held`)
+        .toBe(false);
+    }
+  });
+});
+
+describe("the play region declares itself", () => {
+  it("puts touch-none on the whole region, not only the canvas", () => {
+    // The compositor half. It needs no handler to run, which is what makes it
+    // hold while a frame is busy - the reason this file's header gives for
+    // preferring touch-action wherever it can express the rule.
+    const canvas = readSrc("src/components/game/GameCanvas.tsx");
+    const root = canvas.slice(canvas.indexOf("flex flex-col w-full h-full"));
+    expect(root.slice(0, 120), "the play region can still be panned")
+      .toContain("touch-none");
+  });
+});
+
+describe("a scrolling panel that nobody marked", () => {
+  /**
+   * The regression this refusal could easily have shipped with. The
+   * level-complete sheet scrolls, and it comes up while the screen is still
+   * `game` - so a rule keyed only on an attribute would have taken its
+   * scrolling away the first time it appeared, and the next scrolling overlay
+   * anyone added would have broken the same way with no clue pointing here.
+   *
+   * So the question asked is "can this actually be scrolled", measured on the
+   * element, and the attribute is only the override for a panel that wants the
+   * drag while it happens to fit.
+   */
+  function scroller(scrollable: boolean) {
+    const box = document.createElement("div");
+    const inner = document.createElement("p");
+    box.appendChild(inner);
+    document.body.appendChild(box);
+    // jsdom does not lay out, so the measurements are declared.
+    Object.defineProperty(box, "clientHeight", { value: 100, configurable: true });
+    Object.defineProperty(box, "scrollHeight", { value: scrollable ? 400 : 100, configurable: true });
+    Object.defineProperty(box, "clientWidth", { value: 100, configurable: true });
+    Object.defineProperty(box, "scrollWidth", { value: 100, configurable: true });
+    return { box, inner, clean: () => box.remove() };
+  }
+
+  it("lets a drag inside it scroll, marked or not", () => {
+    const { inner, clean } = scroller(true);
+    expect(touchStartsInAPanner(inner), "a scrolling overlay lost its scrolling")
+      .toBe(true);
+    clean();
+  });
+
+  it("holds a drag inside a panel that does not scroll", () => {
+    const { inner, clean } = scroller(false);
+    expect(touchStartsInAPanner(inner)).toBe(false);
+    clean();
+  });
+
+  it("finds the scroller from deep inside it, not just on it", () => {
+    const { box, clean } = scroller(true);
+    const deep = document.createElement("span");
+    box.firstElementChild!.appendChild(deep);
+    expect(touchStartsInAPanner(deep)).toBe(true);
+    clean();
+  });
+
+  it("never calls the document itself a panner", () => {
+    // The walk stops at body on purpose: treat the root as scrollable and
+    // every drag goes straight back to the browser, which is the bug.
+    expect(touchStartsInAPanner(document.body)).toBe(false);
+    const bare = document.createElement("div");
+    document.body.appendChild(bare);
+    expect(touchStartsInAPanner(bare)).toBe(false);
+    bare.remove();
+  });
+
+  it("says nothing about a target that is not an element", () => {
+    expect(touchStartsInAPanner(null)).toBe(false);
+    expect(touchStartsInAPanner(document)).toBe(false);
   });
 });

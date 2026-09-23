@@ -319,8 +319,13 @@ describe("the recovery is wired to the page and to the game", () => {
 
   it("watches the viewport from the same hook that refuses the gesture", () => {
     // One install point, so a screen added later gets both halves or neither.
+    //
+    // Matched on the call rather than on its whole argument list: pinning the
+    // literal `installZoomGuard(document)` made this break the moment the guard
+    // learned which screen it was on, which is a change to what the guard does
+    // and not to the wiring this test is about.
     const hook = read("src/hooks/useZoomGuard.ts");
-    expect(hook).toContain("installZoomGuard(document)");
+    expect(hook).toContain("installZoomGuard(document");
     expect(hook).toContain("watchViewportZoom(document");
   });
 
