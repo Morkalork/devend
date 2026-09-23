@@ -32,6 +32,9 @@ import type { SpaceGrid } from "@/lib/spaceGrid";
 import { CellState, rasterizeCutToGrid, captureUnreachableCells } from "@/lib/spaceGrid";
 import type { Vector2 } from "@/lib/polygon";
 import type { WinSpec } from "@/types/winSpec";
+import {
+  DEFAULT_SMASH_CLASS, matchesSmashClass, type SmashClassFilter,
+} from "@/lib/destructibleClass";
 
 /**
  * How far outside a slab a ball's CENTRE can sit and still be able to hit it.
@@ -127,27 +130,89 @@ function breakables(game: CanvasGameState): DestructibleState[] {
   return (game.destructibles ?? []).filter(d => d.kind === "breakable");
 }
 
-/** How many smashes this map's win asks for; 0 when it asks for none. */
+/** One thing a map's win asks for: this many, of this class. */
+export interface SmashDemand {
+  of: SmashClassFilter;
+  count: number;
+}
+
+/**
+ * What this map's win asks to be smashed, one entry per class it names.
+ *
+ * A list rather than the single number this used to be, because the two
+ * classes are independent bills: six shards do not pay for a monolith, which is
+ * the whole reason lib/destructibleClass exists. A map asking for both carries
+ * two clauses and both have to stay reachable.
+ *
+ * The max per filter, keeping the old behaviour for the one-clause case: two
+ * clauses naming the same class are one demand for the larger, since meeting
+ * the larger meets the smaller.
+ *
+ * WHERE THIS IS APPROXIMATE, said out loud: an `any` demand alongside a named
+ * one would contend for the same breakables, and each demand is checked on its
+ * own here, so a spec carrying both could in principle be called reachable
+ * when it is not. `winSpecProblems` refuses exactly that spec - `of: any` is
+ * only legal on a map holding a single class, where `any` and that class are
+ * the same set - so the case cannot reach this function from an authored map.
+ * Left approximate rather than exact because the exact version is a matching
+ * problem, and one that would only ever run on a spec the authoring gate
+ * already rejected.
+ */
+export function smashDemands(spec: WinSpec): SmashDemand[] {
+  const byClass = new Map<SmashClassFilter, number>();
+  for (const c of spec.require) {
+    if (c.kind !== "smashed") continue;
+    const of = c.of ?? DEFAULT_SMASH_CLASS;
+    byClass.set(of, Math.max(byClass.get(of) ?? 0, c.count));
+  }
+  return [...byClass].map(([of, count]) => ({ of, count }));
+}
+
+/**
+ * How many smashes this map's win asks for in total, across every class.
+ *
+ * For the callers that only need "does this map ask for smashing at all" and
+ * for the HUD's headline. A class-blind number is NOT a safe basis for a reach
+ * decision any more - use `smashDemands` for those.
+ */
 export function requiredSmashes(spec: WinSpec): number {
   let n = 0;
-  for (const c of spec.require) if (c.kind === "smashed") n = Math.max(n, c.count);
+  for (const d of smashDemands(spec)) n += d.count;
   return n;
 }
 
 /**
- * Is the smash requirement still satisfiable?
+ * Is the smash requirement still satisfiable, for one class?
  *
  * Counts what is already broken plus what can still be reached. A map with four
  * slabs and a `smashed 1` clause can lose three of them and be perfectly fine,
  * so the test is against the REQUIREMENT rather than against any single slab -
  * failing a map for burying a slab it did not need would be its own bug.
  */
-export function smashesStillPossible(game: CanvasGameState): number {
+export function smashesStillPossible(
+  game: CanvasGameState, of: SmashClassFilter = DEFAULT_SMASH_CLASS,
+): number {
   let n = 0;
   for (const d of breakables(game)) {
+    if (!matchesSmashClass(d, of)) continue;
     if (d.destroyed || canStillStrike(game, d)) n++;
   }
   return n;
+}
+
+/** Is every demand in this spec still reachable on this board? */
+function allDemandsReachable(
+  board: CanvasGameState, demands: readonly SmashDemand[], probe = board,
+): boolean {
+  for (const d of demands) {
+    let possible = 0;
+    for (const x of breakables(board)) {
+      if (!matchesSmashClass(x, d.of)) continue;
+      if (x.destroyed || canStillStrike(probe, x)) possible++;
+    }
+    if (possible < d.count) return false;
+  }
+  return true;
 }
 
 /**
@@ -155,15 +220,15 @@ export function smashesStillPossible(game: CanvasGameState): number {
  * broken or walled off, and the count still falls short.
  */
 export function smashRequirementLost(game: CanvasGameState, spec: WinSpec): boolean {
-  const need = requiredSmashes(spec);
-  if (need === 0) return false;
+  const demands = smashDemands(spec);
+  if (demands.length === 0) return false;
   // A map with a smash clause and NO breakables on it was unwinnable before the
   // player touched it. That is an authoring fault - winSpecProblems refuses a
   // count above the breakable count, and the builder shows the flag - and
   // failing the player for it would report their cut as the cause of a map that
   // never had a chance. Nothing here can be "lost" if there was nothing to lose.
   if (breakables(game).length === 0) return false;
-  return smashesStillPossible(game) < need;
+  return !allDemandsReachable(game, demands);
 }
 
 /**
@@ -184,15 +249,22 @@ export function regionHoldsNeededSlab(
   game: CanvasGameState, spec: WinSpec, cellIndices: number[],
 ): boolean {
   const grid = game.spaceGrid;
-  const need = requiredSmashes(spec);
-  if (!grid || need === 0) return false;
-  const done = breakables(game).filter(d => d.destroyed).length;
-  if (done >= need) return false;
+  const demands = smashDemands(spec);
+  if (!grid || demands.length === 0) return false;
+
+  // "Still needs" is per class now. A map that owes a monolith and no longer
+  // owes any shards must stop refusing pockets around shards, or the seal it
+  // declines is one the win has already stopped caring about.
+  const owed = demands.filter(dem =>
+    breakables(game).filter(d => d.destroyed && matchesSmashClass(d, dem.of)).length < dem.count);
+  if (owed.length === 0) return false;
 
   const cells = new Set(cellIndices);
   const radius = strikingRadius(game);
   for (const d of breakables(game)) {
     if (d.destroyed) continue;
+    // Only a breakable some OWED demand could still be paid with.
+    if (!owed.some(dem => matchesSmashClass(d, dem.of))) continue;
     for (const i of strikeCells(grid, d, radius)) {
       if (cells.has(i)) return true;
     }
@@ -243,13 +315,13 @@ export function cutWouldBurySmashes(
   segments: ReadonlyArray<{ start: Vector2; end: Vector2 }>,
   thickness: number,
 ): boolean {
-  const need = requiredSmashes(spec);
-  if (need === 0) return false;
+  const demands = smashDemands(spec);
+  if (demands.length === 0) return false;
   const grid = game.spaceGrid;
   if (!grid || segments.length === 0) return false;
   if (breakables(game).length === 0) return false;
   // Already lost: not this cut's doing, and not this rule's to report.
-  if (smashesStillPossible(game) < need) return false;
+  if (!allDemandsReachable(game, demands)) return false;
 
   const after: SpaceGrid = {
     ...grid,
@@ -261,10 +333,10 @@ export function cutWouldBurySmashes(
   }
   captureUnreachableCells(after, game.balls, [...game.walls, ...segments]);
 
+  // Per demand, not per total: a cut that orphans the map's last monolith is
+  // refused even though six shards are still perfectly reachable. Counting
+  // them together is what made the monolith pointless in the first place, and
+  // it would let this rule wave through the exact burial it exists to stop.
   const probe = { ...game, spaceGrid: after } as CanvasGameState;
-  let possible = 0;
-  for (const d of breakables(game)) {
-    if (d.destroyed || canStillStrike(probe, d)) possible++;
-  }
-  return possible < need;
+  return !allDemandsReachable(game, demands, probe);
 }

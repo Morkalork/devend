@@ -185,7 +185,12 @@ export function failLines(t: TFunction, failure: MapFailure): string[] {
       case "splitLocks": return t("mapFailure.needSplitLocks", { ...v, each: c.count }) as string;
       case "boss": return t("mapFailure.needBoss") as string;
       case "allLocked": return t("mapFailure.needAllLocked") as string;
-      case "smashed": return t("mapFailure.needSmashed", v) as string;
+      // Named by class, because "you had 4 of 6" over a board of shards and
+      // monoliths does not say which four were wanted.
+      case "smashed": return t(
+        c.of === "shards" ? "mapFailure.needSmashedShards"
+          : c.of === "monoliths" ? "mapFailure.needSmashedMonoliths"
+          : "mapFailure.needSmashed", v) as string;
       case "terminals": return t("mapFailure.needTerminals", v) as string;
       case "harvested": return t("mapFailure.needHarvested", v) as string;
       case "delivered": return t("mapFailure.needDelivered", v) as string;

@@ -36,6 +36,7 @@ import { CellState, findGridRegions, markCellRemoved, type SpaceGrid } from "@/l
 import { BOARD_WIDTH } from "@/lib/boardConstants";
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
+import { noSmashes } from "@/lib/destructibleClass";
 
 /** Give every surviving cell the id of the region it is actually in. */
 function repaintRegions(grid: SpaceGrid): void {
@@ -184,7 +185,7 @@ function claim(grid: SpaceGrid, col: number, row: number): void {
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 50, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: 0, terminals: 0,
+  lockedByType: {}, lockPoints: [], mapRotation: 0, delivered: 0, smashed: noSmashes(), terminals: 0,
   harvested: 0, bossDefeated: false, allLocked: false, cuts: 1, par: 6,
   activeSeconds: 0, ...over,
 });

@@ -27,6 +27,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { WinSpec } from "@/types/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import { canStillStrike } from "@/lib/physics/smashReach";
+import { matchesSmashClass } from "@/lib/destructibleClass";
 
 /** A board-space rectangle to draw an announcement around. */
 export interface HighlightRect {
@@ -81,6 +82,12 @@ export function winHighlightRects(
       // destructible too and are scenery, not a job.
       for (const d of game.destructibles ?? []) {
         if (d.kind !== "breakable" || d.destroyed) continue;
+        // ...and matching the clause's CLASS. A map asking for six shards and
+        // one monolith carries two clauses, and each must point only at what
+        // would pay it: a ring over a monolith on a shards clause is the same
+        // wrong instruction as a ring over rubble, and on a mixed map it is
+        // the instruction that made the monolith look optional.
+        if (!matchesSmashClass(d, c.of)) continue;
         // ...and only while it can still be hit.
         //
         // The marker is an instruction, and the argument against pointing at a

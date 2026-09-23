@@ -1,4 +1,5 @@
 import type { MapRotation } from "@/lib/mapRotation";
+import type { DestructibleClass, SmashClassFilter } from "@/lib/destructibleClass";
 /**
  * What a map asks of you, as data instead of as control flow.
  *
@@ -121,8 +122,20 @@ export type WinCondition = (
    * touching it. Counts breakables only, on the same rule the Engagement axis
    * uses: mirrors and movers are destructible too, but they are scenery a ball
    * happens to hit rather than a thing the player sets out to do.
+   *
+   * `of` says WHICH breakables, because they are two things now and counting
+   * them together made one of them pointless. A map with six shards and one
+   * monolith asking for five gave the player six cheap ways to pay a bill the
+   * monolith could also have settled, so the monolith was never worth the three
+   * drives it costs. See lib/destructibleClass for what separates them.
+   *
+   * Omitted means `any`, which is what every clause authored before the split
+   * said by omission, so the shipped ladder is unchanged on the day this lands
+   * and migrates a map at a time. `winSpecProblems` refuses an omitted `of` on
+   * a map that actually holds both classes - the case above - so "unsaid" can
+   * only survive where it cannot be ambiguous.
    */
-  | { kind: "smashed"; count: number }
+  | { kind: "smashed"; count: number; of?: SmashClassFilter }
   /**
    * Light at least `count` of the map's circuit terminals.
    *
@@ -211,8 +224,17 @@ export interface WinSnapshot {
   mapRotation: MapRotation;
   /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
   delivered: number;
-  /** The map's breakable obstacles that have been destroyed. */
-  smashed: number;
+  /**
+   * The map's breakable obstacles that have been destroyed, by class.
+   *
+   * A record rather than one number plus a couple of extras, so a clause asking
+   * for a class it can name is a lookup and cannot fall back to the total by
+   * accident. `any` is stored alongside rather than summed at each read, for
+   * the reason every other snapshot field is precomputed: the win gate, the
+   * HUD and the stranding check all ask this several times a frame and must
+   * agree, and a total derived in three places is a total that can drift.
+   */
+  smashed: SmashCounts;
   /** Circuit terminals lit by routing a fence through them. */
   terminals: number;
   /** Data-stream segments harvested by running a fence along them. */
@@ -224,6 +246,15 @@ export interface WinSnapshot {
   par: number;
   activeSeconds: number;
 }
+
+/**
+ * Smashed breakables, counted by class and in total.
+ *
+ * Keyed by the clause's own `of` values so a reader indexes it with the field
+ * it already has (`snap.smashed[c.of ?? "any"]`) rather than switching on the
+ * class a second time.
+ */
+export type SmashCounts = Record<DestructibleClass | "any", number>;
 
 /** How one clause is doing, for the HUD and the admin preview. */
 export interface WinConditionProgress {

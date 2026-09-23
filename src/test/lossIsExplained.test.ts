@@ -21,6 +21,7 @@ import { resolve } from "node:path";
 import { MAP_FAIL_KINDS, mapFailure, failHeadline, failLines } from "@/lib/mapFailure";
 import { GAME_MESSAGE_IDS } from "@/lib/gameMessages";
 import type { WinSpec, WinSnapshot } from "@/types/winSpec";
+import { everySmashed } from "./fixtures/smashCounts";
 
 const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
 
@@ -113,7 +114,7 @@ describe("every reason renders", () => {
       require: [{ kind: "space", threshold: 25 }, { kind: "smashed", count: 2 }],
       alsoWinIf: [], authored: true,
     } as WinSpec;
-    const snap = { remainingPercent: 60, smashed: 1 } as unknown as WinSnapshot;
+    const snap = { remainingPercent: 60, smashed: everySmashed(1) } as unknown as WinSnapshot;
     const failure = mapFailure("ballHitFence", spec, snap);
 
     expect(failure.unmet, "a death threw away what the player had achieved").toHaveLength(2);

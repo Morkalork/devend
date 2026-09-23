@@ -137,11 +137,21 @@ describe("level 18 is the windmill map", () => {
     const breakables = walls.filter(w => w.breakable || w.brittle || w.chest);
     expect(breakables.length).toBeGreaterThan((smash as { count: number }).count);
     // And the targets are spread, so no single seal can bury the clause.
-    const outer = breakables.filter(w => w.id.startsWith("slab-"));
-    expect(outer.length).toBeGreaterThanOrEqual(3);
-    const quadrants = new Set(outer.map(w =>
-      `${w.x + w.width / 2 < 450 ? "W" : "E"}${w.y + w.height / 2 < 450 ? "N" : "S"}`));
-    expect(quadrants.size, "the slabs share a quadrant").toBeGreaterThanOrEqual(3);
+    //
+    // Measured over the board rather than over an id prefix. It used to filter
+    // on `slab-` and count three, which stopped being the same question the
+    // moment one of those slabs became a square of four shards: the targets
+    // were still in three corners, the NAMES just stopped agreeing. An
+    // assertion about what a map is made of should read the geometry.
+    //
+    // `wm-s` is excluded because it is the room's own door, not an outer
+    // target: the Turn breaks it, it sits in the middle, and counting it would
+    // let a map with everything bunched centrally pass on its say-so.
+    const outer = breakables.filter(w => w.id !== "wm-s");
+    const quadrant = (w: typeof outer[number]) =>
+      `${w.x + w.width / 2 < 450 ? "W" : "E"}${w.y + w.height / 2 < 450 ? "N" : "S"}`;
+    const quadrants = new Set(outer.map(quadrant));
+    expect(quadrants.size, "the smash targets share a quadrant").toBeGreaterThanOrEqual(3);
   });
 
   it("keeps its Turn pointed at the room, and telegraphs it", () => {
