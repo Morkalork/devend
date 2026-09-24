@@ -31,8 +31,16 @@ import {
   type GravityConfig,
 } from "@/lib/physics/gravity";
 
-/** The last stretch before a shift, when it should start catching the eye. */
-export const URGENT_SECONDS = 1.5;
+/**
+ * The last stretch before a shift, when it should start catching the eye.
+ *
+ * Three seconds, up from one and a half. Level 19 was reported as needing "a
+ * better warning about full gravity": it puts four patrol bars on the board,
+ * so a cut committed with a second and a half to go is a cut that meets a bar
+ * or a ball in a new fall line before it finishes. Three is long enough to
+ * see the amber edge, read where the pull is going, and hold off.
+ */
+export const URGENT_SECONDS = 3;
 
 export interface GravityCue {
   /**
