@@ -532,6 +532,24 @@ export function GameCanvas({
     const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
     game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
   }, [pickupConfig, level, levelNumber, activeModifiers.pickupChanceBonus]);
+  /**
+   * The latest bug tuning, for the per-map init block to read.
+   *
+   * The init effect deliberately does NOT list `bugConfig` in its deps - doing
+   * so would restart the level the moment game-config.yml landed - and the
+   * price of that is a closure holding whatever the prop was when the effect
+   * was last created. On a map mounted before the fetch resolved, that is
+   * DEFAULT_BUG_CONFIG, and it wins: React runs the sync effect below first and
+   * the init block second, so the stale copy overwrites the fresh one.
+   *
+   * Harmless today only because every default happens to equal the shipped
+   * YAML. Tune `speed` or `lifetime_seconds` in game-config.yml and the first
+   * map of a session would silently ignore it, which is the kind of bug that
+   * gets diagnosed as "the YAML does nothing".
+   */
+  const bugConfigRef = useRef(bugConfig);
+  useEffect(() => { bugConfigRef.current = bugConfig; }, [bugConfig]);
+
   // Bug tuning arrives on the same async config fetch, and is reseeded the same
   // way and for the same reason: putting it in the init effect's deps would
   // restart the level the moment game-config.yml landed.
@@ -1256,8 +1274,10 @@ export function GameCanvas({
         game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
       }
       {
-        const chance = effectiveBugChance(bugConfig, levelNumber, level.bugChance);
-        game.bugConfig = chance > 0 ? { ...bugConfig, spawnChance: chance } : null;
+        // Through the ref, not the closure: see bugConfigRef.
+        const cfg = bugConfigRef.current;
+        const chance = effectiveBugChance(cfg, levelNumber, level.bugChance);
+        game.bugConfig = chance > 0 ? { ...cfg, spawnChance: chance } : null;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       // Pickup anchors, colored areas and gravity wells, all authored in the

@@ -27,6 +27,7 @@ import {
 import { fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { loadedSlingAt, slingShape, fireSlingFence } from "@/lib/physics/slingFence";
 import { moverAt, railParam, railReading, releaseMover } from "@/lib/physics/moverControl";
+import { bugAtTap } from "@/lib/physics/bugs";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -472,6 +473,31 @@ export function useGameInput(
       ) {
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist  = vec2Length(delta);
+
+        // A tap on a BUG squashes it, killing it for no reward.
+        //
+        // First of the tap branches, because a bug flies OVER everything else
+        // on the board and the finger is on the thing the player can see moving.
+        //
+        // This replaces press-and-hold, which was the explainer gesture here
+        // and was unusable: a bug is nine world units across and travels 10-17
+        // of them in the time it takes a touch to register, against 22 of slop,
+        // and the 450ms hold then had to survive a 12-unit move slop that a
+        // resting thumb drifts past. Reported as "press and hold doesn't work",
+        // which it did not. A tap has to land once, on a target the same size,
+        // and that is a gesture a moving thing can actually carry.
+        if (dist < BASE_SWIPE_MIN_DISTANCE) {
+          const bug = bugAtTap(game, game.swipeStart);
+          if (bug) {
+            // Named, not described - see the tapBug command for why a point
+            // would be the wrong thing to send about something that moves.
+            enqueueCommand(game, { kind: "tapBug", player: getLocalPlayer(), bugId: bug.id });
+            game.swipeStart = null; game.swipeRegionId = null;
+            game.currentSwipePos = null; game.swipePointerId = null;
+            setIsPlayerDragging(false);
+            return;
+          }
+        }
 
         // Tappable ball (#57): a tap on a WHITE ball removes it for no points -
         // a relief valve, or the alternative to working for its big lock.

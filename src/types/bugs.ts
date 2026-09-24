@@ -90,18 +90,34 @@ export interface BugSplat {
   id: string;
   effect: BugEffect;
   position: Vector2;
-  /** Direction the ball was travelling, so the splat sprays the right way. */
+  /**
+   * Direction the ball was travelling, so the splat sprays the right way.
+   *
+   * Zero when nothing hit it, which is the tapped case: a bug the player
+   * squashed with a finger has no heading to spray along, so it bursts
+   * radially instead. That difference is not decoration - it is how "a ball did
+   * this" and "I did this" tell themselves apart at a glance.
+   */
   direction: Vector2;
   /** performance.now() - presentation only, wall clock is right for it. */
   startTime: number;
   /**
-   * What actually happened, for the label.
+   * What actually happened.
    *
-   * An effect can decline: Branch with the ball cap reached, Auto Merge on a ball
-   * with no room for a ring. "Nothing happened" and "nothing works" look the
-   * same from the outside, so the splat says which.
+   * Three outcomes, not two, and the third is the reason this stopped being a
+   * boolean:
+   *
+   *   paid      a ball ran it over and the power landed on that ball.
+   *   declined  a ball ran it over and the effect could not fire - Branch at
+   *             the ball cap, Auto Merge on a ball with no room for a ring.
+   *             "Nothing happened" and "nothing works" look the same from the
+   *             outside, so the splat says which.
+   *   denied    the PLAYER squashed it with a tap. Nothing was paid and nothing
+   *             failed: the bug was refused on purpose, which is a different
+   *             thing from an effect that misfired and must not be drawn as
+   *             one.
    */
-  applied: boolean;
+  outcome: "paid" | "declined" | "denied";
 }
 
 /** Parsed `bugs:` block of game-config.yml. */

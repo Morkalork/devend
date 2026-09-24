@@ -31,8 +31,8 @@ import {
   getAllBugs, getBug, drawBug, bugMagnitude, applyBugCatalogue, isKnownBug,
 } from "@/lib/bugs";
 import {
-  BUG_RADIUS, spawnBug, updateBugs, squashBugs, effectiveBugChance,
-  requestBugSpawn, clearPendingBugSpawn, resetBugCounters,
+  BUG_RADIUS, BUG_TAP_SLOP, spawnBug, updateBugs, squashBugs, effectiveBugChance,
+  requestBugSpawn, clearPendingBugSpawn, resetBugCounters, tapSquashBug, bugAtTap,
 } from "@/lib/physics/bugs";
 import { applyBugEffect, expireBugBuffs, MAX_BLOAT_SCALE, resetBugSplitCounter } from "@/lib/physics/bugEffects";
 import { isWrecking, isAttracting, WRECKING_DAMAGE_MULTIPLIER } from "@/lib/bugBuffs";
@@ -158,6 +158,11 @@ afterEach(() => {
   releaseClock();
   // The catalogue is module state; a test that swapped it must not leak.
   applyBugCatalogue(read("public/bugs.yml"));
+  // Neither may the run seed. The integration tests below arm one, and an
+  // armed seed turns getRunRng from a Math.random passthrough into a
+  // deterministic stream for EVERY later file sharing this worker - which
+  // would quietly make another suite's random map deals repeat one deal.
+  setRunSeedText(null);
 });
 
 // ── The pool ────────────────────────────────────────────────────────────────
@@ -414,7 +419,7 @@ describe("squashing", () => {
     squashBugs(game, ctx());
     expect(game.bugs!.length).toBe(0);
     const splat = game.bugSplats![0];
-    expect(splat.applied).toBe(true);
+    expect(splat.outcome).toBe("paid");
     expect(splat.direction.y).toBeCloseTo(1, 5);
     expect(splat.direction.x).toBeCloseTo(0, 5);
   });
@@ -437,7 +442,7 @@ describe("squashing", () => {
     spawnBug(game, fixedRng(0.5), "allHands");
     game.bugs![0].position = { x: 300, y: 300 };
     squashBugs(game, ctx());
-    expect(game.bugSplats![0].applied).toBe(false);
+    expect(game.bugSplats![0].outcome).toBe("declined");
     expect(isAttracting(ball)).toBe(false);
   });
 
@@ -835,4 +840,132 @@ describe("on a real Demolition map, through the harness", () => {
     expect(ctxBot.game.bugs ?? []).toHaveLength(0);
     expect(ctxBot.game.bugsSquashedLog ?? []).toHaveLength(0);
   }, 60000);
+});
+
+// ── Tapping one ─────────────────────────────────────────────────────────────
+
+/**
+ * A tap kills a bug and pays nothing.
+ *
+ * Asked for as "Maybe [the player] should just tap it to splat it?", after
+ * press-and-hold turned out to be unperformable on a nine-unit moving target.
+ * The reason it kills rather than claims is the mechanic's own premise: the
+ * power belongs to the ball that earns it, and a tap that paid out would make
+ * every bug free and delete the question the pool exists to ask ("which ball,
+ * and where do I let it run").
+ *
+ * So the tap is the OTHER half of that question: refusal. Big Bang Release
+ * wears a warning ring, and this is what a player can do about it besides hope.
+ */
+describe("tapping a bug", () => {
+  it("kills it, and pays nothing to anybody", () => {
+    const ball = testBall({ position: { x: 800, y: 800 } });
+    const game = testGame({ balls: [ball] });
+    spawnBug(game, fixedRng(0.5), "caffeine");
+    const before = { speed: ball.speed, mult: ball.lockMultiplier };
+
+    expect(tapSquashBug(game, game.bugs![0].id)).toBe(true);
+    expect(game.bugs!.length, "the bug survived the tap").toBe(0);
+    expect(ball.speed, "a tap paid a ball that was nowhere near it").toBe(before.speed);
+    expect(ball.lockMultiplier).toBe(before.mult);
+  });
+
+  it("is how you refuse the one that can end the map", () => {
+    // The ball sits at the board's middle, which is where fixedRng(0.5) would
+    // put the bug: a different draw, or the spawn is refused for clearance and
+    // the test reads as a failure of the tap.
+    const game = testGame({ balls: [testBall()] });
+    spawnBug(game, fixedRng(0.2), "bigBang");
+    tapSquashBug(game, game.bugs![0].id);
+    expect(game.bugs!).toHaveLength(0);
+    // Nothing was sealed: no ring was ever laid.
+    expect(game.walls).toHaveLength(0);
+  });
+
+  it("still names it, so refusing one is how you learn what it was", () => {
+    const game = testGame();
+    spawnBug(game, fixedRng(0.5), "forcePush");
+    tapSquashBug(game, game.bugs![0].id);
+    const splat = game.bugSplats![0];
+    expect(splat.effect).toBe("forcePush");
+    expect(splat.outcome).toBe("denied");
+  });
+
+  it("bursts radially rather than spraying, because nothing hit it", () => {
+    // The direction is what tells "a ball did this" from "I did this" before
+    // the name has even been read. A tap has no heading to spray along.
+    const game = testGame();
+    spawnBug(game, fixedRng(0.5), "branch");
+    tapSquashBug(game, game.bugs![0].id);
+    expect(game.bugSplats![0].direction).toEqual({ x: 0, y: 0 });
+  });
+
+  it("reads as refused rather than as an effect that misfired", () => {
+    // Three outcomes and not two: a denied bug keeps its colour, a declined one
+    // goes grey and struck through. Drawing a deliberate refusal as a misfire
+    // would tell the player their tap failed.
+    const game = testGame({ balls: [testBall({ position: { x: 300, y: 300 } })] });
+    spawnBug(game, fixedRng(0.5), "allHands");
+    game.bugs![0].position = { x: 300, y: 300 };
+    squashBugs(game, ctx());              // no other ball to pull: declines
+    spawnBug(game, fixedRng(0.5), "allHands");
+    tapSquashBug(game, game.bugs![0].id);
+    expect(game.bugSplats!.map(s => s.outcome)).toEqual(["declined", "denied"]);
+  });
+
+  it("logs the refusal, so the map's tally is not a lie", () => {
+    const game = testGame();
+    spawnBug(game, fixedRng(0.5), "bitRot");
+    tapSquashBug(game, game.bugs![0].id);
+    expect(game.bugsSquashedLog).toEqual([{ effect: "bitRot", outcome: "denied" }]);
+  });
+
+  it("does nothing at all for a bug that is already gone", () => {
+    // A ball reached it first, or it expired, between the finger going down and
+    // the command being applied a frame later. Both are misses, not errors.
+    const game = testGame();
+    expect(tapSquashBug(game, "bug-does-not-exist")).toBe(false);
+    expect(game.bugSplats ?? []).toHaveLength(0);
+  });
+});
+
+describe("finding the bug under a finger", () => {
+  it("is generous enough to hit something this small and this fast", () => {
+    const game = testGame();
+    spawnBug(game, fixedRng(0.5), "deadlock");
+    const bug = game.bugs![0];
+    const at = { x: bug.position.x + BUG_RADIUS + BUG_TAP_SLOP - 1, y: bug.position.y };
+    expect(bugAtTap(game, at)?.id).toBe(bug.id);
+  });
+
+  it("does not claim a bug the finger missed", () => {
+    const game = testGame();
+    spawnBug(game, fixedRng(0.5), "deadlock");
+    const bug = game.bugs![0];
+    const at = { x: bug.position.x + BUG_RADIUS + BUG_TAP_SLOP + 20, y: bug.position.y };
+    expect(bugAtTap(game, at)).toBeNull();
+  });
+
+  it("takes the nearest when two are within reach", () => {
+    const game = testGame();
+    // Two different draws: one generator twice puts both at the same spot, and
+    // the second spawn is then refused for sitting on top of the first.
+    spawnBug(game, fixedRng(0.2), "bitRot");
+    spawnBug(game, fixedRng(0.8), "caffeine");
+    game.bugs![0].position = { x: 400, y: 400 };
+    game.bugs![1].position = { x: 415, y: 400 };
+    expect(bugAtTap(game, { x: 403, y: 400 })?.id).toBe(game.bugs![0].id);
+    expect(bugAtTap(game, { x: 413, y: 400 })?.id).toBe(game.bugs![1].id);
+  });
+
+  it("is a command carrying the bug's id, not the point it was tapped at", () => {
+    // A bug moves every frame, and a command is applied on the next one, so
+    // "the bug nearest this point" would resolve to a different bug (or none)
+    // by the time it ran. Same rule the tappable ball follows.
+    const input = read("src/hooks/useGameInput.ts");
+    expect(input).toMatch(/kind:\s*"tapBug"[\s\S]{0,80}bugId:\s*bug\.id/);
+    const commands = read("src/lib/net/commands.ts");
+    expect(commands).toMatch(/kind:\s*"tapBug";\s*player:\s*PlayerId;\s*bugId:\s*string/);
+    expect(commands, "a tap does not travel to the other device").toContain('case "tapBug"');
+  });
 });

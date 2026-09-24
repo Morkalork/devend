@@ -19,7 +19,6 @@ import { pointInPolygon } from "@/lib/polygon";
 import { coloredAreaAt } from "@/lib/coloredAreas";
 
 export type BoardEntityKind =
-  | "bug"
   | "pickup"
   | "chestLoot"
   | "dormantBall"
@@ -52,14 +51,13 @@ function near(x: number, y: number, px: number, py: number, r: number): boolean 
 export function boardEntityAt(game: CanvasGameState, x: number, y: number): BoardEntityHit | null {
   // ── Small, transient things first: they sit ON TOP of everything else ──────
   //
-  // Bugs before tokens, because a bug can fly over one and the finger is on the
-  // thing that moved. The hit is resolved at press-down and carried into the
-  // hold timer, so a bug scuttling off during the 450ms does not cancel the
-  // explanation of the bug that was there when the press began - which is the
-  // only reason a hold gesture works on something that moves at all.
-  for (const b of game.bugs ?? []) {
-    if (near(x, y, b.position.x, b.position.y, TOUCH_SLOP)) return { kind: "bug", detail: b.effect };
-  }
+  // Bugs are deliberately NOT here. They were, for one commit, and holding one
+  // turned out to be a gesture nobody could perform: nine world units across,
+  // moving 10-17 units in the time a touch takes to register against 22 of
+  // slop, and then a 450ms hold to survive with a 12-unit move slop. A tap
+  // squashes one instead (physics/bugs.ts), and the two would fight anyway -
+  // a hold that fell short of 450ms would kill the thing it was asking about.
+  // What a bug does is answered by the splat's name and the tutorial roster.
   for (const p of game.pickups ?? []) {
     if (near(x, y, p.position.x, p.position.y, TOUCH_SLOP)) return { kind: "pickup", detail: p.effect };
   }

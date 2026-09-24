@@ -733,8 +733,8 @@ export interface CanvasGameState {
    * thing untestable, and it is right.
    */
   forcedBugEffect?: string;
-  /** Every bug squashed this map, and whether its effect actually landed. */
-  bugsSquashedLog?: { effect: string; applied: boolean }[];
+  /** Every bug squashed this map, and how it ended (see BugSplat.outcome). */
+  bugsSquashedLog?: { effect: string; outcome: BugSplat["outcome"] }[];
 
   // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
   /** All mirrors/movers that can be broken by the black ball. */

@@ -32,7 +32,7 @@
  */
 import type { Ball, Vector2 } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
-import type { BugConfig, BugState } from "@/types/bugs";
+import type { BugConfig, BugSplat, BugState } from "@/types/bugs";
 import { drawBug, getBug, bugMagnitude } from "@/lib/bugs";
 import { applyBugEffect, expireBugBuffs, type BugEffectContext } from "./bugEffects";
 import { isPositionActive } from "@/lib/spaceGrid";
@@ -49,6 +49,17 @@ export const BUG_SPLAT_MS = 1300;
 
 /** A bug starts blinking this many active-play seconds before it expires. */
 export const BUG_EXPIRY_WARN_SECONDS = 3;
+
+/**
+ * Touch slop added to a bug's radius when tapping it, in world units.
+ *
+ * The same 22 a ball tap gets (FREEZE_TAP_SLOP), and a bug needs it more: it is
+ * half a ball's size and it is moving, so by the time a finger lands the target
+ * has left. Press-and-hold was tried here first and was unusable for exactly
+ * this reason, plus a 12-unit move slop that a resting thumb drifts past inside
+ * 450ms.
+ */
+export const BUG_TAP_SLOP = 22;
 
 /** Clearances for a spawn spot, world units. */
 const MIN_WALL_CLEARANCE = BUG_RADIUS + 10;
@@ -270,19 +281,83 @@ function flyBug(game: CanvasGameState, bug: BugState, dt: number, cruise: number
   bug.position.y += bug.velocity.y * dt;
 }
 
-/** Record a squash (or a refusal) where it happened. */
-function pushSplat(game: CanvasGameState, bug: BugState, ball: Ball, applied: boolean): void {
-  const vx = ball.velocity.x;
-  const vy = ball.velocity.y;
-  const len = Math.hypot(vx, vy) || 1;
+/**
+ * Record a squash where it happened.
+ *
+ * `ball` is null for a tap: nothing hit the bug, so there is no heading and the
+ * splat bursts radially. See BugSplat.direction.
+ */
+function pushSplat(
+  game: CanvasGameState,
+  bug: BugState,
+  ball: Ball | null,
+  outcome: BugSplat["outcome"],
+): void {
+  const vx = ball?.velocity.x ?? 0;
+  const vy = ball?.velocity.y ?? 0;
+  const len = Math.hypot(vx, vy);
   (game.bugSplats ??= []).push({
     id: `splat-${++_splatCounter}`,
     effect: bug.effect,
     position: { x: bug.position.x, y: bug.position.y },
-    direction: { x: vx / len, y: vy / len },
+    direction: len > 0 ? { x: vx / len, y: vy / len } : { x: 0, y: 0 },
     startTime: simNow(),
-    applied,
+    outcome,
   });
+}
+
+/**
+ * The player squashed a bug with a finger. It dies and pays nothing.
+ *
+ * ── Why a tap kills rather than claims ──────────────────────────────────────
+ *
+ * Because the power belongs to the ball that earns it. A tap that paid out
+ * would make every bug free, and "which ball do I let reach this, and where"
+ * - the decision the whole mechanic exists to ask - would stop being a
+ * question anybody had to answer.
+ *
+ * So a tap is the other half of that decision: REFUSAL. You can see the warning
+ * ring on Big Bang Release, and now you can do something about it other than
+ * hope. It is the same shape as the white ball, which taps away for no points
+ * as a relief valve, and it costs the same thing that costs: the finger doing
+ * it is the finger that draws fences.
+ *
+ * Returns whether a bug was actually there, so the caller can tell a hit from a
+ * tap on empty board.
+ */
+export function tapSquashBug(game: CanvasGameState, bugId: string): boolean {
+  const bugs = game.bugs;
+  if (!bugs) return false;
+  const i = bugs.findIndex(b => b.id === bugId);
+  if (i < 0) return false;
+  const bug = bugs[i];
+  bugs.splice(i, 1);
+  // The splat still NAMES it. Refusing a bug is how a player learns what it
+  // was, and charging them a denied bug for that lesson is the cheapest
+  // teaching this board does.
+  pushSplat(game, bug, null, "denied");
+  (game.bugsSquashedLog ??= []).push({ effect: bug.effect, outcome: "denied" });
+  return true;
+}
+
+/**
+ * The bug nearest a tap, or null.
+ *
+ * Generous, and it has to be: a bug is nine world units across and moving, so
+ * a slop the size of the thing itself would make this unusable in exactly the
+ * way press-and-hold turned out to be. Same allowance a ball tap gets.
+ */
+export function bugAtTap(game: CanvasGameState, at: Vector2): BugState | null {
+  let best: BugState | null = null;
+  let bestDist = Infinity;
+  for (const bug of game.bugs ?? []) {
+    const d = Math.hypot(bug.position.x - at.x, bug.position.y - at.y);
+    if (d <= BUG_RADIUS + BUG_TAP_SLOP && d < bestDist) {
+      best = bug;
+      bestDist = d;
+    }
+  }
+  return best;
 }
 
 /**
@@ -317,15 +392,15 @@ export function squashBugs(game: CanvasGameState, ctx: BugEffectContext): void {
     // step from inside the pocket that just closed around it.
     bugs.splice(i, 1);
     if (!def) {
-      pushSplat(game, bug, squasher, false);
+      pushSplat(game, bug, squasher, "declined");
       continue;
     }
     // Seeded by the bug's own id, so the magnitude is the same on both halves
     // of a lockstep pair and in a replayed Daily run.
     const magnitude = bugMagnitude(def, getRunRng(`bug:${bug.id}`));
     const applied = applyBugEffect(game, squasher, def, magnitude, ctx);
-    pushSplat(game, bug, squasher, applied);
-    (game.bugsSquashedLog ??= []).push({ effect: def.id, applied });
+    pushSplat(game, bug, squasher, applied ? "paid" : "declined");
+    (game.bugsSquashedLog ??= []).push({ effect: def.id, outcome: applied ? "paid" : "declined" });
   }
 }
 
