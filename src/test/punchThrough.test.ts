@@ -100,7 +100,8 @@ describe("the punch-through rule", () => {
 function level6(): BotGame {
   installClock();
   setRunSeedText("punch-through");
-  const ctx = createBotGame(byLevel(LADDER, 6)!, 6, plainModifiers());
+  // Pinned upright: level 6 rotates, and every coordinate below is authored.
+  const ctx = createBotGame({ ...byLevel(LADDER, 6)!, neverRotates: true }, 6, plainModifiers());
   for (let i = 0; i < 30; i++) stepBot(ctx);
   for (const ball of ctx.game.balls) {
     ball.position = { x: 120, y: 820 };
@@ -111,44 +112,55 @@ function level6(): BotGame {
   return ctx;
 }
 
+const teeth = (ctx: BotGame) => (ctx.game.destructibles ?? []).filter(d => d.id.startsWith("tooth-"));
+
 /**
- * Fire the first ball at the brick column's left face at `speed`, and report
- * what happened to it and to the bricks.
+ * Fire the first ball straight up into the middle right-hand tooth at `speed`,
+ * and report what happened to it and to the bricks.
+ *
+ * Level 6 used to be one column of shards down the middle; since its redesign
+ * the shards are teeth off a solid spine. tooth-r2b sits at x 509..539,
+ * y 436..464, and above it is open floor as far as the next tooth at y 254, so
+ * a ball at x 524 heading up meets one brick and then nothing for 180 units.
+ *
+ * Head-on into a face is also the case that found a bug: the obstacle's BODY
+ * resolver reflected the ball before the edge walls broke the brick, and the
+ * punch-through then restored the already-reflected velocity. See
+ * arrivalVelocity in updateBall.
  */
-function fireAtTheColumn(ctx: BotGame, speed: number) {
+function fireAtTheTooth(ctx: BotGame, speed: number) {
   const ball = ctx.game.balls[0];
   ball.frozenUntil = undefined;
-  // Level 6's column spans x 437..463; gate-6 sits at y 410..445.
-  ball.position = { x: 380, y: 427 };
-  ball.velocity = { x: speed, y: 0 };
+  ball.position = { x: 524, y: 540 };
+  ball.velocity = { x: 0, y: -speed };
   ball.speed = speed;
-  const bricks = () => (ctx.game.destructibles ?? []).filter(d => d.id.startsWith("gate-"));
-  const before = bricks().filter(d => d.destroyed).length;
+  const before = teeth(ctx).filter(d => d.destroyed).length;
   for (let i = 0; i < 40; i++) stepBot(ctx);
   return {
     ball,
-    smashed: bricks().filter(d => d.destroyed).length - before,
-    heading: Math.sign(ball.velocity.x),
+    smashed: teeth(ctx).filter(d => d.destroyed).length - before,
+    // -1 still heading up (through), +1 turned back down (bounced).
+    heading: Math.sign(ball.velocity.y),
   };
 }
 
-describe("on level 6's brick column", () => {
+describe("on level 6's teeth of shards", () => {
   it("bounces an ordinary ball off the brick it just broke", () => {
     // The "(not otherwise)" half. A brittle brick goes on any contact, so this
     // ball breaks one too - and comes straight back, as it always has.
     const ctx = level6();
-    const out = fireAtTheColumn(ctx, 260);
+    const out = fireAtTheTooth(ctx, 260);
     expect(out.smashed, "the brick survived an ordinary hit").toBeGreaterThanOrEqual(1);
-    expect(out.heading, "an ordinary ball punched through").toBe(-1);
+    expect(out.heading, "an ordinary ball punched through").toBe(1);
     releaseClock();
   });
 
   it("sends a fast one straight on through", () => {
     const ctx = level6();
-    const out = fireAtTheColumn(ctx, 700);
+    const out = fireAtTheTooth(ctx, 700);
     expect(out.smashed, "nothing broke").toBeGreaterThanOrEqual(1);
-    expect(out.heading, "the rocket bounced off the wreck").toBe(1);
-    expect(out.ball.position.x, "it never made it past the column").toBeGreaterThan(463);
+    expect(out.heading, "the rocket bounced off the wreck").toBe(-1);
+    expect(out.ball.position.y, "it never made it past the tooth").toBeLessThan(436);
     releaseClock();
   });
 
@@ -156,26 +168,27 @@ describe("on level 6's brick column", () => {
     // Nothing on this board damps a ball, and a reward that quietly taxed the
     // thing it was rewarding would be a strange reward.
     const ctx = level6();
-    const out = fireAtTheColumn(ctx, 700);
+    const out = fireAtTheTooth(ctx, 700);
     expect(Math.hypot(out.ball.velocity.x, out.ball.velocity.y)).toBeCloseTo(700, 0);
     releaseClock();
   });
 
   it("goes through the NEXT brick too, rather than stopping at one", () => {
-    // A column is a run, and a ball fast enough to pass through one brick is
+    // A tooth is a run, and a ball fast enough to pass through one brick is
     // fast enough to meet the next one at the same speed. The hit debounce is
     // per object, so each brick is its own contact.
     const ctx = level6();
     const ball = ctx.game.balls[0];
     ball.frozenUntil = undefined;
-    // Down the column's own line, so it meets brick after brick.
-    ball.position = { x: 450, y: 120 };
-    ball.velocity = { x: 0, y: 900 };
+    // Along the tooth's own line, from its free end toward the spine, so it
+    // meets brick after brick.
+    ball.position = { x: 700, y: 450 };
+    ball.velocity = { x: -900, y: 0 };
     ball.speed = 900;
     for (let i = 0; i < 90; i++) stepBot(ctx);
-    const smashed = (ctx.game.destructibles ?? [])
-      .filter(d => d.id.startsWith("gate-") && d.destroyed).length;
+    const smashed = teeth(ctx).filter(d => d.id.startsWith("tooth-r2") && d.destroyed).length;
     expect(smashed, "it stopped at the first brick").toBeGreaterThan(1);
     releaseClock();
   });
 });
+

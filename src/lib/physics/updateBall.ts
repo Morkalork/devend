@@ -776,6 +776,18 @@ export function updateBall(
     }
   }
 
+  // What the ball arrived with, before any obstacle this step reflected it, and
+  // which obstacle's BODY did the reflecting. A breakable can be struck by both
+  // collision systems in one step: the body resolver below reflects the ball
+  // and counts nothing, then the edge walls count the hit that breaks it. The
+  // punch-through there undoes "the" reflection by restoring the velocity it
+  // saw - which was already the reflected one - so a ball fast enough to punch
+  // through bounced instead, whenever the body got to it first. Found when
+  // level 6 moved its shards into teeth and a 700/s ball into a tooth's end
+  // came straight back.
+  const arrivalVelocity = { x: ball.velocity.x, y: ball.velocity.y };
+  let bodyReflected: Polygon | null = null;
+
   for (const obstacle of game.obstaclePolygons) {
     if (phasedOut && phasedOut.polys.has(obstacle)) continue;
     // The wreck this ball is punching through, in the second collision system.
@@ -816,6 +828,7 @@ export function updateBall(
       ball.position = obstacleResult.position;
       ball.velocity = obstacleResult.velocity;
       surfaceHit = true;
+      bodyReflected = obstacle;
 
       // Deformable face. The reflection has already happened, so the closing
       // speed along the normal is half the change in velocity it caused, and
@@ -984,7 +997,11 @@ export function updateBall(
               // THIS obstacle for a moment - otherwise it would sail on and
               // bounce off the far side of something that no longer exists.
               if (wasWhole && d.destroyed && punchesThrough(vn)) {
-                ball.velocity = { x: vBefore.x, y: vBefore.y };
+                // The arrival velocity if this obstacle's body already turned
+                // the ball this step (see arrivalVelocity above).
+                const carry = bodyReflected !== null && bodyReflected === d.obstaclePolygon
+                  ? arrivalVelocity : vBefore;
+                ball.velocity = { x: carry.x, y: carry.y };
                 ball.speed = vec2Length(ball.velocity);
                 ball.punchThroughId = oid;
                 ball.punchThroughUntil = now + PUNCH_THROUGH_GRACE_MS;
