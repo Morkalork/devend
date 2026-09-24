@@ -27,7 +27,7 @@ export function PairGuestGate({ what, remoteName }: PairGuestGateProps) {
   const { t } = useTranslation();
   return (
     <div
-      className="fixed inset-0 z-[60] bg-background/92 flex flex-col items-center justify-center gap-4 p-6"
+      className="fixed inset-0 z-[60] bg-background/95 flex flex-col items-center justify-center gap-4 p-6"
       // The point of the gate: the guest's taps must not reach the screen
       // underneath, or it makes decisions about a run it does not own.
       onPointerDown={e => e.stopPropagation()}
