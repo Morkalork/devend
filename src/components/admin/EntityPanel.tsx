@@ -1,5 +1,6 @@
 import type { Bearing } from '@/lib/physics/obstacleRules';
 import { BOUNCER_HOURS } from '@/lib/physics/bouncer';
+import { getAllBugs } from '@/lib/bugs';
 import {
   muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
@@ -75,6 +76,14 @@ interface EntityPanelProps {
   onAddWell?: () => void;
   onDeleteWell?: (index: number) => void;
   onUpdateWell?: (index: number, updates: Partial<GravityWell>) => void;
+}
+
+/** The <select> value for an entity's `bug` field (see the picker below). */
+function bugCarrierValue(e: { bug?: boolean | string }): string {
+  if (e.bug === undefined) return "";
+  if (e.bug === false) return "__never";
+  if (e.bug === true) return "__any";
+  return e.bug;
 }
 
 export function EntityPanel({
@@ -655,6 +664,39 @@ export function EntityPanel({
             />
             <span className="text-sky-200">Brittle</span>
             <span className="text-muted-foreground">(glass: any touch breaks it)</span>
+          </label>
+          )}
+
+          {/* Which bug this shard is carrying, from the catalogue, so a new bug
+              is offered here the moment it is authored with nothing to
+              remember. Three states and all three are meant:
+                (roll)  leave it to the map's bugChance
+                never   keep this shard out of that roll
+                <id>    this specific shard holds this specific bug
+              The last is the point of the field: "the brick in the corner holds
+              the dangerous one" is a thing to plan a cut around. */}
+          {!isMoverEntity(selectedEntity) && (
+          <label className="space-y-1 block text-xs">
+            <span className="text-slate-300">Carries a bug</span>
+            <select
+              value={bugCarrierValue(selectedEntity as { bug?: boolean | string })}
+              onChange={(e) => {
+                const v = e.target.value;
+                const next = v === "" ? undefined : v === "__never" ? false : v === "__any" ? true : v;
+                onUpdateEntity(selectedEntity.id, { bug: next } as Partial<LevelEntity>);
+              }}
+              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-200"
+            >
+              <option value="">(leave to the map's roll)</option>
+              <option value="__never">Never (keep this shard clear)</option>
+              <option value="__any">Any (random kind)</option>
+              {getAllBugs().map(b => (
+                <option key={b.id} value={b.id}>{b.name} ({b.id}){b.danger ? " \u26a0" : ""}</option>
+              ))}
+            </select>
+            <span className="block text-muted-foreground">
+              Only breakables carry one; it is released where the shard stood.
+            </span>
           </label>
           )}
 

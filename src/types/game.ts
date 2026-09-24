@@ -448,6 +448,16 @@ export interface DestructibleState {
   sealedCells?: number[];      // breakable gate: grid cells of the sealed area to reopen on break
   chest?: boolean;             // treasure chest (#38): smashing it grants a run bonus
   chestRewards?: string[];     // chest: hybrid reward pool (empty/absent = full default pool)
+  /**
+   * Bug id this shard holds, released at its centroid when it breaks
+   * (physics/bugs.ts). Absent = it holds nothing.
+   *
+   * Resolved ONCE, at map init, rather than rolled at the moment of the smash.
+   * That is the whole reason the mechanic reads: the shard is drawn as carrying
+   * something from the first frame, so breaking it is a choice the player made
+   * rather than a surprise they were handed.
+   */
+  bug?: string;
 }
 
 /**

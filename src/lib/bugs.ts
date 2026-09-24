@@ -158,3 +158,23 @@ export async function loadBugs(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Which shards a map AUTHORS as carriers, by entity id.
+ *
+ * `true` means "carry one, any kind"; a string names the kind; `false` means
+ * "keep this one clear of the random roll". Kept here rather than in the
+ * physics because it is a reading of the level file, and because the admin
+ * screens want the same answer without dragging the engine in.
+ */
+export function authoredBugCarriers(
+  level: { entities?: { id?: string; bug?: boolean | string }[] },
+): Map<string, boolean | string> {
+  const out = new Map<string, boolean | string>();
+  for (const e of level.entities ?? []) {
+    if (!e || typeof e.id !== "string") continue;
+    if (e.bug === undefined) continue;
+    out.set(e.id, e.bug);
+  }
+  return out;
+}

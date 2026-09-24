@@ -29,10 +29,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   getAllBugs, getBug, drawBug, bugMagnitude, applyBugCatalogue, isKnownBug,
+  authoredBugCarriers,
 } from "@/lib/bugs";
 import {
   BUG_RADIUS, BUG_TAP_SLOP, spawnBug, updateBugs, squashBugs, effectiveBugChance,
   requestBugSpawn, clearPendingBugSpawn, resetBugCounters, tapSquashBug, bugAtTap,
+  assignShardBugs, releaseBugFrom,
 } from "@/lib/physics/bugs";
 import { applyBugEffect, expireBugBuffs, MAX_BLOAT_SCALE, resetBugSplitCounter } from "@/lib/physics/bugEffects";
 import { isWrecking, isAttracting, WRECKING_DAMAGE_MULTIPLIER } from "@/lib/bugBuffs";
@@ -46,7 +48,7 @@ import { installClock, releaseClock, plainModifiers, createBotGame, stepBot } fr
 import { LADDER, byLevel } from "./fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 import { simNow } from "@/lib/simClock";
-import type { Ball } from "@/types/game";
+import type { Ball, DestructibleState } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinSpec } from "@/types/winSpec";
 
@@ -329,23 +331,21 @@ describe("a bug in the air", () => {
     // Frames go by, but no active-play time does: the game is paused.
     for (let i = 0; i < 200; i++) updateBugs(game, 1 / 60);
     expect(game.bugs!.length, "a paused game aged the bug out").toBe(1);
-    // Chance to zero for the jump: the clock skipping a lifetime also skips
-    // the roll cadence, so a board left on its default chance can cull the old
-    // bug and spawn a new one in the same call - which is correct behaviour and
-    // would make this test read as "it never expired".
-    game.bugConfig = { ...DEFAULT_BUG_CONFIG, spawnChance: 0 };
     game.activePlaySeconds += DEFAULT_BUG_CONFIG.lifetimeSeconds + 1;
     updateBugs(game, 1 / 60);
     expect(game.bugs!.length).toBe(0);
   });
 
-  it("holds the simultaneous cap, so the board never becomes a swarm", () => {
-    const game = testGame({ bugConfig: { ...DEFAULT_BUG_CONFIG, spawnChance: 1, spawnCheckSeconds: 0 } });
-    for (let i = 0; i < 30; i++) {
-      game.activePlaySeconds += 1;
+  it("never appears out of thin air, however long the map runs", () => {
+    // The timed spawn is gone. A bug comes out of a shard or it does not come
+    // at all, which is what makes "they are released from breaking a specific
+    // shard" a rule rather than a tendency.
+    const game = testGame();
+    for (let i = 0; i < 400; i++) {
+      game.activePlaySeconds += 0.5;
       updateBugs(game, 1 / 60);
     }
-    expect(game.bugs!.length).toBeLessThanOrEqual(DEFAULT_BUG_CONFIG.maxSimultaneous);
+    expect(game.bugs!.length, "a bug arrived with no shard behind it").toBe(0);
   });
 
   it("does nothing at all on a map with bugs switched off", () => {
@@ -734,7 +734,7 @@ describe("Big Bang Release", () => {
 
 describe("admin can reach it", () => {
   it("spawns one on demand, jumping the cadence and the chance both", () => {
-    const game = testGame({ bugConfig: { ...DEFAULT_BUG_CONFIG, spawnChance: 0 } });
+    const game = testGame();
     requestBugSpawn("bigBang");
     updateBugs(game, 1 / 60);
     expect(game.bugs!.length).toBe(1);
@@ -749,7 +749,7 @@ describe("admin can reach it", () => {
   });
 
   it("the request is spent once, not every frame after", () => {
-    const game = testGame({ bugConfig: { ...DEFAULT_BUG_CONFIG, spawnChance: 0 } });
+    const game = testGame();
     requestBugSpawn("bitRot");
     for (let i = 0; i < 10; i++) {
       game.activePlaySeconds += 1;
@@ -760,9 +760,10 @@ describe("admin can reach it", () => {
 
   it("forces WHICH bug the roll draws, without forcing whether", () => {
     const game = testGame({
-      bugConfig: { ...DEFAULT_BUG_CONFIG, spawnChance: 1, spawnCheckSeconds: 0 },
+      bugConfig: { ...DEFAULT_BUG_CONFIG },
       forcedBugEffect: "bigBang",
     });
+    requestBugSpawn("bigBang");
     game.activePlaySeconds += 1;
     updateBugs(game, 1 / 60);
     expect(game.bugs![0].effect).toBe("bigBang");
@@ -795,21 +796,19 @@ describe("admin can reach it", () => {
  * first real brick wall - and its balls are loose from the first frame.
  */
 describe("on a real Demolition map, through the harness", () => {
-  it("grows bugs, flies them in live space, and lets a ball squash one", () => {
+  it("carries bugs in its shards, lets them out on a break, and flies them", () => {
     setRunSeedText("bugs-integration");
     const level = byLevel(LADDER, 7)!;
-    const ctxBot = createBotGame(level, 7, plainModifiers());
-    // The sweep leaves bugs off by default (see stepBot); this map wants them.
-    // Pinned on and crowded: the shipped map rolls 0.8 with a cap of two, and
-    // waiting on that would make this a test of patience. What is being proved
-    // is the wiring, not the tuning.
-    ctxBot.game.bugConfig = {
-      ...DEFAULT_BUG_CONFIG, spawnChance: 1, spawnCheckSeconds: 1, maxSimultaneous: 6,
-    };
-    ctxBot.game.bugRollContext = "bugs:level-7";
+    // Every eligible shard carries one and the cap is lifted, so the break is
+    // what is being measured rather than the roll.
+    const ctxBot = createBotGame(level, 7, plainModifiers(), {
+      bugs: { ...DEFAULT_BUG_CONFIG, carryChance: 1, maxPerMap: 99 },
+    });
+
+    const carriers = ctxBot.game.destructibles.filter(d => d.bug);
+    expect(carriers.length, "the map was dealt with no shard carrying anything").toBeGreaterThan(0);
 
     let everAlive = 0;
-    let squashed = 0;
     for (let i = 0; i < 24000; i++) {
       // The map's own clock runs out at 60s with nobody playing it, and a
       // finished board steps no physics: keep the reading inside the map's life.
@@ -823,19 +822,18 @@ describe("on a real Demolition map, through the harness", () => {
           `a bug left live space at step ${i}`,
         ).toBe(true);
       }
-      squashed = (ctxBot.game.bugsSquashedLog ?? []).length;
-      if (squashed > 0 && everAlive > 0) break;
+      if (everAlive > 0) break;
     }
 
-    expect(everAlive, "no bug ever appeared on a map with the chance pinned to 1").toBeGreaterThan(0);
-    expect(squashed, "a minute of play and no ball ever ran one over").toBeGreaterThan(0);
+    expect(everAlive, "the bricks broke and nothing came out of any of them").toBeGreaterThan(0);
   }, 120000);
 
   it("leaves a map with bugs off exactly as it was", () => {
     setRunSeedText("bugs-off");
     const level = byLevel(LADDER, 7)!;
-    const ctxBot = createBotGame(level, 7, plainModifiers());
-    ctxBot.game.bugConfig = null;
+    const ctxBot = createBotGame(level, 7, plainModifiers());  // bugs off by default
+    expect(ctxBot.game.bugConfig).toBeNull();
+    expect(ctxBot.game.destructibles.some(d => d.bug), "a sweep grew bugs it did not ask for").toBe(false);
     for (let i = 0; i < 600; i++) stepBot(ctxBot);
     expect(ctxBot.game.bugs ?? []).toHaveLength(0);
     expect(ctxBot.game.bugsSquashedLog ?? []).toHaveLength(0);
@@ -967,5 +965,276 @@ describe("finding the bug under a finger", () => {
     const commands = read("src/lib/net/commands.ts");
     expect(commands).toMatch(/kind:\s*"tapBug";\s*player:\s*PlayerId;\s*bugId:\s*string/);
     expect(commands, "a tap does not travel to the other device").toContain('case "tapBug"');
+  });
+});
+
+// ── Where they come from ────────────────────────────────────────────────────
+
+/**
+ * A bug is carried by a shard and released when that shard breaks.
+ *
+ * Asked for as "it must be clear that they are released from breaking a
+ * specific shard". The old timed spawn is gone, and its going is the point: a
+ * bug rolled onto the board on a clock was weather, and steering a ball into
+ * one was a lottery nobody could set up. Held in a named brick it is a target,
+ * and the fence drawn to reach that brick is the play.
+ */
+function shard(id: string, over: Partial<DestructibleState> = {}): DestructibleState {
+  return {
+    id,
+    kind: "breakable",
+    hits: 0,
+    maxHits: 1,
+    lastHitAt: 0,
+    destroyed: false,
+    ...over,
+  } as DestructibleState;
+}
+
+describe("shards carrying bugs", () => {
+  it("honours an authored carrier exactly, kind and all", () => {
+    const shards = [shard("plain"), shard("named")];
+    assignShardBugs(shards, 0, 99, new Map([["named", "bigBang"]]));
+    expect(shards[1].bug).toBe("bigBang");
+    expect(shards[0].bug, "a shard nobody authored was given one at chance 0").toBeUndefined();
+  });
+
+  it("lets an authored carrier through the per-map cap", () => {
+    // A map that says a brick holds Big Bang Release means it. A cap silently
+    // dropping it would be a set piece that vanished for no stated reason.
+    const shards = [shard("a"), shard("b"), shard("c")];
+    assignShardBugs(shards, 0, 1, new Map<string, boolean | string>([["a", "bigBang"], ["b", "forcePush"], ["c", true]]));
+    expect(shards.filter(d => d.bug).length).toBe(3);
+  });
+
+  it("fills the rest by chance, up to the cap", () => {
+    const shards = Array.from({ length: 20 }, (_, i) => shard(`s${i}`));
+    assignShardBugs(shards, 1, 3, new Map());
+    expect(shards.filter(d => d.bug).length).toBe(3);
+  });
+
+  it("never puts one in a chest", () => {
+    // A brick holding two rewards is a brick nobody can read.
+    const shards = [shard("chest", { chest: true }), shard("plain")];
+    assignShardBugs(shards, 1, 99, new Map());
+    expect(shards[0].bug, "a chest was given a bug as well").toBeUndefined();
+    expect(shards[1].bug).toBeTruthy();
+  });
+
+  it("respects a shard the map explicitly keeps clear", () => {
+    const shards = [shard("keepClear"), shard("other")];
+    assignShardBugs(shards, 1, 99, new Map([["keepClear", false]]));
+    expect(shards[0].bug).toBeUndefined();
+    expect(shards[1].bug).toBeTruthy();
+  });
+
+  it("is seeded, so both halves of a pair deal the same bricks", () => {
+    setRunSeedText("carry-seed");
+    const a = Array.from({ length: 12 }, (_, i) => shard(`s${i}`));
+    assignShardBugs(a, 0.5, 99, new Map());
+    setRunSeedText("carry-seed");
+    const b = Array.from({ length: 12 }, (_, i) => shard(`s${i}`));
+    assignShardBugs(b, 0.5, 99, new Map());
+    expect(b.map(d => d.bug)).toEqual(a.map(d => d.bug));
+  });
+
+  it("reads the authored carriers straight off the level", () => {
+    const authored = authoredBugCarriers({
+      entities: [
+        { id: "a", bug: "forcePush" },
+        { id: "b", bug: true },
+        { id: "c", bug: false },
+        { id: "d" },
+      ],
+    });
+    expect(authored.get("a")).toBe("forcePush");
+    expect(authored.get("b")).toBe(true);
+    expect(authored.get("c")).toBe(false);
+    expect(authored.has("d"), "a shard that says nothing became an entry").toBe(false);
+  });
+
+  it("is what level 17 promises: one named brick holds the hammer", () => {
+    const level = byLevel(LADDER, 17)!;
+    const authored = authoredBugCarriers(level as { entities?: { id?: string; bug?: boolean | string }[] });
+    expect([...authored.entries()]).toEqual([["brick-a1", "forcePush"]]);
+  });
+});
+
+describe("releasing one", () => {
+  it("puts it exactly where the shard stood", () => {
+    const game = testGame();
+    const d = shard("brick", { bug: "forcePush" });
+    const bug = releaseBugFrom(game, d, { x: 321, y: 654 });
+    expect(bug).not.toBeNull();
+    expect(bug!.position).toEqual({ x: 321, y: 654 });
+    expect(bug!.effect).toBe("forcePush");
+    expect(game.bugs!).toHaveLength(1);
+  });
+
+  it("marks where it came from, so the burst can stay on the shard", () => {
+    const game = testGame({ activePlaySeconds: 12 });
+    const bug = releaseBugFrom(game, shard("brick", { bug: "branch" }), { x: 100, y: 100 })!;
+    expect(bug.bornAtSeconds).toBe(12);
+    expect(bug.spawnPosition).toEqual({ x: 100, y: 100 });
+  });
+
+  it("spends the shard, so one brick can never pay twice", () => {
+    const game = testGame();
+    const d = shard("brick", { bug: "branch" });
+    expect(releaseBugFrom(game, d, { x: 100, y: 100 })).not.toBeNull();
+    expect(d.bug).toBeUndefined();
+    expect(releaseBugFrom(game, d, { x: 100, y: 100 })).toBeNull();
+    expect(game.bugs!).toHaveLength(1);
+  });
+
+  it("does nothing for a shard that was carrying nothing", () => {
+    const game = testGame();
+    expect(releaseBugFrom(game, shard("empty"), { x: 1, y: 1 })).toBeNull();
+    expect(game.bugs ?? []).toHaveLength(0);
+  });
+
+  it("fires from the break itself, not from a later tick", () => {
+    // The rule lives in the destroy path; this pins that it is wired there, so
+    // a bug can never appear a beat after the shard it came out of.
+    const source = read("src/lib/physics/destructibles.ts");
+    expect(source).toMatch(/d\.bug && d\.obstaclePolygon[\s\S]{0,140}releaseBugFrom/);
+  });
+});
+
+// ── Stepping in front of a ball ─────────────────────────────────────────────
+
+/**
+ * "To make it a little more likely that a ball hit one of them, which it
+ * almost never does now, bugs should try to step in front of balls that come
+ * near them. A little help, albeit not too overly obvious."
+ *
+ * Both halves are tested: that it helps at all, and that the help stays small.
+ * The second is the harder one to keep, and the one a later tuning pass is most
+ * likely to break.
+ */
+describe("a bug stepping into a ball's path", () => {
+  /** Fly a bug for `seconds` and report how close the ball ever came. */
+  function closestApproach(game: CanvasGameState, seconds: number): number {
+    let best = Infinity;
+    const dt = 1 / 120;
+    for (let i = 0; i < seconds / dt; i++) {
+      game.activePlaySeconds += dt;
+      updateBugs(game, dt);
+      for (const ball of game.balls) {
+        ball.position.x += ball.velocity.x * dt;
+        ball.position.y += ball.velocity.y * dt;
+        for (const bug of game.bugs ?? []) {
+          best = Math.min(best, Math.hypot(ball.position.x - bug.position.x, ball.position.y - bug.position.y));
+        }
+      }
+    }
+    return best;
+  }
+
+  it("closes the near miss it was asked to close", () => {
+    // A ball passing about 60 units to one side: close enough to notice, far
+    // enough that an indifferent bug would sail past it. Averaged over several
+    // starting phases, because one bug's wander is not evidence of anything.
+    let helped = 0;
+    let ignored = 0;
+    for (let seed = 0; seed < 8; seed++) {
+      const start = { x: 200, y: 300 };
+      const mk = () => {
+        const ball = testBall({ position: { x: 60, y: 360 }, velocity: { x: 260, y: 0 } });
+        const game = testGame({ balls: [ball] });
+        spawnBug(game, fixedRng(0.5), "bitRot");
+        game.bugs![0].position = { ...start };
+        game.bugs![0].wander = seed;
+        game.bugs![0].wanderSeed = seed * 0.7;
+        return game;
+      };
+      const withHelp = closestApproach(mk(), 1.4);
+      // The same board with the ball parked, so the bug has nothing to step
+      // for: that is the indifferent path this replaced.
+      const idle = mk();
+      idle.balls[0].velocity = { x: 0, y: 0 };
+      const noHelp = closestApproach(idle, 1.4);
+      if (withHelp < noHelp) helped++; else ignored++;
+    }
+    expect(helped, `only ${helped} of 8 runs closed the gap`).toBeGreaterThanOrEqual(6);
+  });
+
+  it("ignores a ball that is going the other way", () => {
+    // Stepping in front of a ball that is leaving means chasing it down from
+    // behind, which is the single most obvious thing a bug could do.
+    const ball = testBall({ position: { x: 300, y: 300 }, velocity: { x: -260, y: 0 } });
+    const game = testGame({ balls: [ball] });
+    spawnBug(game, fixedRng(0.5), "bitRot");
+    const bug = game.bugs![0];
+    bug.position = { x: 420, y: 300 };
+    const before = bug.position.x;
+    for (let i = 0; i < 60; i++) {
+      game.activePlaySeconds += 1 / 60;
+      updateBugs(game, 1 / 60);
+      ball.position.x += ball.velocity.x / 60;
+    }
+    // It may wander anywhere; what it must not do is track the departing ball.
+    const chased = bug.position.x < before - 120;
+    expect(chased, "the bug set off after a ball that was leaving").toBe(false);
+  });
+
+  it("ignores a ball too far away to be about to arrive", () => {
+    const ball = testBall({ position: { x: 20, y: 300 }, velocity: { x: 260, y: 0 } });
+    const game = testGame({ balls: [ball] });
+    spawnBug(game, fixedRng(0.5), "bitRot");
+    const bug = game.bugs![0];
+    bug.position = { x: 800, y: 300 };
+    const startY = bug.position.y;
+    for (let i = 0; i < 30; i++) {
+      game.activePlaySeconds += 1 / 60;
+      updateBugs(game, 1 / 60);
+    }
+    // Half a second at this distance is pure wander: it cannot have homed.
+    expect(Math.abs(bug.position.y - startY)).toBeLessThan(60);
+  });
+
+  it("stays a skitter, not a homing missile", () => {
+    // The help is capped well under the bug's own wander, so even flying
+    // straight at a stationary target it does not arrive in a straight line.
+    // A beeline would cover the distance almost exactly; this must not.
+    const ball = testBall({ position: { x: 100, y: 300 }, velocity: { x: 200, y: 0 } });
+    const game = testGame({ balls: [ball] });
+    spawnBug(game, fixedRng(0.5), "bitRot");
+    const bug = game.bugs![0];
+    bug.position = { x: 240, y: 300 };
+    const start = { ...bug.position };
+    let travelled = 0;
+    for (let i = 0; i < 90; i++) {
+      const was = { ...bug.position };
+      game.activePlaySeconds += 1 / 60;
+      updateBugs(game, 1 / 60);
+      travelled += Math.hypot(bug.position.x - was.x, bug.position.y - was.y);
+    }
+    const net = Math.hypot(bug.position.x - start.x, bug.position.y - start.y);
+    // A straight line would put net/travelled near 1.
+    expect(net / Math.max(travelled, 1), "the bug flew straight at the ball").toBeLessThan(0.9);
+  });
+
+  it("never lets the help drive it through a fence", () => {
+    // The wall check runs after the assist, not before it: a bug that could be
+    // lured into captured space would be a power-up the board could eat.
+    const grid = openGrid();
+    for (let row = 0; row < grid.height; row++) {
+      for (let col = 30; col < grid.width; col++) grid.cells[row * grid.width + col] = CellState.REMOVED;
+    }
+    // Ball beyond the captured edge, driving toward the bug.
+    const ball = testBall({ position: { x: 300, y: 300 }, velocity: { x: 260, y: 0 } });
+    const game = testGame({ spaceGrid: grid, balls: [ball] });
+    // A draw well clear of the ball: one generator returns the same point on
+    // every attempt, so a spot inside the ball's clearance is 40 refusals and
+    // no bug at all.
+    spawnBug(game, fixedRng(0.1), "bitRot");
+    const bug = game.bugs![0];
+    bug.position = { x: 400, y: 300 };
+    for (let i = 0; i < 300; i++) {
+      game.activePlaySeconds += 1 / 60;
+      updateBugs(game, 1 / 60);
+      expect(isPositionActive(grid, bug.position), `left live space at step ${i}`).toBe(true);
+    }
   });
 });

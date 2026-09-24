@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
+import { getBug } from '@/lib/bugs';
 
 export function BoardEntityInfoModal({
   hit,
@@ -24,6 +25,10 @@ export function BoardEntityInfoModal({
 }) {
   const { t } = useTranslation();
   const accent = accentColor || '#00ff88';
+  // A carrying shard names what is inside it. An unknown id falls through to
+  // the generic strings rather than rendering a blank card: a bugs.yml a
+  // deployed build could not fetch must still explain what the glow is.
+  const bug = hit.kind === 'bugShard' ? getBug(hit.detail) : undefined;
 
   return (
     <motion.div
@@ -52,13 +57,48 @@ export function BoardEntityInfoModal({
             end can be scrolled to. The close button stays outside the scroller. */}
         <div className="overflow-y-auto p-5">
 
-          <h3 className="font-display font-bold text-base mb-1.5 pr-6" style={{ color: accent }}>
-            {t(`boardInfo.${hit.kind}.title`)}
+          <h3 className="font-display font-bold text-base mb-1.5 pr-6" style={{ color: bug ? bug.color : accent }}>
+            {bug ? bug.name : t(`boardInfo.${hit.kind}.title`)}
           </h3>
 
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {t(`boardInfo.${hit.kind}.body`)}
-          </p>
+          {bug ? (
+            /* A shard with something in it says what will come out, as two
+               labelled blocks: what it GIVES and what it COSTS. Every bug in
+               the pool is double-edged, and run together into one paragraph
+               the same words read as a list of gifts - which is the one thing
+               it must not look like when the player is deciding whether to aim
+               at this brick. Copy from public/bugs.yml, beside the tuning it
+               describes, so a rebalanced bug cannot outlive its explanation. */
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {t('boardInfo.bugShard.body')}
+              </p>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                  {t('boardInfo.bugShard.gives')}
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{bug.description}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                  {t('boardInfo.bugShard.costs')}
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{bug.cost}</p>
+              </div>
+              {bug.danger && (
+                <p
+                  className="text-sm font-semibold leading-relaxed rounded-lg px-3 py-2"
+                  style={{ color: bug.color, backgroundColor: `${bug.color}1a` }}
+                >
+                  {t('boardInfo.bugShard.danger')}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t(`boardInfo.${hit.kind}.body`)}
+            </p>
+          )}
 
           <p className="mt-3 text-[11px] text-muted-foreground/60">
             {t('boardInfo.hint')}

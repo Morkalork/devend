@@ -725,6 +725,12 @@ export interface CanvasGameState {
   /** This map's `bugChance` from map.yml, when it states one. */
   bugChanceOverride?: number;
   /**
+   * The resolved chance each eligible shard carried a bug when this map was
+   * dealt. Kept so the assignment and the admin readout agree about what was
+   * rolled, rather than each deriving it from the gate again.
+   */
+  bugCarryChance?: number;
+  /**
    * Playground: spawn only this kind of bug.
    *
    * The pool is weighted and Big Bang Release sits at weight 1, so watching the

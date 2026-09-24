@@ -7,6 +7,11 @@
  * of. Agreed as a gap and closed three ways, each answering a different
  * question, because no single one of them answers all three:
  *
+ *   WHAT IS IN THAT BRICK?   press-and-hold the SHARD. The gesture came back
+ *                            once bugs started being carried: a brick holds
+ *                            still, so the 450ms lands every time, and the
+ *                            question is asked before the shard is broken,
+ *                            which is when it can still change the plan.
  *   WHAT DID I JUST GET?     the splat says the name, whether a ball squashed
  *                            it or the player did. You did the thing, then you
  *                            find out what it was called, which is the order
@@ -15,19 +20,23 @@
  *                            discovery gating. See the note in TutorialScreen
  *                            for why that differs from the ball roster.
  *
- * Both read the SAME strings out of public/bugs.yml, which is the property
- * worth a test file: two explanations of one mechanic, maintained separately,
- * is two chances to describe a bug the game no longer has.
+ * All three read the SAME strings out of public/bugs.yml, which is the property
+ * worth a test file: three explanations of one mechanic, maintained
+ * separately, is three chances to describe a bug the game no longer has.
  *
  * ── The gesture that is not here ────────────────────────────────────────────
  *
- * Press-and-hold was the first answer to "what is that thing?" and shipped
- * unusable. Reported as "Press and hold doesn't work", and it did not: a bug is
- * nine world units across and covers 10-17 of them in the time a touch takes to
- * register, against 22 of slop, and the 450ms hold then had to survive a
- * 12-unit move slop that a resting thumb drifts past. A tap KILLS a bug now
- * (bugs.test.ts covers it), so the two gestures could not coexist anyway: a
- * hold that fell short of 450ms would destroy the thing it was asking about.
+ * Press-and-hold on the BUG shipped unusable. Reported as "Press and hold
+ * doesn't work", and it did not: a bug is nine world units across and covers
+ * 10-17 of them in the time a touch takes to register, against 22 of slop, and
+ * the 450ms hold then had to survive a 12-unit move slop that a resting thumb
+ * drifts past. A tap KILLS a loose bug now (bugs.test.ts covers it), so the two
+ * gestures could not share a target anyway: a hold that fell short of 450ms
+ * would destroy the thing it was asking about.
+ *
+ * The gesture is on the SHARD instead, which is a better home than the bug ever
+ * was - it does not move, and the question gets asked while the answer can
+ * still change what the player does.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -88,31 +97,74 @@ describe("every bug says what it gives and what it costs", () => {
 
 // ── What is not reachable any more ─────────────────────────────────────────
 
-describe("press-and-hold on a bug", () => {
-  it("is gone, rather than present and unusable", () => {
-    // The gesture was the reported defect. Leaving it wired while adding the
-    // tap would have been the worse outcome of the two: a hold released a
-    // moment early is a tap, so a player trying to ask what a bug was would
-    // have killed it instead, and the explanation they wanted would have been
-    // the last thing they saw of it.
+describe("press-and-hold, on the shard rather than the bug", () => {
+  /** A board with one breakable carrying `effect`. */
+  function boardWithCarrier(effect: string) {
+    const poly = { vertices: [{ x: 280, y: 280 }, { x: 340, y: 280 }, { x: 340, y: 320 }, { x: 280, y: 320 }] };
+    return {
+      bugs: [], pickups: [], chestLoot: [], balls: [], walls: [],
+      phasingObjects: [], movers: [], mirrorPolygons: [], obstaclePolygons: [poly],
+      coloredAreas: [],
+      destructibles: [{
+        id: "carrier", kind: "breakable", hits: 0, maxHits: 1, lastHitAt: 0,
+        destroyed: false, obstaclePolygon: poly, bug: effect,
+      }],
+    } as unknown as CanvasGameState;
+  }
+
+  it("is gone from the bug itself, which could not be held", () => {
+    // Nine world units across, moving 95 a second, against 22 of slop: the
+    // press could not be landed, and a hold released early is a tap, which now
+    // KILLS the bug. The two gestures could not share a target.
     const source = read("src/lib/boardEntityInfo.ts");
-    expect(source, "boardEntityAt still hit-tests bugs").not.toMatch(/kind:\s*"bug"/);
-    const kinds = read("src/lib/boardEntityInfo.ts")
-      .slice(source.indexOf("export type BoardEntityKind"), source.indexOf("export interface BoardEntityHit"));
-    expect(kinds).not.toContain('"bug"');
+    expect(source, "boardEntityAt still hit-tests loose bugs").not.toMatch(/kind:\s*"bug"[,\s}]/);
+    for (const loc of LOCALES) {
+      expect(locale(loc).boardInfo.bug, `${loc} still carries boardInfo.bug`).toBeUndefined();
+    }
+  });
+
+  it("works on the shard, which holds still", () => {
+    const hit = boardEntityAt(boardWithCarrier("forcePush"), 310, 300);
+    expect(hit?.kind).toBe("bugShard");
+    expect(hit?.detail, "the card would not know WHICH bug is in there").toBe("forcePush");
+  });
+
+  it("says what is in there, and what it will cost", () => {
+    const bug = getBug("forcePush")!;
+    render(<BoardEntityInfoModal hit={{ kind: "bugShard", detail: "forcePush" }} onClose={() => { /* closed elsewhere */ }} />);
+    expect(screen.getByText(bug.name)).toBeTruthy();
+    expect(screen.getByText(bug.description)).toBeTruthy();
+    expect(screen.getByText(bug.cost), "the card shows the upside and hides the cost").toBeTruthy();
+    expect(screen.getByText(locale("en").boardInfo.bugShard.body)).toBeTruthy();
+  });
+
+  it("carries the danger warning on the dangerous one, and only there", () => {
+    const danger = locale("en").boardInfo.bugShard.danger;
+    render(<BoardEntityInfoModal hit={{ kind: "bugShard", detail: "bigBang" }} onClose={() => { /* ditto */ }} />);
+    expect(screen.getByText(danger)).toBeTruthy();
+    cleanup();
+    render(<BoardEntityInfoModal hit={{ kind: "bugShard", detail: "bitRot" }} onClose={() => { /* ditto */ }} />);
+    expect(screen.queryByText(danger), "every shard looks dangerous").toBeNull();
+  });
+
+  it("still explains SOMETHING when the catalogue could not be fetched", () => {
+    const strings = locale("en").boardInfo.bugShard;
+    render(<BoardEntityInfoModal hit={{ kind: "bugShard", detail: "notARealBug" }} onClose={() => { /* ditto */ }} />);
+    expect(screen.getByText(strings.title)).toBeTruthy();
+    expect(screen.getByText(strings.body)).toBeTruthy();
+  });
+
+  it("leaves a shard carrying nothing as an ordinary breakable", () => {
+    const board = boardWithCarrier("forcePush");
+    board.destructibles[0].bug = undefined;
+    expect(boardEntityAt(board, 310, 300)?.kind).toBe("breakable");
   });
 
   it("left every other board object's explainer exactly as it was", () => {
     const strings = locale("en").boardInfo;
-    render(<BoardEntityInfoModal hit={{ kind: "pickup", detail: "overtime" }} onClose={() => { /* closed elsewhere */ }} />);
+    render(<BoardEntityInfoModal hit={{ kind: "pickup", detail: "overtime" }} onClose={() => { /* ditto */ }} />);
     expect(screen.getByText(strings.pickup.title)).toBeTruthy();
     expect(screen.getByText(strings.pickup.body)).toBeTruthy();
-  });
-
-  it("leaves no dead strings behind in any locale", () => {
-    for (const loc of LOCALES) {
-      expect(locale(loc).boardInfo.bug, `${loc} still carries boardInfo.bug`).toBeUndefined();
-    }
   });
 });
 
@@ -166,8 +218,12 @@ describe("the three explanations cannot drift", () => {
     // The failure this guards is a rebalanced bug whose card still describes
     // the old one. Source checks, because "did this component hardcode a
     // sentence" is not something a render can show.
+    const modal = read("src/components/game/BoardEntityInfoModal.tsx");
     const tutorial = read("src/components/game/TutorialScreen.tsx");
     const fx = read("src/lib/rendering/sleek/fxLayer.ts");
+    expect(modal).toContain("getBug(");
+    expect(modal).toMatch(/bug\.description/);
+    expect(modal).toMatch(/bug\.cost/);
     expect(tutorial).toContain("getAllBugs()");
     expect(tutorial).toMatch(/bug\.description/);
     expect(tutorial).toMatch(/bug\.cost/);
@@ -178,6 +234,9 @@ describe("the three explanations cannot drift", () => {
   it("has its framing strings in every locale", () => {
     for (const loc of LOCALES) {
       const data = locale(loc);
+      for (const key of ["title", "body", "gives", "costs", "danger"]) {
+        expect(data.boardInfo?.bugShard?.[key], `${loc}: boardInfo.bugShard.${key} is missing`).toBeTruthy();
+      }
       for (const key of ["title", "intro", "cost", "danger"]) {
         expect(data.tutorial?.bugs?.[key], `${loc}: tutorial.bugs.${key} is missing`).toBeTruthy();
       }
@@ -187,7 +246,10 @@ describe("the three explanations cannot drift", () => {
   it("keeps the em-dash out of all of it (CLAUDE.md)", () => {
     for (const loc of LOCALES) {
       const data = locale(loc);
-      const strings = Object.values(data.tutorial.bugs as Record<string, string>);
+      const strings = [
+        ...Object.values(data.boardInfo.bugShard as Record<string, string>),
+        ...Object.values(data.tutorial.bugs as Record<string, string>),
+      ];
       for (const line of strings) {
         expect(line, `${loc}: "${line}"`).not.toContain("—");
       }

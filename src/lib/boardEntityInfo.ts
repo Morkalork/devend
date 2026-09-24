@@ -26,6 +26,7 @@ export type BoardEntityKind =
   | "ball"
   | "chest"
   | "objective"
+  | "bugShard"
   | "breakable"
   | "mirror"
   | "mover"
@@ -83,6 +84,15 @@ export function boardEntityAt(game: CanvasGameState, x: number, y: number): Boar
     if (d.destroyed) continue;
     const poly = d.obstaclePolygon ?? d.mirrorPolygon;
     if (!poly || !pointInPolygon({ x, y }, poly)) continue;
+    // A carrier before anything else it also is: "there is something IN this
+    // one" is the fact a player is asking about when they hold a shard that is
+    // visibly glowing, and it is the fact that decides whether they aim at it.
+    //
+    // This is the explainer gesture coming back for bugs, on the one object it
+    // can work on. Holding the BUG itself was removed because a nine-unit thing
+    // moving at 95 units a second cannot be pressed and held; a brick holds
+    // still, so the same 450ms lands every time.
+    if (d.bug) return { kind: "bugShard", detail: d.bug };
     if (d.chest) return { kind: "chest" };
     if (d.objective) return { kind: "objective" };
     return { kind: d.kind === "mirror" ? "mirror" : "breakable" };

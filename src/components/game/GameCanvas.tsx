@@ -34,7 +34,8 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFallbackBoard } from "@/lib/rendering/fallbackBoard";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
-import { effectiveBugChance, squashBugs } from "@/lib/physics/bugs";
+import { assignShardBugs, effectiveBugChance, squashBugs } from "@/lib/physics/bugs";
+import { authoredBugCarriers } from "@/lib/bugs";
 import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
 import { RubberBandOverlay, type BandTarget } from "@/components/game/RubberBandOverlay";
@@ -556,8 +557,10 @@ export function GameCanvas({
   useEffect(() => {
     const game = gameRef.current;
     if (!game.spaceGrid) return;
-    const chance = effectiveBugChance(bugConfig, levelNumber, level.bugChance);
-    game.bugConfig = chance > 0 ? { ...bugConfig, spawnChance: chance } : null;
+    // Only the RELEASED bug's tuning (lifetime, speed) can be reseeded live:
+    // which shards carry one was settled when the map was dealt, and changing
+    // it mid-map would put a bug into a brick the player has already read.
+    game.bugConfig = effectiveBugChance(bugConfig, levelNumber, level.bugChance) > 0 ? bugConfig : null;
     game.bugChanceOverride = level.bugChance;
   }, [bugConfig, level, levelNumber]);
 
@@ -1277,7 +1280,8 @@ export function GameCanvas({
         // Through the ref, not the closure: see bugConfigRef.
         const cfg = bugConfigRef.current;
         const chance = effectiveBugChance(cfg, levelNumber, level.bugChance);
-        game.bugConfig = chance > 0 ? { ...cfg, spawnChance: chance } : null;
+        game.bugConfig = chance > 0 ? cfg : null;
+        game.bugCarryChance = chance;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       // Pickup anchors, colored areas and gravity wells, all authored in the
@@ -1359,6 +1363,17 @@ export function GameCanvas({
       game.basePlayableArea   = data.basePlayableArea;
       game.balls              = data.balls;
       game.destructibles      = data.destructibles;
+      // Which shards are carrying a bug, decided once, now that the map's
+      // destructibles exist. Before the first frame on purpose: a carrier is
+      // DRAWN as one, so it has to be settled before anything is drawn.
+      if (game.bugConfig) {
+        assignShardBugs(
+          game.destructibles,
+          game.bugCarryChance ?? 0,
+          bugConfigRef.current.maxPerMap,
+          authoredBugCarriers(level),
+        );
+      }
       game.stackObjects       = data.stackObjects;
       // What the win actually needs, for the map-open announcement. Computed
       // here because it reads destructibles, coloredAreas and deliveryBoxes,

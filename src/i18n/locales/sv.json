@@ -756,7 +756,7 @@
     },
     "bugs": {
       "title": "Buggar",
-      "intro": "Sma saker som flyger omkring pa vissa banor. Kor over en med en boll for att klama den, sa hamnar det den bar pa hos just den bollen. Alla kostar dig nagot, sa las den innan du styr en boll mot den. Du kan ocksa trycka pa en bugg sjalv for att doda den: det ger ingenting, och sa tackar du nej till en du inte vill ha.",
+      "intro": "Vissa skarvor pa banan bar pa en bugg, och den lyser inifran innan du slar sonder nagot. Krossa skarvan sa kommer buggen ut och flyger. Kor over den med en boll for att klama den, sa hamnar det den bar pa hos just den bollen. Alla kostar dig nagot, sa las den innan du slar sonder skarvan. Du kan ocksa trycka pa en los bugg for att doda den: det ger ingenting, och sa tackar du nej till en du inte vill ha.",
       "cost": "Kostar:",
       "danger": "Farlig. Den har kan kosta dig kartan, sa tryck pa den for att doda den i stallet for att lata en boll na fram."
     },
@@ -1717,6 +1717,13 @@
   },
   "boardInfo": {
     "hint": "Håll in vad som helst på brädet för att se vad det är.",
+    "bugShard": {
+      "title": "Bugg i vaggen",
+      "body": "Slå sonder den har skarvan sa flyger buggen ut. Kor sedan over den med en boll for att klama den, sa hamnar det den bar pa hos just den bollen.",
+      "gives": "Vad du far",
+      "costs": "Vad det kostar",
+      "danger": "Farlig. Den har kan kosta dig kartan."
+    },
     "pickup": {
       "title": "Uppgraderingsmarker",
       "body": "Lås in en boll i en ficka som rymmer denna för att ta den. Erövrad utan lås går den förlorad."

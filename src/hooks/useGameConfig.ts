@@ -44,9 +44,8 @@ function parsePickupConfig(raw: RawPickupConfig | undefined): PickupConfig {
 /** Raw `bugs:` block shape as written in the YAML (snake_case). */
 interface RawBugConfig {
   start_level?: number;
-  spawn_check_seconds?: number;
-  spawn_chance?: number;
-  max_simultaneous?: number;
+  carry_chance?: number;
+  max_per_map?: number;
   lifetime_seconds?: number;
   speed?: number;
 }
@@ -63,9 +62,8 @@ function parseBugConfig(raw: RawBugConfig | undefined): BugConfig {
   const d = DEFAULT_BUG_CONFIG;
   return {
     startLevel: raw?.start_level ?? d.startLevel,
-    spawnCheckSeconds: raw?.spawn_check_seconds ?? d.spawnCheckSeconds,
-    spawnChance: raw?.spawn_chance ?? d.spawnChance,
-    maxSimultaneous: raw?.max_simultaneous ?? d.maxSimultaneous,
+    carryChance: raw?.carry_chance ?? d.carryChance,
+    maxPerMap: raw?.max_per_map ?? d.maxPerMap,
     lifetimeSeconds: raw?.lifetime_seconds ?? d.lifetimeSeconds,
     speed: raw?.speed ?? d.speed,
   };

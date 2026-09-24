@@ -756,7 +756,7 @@
     },
     "bugs": {
       "title": "Bichos",
-      "intro": "Cosas pequenas que vuelan por algunos tableros. Pasa una bola por encima para aplastarlo y lo que lleve dentro va a parar a esa bola. Todos te cuestan algo, asi que leelo antes de dirigir una bola hacia el. Tambien puedes tocarlo tu para matarlo: eso no paga nada, y es como rechazas uno que no quieres.",
+      "intro": "Algunos fragmentos del tablero llevan un bicho dentro, y se ve brillar antes de romper nada. Rompe ese fragmento y el bicho sale volando. Pasa una bola por encima para aplastarlo y lo que lleve dentro va a parar a esa bola. Todos te cuestan algo, asi que leelo antes de romper el fragmento. Tambien puedes tocar un bicho suelto para matarlo: eso no paga nada, y es como rechazas uno que no quieres.",
       "cost": "Cuesta:",
       "danger": "Peligroso. Este puede costarte el mapa, asi que tocalo para matarlo en vez de dejar que una bola llegue."
     },
@@ -1717,6 +1717,13 @@
   },
   "boardInfo": {
     "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",
+    "bugShard": {
+      "title": "Bicho en el muro",
+      "body": "Rompe este fragmento y el bicho sale volando. Despues pasa una bola por encima para aplastarlo, y lo que lleve dentro va a parar a esa bola.",
+      "gives": "Que te da",
+      "costs": "Que te cuesta",
+      "danger": "Peligroso. Este puede costarte el mapa."
+    },
     "pickup": {
       "title": "Ficha de mejora",
       "body": "Encierra una bola en un hueco que contenga esto para reclamarlo. Capturado sin encierro, se pierde."

@@ -34,6 +34,7 @@ import type { Ball, Vector2 } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import type { BugConfig, BugSplat, BugState } from "@/types/bugs";
 import { drawBug, getBug, bugMagnitude } from "@/lib/bugs";
+import type { DestructibleState } from "@/types/game";
 import { applyBugEffect, expireBugBuffs, type BugEffectContext } from "./bugEffects";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { pointToSegmentDistance } from "@/lib/polygon";
@@ -49,6 +50,9 @@ export const BUG_SPLAT_MS = 1300;
 
 /** A bug starts blinking this many active-play seconds before it expires. */
 export const BUG_EXPIRY_WARN_SECONDS = 3;
+
+/** How long the burst at a released bug's shard lasts, in active-play seconds. */
+export const BUG_BIRTH_SECONDS = 0.55;
 
 /**
  * Touch slop added to a bug's radius when tapping it, in world units.
@@ -74,6 +78,40 @@ const TURN_AMPLITUDE = 3.4;
 /** Slowest and fastest points of the speed pulse, as fractions of cruise. */
 const CRAWL = 0.35;
 const DART = 1.75;
+
+/**
+ * How far a bug notices a ball coming, in world units.
+ *
+ * ── Why a bug steps into the way at all ─────────────────────────────────────
+ *
+ * The first version was indifferent to balls on purpose, and the note said so:
+ * the board's tension is that you cannot steer a ball directly, so a bug that
+ * reacted would hang the reward on the one thing the player does not control.
+ * That reasoning was sound and the result was not. Reported as "a ball hits one
+ * almost never", which is what a nine-unit target wandering a board this size
+ * actually produces - the mechanic was a lottery, and the fence you drew to set
+ * it up had no bearing on whether it paid.
+ *
+ * So the bug helps, and the size of the help is the whole design. It is not a
+ * homing beacon: it steps sideways into a path a ball is ALREADY on, within
+ * about a ball's own length of travel, at a turn rate well under its own
+ * wander. What the player did - putting a ball into this chamber, on this line
+ * - is still what decides it. The bug just stops being unlucky about it.
+ */
+const HELP_RADIUS = 190;
+
+/**
+ * Ceiling on the helping turn, radians per second.
+ *
+ * Deliberately under half TURN_AMPLITUDE, so the skitter still dominates the
+ * path and the assist reads as a bug wandering into trouble rather than as one
+ * flying at the ball. "A little help, albeit not too overly obvious" was the
+ * brief, and this number is the whole of it.
+ */
+const HELP_TURN = 1.5;
+
+/** How far ahead of the ball the bug aims, in seconds of the ball's travel. */
+const HELP_LEAD_SECONDS = 0.28;
 
 let _bugCounter = 0;
 let _splatCounter = 0;
@@ -131,7 +169,7 @@ export function effectiveBugChance(
   levelNumber: number,
   levelChanceOverride: number | undefined,
 ): number {
-  const base = levelChanceOverride ?? (levelNumber >= cfg.startLevel ? cfg.spawnChance : 0);
+  const base = levelChanceOverride ?? (levelNumber >= cfg.startLevel ? cfg.carryChance : 0);
   return Math.max(0, Math.min(1, base));
 }
 
@@ -239,6 +277,62 @@ function headingIsClear(game: CanvasGameState, from: Vector2, heading: Vector2, 
  * sitting and twitching is a target, and a bug that tunnelled out through a
  * fence would be a power-up escaping into captured space.
  */
+/**
+ * A heading that puts this bug in the way of a ball, or null when none is
+ * worth stepping for.
+ *
+ * Three conditions, and each one is there to keep the help from reading as a
+ * chase:
+ *
+ *   NEAR       within HELP_RADIUS. Across the board it does nothing at all, so
+ *              a bug's ordinary wander is its ordinary wander.
+ *   CLOSING    the ball has to be coming TOWARD the bug. Stepping in front of
+ *              one that is leaving means chasing it down from behind, which is
+ *              the single most obvious thing a bug could do.
+ *   AHEAD      the aim point is where the ball WILL be, not where it is. A bug
+ *              that aimed at the ball itself would trail along behind it; one
+ *              that aims at the path arrives in time to be run over, which is
+ *              the whole idea.
+ *
+ * Frozen and held balls are skipped: they are not going anywhere, so there is
+ * no path to step into, and a bug drifting onto a stationary ball would look
+ * like it was attacking it.
+ */
+function interceptHeading(game: CanvasGameState, bug: BugState): number | null {
+  let best: { x: number; y: number } | null = null;
+  let bestDist = Infinity;
+
+  for (const ball of game.balls) {
+    if (ball.state !== "active") continue;
+    const vx = ball.velocity.x;
+    const vy = ball.velocity.y;
+    const speed = Math.hypot(vx, vy);
+    if (speed <= 1) continue;
+
+    const dx = bug.position.x - ball.position.x;
+    const dy = bug.position.y - ball.position.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > HELP_RADIUS || dist < 1) continue;
+
+    // Closing: the ball's heading has to point at least somewhat at the bug.
+    // The threshold is generous (about 60 degrees off), because a ball that
+    // will pass NEAR is exactly the one worth stepping in front of - it is the
+    // near miss this whole change exists to convert.
+    if ((vx * dx + vy * dy) / (speed * dist) < 0.5) continue;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = {
+        x: ball.position.x + (vx / speed) * speed * HELP_LEAD_SECONDS,
+        y: ball.position.y + (vy / speed) * speed * HELP_LEAD_SECONDS,
+      };
+    }
+  }
+
+  if (!best) return null;
+  return Math.atan2(best.y - bug.position.y, best.x - bug.position.x);
+}
+
 function flyBug(game: CanvasGameState, bug: BugState, dt: number, cruise: number): void {
   bug.wander += dt * WANDER_RATE;
 
@@ -248,8 +342,23 @@ function flyBug(game: CanvasGameState, bug: BugState, dt: number, cruise: number
     + Math.sin(bug.wander * 0.41 + bug.wanderSeed * 1.7) * TURN_AMPLITUDE * 0.5;
 
   let heading = Math.atan2(bug.velocity.y, bug.velocity.x) + drift * dt;
+
+  // Step in front of a ball that is coming this way. Capped hard; see HELP_TURN.
+  const lead = interceptHeading(game, bug);
+  if (lead !== null) {
+    // Turn toward it by at most HELP_TURN * dt, the short way round.
+    let delta = lead - heading;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    const step = Math.max(-HELP_TURN * dt, Math.min(HELP_TURN * dt, delta));
+    heading += step;
+  }
+
   const pulse = CRAWL + (DART - CRAWL) * (0.5 + 0.5 * Math.sin(bug.wander * 2.1 + bug.wanderSeed));
-  const speed = cruise * pulse;
+  // A bug on its way into a path must not pick that moment to sit down. The
+  // floor only applies while it is helping, so an idle bug still crawls and
+  // darts as before - the pulse is what makes it look alive.
+  const speed = cruise * (lead !== null ? Math.max(pulse, 0.8) : pulse);
 
   const probe = Math.max(BUG_RADIUS + 4, speed * dt * 3);
   const dir = { x: Math.cos(heading), y: Math.sin(heading) };
@@ -434,30 +543,114 @@ export function updateBugs(game: CanvasGameState, dt: number): void {
     for (const bug of game.bugs) flyBug(game, bug, step, cfg.speed);
   }
 
-  // An admin request jumps the cadence and the chance both. It still has to
-  // find a free spot, so what it proves is the real spawn path working.
+  // The admin request is the ONLY thing left that puts a bug on the board from
+  // nowhere, and it is a test tool: everything a player meets comes out of a
+  // shard (releaseBugFrom). A button that had to find and break a shard would
+  // be testing the map rather than the bug.
   if (_pendingSpawn !== undefined) {
     const asked = _pendingSpawn;
     _pendingSpawn = undefined;
-    spawnBug(game, getRunRng(`bugs:forced:${game.bugRollIndex ?? 0}:${nowS}`), asked ?? undefined);
-    return;
+    const rollIndex = (game.bugRollIndex = (game.bugRollIndex ?? 0) + 1);
+    spawnBug(game, getRunRng(`bugs:forced:${rollIndex}:${nowS}`), asked ?? undefined);
+  }
+}
+
+/**
+ * Decide which shards on this map are carrying a bug. Call once, at map init.
+ *
+ * ── Why it is decided here and not at the smash ─────────────────────────────
+ *
+ * Because the shard has to LOOK like it is carrying one, from the first frame.
+ * "It must be clear that they are released from breaking a specific shard" is
+ * the whole requirement, and a bug rolled at the moment of the break could not
+ * be drawn in advance - the player would smash a brick and be handed a thing,
+ * which is the opposite of aiming at one.
+ *
+ * It also changes what a bug IS. Rolled on a timer it was weather: it appeared,
+ * and steering a ball into it was a lottery nobody could set up. Held in a
+ * named brick it is a target, and the fence you draw to reach that brick is the
+ * play. The force model already makes a wall something you aim at on these
+ * maps; this puts something worth aiming at inside one.
+ *
+ * Authored carriers (`bug:` on the entity) are honoured first and always; the
+ * chance then fills up to the map's cap from what is left. Seeded per shard, so
+ * a Daily run and both halves of a lockstep pair carry the same bricks.
+ */
+export function assignShardBugs(
+  destructibles: DestructibleState[],
+  chance: number,
+  maxPerMap: number,
+  authored: Map<string, boolean | string>,
+): void {
+  let placed = 0;
+
+  // Authored first, and they ignore the cap: a map that says a brick holds Big
+  // Bang Release means it, and a cap silently dropping an authored carrier
+  // would be a map whose set piece vanished for no stated reason.
+  for (const d of destructibles) {
+    const want = authored.get(d.id);
+    if (want === undefined || want === false) continue;
+    const def = typeof want === "string" ? getBug(want) : drawBug(getRunRng(`bug:carry:${d.id}`));
+    if (!def) continue;
+    d.bug = def.id;
+    placed++;
   }
 
-  if (nowS - (game.lastBugRollAt ?? 0) < cfg.spawnCheckSeconds) return;
-  game.lastBugRollAt = nowS;
-  if (game.bugs.length >= cfg.maxSimultaneous) return;
+  if (chance <= 0 || placed >= maxPerMap) return;
 
-  // Seeded per roll index, like the pickup roll: board state diverges between
-  // devices but the roll cadence and the draw must not.
-  const rollIndex = (game.bugRollIndex = (game.bugRollIndex ?? 0) + 1);
-  const rng = getRunRng(`${game.bugRollContext ?? "bugs"}:roll:${rollIndex}`);
-  // `cfg.spawnChance` is ALREADY the effective chance: the level gate and the
-  // map's override are resolved once, where the config is seeded, exactly as
-  // the pickup tick expects of its own. Re-deriving it here would need a level
-  // number the loop does not have, and would be a second place for the gate to
-  // be wrong in.
-  if (rng() >= cfg.spawnChance) return;
-  // The map's own forcing first, then the session/URL flag. Either way this is
-  // WHICH bug, never whether: the chance above has already decided that.
-  spawnBug(game, rng, game.forcedBugEffect ?? debugBugId() ?? undefined);
+  for (const d of destructibles) {
+    if (placed >= maxPerMap) break;
+    if (d.bug) continue;
+    // A chest already holds something, and a brick holding two rewards is a
+    // brick nobody can read. `bug: false` is an author saying "not this one".
+    if (d.chest) continue;
+    if (authored.get(d.id) === false) continue;
+    const rng = getRunRng(`bug:roll:${d.id}`);
+    if (rng() >= chance) continue;
+    const def = drawBug(getRunRng(`bug:carry:${d.id}`));
+    if (!def) continue;
+    d.bug = def.id;
+    placed++;
+  }
+}
+
+/**
+ * A shard broke. Let its bug out, where the shard stood.
+ *
+ * Returns the bug, or null when the shard was carrying nothing. The position is
+ * the caller's (the slab's centroid) rather than a free-spot search: a bug that
+ * appeared somewhere other than the thing it came out of would break the one
+ * connection this whole change exists to make.
+ */
+export function releaseBugFrom(
+  game: CanvasGameState,
+  d: DestructibleState,
+  at: Vector2,
+): BugState | null {
+  if (!d.bug) return null;
+  const effect = d.bug;
+  // Spent, whether or not it flies: a shard cannot be broken twice, and a
+  // second release from the same slab would be a bug with no source.
+  d.bug = undefined;
+  if (!getBug(effect)) return null;
+
+  const rng = getRunRng(`bug:release:${d.id}`);
+  const heading = rng() * Math.PI * 2;
+  const speed = game.bugConfig?.speed ?? 95;
+  const lifetime = game.bugConfig?.lifetimeSeconds ?? 20;
+  const bug: BugState = {
+    id: `bug-${++_bugCounter}`,
+    effect,
+    position: { x: at.x, y: at.y },
+    velocity: { x: Math.cos(heading) * speed, y: Math.sin(heading) * speed },
+    wander: rng() * Math.PI * 2,
+    wanderSeed: rng() * Math.PI * 2,
+    spawnedAtSeconds: game.activePlaySeconds,
+    expiresAtSeconds: game.activePlaySeconds + lifetime,
+    /** Where it came from, for the burst the renderer draws at the shard. */
+    bornAtSeconds: game.activePlaySeconds,
+    spawnPosition: { x: at.x, y: at.y },
+  };
+  (game.bugs ??= []).push(bug);
+  return bug;
 }

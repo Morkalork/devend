@@ -2102,11 +2102,32 @@ count, so `hitsToBreak` keeps meaning hits everywhere else. Family A,
 "three good hits" never read the same. Ledger row and `mechanicSpread`
 detector land with the flag.
 
-**2. Drops.** Still unbuilt, and now probably unnecessary: bugs (below) put a
-ball-claimed reward on the board without needing a brick to drop it, and two
-sources of the same thing on the same map would be noise. Kept here because the
-brick-sourced version says something bugs do not - "this WALL pays" - if a map
-ever wants that. The original design follows.
+**2. Drops. BUILT, and they are how bugs arrive.**
+
+The first version of bugs skipped this and spawned them on a timer, on the
+grounds that a bug was a board event rather than something a wall paid out.
+That was wrong twice over, and playing it showed both:
+
+- **A timed bug is weather.** It appears somewhere, and steering a ball into a
+  nine-unit target wandering a board this size is a lottery the player cannot
+  set up. Reported as "a ball hits one of them almost never".
+- **A timed bug has no author.** Nothing on the board says where it came from,
+  so nothing about it can be aimed at, and the archetype's own verb - put a
+  ball into that wall on purpose - had no bearing on it.
+
+So a bug is carried by a breakable and released where it stood when that
+breakable is smashed, which is this row, built. `bug:` on a wall entity names
+the kind (or `true` for any, `false` to keep a shard out of the map's roll);
+the map's `bugChance` fills the rest up to `max_per_map`. A carrier is DRAWN as
+one from the first frame - a lit chamber in the material, in the bug's own
+colour - because a shard that looked ordinary until it popped would be the
+lottery again with an extra step.
+
+That is also what makes the reward legible end to end: the brick glows amber,
+the thing that flies out is amber, the splat it leaves is amber. No text
+anywhere in that chain.
+
+The original per-brick design, which this is:
 
 `drops: { chance, effects? }` on a breakable: the smash rolls
 the chance (through `getRunRng`, so Daily runs agree) and on a hit spawns a
@@ -2120,11 +2141,20 @@ smash itself are chests, and exist.
 
 **3. Ball buffs. BUILT, and not as pickup effects.**
 
-Built as **bugs**: small flying things that wander the live space, squashed by a
-ball running one over, paying the ball that did it. Catalogue in
-`public/bugs.yml`, flight and squashing in `physics/bugs.ts`, effects in
-`physics/bugEffects.ts`, the auto-lock ring in `physics/bugRing.ts`. Opted into
-per map with `bugChance`, today on 7, 9, 17 and 18.
+Built as **bugs**: small flying things released by breaking the shard that
+carries them (see Drops above), squashed by a ball running one over, paying the
+ball that did it. Catalogue in `public/bugs.yml`, flight, carrying and
+squashing in `physics/bugs.ts`, effects in `physics/bugEffects.ts`, the
+auto-lock ring in `physics/bugRing.ts`. Opted into per map with `bugChance`,
+today on 7, 9, 17 and 18, with level 17's `brick-a1` authored to hold Force
+Push.
+
+A loose bug **steps into the path of a ball that is already coming at it** -
+within about 190 units, only while the ball is closing, at a turn rate well
+under its own wander. Without it the mechanic was a lottery; with more of it
+the bug would be flying at the ball, and what the player did with their fence
+would stop mattering. A player can also **tap a loose bug to kill it** for
+nothing, which is how a dangerous one is refused.
 
 Three things about the shipped version differ from the sketch below, and each
 was the request's own idea rather than a compromise:

@@ -24,6 +24,8 @@ import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope }
 import { snapContour, hairline, type Pt } from "./pixelGrid";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import type { ImpactDent } from "@/types/game";
+import { getBug } from "@/lib/bugs";
+import { simNow } from "@/lib/simClock";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -402,6 +404,76 @@ export class ObjectLayer {
     // so it is identical every frame; a per-frame random would make the cracks
     // crawl and read as noise.
     this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
+
+    // Something is living in this one.
+    if (d.bug) this.drawCarriedBug(d.bug, pts, cx, cy, scale);
+  }
+
+  /**
+   * The mark on a shard that is carrying a bug.
+   *
+   * "It must be clear that they are released from breaking a specific shard",
+   * and clear BEFORE the shard is broken: the whole gain over the old timed
+   * spawn is that a carrier is a target you can draw a fence to reach. A slab
+   * that looked like every other slab until it popped would be the lottery
+   * again with an extra step.
+   *
+   * So it is drawn as something INSIDE the material rather than a badge on top
+   * of it: a dark chamber with the bug's own colour glowing out of it, and a
+   * slow breath on the glow so the board reads it as alive. It sits over the
+   * cracks, because a nearly-broken carrier is precisely when the player most
+   * needs to see what is about to come out.
+   *
+   * The colour is the bug's, which is the same colour it will fly in and the
+   * same colour its splat leaves. That is the entire identification chain:
+   * this brick is amber, so the thing in it is amber, so the Force Push that
+   * flew out was the amber one. No text, and none needed.
+   */
+  private drawCarriedBug(effect: string, pts: Pt[], cx: number, cy: number, scale: number): void {
+    const def = getBug(effect);
+    if (!def) return;
+    const color = Number.parseInt(def.color.replace("#", ""), 16);
+
+    // Sized off the slab so a brick and a slab both read, floored so it never
+    // disappears on the smallest brick on the board.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const r = Math.max(2.5, Math.min(Math.min(maxX - minX, maxY - minY) * 0.3, 9 * scale));
+
+    // Slow, shallow breath. Fast enough to notice on a still board, far too
+    // slow to compete with a ball for attention; the monitor shimmer's own
+    // history (monitorSignal.ts) is why this is 0.4Hz and not four.
+    const breathe = 0.5 + 0.5 * Math.sin(simNow() / 400);
+
+    // The chamber it sits in: a hole in the material, so the glow has
+    // somewhere to be rather than floating on the surface.
+    this.bodies.circle(cx, cy, r * 1.5).fill({ color: PALETTE.shadow, alpha: 0.75 });
+    this.bodies.circle(cx, cy, r * (1.35 + breathe * 0.2))
+      .stroke({ width: Math.max(1, scale), color, alpha: 0.35 + breathe * 0.3 });
+    this.bodies.circle(cx, cy, r).fill({ color, alpha: 0.55 + breathe * 0.35 });
+    // A bright core, so it reads as lit from inside rather than painted.
+    this.bodies.circle(cx, cy, r * 0.45).fill({ color: 0xffffff, alpha: 0.35 + breathe * 0.25 });
+
+    if (def.danger) {
+      // The same broken warning ring the loose bug wears (propLayer.ts), so a
+      // dangerous one is recognisable in the wall and in the air. Flattened to
+      // a polyline: this renderer has no arcs, see compassRing.ts.
+      const rr = r * 2.2;
+      const spin = simNow() / 900;
+      const STEPS = 6;
+      for (let i = 0; i < 4; i++) {
+        const a0 = spin + (i / 4) * Math.PI * 2;
+        this.bodies.moveTo(cx + Math.cos(a0) * rr, cy + Math.sin(a0) * rr);
+        for (let k = 1; k <= STEPS; k++) {
+          const a = a0 + (0.85 * k) / STEPS;
+          this.bodies.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+        }
+        this.bodies.stroke({ width: Math.max(1, scale), color, alpha: 0.8 });
+      }
+    }
   }
 
   /**

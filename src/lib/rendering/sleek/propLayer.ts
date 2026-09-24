@@ -22,7 +22,7 @@ import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, shadowFor, slabHeight, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
 import { getBug } from "@/lib/bugs";
-import { BUG_EXPIRY_WARN_SECONDS, BUG_RADIUS } from "@/lib/physics/bugs";
+import { BUG_BIRTH_SECONDS, BUG_EXPIRY_WARN_SECONDS, BUG_RADIUS } from "@/lib/physics/bugs";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -287,6 +287,25 @@ export class PropLayer {
       const heading = Math.atan2(bug.velocity.y, bug.velocity.x);
       const cos = Math.cos(heading);
       const sin = Math.sin(heading);
+
+      // Just out of a shard: a ring thrown outward from where it was released.
+      //
+      // The break already throws rubble, so without this a bug that came out of
+      // a brick is indistinguishable from one that happened to be flying past
+      // the brick as it broke - and "it is clear they are RELEASED from
+      // breaking a specific shard" is the whole point of carrying them. The
+      // ring is anchored to the bug's birthplace rather than to the bug, so it
+      // marks the shard even as the bug leaves it.
+      if (bug.bornAtSeconds !== undefined) {
+        const age = game.activePlaySeconds - bug.bornAtSeconds;
+        if (age >= 0 && age < BUG_BIRTH_SECONDS) {
+          const t = age / BUG_BIRTH_SECONDS;
+          const birth = w2s(bug.spawnPosition?.x ?? bug.position.x, bug.spawnPosition?.y ?? bug.position.y);
+          this.glows
+            .circle(birth.x, birth.y, r * (1 + t * 3.5))
+            .stroke({ width: Math.max(1, scale * 1.5 * (1 - t)), color, alpha: (1 - t) * 0.85 });
+        }
+      }
 
       const cast = shadowFor(light, c.x, c.y, slabHeight(scale) * 0.5);
       this.shadows

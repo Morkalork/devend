@@ -64,7 +64,9 @@ import { updateBallEffects } from "@/lib/ballEffects";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
 import { updatePickups } from "@/lib/pickups";
-import { squashBugs, updateBugs } from "@/lib/physics/bugs";
+import { assignShardBugs, effectiveBugChance, squashBugs, updateBugs } from "@/lib/physics/bugs";
+import { authoredBugCarriers } from "@/lib/bugs";
+import type { BugConfig } from "@/types/bugs";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
@@ -257,7 +259,13 @@ export type BotWeather = "roll" | string | null;
 
 export function createBotGame(
   level: LevelConfig, levelNumber: number, modifiers: GameModifiers = plainModifiers(),
-  opts: { mutator?: BotWeather } = {},
+  /**
+   * `bugs` seeds this board's bug tuning, which is OFF unless a caller asks
+   * for it. A ladder sweep has to measure the map, not what a power-up handed
+   * the bot on one seed; a test about bugs passes DEFAULT_BUG_CONFIG here and
+   * gets a board whose shards carry them exactly as the browser's would.
+   */
+  opts: { mutator?: BotWeather; bugs?: BugConfig } = {},
 ): BotGame {
   // A DEAL WITH NO RUN SEED IS A DEAL NOBODY CAN REPRODUCE, so arm one.
   //
@@ -315,6 +323,19 @@ export function createBotGame(
   } as unknown as CanvasGameState;
   // Same rule GameCanvas applies: a full-gravity map bounces on every side.
   game.boardEdges = resolveBoardEdges(game.boardEdges, mutator?.behavior === "gravity");
+  // Shards carrying bugs, decided exactly as the browser decides them. Inert
+  // by default, because bugConfig is null unless a test seeds one - the same
+  // arrangement the pickups have, so a ladder sweep still measures the map
+  // rather than what a power-up happened to hand the bot.
+  game.bugConfig = opts.bugs ?? null;
+  if (game.bugConfig) {
+    assignShardBugs(
+      game.destructibles,
+      effectiveBugChance(game.bugConfig, levelNumber, level.bugChance),
+      game.bugConfig.maxPerMap,
+      authoredBugCarriers(level),
+    );
+  }
   return {
     game, level, levelNumber, modifiers,
     callbacks: recordingCallbacks(events),

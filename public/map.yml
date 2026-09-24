@@ -624,9 +624,9 @@ levels:
     level: 7
     # Bugs (public/bugs.yml). Act I's first map with a real brick wall AND a
     # slab, so the ball is already a tool here and a buff has something to act
-    # on. Half the rolls: a bug is a thing that happens on this map, not a
-    # thing the map is about.
-    bugChance: 0.5
+    # on. Just under a third of its shards carry one, capped at the config's
+    # max_per_map: a bug is a thing this map has, not a thing it is about.
+    bugChance: 0.3
     sizeThreshold: 22
     expectedCuts: 6
     points: 5
@@ -912,9 +912,10 @@ levels:
   - id: level-9
     level: 9
     # Bugs. The act I map that teaches both claim rules already (chest on the
-    # smash, token on the seal), so a third - squash it with a ball - lands
-    # where the player is being taught how rewards arrive anyway.
-    bugChance: 0.6
+    # smash, token on the seal), so a third - break a shard and steer a ball to
+    # what comes out - lands where the player is being taught how rewards
+    # arrive anyway.
+    bugChance: 0.3
     sizeThreshold: 16
     expectedCuts: 7
     points: 5
@@ -1857,10 +1858,11 @@ levels:
   # bottom. Every strip you seal from the bottom shortens the bounce.
   - id: level-17
     level: 17
-    # Bugs, at the archetype's set piece. The highest chance on the ladder:
+    # Bugs, at the archetype's set piece. The highest share on the ladder:
     # "Deprecation" is the map Demolition exists for, its wall is sixteen
-    # smashes deep, and Force Push is the answer it is built to want.
-    bugChance: 0.8
+    # smashes deep, and Force Push is the answer it is built to want. The cap
+    # is what stops a quarter of that wall being power-ups.
+    bugChance: 0.35
     sizeThreshold: 12
     expectedCuts: 9
     points: 5
@@ -1936,6 +1938,13 @@ levels:
         width: 60
         height: 22
         brittle: true
+        # This one holds the hammer, and it is authored rather than rolled so
+        # the map can promise it. Deprecation's wall is sixteen smashes deep
+        # and Force Push takes bricks and slabs in one hit, so the first brick
+        # of the top row is a stated shortcut through the rest of the wall -
+        # if you can get a ball back to whatever comes out of it. Authored
+        # carriers ignore max_per_map.
+        bug: forcePush
       - id: brick-a2
         kind: wall
         shape: rect
@@ -2219,10 +2228,9 @@ levels:
   # Freak is aimed at: braking the arm turns the bet into a decision.
   - id: level-18
     level: 18
-    # Bugs. Slabs rather than bricks, so Force Push is worth more here and
-    # Bit Rot hurts more - the same pool reads differently against
-    # material that needs force.
-    bugChance: 0.6
+    # Bugs. Slabs rather than bricks, so a carrier takes real force to open
+    # and the decision is which slab to spend that force on.
+    bugChance: 0.35
     sizeThreshold: 11
     expectedCuts: 8
     points: 5

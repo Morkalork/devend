@@ -45,6 +45,7 @@ import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnershi
 import { generateRegionId } from "@/lib/gameUtils";
 import { wasteCapturedPickups } from "@/lib/pickups";
 import { simNow } from "@/lib/simClock";
+import { releaseBugFrom } from "@/lib/physics/bugs";
 import { isWrecking, WRECKING_DAMAGE_MULTIPLIER } from "@/lib/bugBuffs";
 
 export const DESTRUCTIBLE_MAX_HITS = 3;
@@ -754,6 +755,14 @@ function completeBreakable(
   // Treasure chest (#38): a smash rolls a reward, grants it, and drops a gem
   // showing what it was.
   if (d.chest) grantChestReward(game, d, levelNumber, callbacks.onChestReward);
+
+  // A shard that was carrying a bug lets it out, where the shard stood
+  // (physics/bugs.ts). The centroid rather than the hit point: a bug has to
+  // come out of the OBJECT, and a glancing hit on a corner would put it
+  // somewhere the player would not connect with the thing they just broke.
+  if (d.bug && d.obstaclePolygon) {
+    releaseBugFrom(game, d, polygonCentroid(d.obstaclePolygon));
+  }
 
   // A gate breakable re-opens its sealed (locked) area as capturable space.
   if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {

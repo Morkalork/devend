@@ -166,6 +166,19 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
    */
   chestRewards?: string[];
   /**
+   * This shard holds a bug (public/bugs.yml), released where it stood when the
+   * shard breaks. Implies `breakable`.
+   *
+   * `true` picks one from the pool, seeded per shard; a string names the exact
+   * kind. Authoring the kind is what lets a map say "the brick in the corner
+   * holds the dangerous one", which is a thing to plan a cut around rather than
+   * a thing that happens to you.
+   *
+   * A shard left alone still gets one when the map's `bugChance` rolls it. Set
+   * `bug: false` to keep a particular shard clear of that roll.
+   */
+  bug?: boolean | string;
+  /**
    * Phasing object (issue #64). When true the obstacle fades IN (solid) and OUT
    * (intangible) on a repeating cycle. While phased out, balls and fences pass
    * through it, and the phase-out emits a shockwave that flings any snagged /

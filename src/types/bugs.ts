@@ -83,6 +83,17 @@ export interface BugState {
   /** game.activePlaySeconds, so a pause never eats a bug's life. */
   spawnedAtSeconds: number;
   expiresAtSeconds: number;
+  /**
+   * When it came out of a shard, for the brief burst the renderer draws at the
+   * break. Absent on a bug the Playground conjured, which has no shard behind
+   * it and so has nothing to burst out of.
+   */
+  bornAtSeconds?: number;
+  /**
+   * Where it was released, kept separately from `position` because the bug
+   * flies away from it immediately and the burst has to stay on the SHARD.
+   */
+  spawnPosition?: Vector2;
 }
 
 /** A squash, rendered briefly where it happened. */
@@ -120,15 +131,22 @@ export interface BugSplat {
   outcome: "paid" | "declined" | "denied";
 }
 
-/** Parsed `bugs:` block of game-config.yml. */
+/**
+ * Parsed `bugs:` block of game-config.yml.
+ *
+ * Spawning tuning is gone from this and is not coming back: a bug is not rolled
+ * onto the board on a timer any more, it is carried by a shard and released
+ * when that shard breaks. What is left is how MANY shards carry one, and how a
+ * released bug behaves.
+ */
 export interface BugConfig {
-  /** First level number bugs may spawn on (a map's `bugChance` overrides it). */
+  /** First level number shards may carry bugs on (a map's `bugChance` overrides it). */
   startLevel: number;
-  /** A spawn roll happens every N active-play seconds. */
-  spawnCheckSeconds: number;
-  /** Chance per roll, 0-1, while fewer than maxSimultaneous are alive. */
-  spawnChance: number;
-  maxSimultaneous: number;
+  /** Chance an eligible shard carries a bug, 0-1, rolled once per shard at map init. */
+  carryChance: number;
+  /** Hard cap on carrying shards per map, so a long wall is not a bug farm. */
+  maxPerMap: number;
+  /** Active-play seconds a RELEASED bug lives before it flies off. */
   lifetimeSeconds: number;
   /** Cruise speed in world units per second. */
   speed: number;
@@ -141,10 +159,9 @@ export interface BugConfig {
  * invisible until the one run where it doesn't.
  */
 export const DEFAULT_BUG_CONFIG: BugConfig = {
-  startLevel: 5,
-  spawnCheckSeconds: 6,
-  spawnChance: 0.35,
-  maxSimultaneous: 2,
+  startLevel: 999,
+  carryChance: 0.25,
+  maxPerMap: 3,
   lifetimeSeconds: 20,
   speed: 95,
 };
