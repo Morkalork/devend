@@ -52,6 +52,7 @@ import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import { PairGuestGate } from "./PairGuestGate";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
 import { AbilityIcon } from "./AbilityIcon";
@@ -282,6 +283,8 @@ interface GameCanvasProps {
   /** True on the phone that is NOT the host of a pair run: it plays the board
    *  but answers none of the run's questions. */
   isPairGuest?: boolean;
+  /** The host's name, for the card the guest sees while the host decides. */
+  pairPartnerName?: string;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -384,6 +387,7 @@ export function GameCanvas({
   lives,
   lockstep,
   isPairGuest = false,
+  pairPartnerName,
   onLivesChange,
   onGrantAbility,
   abilityCharges,
@@ -2571,6 +2575,11 @@ export function GameCanvas({
           onBank={handleBankAndContinue}
           onPush={handlePushYourLuck}
         />
+      )}
+      {/* ...and the guest is told who is deciding, rather than left looking at
+          a stopped board with nothing to say why. */}
+      {pushMode === "prompt" && clearedPercent !== null && isPairGuest && (
+        <PairGuestGate what="pushing" remoteName={pairPartnerName ?? t("pair.partner")} />
       )}
 
       {/* One-time lock explainer, over the push prompt, on the first zero-lock finish. */}

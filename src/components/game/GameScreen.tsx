@@ -116,6 +116,8 @@ interface GameScreenProps {
   pairBanner?: React.ReactNode;
   /** True on the phone that is not the host of a pair run. */
   isPairGuest?: boolean;
+  /** The host's name, for the guest's "waiting for" card. */
+  pairPartnerName?: string;
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
@@ -213,6 +215,7 @@ export function GameScreen({
   lockstep,
   pairBanner,
   isPairGuest,
+  pairPartnerName,
   continuesRemaining = 0,
   onLivesChange,
   onGrantAbility,
@@ -1141,6 +1144,7 @@ export function GameScreen({
             lives={lives}
             lockstep={lockstep}
             isPairGuest={isPairGuest}
+            pairPartnerName={pairPartnerName}
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
             abilityCharges={abilityCharges ?? {}}

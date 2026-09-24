@@ -196,7 +196,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           ? "shopping"
           : navigation.currentScreen !== 'game'
             ? "deciding"
-            : null;
+            // The map-won card sits over the game screen rather than replacing
+            // it, so the screen check above never saw it and the guest was
+            // offered the host's Next Level button.
+            : session.showLevelComplete
+              ? "deciding"
+              : null;
 
   /**
    * A pair run never files on the solo ladder.
@@ -486,6 +491,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 viewportZoomStuck={viewportZoomStuck}
                 lockstep={pair.lockstep}
                 isPairGuest={pair.phase === 'playing' && !pair.isHost}
+                pairPartnerName={pair.remoteName}
                 pairBanner={
                   pair.phase === 'playing' && (pair.stalled || pair.dropped)
                     ? (
