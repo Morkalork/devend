@@ -315,7 +315,7 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| colored area (bonus) | D | Meet | 3 | 5 | 9, 14, 17, 21, 22, 24, 26, 28, 29, 31, 33 |
+| colored area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 18, 21, 22, 24, 26, 28, 29, 31, 33 |
 | mover | C | Meet | 4 | 5 | 7, 9, 13, 19, 22, 23, 29, 33 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
@@ -343,7 +343,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | ball gate | B | Compressed | 33 | 34 | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 15 | 19 |
-| colored area (gate) | D | Meet | 8 | 20 (boss) | 34, 35 |
+| colored area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 20 (boss), 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |

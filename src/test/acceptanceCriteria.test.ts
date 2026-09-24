@@ -188,9 +188,11 @@ describe("a heading and its bullets read as one sentence", () => {
 
 describe("optional is marked optional", () => {
   it("names the bonus pocket the modal used to hide", () => {
-    // Level 5's var pocket: pays 1.5x, gates nothing, and no line of the old
-    // paragraph mentioned it existed.
-    const g = groups(5);
+    // Level 5's var pocket was the case that found this: it paid 1.5x, gated
+    // nothing, and no line of the old paragraph mentioned it existed. Level 5
+    // has no box any more (act I now puts every box it shows in the win), so
+    // this reads level 18's const pocket, the ladder's clearest bonus.
+    const g = groups(18);
     expect(g.optional?.join(" "), "the bonus pocket is still invisible")
       .toContain("winConditions.bonusArea");
     expect(g.required?.join(" "), "the bonus was filed as a requirement")
@@ -198,7 +200,8 @@ describe("optional is marked optional", () => {
   });
 
   it("counts a bonus pocket on every map that has one", () => {
-    // Three of act I's maps carry one (3, 5 twice, 9). The floor is a guard
+    // Act I carries none since its review (every box it shows is in the win);
+    // act II has 11, 13 and 18. The floor is a guard
     // against the rule silently ceasing to fire, not a target: it was 10 when
     // the ladder was 35 maps and comes back up with the rebuild.
     const withBonus = LEVELS.filter(l =>

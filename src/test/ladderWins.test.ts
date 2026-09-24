@@ -144,7 +144,7 @@ describe("the maps with nothing a lock cannot produce", () => {
       breakables(l) === 0 && gateAreas(l.coloredAreas ?? []).length === 0
       && terminals(l) === 0 && seams(l) === 0 && boxes(l) === 0
     ).map(l => l.level as number);
-    // Act I's four teaching maps, and now level 15. The list held seven more
+    // Act I's first two teaching maps, and now level 15. The list held seven more
     // from acts II-IV and those maps are gone: a rebuilt map joins only by
     // being authored with nothing operable, which is the decision the list
     // exists to make visible. So, said out loud: 15 is an empty board on
@@ -177,6 +177,11 @@ describe("the maps with nothing a lock cannot produce", () => {
     // ask for, and inventing something (a token breakable, a gate the map does
     // not want) to get 16 off this list would be exactly the dishonesty the
     // list exists to expose.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 14, 15, 16]);
+    //
+    // 3 and 4 LEFT, in the direction the list is meant to move. A play review
+    // of act I found a box on a teaching map that the win ignored read as a
+    // promise with nothing behind it, so 3 now meets the box as its win and 4
+    // puts the guard in front of it. Both ask `space + area`.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 15, 16]);
   });
 });
