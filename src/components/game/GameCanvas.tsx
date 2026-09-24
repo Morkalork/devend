@@ -2209,7 +2209,18 @@ export function GameCanvas({
   // The unusual win requirements, recomputed each render off the live game.
   // resolveWinSpec + readWinSnapshot are exactly what applyCut's win check
   // calls, so there is one reading of the map's win, not two.
-  const goals = mapGoals(resolveWinSpec(level, activeModifiers), readWinSnapshot(gameRef.current, level));
+  //
+  // Kept as the SAME array while its contents are unchanged. It feeds the
+  // state push below as a dependency, and a fresh array every render made that
+  // effect fire every render: it set the parent's state, the parent re-rendered
+  // this, and round it went ("Maximum update depth exceeded" from the first
+  // frame of every map, solo and paired).
+  const freshGoals = mapGoals(resolveWinSpec(level, activeModifiers), readWinSnapshot(gameRef.current, level));
+  const goalsRef = useRef(freshGoals);
+  if (JSON.stringify(goalsRef.current) !== JSON.stringify(freshGoals)) {
+    goalsRef.current = freshGoals;
+  }
+  const goals = goalsRef.current;
   // Same counter the win check uses for "every ball is locked", so the warning
   // cannot claim a last ball on a board the gate thinks still has two.
   const ballsInPlay = countBallsInPlay(gameRef.current.balls);

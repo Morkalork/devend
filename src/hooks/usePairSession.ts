@@ -110,6 +110,14 @@ export function usePairSession(paired: PairedSession | null) {
   const transportRef = useRef<Transport | null>(null);
   const runIdRef = useRef<string>("");
   const pairSave = usePairRunSave();
+  // The save's FUNCTIONS are stable (useCallback with no deps); the object
+  // holding them is new on every render. Callbacks below depend on the
+  // functions, never the object: recordMap depending on the object made it a
+  // new function every render, and Index's once-per-map publish effect, keyed
+  // on it, fired on every render instead. The host re-sent its run in a loop
+  // and the guest re-adopted it each time, which rebuilt her modifiers and
+  // re-armed the map's Acceptance Criteria after every tap.
+  const { saveFor, store: storeSave, discard: discardSave } = pairSave;
   const devicesRef = useRef<[string, string] | null>(null);
 
   // ── Setting up ───────────────────────────────────────────────────────────
@@ -289,7 +297,7 @@ export function usePairSession(paired: PairedSession | null) {
     const pairId = state.pairId;
     if (!pairId) return;
     const runId = resumed && run
-      ? (pairSave.saveFor(pairId)?.runId ?? `${pairId}-${Date.now()}`)
+      ? (saveFor(pairId)?.runId ?? `${pairId}-${Date.now()}`)
       : `${pairId}-${Date.now()}`;
     runIdRef.current = runId;
     const seed = `coop:${pairId}:${runId}`;
@@ -297,7 +305,7 @@ export function usePairSession(paired: PairedSession | null) {
     setRunSeedText(seed);
     transportRef.current?.send({ t: "runState", payload: rs });
     setState(s => ({ ...s, runState: rs, phase: "playing" }));
-  }, [state.pairId, pairSave]);
+  }, [state.pairId, saveFor]);
 
   const chooseContinue = useCallback(() => {
     const pairId = state.pairId;
@@ -307,27 +315,27 @@ export function usePairSession(paired: PairedSession | null) {
     const pick = chooseSave(mine, theirs);
     if (pick === "none") { start(null, false); return; }
     if (pick === "mine") {
-      start(pairSave.saveFor(pairId)?.run ?? null, true);
+      start(saveFor(pairId)?.run ?? null, true);
       return;
     }
     // The partner has the copy worth keeping. Ask for it: a pair save lives on
     // both phones precisely so one of them clearing its data does not end the
     // run for the other.
     transportRef.current?.send({ t: "hostChoice", choice: "sendSave" });
-  }, [state.pairId, state.offeredSave, pairSave, start]);
+  }, [state.pairId, state.offeredSave, saveFor, start]);
 
   const chooseNew = useCallback(() => {
-    pairSave.discard();
+    discardSave();
     transportRef.current?.send({ t: "hostChoice", choice: "discardSave" });
     start(null, false);
-  }, [pairSave, start]);
+  }, [discardSave, start]);
 
   const recordMap = useCallback((run: RunSave) => {
     const pairId = state.pairId;
     const devices = devicesRef.current;
     const seed = state.runState?.seed;
     if (!pairId || !devices || !seed) return;
-    pairSave.store(
+    storeSave(
       { pairId, runId: runIdRef.current || `${pairId}-0`, seed, devices },
       run,
     );
@@ -337,7 +345,7 @@ export function usePairSession(paired: PairedSession | null) {
     if (state.isHost) {
       transportRef.current?.send({ t: "hostChoice", choice: "mapState", payload: run });
     }
-  }, [state.pairId, state.runState, state.isHost, pairSave]);
+  }, [state.pairId, state.runState, state.isHost, storeSave]);
 
   /**
    * Clear the stall flag once the pair is moving again.
