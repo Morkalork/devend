@@ -305,7 +305,7 @@ export function createInitialGameData(
   const mirrorPolygons:   Polygon[] = [];
   const destructibles:    DestructibleState[] = [];
   // Non-mirror obstacles participating in the break/topple support graph (#38).
-  const obstacleEntities: Array<{ id: string; polygon: Polygon; breakable: boolean }> = [];
+  const obstacleEntities: Array<{ id: string; polygon: Polygon; breakable: boolean; brittle: boolean }> = [];
   // Sealed areas gated by a breakable (issue #38): carved out at init, re-opened
   // when their gate breaks. Paired with their descriptor to record cell indices.
   const sealedAreas: Array<{ destructible: DestructibleState; poly: Polygon }> = [];
@@ -792,7 +792,10 @@ export function createInitialGameData(
           // breaks. The rule is entityIsDestructible's, not this line's, so
           // everything that asks the question gets the same answer.
           const isBreakable = entityIsDestructible(entity);
-          obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: isBreakable });
+          obstacleEntities.push({
+            id: entity.id, polygon: obstaclePolygon, breakable: isBreakable,
+            brittle: (entity as WallEntity).brittle === true,
+          });
           if (isBreakable) {
             const dest: DestructibleState = {
               id: entity.id,
@@ -1362,6 +1365,29 @@ export function createInitialGameData(
   // "Down" is the board bottom. Each obstacle rests on the obstacle directly
   // beneath it (its bottom edge meets that one's top edge with x-overlap) or on
   // the ground. When a support is removed, whatever rests on it topples.
+  //
+  // SHARDS TAKE NO PART, either as the thing resting or the thing holding up.
+  // A shard's whole contract is one contact, one shard: the wall opens where a
+  // ball hits it. Reported from play on level 9, where a ball clipping the
+  // bottom of a column of five brought the other four down with it - and only
+  // on two of the four deals, because "down" is the board bottom and rotation
+  // does not turn it, so the same column dealt sideways was a row that stood.
+  // Measured across the ladder that was levels 5, 6, 7, 9, 11-13 and 17 (up to
+  // 32 hidden links on 17's brick wall), every one of them a rule the board
+  // never showed. Runs of shards are authored 8 px apart, well inside the
+  // 30 px tolerance below, so the graph read every run as a stack.
+  //
+  // NOR DOES ARCHITECTURE. A plain wall is the map, not a thing on it, and the
+  // same tolerance read the side walls of a room as "resting on" its floor. So
+  // on level 18 smashing the room's door brought its east wall down with it,
+  // and on level 11 opening the curtain toppled the jamb that makes the pocket
+  // behind it a pocket: the lock the map exists to sell stopped existing, again
+  // on two deals of four. What is left is the rule #38 was written for, a
+  // monolith or a chest stacked on another one.
+  //
+  // Every obstacle stays in stackObjects (Descope finds plain walls there); the
+  // rule decides only who may rest on whom.
+  const stacks = (o: { breakable: boolean; brittle: boolean }) => o.breakable && !o.brittle;
   const stackObjects: StackObject[] = [];
   {
     const SUPPORT_TOL = 30; // world units of slack for "resting on"
@@ -1377,10 +1403,12 @@ export function createInitialGameData(
       const a = boxes[i];
       let supporterId: string | null = null;
       const onGround = Math.abs(bottom - a.maxY) <= SUPPORT_TOL;
+      const aStacks = stacks(obstacleEntities[i]);
       if (!onGround) {
         let best = Infinity;
         for (let j = 0; j < boxes.length; j++) {
           if (i === j) continue;
+          if (!aStacks || !stacks(obstacleEntities[j])) continue;
           const b = boxes[j];
           const xOverlap = a.minX < b.maxX && a.maxX > b.minX;
           if (!xOverlap) continue;

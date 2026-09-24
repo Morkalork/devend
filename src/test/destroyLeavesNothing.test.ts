@@ -25,6 +25,10 @@
  * is the route that had the hole: it detached the body and set `destroyed` by
  * hand, so a toppled gate kept its sealed area shut forever and a toppled chest
  * paid nothing. So the sweep runs both ways round.
+ *
+ * Only a monolith topples now (shardsDoNotTopple.test.ts), and no shipped map
+ * stacks one on another, so the toppled sweep builds its stacks from each
+ * map's own monoliths rather than finding them.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
@@ -104,14 +108,23 @@ describe("a destroyed obstacle leaves nothing behind", () => {
           }));
 
           // "smashed": every breakable goes through the destroy queue.
-          // "toppled": only the SUPPORTERS do, so anything resting on them has
-          // to be finished off by toppleSupportedBy instead.
+          // "toppled": only a SUPPORTER does, so anything resting on it has to
+          // be finished off by toppleSupportedBy instead.
+          //
+          // The ladder no longer ships a stack (only a monolith may rest on a
+          // monolith, and no map stands one on another: shardsDoNotTopple pins
+          // that), so reading the stacks off the maps left this route checking
+          // nothing. It stacks them instead: every other monolith on the map is
+          // stood on the first, which runs the topple path over the real gates
+          // and chests the ladder carries rather than over a constructed one.
           let queue = breakables;
           if (route === "toppled") {
-            const supporters = new Set(
-              game.stackObjects.filter(s => s.supporterId).map(s => s.supporterId as string),
-            );
-            queue = breakables.filter(d => supporters.has(d.id));
+            const monoliths = breakables.filter(d => !d.brittle);
+            if (monoliths.length < 2) { vi.restoreAllMocks(); continue; }
+            const [root, ...rest] = monoliths;
+            const resting = new Set(rest.map(d => d.id));
+            for (const so of game.stackObjects) if (resting.has(so.id)) so.supporterId = root.id;
+            queue = [root];
           }
           if (queue.length === 0) { vi.restoreAllMocks(); continue; }
           for (const d of queue) { d.destroyed = true; game.pendingDestroys.push(d); }

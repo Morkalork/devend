@@ -326,6 +326,14 @@ function applyDeformable(
   // per-wall AABB is a different story and applyDent invalidates it - see there.
 }
 
+/** Is the ball's BODY over an obstacle's bounds (see the transit note in updateBall)? */
+function straddles(ball: Ball, poly: Polygon): boolean {
+  const b = getObstacleBounds(poly);
+  const reach = ball.radius + WALL_THICKNESS;
+  return ball.position.x >= b.minX - reach && ball.position.x <= b.maxX + reach
+    && ball.position.y >= b.minY - reach && ball.position.y <= b.maxY + reach;
+}
+
 /**
  * Bug Squash: roll whether this wall hit sticks the ball, and stick it.
  *
@@ -1112,13 +1120,15 @@ export function updateBall(
   if (game.obstacleRules?.size) {
     for (const [poly, rule] of game.obstacleRules) {
       if (!ballMayPass(rule, ball, ball.velocity)) continue;
-      const b = getObstacleBounds(poly);
-      const reach = ball.radius + WALL_THICKNESS;
-      if (ball.position.x >= b.minX - reach && ball.position.x <= b.maxX + reach
-        && ball.position.y >= b.minY - reach && ball.position.y <= b.maxY + reach) {
-        return;
-      }
+      if (straddles(ball, poly)) return;
     }
+  }
+  // A phased-out obstacle is the same case, and was missing: both collision
+  // systems above skip it, and then this check threw the ball back out the side
+  // it came in, so a phasing wall was solid in every phase. Reported from play
+  // on level 16.
+  if (phasedOut) {
+    for (const poly of phasedOut.polys) if (straddles(ball, poly)) return;
   }
 
   // Pieces knocked off breakables turn a ball, after every wall and obstacle

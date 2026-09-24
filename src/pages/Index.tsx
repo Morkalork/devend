@@ -128,15 +128,28 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   // signal the solo save uses: a new map beginning. On the host that write is
   // also a publication: the guest takes the host's run as the only run.
   const pairRecordMap = pair.recordMap;
+  // Which map was last recorded, so the write (and on the host, the publish)
+  // happens once per map even if this effect re-runs. A re-publish is not
+  // harmless: the guest adopts every copy it receives, and each adoption
+  // rebuilds its modifiers and re-arms the map's Acceptance Criteria.
+  const recordedMapRef = useRef<string | null>(null);
   useEffect(() => {
-    if (pairPhase !== 'playing' || navigation.currentScreen !== 'game') return;
+    if (pairPhase !== 'playing' || navigation.currentScreen !== 'game') {
+      // Leaving the board (a retry, the shop) re-arms it, as before: a map
+      // entered again is recorded again, it just is not recorded twice in a row.
+      recordedMapRef.current = null;
+      return;
+    }
+    const mapKey = `${pairRunState?.seed ?? ''}:${session.currentLevelIndex}`;
+    if (recordedMapRef.current === mapKey) return;
     const snap = session.readRunSnapshot();
     if (!snap || snap.levelSequenceIds.length === 0) return;
+    recordedMapRef.current = mapKey;
     pairRecordMap({ ...snap, version: 1, savedAt: Date.now() });
     // Keyed on the map, like the solo write: the payload is read fresh, so
     // this fires once per map rather than on every state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pairPhase, navigation.currentScreen, session.currentLevelIndex, pairRecordMap]);
+  }, [pairPhase, navigation.currentScreen, session.currentLevelIndex, pairRecordMap, pairRunState]);
 
   /**
    * The guest takes the host's run at the start of every map.
