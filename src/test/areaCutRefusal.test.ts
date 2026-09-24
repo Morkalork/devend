@@ -71,3 +71,35 @@ describe("sealing the win's zone", () => {
     }
   });
 });
+
+describe("sealing a zone that is still behind its door", () => {
+  // Level 8's box sits behind a curtain. Pinned upright (it rotates from level
+  // 4 up) so the doorway is where map.yml draws it: x 437-463, y 345-455.
+  const L8 = { ...byLevel(LADDER, 8)!, neverRotates: true };
+  const SHUT_THE_DOORWAY = [{ start: { x: 450, y: 340 }, end: { x: 450, y: 460 } }];
+
+  function board8(balls: Array<{ x: number; y: number }>): CanvasGameState {
+    releaseClock();
+    setRunSeedText("door-refusal");
+    installClock();
+    const ctx = createBotGame(L8, 8);
+    for (let i = 0; i < 10; i++) stepBot(ctx);
+    const game = ctx.game as unknown as CanvasGameState;
+    // Park the sliding door out of the way; this is about the grid, not timing.
+    for (const m of game.movers ?? []) m.offset = -60;
+    game.balls.forEach((b, i) => { b.position = { ...balls[i] }; b.prevPosition = { ...balls[i] }; });
+    return game;
+  }
+  const refused8 = (game: CanvasGameState) =>
+    cutWouldBuryArea(game, resolveWinSpec(L8, NO_RUN_RULES), readWinSnapshot(game, L8), SHUT_THE_DOORWAY, 8);
+
+  it("refuses shutting every ball out of the curtain's room, before the curtain has gone", () => {
+    // The door opens onto ground nobody can reach; it used to be allowed and
+    // the map failed twenty seconds later, when the curtain finally went.
+    expect(refused8(board8([{ x: 200, y: 600 }, { x: 250, y: 700 }, { x: 300, y: 200 }]))).toBe(true);
+  });
+
+  it("lets it land with a ball in the curtain's room", () => {
+    expect(refused8(board8([{ x: 200, y: 600 }, { x: 700, y: 600 }, { x: 300, y: 200 }]))).toBe(false);
+  });
+});

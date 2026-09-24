@@ -376,7 +376,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
 | colored area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 18, 21, 22, 24, 26, 28, 29, 31, 33 |
-| mover | C | Meet | 4 | 5 | 7, 9, 13, 19, 22, 23, 29, 33 |
+| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 18, 19, 22, 23, 29, 33 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
@@ -639,10 +639,10 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
 | 3 | **Meet** colored area | topology | The pink box is the win: clear the board and lock a ball inside it. (It was a bonus; a box the win ignored read as a promise with nothing behind it.) |
 | 4 | **Meet** mover | **Use** colored area | A guard walks across the box's door, so closing the box is "can I draw it NOW". (It guarded a doorway for a split-lock win that never involved it, and read as scenery.) |
-| 5 | **Meet** brittle | Use mover | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached (its two bonus boxes came off for contradicting that). |
-| 6 | - | Fight brittle | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
+| 5 | **Meet** brittle | - | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached (its bonus boxes and its patrol came off for contradicting that). |
+| 6 | - | Fight brittle | Each room's best pockets are alcoves walled with the shards the win asks you to break: keep an alcove, or spend it. |
 | 7 | **Compressed** chest | Use brittle, Fight mover | The chest is in the win: one monolith of two chests, plus four shards. The better chest sits behind the patrol, the other in the open. |
-| 8 | **Compressed** reveals | Break colored area | The box you know from 3 and 4 is behind a curtain: clear to 81% AND lock a ball in it, on ground that does not exist until you pay for it. |
+| 8 | **Compressed** reveals | Break colored area, Break mover | The box is behind a curtain only a ball in its room can break, and a sliding door in the only doorway decides who gets in. |
 | 9 | - skill check | all of act I | No new toys, and the win names each one: the box, four shards of ten, one monolith of two, at 81%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 

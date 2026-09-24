@@ -316,32 +316,34 @@ levels:
         leadMs: 2000
     balls: []
 
-  # 5 "Technical Debt" - MEET the breakable, USE the mover.
+  # 5 "Technical Debt" - MEET the shard.
   #
-  # The divider has a soft section in it. Smash it and you own a SECOND doorway
-  # into the right-hand chamber, at y 207-345, which the patrol never reaches -
-  # it sweeps the lower doorway only. So the map quotes you two prices for the
-  # same trip: walk the guarded doorway on the guard's schedule, or spend six
-  # hits and go where it cannot follow. That is the whole lesson: a breakable is
-  # not an obstacle, it is a price quoted in tempo.
+  # One touch opens a slot in a short column of shards in the divider, and the
+  # doorway below it is already open. The verb, with nothing else attached:
+  # the win asks for two of the four, and a ball that touches one breaks it.
   #
-  # The slab does NOT enclose anything, and that is deliberate rather than
-  # incidental. The first draft bricked up the pink pocket instead, and the
-  # audit killed it: a fully sealed region is written off by
-  # captureUnreachableCells as unreachable-hence-captured, so the vault started
-  # the map already claimed, and a ball driven in after the break would land in
-  # ground the player already owned and lock itself for free (the stranded-lock
-  # rule). A breakable that seals a pocket is a free lock with extra steps.
+  # It used to quote two prices for one trip - walk the doorway on a patrol's
+  # schedule, or spend six hits on a slab and go where the patrol could not
+  # follow. Both halves went: the slab became one-touch shards when act I was
+  # rebuilt on them (so there is no price in hits any more), and the patrol
+  # came off when level 8 took a mover for its sliding door and act I would
+  # otherwise have had one on six maps of ten. A patrol here after 4's was the
+  # same gimmick two maps running, on the map whose job is to show one new
+  # thing.
   #
-  # THE TURN: at 45% remaining the slab goes whether you were ready or not, with
-  # a banner. It reads like a gift and is the opposite. Until it breaks, that
-  # stretch of divider is WALL, and wall is what a fence anchors on: a player
-  # part-way through sealing the top-right chamber has been leaning on it. The
-  # deadline puts a hole in their anchor and a new mouth in the pocket they were
-  # about to close. It is a real reason not to break it yourself.
+  # The column does NOT enclose anything, and that is deliberate rather than
+  # incidental. The first draft bricked up a pocket instead, and the audit
+  # killed it: a fully sealed region is written off by captureUnreachableCells
+  # as unreachable-hence-captured, so the vault started the map already
+  # claimed. A breakable that seals a pocket is a free lock with extra steps.
   #
-  # The two seams either side of the slab are 12 units, passages to nothing. The
-  # doorway below it is 210. Those numbers only survive because this map is at
+  # THE TURN: at 45% remaining the second shard goes whether you were ready or
+  # not, with a banner. Until it breaks, that stretch of divider is WALL, and
+  # wall is what a fence anchors on: a player part-way through sealing the
+  # top-right chamber has been leaning on it.
+  #
+  # The seams between shards are 8 units, passages to nothing. The doorway
+  # below the column is 210. Those numbers only survive because this map is at
   # variety 0; see the note at the top of act I.
   - id: level-5
     level: 5
@@ -406,16 +408,6 @@ levels:
         'y': 555
         width: 26
         height: 300
-      - id: guard
-        kind: mover
-        shape: rect
-        x: 300
-        'y': 438
-        width: 300
-        height: 26
-        axis: horizontal
-        range: 280
-        speed: 130
     # No colored areas. There were two bonus boxes here, one in each far
     # corner, and neither was in the win: two bright promises on the map that
     # introduces the shard, with nothing behind them. Reported from play as a
@@ -428,41 +420,47 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 6 "Merge Conflict" - FIGHT the breakable, USE the mover.
+  # 6 "Merge Conflict" - FIGHT the breakable.
   #
-  # Four of the twelve shards, down from six. The divider used to be a hidden
-  # stack: break its bottom shard and the eleven above it toppled, on two
-  # deals of four. That was a bug (shards never stack now), and it had been
-  # doing most of the smashing: without it six of twelve measured 6 of 16 on
-  # the sweep against 11 before, and four of twelve measures 12.
+  # Each room's best pockets are walled with the shards you have to break. A
+  # solid spine divides the board, with a neck at each end, and three teeth of
+  # shards stick out of it into EACH room. Between the teeth are alcoves, and
+  # each one closes with a single fence into a pocket that grades superior.
+  # The win asks for six of the eighteen shards - and every shard broken is a
+  # hole in an alcove wall. So the map asks the question the old one never
+  # did: which alcoves do you keep, and which do you spend? Lock a ball in one
+  # while its teeth stand, or let the balls chew through them for the win and
+  # lose the pocket.
   #
-  # No new mechanic. Map 5 taught that a breakable is a price you pay in tempo;
-  # this one charges the opposite way round, because the fourth thing breaking a
-  # wall does is the one nobody thinks about: it MERGES two regions into one.
+  # Reported from play as "ok, but lacks imagination. Good win condition,
+  # boring design", and then: "no twists or turns, just grunt fencing off
+  # without tactics". The old map was one straight column of shards between
+  # two rooms. It eroded where the balls hit it, but nothing depended on WHERE,
+  # so there was nothing to decide. The win keeps its shape (clear to 75%,
+  # break a third of the shards); the shards moved from the divider into the
+  # teeth, and the divider became solid so the two rooms stay two rooms.
   #
-  # The divider is soft, and the balls chip it just by living. Nothing the
-  # player does protects it - they can steer away from it, and that is the
-  # skill - so the two-chamber board they are reading is on a clock they do not
-  # control. Seal the far room while it is still a room, or clear the near one
-  # safely and find the far one has become the same room.
+  # Teeth on BOTH sides, not only the far one: with the shards all in one room
+  # the balls often never reached them, and the sweep fell to 9 of 16 with the
+  # board cleared and the shard line short. Mirrored, it reads 14 of 16.
   #
-  # Two 66-unit necks, one at each end of the divider, are the honest way
-  # through while it stands. Both are legal passages rather than the seams on
-  # map 5: this map is about the wall in the middle, not about getting past it.
+  # Measured with the pocket probe: an alcove is about 182 by 122, 3.4% of the
+  # board, superior at the start of the map. The nook in the far corner is the
+  # smallest one-fence pocket at 1.85%, and costs no teeth.
   #
-  # No patrol, deliberately. Maps 4 and 5 are both about a mover and 7 and 9
-  # both use one, and mechanicSpread flagged the act at seven movers in ten maps
-  # when this map had one too - which is the "same gimmick every map" line in the
-  # guidelines' own anti-pattern list. The pressure here is the wall's decay, and
-  # a patrol on top of it would have been decoration charged as difficulty.
+  # Shards: 30x28, 8 apart along a tooth and 8 off the spine, so a tooth is a
+  # wall to a ball until one goes (a gap of 46 lets a ball through).
   #
-  # THE TURN: at 55 seconds the divider goes whether the balls got there or not.
-  # A clock rather than a threshold, because the whole map is a race against
-  # something the player cannot stop, and a space trigger would have made it
-  # something they caused.
+  # No patrol, deliberately: act I already has movers on 4, 5, 7 and 9, and the
+  # pressure here is the teeth, not a timer on top of them.
+  #
+  # THE TURN: at 55 seconds the middle shard of the middle right-hand tooth
+  # goes whether the balls got there or not, announced. It is the rescue for
+  # the shard line, and it opens the two right-hand alcoves into one: whoever
+  # was saving that pair loses it.
   - id: level-6
     level: 6
-    premise: "The one where the divider is shards the balls chip away, so seal the far room while it is still a room."
+    premise: "The one where each room's best pockets are walled with the shards you have to break."
     sizeThreshold: 25
     expectedCuts: 5
     points: 5
@@ -474,7 +472,7 @@ levels:
         - kind: space
           threshold: 25
         - kind: smashed
-          count: 4
+          count: 6
           of: shards
     entities:
       - id: anchor-top
@@ -484,102 +482,13 @@ levels:
         'y': 45
         width: 26
         height: 84
-      - id: gate-1
+      - id: spine
         kind: wall
         shape: rect
         x: 437
         'y': 195
         width: 26
-        height: 35
-        brittle: true
-      - id: gate-2
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 238
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-3
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 281
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-4
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 324
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-5
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 367
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-6
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 410
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-7
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 453
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-8
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 496
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-9
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 539
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-10
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 582
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-11
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 625
-        width: 26
-        height: 35
-        brittle: true
-      - id: gate-12
-        kind: wall
-        shape: rect
-        x: 437
-        'y': 668
-        width: 26
-        height: 35
-        brittle: true
+        height: 510
       - id: anchor-bottom
         kind: wall
         shape: rect
@@ -587,6 +496,150 @@ levels:
         'y': 771
         width: 26
         height: 84
+      - id: tooth-r1a
+        kind: wall
+        shape: rect
+        x: 471
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r1b
+        kind: wall
+        shape: rect
+        x: 509
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r1c
+        kind: wall
+        shape: rect
+        x: 547
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l1a
+        kind: wall
+        shape: rect
+        x: 399
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l1b
+        kind: wall
+        shape: rect
+        x: 361
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l1c
+        kind: wall
+        shape: rect
+        x: 323
+        'y': 226
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r2a
+        kind: wall
+        shape: rect
+        x: 471
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r2b
+        kind: wall
+        shape: rect
+        x: 509
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r2c
+        kind: wall
+        shape: rect
+        x: 547
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l2a
+        kind: wall
+        shape: rect
+        x: 399
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l2b
+        kind: wall
+        shape: rect
+        x: 361
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l2c
+        kind: wall
+        shape: rect
+        x: 323
+        'y': 436
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r3a
+        kind: wall
+        shape: rect
+        x: 471
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r3b
+        kind: wall
+        shape: rect
+        x: 509
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-r3c
+        kind: wall
+        shape: rect
+        x: 547
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l3a
+        kind: wall
+        shape: rect
+        x: 399
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l3b
+        kind: wall
+        shape: rect
+        x: 361
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
+      - id: tooth-l3c
+        kind: wall
+        shape: rect
+        x: 323
+        'y': 646
+        width: 30
+        height: 28
+        brittle: true
       - id: nook-lip
         kind: wall
         shape: rect
@@ -597,7 +650,7 @@ levels:
     beats:
       - id: deadline
         atSeconds: 55
-        breakId: gate-6
+        breakId: tooth-r2b
         announce: game.beatDeadline
         leadMs: 2000
     balls: []
@@ -815,7 +868,22 @@ levels:
         leadMs: 2000
     balls: []
 
-  # 8 "Refactor" - MEET reveals, BREAK the marked zone.
+  # 8 "Refactor" - MEET reveals, BREAK the marked zone, USE the mover.
+  #
+  # WHO IS IN THE ROOM WITH THE CURTAIN. Only a ball in the right-hand room can
+  # break the curtain, and only a ball behind it can be locked in the box. The
+  # doorway between the rooms is narrow now (110) and a sliding door runs
+  # through it on a four-second rhythm, so balls cross only when it is open,
+  # and a fence that shuts the doorway has to be drawn between its passes. The
+  # play is to get balls onto the curtain's side and close the door on them:
+  # too early and nothing is there to break the curtain, too late and they
+  # have wandered back.
+  #
+  # Reported from play: "good win condition, requires tactic to complete.
+  # Boring map design outside the coloured area with destructible block", and
+  # then "no twists or turns, just grunt fencing off without tactics". The two
+  # rooms used to meet through a 310-unit doorway, which made them one room,
+  # so nothing outside the corner mattered. The win is unchanged.
   #
   # `reveals` is the one mechanic that makes the board BIGGER. The corner behind
   # the curtain is 276x255 of board that does not exist yet: its cells start
@@ -861,7 +929,7 @@ levels:
   # rather than an ambush.
   - id: level-8
     level: 8
-    premise: "The one where the box is behind a curtain you have to pay to open before a ball can be locked in it."
+    premise: "The one where only a ball in the curtain's room can open the box, and a sliding door decides who gets in."
     sizeThreshold: 19
     expectedCuts: 6
     points: 5
@@ -894,14 +962,28 @@ levels:
         x: 437
         'y': 45
         width: 26
-        height: 200
+        height: 300
       - id: jamb-bottom
         kind: wall
         shape: rect
         x: 437
-        'y': 555
+        'y': 455
         width: 26
-        height: 300
+        height: 400
+      # The sliding door: exactly the doorway's height, sliding through it
+      # side to side. Home centre x 450, range 120 (390-510), 60/s, so it
+      # plugs the doorway 43% of the time on a four-second rhythm and stands
+      # on the line a closing fence would take 27% of it.
+      - id: door
+        kind: mover
+        shape: rect
+        x: 437
+        'y': 345
+        width: 26
+        height: 110
+        axis: horizontal
+        range: 120
+        speed: 60
       - id: curtain-jamb
         kind: wall
         shape: rect

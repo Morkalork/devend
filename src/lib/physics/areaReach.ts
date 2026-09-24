@@ -36,8 +36,8 @@
  * was every areaUnreachable loss left once sealing it empty was refused.
  *
  * Every uncertainty resolves toward letting the cut land. A zone still behind
- * an unbroken reveal is not open yet and not lost, so nothing is refused while
- * one is pending; a zone already gone before this cut is not this cut's doing.
+ * an unbroken reveal is judged with its door opened on the prediction. A zone
+ * already gone before this cut is not this cut's doing.
  */
 import type { CanvasGameState } from "@/types/gameState";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
@@ -138,6 +138,24 @@ function zoneStillWinnable(
   return false;
 }
 
+/** Grid cells under a destructible's body: what its breaking hands back. */
+function footprint(grid: SpaceGrid, d: { obstaclePolygon?: { vertices: { x: number; y: number }[] } }): number[] {
+  const vs = d.obstaclePolygon?.vertices ?? [];
+  if (vs.length === 0) return [];
+  const x0 = Math.min(...vs.map(v => v.x)), x1 = Math.max(...vs.map(v => v.x));
+  const y0 = Math.min(...vs.map(v => v.y)), y1 = Math.max(...vs.map(v => v.y));
+  const out: number[] = [];
+  for (let r = 0; r < grid.height; r++) {
+    const cy = grid.originY + (r + 0.5) * grid.cellSize;
+    if (cy < y0 || cy > y1) continue;
+    for (let c = 0; c < grid.width; c++) {
+      const cx = grid.originX + (c + 0.5) * grid.cellSize;
+      if (cx >= x0 && cx <= x1) out.push(r * grid.width + c);
+    }
+  }
+  return out;
+}
+
 /** Smallest radius among the balls still in play; the game's default when none. */
 function ballRadius(game: CanvasGameState): number {
   const live = game.balls.filter(b => b.state !== "won");
@@ -176,17 +194,41 @@ export function cutWouldBuryArea(
   if (evaluateWinCondition(clause, snap).met) return false;
 
   const cells = areaCellIndices(grid, gates);
+  const after = (): SpaceGrid => {
+    const g: SpaceGrid = { ...grid, cells: Uint8Array.from(grid.cells), cellRegionIds: [...grid.cellRegionIds] };
+    for (const seg of segments) rasterizeCutToGrid(g, seg.start, seg.end, thickness);
+    captureUnreachableCells(g, game.balls, [...game.walls, ...segments]);
+    return g;
+  };
+
+  // A ZONE STILL BEHIND ITS DOOR. Its cells are not open yet, so there is no
+  // zone to measure until the door goes - so open it, on the prediction: put
+  // the door's footprint and the ground it seals back, run the capture again,
+  // and ask the ordinary question of what is left. A fence can leave a door a
+  // ball can still STRIKE and still strand the zone behind it: found on level
+  // 8 the day its doorway narrowed, where a ball could chip the curtain's end
+  // from the side while the ground under it was already claimed, so the box
+  // opened onto nothing a ball could enter, twenty seconds after the fence
+  // that decided it.
   const pending = sealedPendingCells(game.destructibles);
-  if (cells.some(i => pending.has(i))) return false;
+  if (cells.some(i => pending.has(i))) {
+    const doors = game.destructibles.filter(d =>
+      !d.destroyed && (d.sealedCells ?? []).some(i => cells.includes(i)));
+    if (doors.length === 0) return false;
+    const opened = (g: SpaceGrid): SpaceGrid => {
+      const o: SpaceGrid = { ...g, cells: Uint8Array.from(g.cells), cellRegionIds: [...g.cellRegionIds] };
+      for (const d of doors) {
+        for (const i of [...(d.sealedCells ?? []), ...footprint(o, d)]) o.cells[i] = CellState.ACTIVE;
+      }
+      const walls = game.walls.filter(w => !doors.some(d => w.id.startsWith(`obstacle-${d.id}-`)));
+      captureUnreachableCells(o, game.balls, [...walls, ...segments]);
+      return o;
+    };
+    if (!zoneStillWinnable(game, opened(grid), gates, cells)) return false;   // already lost
+    return !zoneStillWinnable(game, opened(after()), gates, cells);
+  }
+
   // Already lost: not this cut's doing, and the failure in applyCut says so.
   if (!zoneStillWinnable(game, grid, gates, cells)) return false;
-
-  const after: SpaceGrid = {
-    ...grid,
-    cells: Uint8Array.from(grid.cells),
-    cellRegionIds: [...grid.cellRegionIds],
-  };
-  for (const seg of segments) rasterizeCutToGrid(after, seg.start, seg.end, thickness);
-  captureUnreachableCells(after, game.balls, [...game.walls, ...segments]);
-  return !zoneStillWinnable(game, after, gates, cells);
+  return !zoneStillWinnable(game, after(), gates, cells);
 }
