@@ -45,6 +45,7 @@ levels:
   # and get paid, which teaches pocket size better than any explanation.
   - id: level-1
     level: 1
+    premise: "The one where locking the only ball wins outright, so the corner nook is a button marked finish now."
     sizeThreshold: 40
     expectedCuts: 3
     points: 5
@@ -95,6 +96,7 @@ levels:
   # which one to spend a ball on and not whether a pocket qualifies.
   - id: level-2
     level: 2
+    premise: "The one where the doorway keeps two balls apart, and the win wants one sealed on each side of it."
     sizeThreshold: 37
     expectedCuts: 4
     points: 5
@@ -146,11 +148,16 @@ levels:
 
   # 3 "Standup" - MEET the marked zone.
   #
-  # The game's first Colored Area, in its BONUS form (required: false): seal a
-  # ball inside the pink box and the lock pays 1.5x, ignore it and you lose
-  # nothing at all. The first map that shows the symbol must not be able to
-  # punish a player for misreading it, because by the act I boss the same box is
-  # the only way to ship and the symbol has to be familiar by then.
+  # The game's first Colored Area, and it is the WIN: clear the board and lock
+  # a ball inside the pink box. It used to be the bonus form (required: false),
+  # on the theory that the first map to show a symbol must not punish misreading
+  # it. Played, it read the other way round: a bright box on an otherwise bare
+  # board that the win never mentions is a signal with nothing behind it, and
+  # the map felt like map 2 with a decoration. A thing the map puts in front of
+  # you is a promise, so the box is now the second line of the win. The lock
+  # still pays 1.5x, so getting it right is paid as well as required. It
+  # replaces `locks: 2`: two locks anywhere is the ask map 1 already made, and
+  # one in the box is the thing this map is for.
   #
   # Drawn at 225x225 = 7.7% of the board, well ABOVE the 4% superior bar and on
   # purpose: this map teaches WHERE you locked, not how tightly. A box small
@@ -165,6 +172,7 @@ levels:
   # passage, and adding a ball is the axis of last resort.
   - id: level-3
     level: 3
+    premise: "The one where the pink box is the win: clear the board and lock a ball inside it."
     sizeThreshold: 34
     expectedCuts: 4
     points: 5
@@ -175,8 +183,8 @@ levels:
       require:
         - kind: space
           threshold: 34
-        - kind: locks
-          count: 2
+        - kind: area
+          count: 1
     entities:
       - id: jamb-top
         kind: wall
@@ -205,7 +213,6 @@ levels:
         'y': 45
         width: 225
         height: 225
-        required: false
     beats:
       - id: crunch
         atSpaceRemaining: 50
@@ -213,26 +220,30 @@ levels:
         announce: game.beatCrunchTime
     balls: []
 
-  # 4 "Blocker" - MEET the mover.
+  # 4 "Blocker" - MEET the mover, USE the marked zone.
   #
-  # A patrol sweeps the doorway, so the question stops being "can I draw this
-  # fence" and becomes "can I draw it NOW". The mover is the only new thing, and
-  # it is the only hook: the corner pocket behind it is unmarked, the way maps 1
-  # and 2 left theirs. Map 3's pink box was deliberately NOT carried over here.
-  # Two consecutive maps whose eye goes to the same box is one focal point too
-  # many, and it would have put a colored area on six of act I's ten maps -
-  # which is the exact over-use MAP_DESIGN_GUIDELINES.md section 2 exists to
-  # stop. The box comes back on map 5, priced.
+  # The guard walks across the box's open side, so closing the box is a
+  # question of WHEN: a fence grown into the guard costs a life, and the only
+  # fence that closes the box runs straight down the guard's beat. The lesson is
+  # still "not can I draw this fence, but can I draw it NOW", and it is now
+  # asked about the thing the win needs rather than about a doorway the win
+  # never mentions.
   #
-  # The doorway widens back to 210 because the difficulty has moved into the
-  # timing. A neck that is both narrow and guarded is two problems, and this map
-  # is about one of them.
+  # Reported from play: the first version put the guard on the doorway between
+  # the halves and asked for one ball on each side, and the mover read as
+  # scenery - nothing the map asked for involved it. A mover the win routes
+  # around is an obstacle; a mover standing on the win is a decision.
   #
-  # First map that ROTATES (level >= 4), so nothing here depends on which way is
-  # down: the patrol is horizontal in authored space and becomes vertical in two
-  # of the four deals, which changes how the doorway reads without changing what
-  # it asks. The Turn is a spawn rather than a topple for the same reason -
-  # gravity does not rotate with the board.
+  # The box is map 3's box, in the same corner, on purpose: this is its USE
+  # beat. Map 3 taught what the box wants; this map puts someone in front of it.
+  # The guard is short (60) and slow (70/s) because this is a Meet: it stands
+  # on the door's line under a third of the time, so a player who watches it
+  # pass once can always find the window. An 80-wide guard at 80/s measured
+  # 3 of 8 on the bot sweep; this one 10 of 16.
+  #
+  # First map that ROTATES (level >= 4). The guard, the box and its door turn
+  # together, so every deal asks the same question. The Turn is a spawn rather
+  # than a topple for the same reason - gravity does not rotate with the board.
   #
   # THE TURN, and it is map 3's turned inside out. Map 3's fires on SPACE, so it
   # answers what the player did; this one fires on the CLOCK at 50 seconds and
@@ -242,37 +253,27 @@ levels:
   # - it was in the first draft of this map and mapBeats.test.ts caught it.
   - id: level-4
     level: 4
+    premise: "The one where a guard walks across the box's door, so closing the box is a question of when."
     sizeThreshold: 31
     expectedCuts: 5
     points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 2
-    # USE split locks, and the reason this map is where they come back.
-    #
-    # Map 2 asked the same question against a doorway on YOUR schedule: the
-    # jamb is fixed, the gap is always there, and the only cost of getting a
-    # ball into the far half is deciding to. Here the same 210-unit gap is
-    # swept by a patrol, so the trip across has a window rather than a price,
-    # and the map's own lesson - "not can I draw this fence, but can I draw it
-    # NOW" - is asked of the ball as well as of the fence.
-    #
-    # `locks: 2` is retired rather than kept beside it. On a two-ball map "one
-    # on each side" already means both, so the pair would be the same demand
-    # twice in the goal row, which is the reasoning map 2 wrote down. The
-    # requirement COUNT is unchanged: this is the same ask with a place
-    # attached, not an extra thing to do on a tutorial map.
-    #
-    # The line is left to default to 450, where the jamb column already sits
-    # (x 437-463). First rotating map to carry the clause: see dealtSplit for
-    # why the line turns with the deal, and winSpecProblems for why a rotating
-    # map may not author the horizontal one.
+    # The box, in place of `splitLocks`. One ball in it is the whole ask
+    # beyond the clear, and it is the ask the guard stands on.
     win:
       require:
         - kind: space
           threshold: 31
-        - kind: splitLocks
+        - kind: area
           count: 1
+    coloredAreas:
+      - kind: var
+        x: 630
+        'y': 45
+        width: 225
+        height: 225
     entities:
       - id: jamb-top
         kind: wall
@@ -295,16 +296,18 @@ levels:
         'y': 270
         width: 225
         height: 24
+      # Home centre x 640, sweeping 540-740: across the box's door at x 630
+      # and back out into the right-hand room, never reaching the jamb.
       - id: guard
         kind: mover
         shape: rect
-        x: 300
-        'y': 438
-        width: 300
+        x: 610
+        'y': 144
+        width: 60
         height: 26
         axis: horizontal
-        range: 280
-        speed: 130
+        range: 200
+        speed: 70
     beats:
       - id: crunch
         atSeconds: 50
@@ -342,6 +345,7 @@ levels:
   # variety 0; see the note at the top of act I.
   - id: level-5
     level: 5
+    premise: "The one where a single touch opens a slot in a short column of shards, and nothing else is new."
     sizeThreshold: 28
     expectedCuts: 5
     points: 5
@@ -412,19 +416,11 @@ levels:
         axis: horizontal
         range: 280
         speed: 130
-    coloredAreas:
-      - kind: var
-        x: 630
-        'y': 45
-        width: 225
-        height: 225
-        required: false
-      - kind: var
-        x: 50
-        'y': 600
-        width: 225
-        height: 250
-        required: false
+    # No colored areas. There were two bonus boxes here, one in each far
+    # corner, and neither was in the win: two bright promises on the map that
+    # introduces the shard, with nothing behind them. Reported from play as a
+    # weird signal, and it contradicted this map's own premise - the verb,
+    # with nothing else attached.
     beats:
       - id: deadline
         atSpaceRemaining: 45
@@ -433,6 +429,12 @@ levels:
     balls: []
 
   # 6 "Merge Conflict" - FIGHT the breakable, USE the mover.
+  #
+  # Four of the twelve shards, down from six. The divider used to be a hidden
+  # stack: break its bottom shard and the eleven above it toppled, on two
+  # deals of four. That was a bug (shards never stack now), and it had been
+  # doing most of the smashing: without it six of twelve measured 6 of 16 on
+  # the sweep against 11 before, and four of twelve measures 12.
   #
   # No new mechanic. Map 5 taught that a breakable is a price you pay in tempo;
   # this one charges the opposite way round, because the fourth thing breaking a
@@ -460,6 +462,7 @@ levels:
   # something they caused.
   - id: level-6
     level: 6
+    premise: "The one where the divider is shards the balls chip away, so seal the far room while it is still a room."
     sizeThreshold: 25
     expectedCuts: 5
     points: 5
@@ -471,7 +474,7 @@ levels:
         - kind: space
           threshold: 25
         - kind: smashed
-          count: 6
+          count: 4
           of: shards
     entities:
       - id: anchor-top
@@ -618,10 +621,20 @@ levels:
   # ball in the alcove while you draw the cut across a patrol's line, which is
   # the map's one greedy read.
   #
-  # The partition is the safe skip. Breaking it opens the lower half into one
-  # room, which is map 6's lesson quoted back: easier to reach, harder to seal.
+  # The partition is map 6's lesson quoted back: breaking it opens the lower
+  # half into one room, easier to reach and harder to seal.
+  #
+  # THE WIN NAMES BOTH. It used to ask for six shards and nothing else, so the
+  # map whose whole subject is the chest never asked for one, and a player
+  # reasonably asked why they would ever go for it. Reported from play. Now it
+  # asks for one monolith as well as four shards, with two chests on the board
+  # so no single cut can bury the ask: one in the alcove behind the patrol, and
+  # one out in the open bottom right, easy to reach. Which one you break is the
+  # map's decision. The shard count came down from six to four to pay for the
+  # new line.
   - id: level-7
     level: 7
+    premise: "The one where the chest is worth breaking, and the better of the two sits behind the patrol."
     # Bugs (public/bugs.yml). Act I's first map with a real brick wall AND a
     # slab, so the ball is already a tool here and a buff has something to act
     # on. Half the rolls: a bug is a thing that happens on this map, not a
@@ -638,8 +651,11 @@ levels:
         - kind: space
           threshold: 22
         - kind: smashed
-          count: 6
+          count: 4
           of: shards
+        - kind: smashed
+          count: 1
+          of: monoliths
     entities:
       # The alcove is ONE wall now. It used to be two - a 141-long jamb hanging
       # off the top edge at x 585 and this 270-long lip - which left the only
@@ -669,6 +685,19 @@ levels:
         'y': 90
         width: 110
         height: 90
+        chest: true
+        breakable: true
+        hitsToBreak: 3
+      # The other monolith: a second chest, in the open, bottom right. The easy
+      # one. A chest rather than a plain slab because the plain slab meets on
+      # level 8 (the ledger), and this map's new thing is the chest.
+      - id: chest-7b
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 660
+        width: 110
+        height: 60
         chest: true
         breakable: true
         hitsToBreak: 3
@@ -771,6 +800,14 @@ levels:
         range: 240
         speed: 150
     beats:
+      # The rescue act I gives every required break: at 25% remaining the
+      # open chest goes, announced, so a player who cleared the board without
+      # ever cracking a monolith is not left with a map that cannot finish.
+      # Low enough that anyone playing the map breaks one first.
+      - id: deadline
+        atSpaceRemaining: 25
+        breakId: chest-7b
+        announce: game.beatDeadline
       - id: crunch
         atSeconds: 55
         speedSpike: 0.15
@@ -824,6 +861,7 @@ levels:
   # rather than an ambush.
   - id: level-8
     level: 8
+    premise: "The one where the box is behind a curtain you have to pay to open before a ball can be locked in it."
     sizeThreshold: 19
     expectedCuts: 6
     points: 5
@@ -903,19 +941,32 @@ levels:
   #
   # The one thing it adds is that all five compete for the same attention at
   # once. The chest and the box are on opposite sides of the divider, so the
-  # greedy line is to run a ball at the chest while sealing around the box, and
-  # the patrol crosses the only doorway between them.
+  # line is to run a ball at the chest while sealing around the box, and the
+  # patrol crosses the only doorway between them.
+  #
+  # THE WIN NAMES ALL OF IT. It used to ask for the clear and six shards, and
+  # nothing else: the box was a bonus and the chest was loot, so two of the
+  # five ideas were on the board and out of the win. Reported from play as
+  # "weird win conditions", and that is the right word for a skill check that
+  # does not check the skills. Now it asks for each thing the act taught, one
+  # line apiece, and every count has a spare: the box (one of one, and a cut
+  # that would leave no ball able to reach it is refused), four shards of ten,
+  # and one monolith of two - the chest, or a plain slab added in the open
+  # bottom-right for the player who would rather not fight the patrol for it.
+  # The clear eases from 84% to 81% to pay for the extra lines - level 8's
+  # figure, since the act's difficulty spine may hold but never drop.
   #
   # THE TURN: map 3's speed spike, back at its smallest and latest. The act
   # opened by teaching that the board reacts to progress; it closes by charging
   # for it when there is the least room left to absorb it.
   - id: level-9
     level: 9
+    premise: "The one where everything act I taught is in the win at once: the box, the shards and a monolith."
     # Bugs. The act I map that teaches both claim rules already (chest on the
     # smash, token on the seal), so a third - squash it with a ball - lands
     # where the player is being taught how rewards arrive anyway.
     bugChance: 0.6
-    sizeThreshold: 16
+    sizeThreshold: 19
     expectedCuts: 7
     points: 5
     variety: 0
@@ -924,17 +975,21 @@ levels:
     win:
       require:
         - kind: space
-          threshold: 16
+          threshold: 19
+        - kind: area
+          count: 1
         - kind: smashed
-          count: 6
+          count: 4
           of: shards
+        - kind: smashed
+          count: 1
+          of: monoliths
     coloredAreas:
       - kind: var
         x: 45
         'y': 610
         width: 200
         height: 245
-        required: false
     pickupSpots:
       - x: 620
         'y': 640
@@ -977,6 +1032,17 @@ levels:
         width: 110
         height: 90
         chest: true
+        breakable: true
+        hitsToBreak: 3
+      # The other monolith: plain, in the open, bottom right, away from the
+      # patrol. 75 clear of the right wall and 69 of the floor.
+      - id: ledger
+        kind: wall
+        shape: rect
+        x: 680
+        'y': 760
+        width: 100
+        height: 26
         breakable: true
         hitsToBreak: 3
       - id: seam-1
@@ -1070,6 +1136,12 @@ levels:
         range: 300
         speed: 175
     beats:
+      # The same rescue map 7 gives its monolith line: the plain slab goes at
+      # 25% remaining, announced, so a clear that never cracked one can finish.
+      - id: deadline
+        atSpaceRemaining: 25
+        breakId: ledger
+        announce: game.beatDeadline
       - id: crunch
         atSpaceRemaining: 35
         speedSpike: 0.12
@@ -1079,6 +1151,7 @@ levels:
 
   - id: level-10
     level: 10
+    premise: "The one where the release candidate has to be fenced into the pink box before it ships."
     sizeThreshold: 15
     expectedCuts: 8
     points: 5
@@ -1158,9 +1231,31 @@ levels:
   # the builder splices a level it edits and eats any comment inside its body.
   # ===========================================================================
 
-  # 11 "Sprint Planning" - MEET the launcher, USE reveals.
+  # 11 "Sprint Planning" - MEET the launcher, USE reveals, MEET the bumper as
+  # a brake.
+  #
+  # The barrel sets the speed of the whole map, up to three times, before a
+  # fence exists. Reported from play: at full throttle the balls were
+  # impossible to lock, so the top of the pull was a trap rather than a
+  # wager. Two green bumpers are the answer, and they are placed OFF the
+  # barrel's line so the opening shot still reaches the curtain: each brakes a
+  # ball 5% a bump, ten bumps deep, and once spent only redirects (bounceKick
+  # 1) - never the pop bumper that speeds a ball up. That second half, and the
+  # bank you drain to get there, is level 12's subject.
+  #
+  # The four shards (the square that replaced the old sump) are in the win
+  # now, two of four. They were on the board and out of the win, the same
+  # promise-with-nothing-behind-it the act I review found.
+  #
+  # Measured at full throttle, eight seeds, no cuts: the balls average 2.8x
+  # their base speed at 5 s and stay there without the bumpers; with them it is
+  # 2.5x at 5 s, 2.1x at 15 s and 2.0x at 30 s. A bank of three hours each
+  # (fifteen brakes) only reached 1.9x at 30 s for half as much hazard pay
+  # again, so two it is. If the top of the pull is still unlockable in the
+  # hand, the next lever is the pull's ceiling, not more bumpers.
   - id: level-11
     level: 11
+    premise: "The one where the launch sets the whole map's speed before any fence exists, and two bumpers let you spend it back."
     sizeThreshold: 16
     expectedCuts: 7
     points: 5
@@ -1175,6 +1270,9 @@ levels:
         - kind: smashed
           count: 1
           of: monoliths
+        - kind: smashed
+          count: 2
+          of: shards
     coloredAreas:
       - kind: var
         x: 640
@@ -1192,6 +1290,24 @@ levels:
         height: 110
         facing: right
         angle: -36
+      - id: brake-west
+        kind: wall
+        shape: circle
+        cx: 380
+        cy: 330
+        radius: 46
+        bouncer: true
+        bounceHours: 2
+        bounceKick: 1
+      - id: brake-south
+        kind: wall
+        shape: circle
+        cx: 610
+        cy: 749
+        radius: 46
+        bouncer: true
+        bounceHours: 2
+        bounceKick: 1
       - id: rafter
         kind: wall
         shape: rect
@@ -1273,9 +1389,13 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 12 "Velocity" - MEET the bumper, FIGHT the launcher.
+  # 12 "Velocity" - USE the bumper, FIGHT the launcher.
+  #
+  # The bumper met on 11 as a brake that never accelerates. Here it is the
+  # whole machine: green while its bank lasts, a red pop bumper once spent.
   - id: level-12
     level: 12
+    premise: "The one where bumpers pay to brake your speed until their bank runs dry, then start throwing balls faster."
     sizeThreshold: 15
     expectedCuts: 8
     points: 5
@@ -1381,9 +1501,27 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 13 "Code Review" - MEET the mirror, USE the bumper.
+  # 13 "Code Review" - MEET the mirror.
+  #
+  # Someone else decides where your work goes. A fence that meets the mirror
+  # reflects and keeps going, so one drag becomes a bent line, and the pink
+  # box sits where no straight fence closes it. The box is the win: clear the
+  # board, and lock a ball in the box the mirror is for.
+  #
+  # Reported from play as "too similar to the previous one", and it was: 12
+  # and 13 carried the same bumpers, the same monolith strut and sump, the
+  # same square of shards and the same win (one monolith, two shards), with a
+  # mirror added to 13. All of that came off. It was 12's furniture and 12's
+  # win, the box was a bonus nothing asked for, and the mirror - the thing
+  # this map introduces - was never needed to finish. Now the map is the
+  # mirror and the box, and nothing else competes for the read.
+  #
+  # THE TURN: a small speed spike at 35% remaining, announced. The map runs at
+  # 0.75 speed so a bent cut can be planned; the spike charges for taking too
+  # long to plan it.
   - id: level-13
     level: 13
+    premise: "The one where the box sits where no straight fence can close it, and the mirror bends your cut around it."
     sizeThreshold: 14
     expectedCuts: 8
     points: 5
@@ -1399,19 +1537,14 @@ levels:
       require:
         - kind: space
           threshold: 14
-        - kind: smashed
+        - kind: area
           count: 1
-          of: monoliths
-        - kind: smashed
-          count: 2
-          of: shards
     coloredAreas:
       - kind: var
         x: 660
         'y': 150
         width: 170
         height: 160
-        required: false
     entities:
       - id: mirror-a
         kind: wall
@@ -1421,89 +1554,27 @@ levels:
         width: 20
         height: 300
         mirror: true
-      - id: governor-a
-        kind: wall
-        shape: circle
-        cx: 700
-        cy: 480
-        radius: 46
-        bouncer: true
-      - id: governor-b
-        kind: wall
-        shape: circle
-        cx: 260
-        cy: 300
-        radius: 46
-        bouncer: true
-      - id: strut
-        kind: wall
-        shape: rect
-        x: 250
-        'y': 410
-        width: 26
-        height: 150
-        breakable: true
-        hitsToBreak: 3
-      - id: sump
-        kind: wall
-        shape: rect
-        x: 300
-        'y': 760
-        width: 200
-        height: 26
-        breakable: true
-        hitsToBreak: 3
-      - id: grit-1
-        kind: wall
-        shape: rect
-        x: 629
-        'y': 680
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-2
-        kind: wall
-        shape: rect
-        x: 665
-        'y': 680
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-3
-        kind: wall
-        shape: rect
-        x: 629
-        'y': 718
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-4
-        kind: wall
-        shape: rect
-        x: 665
-        'y': 718
-        width: 26
-        height: 28
-        brittle: true
     beats:
-      - id: deadline
-        atSpaceRemaining: 20
-        breakId: strut
-        announce: game.beatDeadline
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
     balls: []
 
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
   - id: level-14
     level: 14
+    premise: "The one where the room turns a quarter every ten seconds and down goes with it."
     # The board where you MEET real gravity, so the board shows you nothing but
     # gravity. It was a five-obstacle map, and on a board full of shelves a ball
     # never gets a fall long enough to look like one: it clips something within
     # half a second and the arc you were meant to read never finishes. Reported
     # as "still not normal gravity" with the physics already in and working.
     #
-    # Bare, and the same shape as 15 on purpose. 14 is "things fall", 15 is the
-    # same board with the room turning under it, so the second map adds exactly
-    # one idea instead of two.
+    # Bare on purpose, so the only thing to read is the fall and the turn.
+    # (15 used to be this board again with wells on it; it is a well feeding a
+    # cup now, and the bouncy sides stayed here, where a falling board needs
+    # them.)
     sizeThreshold: 14
     # Between 13 (this map with obstacles to hide behind) and 15's bare board.
     # Losing the shelves cuts both ways: nothing blocks a fence, and nothing
@@ -1562,105 +1633,85 @@ levels:
 
   - id: level-15
     level: 15
-    # MEET the gravity well, USE the turning room and the live outer walls.
+    premise: "The one where a gravity well drops balls into the cup the win needs, if you close the lid in time."
+    # MEET the gravity well, and nothing else.
     #
-    # The well is the one unplaced mechanic that talks to what 14 taught rather
-    # than sitting beside it. A well's pull is FIXED and absolute; this map's
-    # global pull turns a quarter every ten seconds. So the same well is a
-    # funnel when the two agree, a brake when they oppose and a sideways current
-    # in between, and which one it is depends on when a ball arrives rather than
-    # on where it is. That is 14's read - fence where the pull is taking them -
-    # asked one level up.
+    # A cup sits on the floor in the middle of the board, open at the top, and
+    # a well hangs over its mouth pulling down into it. The win is a ball
+    # locked in the cup. So the well is not terrain to route around: it is the
+    # thing doing the aiming, and the read is when to trust it - let it drop a
+    # ball in, then close the lid across the cup's mouth before the ball
+    # bounces back out through the well.
     #
-    # It also settles a debt 14 left: a pinned mutator and live outer walls were
-    # each on exactly one map, which the spread rule counts as introduced and
-    # dropped. Using both here is what takes them off that list.
+    # Reported from play as a weird map: "bouncers on all sides, but no general
+    # gravity", and the wells not introduced by the design. It was a bare board
+    # with two wells a player could ignore, four bouncy sides carried over from
+    # 14 (where they exist to keep a falling board alive; with no global pull
+    # here they were only noise), and a win of `locks: 2` that never mentioned
+    # a well. The sides are plain again, and the win is the cup the well feeds.
+    #
+    # Measured, eight seeds, twenty seconds with no cuts: balls spend 13.2% of
+    # their time in the cup with the well and 6.2% without it. On the bot sweep
+    # the win rate is the same either way (15 of 16) and the well saves about a
+    # third of the cuts, median 14 against 20: it is the helper it is meant to
+    # be, not a gate.
+    #
+    # One well rather than two. A second well pulling elsewhere would be a
+    # second relationship on a MEET map; one well over one cup says one thing.
+    # 3.0 turn rate, the value the mechanic was designed around, since nothing
+    # else on the board competes with it.
+    #
+    # No `neverRotates`: with no global pull there is nothing to keep upright,
+    # and rotateGravityWell turns the well's position and bearing together, so
+    # the cup and the well stay a pair on every deal.
     sizeThreshold: 13
-    # 7, not 8. Measured at 19.5 bot cuts against this ladder's 2.8x bot ratio,
-    # down from 22.5 when the map still carried a global pull: a turning room
-    # makes every fence a worse bet, and taking it away gave the cuts back.
-    # Lower than 14's par on a later map, which is correct - par describes the
-    # map, not the rung.
     expectedCuts: 7
     points: 5
     maxBalls: 3
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, red]
-    # NO global pull, and that is the point of the map rather than an omission.
-    # It shipped for a day pinning `tipping` - real gravity plus a turning room
-    # - on the reasoning that the well is best read against a pull that turns.
-    # Played, it reads as two gravities at once: the board is already dragging
-    # everything one way, so a patch that drags things another is a second
-    # helping of the same idea rather than a new one. The well is the ONLY pull
-    # here now, which is what makes it legible and what the mechanic was
-    # designed for (see gravityWells.ts on why local beats global).
-    #
-    # No `neverRotates` either. That flag exists because global gravity is
-    # screen-relative and does not turn with the deal; with no global pull there
-    # is nothing to keep upright, and rotateGravityWell turns a well's position
-    # AND its bearing together, so a rotated deal stays self-consistent.
-    boardEdges:
-      top:
-        kick: 1.05
-      bottom:
-        kick: 1.05
-      left:
-        kick: 1.05
-      right:
-        kick: 1.05
-    # Two, diagonally opposite, and pulling the SAME way on purpose.
-    #
-    # One well is avoidable on a board this open; two placed across the diagonal
-    # are not, whichever corner the balls are being thrown into. Giving them
-    # different bearings was the tempting version and it is one idea too many
-    # for a MEET: the player would be reading two relationships at once and
-    # could not tell which well did what. Same bearing means the whole board
-    # says one thing at a time, and the thing it says changes every ten seconds.
-    #
-    # `pull: down` is the default and is written out anyway, because the point
-    # of this map is that the well's direction does NOT turn with the room, and
-    # a field that is invisible in the YAML is one nobody thinks about.
-    #
-    # 3.0, mid-range of the four wells the retired ladder shipped (2.8 to 3.2)
-    # and a little over the 2.6 engine default, because this is a bare board
-    # where the well is the only thing to read.
-    #
-    # It was 3.8 for a day, and the reason it came back down is the same rule
-    # that put it up: a mechanic's strength is relative to the board under it.
-    # While this map carried a global pull, the well had to out-turn that pull
-    # to be seen at all, and 2.6 measured 0.98x the ambient bend - literally
-    # indistinguishable. With the global pull gone there is nothing to compete
-    # with, so the number the mechanic was designed for is the right one again.
     gravityWells:
-      - x: 150
-        y: 200
-        width: 200
-        height: 180
+      - x: 355
+        y: 400
+        width: 190
+        height: 230
         turnRate: 3.0
         pull: down
-      - x: 550
-        y: 520
-        width: 200
-        height: 180
-        turnRate: 3.0
-        pull: down
-    # Terrain-only board, so `space + locks` is what it may honestly ask (a well
-    # is terrain: there is no state saying whether you engaged with one). Two
-    # locks rather than 14's one, which is the ramp: the wells make a ball's
-    # exit vector a thing you have to plan for twice.
     win:
       require:
         - kind: space
           threshold: 13
-        - kind: locks
-          count: 2
-    entities: []
+        - kind: area
+          count: 1
+    coloredAreas:
+      - kind: var
+        x: 355
+        'y': 650
+        width: 190
+        height: 205
+    # The cup: two walls standing on the floor, 190 apart inside, 205 tall.
+    # Its mouth is the line y 650 between their tops, one fence wide.
+    entities:
+      - id: cup-west
+        kind: wall
+        shape: rect
+        x: 329
+        'y': 650
+        width: 26
+        height: 205
+      - id: cup-east
+        kind: wall
+        shape: rect
+        x: 545
+        'y': 650
+        width: 26
+        height: 205
     balls: []
 
-  # 16 "Tech Debt" - MEET phasing, COMPRESSED deformable, USE the bumper.
   - id: level-16
     level: 16
+    premise: "The one where the pillars in the divider vanish on a cycle, and the win wants a ball sealed on each side."
     # THREE OBJECTS THAT DISAGREE ABOUT HOW FAST THE BALLS ARE.
     #
     # 14 and 15 were terrain maps: bare boards where the whole read was a pull.
@@ -1737,13 +1788,9 @@ levels:
     # purpose: the pocket that pays is the one with a machine in it whose whole
     # job is throwing balls back out. Cheap to seal, hard to seal with a ball
     # still inside.
-    coloredAreas:
-      - kind: var
-        x: 100
-        'y': 80
-        width: 180
-        height: 150
-        required: false
+    # No colored area. A bonus var box sat in the top-left room, and the win
+    # never mentioned it: the same promise-with-nothing-behind-it the act I
+    # review found on levels 3 and 5. This map's subject is the divider.
     entities:
       # ── The divider: one wall you can rely on, two you cannot ─────────────
       #
@@ -1857,11 +1904,18 @@ levels:
   # bottom. Every strip you seal from the bottom shortens the bounce.
   - id: level-17
     level: 17
+    premise: "The one where the balls are your hammer, and the wall of shards opens wherever they hit it."
     # Bugs, at the archetype's set piece. The highest chance on the ladder:
     # "Deprecation" is the map Demolition exists for, its wall is sixteen
     # smashes deep, and Force Push is the answer it is built to want.
     bugChance: 0.8
     sizeThreshold: 12
+    # Authored, not the rung's default 50 s. The wall used to come down faster
+    # than it should: the stack graph read the brick rows as stacked, so a ball
+    # clipping a bottom brick toppled the ones above it on two deals of four.
+    # That was a bug and is gone, and without it the same map measured 8 of 16
+    # against 11 before; ten more seconds is what the free cascade was worth.
+    timeLimit: 60
     expectedCuts: 9
     points: 5
     maxBalls: 3
@@ -2219,6 +2273,7 @@ levels:
   # Freak is aimed at: braking the arm turns the bet into a decision.
   - id: level-18
     level: 18
+    premise: "The one where a windmill turns inside the room that pays triple, and every cut across it is a bet on the arm."
     # Bugs. Slabs rather than bricks, so Force Push is worth more here and
     # Bit Rot hurts more - the same pool reads differently against
     # material that needs force.
@@ -2348,6 +2403,7 @@ levels:
   # bar. Four bouncy sides at 1.05, like 14, so nothing pools dead on a floor.
   - id: level-19
     level: 19
+    premise: "The one where four patrol bars sweep a board whose floor turns every ten seconds, and two of four chests are the win."
     sizeThreshold: 10
     expectedCuts: 8
     points: 5

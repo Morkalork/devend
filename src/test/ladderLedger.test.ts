@@ -72,7 +72,7 @@ const ROWS: Row[] = DOC
 
 /** The ledger's own name for a mechanic, mapped to mechanicSpread's label. */
 const LABEL: Record<string, string> = {
-  "colored area (bonus)": "Colored area", mover: "Mover", breakable: "Breakable",
+  "colored area": "Colored area", mover: "Mover", breakable: "Breakable",
   chest: "Chest", brittle: "Brittle", reveals: "Reveals", "pickup spots": "Pickup spots",
   launcher: "Launcher", bumper: "Bumper", deformable: "Deformable",
   phasing: "Phasing", rotor: "Rotor", mirror: "Mirror", terminals: "Terminals",

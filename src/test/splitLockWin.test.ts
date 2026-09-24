@@ -342,15 +342,21 @@ describe("the line turns with the board", () => {
   });
 });
 
-describe("the three maps that ask it", () => {
+describe("the maps that ask it", () => {
   /**
-   * One per act-and-a-bit, and each asks the question against a different kind
-   * of divider: masonry you can plan around, a doorway somebody else is
-   * standing in, and a column that is only there some of the time.
+   * Each asks the question against a different kind of divider: masonry you
+   * can plan around, and a column that is only there some of the time.
+   *
+   * Level 4 used to be the middle one, "a doorway somebody else is standing
+   * in". A play review found the mover read as scenery there - the win was
+   * about sides and nothing it asked involved the patrol - so 4 now asks for a
+   * ball in the box the patrol walks across, and the clause is met on 2 and
+   * fought on 16. Level 16's pillars only became a real door with the fix
+   * that lets a ball through a phased-out wall, which is what makes it the
+   * clause's development rather than a repeat.
    */
   const MAPS = [
     { id: "level-2", divider: "jamb-top" },
-    { id: "level-4", divider: "jamb-top" },
     { id: "level-16", divider: "the-slab" },
   ];
 
@@ -382,13 +388,13 @@ describe("the three maps that ask it", () => {
   }
 
   it("spends the clause across the ladder rather than on one map", () => {
-    // The reason this went from one map to three: a mechanic that appears once
-    // is a mechanic nobody learns. One in the tutorial band, one later in it,
-    // one in act II.
+    // The reason this went from one map to several: a mechanic that appears
+    // once is a mechanic nobody learns. One in the tutorial band, one in act
+    // II (level 4 left in the act I review; see the note on MAPS above).
     const carriers = LADDER
       .filter(l => resolveWinSpec(l, NO_RUN_RULES).require.some(c => c.kind === "splitLocks"))
       .map(l => l.level)
       .sort((a, b) => a - b);
-    expect(carriers).toEqual([2, 4, 16]);
+    expect(carriers).toEqual([2, 16]);
   });
 });

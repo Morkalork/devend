@@ -12,29 +12,9 @@
  * map wants eight cuts, which no map does.
  */
 import { useTranslation } from 'react-i18next';
-import {
-  Diamond, Crosshair, Palette, Skull, Lock, Scissors, Timer, Hammer,
-  PackageCheck, Zap, Waves, Target, Info,
-} from 'lucide-react';
+import { Info } from 'lucide-react';
 import type { Goal } from '@/lib/goalTracker';
-
-/** One glyph per kind, so two goals on a map never look alike. */
-const ICONS = {
-  space: Target,
-  locks: Lock,
-  superiorLocks: Diamond,
-  area: Palette,
-  lockType: Crosshair,
-  boss: Skull,
-  allLocked: Lock,
-  smashed: Hammer,
-  delivered: PackageCheck,
-  terminals: Zap,
-  harvested: Waves,
-  underPar: Scissors,
-  speedClear: Timer,
-  par: Scissors,
-} as const;
+import { goalIcon } from '@/components/game/goalIcons';
 
 interface Props {
   goal: Goal;
@@ -70,7 +50,7 @@ export function GoalChip({
   winMet = false,
 }: Props) {
   const { t } = useTranslation();
-  const Icon = ICONS[goal.kind as keyof typeof ICONS] ?? Diamond;
+  const Icon = goalIcon(goal);
 
   const label = goal.ballType
     ? t(goal.labelKey, { type: goal.ballType })

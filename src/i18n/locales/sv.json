@@ -756,9 +756,9 @@
     },
     "bugs": {
       "title": "Buggar",
-      "intro": "Sma saker som flyger omkring pa vissa banor. Kor over en med en boll for att klama den, sa hamnar det den bar pa hos just den bollen. Alla kostar dig nagot, sa las den innan du styr en boll mot den.",
+      "intro": "Sma saker som flyger omkring pa vissa banor. Kor over en med en boll for att klama den, sa hamnar det den bar pa hos just den bollen. Alla kostar dig nagot, sa las den innan du styr en boll mot den. Du kan ocksa trycka pa en bugg sjalv for att doda den: det ger ingenting, och sa tackar du nej till en du inte vill ha.",
       "cost": "Kostar:",
-      "danger": "Farlig. Den har kan kosta dig kartan."
+      "danger": "Farlig. Den har kan kosta dig kartan, sa tryck pa den for att doda den i stallet for att lata en boll na fram."
     },
     "steps": {
       "swipeToCut": {
@@ -1717,13 +1717,6 @@
   },
   "boardInfo": {
     "hint": "Håll in vad som helst på brädet för att se vad det är.",
-    "bug": {
-      "title": "Bugg",
-      "body": "Kor over den med en boll for att klama den. Det den bar pa hamnar hos just den bollen, sa hela beslutet ar vilken boll du later na fram.",
-      "gives": "Vad du far",
-      "costs": "Vad det kostar",
-      "danger": "Farlig. Den har kan kosta dig kartan."
-    },
     "pickup": {
       "title": "Uppgraderingsmarker",
       "body": "Lås in en boll i en ficka som rymmer denna för att ta den. Erövrad utan lås går den förlorad."
@@ -1790,7 +1783,8 @@
     "lifeLostBall": "En boll gick genom ditt staket. Ett liv forlorat.",
     "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat.",
     "cutWouldTrapBall": "Det snittet hade stangt in en boll utan vag ut, sa det lades inte. Lamna en vag.",
-    "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom."
+    "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom.",
+    "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",

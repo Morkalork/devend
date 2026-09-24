@@ -56,14 +56,19 @@ describe("the orientations strip", () => {
 
 describe("the mechanics panel", () => {
   it("names the mechanics the current map actually uses", () => {
-    // Level 6 is "Merge Conflict": one breakable divider and nothing else
+    // Level 6 is "Merge Conflict": one divider of shards and nothing else
     // headline, which is the map working as designed rather than a thin one.
     // It used to be asserted on "Bent shape" too; that is seasoning now (a
     // shape modifier, never a map's subject) and no longer chips at all.
+    //
+    // It also used to be asserted on "Breakable", and passed on a warning line
+    // further down that happened to name breakables on other maps: level 6 has
+    // been shards since act I was rebuilt, and shards chip as "Brittle". The
+    // warning went when level 13 dropped its slabs, and the assertion with it.
     render(<MechanicSpreadPanel levels={LEVELS} current={lvl(6)} />);
     // getAllByText rather than getByText: a name can appear twice, once as a
     // chip for this map and once in the warnings below it.
-    expect(screen.getAllByText(/Breakable/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Brittle/).length).toBeGreaterThan(0);
     // ...and the panel must not claim a mechanic the map does not have. Level 7
     // has the chest; level 6 does not, and a panel that listed it would be
     // describing the ladder rather than the map in front of the designer.

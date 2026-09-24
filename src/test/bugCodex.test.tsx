@@ -7,20 +7,27 @@
  * of. Agreed as a gap and closed three ways, each answering a different
  * question, because no single one of them answers all three:
  *
- *   WHAT IS THAT THING?      press-and-hold on the bug, the project's standard
- *                            explain-this gesture (boardEntityInfo.ts). Asked
- *                            while it is still flying, which is when the
- *                            decision is actually made.
- *   WHAT DID I JUST GET?     the splat says the name. You did the thing, then
- *                            you find out what it was called, which is the
- *                            order that sticks.
+ *   WHAT DID I JUST GET?     the splat says the name, whether a ball squashed
+ *                            it or the player did. You did the thing, then you
+ *                            find out what it was called, which is the order
+ *                            that sticks.
  *   WHAT IS OUT THERE?       the tutorial roster, every entry, always, no
  *                            discovery gating. See the note in TutorialScreen
  *                            for why that differs from the ball roster.
  *
- * All three read the SAME strings out of public/bugs.yml, which is the property
- * worth a test file: three explanations of one mechanic, maintained separately,
- * is three chances to describe a bug the game no longer has.
+ * Both read the SAME strings out of public/bugs.yml, which is the property
+ * worth a test file: two explanations of one mechanic, maintained separately,
+ * is two chances to describe a bug the game no longer has.
+ *
+ * ── The gesture that is not here ────────────────────────────────────────────
+ *
+ * Press-and-hold was the first answer to "what is that thing?" and shipped
+ * unusable. Reported as "Press and hold doesn't work", and it did not: a bug is
+ * nine world units across and covers 10-17 of them in the time a touch takes to
+ * register, against 22 of slop, and the 450ms hold then had to survive a
+ * 12-unit move slop that a resting thumb drifts past. A tap KILLS a bug now
+ * (bugs.test.ts covers it), so the two gestures could not coexist anyway: a
+ * hold that fell short of 450ms would destroy the thing it was asking about.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -79,103 +86,33 @@ describe("every bug says what it gives and what it costs", () => {
   });
 });
 
-// ── Hold it to ask ──────────────────────────────────────────────────────────
-
-/** A board with one bug and one token sitting at known spots. */
-function boardWith(bugEffect: string, at = { x: 300, y: 300 }): CanvasGameState {
-  return {
-    bugs: [{ id: "b", effect: bugEffect, position: at, velocity: { x: 0, y: 0 } }],
-    pickups: [{ id: "p", effect: "overtime", position: at }],
-    chestLoot: [],
-    balls: [],
-    walls: [],
-    destructibles: [],
-    coloredAreas: [],
-    // The rest of what boardEntityAt walks on its way down to "nothing here".
-    // Empty rather than absent: the hit test reads the required collections
-    // without a guard, which is correct on a real board and means a fixture
-    // has to be a whole one to ask the miss case at all.
-    phasingObjects: [],
-    movers: [],
-    mirrorPolygons: [],
-    obstaclePolygons: [],
-  } as unknown as CanvasGameState;
-}
+// ── What is not reachable any more ─────────────────────────────────────────
 
 describe("press-and-hold on a bug", () => {
-  it("resolves to the bug that is under the finger", () => {
-    const game = boardWith("forcePush");
-    const hit = boardEntityAt(game, 300, 300);
-    expect(hit?.kind).toBe("bug");
-    expect(hit?.detail, "the card would not know WHICH bug").toBe("forcePush");
+  it("is gone, rather than present and unusable", () => {
+    // The gesture was the reported defect. Leaving it wired while adding the
+    // tap would have been the worse outcome of the two: a hold released a
+    // moment early is a tap, so a player trying to ask what a bug was would
+    // have killed it instead, and the explanation they wanted would have been
+    // the last thing they saw of it.
+    const source = read("src/lib/boardEntityInfo.ts");
+    expect(source, "boardEntityAt still hit-tests bugs").not.toMatch(/kind:\s*"bug"/);
+    const kinds = read("src/lib/boardEntityInfo.ts")
+      .slice(source.indexOf("export type BoardEntityKind"), source.indexOf("export interface BoardEntityHit"));
+    expect(kinds).not.toContain('"bug"');
   });
 
-  it("wins over a token it is flying across", () => {
-    // Both are at the same point. A bug moves and a token does not, so the
-    // thing the finger is on is the bug; resolving to the token would explain
-    // the object the player was not pointing at.
-    const game = boardWith("bigBang");
-    expect(boardEntityAt(game, 300, 300)?.kind).toBe("bug");
-  });
-
-  it("is a generous enough target to hit on a phone", () => {
-    const game = boardWith("deadlock");
-    expect(boardEntityAt(game, 300 + BUG_RADIUS + 6, 300)?.kind).toBe("bug");
-  });
-
-  it("does not claim a bug that is nowhere near", () => {
-    const game = boardWith("deadlock");
-    const hit = boardEntityAt(game, 800, 800);
-    expect(hit?.kind).not.toBe("bug");
-  });
-});
-
-describe("the explainer card", () => {
-  it("names the bug and prints its own description and cost", () => {
-    const bug = getBug("forcePush")!;
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "forcePush" }} onClose={() => { /* closed elsewhere */ }} />);
-    expect(screen.getByText(bug.name)).toBeTruthy();
-    expect(screen.getByText(bug.description)).toBeTruthy();
-    expect(screen.getByText(bug.cost), "the card shows the upside and hides the cost").toBeTruthy();
-  });
-
-  it("shows the two halves under their own labels, not run together", () => {
-    const strings = locale("en").boardInfo.bug;
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "bitRot" }} onClose={() => { /* ditto */ }} />);
-    expect(screen.getByText(strings.gives)).toBeTruthy();
-    expect(screen.getByText(strings.costs)).toBeTruthy();
-  });
-
-  it("says what a bug IS, for the player meeting their first one", () => {
-    const strings = locale("en").boardInfo.bug;
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "branch" }} onClose={() => { /* ditto */ }} />);
-    expect(screen.getByText(strings.body)).toBeTruthy();
-  });
-
-  it("carries the danger warning on the dangerous one, and only there", () => {
-    const strings = locale("en").boardInfo.bug;
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "bigBang" }} onClose={() => { /* ditto */ }} />);
-    expect(screen.getByText(strings.danger)).toBeTruthy();
-    cleanup();
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "bitRot" }} onClose={() => { /* ditto */ }} />);
-    expect(screen.queryByText(strings.danger), "every bug looks dangerous").toBeNull();
-  });
-
-  it("still explains SOMETHING when the catalogue could not be fetched", () => {
-    // An unknown id is what a deployed build sees if bugs.yml 404s and the
-    // baked-in catalogue has since been edited. A blank card would be the worst
-    // possible answer to "what is that thing".
-    const strings = locale("en").boardInfo.bug;
-    render(<BoardEntityInfoModal hit={{ kind: "bug", detail: "notARealBug" }} onClose={() => { /* ditto */ }} />);
-    expect(screen.getByText(strings.title)).toBeTruthy();
-    expect(screen.getByText(strings.body)).toBeTruthy();
-  });
-
-  it("leaves every other board object's card exactly as it was", () => {
+  it("left every other board object's explainer exactly as it was", () => {
     const strings = locale("en").boardInfo;
-    render(<BoardEntityInfoModal hit={{ kind: "pickup", detail: "overtime" }} onClose={() => { /* ditto */ }} />);
+    render(<BoardEntityInfoModal hit={{ kind: "pickup", detail: "overtime" }} onClose={() => { /* closed elsewhere */ }} />);
     expect(screen.getByText(strings.pickup.title)).toBeTruthy();
     expect(screen.getByText(strings.pickup.body)).toBeTruthy();
+  });
+
+  it("leaves no dead strings behind in any locale", () => {
+    for (const loc of LOCALES) {
+      expect(locale(loc).boardInfo.bug, `${loc} still carries boardInfo.bug`).toBeUndefined();
+    }
   });
 });
 
@@ -207,6 +144,13 @@ describe("the tutorial's bug roster", () => {
     expect(screen.getAllByText(notEncountered).length).toBeGreaterThan(0);
   });
 
+  it("teaches the tap, which is the only thing a player can DO to a bug", () => {
+    const intro = locale("en").tutorial.bugs.intro;
+    expect(intro.toLowerCase(), "the roster never mentions tapping one").toMatch(/tap/);
+    render(<TutorialScreen onBack={() => { /* ditto */ }} />);
+    expect(screen.getByText(intro)).toBeTruthy();
+  });
+
   it("prints the cost of every one of them", () => {
     render(<TutorialScreen onBack={() => { /* ditto */ }} />);
     for (const bug of getAllBugs()) {
@@ -222,12 +166,8 @@ describe("the three explanations cannot drift", () => {
     // The failure this guards is a rebalanced bug whose card still describes
     // the old one. Source checks, because "did this component hardcode a
     // sentence" is not something a render can show.
-    const modal = read("src/components/game/BoardEntityInfoModal.tsx");
     const tutorial = read("src/components/game/TutorialScreen.tsx");
     const fx = read("src/lib/rendering/sleek/fxLayer.ts");
-    expect(modal).toContain("getBug(");
-    expect(modal).toMatch(/bug\.description/);
-    expect(modal).toMatch(/bug\.cost/);
     expect(tutorial).toContain("getAllBugs()");
     expect(tutorial).toMatch(/bug\.description/);
     expect(tutorial).toMatch(/bug\.cost/);
@@ -238,9 +178,6 @@ describe("the three explanations cannot drift", () => {
   it("has its framing strings in every locale", () => {
     for (const loc of LOCALES) {
       const data = locale(loc);
-      for (const key of ["title", "body", "gives", "costs", "danger"]) {
-        expect(data.boardInfo?.bug?.[key], `${loc}: boardInfo.bug.${key} is missing`).toBeTruthy();
-      }
       for (const key of ["title", "intro", "cost", "danger"]) {
         expect(data.tutorial?.bugs?.[key], `${loc}: tutorial.bugs.${key} is missing`).toBeTruthy();
       }
@@ -250,10 +187,7 @@ describe("the three explanations cannot drift", () => {
   it("keeps the em-dash out of all of it (CLAUDE.md)", () => {
     for (const loc of LOCALES) {
       const data = locale(loc);
-      const strings = [
-        ...Object.values(data.boardInfo.bug as Record<string, string>),
-        ...Object.values(data.tutorial.bugs as Record<string, string>),
-      ];
+      const strings = Object.values(data.tutorial.bugs as Record<string, string>);
       for (const line of strings) {
         expect(line, `${loc}: "${line}"`).not.toContain("—");
       }

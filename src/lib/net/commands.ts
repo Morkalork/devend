@@ -44,6 +44,7 @@ import { isTappableBall } from "@/lib/ballTypes";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { simNow } from "@/lib/simClock";
+import { tapSquashBug } from "@/lib/physics/bugs";
 
 /** Player 0 is whoever started the run; player 1 is the partner. Solo play is
  *  all player 0, which is why nothing below special-cases it. */
@@ -96,6 +97,15 @@ export type GameCommand =
   | { kind: "freezeTap"; player: PlayerId; at: Vector2; regionId: string; useCharge: boolean }
   /** A tap that pops a white ball (#57). */
   | { kind: "tapRemove"; player: PlayerId; ballId: string }
+  /**
+   * A tap that squashes a bug, killing it for no reward (physics/bugs.ts).
+   *
+   * Carries the bug's ID rather than the point, for the reason tapRemove does:
+   * by the time this is applied the board has moved on a frame, and a bug moves
+   * every one of them, so "the bug nearest this point" would no longer be the
+   * bug the player put their finger on.
+   */
+  | { kind: "tapBug"; player: PlayerId; bugId: string }
   /** Letting go of a pulled-back Redeploy fence. */
   | { kind: "slingRelease"; player: PlayerId; wallId: string; pull: Vector2 }
   /** Taking hold of a mover (Control Freak). */
@@ -219,6 +229,7 @@ export function applyCommand(game: CanvasGameState, cmd: GameCommand, rawDeps: C
     case "cut":          applyCut(game, cmd, deps); break;
     case "freezeTap":    applyFreezeTap(game, cmd, deps); break;
     case "tapRemove":    applyTapRemove(game, cmd, deps); break;
+    case "tapBug":       applyTapBug(game, cmd, deps); break;
     case "slingRelease": applySlingRelease(game, cmd, deps); break;
     case "moverGrab":    applyMoverGrab(game, cmd, deps); break;
     case "moverMove":    applyMoverMove(game, cmd); break;
@@ -412,6 +423,17 @@ function applyTapRemove(
   const removed = { x: target.position.x, y: target.position.y, color: target.color };
   game.balls = game.balls.filter(b => b !== target);
   deps.onTapRemove?.(removed);
+}
+
+function applyTapBug(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "tapBug" }>,
+  deps: CommandDeps,
+): void {
+  // Only buzz when something was actually squashed. A tap on a bug that a ball
+  // reached first, or that expired in the meantime, is a miss, and a phone that
+  // buzzed for it would be reporting a kill the player did not get.
+  if (tapSquashBug(game, cmd.bugId)) deps.vibrate?.(20);
 }
 
 // ── the slingshot fence ─────────────────────────────────────────────────────

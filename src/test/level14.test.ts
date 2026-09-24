@@ -118,7 +118,10 @@ describe("level 14 holds together", () => {
     // terrain, so there is nothing on it to smash and nothing to gate. The
     // band's `smashed` habit is being broken by maps that do not need the
     // clause, which is the only honest way to break it.
-    expect(noSmash.map(l => l.level)).toEqual([14, 15, 16]);
+    //
+    // 13 joined after a play review found it too like 12: it was stripped back
+    // to its mirror, and its win is the box the mirror is for, not a smash.
+    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,

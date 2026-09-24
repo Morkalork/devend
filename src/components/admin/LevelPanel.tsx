@@ -6,6 +6,7 @@ import { areaShareOf, clampAreaShare, DEFAULT_COLORED_AREA_SHARE, MAX_COLORED_AR
 import { getMapMutators } from '@/lib/mapMutators';
 import { BOARD_SIDES, type BoardEdgeSpecs, type BoardSide } from '@/lib/physics/boardEdges';
 import { clampWeather, WEATHER_MAX } from '@/lib/rendering/motes';
+import { PREMISE_MAX_CHARS } from '@/lib/mapPremise';
 
 /**
  * Optional numeric field: blank deletes it, so "this map does not say" and
@@ -72,6 +73,28 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               value={level.id}
               onChange={(e) => onUpdateLevel({ ...level, id: e.target.value })}
               className="w-full px-2 py-1 rounded bg-background border border-border"
+            />
+          </label>
+
+          {/* The map's idea in one sentence, for the designer only. Blank is
+              allowed while a map is being drafted; the ladder lint refuses a
+              shipped map without one (mapPremise.test.ts). */}
+          <label className="space-y-1 col-span-2">
+            <span className="text-muted-foreground">
+              Premise ({(level.premise ?? '').length}/{PREMISE_MAX_CHARS}, "the one where...")
+            </span>
+            <textarea
+              value={level.premise ?? ''}
+              rows={2}
+              maxLength={PREMISE_MAX_CHARS}
+              onChange={(e) => {
+                const next = { ...level };
+                const v = e.target.value.replace(/\s*\n\s*/g, ' ');
+                if (v.trim() === '') delete next.premise;
+                else next.premise = v;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border resize-none"
             />
           </label>
           

@@ -635,7 +635,10 @@ export class FxLayer {
       const t = elapsed / BUG_SPLAT_MS;
       const p = w2s(splat.position.x, splat.position.y);
       const def = getBug(splat.effect);
-      const color = splat.applied && def
+      // Grey ONLY for a misfire. A denied bug keeps its own colour, because the
+      // player refused it on purpose and greying it out would read as the tap
+      // having failed.
+      const color = splat.outcome !== "declined" && def
         ? Number.parseInt(def.color.replace("#", ""), 16)
         : 0x9aa3ad;
       const r = BUG_RADIUS * scale;
@@ -647,16 +650,30 @@ export class FxLayer {
       // The stain, thrown forward along the heading.
       const dx = splat.direction.x;
       const dy = splat.direction.y;
+      // Thrown forward along the heading and stretched along it. A tapped bug
+      // has no heading, so the same expression leaves it centred and round.
       this.over
-        .ellipse(p.x + dx * r * burst * 1.2, p.y + dy * r * burst * 1.2, r * (1 + burst * 0.9), r * (1 + burst * 0.45))
+        .ellipse(
+          p.x + dx * r * burst * 1.2,
+          p.y + dy * r * burst * 1.2,
+          r * (1 + burst * 0.9),
+          r * (1 + burst * (dx === 0 && dy === 0 ? 0.9 : 0.45)),
+        )
         .fill({ color, alpha: alpha * 0.55 });
 
-      // Five specks, fanned into the half-plane the ball was heading into.
+      // Specks. Fanned into the half-plane the ball was heading into, or thrown
+      // all the way round when nothing hit it - which is the tapped case, and
+      // is how "a ball did this" and "I did this" tell themselves apart before
+      // the name has even been read.
       if (burst < 1) {
-        const spread = Math.PI * 0.55;
-        const heading = Math.atan2(dy, dx);
-        for (let i = 0; i < 5; i++) {
-          const a = heading + (i / 4 - 0.5) * spread;
+        const tapped = dx === 0 && dy === 0;
+        const count = tapped ? 8 : 5;
+        const spread = tapped ? Math.PI * 2 : Math.PI * 0.55;
+        const heading = tapped ? 0 : Math.atan2(dy, dx);
+        for (let i = 0; i < count; i++) {
+          const a = tapped
+            ? (i / count) * spread
+            : heading + (i / (count - 1) - 0.5) * spread;
           const d = r * (1.4 + burst * 3.4) * (0.7 + (i % 2) * 0.4);
           this.over
             .circle(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.max(0.6, r * 0.22 * (1 - burst)))
@@ -664,7 +681,7 @@ export class FxLayer {
         }
       }
 
-      if (!splat.applied) {
+      if (splat.outcome === "declined") {
         // Struck through: the bug was squashed and gave nothing.
         const rr = r * 1.8;
         this.over

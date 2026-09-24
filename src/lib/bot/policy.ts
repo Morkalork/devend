@@ -16,6 +16,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Vector2 } from "@/types/game";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
+import { gateAreas } from "@/lib/coloredAreas";
 
 /** Small deterministic PRNG (mulberry32), so a seed replays a whole run. */
 export function seededRandom(seed: number): () => number {
@@ -57,10 +58,25 @@ const MIN_CLEARANCE = 12;
  */
 export function planCut(
   game: CanvasGameState, rng: () => number, desperation = 0,
+  /** The win still needs a ball locked in a gate zone (an unmet `area` clause). */
+  wantZone = false,
 ): CutPlan | null {
   // 0 = pick freely, 1 = take almost anything.
   const required = Math.max(MIN_CLEARANCE, BALL_CLEARANCE * (1 - Math.min(1, desperation)));
   const live = (game.balls ?? []).filter(b => b.state === "active");
+
+  // A ZONE THE WIN NEEDS comes first. Without this the bot was blind to the
+  // one objective that says WHERE: it locked balls wherever its random lines
+  // happened to close, so every gate map lost to areaUnreachable on most seeds
+  // - level 8, which plays well by hand, swept 1 of 8 - and a sweep of a zone
+  // map measured the bot rather than the map. So: close the zone when a ball is
+  // in it. The other half - not locking the last ball outside it - is the
+  // game's own rule now (areaReach refuses that fence), so the bot keeps
+  // cutting as a player would and the refusal is exercised, not routed around.
+  if (wantZone) {
+    const seal = planZoneSeal(game, live);
+    if (seal) return seal;
+  }
 
   let best: CutPlan | null = null;
   let bestClearance = -Infinity;
@@ -100,4 +116,55 @@ export function planCut(
   // rather than cutting into one. Returning null is a real move.
   if (bestClearance < required) return null;
   return best;
+}
+
+/** Keep this far from a line the bot is about to draw across a zone's door. */
+const ZONE_SEAL_CLEARANCE = 30;
+
+/**
+ * A cut along one side of a gate zone that holds a live ball, if one is safe
+ * right now: every other ball clear of the line, and no mover on it. The cut
+ * grows until it meets a wall, so along a side the map has left open it closes
+ * the zone's door, and along a side that is already wall or board edge the
+ * origin is not open ground and the side is skipped.
+ */
+function planZoneSeal(
+  game: CanvasGameState, live: CanvasGameState["balls"],
+): CutPlan | null {
+  const zones = gateAreas(game.coloredAreas ?? []);
+  for (const z of zones) {
+    const inside = live.find(b => b.position.x > z.x && b.position.x < z.x + z.width
+      && b.position.y > z.y && b.position.y < z.y + z.height);
+    if (!inside) continue;
+    const sides: CutPlan[] = [
+      { origin: { x: z.x, y: inside.position.y }, direction: { x: 0, y: 1 } },
+      { origin: { x: z.x + z.width, y: inside.position.y }, direction: { x: 0, y: 1 } },
+      { origin: { x: inside.position.x, y: z.y }, direction: { x: 1, y: 0 } },
+      { origin: { x: inside.position.x, y: z.y + z.height }, direction: { x: 1, y: 0 } },
+    ];
+    for (const side of sides) {
+      if (!game.spaceGrid || !isPositionActive(game.spaceGrid, side.origin)) continue;
+      if (!findRegionContainingPoint(game.regions, side.origin.x, side.origin.y)) continue;
+      const vertical = side.direction.y !== 0;
+      const at = vertical ? side.origin.x : side.origin.y;
+      const clear = live.every(b =>
+        Math.abs((vertical ? b.position.x : b.position.y) - at) >= ZONE_SEAL_CLEARANCE);
+      if (!clear) continue;
+      // Wait for a mover to leave the line: a fence grown into one costs a life.
+      const lo = vertical ? z.y : z.x;
+      const hi = vertical ? z.y + z.height : z.x + z.width;
+      const blocked = (game.movers ?? []).some(m => {
+        const vs = m.polygon?.vertices ?? [];
+        if (vs.length === 0) return false;
+        const across = vs.map(v => (vertical ? v.x : v.y));
+        const along = vs.map(v => (vertical ? v.y : v.x));
+        return Math.min(...across) - ZONE_SEAL_CLEARANCE <= at
+          && Math.max(...across) + ZONE_SEAL_CLEARANCE >= at
+          && Math.max(...along) >= lo && Math.min(...along) <= hi;
+      });
+      if (blocked) continue;
+      return side;
+    }
+  }
+  return null;
 }
