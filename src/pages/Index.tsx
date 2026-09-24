@@ -9,6 +9,7 @@
  * Admin screens are lazy-loaded and only available in dev builds.
  */
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
+import type { GameScreen as GameScreenName } from '@/types/game';
 import { useZoomGuard } from '@/hooks/useZoomGuard';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -49,6 +50,16 @@ import { loadMusicCatalogue, getMusicCatalogue } from '@/lib/musicCatalogue';
 import type { MusicCatalogue } from '@/types/music';
 import { backActionForScreen } from '@/lib/screenBack';
 import { todayKey, previousDayKey } from '@/lib/runRng';
+/**
+ * The screens that show a live board, and must not be resized under the player.
+ *
+ * Kept beside the style that reads it rather than shared with zoomGuard's own
+ * list: that one answers "is a drag here always gameplay", this one answers "is
+ * a board being played on here", and they agree today by coincidence of the
+ * same three screens rather than because one implies the other.
+ */
+// `GameScreenName`, aliased: the bare name is the component in this file.
+const BOARD_SCREENS: GameScreenName[] = ['game', 'tutorial', 'pairLoopback'];
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
@@ -365,7 +376,24 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               willChange: 'transform',
               position: 'relative',
               width: '100%',
-              height: '100dvh',
+              // `svh` on a screen showing a board, `dvh` everywhere else.
+              //
+              // `dvh` is DEFINED to move as the mobile URL bar collapses and
+              // expands, which is exactly what you want for a page that
+              // scrolls and exactly what you do not want under a game: the
+              // resize reaches GameCanvas, which rebuilds `boardRect` from the
+              // container, and the board changes size while a fence is being
+              // drawn on it. Reported repeatedly as "the gameboard is zooming
+              // out", and it is not the browser's zoom at all.
+              //
+              // `svh` is the SMALL viewport height - the size with the bar
+              // showing - and it does not move. The board is then laid out
+              // once and stays put; the cost is a strip of unused space when
+              // the bar is hidden, which is a far better trade than a board
+              // that resizes mid-cut. GameCanvas holds any resize that still
+              // arrives (lib/boardResizeHold) for the causes this cannot
+              // reach, such as an orientation change.
+              height: BOARD_SCREENS.includes(navigation.currentScreen) ? '100svh' : '100dvh',
               // Issue #36: every view scrolls when its content overflows — the
               // game view is the sole exception and must never scroll. Scrollbar
               // chrome is hidden globally (see index.css), so this only adds the

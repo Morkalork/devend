@@ -140,6 +140,7 @@ import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
+import { PendingResize } from "@/lib/boardResizeHold";
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -717,6 +718,26 @@ export function GameCanvas({
   // Boss ball HUD mirror (issue #56): updated on init and on every boss hit/defeat.
   const [bossHud, setBossHud] = useState({ active: false, hp: 0, maxHp: 0, defeated: false });
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
+  // Resizes that arrived mid-cut and are owed once the board is idle again.
+  const pendingResizeRef = useRef(new PendingResize());
+
+  /**
+   * Apply a resize that arrived mid-cut, now the cut is over.
+   *
+   * Keyed on the drag ending rather than polled, so the board snaps to the
+   * layout at the first idle moment instead of staying stale until the next
+   * time the window happens to change. `claim` clears as it reports, so the
+   * releases that deferred nothing - almost all of them - do no work.
+   *
+   * Growing walls are the other half of "idle" and they are NOT covered here:
+   * a fence released and still extending keeps the hold, and the resize lands
+   * on the following release. One cut late is the worst case, and it beats
+   * moving the board out from under a fence in flight.
+   */
+  useEffect(() => {
+    if (isPlayerDragging) return;
+    if (pendingResizeRef.current.claim()) resizeCanvasRef.current?.();
+  }, [isPlayerDragging]);
 
   /**
    * The circuit nudge: after a while on a map with an unlit terminal, draw the
@@ -1398,6 +1419,16 @@ export function GameCanvas({
     };
 
     const resizeCanvas = () => {
+      // Not while a fence is being drawn. `100dvh` moves when the mobile URL
+      // bar does, and a drag begun beside the board is the scroll gesture that
+      // collapses it - so the board was being re-laid out under the finger,
+      // which is the "gameboard zooming out" that kept being reported. Held to
+      // the last reading taken at rest and applied the moment the board is
+      // idle. See lib/boardResizeHold for the whole chain.
+      if (!pendingResizeRef.current.offer({
+        dragging: game.swipeStart !== null,
+        growingWalls: game.activeWalls?.length ?? 0,
+      })) return;
       const { width, height } = container.getBoundingClientRect();
       // Native device resolution (3x sanity cap saturates any panel); the
       // emergency 2D board keeps the capped + adaptive DPR.
