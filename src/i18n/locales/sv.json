@@ -754,6 +754,12 @@
       "lock": "Lås ×{{mult}}",
       "notEncounteredYet": "Inte mött än. Lås in den för mer info."
     },
+    "bugs": {
+      "title": "Buggar",
+      "intro": "Sma saker som flyger omkring pa vissa banor. Kor over en med en boll for att klama den, sa hamnar det den bar pa hos just den bollen. Alla kostar dig nagot, sa las den innan du styr en boll mot den.",
+      "cost": "Kostar:",
+      "danger": "Farlig. Den har kan kosta dig kartan."
+    },
     "steps": {
       "swipeToCut": {
         "title": "Svep för att skära",
@@ -1711,6 +1717,13 @@
   },
   "boardInfo": {
     "hint": "Håll in vad som helst på brädet för att se vad det är.",
+    "bug": {
+      "title": "Bugg",
+      "body": "Kor over den med en boll for att klama den. Det den bar pa hamnar hos just den bollen, sa hela beslutet ar vilken boll du later na fram.",
+      "gives": "Vad du far",
+      "costs": "Vad det kostar",
+      "danger": "Farlig. Den har kan kosta dig kartan."
+    },
     "pickup": {
       "title": "Uppgraderingsmarker",
       "body": "Lås in en boll i en ficka som rymmer denna för att ta den. Erövrad utan lås går den förlorad."

@@ -754,6 +754,12 @@
       "lock": "Bloqueo ×{{mult}}",
       "notEncounteredYet": "Aún no vista. Enciérrala para saber más."
     },
+    "bugs": {
+      "title": "Bichos",
+      "intro": "Cosas pequenas que vuelan por algunos tableros. Pasa una bola por encima para aplastarlo y lo que lleve dentro va a parar a esa bola. Todos te cuestan algo, asi que leelo antes de dirigir una bola hacia el.",
+      "cost": "Cuesta:",
+      "danger": "Peligroso. Este puede costarte el mapa."
+    },
     "steps": {
       "swipeToCut": {
         "title": "Desliza para cortar",
@@ -1711,6 +1717,13 @@
   },
   "boardInfo": {
     "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",
+    "bug": {
+      "title": "Bicho",
+      "body": "Pasa una bola por encima para aplastarlo. Lo que lleve dentro va a parar a esa bola, asi que la decision es que bola dejas llegar hasta el.",
+      "gives": "Que te da",
+      "costs": "Que te cuesta",
+      "danger": "Peligroso. Este puede costarte el mapa."
+    },
     "pickup": {
       "title": "Ficha de mejora",
       "body": "Encierra una bola en un hueco que contenga esto para reclamarlo. Capturado sin encierro, se pierde."

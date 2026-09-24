@@ -24,6 +24,8 @@ interface RawBug {
   valueMax?: unknown;
   value_max?: unknown;
   danger?: unknown;
+  description?: unknown;
+  cost?: unknown;
 }
 
 const num = (v: unknown, fallback: number): number =>
@@ -61,6 +63,11 @@ function parseCatalogue(text: string): BugDef[] {
       value: num(entry.value, 1),
       valueMax: typeof valueMax === "number" && Number.isFinite(valueMax) ? valueMax : undefined,
       danger: entry.danger === true,
+      // Empty rather than a placeholder. A bug whose card says "TODO" reads as
+      // a broken game; a bug whose card is blank reads as a bug with nothing to
+      // say, and a test refuses that so neither ever ships.
+      description: typeof entry.description === "string" ? entry.description : "",
+      cost: typeof entry.cost === "string" ? entry.cost : "",
     });
   }
   return out;
