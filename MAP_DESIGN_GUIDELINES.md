@@ -192,21 +192,27 @@ per class now.
 | give it a sibling | a second monolith is the cheapest fix, and it is what 11, 12 and 13 do. Sweep after: a monolith is usually structure, so adding one changes the board before it changes the content. |
 | let the object pay for itself | a **chest** already does. See below. |
 
-#### The chest pays its own way
+#### The chest pays its own way - and that was not enough
 
 The chest is a monolith by the rule (amber, three hits), and it is the one
-monolith that never needs a clause to be worth breaking: smashing it grants a
-run reward. "Why would you ever go for the big one" - the question the whole
-split came from - has an answer here that no plain amber block has.
+monolith that pays for being broken: smashing it grants a run reward. The
+argument this section used to make was that the reward alone answers "why
+would you ever go for the big one", so a chest on a map with no spare could
+stay out of the win.
 
-So a chest on a map with no spare stays out of the win, and 7, 9 and 17 all say
-`of: shards` for that reason.
+**Played, it did not.** The review of level 7 said it in as many words: "has
+both shard and monolith, but only shards in the AC, so why go for the
+monolith". A reward the player only learns about after breaking the thing is
+not a reason to break it. So 7 and 9 now count a monolith, and pay for the
+slack the honest way - a second monolith on the board (7 has two chests, 9 a
+chest and a plain slab) - rather than by leaving the line out.
 
-This is about slack, not about chests being sacred. **Level 19 requires two of
-its four chests** and is right to: four of a thing is slack, so no single cut
-is fatal, and "open two of the four" is a real choice about which two. The rule
-is the spare, and the chest's own reward is what makes a lone one bearable
-without one.
+Level 17 is the one exception, by decision rather than by rule: its lone vault
+chest across the wall of shards was asked about directly and kept out, because
+one monolith has no spare (5 of 8 became 1 of 8 with it required). It is that
+map's greed hook, and it is listed by name in `everyObjectIsInTheWin.test.ts`.
+**Level 19 requires two of its four chests**, which is the shape to reach for:
+four of a thing is slack, and "open two of the four" is a real choice.
 
 #### Slack is in LANES, not in objects
 
@@ -244,6 +250,60 @@ The three levers, cheapest first:
 Write all three down in the map's premise before placing an entity. If you
 cannot name two answers, the map has one, and one answer plus an irreversible
 verb is the definition of *requires perfection*.
+
+### 1.2 Every object is a promise
+
+> **Anything a map puts in front of the player is in its win, is a hazard,
+> or is that map's named greed hook. Nothing else.**
+
+The rule a play review of the whole built ladder came down to. The maps rated
+weakest all had the same fault, and it is not one the checklist below used to
+catch:
+
+| map | verdict | what was on the board and out of the win |
+|---|---|---|
+| 3 | not good | a pink box, on a map otherwise identical to 2 |
+| 4 | so-so | a patrol, guarding a doorway for a win that never involved it |
+| 5 | ok | two bonus boxes on the map that introduces the shard |
+| 7 | not good | a chest ("why go for the monolith") |
+| 9 | bad | a box and a chest on the act's skill check ("weird win conditions") |
+| 13 | ok | 12's bumpers, slabs and shards, and a mirror nothing needed |
+| 15 | weird | four bouncy walls, and two wells a player could ignore |
+| 16 | strange | phasing pillars that could not be passed (a bug) and a bonus box |
+
+A bright object on the board reads as an objective. When the win ignores it,
+the map has made a promise with nothing behind it, and the player spends
+attention on it and learns nothing. The maps rated well (1, 2, 10, 12, 14, 17,
+18) are the ones where every object either IS the win or is plainly in the way
+of it. 14 was called "fantastic" for introducing gravity "without
+distractions"; 18 "innovative" because its windmill turns inside the room the
+map pays for.
+
+**Three corollaries**, each of which a map in the table broke:
+
+1. **The new mechanic is needed to finish.** A Meet that the win routes around
+   is decoration. 13's mirror now bends the only fence that closes its box;
+   15's well now feeds the cup the win asks for; 4's guard now walks across
+   the box's door.
+2. **Every class of breakable shown is counted, per class.** Shards and
+   monoliths are two things (section 1.1); a map showing both asks for both.
+   A reveal is exempt: breaking it is how the zone behind it is reached.
+3. **A bonus zone is a greed hook or nothing.** Only 11 (the pocket behind the
+   curtain the shot opens) and 18 (the room the windmill turns in) keep one.
+   In act I every box is a gate: the teaching band cannot afford a symbol that
+   sometimes matters.
+
+`everyObjectIsInTheWin.test.ts` pins corollaries 2 and 3, with the exceptions
+listed by name; `mapHookPlacement.test.ts` pins act I's gates. Corollary 1 is
+not lintable, which is what the map's written premise is for: a premise that
+names the new mechanic and not the win, or the win and not the mechanic, is
+the finding.
+
+**The harshness this rule could cause is handled where it happens.** Putting
+the box in level 3's win would have put a lost life on the map that teaches
+the box, because a fence that sealed it empty used to fail the map on the
+spot. That fence is refused now, with a message (`areaReach.cutWouldBuryArea`),
+exactly as a fence that would bury a slab the win needs already was.
 
 ### Case study: why level 9 is the worst map on the ladder
 
@@ -577,13 +637,13 @@ why, and change it back only once the runtime gap guard measures what ships.
 |---|---|---|---|
 | 1 | - (the doorway) | - | Two rooms, one doorway, one ball. Locking every ball wins outright, so the corner nook is a button marked "finish now". |
 | 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
-| 3 | **Meet** colored area (bonus) | topology | A pink box that pays 1.5x and costs nothing to ignore. |
-| 4 | **Meet** mover | Fight topology, **Use** split locks | A patrol sweeps the doorway: not "can I draw this fence" but "can I draw it NOW". Map 2 asked for one lock in each half against a doorway on your own schedule; this one asks it against a doorway somebody is standing in. |
-| 5 | **Meet** brittle | Use mover, Use colored area | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached. |
+| 3 | **Meet** colored area | topology | The pink box is the win: clear the board and lock a ball inside it. (It was a bonus; a box the win ignored read as a promise with nothing behind it.) |
+| 4 | **Meet** mover | **Use** colored area | A guard walks across the box's door, so closing the box is "can I draw it NOW". (It guarded a doorway for a split-lock win that never involved it, and read as scenery.) |
+| 5 | **Meet** brittle | Use mover | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached (its two bonus boxes came off for contradicting that). |
 | 6 | - | Fight brittle | The divider is soft and the balls chip it just by living. Seal the far room while it is still a room. |
-| 7 | **Compressed** chest | Use brittle, Fight mover | An open alcove worth two different things, and they compete for the same ball. The chest is the map's first block that does NOT go on one touch. |
-| 8 | **Compressed** reveals, **Meet** colored area (gate) | Break colored area | The box stops being optional: clear to 81% AND lock a ball in it, on ground that does not exist until you pay for it. |
-| 9 | - skill check | all of act I | No new toys. Five ideas competing for one attention, at 84%. |
+| 7 | **Compressed** chest | Use brittle, Fight mover | The chest is in the win: one monolith of two chests, plus four shards. The better chest sits behind the patrol, the other in the open. |
+| 8 | **Compressed** reveals | Break colored area | The box you know from 3 and 4 is behind a curtain: clear to 81% AND lock a ball in it, on ground that does not exist until you pay for it. |
+| 9 | - skill check | all of act I | No new toys, and the win names each one: the box, four shards of ten, one monolith of two, at 81%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
 ### Act II - The Sprint (11-20)  *(rebuilding: 11-19 built, 20 to come)*
@@ -591,7 +651,16 @@ why, and change it back only once the runtime gap guard measures what ships.
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
 
-#### 11 "Sprint Planning" - Meet launcher, Use reveals  *(built)*
+#### 11 "Sprint Planning" - Meet launcher, Use reveals, Compressed bumper  *(built)*
+
+**Revised after the play review:** at full throttle the balls were impossible
+to lock, so the top of the pull was a trap rather than a wager. Two green
+bumpers now sit off the barrel's line, each a pure brake: five percent a bump,
+ten bumps deep, and once spent they only redirect (`bounceKick: 1`), never the
+pop bumper that speeds a ball up. Measured at full throttle with no cuts, the
+balls hold 2.8x base speed without them, and fall to 2.5x, 2.1x and 2.0x at 5,
+15 and 30 seconds with them. Its four shards (the square that replaced the old
+sump) are in the win too, two of four. 14 of 16 on the sweep.
 
 **You commit to a scope before you know how the sprint goes.** The barrel holds
 the whole roster and is the first thing you touch, and the pull sets two numbers
@@ -651,7 +720,11 @@ map on the ladder by that measure. The board was flat at first and the bot ran
 out of clock on it; the `rafter` is what fixed that, and it is why an open square
 is not a topology.
 
-#### 12 "Velocity" - Meet bumper, Fight launcher  *(built)*
+#### 12 "Velocity" - Use bumper, Fight launcher  *(built)*
+
+**Revised after the play review:** the bumper now meets on 11 as a brake that
+never accelerates, so this is its development beat: the bank, and the red pop
+bumper it turns into once the bank is spent. The rest of the entry stands.
 
 **The same wager as 11, one layer down: the board will buy your speed back, and
 it has a fixed amount of money.** The launcher returns - this is its Use beat,
@@ -679,39 +752,25 @@ beat breaks the centre slab at 21% remaining, the same low rescue level 11 uses.
 **Bot sweep, 8 seeds:** 7 wins, average 19 cuts against par 8. The loss is the
 clock at 2% remaining, not a dead end.
 
-#### 13 "Code Review" - Meet mirror, Use bumper  *(built)*
+#### 13 "Code Review" - Meet mirror  *(built)*
 
-**Someone else decides where your work goes.** Two maps of speed is enough, so
-this one changes the subject entirely: the mirror is the first mechanic on the
-rebuilt ladder that acts on the PLAYER'S TOOL rather than on the balls.
+**Someone else decides where your work goes.** A fence that meets the mirror
+reflects and keeps going, so one drag becomes a bent line, and the pink box
+sits where no straight fence closes it. The box is the win: clear to 86% and
+lock a ball in the box the mirror is for.
 
-Cuts are free-angle (`vec2Normalize(delta)` off the swipe) and a fence meeting a
-mirror reflects and keeps going, up to three bounces, in both directions from
-the swipe. So one drag becomes an L or a Z, and a pocket that cannot be enclosed
-by any straight line can be enclosed by a bent one. That is the greed hook: the
-`var` pocket sits where the geometry does not offer a straight answer.
+**Rebuilt after the play review ("too similar to the previous one").** It was:
+12 and 13 carried the same bumpers, the same monolith strut and sump, the same
+square of shards and the same win (one monolith, two shards), with a mirror
+added to 13 and its box a bonus nothing asked for. The mirror, the thing this
+map introduces, was never needed to finish it. All of 12's furniture came off,
+and the box became the win, so the mirror is how the map is finished rather
+than an ornament beside it.
 
-The bumper returns as the development beat, which takes it off the single-use
-list one map after arriving - the same rhythm 11 and 12 set. Two bumpers, in two
-different regions, per the ball-gathering rule in section 9.
+`ballSpeedScale: 0.75` stays, so a bent cut can be planned; a 12% speed spike
+at 35% remaining is the Turn, charging for planning too long.
 
-**The map sets its own tempo: `ballSpeedScale: 0.75`.** Playtested as too fast,
-and the fix wanted a dial the ladder did not have - a map's pace could only be
-changed by picking different ball TYPES (blunt: it changes what they do as well
-as how fast they go) or by a mutator (announced to the player as an event rather
-than being the map's own speed). It scales the type's base speed at spawn, so a
-`speedRange` scales with it, and it sits outside the upgrade floor so a slow
-build still means half of what THIS map spawns at. Authorable from the builder's
-Level Settings.
-
-Slowing it made the ball-gathering problem WORSE before it made the map better:
-slow balls cover less board, so more of it goes ball-free and gets captured, and
-the sweep fell to 5 of 8 on three `objectiveBuried`. Pulling the two outlying
-slabs in from the corners into the traffic fixed it. Worth knowing when tuning
-any map's speed down - see the rule in section 9.
-
-**Bot sweep, 8 seeds: 8 wins**, average 21 cuts against par 8. The only map on
-the ladder the bot has never lost.
+**Bot sweep, 16 seeds:** 13 wins, three `areaUnreachable`.
 
 #### 14 "Downtime" - Meet gravity. The board itself is the mechanic  *(built)*
 
@@ -794,57 +853,28 @@ now a summary of them rather than a rival to them.
 | - | *(displaced from 19)* **Compressed** cage, **Compressed** thread lock, and the WIP limit, terminals and portal Meets | - | Moved to act III (21+): act II's skill check is gravity with movers now, and a skill check introduces nothing. |
 | 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
 
-#### 15 "Standup" - Meet live outer walls (symmetric), Use pinned mutator  *(built)*
+#### 15 "Standup" - Meet gravity well  *(built)*
 
-**The room turns a quarter every ten seconds, and every wall throws you back.**
-No obstacles at all: an empty board, three balls, four identical bouncy walls
-and a pull that never stops and only ever changes which wall it points at. This
-is a MEET in the strict sense, one idea with nothing on the board to read it
-against, and it is easy on purpose (8/8, about 13 seconds of a 50 second map).
+**A well hangs over a cup on the floor, and the win is a ball in the cup.** The
+well pulls down into the cup's mouth, so it is not terrain to route around: it
+is the thing doing the aiming, and the read is when to trust it - let it drop a
+ball in, then close the lid across the cup's mouth before the ball bounces back
+out through the well. This is the combination cell "gravity well aims into a
+pocket" (section 4), spent as the well's Meet because it makes the well
+necessary to the win rather than beside it.
 
-**The premise it was designed from turned out to be false, and the map is better
-for knowing that.** The idea was that you would fence the balls into a pocket
-and the tilt would then drop them somewhere that ruined it. It cannot: a
-completed fence is a permanent wall and captured space never comes back (only
-`reveals` returns board), so a turn slides the balls to a different side of the
-SAME pocket and takes nothing. Measured three ways, all agreeing:
+**Rebuilt after the play review ("bouncers on all sides, but no general
+gravity; should introduce gravity wells by better design").** It was a bare
+board with two wells a player could ignore, four bouncy sides carried over from
+14 - where they exist to keep a falling board alive, and with no global pull
+here were only noise - and a `locks: 2` win that never mentioned a well. The
+sides are plain now; the bouncy walls stay on 14 and 19.
 
-- level 14's board, tipping vs its shipped steady pull: 8/8 against 7/8, so
-  tipping is slightly EASIER.
-- a bare board across nine variants (no gravity / steady / tipping, crossed with
-  kick 1.00 to 1.30): every one 8/8, ~15 cuts, indistinguishable.
-- a bare board turned hard (7 balls, clear 92%): no gravity 0/8 and 16.3% left,
-  steady 2/8 and 9.6%, tipping 2/8 and 9.4%. **The board with no gravity is the
-  hardest one.**
-
-Gravity pools the balls, and a pooled ball is a ball that is not near your
-fence: section 9 arriving from the other side. So a tilt is a PERCEPTION
-mechanic, not a difficulty one. What it takes is your PLAN, in the eight settled
-seconds you had to pick a cut, and it should never be tuned as though it takes
-anything else.
-
-**What four bouncy walls really are on this engine: an accelerando.** Gravity
-only steers, so nothing ever takes speed off a ball, so a bouncy wall cannot
-give back what it took and can only add. That makes the kick the map's tempo
-dial, and it saturates:
-
-- plain walls: 1.00x forever.
-- **1.05: 1.10x at 10s, 1.28x at 20s, 1.48x at 30s, and it never arrives.**
-- 1.12: 1.26x, 1.77x, 2.20x, with every ball pinned at the cap from 27s.
-- 1.25: 1.59x, 2.20x, 2.20x, pinned from 18s.
-
-1.05 rises across the whole map and never arrives, so a cut that was safe early
-is not safe late. 1.12 and 1.25 spend their back half at a flat maximum, where
-the walls have stopped being a variable. **Author the ramp, not the ceiling.**
-
-**Symmetry is the other half of the design, and it is free.** Because
-`boardEdges` are world space and do not turn with the pull (7.3b), any asymmetry
-on a tipping map is correct one phase in four. Four identical walls have no
-preferred direction to lose, so this is the first live-edge map that needs no
-`neverRotates` and can be dealt in all four orientations. It also asks for
-`space + locks` rather than `space + smashed` - no obstacles means no breakables
-means nothing to smash - which made it, for one map, the only act II board that
-did not ask for a smash. 16 is the second.
+**Measured that the well does the job.** Eight seeds, twenty seconds, no cuts:
+balls spend 13.2% of their time in the cup with the well and 6.2% without. On
+the sweep the win rate is 15 of 16 either way, and the well saves a third of
+the cuts (median 14 against 20). A helper, not a gate, which is right for a
+Meet.
 
 #### 16 "Tech Debt" - Meet phasing, Compressed deformable, Use bumper, Fight split locks  *(built)*
 
@@ -919,6 +949,17 @@ turned up. The likely cause is the phase-out shockwave: the doorway opens and
 shoves everything near it away in the same instant, so the window that looks
 like an invitation mostly is not one. Stated as a hypothesis, because the
 measurement establishes the ordering and not the reason.
+
+**The hypothesis was wrong, and the real cause was a bug.** Reported from play:
+"balls can never pass through a phasing object". Both collision systems
+skipped a phased-out pillar, but the region check after them threw a ball
+straight back out of its footprint, so a pillar was solid in every phase. With
+that fixed the same measurement reads **7.9 crossings per run** (5.9 with the
+pillars permanent, 7.4 with none): the pillars now open the board, which is
+what the map was built on. The review also found the map "doesn't use" them;
+it did not, because they could not work. Its bonus box, which the win never
+mentioned, came off. The sweep reads 12 of 16 now that balls really cross
+sides; the losses are split-lock strandings the bot cannot see coming.
 
 #### 17 "Deprecation" - Compressed brittle, Fight launcher, Use chest  *(built)*
 
@@ -1787,6 +1828,25 @@ is a STOP, and it is a shipped act-I map. Level 13's fall from 8 to 6 and level
 6's from 5 to 4 are the same mechanism in a milder form: Scope Creep now runs,
 so the back half of a long map is faster than anything previously measured.
 
+### Two things the harness learned in the play review
+
+**The bot aims for zones now.** It was blind to the one objective that says
+WHERE: it locked balls wherever its random lines closed, so every zone map
+lost to `areaUnreachable` on most seeds and the sweep measured the harness.
+Level 8, which the review rated good, swept 1 of 8. `planCut` now closes a
+zone along an open side when a ball is inside it and waits for a mover to
+clear the line, and the game refuses the fences that would leave no ball able
+to reach the zone, so the bot runs into the same wall a player does. Level 8
+reads 8 of 16. A zone map's sweep is still the bot's floor, not the map's.
+
+**The shard stacks were helping.** The stack graph used to read a column or
+wall of shards as stacked, so a ball clipping the bottom brick toppled the
+rest, on two deals of four (rotation does not turn "down"). That was a bug and
+is fixed, and the maps built on shard walls lost free smashes they had been
+tuned against: 6 went from 11 to 6 of 16 (retuned to four of twelve shards,
+12 of 16) and 17 from 11 to 8 (given an authored 60 s clock, 11 of 16). A
+number measured before a physics fix is a number about the old physics.
+
 ### The measured ladder, as a calibration baseline
 
 A full sweep - all 35 maps, 4 seeds, 7200 frames - reads like this. It is a
@@ -1968,8 +2028,13 @@ layout doing it to them.
 
 A map is not done until:
 
-- [ ] You can state its premise in **one sentence** ("this is the one where...").
-      If you cannot, it has no identity yet.
+- [ ] Its **`premise:`** is written in map.yml, one sentence ("the one where..."),
+      BEFORE anything is placed. If you cannot write it, the map has no
+      identity yet. `mapPremise.test.ts` refuses a shipped map without one.
+- [ ] **Every object is in the win, a hazard, or the named greed hook** (1.2).
+      Walk the board object by object and say which.
+- [ ] Its **new mechanic is needed to finish**, not merely present.
+- [ ] Every **class** of breakable it shows is counted by its own line.
 - [ ] It reads as **chambers and necks**, not scattered blocks.
 - [ ] It **authors a `win:`** that names its own content, with at least one
       clause a lock cannot produce (section 6.4). A derived spec means the map

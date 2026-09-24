@@ -45,6 +45,7 @@ levels:
   # and get paid, which teaches pocket size better than any explanation.
   - id: level-1
     level: 1
+    premise: "The one where locking the only ball wins outright, so the corner nook is a button marked finish now."
     sizeThreshold: 40
     expectedCuts: 3
     points: 5
@@ -95,6 +96,7 @@ levels:
   # which one to spend a ball on and not whether a pocket qualifies.
   - id: level-2
     level: 2
+    premise: "The one where the doorway keeps two balls apart, and the win wants one sealed on each side of it."
     sizeThreshold: 37
     expectedCuts: 4
     points: 5
@@ -170,6 +172,7 @@ levels:
   # passage, and adding a ball is the axis of last resort.
   - id: level-3
     level: 3
+    premise: "The one where the pink box is the win: clear the board and lock a ball inside it."
     sizeThreshold: 34
     expectedCuts: 4
     points: 5
@@ -250,6 +253,7 @@ levels:
   # - it was in the first draft of this map and mapBeats.test.ts caught it.
   - id: level-4
     level: 4
+    premise: "The one where a guard walks across the box's door, so closing the box is a question of when."
     sizeThreshold: 31
     expectedCuts: 5
     points: 5
@@ -341,6 +345,7 @@ levels:
   # variety 0; see the note at the top of act I.
   - id: level-5
     level: 5
+    premise: "The one where a single touch opens a slot in a short column of shards, and nothing else is new."
     sizeThreshold: 28
     expectedCuts: 5
     points: 5
@@ -457,6 +462,7 @@ levels:
   # something they caused.
   - id: level-6
     level: 6
+    premise: "The one where the divider is shards the balls chip away, so seal the far room while it is still a room."
     sizeThreshold: 25
     expectedCuts: 5
     points: 5
@@ -628,6 +634,7 @@ levels:
   # new line.
   - id: level-7
     level: 7
+    premise: "The one where the chest is worth breaking, and the better of the two sits behind the patrol."
     # Bugs (public/bugs.yml). Act I's first map with a real brick wall AND a
     # slab, so the ball is already a tool here and a buff has something to act
     # on. Half the rolls: a bug is a thing that happens on this map, not a
@@ -854,6 +861,7 @@ levels:
   # rather than an ambush.
   - id: level-8
     level: 8
+    premise: "The one where the box is behind a curtain you have to pay to open before a ball can be locked in it."
     sizeThreshold: 19
     expectedCuts: 6
     points: 5
@@ -953,6 +961,7 @@ levels:
   # for it when there is the least room left to absorb it.
   - id: level-9
     level: 9
+    premise: "The one where everything act I taught is in the win at once: the box, the shards and a monolith."
     # Bugs. The act I map that teaches both claim rules already (chest on the
     # smash, token on the seal), so a third - squash it with a ball - lands
     # where the player is being taught how rewards arrive anyway.
@@ -1142,6 +1151,7 @@ levels:
 
   - id: level-10
     level: 10
+    premise: "The one where the release candidate has to be fenced into the pink box before it ships."
     sizeThreshold: 15
     expectedCuts: 8
     points: 5
@@ -1245,6 +1255,7 @@ levels:
   # hand, the next lever is the pull's ceiling, not more bumpers.
   - id: level-11
     level: 11
+    premise: "The one where the launch sets the whole map's speed before any fence exists, and two bumpers let you spend it back."
     sizeThreshold: 16
     expectedCuts: 7
     points: 5
@@ -1384,6 +1395,7 @@ levels:
   # whole machine: green while its bank lasts, a red pop bumper once spent.
   - id: level-12
     level: 12
+    premise: "The one where bumpers pay to brake your speed until their bank runs dry, then start throwing balls faster."
     sizeThreshold: 15
     expectedCuts: 8
     points: 5
@@ -1509,6 +1521,7 @@ levels:
   # long to plan it.
   - id: level-13
     level: 13
+    premise: "The one where the box sits where no straight fence can close it, and the mirror bends your cut around it."
     sizeThreshold: 14
     expectedCuts: 8
     points: 5
@@ -1551,6 +1564,7 @@ levels:
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
   - id: level-14
     level: 14
+    premise: "The one where the room turns a quarter every ten seconds and down goes with it."
     # The board where you MEET real gravity, so the board shows you nothing but
     # gravity. It was a five-obstacle map, and on a board full of shelves a ball
     # never gets a fall long enough to look like one: it clips something within
@@ -1619,6 +1633,7 @@ levels:
 
   - id: level-15
     level: 15
+    premise: "The one where a gravity well drops balls into the cup the win needs, if you close the lid in time."
     # MEET the gravity well, and nothing else.
     #
     # A cup sits on the floor in the middle of the board, open at the top, and
@@ -1696,6 +1711,7 @@ levels:
 
   - id: level-16
     level: 16
+    premise: "The one where the pillars in the divider vanish on a cycle, and the win wants a ball sealed on each side."
     # THREE OBJECTS THAT DISAGREE ABOUT HOW FAST THE BALLS ARE.
     #
     # 14 and 15 were terrain maps: bare boards where the whole read was a pull.
@@ -1888,6 +1904,7 @@ levels:
   # bottom. Every strip you seal from the bottom shortens the bounce.
   - id: level-17
     level: 17
+    premise: "The one where the balls are your hammer, and the wall of shards opens wherever they hit it."
     # Bugs, at the archetype's set piece. The highest chance on the ladder:
     # "Deprecation" is the map Demolition exists for, its wall is sixteen
     # smashes deep, and Force Push is the answer it is built to want.
@@ -2256,6 +2273,7 @@ levels:
   # Freak is aimed at: braking the arm turns the bet into a decision.
   - id: level-18
     level: 18
+    premise: "The one where a windmill turns inside the room that pays triple, and every cut across it is a bet on the arm."
     # Bugs. Slabs rather than bricks, so Force Push is worth more here and
     # Bit Rot hurts more - the same pool reads differently against
     # material that needs force.
@@ -2385,6 +2403,7 @@ levels:
   # bar. Four bouncy sides at 1.05, like 14, so nothing pools dead on a floor.
   - id: level-19
     level: 19
+    premise: "The one where four patrol bars sweep a board whose floor turns every ten seconds, and two of four chests are the win."
     sizeThreshold: 10
     expectedCuts: 8
     points: 5

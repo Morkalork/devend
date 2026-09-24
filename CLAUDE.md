@@ -44,6 +44,8 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
   loaded at runtime with `js-yaml`.
 
 See **ARCHITECTURE.md** for the game design and data model,
+**MAP_DESIGN_CARD.md** first, before designing or changing any map (one page:
+the premise, every object is a promise, fair difficulty, how to measure),
 **MAP_DESIGN_GUIDELINES.md** for how the ladder is designed (the mechanic
 ledger, the combination matrix, the per-map conventions, the engine
 constraints a map must satisfy, and the map archetypes in section 11),
