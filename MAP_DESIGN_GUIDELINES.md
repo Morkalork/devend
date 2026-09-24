@@ -2049,11 +2049,19 @@ A map is not done until:
       cheaper, never possible.
 - [ ] There is **exactly one greed hook** with a real cost AND a safe skip.
 - [ ] There is **one telegraphed Turn**, so the end differs from the start.
-- [ ] At least one pocket is **superior-lock-sized**, measured against the worst
-      denominator, not eyeballed.
+- [ ] At least one nook closes with **one fence** into a pocket that grades
+      **superior at the start of the map**, or the map is on
+      `mapPockets.test.ts`'s list with where its precision reward is instead.
+      Measured, not eyeballed: **Measure pockets** in the Map Builder's Level
+      Settings (lib/admin/pocketProbe) reports the smallest one-fence pocket, the
+      superior bar at the start (4% of the board) and late in the map (4% over
+      the ball count), and the share of open ground a 90+ fence runs through.
+      The late bar is the stricter one the old wording asked for; when first
+      measured only 1, 2, 6 and 8 met it.
 - [ ] Every gap is **<= 12 or >= 60**.
 - [ ] Nothing it authors overlaps anything else it authors.
-- [ ] There are open **drawing lanes** everywhere a cut is expected.
+- [ ] There are open **drawing lanes** everywhere a cut is expected: the probe's
+      "room to draw" at 95% or more (every shipped map measured 99.9+).
 - [ ] `expectedCuts` and `sizeThreshold` match the intended seals and the spine.
 - [ ] Its new mechanic (if any) is the **only** new thing, and its ledger row is
       updated.

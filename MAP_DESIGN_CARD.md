@@ -57,6 +57,11 @@ column that stands on one deal is a row on another.
 
 ## 6. Measure, do not eyeball
 
+Press **Measure pockets** in the Map Builder while drawing: the smallest pocket
+one fence closes, whether it grades superior, and how much of the board has
+room to draw. Every map offers a one-fence superior nook, or says in
+`mapPockets.test.ts` where its precision reward is instead.
+
 Sweep it: 16 seeds, and read the loss kinds, not only the win count. Then
 measure the mechanic ITSELF, because the bot cannot see timing, mirrors or
 split locks: time a ball spends where the map wants it, crossings through a
