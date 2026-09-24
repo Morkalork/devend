@@ -118,8 +118,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const pairPhase = pair.phase;
   useEffect(() => {
     if (pairPhase !== 'playing' || !pairRunState) return;
-    if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run);
-    else session.handleStartGame();
+    // The pair's seed goes in with it: starting a run clears the seed, and a
+    // pair run that lost it dealt and rolled everything separately per phone.
+    if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run, pairRunState.seed);
+    else session.handleStartGame(undefined, undefined, pairRunState.seed);
     // handleStartGame/handleResumeSavedRun are stable session actions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairPhase, pairRunState]);
@@ -194,7 +196,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           ? "shopping"
           : navigation.currentScreen !== 'game'
             ? "deciding"
-            : null;
+            // The map-won card sits over the game screen rather than replacing
+            // it, so the screen check above never saw it and the guest was
+            // offered the host's Next Level button.
+            : session.showLevelComplete
+              ? "deciding"
+              : null;
 
   /**
    * A pair run never files on the solo ladder.
@@ -484,6 +491,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 viewportZoomStuck={viewportZoomStuck}
                 lockstep={pair.lockstep}
                 isPairGuest={pair.phase === 'playing' && !pair.isHost}
+                pairPartnerName={pair.remoteName}
                 pairBanner={
                   pair.phase === 'playing' && (pair.stalled || pair.dropped)
                     ? (

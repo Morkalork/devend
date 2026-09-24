@@ -324,7 +324,10 @@ describe("every breakable can be reached and hit", () => {
 describe("the ladder actually carries these hooks", () => {
   const withArea = LEVELS.filter(l => (l.coloredAreas?.length ?? 0) > 0);
    
-  const withBreak = LEVELS.filter(l => ((l as any).entities ?? []).some((e: any) => e.breakable));  // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Shards (`brittle`) and chests count: both are breakables to the game
+  // (entityIsDestructible), and this read only `breakable` from before shards
+  // existed, so a map built entirely of shards counted as carrying none.
+  const withBreak = LEVELS.filter(l => ((l as any).entities ?? []).some((e: any) => e.breakable || e.brittle || e.chest));  // eslint-disable-line @typescript-eslint/no-explicit-any
 
   it("puts a colored area or a breakable on most maps", () => {
     // Reported as "there need to be more breakable items and coloured areas".
@@ -339,16 +342,25 @@ describe("the ladder actually carries these hooks", () => {
       .toBeGreaterThanOrEqual(Math.ceil(LEVELS.length * 2 / 3));
   });
 
-  it("keeps a win GATE out of the tutorial band, and allows a bonus", () => {
-    // Was "leaves the first four levels clean". The designer put a bonus var
-    // zone on level 3, deliberately and repeatedly, so the convention has been
-    // narrowed rather than enforced against them: what must stay out of levels
-    // 1-4 is a REQUIRED area, because a win the player cannot yet read is the
-    // thing that actually hurts in the teaching band. An optional pocket to
-    // aim at is just a target.
-    for (const l of LEVELS.filter(l => l.level <= 4)) {
-      const gates = (l.coloredAreas ?? []).filter(a => a.required !== false);
-      expect(gates, `${l.id} (level ${l.level}) gates the tutorial band`).toHaveLength(0);
+  it("puts every act I area in the win", () => {
+    // Was "keeps a win GATE out of the tutorial band, and allows a bonus", on
+    // the argument that a win the player cannot yet read hurts most while they
+    // are learning. Played, the bonus form hurt more: a bright box on a
+    // teaching map that the win never mentions reads as an objective with
+    // nothing behind it. Level 3 was reported as "map 2 with a var area that
+    // isn't in the win condition", and level 5's two bonus boxes as "weird
+    // signals". So the teaching band now says the opposite: every box it shows
+    // is part of the win. The harshness the old rule feared is handled where
+    // it happens instead - a fence that would leave no ball able to reach the
+    // zone is refused (areaReach), not charged a life.
+    for (const l of LEVELS.filter(l => l.level <= 9)) {
+      const bonus = (l.coloredAreas ?? []).filter(a => a.required === false);
+      expect(bonus.map(a => a.kind), `${l.id} (level ${l.level}) shows a box its win ignores`)
+        .toEqual([]);
+      const asks = (l.win?.require ?? []).some(c => c.kind === "area");
+      if ((l.coloredAreas ?? []).length > 0) {
+        expect(asks, `${l.id} (level ${l.level}) has a box and no area line in its win`).toBe(true);
+      }
     }
   });
 
@@ -375,7 +387,17 @@ describe("the ladder actually carries these hooks", () => {
     // Levels 20, 30, 34 and 35 came off with the act II-IV rebuild. Each boss
     // rejoins as its map is authored, and a gate is expected on every one of
     // them: fencing the boss into the zone is what a boss map asks for.
-    const GATE_MAPS = ["level-10", "level-8"];
+    //
+    // Levels 3, 4 and 9 went ON after a play review of act I: a box on a
+    // teaching map that the win ignored read as a promise with nothing behind
+    // it (see "puts every act I area in the win" above). 3 meets the box as
+    // the win, 4 puts the guard in front of it, and 9 is the skill check that
+    // names everything the act taught.
+    //
+    // 13 and 15 went ON in the act II review for the same reason: 13's box is
+    // the one its mirror is for, and 15's cup is the one its well feeds. In
+    // both the zone is how the map's new mechanic reaches the win.
+    const GATE_MAPS = ["level-10", "level-13", "level-15", "level-3", "level-4", "level-8", "level-9"];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);

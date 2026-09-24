@@ -54,7 +54,9 @@ export type GameMessageId =
    */
   | "cutWouldTrapBall"
   /** The finished cut would have put the slabs the win needs out of reach. */
-  | "cutWouldBurySlabs";
+  | "cutWouldBurySlabs"
+  /** The finished cut would have left no ball that can still get into the zone the win needs. */
+  | "cutWouldBuryArea";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -117,6 +119,7 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   lifeLostMover: true,
   cutWouldTrapBall: true,
   cutWouldBurySlabs: true,
+  cutWouldBuryArea: true,
 };
 
 export const GAME_MESSAGE_IDS = Object.keys(ALL_MESSAGE_IDS) as GameMessageId[];

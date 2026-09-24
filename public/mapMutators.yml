@@ -85,10 +85,16 @@ mutators:
   # pick a cut and commit to it.
   #
   # Ten rather than nine, so a turn lands on a beat the player can count.
+  #
+  # Named for what it DOES. It was "Standup", which is a flavour name the
+  # banner showed in the largest type on screen, and level 19 was reported as
+  # "unclear, needs a better warning about full gravity": the one word a player
+  # reads first said nothing about falling. The description says it plainly
+  # too - everything falls, and the pull turns on a clock the edge bar counts.
   - id: tipping
-    name: Standup
-    description: The room turns a quarter every ten seconds, and down goes with it.
-    clarify: The pull turns a quarter every ten seconds. Finished fences are safe; your plan is not. Read where the balls go next.
+    name: Full Gravity
+    description: Everything on the board falls. Every 10 seconds the pull turns a quarter, and the balls fall the new way.
+    clarify: The bar along the top counts down to each turn, and the amber edge shows where the pull goes next. Finished fences are safe; your plan is not.
     behavior: gravity
     # Never rolled (full-map gravity is pinned only), so no weight or minLevel.
     weight: 0

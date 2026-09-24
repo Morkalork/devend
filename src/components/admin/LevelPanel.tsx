@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LevelConfig } from '@/types/level';
 import { MIN_MAP_LIGHT } from "@/lib/rendering/sleek/boardWash";
 import { ScoringPreviewPanel } from './ScoringPreviewPanel';
@@ -6,6 +7,10 @@ import { areaShareOf, clampAreaShare, DEFAULT_COLORED_AREA_SHARE, MAX_COLORED_AR
 import { getMapMutators } from '@/lib/mapMutators';
 import { BOARD_SIDES, type BoardEdgeSpecs, type BoardSide } from '@/lib/physics/boardEdges';
 import { clampWeather, WEATHER_MAX } from '@/lib/rendering/motes';
+import { PREMISE_MAX_CHARS } from '@/lib/mapPremise';
+import { probePockets, LANE_MIN_LENGTH, type PocketProbe } from '@/lib/admin/pocketProbe';
+import { createInitialGameData } from '@/lib/initGame';
+import { DEFAULT_MODIFIERS } from '@/hooks/useActiveModifiers';
 
 /**
  * Optional numeric field: blank deletes it, so "this map does not say" and
@@ -53,6 +58,43 @@ function edgeKick(edges: BoardEdgeSpecs | undefined, side: BoardSide): number | 
   return edges?.[side]?.kick;
 }
 
+/**
+ * The pocket probe, on demand: the smallest pocket one fence closes on this
+ * map as authored, whether it grades superior, and how much of the board has
+ * room to draw. A button rather than live, because it traces every fence a
+ * player could start and the panel re-renders on every keystroke.
+ */
+function PocketReadout({ level }: { level: LevelConfig }) {
+  const [result, setResult] = useState<{ id: string; p: PocketProbe } | null>(null);
+  const measure = () => {
+    const data = createInitialGameData({ ...level, neverRotates: true }, level.level, DEFAULT_MODIFIERS);
+    setResult({ id: level.id, p: probePockets(data, level.maxBalls ?? 2) });
+  };
+  const p = result && result.id === level.id ? result.p : null;
+  const pct = p?.smallestPocketPercent;
+  return (
+    <div className="space-y-1 col-span-2">
+      <button
+        type="button"
+        onClick={measure}
+        className="px-2 py-1 rounded border border-border bg-background hover:bg-muted"
+      >
+        Measure pockets
+      </button>
+      {p && (
+        <span className="block text-[10px] text-muted-foreground leading-relaxed">
+          Smallest one-fence pocket: {pct == null ? 'none' : `${pct.toFixed(2)}% of the board`}
+          {pct != null && p.smallestPocketAt && ` at (${Math.round(p.smallestPocketAt.x)}, ${Math.round(p.smallestPocketAt.y)})`}.
+          {' '}Superior at the start needs {p.superiorAtStartPercent.toFixed(2)}%
+          {pct != null && pct <= p.superiorAtStartPercent ? ' (yes)' : ' (no)'}, and late in the map
+          {' '}{p.superiorAtWorstPercent.toFixed(2)}%{pct != null && pct <= p.superiorAtWorstPercent ? ' (yes)' : ' (no)'}.
+          {' '}Room to draw ({LANE_MIN_LENGTH}+ fence): {p.lanePercent.toFixed(1)}% of open ground.
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface LevelPanelProps {
   level: LevelConfig;
   onUpdateLevel: (level: LevelConfig) => void;
@@ -72,6 +114,30 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               value={level.id}
               onChange={(e) => onUpdateLevel({ ...level, id: e.target.value })}
               className="w-full px-2 py-1 rounded bg-background border border-border"
+            />
+          </label>
+
+          <PocketReadout level={level} />
+
+          {/* The map's idea in one sentence, for the designer only. Blank is
+              allowed while a map is being drafted; the ladder lint refuses a
+              shipped map without one (mapPremise.test.ts). */}
+          <label className="space-y-1 col-span-2">
+            <span className="text-muted-foreground">
+              Premise ({(level.premise ?? '').length}/{PREMISE_MAX_CHARS}, "the one where...")
+            </span>
+            <textarea
+              value={level.premise ?? ''}
+              rows={2}
+              maxLength={PREMISE_MAX_CHARS}
+              onChange={(e) => {
+                const next = { ...level };
+                const v = e.target.value.replace(/\s*\n\s*/g, ' ');
+                if (v.trim() === '') delete next.premise;
+                else next.premise = v;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border resize-none"
             />
           </label>
           

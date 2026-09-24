@@ -55,7 +55,15 @@ describe("every gate map on the ladder", () => {
   for (const level of gateMaps) {
     it(`level ${level.level} can reach its zone on the first frame of every deal`, () => {
       const rotations = new Set<number>();
-      for (const seed of SEEDS) {
+      const rotates = (level.level ?? 0) >= 4 && !level.neverRotates;
+      // Deal on until every orientation has been seen, not for a fixed eight:
+      // which seeds land on which rotation depends on the map's id, and a
+      // fixed set covered three of four on levels 4 and 9 once they gained a
+      // zone. The first eight always run.
+      const seeds = [...SEEDS];
+      for (let extra = 100; rotates && extra < 164; extra++) seeds.push(extra);
+      for (const seed of seeds) {
+        if (rotates && rotations.size === 4 && !SEEDS.includes(seed)) break;
         const game = deal(level, seed);
         rotations.add((game as unknown as { mapRotation: number }).mapRotation);
         const reachable = anyGateTargetCanReach(
@@ -63,9 +71,9 @@ describe("every gate map on the ladder", () => {
         );
         expect(reachable, `level ${level.level} seed ${seed} is unwinnable before the first cut`).toBe(true);
       }
-      // Eight seeds see every orientation a rotating map can be dealt in, so
-      // the check above covered all four rather than the one that happened.
-      if ((level.level ?? 0) >= 4 && !level.neverRotates) {
+      // Every orientation a rotating map can be dealt in was checked, rather
+      // than the one that happened.
+      if (rotates) {
         expect(rotations.size, `seeds only dealt rotations ${[...rotations]}`).toBe(4);
       }
     });

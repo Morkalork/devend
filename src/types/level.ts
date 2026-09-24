@@ -330,6 +330,18 @@ export type LevelMoverEntity  = MoverRectEntity | MoverCircleEntity;
 
 export interface LevelConfig {
   id: string;
+  /**
+   * What this map is ABOUT, in one sentence: "the one where...". For the
+   * designer, never shown to a player, so it is plain English in map.yml and
+   * not a locale string.
+   *
+   * A premise is written before anything is placed, and a map that cannot
+   * state one does not have one yet. That is the whole reason for the field:
+   * a play review of the ladder found the maps rated weakest were the ones
+   * whose objects did not add up to a single idea, and nothing made that
+   * visible until someone played them. See MAP_DESIGN_CARD.md.
+   */
+  premise?: string;
   level: number; // logical level number (multiple maps can share the same level)
   sizeThreshold: number; // percentage
   expectedCuts: number; // expected number of cuts to complete the level
