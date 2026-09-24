@@ -238,17 +238,48 @@ describe("the ladder's counts", () => {
     }
   });
 
-  it("keeps every smash clause under the number of breakables it has", () => {
+  it("keeps every smash clause under the number of breakables OF ITS CLASS", () => {
     // The slack rule (MAP_DESIGN_GUIDELINES section 1). Half of many leaves
     // plenty; half of two would leave none, which is the shape that makes a
     // single object load-bearing.
+    //
+    // Per class, and that is the whole point of this rewrite. It used to lump
+    // every breakable into one number, so a clause asking for the one monolith
+    // on a map of thirty-four shards was measured against thirty-five and
+    // passed with room to spare. Level 17 is that map, the question was asked
+    // in as many words, and the sweep is what caught it: 5 wins of 8 became 1,
+    // five losses objectiveBuried.
     const levels = yaml.split(/\n {2}- id: level-/).slice(1);
     for (const body of levels) {
-      const count = Number(body.match(/- kind: smashed\n\s+count: (\d+)/)?.[1] ?? 0);
-      if (count === 0) continue;
-      const breakables = (body.match(/\n {8}(brittle|chest|breakable): true/g) ?? []).length;
       const id = body.slice(0, body.indexOf("\n"));
-      expect(count, `level ${id} has no brick to spare`).toBeLessThan(breakables);
+      // Each entity block, so a flag can be attributed to the object carrying
+      // it rather than counted loose across the map.
+      const entities = body.split(/\n {6}- id: /).slice(1);
+      const shards = entities.filter(e => /\n {8}brittle: true/.test(e)).length;
+      const monoliths = entities.filter(e =>
+        /\n {8}(chest|breakable): true/.test(e) && !/\n {8}brittle: true/.test(e)).length;
+
+      for (const m of body.matchAll(/- kind: smashed\n\s+count: (\d+)\n\s+of: (\w+)/g)) {
+        const count = Number(m[1]);
+        const have = m[2] === "shards" ? shards : m[2] === "monoliths" ? monoliths : shards + monoliths;
+        expect(count, `level ${id} asks for ${count} of ${m[2]} and has ${have}: no spare`)
+          .toBeLessThan(have);
+      }
+    }
+  });
+
+  it("names a class on every clause, so the check above can do its job", () => {
+    // A clause without `of` is measured against both classes lumped together,
+    // which is exactly the blindness the test above exists to remove. The gate
+    // only forces `of` on a map holding both; the ladder says it everywhere so
+    // a map copied from it inherits the habit.
+    const levels = yaml.split(/\n {2}- id: level-/).slice(1);
+    for (const body of levels) {
+      const id = body.slice(0, body.indexOf("\n"));
+      const clauses = [...body.matchAll(/- kind: smashed\n\s+count: \d+\n(\s+of: \w+)?/g)];
+      for (const c of clauses) {
+        expect(c[1], `level ${id} has a smash clause that does not say of what`).toBeTruthy();
+      }
     }
   });
 });

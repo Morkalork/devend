@@ -163,10 +163,50 @@ object, never the structural one, and sweep before and after.
 \* 11 and 13 carry a shard square as well; the entry above says which of their
 clauses bills it.
 
-The chest is a monolith by the rule (amber, three hits) and is **loot**, so no
-shipped clause names monoliths on a chest map: a reward you would open anyway
-must not double as a required objective. Levels 7, 9 and 17 all say
-`of: shards` for this reason.
+#### When the map has only ONE monolith
+
+> A clause naming a class needs **a spare of that class**. The slack rule is
+> per class, and it is strict: more than it counts, not as many as it counts.
+
+Asked as a design question about level 17, which carries thirty-four shards and
+one yellow monolith: would it not make sense to require the monolith? It reads
+as an oversight, and the instinct is right in general - see level 19 below,
+which does exactly that.
+
+On 17 the sweep says no, and loudly. Adding `1 of monoliths` took it from **5
+wins of 8 to 1**, and five of the seven losses were `objectiveBuried`. One
+object with no spare, embedded in the middle of the wall the launcher is firing
+at, is the load-bearing shape this rule exists to forbid: the refusal stops the
+cut that would bury it, but a capture cascading off a legal cut elsewhere still
+can, and then the map is simply over.
+
+Nothing caught it before the sweep did, which was the real finding. The gate
+only refused a count ABOVE the available, so zero spare was legal, and the YAML
+slack test that does demand a spare was not class-aware. Both are strict and
+per class now.
+
+**Two ways to make a monolith matter on a one-monolith map**, when you want to:
+
+| | |
+|---|---|
+| give it a sibling | a second monolith is the cheapest fix, and it is what 11, 12 and 13 do. Sweep after: a monolith is usually structure, so adding one changes the board before it changes the content. |
+| let the object pay for itself | a **chest** already does. See below. |
+
+#### The chest pays its own way
+
+The chest is a monolith by the rule (amber, three hits), and it is the one
+monolith that never needs a clause to be worth breaking: smashing it grants a
+run reward. "Why would you ever go for the big one" - the question the whole
+split came from - has an answer here that no plain amber block has.
+
+So a chest on a map with no spare stays out of the win, and 7, 9 and 17 all say
+`of: shards` for that reason.
+
+This is about slack, not about chests being sacred. **Level 19 requires two of
+its four chests** and is right to: four of a thing is slack, so no single cut
+is fatal, and "open two of the four" is a real choice about which two. The rule
+is the spare, and the chest's own reward is what makes a lone one bearable
+without one.
 
 #### Slack is in LANES, not in objects
 

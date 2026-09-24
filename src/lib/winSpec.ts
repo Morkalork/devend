@@ -496,9 +496,27 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       // reading thirty-four.
       const matching = all.filter(e => matchesSmashClass({ brittle: !!e.brittle }, of));
       const noun = of === "any" ? "breakable" : of === "shards" ? "shard" : "monolith";
-      if (c.count > matching.length) {
-        problems.push(
-          `Asks for ${c.count} ${noun}${c.count === 1 ? "" : "s"} smashed, but the map has ${matching.length}.`);
+      const plural = (n: number) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+      // The slack rule (MAP_DESIGN_GUIDELINES section 1), and STRICTLY: the map
+      // needs more than it counts, not merely as many. A clause with no spare
+      // makes every one of its objects load-bearing, so a single cut that
+      // buries one ends the map - usually with no sign on screen.
+      //
+      // This check only ever refused a count ABOVE the available, which left
+      // the zero-spare case legal, and the class split made that reachable in a
+      // new way: `1 of monoliths` on a map holding exactly one monolith passed
+      // everything. Asked as a design question about level 17 - "there are a
+      // tonne of shards and one yellow monolith, would it not make sense to
+      // have one monolith destroyed as an acceptance criteria" - and the sweep
+      // answered it: 5 wins of 8 became 1, and five of the seven losses were
+      // objectiveBuried. One object with no spare, sitting in the middle of the
+      // wall the launcher is firing at.
+      if (c.count >= matching.length) {
+        problems.push(matching.length === 0
+          ? `Asks for ${plural(c.count)} smashed, but the map has none.`
+          : `Asks for ${plural(c.count)} smashed and the map has ${matching.length}, `
+            + `leaving no spare. Every one becomes load-bearing, so a single cut `
+            + `that buries one ends the map. Add one more, or ask for fewer.`);
       }
       // THE rule this whole change exists for. On a map holding both classes an
       // unsaid `of` means "any", and "any" on a mixed map is the bug that was
