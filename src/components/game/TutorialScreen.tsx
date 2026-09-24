@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer, Fence } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { getImplementedBallTypes } from '@/lib/ballTypes';
+import { getAllBugs } from '@/lib/bugs';
 import { BallMark } from '@/components/game/BallMark';
 
 interface TutorialScreenProps {
@@ -151,6 +152,77 @@ export function TutorialScreen({ onBack, accentColor, encounteredBallTypeIds = [
             </motion.div>
             );
           })}
+        </div>
+
+        {/* ── Bugs ──────────────────────────────────────────────────────────
+            Every entry shown, always, with nothing hidden behind having met it
+            - deliberately unlike the ball roster above.
+
+            The ball roster hides an ability you have not encountered because
+            discovering one is the reward. A bug is the opposite case: the
+            decision it asks for happens BEFORE you touch it, and the one that
+            can cost you the map is the rarest in the pool. A roster that made
+            you meet Big Bang Release before it would tell you what Big Bang
+            Release does is a roster that withholds exactly the warning it
+            exists to give.
+
+            The copy is the catalogue's own (public/bugs.yml), the same strings
+            the press-and-hold explainer shows, so this page cannot teach a bug
+            the game no longer has. */}
+        <motion.h2
+          className="text-xl font-display font-bold text-center mt-10 mb-2 text-primary"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+        >
+          {t('tutorial.bugs.title')}
+        </motion.h2>
+        <p className="text-sm text-muted-foreground text-center max-w-xl mx-auto mb-6">
+          {t('tutorial.bugs.intro')}
+        </p>
+        <div className="grid gap-4 w-full">
+          {getAllBugs().map((bug, index) => (
+            <motion.div
+              key={bug.id}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.65 + index * 0.05 }}
+              className="flex gap-4 p-4 bg-card/50 border rounded-lg"
+              style={{ borderColor: bug.danger ? `${bug.color}66` : undefined }}
+            >
+              {/* The swatch is the bug's board colour, which is the only thing
+                  a player has to go on in the moment. */}
+              <div
+                className="flex-shrink-0 self-start w-10 h-10 rounded-full"
+                style={{
+                  backgroundColor: bug.color,
+                  boxShadow: `0 0 12px ${bug.color}`,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                }}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <h3 className="font-display font-semibold mb-1" style={{ color: bug.color }}>
+                  {bug.name}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{bug.description}</p>
+                {/* The cost gets its own line and its own label, for the reason
+                    the explainer card splits them: run the two together and a
+                    pool of trade-offs reads as a pool of gifts. */}
+                <p className="text-sm text-muted-foreground/80 leading-relaxed mt-1">
+                  <span className="text-foreground/70 font-semibold">
+                    {t('tutorial.bugs.cost')}{' '}
+                  </span>
+                  {bug.cost}
+                </p>
+                {bug.danger && (
+                  <p className="text-xs font-semibold mt-2" style={{ color: bug.color }}>
+                    {t('tutorial.bugs.danger')}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         {/* Life Cycle section */}

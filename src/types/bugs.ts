@@ -48,6 +48,18 @@ export interface BugDef {
   valueMax?: number;
   /** Squashing this can cost the player the map: drawn with a warning ring. */
   danger: boolean;
+  /** What the player gets, in their own words. Shown on hold and in the roster. */
+  description: string;
+  /**
+   * What it costs them.
+   *
+   * Its own field rather than a second sentence in `description`, because every
+   * bug in this pool is double-edged and the upside and the downside have to be
+   * legible as a PAIR. A card that buried the cost in a paragraph would be the
+   * same card that made the pool read as pure reward, which is the one thing it
+   * must not be.
+   */
+  cost: string;
 }
 
 /** A bug alive on the board. */

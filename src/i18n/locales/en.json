@@ -754,6 +754,12 @@
       "lock": "Lock ×{{mult}}",
       "notEncounteredYet": "Not encountered yet. Lock it for more info."
     },
+    "bugs": {
+      "title": "Bugs",
+      "intro": "Small things that fly around some boards. Run a ball over one to squash it, and whatever it holds lands on that ball. Every one of them costs you something, so read it before you steer a ball into it.",
+      "cost": "Costs:",
+      "danger": "Dangerous. This one can cost you the map."
+    },
     "steps": {
       "swipeToCut": {
         "title": "Swipe to Cut",
@@ -1163,6 +1169,13 @@
   },
   "boardInfo": {
     "hint": "Hold anything on the board to see what it is.",
+    "bug": {
+      "title": "Bug",
+      "body": "Run a ball over it to squash it. Whatever it holds lands on that ball, so which ball you let reach it is the whole decision.",
+      "gives": "What you get",
+      "costs": "What it costs",
+      "danger": "Dangerous. This one can cost you the map."
+    },
     "pickup": {
       "title": "Power-up token",
       "body": "Lock a ball in a pocket that holds this to claim it. Captured without a lock, it is wasted."

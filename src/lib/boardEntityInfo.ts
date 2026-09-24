@@ -19,6 +19,7 @@ import { pointInPolygon } from "@/lib/polygon";
 import { coloredAreaAt } from "@/lib/coloredAreas";
 
 export type BoardEntityKind =
+  | "bug"
   | "pickup"
   | "chestLoot"
   | "dormantBall"
@@ -50,6 +51,15 @@ function near(x: number, y: number, px: number, py: number, r: number): boolean 
 
 export function boardEntityAt(game: CanvasGameState, x: number, y: number): BoardEntityHit | null {
   // ── Small, transient things first: they sit ON TOP of everything else ──────
+  //
+  // Bugs before tokens, because a bug can fly over one and the finger is on the
+  // thing that moved. The hit is resolved at press-down and carried into the
+  // hold timer, so a bug scuttling off during the 450ms does not cancel the
+  // explanation of the bug that was there when the press began - which is the
+  // only reason a hold gesture works on something that moves at all.
+  for (const b of game.bugs ?? []) {
+    if (near(x, y, b.position.x, b.position.y, TOUCH_SLOP)) return { kind: "bug", detail: b.effect };
+  }
   for (const p of game.pickups ?? []) {
     if (near(x, y, p.position.x, p.position.y, TOUCH_SLOP)) return { kind: "pickup", detail: p.effect };
   }

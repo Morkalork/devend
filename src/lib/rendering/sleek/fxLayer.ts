@@ -11,7 +11,7 @@
  * it is handed and never mutates game state.
  */
 
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -88,9 +88,23 @@ export class FxLayer {
 
   private under = new Graphics();  // pocket fills, below the actors
   private over = new Graphics();   // sparks, chains, debris
+  /** Splat names (see drawBugSplats). Above the Graphics, so text is never buried. */
+  private labels = new Container();
+  /**
+   * Pooled Text objects for those names, with the string each one currently
+   * holds.
+   *
+   * Pooled rather than built per frame, which is what the rest of this renderer
+   * would have done to it otherwise: a splat lives 1.3 seconds, so a fresh Text
+   * per frame is eighty short-lived objects and eighty texture uploads per
+   * squash, and Pixi re-rasterises a Text whenever its string is ASSIGNED, not
+   * only when it changes. Both are avoided by keeping the slots and comparing
+   * the string first.
+   */
+  private labelPool: { text: Text; current: string }[] = [];
 
   constructor() {
-    this.container.addChild(this.under, this.over);
+    this.container.addChild(this.under, this.over, this.labels);
   }
 
   sync(
@@ -103,6 +117,10 @@ export class FxLayer {
   ): void {
     this.under.clear();
     this.over.clear();
+    // Every label starts the frame hidden; drawBugSplats turns back on exactly
+    // the ones it uses. Clearing by hiding rather than by destroying is what
+    // makes the pool a pool.
+    for (const slot of this.labelPool) slot.text.visible = false;
 
     this.drawCutPreview(game, w2s, scale);
     this.drawSlings(game, w2s, scale, now);
@@ -591,6 +609,21 @@ export class FxLayer {
    * gets a grey splat and a struck-through ring instead of the bug's colour.
    * "Nothing happened" and "nothing works" look the same from the outside, and
    * this board has form for shipping a mechanic nobody could tell was firing.
+   *
+   * ── And it says the name ────────────────────────────────────────────────
+   *
+   * Nine bugs told apart by colour alone is nine things a player cannot name,
+   * and a power-up you cannot name is one you cannot plan around. Arkanoid has
+   * the same problem and prints a letter on the capsule; a letter does not
+   * survive on a body nine world units across, and the compass ring's comment
+   * has the long version of why (a digit on a ball is eight screen pixels on a
+   * phone).
+   *
+   * So the SPLAT carries the name instead of the bug. It is the one moment the
+   * player is already looking at that exact spot, nothing is moving through it,
+   * and there is room for a word - and it teaches in the order that sticks:
+   * you did the thing, then you find out what it was called. The press-and-hold
+   * explainer (boardEntityInfo.ts) is the other half, for deciding BEFORE.
    */
   private drawBugSplats(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const list = game.bugSplats;
@@ -638,7 +671,57 @@ export class FxLayer {
           .moveTo(p.x - rr, p.y - rr).lineTo(p.x + rr, p.y + rr)
           .stroke({ width: Math.max(1, 1.5 * scale), color, alpha: alpha * 0.9 });
       }
+
+      if (def) {
+        this.drawSplatName(def.name, p.x, p.y - r * 2.6, color, alpha, scale, burst);
+      }
     }
+  }
+
+  /**
+   * One splat's name, from the pool.
+   *
+   * Rises a little as it fades, which is what separates it from the board's
+   * static labels: this is an event that happened, not a sign that is there.
+   */
+  private drawSplatName(
+    name: string, x: number, y: number, color: number, alpha: number, scale: number, burst: number,
+  ): void {
+    const slot = this.labelPool.find(l => !l.text.visible) ?? this.makeLabelSlot();
+    const size = Math.max(10, 13 * scale);
+    if (slot.current !== name) {
+      slot.text.text = name;
+      slot.current = name;
+    }
+    slot.text.style.fontSize = size;
+    slot.text.style.fill = color;
+    slot.text.visible = true;
+    slot.text.alpha = alpha;
+    // Lifts by about a line over the splat's life, easing out with the burst.
+    slot.text.position.set(Math.round(x), Math.round(y - size * burst * 0.8));
+  }
+
+  /** A new pooled label. Only ever grows to the most splats seen at once. */
+  private makeLabelSlot(): { text: Text; current: string } {
+    const text = new Text({
+      text: "",
+      style: new TextStyle({
+        fontFamily: "monospace",
+        fontWeight: "bold",
+        fontSize: 13,
+        fill: 0xffffff,
+        // A thin dark halo, because a splat can land anywhere: over captured
+        // ground, over a lit pocket, over a brick. Nothing on this board is a
+        // reliable background for text.
+        stroke: { color: 0x000000, width: 3 },
+      }),
+    });
+    text.anchor.set(0.5, 1);
+    text.visible = false;
+    this.labels.addChild(text);
+    const slot = { text, current: "" };
+    this.labelPool.push(slot);
+    return slot;
   }
 
   /**
@@ -1064,6 +1147,11 @@ export class FxLayer {
   }
 
   destroy(): void {
+    // `children: true` takes the pooled labels with it, since they are children
+    // of `this.labels` which is a child of the container. The pool array is
+    // dropped too, so a layer rebuilt after a resize does not hand out Text
+    // objects belonging to a destroyed scene graph.
+    this.labelPool = [];
     this.container.destroy({ children: true });
   }
 }

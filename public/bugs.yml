@@ -29,6 +29,14 @@
 #   valueMax    upper end when the magnitude is a RANGE (value is the lower end)
 #   danger      true when squashing this can cost the player the map. Drawn with
 #               a warning ring so the choice is informed rather than a surprise
+#   description what the player GETS. One or two sentences, shown on the
+#               press-and-hold explainer and in the roster
+#   cost        what it costs them. A separate field rather than a second
+#               sentence in `description`, because every bug in this pool is
+#               double-edged and a card that states the upside and the downside
+#               in the same breath is the only honest way to show one. A bug
+#               with nothing in this field is a bug that needs rebalancing, not
+#               a bug with no cost, so a test refuses an empty one.
 #
 # Magnitudes are deliberately NOT scaled by pickupPayoutLevel. A bug is a
 # board-side event rather than a reward lane: Benefits Package raises how OFTEN
@@ -39,6 +47,8 @@ bugs:
   # ── The ball's speed, both directions ────────────────────────────────────
   - id: bitRot
     name: Bit Rot
+    description: "Slows the ball that squashes it, for the rest of the map."
+    cost: "A slow ball is easy to fence in, and a poor hammer: damage climbs with speed, so a slower ball takes far longer to break anything."
     color: "#8b7355"
     weight: 4
     # Fraction of its current speed the ball keeps. A slow ball is easy to fence
@@ -48,6 +58,8 @@ bugs:
 
   - id: caffeine
     name: Caffeine
+    description: "Speeds the ball up by half, and it pays half again as much when you finally lock it."
+    cost: "A fast ball is the hardest thing on the board to trap, and it will be loose for a long time."
     color: "#ff6b35"
     weight: 3
     # Speed multiplier, and the same multiplier on what the ball pays when it is
@@ -58,6 +70,8 @@ bugs:
   # ── Hold it still ────────────────────────────────────────────────────────
   - id: deadlock
     name: Deadlock
+    description: "Holds the squashing ball still for a few seconds, exactly like a tap-freeze. Fence around it while it waits."
+    cost: "A held ball is not breaking anything, and the clock does not stop with it."
     color: "#5ec8f5"
     weight: 4
     # Seconds the squashing ball is held where it stands. The same hold a
@@ -67,6 +81,8 @@ bugs:
   # ── Change the ball itself ───────────────────────────────────────────────
   - id: featureBloat
     name: Feature Bloat
+    description: "Grows the ball by half again or more, and the lock pays exactly as much more as it grew."
+    cost: "A bigger ball needs a bigger pocket, so every seal from here on is a harder one to draw."
     color: "#b06bff"
     weight: 3
     # Growth, as a fraction of the ball's current radius: a range, rolled per
@@ -79,6 +95,8 @@ bugs:
 
   - id: branch
     name: Branch
+    description: "Splits the squashing ball in two. Both are the same type, and both pay a lock."
+    cost: "Two balls to trap where there was one, on a board you were already managing."
     color: "#ffd93d"
     weight: 3
     # Extra balls the squashing ball divides into. Two balls to trap where there
@@ -89,6 +107,8 @@ bugs:
   # ── Take the ball off the board ──────────────────────────────────────────
   - id: autoMerge
     name: Auto Merge
+    description: "A fence closes in a ring around the ball where it stands, and locks it. It costs you no fence and no par."
+    cost: "A round, open pocket is the worst-paying seal there is, and the ball it takes off the board was one of your hammers."
     color: "#4ade80"
     weight: 2
     # Ring radius, as a multiple of the ball's radius. A fence closes around the
@@ -100,6 +120,8 @@ bugs:
 
   - id: bigBang
     name: Big Bang Release
+    description: "Does what Auto Merge does, to every free ball at once. It can finish a map on the spot."
+    cost: "It can also end one: with every ball gone, anything the map still wants smashed is out of reach. Do not run over this one while a smash clause is outstanding."
     color: "#ff4d6d"
     weight: 1
     danger: true
@@ -112,6 +134,8 @@ bugs:
   # ── The hammer buffs (MAP_DESIGN_GUIDELINES.md section 11) ───────────────
   - id: forcePush
     name: Force Push
+    description: "Triple damage for a few seconds: bricks and slabs go in a single hit."
+    cost: "It fractures your own fences on contact, like the black ball. The ball that is finally opening the wall is dismantling the pocket you drew for it."
     color: "#ff9f1c"
     weight: 3
     # Seconds of triple damage: bricks and slabs go in one hit. It also
@@ -123,6 +147,8 @@ bugs:
 
   - id: allHands
     name: All Hands
+    description: "The squashing ball drags every other ball toward it for a few seconds."
+    cost: "It gathers the board into one place, which ruins any separation you spent fences building."
     color: "#00d9c0"
     weight: 2
     # Seconds the squashing ball drags every other ball toward it, on the
