@@ -303,7 +303,36 @@ describe("what the authoring gate refuses", () => {
     const p = problems(level(
       [SHARD, { ...SHARD, id: "s2" }, { ...SHARD, id: "s3" }, MONO],
       [{ kind: "smashed", count: 2, of: "monoliths" }]));
-    expect(p).toContain("2 monoliths smashed, but the map has 1");
+    expect(p).toContain("2 monoliths");
+    expect(p).toContain("the map has 1");
+  });
+
+  it("refuses a class clause with no spare, not only one that overreaches", () => {
+    /**
+     * The hole the class split opened, and the reason this rule is `>=`.
+     *
+     * Asked as a design question about level 17: it carries a tonne of shards
+     * and one yellow monolith, so would it not make sense to require the
+     * monolith? A fair question, and the sweep answered it - 5 wins of 8 fell
+     * to 1, and five of the seven losses were objectiveBuried. One object with
+     * no spare, sitting in the middle of the wall the launcher fires at.
+     *
+     * Nothing caught it beforehand. This check only refused a count ABOVE the
+     * available, and the YAML slack test that does enforce a spare was not
+     * class-aware, so `1 of monoliths` on a one-monolith map passed both.
+     */
+    const p = problems(level(
+      [SHARD, { ...SHARD, id: "s2" }, MONO],
+      [{ kind: "smashed", count: 1, of: "monoliths" }]));
+    expect(p, "a clause with every object load-bearing was allowed")
+      .toContain("no spare");
+  });
+
+  it("allows the same clause the moment there is one to spare", () => {
+    expect(problems(level(
+      [SHARD, { ...SHARD, id: "s2" }, MONO, { ...MONO, id: "m2" }],
+      [{ kind: "smashed", count: 1, of: "monoliths" }],
+    ))).toBe("");
   });
 
   it("passes a properly split mixed map", () => {
