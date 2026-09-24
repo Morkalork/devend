@@ -31,6 +31,7 @@ import { useCertificateManager, getLoadedCertBonuses, getLoadedCertStartingLevel
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { loadFenceTypes } from '@/lib/fences';
+import { loadBugs } from "@/lib/bugs";
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { performTotalReset } from '@/lib/totalReset';
 import { loadAbilities, getAllAbilities, rollCappedAbilityReward } from '@/lib/abilities';
@@ -1005,6 +1006,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadAbilities(),
         // Fence types (fences.yml). Failure keeps the build-time catalogue.
         loadFenceTypes(),
+        // Bug pool (bugs.yml), same deal: a failed fetch leaves the baked-in
+        // catalogue standing rather than a board that quietly grows no bugs.
+        loadBugs(),
         loadFeatures(),
         // Door pool (doors.yml). On failure assignment levels fall back to the shop.
         loadDoors(),
@@ -1115,6 +1119,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
+        // Bug pool (bugs.yml), same deal: a failed fetch leaves the baked-in
+        // catalogue standing rather than a board that quietly grows no bugs.
+        loadBugs(),
         loadFeatures(),
         loadDoors(),
         loadCapstones(),
@@ -1255,6 +1262,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
+        // Bug pool (bugs.yml), same deal: a failed fetch leaves the baked-in
+        // catalogue standing rather than a board that quietly grows no bugs.
+        loadBugs(),
         loadFeatures(),
         loadDoors(),
         loadCapstones(),
@@ -2272,7 +2282,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
   // edits even before a run starts. handleStartGame reloads it per run.
-  useEffect(() => { loadBallTypes(); loadAbilities(); loadFenceTypes(); }, []);
+  useEffect(() => { loadBallTypes(); loadAbilities(); loadFenceTypes(); loadBugs(); }, []);
 
   // Replenishing abilities (abilities.yml `replenishTo`, today just Shockwave):
   // every map opens topped up to the authored floor for anything the player has

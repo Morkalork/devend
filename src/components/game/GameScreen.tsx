@@ -1185,6 +1185,13 @@ export function GameScreen({
               // would delete it on the frame it spawned.
               lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
             }}
+            bugConfig={pickupLifetimeFactor === 1 ? config.bugs : {
+              ...config.bugs,
+              // Use It Or Lose It shortens a bug's life exactly as it shortens
+              // a token's. A bug is claimed by getting a ball to it, so a rung
+              // that squeezes the window squeezes the harder of the two.
+              lifetimeSeconds: Math.max(1, Math.round(config.bugs.lifetimeSeconds * pickupLifetimeFactor)),
+            }}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}

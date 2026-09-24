@@ -450,6 +450,17 @@ export interface LevelConfig {
    */
   pickupSpots?: { x: number; y: number }[];
   /**
+   * Bug spawn-chance override for this map (0-1).
+   *
+   * Same shape as `pickupChance` and for the same reasons: setting it bypasses
+   * the global start_level gate, so a Demolition map can guarantee bugs (1.0)
+   * and a set-piece can suppress them (0). Bugs hand out effects that change a
+   * ball permanently, so a map built around one specific ball - a boss, a
+   * launcher's single shot, a two-ball mirror puzzle - wants to say 0 here and
+   * mean it.
+   */
+  bugChance?: number;
+  /**
    * Share of this map's points carried by its colored areas, 0..0.8.
    *
    * Absent means the default (0.4) on any map that HAS areas, and nothing at

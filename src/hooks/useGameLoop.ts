@@ -29,6 +29,7 @@ import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updateMoverControlFn } from "@/lib/physics/moverControl";
 import { updatePickups } from "@/lib/pickups";
+import { updateBugs } from "@/lib/physics/bugs";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
@@ -63,6 +64,15 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /**
+   * Called every physics step: squash any bug a ball is now sitting on.
+   *
+   * A callback rather than a direct call, because applying a bug needs the
+   * level's win spec, the run's modifiers and the lock callbacks - Ship It
+   * closes a real pocket and the lock that follows is priced like any other.
+   * The loop has none of those; GameCanvas has all of them.
+   */
+  squashBugs?: () => void;
   /**
    * Called every frame after the barrels are armed: tears down the shell of
    * any barrel that armed this frame (physics/launcherShell.ts).
@@ -603,6 +613,13 @@ export function createGameLoop(
       }
       handleBallCollisions(game);
 
+      // Bugs squash with the ball pass, not the frame pass. A ball crosses more
+      // than a bug's own diameter inside one 120Hz step, so a per-frame check
+      // would miss exactly the fast balls that are the most satisfying thing to
+      // squash one with - and "it went straight through it" is the one failure
+      // this mechanic cannot have.
+      callbacks.squashBugs?.();
+
       // Arm a barrel the frame it finishes emptying. After ball movement, so a
       // ball that left the interior this step counts as gone this step, and
       // before the win checks downstream, so the first frame a fence could be
@@ -644,6 +661,11 @@ export function createGameLoop(
     // physics step) — all its timing keys off game.activePlaySeconds, so the
     // pause/prompt/menu holds above never advance a token's clock.
     updatePickups(game);
+
+    // Bugs fly, age out and spawn. Once per frame like the tokens, and on the
+    // same active-play clock, so a pause never advances a bug's life or moves
+    // it across a board the player is not looking at.
+    updateBugs(game, dt);
 
     // Treasure-chest loot gems: bounce them under gravity onto the first
     // surface below (obstacle top, fence, or floor). Same per-frame cadence as

@@ -173,3 +173,44 @@ crt_word_highlight:
 
   # Border width in pixels
   border_width: 2
+
+# Bugs: the flying mini power-ups (public/bugs.yml holds the pool itself).
+#
+# A bug is squashed by a ball running it over, and the power lands on THAT
+# ball. Tuning here is spawning and flight only; what each bug does, and how
+# strong it is, lives in bugs.yml beside the entry it belongs to.
+bugs:
+  # First level bugs may spawn on GLOBALLY.
+  #
+  # Set past the ladder on purpose: bugs are opted into per map, with
+  # `bugChance` in map.yml, and today that is the four Demolition maps they
+  # were built for (7, 9, 17, 18). A bug changes a ball permanently, so a map
+  # built around one specific ball - a boss, a launcher's single shot, a
+  # two-ball mirror puzzle - must not grow one by default, and "by default"
+  # is what a low gate here would mean.
+  #
+  # Levels 5 and 6 are deliberately NOT in that list even though they carry
+  # brick runs: 5 is where breaking is MET, and a Meet beat introduces one
+  # thing (MAP_DESIGN_GUIDELINES.md section 4). Pairing the first wall a
+  # player ever breaks with a power-up that rewrites their ball is how a
+  # teaching map stops teaching.
+  #
+  # To make bugs global instead, put a real level number here.
+  start_level: 999
+  # A spawn roll happens every N active-play seconds (pauses don't count)
+  spawn_check_seconds: 6
+  # Chance per roll (0-1), rolled only while fewer than max_simultaneous alive.
+  # Much higher than the pickup chance on purpose: a bug is not a reward lane,
+  # it is something the board does, and one that showed up as rarely as a token
+  # would never become part of how a map is read.
+  spawn_chance: 0.35
+  # Hard cap on simultaneous bugs. Two is a choice ("which one do I want?");
+  # more than that is a swarm, and a board where every loose ball hits
+  # something is a board where the player stopped deciding.
+  max_simultaneous: 2
+  # Unsquashed bugs vanish after this many active-play seconds
+  lifetime_seconds: 20
+  # Cruise speed, world units per second. Well under a ball's ~250: a bug that
+  # moved at ball speed could not be waited for, and waiting is the mechanic.
+  # It darts and crawls around this figure rather than holding it.
+  speed: 95

@@ -18,6 +18,8 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 // Imported, never re-declared: these govern how long the physics keeps a marker
 // alive, and a local copy that drifts makes markers disappear early.
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
+import { BUG_RADIUS, BUG_SPLAT_MS } from "@/lib/physics/bugs";
+import { getBug } from "@/lib/bugs";
 import {
   computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments,
   trajectoryTurnsFor,
@@ -116,6 +118,7 @@ export class FxLayer {
     this.drawAbilityFx(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);
     this.drawPickupFeedback(game, w2s, scale, now);
+    this.drawBugSplats(game, w2s, scale, now);
     this.drawMoverFriction(game, w2s, scale, now);
     this.drawLockMarkers(game, w2s, scale);
     this.drawBallPops(game, w2s, scale, now);
@@ -572,6 +575,68 @@ export class FxLayer {
         this.over
           .moveTo(p.x - r, p.y - r).lineTo(p.x + r, p.y + r)
           .stroke({ width: Math.max(1.5, 2 * scale), color: 0x9aa3ad, alpha });
+      }
+    }
+  }
+
+  /**
+   * The squash.
+   *
+   * It sprays ALONG THE BALL'S HEADING rather than radiating, because a splat
+   * that spread evenly would read as the bug popping on its own - and the whole
+   * point of the mechanic is that a ball you steered did this. The direction is
+   * the one piece of the event that says who is responsible.
+   *
+   * A declined effect (Branch at the ball cap, Auto Merge with no room for a ring)
+   * gets a grey splat and a struck-through ring instead of the bug's colour.
+   * "Nothing happened" and "nothing works" look the same from the outside, and
+   * this board has form for shipping a mechanic nobody could tell was firing.
+   */
+  private drawBugSplats(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const list = game.bugSplats;
+    if (!list || list.length === 0) return;
+
+    for (const splat of list) {
+      const elapsed = now - splat.startTime;
+      if (elapsed < 0 || elapsed >= BUG_SPLAT_MS) continue;
+      const t = elapsed / BUG_SPLAT_MS;
+      const p = w2s(splat.position.x, splat.position.y);
+      const def = getBug(splat.effect);
+      const color = splat.applied && def
+        ? Number.parseInt(def.color.replace("#", ""), 16)
+        : 0x9aa3ad;
+      const r = BUG_RADIUS * scale;
+      // Fast out, slow fade: the burst is over in a third of the splat's life
+      // and the stain lingers, which is how a squash actually looks.
+      const burst = Math.min(1, elapsed / 220);
+      const alpha = (1 - t) * (1 - t);
+
+      // The stain, thrown forward along the heading.
+      const dx = splat.direction.x;
+      const dy = splat.direction.y;
+      this.over
+        .ellipse(p.x + dx * r * burst * 1.2, p.y + dy * r * burst * 1.2, r * (1 + burst * 0.9), r * (1 + burst * 0.45))
+        .fill({ color, alpha: alpha * 0.55 });
+
+      // Five specks, fanned into the half-plane the ball was heading into.
+      if (burst < 1) {
+        const spread = Math.PI * 0.55;
+        const heading = Math.atan2(dy, dx);
+        for (let i = 0; i < 5; i++) {
+          const a = heading + (i / 4 - 0.5) * spread;
+          const d = r * (1.4 + burst * 3.4) * (0.7 + (i % 2) * 0.4);
+          this.over
+            .circle(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, Math.max(0.6, r * 0.22 * (1 - burst)))
+            .fill({ color, alpha: alpha * 0.8 });
+        }
+      }
+
+      if (!splat.applied) {
+        // Struck through: the bug was squashed and gave nothing.
+        const rr = r * 1.8;
+        this.over
+          .moveTo(p.x - rr, p.y - rr).lineTo(p.x + rr, p.y + rr)
+          .stroke({ width: Math.max(1, 1.5 * scale), color, alpha: alpha * 0.9 });
       }
     }
   }

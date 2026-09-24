@@ -132,6 +132,29 @@ export interface Ball {
   lastDeformAt?: number;
   /** When this ball last came out of a portal, so a pair cannot become a loop. */
   lastPortalAt?: number;
+  // ── Bug buffs (types/bugs.ts, physics/bugEffects.ts) ─────────────────────
+  //
+  // NOT the Bug Squash upgrade above: these come from squashing one of the
+  // flying power-ups, and the older field is about this ball being squashed.
+  /**
+   * Force Push: until this moment the ball deals triple damage, breaks what it
+   * hits in one go, and fractures the player's own fences on contact.
+   */
+  wreckingUntil?: number;
+  /**
+   * All Hands: until this moment the ball pulls the others toward it, on the
+   * lodestone ball type's own steering fields (attractTurnRate/attractRadius
+   * above, borrowed for the duration and taken back by expireBugBuffs).
+   */
+  attractUntil?: number;
+  /**
+   * Radius this ball started the map at, so Feature Bloat's ceiling is a
+   * multiple of its ORIGINAL size rather than of whatever it grew to last. Set
+   * at spawn; a ball without it reads its current radius as the baseline, which
+   * is correct on the first bloat and is the only case that matters for a ball
+   * built by a test fixture.
+   */
+  bugBaseRadius?: number;
   /**
    * The obstacle this ball is currently punching through, and until when.
    *

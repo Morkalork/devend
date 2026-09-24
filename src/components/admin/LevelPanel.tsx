@@ -16,7 +16,7 @@ function OptionalNumber({
   level, field, label, min, max, step = 1, scale = 1, hint, onUpdateLevel,
 }: {
   level: LevelConfig;
-  field: 'maxBalls' | 'variety' | 'timeLimit' | 'pickupChance' | 'tiltChance';
+  field: 'maxBalls' | 'variety' | 'timeLimit' | 'pickupChance' | 'bugChance' | 'tiltChance';
   label: string; min: number; max?: number; step?: number; scale?: number; hint?: string;
   onUpdateLevel: (level: LevelConfig) => void;
 }) {
@@ -175,6 +175,9 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="pickupChance"
             label="Pickup Chance % (blank = global)" min={0} max={100} scale={100}
             hint="Set at all and the global start-level gate is bypassed: 100 guarantees a token, 0 suppresses them." />
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="bugChance"
+            label="Bug Chance % (blank = global)" min={0} max={100} scale={100}
+            hint="The flying power-ups. Same rule as pickups: set at all and the start-level gate is bypassed, 100 guarantees one, 0 suppresses them. Set 0 on a map built around one specific ball." />
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="tiltChance"
             label="Tilt Chance % (blank = 5-10)" min={0} max={100} scale={100}
             hint="Per progress tier. Needs a gravity well on the map and a level past the tilt floor to mean anything." />

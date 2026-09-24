@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import yaml from 'js-yaml';
 import { PickupConfig, PickupEffect, DEFAULT_PICKUP_CONFIG } from '@/types/pickups';
+import { BugConfig, DEFAULT_BUG_CONFIG } from '@/types/bugs';
 
 /** Raw `pickups:` block shape as written in the YAML (snake_case, keyed effects). */
 interface RawPickupConfig {
@@ -37,6 +38,36 @@ function parsePickupConfig(raw: RawPickupConfig | undefined): PickupConfig {
     maxSimultaneous: raw?.max_simultaneous ?? d.maxSimultaneous,
     lifetimeSeconds: raw?.lifetime_seconds ?? d.lifetimeSeconds,
     effects,
+  };
+}
+
+/** Raw `bugs:` block shape as written in the YAML (snake_case). */
+interface RawBugConfig {
+  start_level?: number;
+  spawn_check_seconds?: number;
+  spawn_chance?: number;
+  max_simultaneous?: number;
+  lifetime_seconds?: number;
+  speed?: number;
+}
+
+/**
+ * Map the YAML block onto the runtime BugConfig, defaulting field-by-field.
+ *
+ * No effect pool here, unlike parsePickupConfig: a bug's magnitude is written
+ * next to the bug in bugs.yml, so the two files never have to agree about a
+ * list of names. That agreement is exactly what let the pickup fallback pool
+ * drift three ways without anyone noticing.
+ */
+function parseBugConfig(raw: RawBugConfig | undefined): BugConfig {
+  const d = DEFAULT_BUG_CONFIG;
+  return {
+    startLevel: raw?.start_level ?? d.startLevel,
+    spawnCheckSeconds: raw?.spawn_check_seconds ?? d.spawnCheckSeconds,
+    spawnChance: raw?.spawn_chance ?? d.spawnChance,
+    maxSimultaneous: raw?.max_simultaneous ?? d.maxSimultaneous,
+    lifetimeSeconds: raw?.lifetime_seconds ?? d.lifetimeSeconds,
+    speed: raw?.speed ?? d.speed,
   };
 }
 
@@ -79,6 +110,8 @@ export interface GameConfig {
   };
   /** Parsed (camelCase) pickup tuning; raw YAML is snake_case (see parsePickupConfig). */
   pickups: PickupConfig;
+  /** Parsed bug spawn/flight tuning; the pool itself is public/bugs.yml. */
+  bugs: BugConfig;
   crt_word_highlight: {
     interval_min_seconds: number; // min delay between highlights appearing
     interval_max_seconds: number; // max delay between highlights appearing
@@ -130,6 +163,7 @@ const defaultConfig: GameConfig = {
     max_steps: 4,
   },
   pickups: DEFAULT_PICKUP_CONFIG,
+  bugs: DEFAULT_BUG_CONFIG,
   crt_word_highlight: {
     interval_min_seconds: 8,
     interval_max_seconds: 14,
@@ -151,7 +185,7 @@ export function useGameConfig() {
     fetch('/game-config.yml')
       .then((res) => res.text())
       .then((text) => {
-        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig };
+        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig };
         setConfig({
           ...defaultConfig,
           ...parsed,
@@ -164,6 +198,7 @@ export function useGameConfig() {
           scope_creep: { ...defaultConfig.scope_creep, ...parsed?.scope_creep },
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
           pickups: parsePickupConfig(parsed?.pickups),
+          bugs: parseBugConfig(parsed?.bugs),
         });
       })
       .catch((err) => {

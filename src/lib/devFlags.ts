@@ -108,6 +108,36 @@ export function debugMutatorId(): string | null {
 }
 
 /**
+ * Force every bug that spawns to be one particular kind, via `?bug=<id>`.
+ *
+ * The pool is weighted and the interesting entries are the rare ones: Big Bang
+ * Release sits at weight 1 and can end a map outright, so confirming it behaves
+ * - that it seals what it can, refuses what it cannot, and that a map with a
+ * smash clause outstanding fails honestly rather than hanging - would otherwise
+ * mean playing until it happened. This pins the draw.
+ *
+ * It does NOT make bugs spawn on a map that has them switched off, and it does
+ * not raise the spawn chance: it decides WHICH bug, not WHETHER. Pair it with
+ * the Playground's own spawn button to get one immediately.
+ *
+ * Ledger-ineligible like every other flag in this file.
+ */
+export function parseBugParam(search: string): string | null {
+  const raw = new URLSearchParams(search).get('bug');
+  const id = raw?.trim();
+  return id ? id : null;
+}
+
+/** The forced bug id from the live URL, or null. */
+export function debugBugId(): string | null {
+  try {
+    return parseBugParam(window.location.search) ?? bugOverride;
+  } catch {
+    return bugOverride; // no window (SSR / test env without a location)
+  }
+}
+
+/**
  * Force every sporadic board tilt to fire, via `?tilt=1`.
  *
  * A tilt is deliberately rare: 5-10% per progress tier, drawn per map, which
@@ -145,6 +175,7 @@ export function forcedTilts(): boolean {
 // flag exists to find, and the URL form is still there for a reload to carry.
 // The URL wins when both are set, so a link someone shares means what it says.
 let mutatorOverride: string | null = null;
+let bugOverride: string | null = null;
 let tiltsOverride = false;
 let ascensionOverride = 0;
 
@@ -153,6 +184,12 @@ export function setDebugMutatorOverride(id: string | null): void {
   mutatorOverride = id && id.trim() ? id.trim() : null;
 }
 export function getDebugMutatorOverride(): string | null { return mutatorOverride; }
+
+/** Force every bug that spawns to be this kind, for this session (null clears). */
+export function setDebugBugOverride(id: string | null): void {
+  bugOverride = id && id.trim() ? id.trim() : null;
+}
+export function getDebugBugOverride(): string | null { return bugOverride; }
 
 /** Force every sporadic tilt to fire for this session. */
 export function setForcedTiltsOverride(on: boolean): void { tiltsOverride = on; }
@@ -169,6 +206,7 @@ export function getDebugAscensionOverride(): number { return ascensionOverride; 
 export function resetDevFlagCache(): void {
   infiniteLives = null;
   mutatorOverride = null;
+  bugOverride = null;
   tiltsOverride = false;
   ascensionOverride = 0;
 }

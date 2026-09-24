@@ -25,15 +25,27 @@
  */
 import type { Ball } from "@/types/game";
 import { steerToward } from "@/lib/physics/gravity";
+import { isAttracting } from "@/lib/bugBuffs";
 
 /** Bend rate applied to a ball at the lodestone's centre, radians per second. */
 export const DEFAULT_ATTRACT_TURN_RATE = 1.6;
 /** Range in world units. Beyond this the lodestone is an ordinary ball. */
 export const DEFAULT_ATTRACT_RADIUS = 320;
 
-/** Is this ball currently able to pull others? */
+/**
+ * Is this ball currently able to pull others?
+ *
+ * Two ways in, and everything downstream - the pull below, the trajectory
+ * preview, the ball's own ring - reads this one predicate rather than the
+ * ability, so a borrowed pull is a real one everywhere or nowhere:
+ *
+ *   BY TYPE      the lodestone ball, which pulls for the whole map.
+ *   BY BUG       All Hands, squashed off a bug, which lends any ball the same
+ *                steering for a few seconds (physics/bugEffects.ts).
+ */
 export function isLodestone(ball: Ball): boolean {
-  return ball.ability === "attract" && ball.state === "active";
+  if (ball.state !== "active") return false;
+  return ball.ability === "attract" || isAttracting(ball);
 }
 
 /**

@@ -45,6 +45,7 @@ import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnershi
 import { generateRegionId } from "@/lib/gameUtils";
 import { wasteCapturedPickups } from "@/lib/pickups";
 import { simNow } from "@/lib/simClock";
+import { isWrecking, WRECKING_DAMAGE_MULTIPLIER } from "@/lib/bugBuffs";
 
 export const DESTRUCTIBLE_MAX_HITS = 3;
 const HIT_DEBOUNCE_MS = 250;     // one ball pass can't count as multiple hits
@@ -129,6 +130,15 @@ export function ballMass(ball: Ball): number {
  */
 export function ballImpactDamage(ball: Ball, normalSpeed: number): number {
   const raw = DAMAGE_K * ballMass(ball) * Math.pow(Math.max(0, normalSpeed), DAMAGE_EXP);
+  // Force Push (a squashed bug) multiplies the force AND lifts the per-hit cap
+  // by the same factor. Lifting the cap is the point rather than a side effect:
+  // the cap is what stops any ordinary ball taking a thick slab in one go, so a
+  // buff that tripled the force under the old ceiling would do nothing at all
+  // on precisely the slabs it is sold as the answer to.
+  if (isWrecking(ball)) {
+    const boosted = raw * WRECKING_DAMAGE_MULTIPLIER;
+    return Math.max(MIN_CHIP_DAMAGE, Math.min(MAX_HIT_DAMAGE * WRECKING_DAMAGE_MULTIPLIER, boosted));
+  }
   return Math.max(MIN_CHIP_DAMAGE, Math.min(MAX_HIT_DAMAGE, raw));
 }
 

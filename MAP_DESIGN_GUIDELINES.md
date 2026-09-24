@@ -1980,7 +1980,8 @@ one planned. The archetype's set-piece is level 17 "Deprecation" (section 5;
 plan and build record in `DEMOLITION_PLAN.md`), but the one-touch brick it is
 built from now MEETS in act I: 5, 6, 7 and 9 open their walls with runs of
 them, so a player meets the verb on the gentlest material there is and meets
-force later. Drops, ball buffs and the targeted clause are unbuilt.
+force later. The ball buffs are BUILT, as bugs (below). Drops and the targeted
+clause are unbuilt.
 
 **Why act I teaches on the brick, not the slab.** A slab asks two things at
 once: that you aim a ball at it, and that you hit it hard enough. Act I's job
@@ -2061,7 +2062,13 @@ count, so `hitsToBreak` keeps meaning hits everywhere else. Family A,
 "three good hits" never read the same. Ledger row and `mechanicSpread`
 detector land with the flag.
 
-**2. Drops.** `drops: { chance, effects? }` on a breakable: the smash rolls
+**2. Drops.** Still unbuilt, and now probably unnecessary: bugs (below) put a
+ball-claimed reward on the board without needing a brick to drop it, and two
+sources of the same thing on the same map would be noise. Kept here because the
+brick-sourced version says something bugs do not - "this WALL pays" - if a map
+ever wants that. The original design follows.
+
+`drops: { chance, effects? }` on a breakable: the smash rolls
 the chance (through `getRunRng`, so Daily runs agree) and on a hit spawns a
 **pickup token** at the brick's footprint, from the named subset or the global
 pool. It then obeys every existing token rule. This is the whole reason not to
@@ -2071,7 +2078,42 @@ a drop that had to be tapped, caught, or that fell to a floor the player cannot
 stand on would be a new rule on top of a new archetype. Bricks that pay on the
 smash itself are chests, and exist.
 
-**3. Ball buffs as pickup effects.** New `PickupEffect` kinds that put a
+**3. Ball buffs. BUILT, and not as pickup effects.**
+
+Built as **bugs**: small flying things that wander the live space, squashed by a
+ball running one over, paying the ball that did it. Catalogue in
+`public/bugs.yml`, flight and squashing in `physics/bugs.ts`, effects in
+`physics/bugEffects.ts`, the auto-lock ring in `physics/bugRing.ts`. Opted into
+per map with `bugChance`, today on 7, 9, 17 and 18.
+
+Three things about the shipped version differ from the sketch below, and each
+was the request's own idea rather than a compromise:
+
+- **A third claim rule after all.** This section argued against one, on the
+  grounds that a drop you had to tap or catch would be a new rule stacked on a
+  new archetype. That argument holds for a drop. It does not hold for this:
+  squashing asks WHICH ball and WHERE YOU LET IT RUN, which is the hammer
+  decision the archetype already turns on, now with a reason attached. It also
+  answers the thing that ruled a falling drop out on this ladder, which is that
+  most maps have no gravity, so nothing falls. A bug flies.
+- **The buff lands on the squasher**, not on a ball that happened to be sealed
+  in with a token. Same reason: the point is the ball you chose.
+- **The pool is wider than the three below**, and every entry is double-edged
+  because that is a property of the LIST. Bit Rot and Caffeine are the same
+  speed axis in both directions; Deadlock holds the ball; Feature Bloat makes it
+  bigger and worth exactly as much more; Branch splits it; Auto Merge rings and
+  locks it for free in the worst-paying pocket there is; Big Bang Release does
+  that to EVERY free ball and is the one marked `danger`; Force Push and All
+  Hands are the two from the table below that survived.
+
+`Force Push` is the `wrecking` row, built as written: triple damage, one-hit
+slabs, and it fractures your own fences. `ballast` was dropped as redundant once
+Feature Bloat existed, and `piercing` was dropped because punch-through already
+does it for any ball fast enough to earn it.
+
+The sketch this was built from:
+
+New `PickupEffect` kinds that put a
 timed state on one ball, the way `frozenUntil` does, applied to the ball that
 was locked in with the token. The player-side hammer is the drill fence; these
 are the ball-side one, and the two are the archetype's "two builds shortcut the

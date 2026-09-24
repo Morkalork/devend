@@ -622,6 +622,11 @@ levels:
   # room, which is map 6's lesson quoted back: easier to reach, harder to seal.
   - id: level-7
     level: 7
+    # Bugs (public/bugs.yml). Act I's first map with a real brick wall AND a
+    # slab, so the ball is already a tool here and a buff has something to act
+    # on. Half the rolls: a bug is a thing that happens on this map, not a
+    # thing the map is about.
+    bugChance: 0.5
     sizeThreshold: 22
     expectedCuts: 6
     points: 5
@@ -906,6 +911,10 @@ levels:
   # for it when there is the least room left to absorb it.
   - id: level-9
     level: 9
+    # Bugs. The act I map that teaches both claim rules already (chest on the
+    # smash, token on the seal), so a third - squash it with a ball - lands
+    # where the player is being taught how rewards arrive anyway.
+    bugChance: 0.6
     sizeThreshold: 16
     expectedCuts: 7
     points: 5
@@ -1848,6 +1857,10 @@ levels:
   # bottom. Every strip you seal from the bottom shortens the bounce.
   - id: level-17
     level: 17
+    # Bugs, at the archetype's set piece. The highest chance on the ladder:
+    # "Deprecation" is the map Demolition exists for, its wall is sixteen
+    # smashes deep, and Force Push is the answer it is built to want.
+    bugChance: 0.8
     sizeThreshold: 12
     expectedCuts: 9
     points: 5
@@ -2206,6 +2219,10 @@ levels:
   # Freak is aimed at: braking the arm turns the bet into a decision.
   - id: level-18
     level: 18
+    # Bugs. Slabs rather than bricks, so Force Push is worth more here and
+    # Bit Rot hurts more - the same pool reads differently against
+    # material that needs force.
+    bugChance: 0.6
     sizeThreshold: 11
     expectedCuts: 8
     points: 5

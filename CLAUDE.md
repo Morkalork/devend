@@ -39,7 +39,8 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
 - `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv}.json`.
 - `src/test/` — Vitest tests.
 - `public/*.yml` — runtime game config (`map.yml`, `upgrades.yml`,
-  `scoring-config.yml`, `loadouts.yml`, `certificates.yml`, `balls.yml`, …),
+  `scoring-config.yml`, `loadouts.yml`, `certificates.yml`, `balls.yml`,
+  `bugs.yml`, …),
   loaded at runtime with `js-yaml`.
 
 See **ARCHITECTURE.md** for the game design and data model,

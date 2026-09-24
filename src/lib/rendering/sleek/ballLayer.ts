@@ -58,6 +58,19 @@ import { causticShadow } from "./flashLight";
 import { getLightLook } from "@/lib/lightLook";
 import { warmup, WARMUP_EMBER } from "@/lib/rendering/ballTell";
 import { compassRing } from "./compassRing";
+import { simNow } from "@/lib/simClock";
+
+/**
+ * Nominal buff durations, for the ring's sweep only.
+ *
+ * The real durations are the `value` fields in public/bugs.yml and an author
+ * can retune them; these are what a full ring MEANS, and the sweep is clamped
+ * so a retuned buff shows a full ring for a moment rather than a ring that
+ * wraps past itself. Duplicating the YAML here would be worse: the renderer
+ * would then be a second place the tuning had to be right.
+ */
+const WRECKING_RING_MS = 6000;
+const ATTRACT_RING_MS = 6000;
 import { ballTrail } from "./ballTrail";
 import type { Pt } from "./pixelGrid";
 import {
@@ -1023,6 +1036,53 @@ export class SleekBallLayer {
 
     // The compass countdown, last so it sits over the ball it belongs to.
     this.drawTurnRing(ball, c, r, scale, activeSeconds);
+    // ...and the bug buffs over that, because they are the most temporary
+    // thing about the ball and the one a player most needs to see running out.
+    this.drawBugBuffRings(ball, c, r, scale);
+  }
+
+  /**
+   * Force Push and All Hands, as countdown rings around the ball.
+   *
+   * Both are timed, both change what the ball does to everything it touches,
+   * and neither changes how the ball looks on its own - so without this the
+   * player's fences start shattering, or every ball on the board starts
+   * drifting, with nothing anywhere saying which ball is doing it or for how
+   * much longer. The rings unwind, so "nearly over" is readable at a glance.
+   *
+   * Drawn as dashes rather than the compass's solid arc, and outside the ball
+   * rather than on it: three ring effects on one board have to be tellable
+   * apart from across the room, not just up close.
+   */
+  private drawBugBuffRings(ball: Ball, c: Pt, r: number, scale: number): void {
+    const now = simNow();
+    const rings: { until: number; span: number; color: number; radius: number }[] = [];
+    if (ball.wreckingUntil !== undefined && now < ball.wreckingUntil) {
+      rings.push({ until: ball.wreckingUntil, span: WRECKING_RING_MS, color: 0xff9f1c, radius: r * 1.45 });
+    }
+    if (ball.attractUntil !== undefined && now < ball.attractUntil) {
+      rings.push({ until: ball.attractUntil, span: ATTRACT_RING_MS, color: 0x00d9c0, radius: r * 1.75 });
+    }
+    if (rings.length === 0) return;
+
+    for (const ring of rings) {
+      // How much of the buff is left, as a fraction of a nominal duration. The
+      // catalogue can tune the real one, so this is clamped rather than assumed
+      // exact: a ring that overshot its own circle would look like a bug.
+      const left = Math.max(0, Math.min(1, (ring.until - now) / ring.span));
+      if (left <= 0) continue;
+      const sweep = left * Math.PI * 2;
+      const dashes = 10;
+      for (let i = 0; i < dashes; i++) {
+        const a0 = -Math.PI / 2 + (i / dashes) * sweep;
+        const a1 = a0 + (sweep / dashes) * 0.55;
+        if (a1 <= a0) continue;
+        this.overlays
+          .moveTo(c.x + Math.cos(a0) * ring.radius, c.y + Math.sin(a0) * ring.radius)
+          .lineTo(c.x + Math.cos(a1) * ring.radius, c.y + Math.sin(a1) * ring.radius)
+          .stroke({ width: Math.max(1.2, 1.8 * scale), color: ring.color, alpha: 0.9, cap: "round" });
+      }
+    }
   }
 
   destroy(): void {

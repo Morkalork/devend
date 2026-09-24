@@ -48,6 +48,7 @@ import { updateBallEffects, triggerWallHit, bounceImpact, pinSquish } from "@/li
 import { captureSplatScene } from "@/lib/splatScene";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage, punchesThrough, PUNCH_THROUGH_GRACE_MS, punchingThrough } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
+import { isWrecking } from "@/lib/bugBuffs";
 import { collectPhasedOut } from "@/lib/physics/phasing";
 import { queryWallsNear } from "@/lib/physics/wallGrid";
 import { runStream } from "@/lib/runRng";
@@ -933,7 +934,10 @@ export function updateBall(
       // Black-ball fence fracture (#64): a black wrecking ball cracks the player's
       // own fences apart in three hits (each hit fractures). Only player fences
       // (not board edges, already skipped, nor obstacle boundaries below).
-      if (!isObstacleWall && ball.ability === 'breakObjects') {
+      // Force Push (a squashed bug) does the same for its few seconds, and the
+      // cost is the whole point of the buff: the ball that is finally opening
+      // the wall is dismantling the pocket you drew to catch it in.
+      if (!isObstacleWall && (ball.ability === 'breakObjects' || isWrecking(ball, now))) {
         registerFenceFracture(game, wall, now);
       }
 

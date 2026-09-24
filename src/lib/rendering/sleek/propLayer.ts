@@ -21,6 +21,8 @@ import { dashedLine } from "./dashedLine";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, shadowFor, slabHeight, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
+import { getBug } from "@/lib/bugs";
+import { BUG_EXPIRY_WARN_SECONDS, BUG_RADIUS } from "@/lib/physics/bugs";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -65,6 +67,7 @@ export class PropLayer {
     this.drawCircuit(game, w2s, scale, now);
     this.drawCharges(game, w2s, scale, now);
     this.drawPickups(game, light, w2s, scale, now);
+    this.drawBugs(game, light, w2s, scale, now);
     this.drawChestLoot(game, light, w2s, scale);
   }
 
@@ -235,6 +238,125 @@ export class PropLayer {
   }
 
   /** Loot gems from a smashed chest: small lit objects that bounce and settle. */
+  /**
+   * The bugs.
+   *
+   * Drawn as OBJECTS in this file's lighting split - shadow, contact, lit limb -
+   * because that is what sells them as things on the board rather than marks on
+   * it, and a power-up a player is meant to aim at has to read as physical.
+   *
+   * Three things are doing work here beyond looking like an insect:
+   *
+   *   IT FACES WHERE IT IS GOING   the body points along the heading, so a
+   *                                player can see which way it is about to
+   *                                scuttle and lead a ball there. A symmetric
+   *                                blob would hide the one piece of information
+   *                                that makes the squash plannable.
+   *   ITS LEGS RUN AT ITS SPEED    the leg cycle is driven by the wander phase
+   *                                the flight code advances, so the darts and
+   *                                the crawls are visible as darts and crawls
+   *                                rather than as a constant jiggle.
+   *   DANGER IS MARKED             a `danger` bug wears a broken warning ring.
+   *                                Big Bang Release can end a map, and a
+   *                                power-up that costs you the run without ever
+   *                                having looked different is a trap, not a
+   *                                choice.
+   */
+  private drawBugs(
+    game: CanvasGameState,
+    light: LightScope,
+    w2s: W2S,
+    scale: number,
+    now: number,
+  ): void {
+    const bugs = game.bugs;
+    if (!bugs || bugs.length === 0) return;
+
+    for (const bug of bugs) {
+      const def = getBug(bug.effect);
+      const color = def ? Number.parseInt(def.color.replace("#", ""), 16) : PALETTE.amber;
+      const c = w2s(bug.position.x, bug.position.y);
+      const r = Math.max(4, BUG_RADIUS * scale);
+
+      // Blink out the last few seconds. Same cue the tokens use, so "this is
+      // about to be gone" is one language on the board rather than two.
+      const left = bug.expiresAtSeconds - game.activePlaySeconds;
+      const expiring = left <= BUG_EXPIRY_WARN_SECONDS;
+      const fade = expiring ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now / 90)) : 1;
+
+      const heading = Math.atan2(bug.velocity.y, bug.velocity.x);
+      const cos = Math.cos(heading);
+      const sin = Math.sin(heading);
+
+      const cast = shadowFor(light, c.x, c.y, slabHeight(scale) * 0.5);
+      this.shadows
+        .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r * 0.9, r * 0.6)
+        .fill({ color: PALETTE.shadow, alpha: cast.alpha * 0.8 * fade });
+
+      this.glows
+        .circle(c.x, c.y, r * 2.1)
+        .fill({ color, alpha: 0.09 * fade });
+
+      // Six legs, three a side, swinging on the flight code's own phase.
+      const amb = ambientAt(light, c.x, c.y);
+      for (let i = 0; i < 3; i++) {
+        const along = (i - 1) * r * 0.55;
+        const swing = Math.sin(bug.wander * 2.1 + bug.wanderSeed + i) * 0.5;
+        for (const side of [1, -1]) {
+          const bx = c.x + cos * along;
+          const by = c.y + sin * along;
+          const a = heading + side * (Math.PI / 2 + swing * side);
+          this.bodies
+            .moveTo(bx, by)
+            .lineTo(bx + Math.cos(a) * r * 1.35, by + Math.sin(a) * r * 1.35)
+            .stroke({ width: Math.max(1, scale), color, alpha: 0.55 * fade });
+        }
+      }
+
+      // Abdomen and head: two bodies along the heading, so it has a front.
+      this.bodies
+        .ellipse(c.x - cos * r * 0.35, c.y - sin * r * 0.35, r * 0.95, r * 0.7)
+        .fill({ color: mix(PALETTE.shadow, color, 0.45 + amb * 0.45), alpha: fade });
+      this.bodies
+        .circle(c.x + cos * r * 0.6, c.y + sin * r * 0.6, r * 0.5)
+        .fill({ color: mix(PALETTE.shadow, color, 0.6 + amb * 0.4), alpha: fade });
+      this.bodies
+        .ellipse(c.x - cos * r * 0.35, c.y - sin * r * 0.35, r * 0.95, r * 0.7)
+        .stroke({ width: 1, color, alpha: 0.85 * fade });
+
+      // The lit limb every round object on this board wears, aimed at the monitor.
+      const bearing = Math.atan2(light.y - c.y, light.x - c.x);
+      this.bodies
+        .circle(c.x + Math.cos(bearing) * r * 0.3, c.y + Math.sin(bearing) * r * 0.3, r * 0.22)
+        .fill({ color: 0xffffff, alpha: 0.45 * light.level * fade });
+
+      if (def?.danger) {
+        // A broken ring, turning slowly: unmistakably a warning, and never
+        // confusable with the solid rings this renderer uses for lock cues.
+        //
+        // Flattened to a polyline rather than stroked with arc(). Pixi reads a
+        // plain arc's instruction data as if it were an arcToSvg when it works
+        // out where the path finished, so a stroked arc leaves a corrupt point
+        // behind for the next mark on the SHARED Graphics to start from - which
+        // here would be the next bug's shadow, as a beam across the board. The
+        // rule and its history are in compassRing.ts; a test enforces it.
+        const spin = now / 900;
+        const rr = r * 1.9;
+        const STEPS = 7;
+        for (let i = 0; i < 4; i++) {
+          const a0 = spin + (i / 4) * Math.PI * 2;
+          const span = 0.9;
+          this.bodies.moveTo(c.x + Math.cos(a0) * rr, c.y + Math.sin(a0) * rr);
+          for (let k = 1; k <= STEPS; k++) {
+            const a = a0 + (span * k) / STEPS;
+            this.bodies.lineTo(c.x + Math.cos(a) * rr, c.y + Math.sin(a) * rr);
+          }
+          this.bodies.stroke({ width: Math.max(1, scale * 1.2), color, alpha: 0.75 * fade });
+        }
+      }
+    }
+  }
+
   private drawChestLoot(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
     for (const g of game.chestLoot ?? []) {
       const c = w2s(g.x, g.y);

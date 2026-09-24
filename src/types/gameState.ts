@@ -22,6 +22,7 @@ import type { TiltState } from "@/lib/boardTilt";
 import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
+import { BugState, BugSplat, BugConfig } from "@/types/bugs";
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { BouncerSpec } from "@/lib/physics/bouncer";
@@ -703,6 +704,37 @@ export interface CanvasGameState {
   /** Short-lived bursts where a white "tappable" ball was tapped away (#57),
    *  for a quick pop-and-vanish. `startTime` is performance.now(). */
   ballPops?: { x: number; y: number; color: string; startTime: number }[];
+
+  // ── Bugs (the flying mini power-ups; types/bugs.ts) ────────────────────
+  //
+  // A separate list from `pickups` rather than a flag on one, because the two
+  // share nothing that matters: a token sits still and is claimed by a fence, a
+  // bug flies and is claimed by a ball. Merging them would mean every reader
+  // asking which kind it had before it could do anything.
+  /** Bugs alive on the board. Absent on a map with bugs switched off. */
+  bugs?: BugState[];
+  /** Flight/spawn tuning from game-config.yml; null = no bugs this map. */
+  bugConfig: BugConfig | null;
+  /** Transient squash markers (culled by updateBugs). */
+  bugSplats?: BugSplat[];
+  /** game.activePlaySeconds of the last spawn roll. */
+  lastBugRollAt: number;
+  /** Seeded-run roll keying, exactly as the pickup roll does it. */
+  bugRollContext: string;
+  bugRollIndex: number;
+  /** This map's `bugChance` from map.yml, when it states one. */
+  bugChanceOverride?: number;
+  /**
+   * Playground: spawn only this kind of bug.
+   *
+   * The pool is weighted and Big Bang Release sits at weight 1, so watching the
+   * rarest and most dangerous entry in the catalogue behave correctly would
+   * otherwise mean playing until it happened. CLAUDE.md calls that class of
+   * thing untestable, and it is right.
+   */
+  forcedBugEffect?: string;
+  /** Every bug squashed this map, and whether its effect actually landed. */
+  bugsSquashedLog?: { effect: string; applied: boolean }[];
 
   // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
   /** All mirrors/movers that can be broken by the black ball. */

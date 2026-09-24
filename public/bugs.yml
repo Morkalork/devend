@@ -1,0 +1,132 @@
+# Bugs: the mini power-ups that crawl around a Demolition board.
+#
+# A bug is a small flying thing that wanders the live space. It is not a
+# pickup token and it does not follow the token rules: a token is CLAIMED by
+# sealing a ball in with it, a bug is SQUASHED by a ball running it over, and
+# the power goes to the ball that did the squashing. That is the whole reason
+# the two exist side by side - a token rewards where you drew your fence, a bug
+# rewards which ball you let run and where you let it run.
+#
+# They fly rather than fall because most maps in this game have no gravity at
+# all, and a power-up that drops to a floor would be unreachable on three
+# quarters of the ladder.
+#
+# ── The rule that keeps the pool honest ────────────────────────────────────
+#
+# EVERY BUG IS DOUBLE-EDGED. If squashing were always good, the mechanic would
+# be "chase the bugs", which is not a decision - it is a chore with a reward
+# attached. Each entry below buys its upside with a real cost, and several are
+# actively dangerous. Reading the bug before you steer a ball into it is the
+# game being played.
+#
+# ── Fields ─────────────────────────────────────────────────────────────────
+#   id          unique key; what the code switches on and what admin forces
+#   name        display name (splat label, Playground picker, info text)
+#   color       the bug's colour on the board (hex WITH '#', quoted)
+#   weight      relative spawn odds within the pool. 0 = never spawns randomly
+#               (still forceable from the Playground)
+#   value       effect magnitude; what it means is per-effect, see each entry
+#   valueMax    upper end when the magnitude is a RANGE (value is the lower end)
+#   danger      true when squashing this can cost the player the map. Drawn with
+#               a warning ring so the choice is informed rather than a surprise
+#
+# Magnitudes are deliberately NOT scaled by pickupPayoutLevel. A bug is a
+# board-side event rather than a reward lane: Benefits Package raises how OFTEN
+# tokens appear and how much they pay, and a bug that also scaled would put the
+# archetype's whole mechanic behind one upgrade family.
+
+bugs:
+  # ── The ball's speed, both directions ────────────────────────────────────
+  - id: bitRot
+    name: Bit Rot
+    color: "#8b7355"
+    weight: 4
+    # Fraction of its current speed the ball keeps. A slow ball is easy to fence
+    # and a poor hammer: damage is mass x closing speed^1.6, so halving the
+    # speed costs roughly two thirds of the impact.
+    value: 0.6
+
+  - id: caffeine
+    name: Caffeine
+    color: "#ff6b35"
+    weight: 3
+    # Speed multiplier, and the same multiplier on what the ball pays when it is
+    # finally locked. The exact inverse of Bit Rot: a better hammer, more
+    # overtime, and the hardest thing on the board to trap.
+    value: 1.5
+
+  # ── Hold it still ────────────────────────────────────────────────────────
+  - id: deadlock
+    name: Deadlock
+    color: "#5ec8f5"
+    weight: 4
+    # Seconds the squashing ball is held where it stands. The same hold a
+    # tap-freeze uses, so it reads as frost and takes the frozen-lock bonus.
+    value: 3
+
+  # ── Change the ball itself ───────────────────────────────────────────────
+  - id: featureBloat
+    name: Feature Bloat
+    color: "#b06bff"
+    weight: 3
+    # Growth, as a fraction of the ball's current radius: a range, rolled per
+    # squash. A bigger ball is markedly harder to seal a pocket around, so the
+    # lock pays the SAME fraction more - the ball is worth exactly as much as it
+    # has become awkward. Repeatable, but capped in code: past a point a ball
+    # stops fitting through its own map.
+    value: 0.5
+    valueMax: 0.8
+
+  - id: branch
+    name: Branch
+    color: "#ffd93d"
+    weight: 3
+    # Extra balls the squashing ball divides into. Two balls to trap where there
+    # was one, each paying a lock - the split is income if you can afford the
+    # traffic and a lost map if you cannot.
+    value: 1
+
+  # ── Take the ball off the board ──────────────────────────────────────────
+  - id: autoMerge
+    name: Auto Merge
+    color: "#4ade80"
+    weight: 2
+    # Ring radius, as a multiple of the ball's radius. A fence closes around the
+    # ball where it stands and locks it: a free lock that costs no fence and no
+    # par - in the worst-shaped pocket the game has, which is what a lock in open
+    # space pays. It also takes that ball away, and on a Demolition map the balls
+    # are the hammers.
+    value: 2.6
+
+  - id: bigBang
+    name: Big Bang Release
+    color: "#ff4d6d"
+    weight: 1
+    danger: true
+    # Auto Merge, on EVERY free ball at once. It can win a map outright and it can
+    # end one on the spot: every hammer is gone, so a smash clause still
+    # outstanding becomes unreachable and the map is lost to a bug the player
+    # ran over. Rare, drawn with a warning ring, and never worth taking blind.
+    value: 2.6
+
+  # ── The hammer buffs (MAP_DESIGN_GUIDELINES.md section 11) ───────────────
+  - id: forcePush
+    name: Force Push
+    color: "#ff9f1c"
+    weight: 3
+    # Seconds of triple damage: bricks and slabs go in one hit. It also
+    # fractures YOUR fences on contact, like the black ball, so the same ball
+    # that is finally opening the wall is dismantling the pocket you drew for
+    # it. The archetype's "two builds shortcut the map in different ways": the
+    # drill fence is the player-side hammer, this is the ball-side one.
+    value: 6
+
+  - id: allHands
+    name: All Hands
+    color: "#00d9c0"
+    weight: 2
+    # Seconds the squashing ball drags every other ball toward it, on the
+    # lodestone ability's own steering. Gathers the board into one place, which
+    # is either the setup for a multi-ball lock or the ruin of the separation
+    # you spent three fences building.
+    value: 6

@@ -64,6 +64,8 @@ import { updateBallEffects } from "@/lib/ballEffects";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
 import { updatePickups } from "@/lib/pickups";
+import { squashBugs, updateBugs } from "@/lib/physics/bugs";
+import { resolveWinSpec } from "@/lib/winSpec";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { mutatorById, mutatorSpeedFactor, selectMapMutator } from "@/lib/mapMutators";
@@ -427,6 +429,17 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // multi-ball map - which is most of them past level 3 - was swept with the
   // balls passing through one another.
   handleBallCollisions(game);
+  // Bugs squash with the ball pass, as in the browser. Inert on a board with no
+  // bugConfig, which is every sweep by default - the same arrangement the
+  // pickups have, and for the same reason: a ladder measurement has to be of
+  // the map, not of what a power-up happened to hand the bot on one seed. A
+  // test that wants them seeds game.bugConfig itself.
+  squashBugs(game, {
+    modifiers,
+    cumulativeLockedBalls: 0,
+    spec: resolveWinSpec(level, modifiers),
+    callbacks,
+  });
 
   // A fired barrel latches armed once its last ball has left, and until then
   // the input layer refuses every cut. The bot honours the same rule (runBot
@@ -492,6 +505,8 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   //
   // Pickups expire and roll on the active-play clock.
   updatePickups(game);
+  // ...and bugs fly and spawn on the same clock.
+  updateBugs(game, dt);
   // The `spawnTimedBalls` bundle, all four of it. Missing entirely, and the
   // boss three are why: a BOSS MAP HAS NEVER BEEN PLAYABLE BY THIS HARNESS.
   // The boss never changed phase, never spat, and never wiped the player's

@@ -34,6 +34,7 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFallbackBoard } from "@/lib/rendering/fallbackBoard";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
+import { effectiveBugChance, squashBugs } from "@/lib/physics/bugs";
 import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
 import { RubberBandOverlay, type BandTarget } from "@/components/game/RubberBandOverlay";
@@ -117,6 +118,7 @@ import {
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupFeedback, PickupEffect, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
+import { BugConfig, BugState, BugSplat, DEFAULT_BUG_CONFIG } from "@/types/bugs";
 import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
 import { normaliseGravity } from "@/lib/physics/gravity";
@@ -303,6 +305,8 @@ interface GameCanvasProps {
   objective?: ActiveMapObjective | null;
   /** Pickup tuning (from game-config.yml `pickups:`). */
   pickupConfig?: PickupConfig;
+  /** Bug spawn/flight tuning (from game-config.yml `bugs:`). */
+  bugConfig?: BugConfig;
   regionColor?: string;
   accentColor?: string;
   activeModifiers: GameModifiers;
@@ -409,6 +413,7 @@ export function GameCanvas({
   mapMutator = null,
   objective = null,
   pickupConfig = DEFAULT_PICKUP_CONFIG,
+  bugConfig = DEFAULT_BUG_CONFIG,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   activeModifiers,
@@ -526,6 +531,16 @@ export function GameCanvas({
     const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
     game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
   }, [pickupConfig, level, levelNumber, activeModifiers.pickupChanceBonus]);
+  // Bug tuning arrives on the same async config fetch, and is reseeded the same
+  // way and for the same reason: putting it in the init effect's deps would
+  // restart the level the moment game-config.yml landed.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game.spaceGrid) return;
+    const chance = effectiveBugChance(bugConfig, levelNumber, level.bugChance);
+    game.bugConfig = chance > 0 ? { ...bugConfig, spawnChance: chance } : null;
+    game.bugChanceOverride = level.bugChance;
+  }, [bugConfig, level, levelNumber]);
 
   /**
    * The cup still holding its ball, mirrored into React so the overlay can
@@ -979,6 +994,12 @@ export function GameCanvas({
     lastPickupRollAt: 0,
     pickupRollContext: 'pickups',
     pickupRollIndex: 0,
+    bugs: [] as BugState[],
+    bugConfig: null as BugConfig | null,
+    bugSplats: [] as BugSplat[],
+    lastBugRollAt: 0,
+    bugRollContext: 'bugs',
+    bugRollIndex: 0,
     pickupOvertime: 0,
     pickupCapBonus: 0,
     freezeCharges: 0,
@@ -1165,6 +1186,17 @@ export function GameCanvas({
       // draws identically (see updatePickups).
       game.pickupRollContext = `pickups:${level.id}`;
       game.pickupRollIndex = 0;
+      // Bugs: fresh board furniture each map, on the same rules as the tokens
+      // above. A bug surviving a map boundary would be a power-up hovering over
+      // a board it was never placed on, and its effect would land on a ball
+      // that did not exist when it spawned.
+      game.bugs = [];
+      game.bugSplats = [];
+      game.lastBugRollAt = 0;
+      game.bugRollContext = `bugs:${level.id}`;
+      game.bugRollIndex = 0;
+      game.bugsSquashedLog = [];
+      game.bugChanceOverride = level.bugChance;
       game.pickupOvertime = 0;
       game.pickupCapBonus = 0;
       game.freezeCharges = 0;
@@ -1201,6 +1233,10 @@ export function GameCanvas({
       {
         const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
         game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
+      }
+      {
+        const chance = effectiveBugChance(bugConfig, levelNumber, level.bugChance);
+        game.bugConfig = chance > 0 ? { ...bugConfig, spawnChance: chance } : null;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       // Pickup anchors, colored areas and gravity wells, all authored in the
@@ -1681,6 +1717,23 @@ export function GameCanvas({
         }),
       settleLaunchers: () =>
         dematerializeArmedLaunchers(game, { repaintRegionCanvas, setRemainingPercent }, simNow()),
+      squashBugs: () => {
+        squashBugs(game, {
+          modifiers: activeModifiers,
+          cumulativeLockedBalls,
+          spec: winSpec,
+          callbacks,
+        });
+        // Auto Merge and Big Bang Release close real pockets and lock real balls,
+        // so the board's captured space and its win state both moved without a
+        // cut being drawn. Same two follow-ups a destroy needs, for the same
+        // reason: the paint is stale and the map can be over.
+        if (game.bugSplats && game.bugSplats.length > 0) {
+          repaintRegionCanvas();
+          setRemainingPercent(game.spaceGrid ? Math.round(getRemainingPercent(game.spaceGrid)) : 100);
+          checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
+        }
+      },
       processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,

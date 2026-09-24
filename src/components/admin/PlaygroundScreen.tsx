@@ -8,6 +8,8 @@ import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, Chev
 import yaml from 'js-yaml';
 import { spliceYamlEntry } from '@/lib/yamlSplice';
 import { GameScreen } from '@/components/game/GameScreen';
+import { getAllBugs } from '@/lib/bugs';
+import { requestBugSpawn } from '@/lib/physics/bugs';
 import type { GameStateInfo } from '@/components/game/GameCanvas';
 import { getAllAbilities, loadAbilities } from '@/lib/abilities';
 import { getAllFenceTypes, loadFenceTypes, STANDARD_FENCE_ID } from '@/lib/fences';
@@ -22,6 +24,7 @@ import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
 import {
   getDebugMutatorOverride, setDebugMutatorOverride,
+  getDebugBugOverride, setDebugBugOverride,
   getForcedTiltsOverride, setForcedTiltsOverride,
 } from '@/lib/devFlags';
 import { getMapMutators } from '@/lib/mapMutators';
@@ -203,6 +206,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // The URL dev flags as controls (CLAUDE.md, "Admin must be able to test it").
   // Session-scoped: see devFlags.ts for why these are not persisted.
   const [forcedMutator, setForcedMutator] = useState(getDebugMutatorOverride);
+  const [forcedBug, setForcedBug] = useState(getDebugBugOverride);
   const [forceTilts, setForceTilts] = useState(getForcedTiltsOverride);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
@@ -1754,6 +1758,56 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <option key={mut.id} value={mut.id}>{mut.name} ({mut.id})</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Forced bug: `?bug=<id>` as a picker, read straight from
+                  bugs.yml so a new bug is offered the moment it is authored,
+                  with nothing here to remember. Does NOT restart the board: a
+                  bug is drawn per spawn roll, not per map, so the next one that
+                  appears is already the forced kind. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" style={{ color: forcedBug ? accent : 'hsl(var(--foreground))' }}>
+                  Force bug
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Which bug spawns, not whether. Needs a map with bugs on. Off the ledger.
+                  </span>
+                </label>
+                <select
+                  value={forcedBug ?? ''}
+                  onChange={(e) => {
+                    const next = e.target.value || null;
+                    setDebugBugOverride(next);
+                    setForcedBug(next);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-xs"
+                  style={{
+                    backgroundColor: forcedBug ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${forcedBug ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                    color: 'hsl(var(--foreground))',
+                  }}
+                >
+                  <option value="">(weighted draw)</option>
+                  {getAllBugs().map(bug => (
+                    <option key={bug.id} value={bug.id}>{bug.name} ({bug.id}){bug.danger ? ' \u26a0' : ''}</option>
+                  ))}
+                </select>
+                {/* Spawn one NOW. The picker alone still leaves a tester waiting
+                    out a spawn roll on a map whose chance may be low, and
+                    "waited and saw nothing" is not a reading of anything. */}
+                <button
+                  onClick={() => requestBugSpawn(forcedBug)}
+                  className="w-full mt-2 px-3 py-2 rounded-lg text-xs font-semibold"
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'hsl(var(--foreground))',
+                  }}
+                >
+                  Spawn a bug now
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Puts one on the live board immediately, forced kind if set.
+                  </span>
+                </button>
               </div>
 
               {/* Forced tilts: `?tilt=1` as a toggle. Pins the per-tier chance to 1;
