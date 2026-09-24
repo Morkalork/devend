@@ -10,7 +10,7 @@ import { setRunSeedText } from "@/lib/runRng";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "./headlessGame";
 import { checkInvariants, checkTerminal, winNotShipped, type Violation } from "./invariants";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
-import { resolveWinSpec, requirementsMet, metAlternative } from "@/lib/winSpec";
+import { resolveWinSpec, requirementsMet, metAlternative, evaluateWinCondition } from "@/lib/winSpec";
 import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, seededRandom } from "./policy";
@@ -127,7 +127,10 @@ export function runBot(
       // nearly-cleared board eventually takes the cut a player would take
       // rather than standing still and calling the map broken.
       const desperation = Math.min(1, framesSinceProgress / 900);
-      const plan = planCut(ctx.game, rng, desperation);
+      const areaClause = spec.require.find(c => c.kind === "area");
+      const wantZone = !!areaClause
+        && !evaluateWinCondition(areaClause, readWinSnapshot(ctx.game, level)).met;
+      const plan = planCut(ctx.game, rng, desperation, wantZone);
       if (plan) tryCut(ctx, plan.origin, plan.direction);
     }
 

@@ -44,6 +44,7 @@ import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
+import { cutWouldBuryArea } from "@/lib/physics/areaReach";
 import { smashCounts } from "@/lib/destructibleClass";
 import { lostRequirement } from "@/lib/physics/requirementReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -252,6 +253,15 @@ export function applyCutFn(
       // while the slabs it would have orphaned were in the left one, so the
       // only cue fired where the player was not looking.
       callbacks.onGameMessage?.("cutWouldBurySlabs");
+      return;
+    }
+    // And for the zone the win still needs a ball locked in: sealing it empty
+    // used to cost a life on the spot (the areaUnreachable failure below), on
+    // the map that introduces the zone. See areaReach.cutWouldBuryArea.
+    const spec = resolveWinSpec(level, activeModifiers);
+    if (cutWouldBuryArea(game, spec, readWinSnapshot(game, level), allSegs, wall.thickness)) {
+      game.activeWalls = game.activeWalls.filter(w => w !== wall);
+      callbacks.onGameMessage?.("cutWouldBuryArea");
       return;
     }
   }

@@ -1783,7 +1783,8 @@
     "lifeLostBall": "En boll gick genom ditt staket. Ett liv forlorat.",
     "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat.",
     "cutWouldTrapBall": "Det snittet hade stangt in en boll utan vag ut, sa det lades inte. Lamna en vag.",
-    "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom."
+    "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom.",
+    "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",

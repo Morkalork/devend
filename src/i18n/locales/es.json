@@ -1783,7 +1783,8 @@
     "lifeLostBall": "Una bola atraveso tu valla. Vida perdida.",
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
-    "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó."
+    "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
+    "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó."
   },
   "mapFailure": {
     "title": "Mapa fallido",
