@@ -243,7 +243,7 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
             hint="Set at all and the global start-level gate is bypassed: 100 guarantees a token, 0 suppresses them." />
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="bugChance"
             label="Bug Chance % (blank = global)" min={0} max={100} scale={100}
-            hint="The share of this map's breakables that carry a bug, rolled once when the map is dealt (capped by max_per_map). Set at all and the start-level gate is bypassed; 0 suppresses them. A shard can also be pinned in the Entity panel." />
+            hint="The share of this map's breakables that carry a bug, rolled once when the map is dealt (capped by max_per_map). Set at all and the start-level gate is bypassed. 0 suppresses the random roll only: a shard pinned in the Entity panel still carries one." />
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="tiltChance"
             label="Tilt Chance % (blank = 5-10)" min={0} max={100} scale={100}
             hint="Per progress tier. Needs a gravity well on the map and a level past the tilt floor to mean anything." />

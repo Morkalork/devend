@@ -34,7 +34,7 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFallbackBoard } from "@/lib/rendering/fallbackBoard";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
-import { assignShardBugs, effectiveBugChance, squashBugs } from "@/lib/physics/bugs";
+import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs } from "@/lib/physics/bugs";
 import { authoredBugCarriers } from "@/lib/bugs";
 import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
@@ -564,7 +564,9 @@ export function GameCanvas({
     // Only the RELEASED bug's tuning (lifetime, speed) can be reseeded live:
     // which shards carry one was settled when the map was dealt, and changing
     // it mid-map would put a bug into a brick the player has already read.
-    game.bugConfig = effectiveBugChance(bugConfig, levelNumber, level.bugChance) > 0 ? bugConfig : null;
+    game.bugConfig = mapHasBugs(
+      effectiveBugChance(bugConfig, levelNumber, level.bugChance), authoredBugCarriers(level),
+    ) ? bugConfig : null;
     game.bugChanceOverride = level.bugChance;
   }, [bugConfig, level, levelNumber]);
 
@@ -1284,7 +1286,7 @@ export function GameCanvas({
         // Through the ref, not the closure: see bugConfigRef.
         const cfg = bugConfigRef.current;
         const chance = effectiveBugChance(cfg, levelNumber, level.bugChance);
-        game.bugConfig = chance > 0 ? cfg : null;
+        game.bugConfig = mapHasBugs(chance, authoredBugCarriers(level)) ? cfg : null;
         game.bugCarryChance = chance;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);

@@ -213,6 +213,46 @@ describe("the tutorial's bug roster", () => {
 
 // ── One source, three readers ───────────────────────────────────────────────
 
+describe("a shard that is carrying one", () => {
+  const OBJ = read("src/lib/rendering/sleek/objectLayer.ts");
+
+  it("is drawn in the bug's own colour, whole", () => {
+    // Asked for as "you can actually just color the whole shard if it has a
+    // bug, to reduce the clutter". It replaced a lit chamber drawn in the
+    // middle of the slab, which was competing with the dents, cracks, seams,
+    // broken rim and glint already on the same few pixels.
+    expect(OBJ, "the body colour does not come from the carried bug")
+      .toMatch(/const base = carried \?[\s\S]{0,120}carried\.color/);
+    expect(OBJ, "the rim still disagrees with the body").toMatch(/rimColor = carried \?/);
+  });
+
+  it("draws no separate marker on top of it", () => {
+    // The clutter this removed. If a badge, chamber or ring ever comes back on
+    // the shard, it comes back deliberately and not by accident.
+    expect(OBJ).not.toContain("drawCarriedBug");
+  });
+
+  it("takes its colour from the catalogue, so the chain is one colour", () => {
+    // The brick, the bug that flies out of it, and the splat it leaves are all
+    // the same hex out of public/bugs.yml. That is the whole identification
+    // chain, and there is no text anywhere in it.
+    expect(OBJ).toContain('import { getBug } from "@/lib/bugs"');
+    const prop = read("src/lib/rendering/sleek/propLayer.ts");
+    const fx = read("src/lib/rendering/sleek/fxLayer.ts");
+    for (const [name, src] of [["propLayer", prop], ["fxLayer", fx]] as const) {
+      expect(src, `${name} does not read the catalogue colour`)
+        .toMatch(/def\.color\.replace\("#", ""\)/);
+    }
+  });
+
+  it("breathes, so it is not mistaken for another material", () => {
+    // The board already has gold, glass and objective-gold breakables. A still
+    // brick in a new colour reads as a fourth material; a breathing one reads
+    // as holding something.
+    expect(OBJ).toMatch(/const breath = carried \?/);
+  });
+});
+
 describe("the three explanations cannot drift", () => {
   it("all read the catalogue rather than restating it", () => {
     // The failure this guards is a rebalanced bug whose card still describes

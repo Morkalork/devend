@@ -204,6 +204,11 @@ bugs:
   # Chance an eligible shard carries one, rolled ONCE per shard when the map is
   # dealt (a map's `bugChance` overrides it). Eligible means breakable and not
   # already a chest: a brick holding two rewards is a brick nobody can read.
+  #
+  # This governs the RANDOM FILL and nothing else. A shard the map pins by hand
+  # (`bug:` on the entity) carries one at any chance, zero included, so a map
+  # can say "these shards and no others" by setting bugChance to 0 and naming
+  # the ones it wants.
   carry_chance: 0.25
   # Hard cap on carrying shards per map. Level 17's wall is sixteen smashes
   # deep, and a quarter of that is four bugs in one wall - which is not a

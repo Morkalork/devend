@@ -173,6 +173,29 @@ export function effectiveBugChance(
   return Math.max(0, Math.min(1, base));
 }
 
+/**
+ * Does this map have bugs at all?
+ *
+ * A chance of 0 is NOT the whole answer, and reading it as one was a real bug:
+ * a map that pinned a carrier by hand (`bug: forcePush` on an entity) and left
+ * its `bugChance` alone got no bugs whatsoever, because the chance gate nulled
+ * the config before the assignment could honour anything. The set piece
+ * vanished for no stated reason, which is exactly what `assignShardBugs`
+ * refuses to let the per-map CAP do.
+ *
+ * So the chance governs the RANDOM FILL and nothing else. An authored carrier
+ * is an author saying "this brick holds this thing", and it is honoured on any
+ * map that says it, at any chance, including zero - which is then the useful
+ * setting it reads as: these shards and no others.
+ */
+export function mapHasBugs(chance: number, authored: Map<string, boolean | string>): boolean {
+  if (chance > 0) return true;
+  for (const want of authored.values()) {
+    if (want !== false) return true;
+  }
+  return false;
+}
+
 /** True when a bug can sit at `p`: open space, clear of walls, balls and bugs. */
 function isSpotFree(game: CanvasGameState, p: Vector2): boolean {
   const grid = game.spaceGrid;

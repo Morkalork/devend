@@ -64,7 +64,7 @@ import { updateBallEffects } from "@/lib/ballEffects";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
 import { updatePickups } from "@/lib/pickups";
-import { assignShardBugs, effectiveBugChance, squashBugs, updateBugs } from "@/lib/physics/bugs";
+import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs, updateBugs } from "@/lib/physics/bugs";
 import { authoredBugCarriers } from "@/lib/bugs";
 import type { BugConfig } from "@/types/bugs";
 import { resolveWinSpec } from "@/lib/winSpec";
@@ -327,7 +327,12 @@ export function createBotGame(
   // by default, because bugConfig is null unless a test seeds one - the same
   // arrangement the pickups have, so a ladder sweep still measures the map
   // rather than what a power-up happened to hand the bot.
-  game.bugConfig = opts.bugs ?? null;
+  {
+    const cfg = opts.bugs ?? null;
+    const authored = authoredBugCarriers(level);
+    game.bugConfig = cfg && mapHasBugs(effectiveBugChance(cfg, levelNumber, level.bugChance), authored)
+      ? cfg : null;
+  }
   if (game.bugConfig) {
     assignShardBugs(
       game.destructibles,

@@ -176,6 +176,10 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
    *
    * A shard left alone still gets one when the map's `bugChance` rolls it. Set
    * `bug: false` to keep a particular shard clear of that roll.
+   *
+   * Honoured at ANY `bugChance`, zero included: the chance governs the random
+   * fill, not whether the map has bugs. A map that names its carriers and sets
+   * `bugChance: 0` gets exactly those and no others.
    */
   bug?: boolean | string;
   /**

@@ -34,7 +34,7 @@ import {
 import {
   BUG_RADIUS, BUG_TAP_SLOP, spawnBug, updateBugs, squashBugs, effectiveBugChance,
   requestBugSpawn, clearPendingBugSpawn, resetBugCounters, tapSquashBug, bugAtTap,
-  assignShardBugs, releaseBugFrom,
+  assignShardBugs, releaseBugFrom, mapHasBugs,
 } from "@/lib/physics/bugs";
 import { applyBugEffect, expireBugBuffs, MAX_BLOAT_SCALE, resetBugSplitCounter } from "@/lib/physics/bugEffects";
 import { isWrecking, isAttracting, WRECKING_DAMAGE_MULTIPLIER } from "@/lib/bugBuffs";
@@ -1057,6 +1057,33 @@ describe("shards carrying bugs", () => {
     const level = byLevel(LADDER, 17)!;
     const authored = authoredBugCarriers(level as { entities?: { id?: string; bug?: boolean | string }[] });
     expect([...authored.entries()]).toEqual([["brick-a1", "forcePush"]]);
+  });
+});
+
+describe("whether a map has bugs at all", () => {
+  it("says yes on any map with a chance", () => {
+    expect(mapHasBugs(0.3, new Map())).toBe(true);
+  });
+
+  it("says no on a map with neither a chance nor an authored carrier", () => {
+    expect(mapHasBugs(0, new Map())).toBe(false);
+    expect(mapHasBugs(0, new Map([["a", false]]))).toBe(false);
+  });
+
+  it("says YES for an authored carrier even at chance zero", () => {
+    // The bug this replaced, found by putting a pinned carrier on a board and
+    // watching it not appear: the chance gate nulled the config before the
+    // assignment could honour anything, so a map that named a brick by hand
+    // and left bugChance alone got no bugs whatsoever, and the set piece
+    // vanished with nothing said. The chance governs the RANDOM FILL only.
+    expect(mapHasBugs(0, new Map([["brick", "forcePush"]]))).toBe(true);
+    expect(mapHasBugs(0, new Map([["brick", true]]))).toBe(true);
+  });
+
+  it("makes chance 0 the useful setting it reads as: these shards and no others", () => {
+    const shards = [shard("named"), shard("a"), shard("b"), shard("c")];
+    assignShardBugs(shards, 0, 99, new Map([["named", "bigBang"]]));
+    expect(shards.map(d => d.bug)).toEqual(["bigBang", undefined, undefined, undefined]);
   });
 });
 

@@ -351,14 +351,30 @@ export class ObjectLayer {
     this.castShadow(pts, cx, cy, scale, light, 1 - damage * 0.4);
 
     const amb = ambientAt(light, cx, cy);
-    // A chest is loot, not obstruction: amber body so it reads as a prize.
+    // ── What colour a breakable is, and why ────────────────────────────────
     //
-    // An ordinary breakable gets a warm shift off the plain obstacle colour.
-    // Small on purpose: colour alone is a weak signal here because the board
-    // already carries several object types, and the LOAD-BEARING cue is the
-    // broken rim below. This just stops a breakable being pixel-identical to
-    // the wall beside it, which is what it was.
-    const base = d.chest ? PALETTE.amber
+    // A shard carrying a bug is drawn ENTIRELY in that bug's colour.
+    //
+    // It was a lit chamber in the middle of the slab, and that was clutter:
+    // this board already carries dents, cracks, seams, a broken rim and a
+    // glint on the same object, and a glowing hole in the centre of all that
+    // was one more thing competing for the same few pixels. The material IS
+    // the signal now - a brick that is not the colour of a brick is holding
+    // something - and it costs nothing on screen.
+    //
+    // It also makes the identification chain a single colour end to end, with
+    // nothing else to learn: the brick is amber, the thing that flies out of
+    // it is amber, the splat it leaves is amber.
+    //
+    // Otherwise: a chest is loot, not obstruction, so it takes an amber body
+    // and reads as a prize. An ordinary breakable gets a warm shift off the
+    // plain obstacle colour, small on purpose - colour alone is a weak signal
+    // here because the board already carries several object types, and the
+    // LOAD-BEARING cue is the broken rim below. That shift just stops a
+    // breakable being pixel-identical to the wall beside it, which it was.
+    const carried = d.bug ? getBug(d.bug) : undefined;
+    const base = carried ? Number.parseInt(carried.color.replace("#", ""), 16)
+      : d.chest ? PALETTE.amber
       // Glass: a brittle brick is the one breakable that is not gold, because
       // gold has come to mean "three good hits" and this one means "one touch".
       : d.brittle ? PALETTE.brittle
@@ -366,13 +382,22 @@ export class ObjectLayer {
       // one now that both are gold: a little more saturated, same luma.
       : d.objective ? 0xa06610
       : PALETTE.breakable;
-    const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45));
+    // A slow, shallow breath, and ONLY on a carrier. Without it a coloured
+    // brick reads as another material - this board already has gold, glass and
+    // objective-gold - and with it the brick reads as holding something alive.
+    // 0.4Hz: monitorSignal.ts has the long version of why nothing on this board
+    // pulses faster than that.
+    const breath = carried ? 0.93 + 0.07 * (0.5 + 0.5 * Math.sin(simNow() / 400)) : 1;
+    const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45) * breath);
     this.bodies.poly(pts).fill({ color: body, alpha: 1 });
 
-    // Chest first: it is loot, and its pale near-white amber keeps it apart
-    // from the slabs even though the whole family is gold now. Everything else
-    // here is a breakable, so it takes the breakable rim rather than the wall's.
-    const rimColor = d.chest ? 0xffe9b0 : d.brittle ? PALETTE.brittleEdge : PALETTE.breakableEdge;
+    // A carrier's rim is a pale wash of its own colour, so the outline agrees
+    // with the body instead of putting a gold edge round a teal brick. Chest
+    // next: its pale near-white amber keeps it apart from the slabs even though
+    // the whole family is gold. Everything else here is a breakable, so it
+    // takes the breakable rim rather than the wall's.
+    const rimColor = carried ? mix(base, 0xffffff, 0.55)
+      : d.chest ? 0xffe9b0 : d.brittle ? PALETTE.brittleEdge : PALETTE.breakableEdge;
     const rimStrength = 0.95 * (1 - damage * 0.7);
     if (d.chest) {
       this.rimEdges(pts, cx, cy, light, rimColor, rimStrength);
@@ -405,75 +430,6 @@ export class ObjectLayer {
     // crawl and read as noise.
     this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
 
-    // Something is living in this one.
-    if (d.bug) this.drawCarriedBug(d.bug, pts, cx, cy, scale);
-  }
-
-  /**
-   * The mark on a shard that is carrying a bug.
-   *
-   * "It must be clear that they are released from breaking a specific shard",
-   * and clear BEFORE the shard is broken: the whole gain over the old timed
-   * spawn is that a carrier is a target you can draw a fence to reach. A slab
-   * that looked like every other slab until it popped would be the lottery
-   * again with an extra step.
-   *
-   * So it is drawn as something INSIDE the material rather than a badge on top
-   * of it: a dark chamber with the bug's own colour glowing out of it, and a
-   * slow breath on the glow so the board reads it as alive. It sits over the
-   * cracks, because a nearly-broken carrier is precisely when the player most
-   * needs to see what is about to come out.
-   *
-   * The colour is the bug's, which is the same colour it will fly in and the
-   * same colour its splat leaves. That is the entire identification chain:
-   * this brick is amber, so the thing in it is amber, so the Force Push that
-   * flew out was the amber one. No text, and none needed.
-   */
-  private drawCarriedBug(effect: string, pts: Pt[], cx: number, cy: number, scale: number): void {
-    const def = getBug(effect);
-    if (!def) return;
-    const color = Number.parseInt(def.color.replace("#", ""), 16);
-
-    // Sized off the slab so a brick and a slab both read, floored so it never
-    // disappears on the smallest brick on the board.
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const p of pts) {
-      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-    }
-    const r = Math.max(2.5, Math.min(Math.min(maxX - minX, maxY - minY) * 0.3, 9 * scale));
-
-    // Slow, shallow breath. Fast enough to notice on a still board, far too
-    // slow to compete with a ball for attention; the monitor shimmer's own
-    // history (monitorSignal.ts) is why this is 0.4Hz and not four.
-    const breathe = 0.5 + 0.5 * Math.sin(simNow() / 400);
-
-    // The chamber it sits in: a hole in the material, so the glow has
-    // somewhere to be rather than floating on the surface.
-    this.bodies.circle(cx, cy, r * 1.5).fill({ color: PALETTE.shadow, alpha: 0.75 });
-    this.bodies.circle(cx, cy, r * (1.35 + breathe * 0.2))
-      .stroke({ width: Math.max(1, scale), color, alpha: 0.35 + breathe * 0.3 });
-    this.bodies.circle(cx, cy, r).fill({ color, alpha: 0.55 + breathe * 0.35 });
-    // A bright core, so it reads as lit from inside rather than painted.
-    this.bodies.circle(cx, cy, r * 0.45).fill({ color: 0xffffff, alpha: 0.35 + breathe * 0.25 });
-
-    if (def.danger) {
-      // The same broken warning ring the loose bug wears (propLayer.ts), so a
-      // dangerous one is recognisable in the wall and in the air. Flattened to
-      // a polyline: this renderer has no arcs, see compassRing.ts.
-      const rr = r * 2.2;
-      const spin = simNow() / 900;
-      const STEPS = 6;
-      for (let i = 0; i < 4; i++) {
-        const a0 = spin + (i / 4) * Math.PI * 2;
-        this.bodies.moveTo(cx + Math.cos(a0) * rr, cy + Math.sin(a0) * rr);
-        for (let k = 1; k <= STEPS; k++) {
-          const a = a0 + (0.85 * k) / STEPS;
-          this.bodies.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
-        }
-        this.bodies.stroke({ width: Math.max(1, scale), color, alpha: 0.8 });
-      }
-    }
   }
 
   /**
