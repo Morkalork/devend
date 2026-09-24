@@ -40,6 +40,7 @@
  * and must never disagree about whether the map is won.
  */
 import { evaluateWinCondition } from "@/lib/winSpec";
+import { DEFAULT_SMASH_CLASS, type SmashClassFilter } from "@/lib/destructibleClass";
 import type {
   WinCondition, WinConditionKind, WinConditionProgress, WinSnapshot, WinSpec,
 } from "@/types/winSpec";
@@ -70,6 +71,11 @@ export interface Goal {
   labelKey: string;
   /** lockType names the ball, which is the whole requirement. */
   ballType?: string;
+  /**
+   * A smash clause's class. The chip draws its icon from it, because two rows
+   * that differ only in a label read as one row at a glance.
+   */
+  smashClass?: SmashClassFilter;
   /** The clause this came from, for the at-risk check. Null off-spec. */
   progress: WinConditionProgress | null;
 }
@@ -112,6 +118,7 @@ function requirementGoal(c: WinCondition, snap: WinSnapshot): Goal {
     key: keyFor(c), kind: c.kind, tier: "requirement" as const,
     labelKey: clauseLabelKey(c), progress: p, over: false,
     ...(c.kind === "lockType" ? { ballType: c.ballType } : {}),
+    ...(c.kind === "smashed" ? { smashClass: c.of ?? DEFAULT_SMASH_CLASS } : {}),
   };
   if (c.kind === "space") {
     // Counting up, out of what the map asks for. Clamped at zero because a
