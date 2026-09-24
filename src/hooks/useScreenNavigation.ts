@@ -8,9 +8,14 @@
  */
 import { useState, useCallback } from 'react';
 import { GameScreen, GameResult } from '@/types/game';
+import { hasPairInvite } from '@/lib/net/pairInvite';
 
 export function useScreenNavigation() {
-  const [currentScreen, setCurrentScreen] = useState<GameScreen>('welcome');
+  // A guest who opened the host's QR link goes straight to the 2-Player screen,
+  // which answers the invitation. Anywhere else, the game opens on the menu.
+  const [currentScreen, setCurrentScreen] = useState<GameScreen>(
+    () => hasPairInvite() ? 'pairLobby' : 'welcome',
+  );
   const [lastResult, setLastResult] = useState<GameResult | null>(null);
 
   const navigateTo = useCallback((screen: GameScreen) => {

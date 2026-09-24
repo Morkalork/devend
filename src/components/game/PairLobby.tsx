@@ -23,7 +23,8 @@ import qrcode from "qrcode-generator";
 import {
   WebRtcTransport, postAnswer, awaitAnswer, cancelRoom, CONNECT_TIMEOUT_MS,
 } from "@/lib/net/webrtc";
-import { buildPairUrl, parsePairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
+import { buildPairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
+import { takePairInvite } from "@/lib/net/pairInvite";
 import { getDeviceId, electPlayer } from "@/lib/net/deviceId";
 import {
   isNearbyAvailable, missingNearbyPermission, startNearbyPairing,
@@ -261,11 +262,15 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   // Arriving on a pairing link jumps straight past the menu: the player tapped
   // a QR their friend was holding up, and asking them what they meant by that
   // would be asking a question they have already answered.
+  //
+  // The link is captured at startup (pairInvite.ts), not read from the address
+  // bar here: by the time this screen mounts, the back guard has already
+  // replaced the URL and the fragment is gone.
   useEffect(() => {
-    const link = parsePairUrl(window.location.hash);
-    if (!link) return;
-    // Clear the fragment so a refresh does not try to answer a spent offer.
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    const link = takePairInvite();
+    if (!link) {
+      return;
+    }
     void joinWith(link.room, link.offer);
   }, [joinWith]);
 

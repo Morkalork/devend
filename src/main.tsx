@@ -1,4 +1,7 @@
 import { StrictMode } from "react";
+// First, before anything can rewrite the URL: a guest arriving on the host's
+// QR link has the whole invitation in the fragment (see pairInvite.ts).
+import "@/lib/net/pairInvite";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./i18n";
