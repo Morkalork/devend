@@ -118,8 +118,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const pairPhase = pair.phase;
   useEffect(() => {
     if (pairPhase !== 'playing' || !pairRunState) return;
-    if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run);
-    else session.handleStartGame();
+    // The pair's seed goes in with it: starting a run clears the seed, and a
+    // pair run that lost it dealt and rolled everything separately per phone.
+    if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run, pairRunState.seed);
+    else session.handleStartGame(undefined, undefined, pairRunState.seed);
     // handleStartGame/handleResumeSavedRun are stable session actions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairPhase, pairRunState]);

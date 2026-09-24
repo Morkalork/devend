@@ -985,10 +985,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     else nav.startGame();
   }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
 
-  const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
+  const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean, runSeed?: string) => {
     // A normal run must never inherit a previous daily's seed: disarm BEFORE
     // loading, because loadLevels() already rolls the level lineup.
     clearDailyMode();
+    // A pair run brings its own seed, and must keep it. Both phones deal the
+    // board, the spawns and every roll during play from it; cleared here, each
+    // phone fell back to Math.random and the two boards split at the first roll.
+    if (runSeed) {
+      setRunSeedText(runSeed);
+    }
     // The loadout catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
@@ -1241,12 +1247,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     restoreSequence(save.levelSequenceIds, save.currentLevelIndex);
   }, [restoreRunProgress, restoreSequence, bestScore]);
 
-  const resumeRunFrom = useCallback(async (save: RunSave) => {
+  const resumeRunFrom = useCallback(async (save: RunSave, runSeed?: string) => {
 
     // Restore the run's seeded context (or lack of it) BEFORE loading: the
-    // shops/drafts/pickups ahead must keep rolling from the daily seed.
+    // shops/drafts/pickups ahead must keep rolling from the daily seed. A pair
+    // run passes its own seed, for the same reason as handleStartGame.
     const savedDaily = save.dailyKey ?? null;
-    setRunSeedText(savedDaily ? dailySeedText(savedDaily) : null);
+    setRunSeedText(runSeed ?? (savedDaily ? dailySeedText(savedDaily) : null));
     dailyKeyRef.current = savedDaily;
     setDailyKey(savedDaily);
 
