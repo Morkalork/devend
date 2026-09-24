@@ -322,7 +322,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | 17 |
-| bumper | C | Compressed | 12 | 13 | - |
+| bumper | C | Compressed | 11 | 12 | 16 |
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
@@ -342,7 +342,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | data stream | E | Meet | 26 | 27 | - |
 | ball gate | B | Compressed | 33 | 34 | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
-| live outer walls | D | Meet | 14 | 15 | 19 |
+| live outer walls | D | Meet | 14 | 19 | - |
 | colored area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 20 (boss), 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |

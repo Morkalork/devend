@@ -393,7 +393,11 @@ describe("the ladder actually carries these hooks", () => {
     // it (see "puts every act I area in the win" above). 3 meets the box as
     // the win, 4 puts the guard in front of it, and 9 is the skill check that
     // names everything the act taught.
-    const GATE_MAPS = ["level-10", "level-3", "level-4", "level-8", "level-9"];
+    //
+    // 13 and 15 went ON in the act II review for the same reason: 13's box is
+    // the one its mirror is for, and 15's cup is the one its well feeds. In
+    // both the zone is how the map's new mechanic reaches the win.
+    const GATE_MAPS = ["level-10", "level-13", "level-15", "level-3", "level-4", "level-8", "level-9"];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);

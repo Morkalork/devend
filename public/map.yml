@@ -425,6 +425,12 @@ levels:
 
   # 6 "Merge Conflict" - FIGHT the breakable, USE the mover.
   #
+  # Four of the twelve shards, down from six. The divider used to be a hidden
+  # stack: break its bottom shard and the eleven above it toppled, on two
+  # deals of four. That was a bug (shards never stack now), and it had been
+  # doing most of the smashing: without it six of twelve measured 6 of 16 on
+  # the sweep against 11 before, and four of twelve measures 12.
+  #
   # No new mechanic. Map 5 taught that a breakable is a price you pay in tempo;
   # this one charges the opposite way round, because the fourth thing breaking a
   # wall does is the one nobody thinks about: it MERGES two regions into one.
@@ -462,7 +468,7 @@ levels:
         - kind: space
           threshold: 25
         - kind: smashed
-          count: 6
+          count: 4
           of: shards
     entities:
       - id: anchor-top
@@ -1215,7 +1221,28 @@ levels:
   # the builder splices a level it edits and eats any comment inside its body.
   # ===========================================================================
 
-  # 11 "Sprint Planning" - MEET the launcher, USE reveals.
+  # 11 "Sprint Planning" - MEET the launcher, USE reveals, MEET the bumper as
+  # a brake.
+  #
+  # The barrel sets the speed of the whole map, up to three times, before a
+  # fence exists. Reported from play: at full throttle the balls were
+  # impossible to lock, so the top of the pull was a trap rather than a
+  # wager. Two green bumpers are the answer, and they are placed OFF the
+  # barrel's line so the opening shot still reaches the curtain: each brakes a
+  # ball 5% a bump, ten bumps deep, and once spent only redirects (bounceKick
+  # 1) - never the pop bumper that speeds a ball up. That second half, and the
+  # bank you drain to get there, is level 12's subject.
+  #
+  # The four shards (the square that replaced the old sump) are in the win
+  # now, two of four. They were on the board and out of the win, the same
+  # promise-with-nothing-behind-it the act I review found.
+  #
+  # Measured at full throttle, eight seeds, no cuts: the balls average 2.8x
+  # their base speed at 5 s and stay there without the bumpers; with them it is
+  # 2.5x at 5 s, 2.1x at 15 s and 2.0x at 30 s. A bank of three hours each
+  # (fifteen brakes) only reached 1.9x at 30 s for half as much hazard pay
+  # again, so two it is. If the top of the pull is still unlockable in the
+  # hand, the next lever is the pull's ceiling, not more bumpers.
   - id: level-11
     level: 11
     sizeThreshold: 16
@@ -1232,6 +1259,9 @@ levels:
         - kind: smashed
           count: 1
           of: monoliths
+        - kind: smashed
+          count: 2
+          of: shards
     coloredAreas:
       - kind: var
         x: 640
@@ -1249,6 +1279,24 @@ levels:
         height: 110
         facing: right
         angle: -36
+      - id: brake-west
+        kind: wall
+        shape: circle
+        cx: 380
+        cy: 330
+        radius: 46
+        bouncer: true
+        bounceHours: 2
+        bounceKick: 1
+      - id: brake-south
+        kind: wall
+        shape: circle
+        cx: 610
+        cy: 749
+        radius: 46
+        bouncer: true
+        bounceHours: 2
+        bounceKick: 1
       - id: rafter
         kind: wall
         shape: rect
@@ -1330,7 +1378,10 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 12 "Velocity" - MEET the bumper, FIGHT the launcher.
+  # 12 "Velocity" - USE the bumper, FIGHT the launcher.
+  #
+  # The bumper met on 11 as a brake that never accelerates. Here it is the
+  # whole machine: green while its bank lasts, a red pop bumper once spent.
   - id: level-12
     level: 12
     sizeThreshold: 15
@@ -1438,7 +1489,24 @@ levels:
         announce: game.beatDeadline
     balls: []
 
-  # 13 "Code Review" - MEET the mirror, USE the bumper.
+  # 13 "Code Review" - MEET the mirror.
+  #
+  # Someone else decides where your work goes. A fence that meets the mirror
+  # reflects and keeps going, so one drag becomes a bent line, and the pink
+  # box sits where no straight fence closes it. The box is the win: clear the
+  # board, and lock a ball in the box the mirror is for.
+  #
+  # Reported from play as "too similar to the previous one", and it was: 12
+  # and 13 carried the same bumpers, the same monolith strut and sump, the
+  # same square of shards and the same win (one monolith, two shards), with a
+  # mirror added to 13. All of that came off. It was 12's furniture and 12's
+  # win, the box was a bonus nothing asked for, and the mirror - the thing
+  # this map introduces - was never needed to finish. Now the map is the
+  # mirror and the box, and nothing else competes for the read.
+  #
+  # THE TURN: a small speed spike at 35% remaining, announced. The map runs at
+  # 0.75 speed so a bent cut can be planned; the spike charges for taking too
+  # long to plan it.
   - id: level-13
     level: 13
     sizeThreshold: 14
@@ -1456,19 +1524,14 @@ levels:
       require:
         - kind: space
           threshold: 14
-        - kind: smashed
+        - kind: area
           count: 1
-          of: monoliths
-        - kind: smashed
-          count: 2
-          of: shards
     coloredAreas:
       - kind: var
         x: 660
         'y': 150
         width: 170
         height: 160
-        required: false
     entities:
       - id: mirror-a
         kind: wall
@@ -1478,75 +1541,11 @@ levels:
         width: 20
         height: 300
         mirror: true
-      - id: governor-a
-        kind: wall
-        shape: circle
-        cx: 700
-        cy: 480
-        radius: 46
-        bouncer: true
-      - id: governor-b
-        kind: wall
-        shape: circle
-        cx: 260
-        cy: 300
-        radius: 46
-        bouncer: true
-      - id: strut
-        kind: wall
-        shape: rect
-        x: 250
-        'y': 410
-        width: 26
-        height: 150
-        breakable: true
-        hitsToBreak: 3
-      - id: sump
-        kind: wall
-        shape: rect
-        x: 300
-        'y': 760
-        width: 200
-        height: 26
-        breakable: true
-        hitsToBreak: 3
-      - id: grit-1
-        kind: wall
-        shape: rect
-        x: 629
-        'y': 680
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-2
-        kind: wall
-        shape: rect
-        x: 665
-        'y': 680
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-3
-        kind: wall
-        shape: rect
-        x: 629
-        'y': 718
-        width: 26
-        height: 28
-        brittle: true
-      - id: grit-4
-        kind: wall
-        shape: rect
-        x: 665
-        'y': 718
-        width: 26
-        height: 28
-        brittle: true
     beats:
-      - id: deadline
-        atSpaceRemaining: 20
-        breakId: strut
-        announce: game.beatDeadline
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
     balls: []
 
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
@@ -1558,9 +1557,10 @@ levels:
     # half a second and the arc you were meant to read never finishes. Reported
     # as "still not normal gravity" with the physics already in and working.
     #
-    # Bare, and the same shape as 15 on purpose. 14 is "things fall", 15 is the
-    # same board with the room turning under it, so the second map adds exactly
-    # one idea instead of two.
+    # Bare on purpose, so the only thing to read is the fall and the turn.
+    # (15 used to be this board again with wells on it; it is a well feeding a
+    # cup now, and the bouncy sides stayed here, where a falling board needs
+    # them.)
     sizeThreshold: 14
     # Between 13 (this map with obstacles to hide behind) and 15's bare board.
     # Losing the shelves cuts both ways: nothing blocks a fence, and nothing
@@ -1619,103 +1619,81 @@ levels:
 
   - id: level-15
     level: 15
-    # MEET the gravity well, USE the turning room and the live outer walls.
+    # MEET the gravity well, and nothing else.
     #
-    # The well is the one unplaced mechanic that talks to what 14 taught rather
-    # than sitting beside it. A well's pull is FIXED and absolute; this map's
-    # global pull turns a quarter every ten seconds. So the same well is a
-    # funnel when the two agree, a brake when they oppose and a sideways current
-    # in between, and which one it is depends on when a ball arrives rather than
-    # on where it is. That is 14's read - fence where the pull is taking them -
-    # asked one level up.
+    # A cup sits on the floor in the middle of the board, open at the top, and
+    # a well hangs over its mouth pulling down into it. The win is a ball
+    # locked in the cup. So the well is not terrain to route around: it is the
+    # thing doing the aiming, and the read is when to trust it - let it drop a
+    # ball in, then close the lid across the cup's mouth before the ball
+    # bounces back out through the well.
     #
-    # It also settles a debt 14 left: a pinned mutator and live outer walls were
-    # each on exactly one map, which the spread rule counts as introduced and
-    # dropped. Using both here is what takes them off that list.
+    # Reported from play as a weird map: "bouncers on all sides, but no general
+    # gravity", and the wells not introduced by the design. It was a bare board
+    # with two wells a player could ignore, four bouncy sides carried over from
+    # 14 (where they exist to keep a falling board alive; with no global pull
+    # here they were only noise), and a win of `locks: 2` that never mentioned
+    # a well. The sides are plain again, and the win is the cup the well feeds.
+    #
+    # Measured, eight seeds, twenty seconds with no cuts: balls spend 13.2% of
+    # their time in the cup with the well and 6.2% without it. On the bot sweep
+    # the win rate is the same either way (15 of 16) and the well saves about a
+    # third of the cuts, median 14 against 20: it is the helper it is meant to
+    # be, not a gate.
+    #
+    # One well rather than two. A second well pulling elsewhere would be a
+    # second relationship on a MEET map; one well over one cup says one thing.
+    # 3.0 turn rate, the value the mechanic was designed around, since nothing
+    # else on the board competes with it.
+    #
+    # No `neverRotates`: with no global pull there is nothing to keep upright,
+    # and rotateGravityWell turns the well's position and bearing together, so
+    # the cup and the well stay a pair on every deal.
     sizeThreshold: 13
-    # 7, not 8. Measured at 19.5 bot cuts against this ladder's 2.8x bot ratio,
-    # down from 22.5 when the map still carried a global pull: a turning room
-    # makes every fence a worse bet, and taking it away gave the cuts back.
-    # Lower than 14's par on a later map, which is correct - par describes the
-    # map, not the rung.
     expectedCuts: 7
     points: 5
     maxBalls: 3
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, red]
-    # NO global pull, and that is the point of the map rather than an omission.
-    # It shipped for a day pinning `tipping` - real gravity plus a turning room
-    # - on the reasoning that the well is best read against a pull that turns.
-    # Played, it reads as two gravities at once: the board is already dragging
-    # everything one way, so a patch that drags things another is a second
-    # helping of the same idea rather than a new one. The well is the ONLY pull
-    # here now, which is what makes it legible and what the mechanic was
-    # designed for (see gravityWells.ts on why local beats global).
-    #
-    # No `neverRotates` either. That flag exists because global gravity is
-    # screen-relative and does not turn with the deal; with no global pull there
-    # is nothing to keep upright, and rotateGravityWell turns a well's position
-    # AND its bearing together, so a rotated deal stays self-consistent.
-    boardEdges:
-      top:
-        kick: 1.05
-      bottom:
-        kick: 1.05
-      left:
-        kick: 1.05
-      right:
-        kick: 1.05
-    # Two, diagonally opposite, and pulling the SAME way on purpose.
-    #
-    # One well is avoidable on a board this open; two placed across the diagonal
-    # are not, whichever corner the balls are being thrown into. Giving them
-    # different bearings was the tempting version and it is one idea too many
-    # for a MEET: the player would be reading two relationships at once and
-    # could not tell which well did what. Same bearing means the whole board
-    # says one thing at a time, and the thing it says changes every ten seconds.
-    #
-    # `pull: down` is the default and is written out anyway, because the point
-    # of this map is that the well's direction does NOT turn with the room, and
-    # a field that is invisible in the YAML is one nobody thinks about.
-    #
-    # 3.0, mid-range of the four wells the retired ladder shipped (2.8 to 3.2)
-    # and a little over the 2.6 engine default, because this is a bare board
-    # where the well is the only thing to read.
-    #
-    # It was 3.8 for a day, and the reason it came back down is the same rule
-    # that put it up: a mechanic's strength is relative to the board under it.
-    # While this map carried a global pull, the well had to out-turn that pull
-    # to be seen at all, and 2.6 measured 0.98x the ambient bend - literally
-    # indistinguishable. With the global pull gone there is nothing to compete
-    # with, so the number the mechanic was designed for is the right one again.
     gravityWells:
-      - x: 150
-        y: 200
-        width: 200
-        height: 180
+      - x: 355
+        y: 400
+        width: 190
+        height: 230
         turnRate: 3.0
         pull: down
-      - x: 550
-        y: 520
-        width: 200
-        height: 180
-        turnRate: 3.0
-        pull: down
-    # Terrain-only board, so `space + locks` is what it may honestly ask (a well
-    # is terrain: there is no state saying whether you engaged with one). Two
-    # locks rather than 14's one, which is the ramp: the wells make a ball's
-    # exit vector a thing you have to plan for twice.
     win:
       require:
         - kind: space
           threshold: 13
-        - kind: locks
-          count: 2
-    entities: []
+        - kind: area
+          count: 1
+    coloredAreas:
+      - kind: var
+        x: 355
+        'y': 650
+        width: 190
+        height: 205
+    # The cup: two walls standing on the floor, 190 apart inside, 205 tall.
+    # Its mouth is the line y 650 between their tops, one fence wide.
+    entities:
+      - id: cup-west
+        kind: wall
+        shape: rect
+        x: 329
+        'y': 650
+        width: 26
+        height: 205
+      - id: cup-east
+        kind: wall
+        shape: rect
+        x: 545
+        'y': 650
+        width: 26
+        height: 205
     balls: []
 
-  # 16 "Tech Debt" - MEET phasing, COMPRESSED deformable, USE the bumper.
   - id: level-16
     level: 16
     # THREE OBJECTS THAT DISAGREE ABOUT HOW FAST THE BALLS ARE.
@@ -1915,6 +1893,12 @@ levels:
     # smashes deep, and Force Push is the answer it is built to want.
     bugChance: 0.8
     sizeThreshold: 12
+    # Authored, not the rung's default 50 s. The wall used to come down faster
+    # than it should: the stack graph read the brick rows as stacked, so a ball
+    # clipping a bottom brick toppled the ones above it on two deals of four.
+    # That was a bug and is gone, and without it the same map measured 8 of 16
+    # against 11 before; ten more seconds is what the free cascade was worth.
+    timeLimit: 60
     expectedCuts: 9
     points: 5
     maxBalls: 3

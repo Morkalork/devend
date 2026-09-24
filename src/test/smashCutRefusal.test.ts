@@ -238,7 +238,11 @@ describe("the ladder's counts", () => {
     // 9 the box as well. Reported from play as "only shards in the AC, so why
     // go for the monolith"; the shard count paid for the extra line. Still a
     // third of the run or more, which is the point this test protects.
-    for (const [n, want] of [[5, 2], [6, 6], [7, 4], [9, 4]] as const) {
+    //
+    // 6 asks four of twelve for a different reason: its divider used to topple
+    // from the bottom (a bug, fixed in the stack graph), which had been doing
+    // most of the smashing, and four is what measures the same without it.
+    for (const [n, want] of [[5, 2], [6, 4], [7, 4], [9, 4]] as const) {
       const body = levels.find(l => l.startsWith(`${n}\n`))!;
       const count = body.match(/- kind: smashed\n\s+count: (\d+)/)?.[1];
       expect(Number(count), `level ${n} changed how many of its bricks it asks for`).toBe(want);

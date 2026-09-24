@@ -182,6 +182,10 @@ describe("the maps with nothing a lock cannot produce", () => {
     // of act I found a box on a teaching map that the win ignored read as a
     // promise with nothing behind it, so 3 now meets the box as its win and 4
     // puts the guard in front of it. Both ask `space + area`.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 15, 16]);
+    //
+    // 15 LEFT with the act II review: its well now feeds a cup and the win is
+    // a ball in the cup, so the map has something a lock cannot produce by
+    // accident. The note above on why it was here stays as the history.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16]);
   });
 });

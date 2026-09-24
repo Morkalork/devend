@@ -200,14 +200,16 @@ describe("optional is marked optional", () => {
   });
 
   it("counts a bonus pocket on every map that has one", () => {
-    // Act I carries none since its review (every box it shows is in the win);
-    // act II has 11, 13 and 18. The floor is a guard
+    // Act I carries none since its review (every box it shows is in the win),
+    // and act II has two, 11's pocket behind the curtain and 18's room under
+    // the windmill: each is its map's greed hook, the only form a bonus box
+    // keeps. The floor is a guard
     // against the rule silently ceasing to fire, not a target: it was 10 when
     // the ladder was 35 maps and comes back up with the rebuild.
     const withBonus = LEVELS.filter(l =>
       l.level != null && (l.coloredAreas ?? []).some(a => a.required === false));
     expect(withBonus.length, "the bonus pockets vanished from the ladder")
-      .toBeGreaterThanOrEqual(3);
+      .toBeGreaterThanOrEqual(2);
     for (const l of withBonus) {
       const opt = winConditions(t, l, l.level as number, NO_RUN_RULES).filter(c => c.group === "optional");
       expect(opt.length, `${l.id} carries a bonus pocket it never mentions`).toBeGreaterThan(0);

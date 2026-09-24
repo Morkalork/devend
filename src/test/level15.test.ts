@@ -15,12 +15,18 @@
  * that pulls everywhere. So the global pull came off, and 14 and 15 now
  * contrast instead of stacking: 14 is the pull you cannot escape, 15 is the
  * pull you can walk around and choose not to.
+ *
+ * Then a play review: "bouncers on all sides, but no general gravity", and the
+ * wells not introduced by the design. The bouncy sides were 14's, where a
+ * falling board needs them, and the two wells were terrain a player could
+ * ignore under a `locks: 2` win that never mentioned them. So 15 is now one
+ * well hung over a cup on the floor, and the win is a ball locked in the cup:
+ * the well is what does the aiming, and the map cannot be read without it.
  */
 import { describe, it, expect } from "vitest";
 import { LADDER } from "./fixtures/maps";
 import { mutatorById } from "@/lib/mapMutators";
 import { DEFAULT_WELL_TURN_RATE } from "@/lib/physics/gravityWells";
-import { BOARD_SIDES } from "@/lib/physics/boardEdges";
 import { createInitialGameData } from "@/lib/initGame";
 import { plainModifiers } from "@/lib/bot/headlessGame";
 
@@ -81,14 +87,11 @@ describe("level 15 holds together", () => {
     expect(mutatorById(l15.mutator as unknown as string)).toBeFalsy();
   });
 
-  it("keeps the symmetric live walls, which need no gravity to earn their keep", () => {
-    // These came from 14 and stay: with no pull at all, a bouncer per side is
-    // what keeps the board's energy up, and the symmetry is what lets the map
-    // be dealt in any orientation.
-    const e = l15.boardEdges!;
-    expect(Object.keys(e).sort()).toEqual(["bottom", "left", "right", "top"]);
-    const kicks = BOARD_SIDES.map(s => e[s]?.kick);
-    expect(new Set(kicks).size, `the four sides disagree: ${kicks.join(", ")}`).toBe(1);
+  it("has plain sides: the bouncy walls are 14's, where a falling board needs them", () => {
+    // Reported from play as the weird part of the old 15: live walls on every
+    // side of a board with no global pull. On 14 they put back the energy each
+    // bounce loses to the fall; here nothing falls, so they were only noise.
+    expect(l15.boardEdges, "level 15 carries live outer walls again").toBeUndefined();
   });
 
   it("may be dealt in any orientation, which the symmetry buys", () => {
@@ -99,21 +102,32 @@ describe("level 15 holds together", () => {
     expect(l15.neverRotates ?? false).toBe(false);
   });
 
-  it("asks what a terrain-only board may honestly ask", () => {
-    // A well is terrain: there is no state saying whether you "engaged" with
-    // one, so there is no clause for it and `space + locks` is the honest ask.
-    // Two locks rather than 14's one is the ramp.
+  it("puts the well to work: the win is the cup it feeds", () => {
+    // A well is terrain and has no clause of its own, so it is made to matter
+    // the other way round: the win names the cup, and the well hangs over the
+    // cup's mouth pulling into it. Measured when it was built: balls spend
+    // 13.2% of their time in the cup with the well and 6.2% without.
     const kinds = (l15.win!.require ?? []).map(c => c.kind).sort();
-    expect(kinds).toEqual(["locks", "space"]);
-    const locks = (l15.win!.require ?? []).find(c => c.kind === "locks");
-    expect(locks?.kind === "locks" && locks.count).toBe(2);
+    expect(kinds).toEqual(["area", "space"]);
+    const [cup] = l15.coloredAreas ?? [];
+    expect(cup, "level 15 lost its cup").toBeDefined();
+    expect(cup.required, "the cup is the win, not a bonus").not.toBe(false);
+    expect(wells()).toHaveLength(1);
+    const [w] = wells();
+    expect(w.pull ?? "down", "the well must pull toward the cup").toBe("down");
+    // Directly over it: overlapping across, and ending at or just above the
+    // cup's mouth, so a ball the well has caught falls in.
+    expect(Math.min(w.x + w.width, cup.x + cup.width) - Math.max(w.x, cup.x))
+      .toBeGreaterThan(cup.width * 0.8);
+    expect(cup.y - (w.y + w.height)).toBeGreaterThanOrEqual(0);
+    expect(cup.y - (w.y + w.height)).toBeLessThanOrEqual(40);
   });
 
-  it("stays bare apart from the wells", () => {
+  it("carries the well and its cup and nothing else", () => {
     // 14's lesson, which cost a round trip: a board full of furniture hides the
-    // mechanic it was built to teach.
-    expect(l15.entities ?? []).toHaveLength(0);
-    expect(l15.coloredAreas ?? []).toHaveLength(0);
+    // mechanic it was built to teach. The only entities are the cup's walls.
+    expect((l15.entities ?? []).map(e => e.id).sort()).toEqual(["cup-east", "cup-west"]);
+    expect(l15.coloredAreas ?? []).toHaveLength(1);
     expect(l15.beats ?? []).toHaveLength(0);
   });
 });
@@ -129,7 +143,7 @@ describe("the wells reach the board the player gets", () => {
     // the map deadline - and the same cure: build it where BOTH callers look.
     const data = createInitialGameData(l15, 15, plainModifiers());
     expect(data.gravityWells).toHaveLength(wells().length);
-    expect(data.coloredAreas).toEqual([]);
+    expect(data.coloredAreas).toHaveLength(1);
     expect(data.pickupSpots).toEqual([]);
   });
 

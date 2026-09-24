@@ -264,23 +264,29 @@ describe("the word CLEAR, which speaks for the whole map", () => {
    * and a lie about the map. So the answer lives next to the goals rather than
    * in the component: one function, asked by the chip, that means what the gate
    * means.
+   *
+   * Read against level 12 now. Level 13 was rebuilt around its mirror and asks
+   * for a ball in a box rather than a smash; 12 still carries the reported
+   * shape exactly, "clear AND smash", so the regression is still pinned
+   * against a shipped map rather than a lookalike. The name below stays L13
+   * only in the history above.
    */
-  const L13 = resolveWinSpec(byLevel(LADDER, 13)!, NO_RUN_RULES);
+  const L13 = resolveWinSpec(byLevel(LADDER, 12)!, NO_RUN_RULES);
   const goalsOf = (spec: WinSpec, s: WinSnapshot) => mapGoals(spec, s);
 
-  it("reads level 13 as unwon while the slab still stands", () => {
+  it("reads the map as unwon while the slab still stands", () => {
     // THE regression, against the shipped map rather than a lookalike.
     const cleared = snap({ remainingPercent: 0, smashed: noSmashes() });
     expect(find(L13, "space", cleared).done, "the space clause is not met on a cleared board")
       .toBe(true);
     expect(everyRequirementMet(goalsOf(L13, cleared)), "the bar would say CLEAR on an unwon map")
       .toBe(false);
-    expect(isWinMet(L13, cleared), "level 13 no longer wants its slab").toBe(false);
+    expect(isWinMet(L13, cleared), "level 12 no longer wants its slab").toBe(false);
   });
 
   it("agrees the moment the last requirement lands", () => {
-    // Two smash clauses now (`1 of monoliths` and `2 of shards`), so the state
-    // that meets level 13 has to meet the LARGER of them. Derived from the
+    // Two smash clauses (`1 of monoliths` and `2 of shards`), so the state that
+    // meets the map has to meet the LARGER of them. Derived from the
     // biggest count the spec asks for rather than pinned at a literal, because
     // the number belongs to the map and this test is about the readout.
     const most = Math.max(...L13.require
@@ -290,7 +296,7 @@ describe("the word CLEAR, which speaks for the whole map", () => {
     expect(isWinMet(L13, both)).toBe(true);
   });
 
-  it("never claims a win the gate would refuse, over every state of level 13", () => {
+  it("never claims a win the gate would refuse, over every state of the map", () => {
     // The property, swept: CLEAR may only appear where the real win check
     // agrees. The converse is deliberately not asserted - a map won by its
     // alsoWinIf alternative never met its requirements, and the post-map screen

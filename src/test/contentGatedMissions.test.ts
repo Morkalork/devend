@@ -89,7 +89,7 @@ describe("counting a block's clean-clearable maps", () => {
     expect(blockSpaceWinnableMaps(clean, 11)).toBe(BLOCK_SIZE);
   });
 
-  it("counts the real block 11, where one of the five prices a lock", () => {
+  it("counts the real block 11, where three of the five price a lock", () => {
     // Read off the LADDER rather than the engine set: block 11 is the one being
     // rebuilt, and mixing authored maps with retired ones measures a block
     // nobody plays.
@@ -106,14 +106,20 @@ describe("counting a block's clean-clearable maps", () => {
     // either way - capOrRefuse drops a noLocks mission only below MIN_TOP_TIER,
     // which is 2, so three clean maps still offers one, capped at three. The
     // number to watch is 1.
+    //
+    // Down to two since the act II review: 13 now asks for a ball in the box
+    // its mirror is for, and 15 for a ball in the cup its well feeds. A lock in
+    // a place is still a lock, so neither is clean any more, and 15 no longer
+    // asks for a bare `locks` count either. Two is exactly MIN_TOP_TIER, so
+    // Ship It still offers here; this is the number that would stop it.
     const built = LADDER.filter(l => (l.level ?? 0) >= 11 && (l.level ?? 0) <= 15);
     expect(built.length, "block 11 is empty: is this reading the ladder?").toBe(5);
     const clean = blockSpaceWinnableMaps(LADDER, 11);
-    expect(clean).toBe(3);
+    expect(clean).toBe(2);
     expect(clean, "below two, Ship It stops offering here at all").toBeGreaterThanOrEqual(2);
     const pricesALock = built.filter(l =>
       (l.win?.require ?? []).some(c => c.kind === "locks"));
-    expect(pricesALock.map(l => l.level)).toEqual([14, 15]);
+    expect(pricesALock.map(l => l.level)).toEqual([14]);
   });
 });
 
