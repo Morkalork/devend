@@ -132,6 +132,11 @@ of the ask I deliberately left out or deferred belongs in the second line.
 When the prompt was a screenshot, a file or a link, say what I took FROM it,
 since that reading is the most likely thing to be wrong.
 
+After the recap, end with the time I finished, taken from
+`date -u '+%Y-%m-%d %H:%M UTC'` at the end rather than guessed, as the last
+line (e.g. `Finished 2026-09-25 14:32 UTC`). The owner runs several agents at
+once and reads it to see how long each has sat idle.
+
 **If CI failed at any point and I fixed it, say so when I wrap up.** Not only in
 the turn where it broke: a red build that got fixed three turns ago is still
 something the recap should carry, because the alternative is a summary that
