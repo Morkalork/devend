@@ -1894,7 +1894,7 @@
     "joining": "Entrando con tu pareja",
     "connected": "Conectados. Empieza el mapa.",
     "failed": "No se pudo contactar con el otro móvil.",
-    "slowHint": "Los dos móviles deben estar en la misma Wi-Fi. Si ya lo están, activa un punto de acceso en uno y conecta el otro.",
+    "slowHint": "Está tardando. Los dos móviles necesitan internet. En la misma Wi-Fi se conectan directamente, en cualquier otra a través de nuestro servidor.",
     "tryAgain": "Reintentar",
     "partner": "Pareja",
     "versionMismatch": "Un móvil tiene una versión antigua. Actualízalo y vuelve a intentarlo.",
@@ -1927,6 +1927,25 @@
       "continuing": "{{name}} decide si gastar una continuación."
     },
     "mismatchTitle": "No estáis jugando a lo mismo.",
-    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero."
+    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero.",
+    "viaRelay": "Conectados a través de nuestro servidor, porque esta red separa los móviles.",
+    "viaDirect": "Conectados directamente, de móvil a móvil.",
+    "nap": {
+      "checking": "Llamando a la puerta del servidor",
+      "waking": "El servidor estaba echando la siesta. Despertándolo, dale unos segundos.",
+      "awake": "El servidor está despierto y con su café.",
+      "justWoke": "El servidor acaba de despertarse. Aún bosteza, pero está listo.",
+      "unreachable": "El servidor no responde. ¿Tiene internet este móvil?",
+      "whyTitle": "¿Por qué iba a dormir un servidor?",
+      "whyNap": "Nuestro servidor vive en un plan de nube diminuto que se echa la siesta tras 30 minutos sin nadie jugando. La primera llamada lo despierta, y tarda unos 10 segundos en encontrar las zapatillas.",
+      "whyMatters": "Importa en 2 jugadores: el servidor pasa el código de emparejamiento entre móviles, y en la Wi-Fi de cafeterías, hoteles u oficinas lleva la partida entera, porque esas redes no dejan que los móviles hablen entre sí.",
+      "tip": {
+        "checking": "Un momento, suele responder en un parpadeo.",
+        "waking": "Solo queda esperar. Tu llamada es lo que lo está despertando, así que estará listo enseguida.",
+        "awake": "Todo bien. Sigue despierto mientras alguien esté jugando.",
+        "justWoke": "Tu llamada lo despertó. Ya está en pie, así que adelante, empareja.",
+        "unreachable": "Comprueba que este móvil tiene internet. Si lo tiene, puede que el servidor esté caído un momento: prueba de nuevo en un minuto."
+      }
+    }
   }
 }

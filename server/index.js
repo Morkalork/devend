@@ -7,7 +7,7 @@
  * committing by hand every time, which is the report this answers.
  *
  * Zero dependencies on purpose. `serve` was the only thing this replaced and
- * Node 20 has http, fs and fetch; adding Express to serve a folder and proxy
+ * Node has http, fs, crypto and fetch; adding Express to serve a folder and proxy
  * one PUT would be more surface than the whole feature.
  *
  * ── Why it does not just write the file ────────────────────────────────────
@@ -23,6 +23,8 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { commitMapYaml, mapCommitConfig, configProblem, secretMatches } from "./mapCommit.js";
 import { putAnswer, takeAnswer, dropRoom } from "./pairRooms.js";
+import { handleRelayUpgrade } from "./relay.js";
+import { healthReport } from "./health.js";
 
 const PORT = process.env.PORT || 8080;
 const DIST = resolve(process.cwd(), "dist");
@@ -146,6 +148,17 @@ const server = createServer(async (req, res) => {
     return res.end();
   }
 
+  // Is anyone home? The 2-Player screen asks, and reads a slow answer or a
+  // young uptime as "the dyno was asleep" (server/health.js).
+  if (url.pathname === "/api/health") {
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      // Always a fresh answer: a cached "awake" is the one thing this must not say.
+      "Cache-Control": "no-store",
+    });
+    return res.end(JSON.stringify(healthReport()));
+  }
+
   // The pairing mailbox (server/pairRooms.js). One message per pairing, and
   // never on the path once the two phones are talking.
   if (url.pathname.startsWith("/api/room/")) {
@@ -185,6 +198,12 @@ const server = createServer(async (req, res) => {
   if (await sendFile(res, join(DIST, "index.html"))) return;
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not found. Has `npm run build` run?");
+});
+
+// The relay (server/relay.js): a WebSocket upgrade on the same port, which is
+// the only kind of connection Heroku's router will pass through to a dyno.
+server.on("upgrade", (req, socket, head) => {
+  if (!handleRelayUpgrade(req, socket, head)) socket.destroy();
 });
 
 server.listen(PORT, () => {

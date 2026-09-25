@@ -243,3 +243,61 @@ export function setDevFenceSlots(ids: string[]): void {
     /* storage blocked: the bar simply shows the standard slot */
   }
 }
+
+// ── Pair Programming network switches ───────────────────────────────────────
+// Both persisted, like infinite lives: a tester sets one, walks to a second
+// phone, and expects it to still be set there after a reload. Neither touches
+// a run's rules, so neither makes a run ledger-ineligible.
+
+const FORCE_RELAY_KEY = "devend:forceRelay";
+const NAP_SIM_KEY = "devend:simulateNap";
+
+/**
+ * Skip the direct link and pair through the server relay every time.
+ *
+ * The relay only takes over on a network that isolates its clients, and the
+ * people testing this are mostly at home, where the direct link opens first
+ * and the relay is never used. Without this, the path every cafe player takes
+ * is the one path nobody at the desk would ever see. Only the HOST's setting
+ * matters: the host picks the link and the guest follows it.
+ */
+export function isForceRelayEnabled(): boolean { return readFlag(FORCE_RELAY_KEY); }
+
+export function setForceRelayEnabled(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(FORCE_RELAY_KEY, "1");
+    else localStorage.removeItem(FORCE_RELAY_KEY);
+  } catch {
+    /* storage blocked: stays off */
+  }
+}
+
+/** What the server-nap readout should pretend, or "off" for the real probe. */
+export type SimulatedNap = "off" | "asleep" | "justWoke" | "unreachable";
+export const SIMULATED_NAPS: SimulatedNap[] = ["off", "asleep", "justWoke", "unreachable"];
+
+/**
+ * Make the 2-Player screen's server readout show a given state.
+ *
+ * A real nap needs half an hour of nobody playing on an eco dyno, and "the
+ * server cannot be reached" needs the server to be down; neither is something
+ * a tester can summon to check the copy reads right. "asleep" holds the
+ * readout on the waking state for as long as the screen is open.
+ */
+export function getSimulatedNap(): SimulatedNap {
+  try {
+    const raw = localStorage.getItem(NAP_SIM_KEY);
+    return SIMULATED_NAPS.includes(raw as SimulatedNap) ? raw as SimulatedNap : "off";
+  } catch {
+    return "off";
+  }
+}
+
+export function setSimulatedNap(state: SimulatedNap): void {
+  try {
+    if (state === "off") localStorage.removeItem(NAP_SIM_KEY);
+    else localStorage.setItem(NAP_SIM_KEY, state);
+  } catch {
+    /* storage blocked: the real probe runs */
+  }
+}

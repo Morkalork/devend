@@ -116,6 +116,28 @@ describe("every URL dev flag has an admin control", () => {
   }
 });
 
+describe("every persisted dev switch has an admin control", () => {
+  // The other class of flag in devFlags.ts: a stored switch with no URL form
+  // at all (infinite lives, the forced 2-Player relay, the simulated server
+  // nap). Nothing but a control can set one, so a setter nobody calls is a
+  // switch that cannot be flipped. Any exported set<Name>Enabled, plus the
+  // simulated nap, whose setter takes a state rather than a boolean.
+  const setters = [
+    ...[...DEV_FLAGS.matchAll(/export function (set\w+Enabled)\(/g)].map(m => m[1]),
+    ...[...DEV_FLAGS.matchAll(/export function (setSimulated\w+)\(/g)].map(m => m[1]),
+  ];
+
+  it("is checking a real set of switches", () => {
+    expect(setters).toEqual(expect.arrayContaining(["setInfiniteLivesEnabled", "setForceRelayEnabled", "setSimulatedNap"]));
+  });
+
+  for (const setter of setters) {
+    it(`${setter} is called from Admin or the Playground`, () => {
+      expect(PLAYGROUND + ADMIN).toMatch(new RegExp(`${setter}\\(`));
+    });
+  }
+});
+
 describe("every level field has a Map Builder editor", () => {
   /**
    * Structured fields with their own editor elsewhere, or authored in YAML by

@@ -1346,7 +1346,7 @@
     "joining": "Joining your partner",
     "connected": "Connected. Starting the map.",
     "failed": "Could not reach the other phone.",
-    "slowHint": "Both phones must be on the same Wi-Fi. If they are, turn on a hotspot on one and join it with the other.",
+    "slowHint": "Taking a while. Both phones need internet. On the same Wi-Fi they link up directly, anywhere else through our server.",
     "tryAgain": "Try again",
     "partner": "Partner",
     "versionMismatch": "One phone is running an older build. Update it and try again.",
@@ -1379,6 +1379,25 @@
       "continuing": "{{name}} is deciding whether to spend a continue."
     },
     "mismatchTitle": "You are not playing the same game.",
-    "mismatchBody": "One of you has upgrades or certificates the other does not, so the two boards would behave differently. Play a run you both have, or catch up first."
+    "mismatchBody": "One of you has upgrades or certificates the other does not, so the two boards would behave differently. Play a run you both have, or catch up first.",
+    "viaRelay": "Linked through our server, since this network keeps phones apart.",
+    "viaDirect": "Linked directly, phone to phone.",
+    "nap": {
+      "checking": "Knocking on the server's door",
+      "waking": "The server was napping. Waking it up, give it a few seconds.",
+      "awake": "Server is awake and caffeinated.",
+      "justWoke": "Server just woke up. Still yawning, but ready.",
+      "unreachable": "The server is not answering. Is this phone online?",
+      "whyTitle": "Why would a server sleep?",
+      "whyNap": "Our server lives on a tiny cloud plan that naps after 30 minutes of nobody playing. The first knock wakes it, and it needs about 10 seconds to find its slippers.",
+      "whyMatters": "It matters for 2 Player: the server passes the pairing code between phones, and on cafe, hotel or office Wi-Fi it carries the whole game, because those networks keep phones from talking to each other.",
+      "tip": {
+        "checking": "Hang on, it usually answers in a blink.",
+        "waking": "Nothing to do but wait. Your knock is what is waking it, so it will be up in a moment.",
+        "awake": "All good. It stays awake as long as someone is playing.",
+        "justWoke": "Your knock woke it. It is fully up now, so go ahead and pair.",
+        "unreachable": "Check this phone has internet. If it does, the server may be down for a moment: try again in a minute."
+      }
+    }
   }
 }

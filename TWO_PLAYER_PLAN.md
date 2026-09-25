@@ -93,6 +93,58 @@ And three rough edges: haptics fired for the partner's actions, a pair run filed
 on the solo ladder where two players cutting twice as fast would have taken it
 over within an evening, and Nearby could be raced into two connections.
 
+### The relay, for public Wi-Fi  **[CHANGED]**
+
+The first real test away from home failed at every cafe: the pairing link
+opened, the answer reached the mailbox, and the two phones never connected.
+Public Wi-Fi (cafes, hotels, offices, most guest networks) runs **client
+isolation**: every device may reach the internet and none may reach another,
+so the host candidates the direct link is built on (section 3) knock on
+addresses that will not answer. The section-3 premise, "same network means the
+phones can see each other", is true at home and false almost everywhere else.
+
+Both phones CAN reach the server the game was loaded from, so that server now
+carries the game when the direct link cannot:
+
+- **`server/relay.js`**, a WebSocket relay on the same port as the site
+  (`/api/relay/<room>?role=host|guest`). Heroku routes HTTP and its upgrade and
+  nothing else, so TURN (UDP) cannot run on a dyno, and a hosted TURN service is
+  billed by the gigabyte; a WebSocket on the dyno the game already runs on costs
+  nothing extra. Zero dependencies, like the rest of the server: the handshake,
+  masking, fragmentation, ping and close of RFC 6455 are about a hundred lines,
+  and `ws` would have been the production server's first dependency. It
+  forwards frames byte for byte and never parses a game message.
+- **`src/lib/net/relay.ts`**, `RelayTransport`, the fourth implementation of
+  the transport interface. The lockstep cannot tell it from the others.
+- **The route choice.** Both phones take a relay seat in the room the QR names
+  as soon as they know it, in parallel with the direct link. The HOST gives the
+  direct link four seconds (`DIRECT_GRACE_MS`) once the answer is in, then
+  settles on the relay; it says hello on the link it picked, and the guest
+  answers on whichever link that hello arrived by. One side decides, so the two
+  can never end up on different links. A relay that is unreachable (an older
+  server, no WebSocket) leaves the direct link its full ten seconds, exactly the
+  behaviour before the relay existed.
+- **What it costs in play:** one extra trip to the server and back, which the
+  adaptive input delay already absorbs (it reads the round trip from the same
+  heartbeat), and a dependence on the dyno staying up for the run. A daily
+  dyno restart or a deploy drops every live relay; the pair save and resume
+  flow (step 6b) covers that the same way it covers a phone leaving Wi-Fi.
+  Rooms live in memory, so the app must run on ONE web dyno.
+- **Is the server awake?** An eco dyno sleeps after thirty idle minutes and
+  takes several seconds to boot on the next request, which on this screen
+  looked like the mode being broken. `/api/health` reports the process uptime;
+  `src/lib/net/serverNap.ts` pings it when the 2-Player screen opens and reads
+  a slow answer (over 1.5 s) or a young process (under 60 s) as a nap. The
+  screen says so in a line, with a tap-and-hold explainer about the server's
+  slippers. The ping is also what wakes it.
+- **Admin:** "Force 2-Player relay" (the relay otherwise never runs at a desk,
+  because the direct link wins at home) and "Server nap readout", which cycles
+  the readout through each state. The desk rig serves the relay and the health
+  check from `vite.config.ts`, as it does the mailbox.
+
+Android is untouched: it pairs over Nearby Connections, which needs no network
+at all, so client isolation never reaches it.
+
 ### Where it all lives
 
 | | |
@@ -108,8 +160,10 @@ over within an evening, and Nearby could be raced into two connections.
 | The 2-Player screens | `src/components/game/PairLobby.tsx`, `PairDecision.tsx`, `PairLinkBanner.tsx` |
 | The run and the pair save | `src/hooks/usePairSession.ts`, `usePairRunSave.ts` |
 | The answer mailbox | `server/pairRooms.js`, and the same route in `vite.config.ts` |
-| Admin | Pair Loopback, Nearby Diagnostics |
-| Tests | `determinism`, `commands`, `lockstep`, `pairing` |
+| The public Wi-Fi relay | `server/relay.js`, `src/lib/net/relay.ts` |
+| Is the server awake | `server/health.js`, `src/lib/net/serverNap.ts` |
+| Admin | Pair Loopback, Nearby Diagnostics, Force 2-Player relay, Server nap readout |
+| Tests | `determinism`, `commands`, `lockstep`, `pairing`, `pairRelay`, `serverNap` |
 
 The question that prompted it: **can this be done without a server in the
 middle?** Short answer, yes. The long answer is section 3.
@@ -807,8 +861,11 @@ sessions.
 - **Versus / race.** Same seed, separate boards, only scores exchanged; a
   fifth of the work of this plan and a different game.
 - **More than two players.** Lockstep generalises; the QR pairing does not.
-- **Internet play.** Needs STUN at minimum and TURN in practice, which are
-  servers, and an input delay tuned for 100 ms round trips.
+- **Internet play.** The relay (above) would technically carry two phones in
+  different cities, but the pairing still starts with a QR held up to the
+  other phone, and the input delay is tuned for the same room. Playing apart
+  would need a way to invite without a camera and a delay tuned for 100 ms
+  round trips.
 - **Spectating, or a phone as a second screen.**
 - **iOS.** WKWebView has WebRTC and would work the same way; there is no iOS
   build to put it in. Nearby Connections has no iOS counterpart in the same

@@ -1894,7 +1894,7 @@
     "joining": "Ansluter till din partner",
     "connected": "Anslutna. Banan startar.",
     "failed": "Kunde inte nå den andra mobilen.",
-    "slowHint": "Båda mobilerna måste vara på samma Wi-Fi. Är de det redan, slå på en surfzon på den ena och anslut den andra.",
+    "slowHint": "Det dröjer. Båda telefonerna behöver internet. På samma wifi kopplas de direkt, annars via vår server.",
     "tryAgain": "Försök igen",
     "partner": "Partner",
     "versionMismatch": "En mobil kör en äldre version. Uppdatera den och försök igen.",
@@ -1927,6 +1927,25 @@
       "continuing": "{{name}} avgör om ni ska lägga en continue."
     },
     "mismatchTitle": "Ni spelar inte samma spel.",
-    "mismatchBody": "En av er har uppgraderingar eller certifikat som den andra saknar, så de två spelplanerna skulle bete sig olika. Kör ett spel ni båda har, eller kom ikapp först."
+    "mismatchBody": "En av er har uppgraderingar eller certifikat som den andra saknar, så de två spelplanerna skulle bete sig olika. Kör ett spel ni båda har, eller kom ikapp först.",
+    "viaRelay": "Kopplade via vår server, eftersom det här nätverket håller isär telefoner.",
+    "viaDirect": "Kopplade direkt, telefon till telefon.",
+    "nap": {
+      "checking": "Knackar på serverns dörr",
+      "waking": "Servern tog en tupplur. Väcker den, ge den några sekunder.",
+      "awake": "Servern är vaken och har druckit sitt kaffe.",
+      "justWoke": "Servern har precis vaknat. Gäspar fortfarande, men är redo.",
+      "unreachable": "Servern svarar inte. Är den här telefonen uppkopplad?",
+      "whyTitle": "Varför skulle en server sova?",
+      "whyNap": "Vår server bor på en pytteliten molnplan som tar en tupplur efter 30 minuter utan spelare. Första knackningen väcker den, och den behöver ungefär 10 sekunder för att hitta tofflorna.",
+      "whyMatters": "Det spelar roll för 2 spelare: servern skickar parkopplingskoden mellan telefonerna, och på wifi på kaféer, hotell och kontor bär den hela spelet, eftersom de näten hindrar telefoner från att prata med varandra.",
+      "tip": {
+        "checking": "Vänta lite, den brukar svara på ett ögonblick.",
+        "waking": "Inget att göra annat än att vänta. Det är din knackning som väcker den, så den är uppe om en stund.",
+        "awake": "Allt är bra. Den håller sig vaken så länge någon spelar.",
+        "justWoke": "Din knackning väckte den. Nu är den helt uppe, så kör på och parkoppla.",
+        "unreachable": "Kolla att telefonen har internet. Om den har det kan servern vara nere en stund: försök igen om en minut."
+      }
+    }
   }
 }

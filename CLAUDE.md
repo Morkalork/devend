@@ -53,7 +53,8 @@ constraints a map must satisfy, and the map archetypes in section 11),
 **DEMOLITION_PLAN.md** for the plan and build record of level 17, the first
 Demolition map (built), **TWO_PLAYER_PLAN.md** for the design and build record
 of Pair Programming, the two-phone co-op mode (built; deterministic lockstep
-over a WebRTC or Nearby Connections link, no server in play), and
+over a WebRTC or Nearby Connections link, with a WebSocket relay on the server
+for public Wi-Fi, where client isolation keeps the phones apart), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions

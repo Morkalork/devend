@@ -40,11 +40,15 @@ npm run build
 npm start   # runs: node server/index.js
 ```
 
-Requires Node 20.x (`"engines": {"node": "20.x"}` in `package.json`).
+Requires Node 26.x (`"engines": {"node": "26.x"}` in `package.json`; CI runs the same major).
 
 `server/index.js` serves `dist` (SPA fallback, hashed assets cached hard,
-`map.yml` never cached) and adds one endpoint: `PUT /api/map`. It has no
-dependencies - Node 20 has `http`, `fs` and `fetch`, and pulling in Express to
+`map.yml` never cached) and adds `PUT /api/map`, plus three for 2-Player: the
+pairing mailbox (`/api/room/<id>`), the public Wi-Fi relay (a WebSocket on
+`/api/relay/<id>`) and `GET /api/health`, which the 2-Player screen uses to
+tell whether an eco dyno was asleep. The relay keeps its rooms in memory, so
+run a single web dyno. It has no
+dependencies - Node has `http`, `fs`, `crypto` and `fetch`, and pulling in Express to
 serve a folder and proxy one PUT would be more surface than the feature.
 
 ### Saving maps from the deployed builder

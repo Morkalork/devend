@@ -48,6 +48,20 @@ function pairRoomPlugin(): Plugin {
     name: "pair-room-api",
     async configureServer(server) {
       const rooms = await import("./server/pairRooms.js");
+      // The relay and the health check too, so the desk rig can pair through
+      // the relay (Admin's "Force 2-Player relay") and show the nap readout.
+      // The relay only answers /api/relay/ upgrades and leaves every other
+      // one, Vite's own hot reload included, to its owner.
+      const relay = await import("./server/relay.js");
+      const health = await import("./server/health.js");
+      server.httpServer?.on("upgrade", (req, socket, head) => {
+        relay.handleRelayUpgrade(req, socket, head);
+      });
+      server.middlewares.use("/api/health", (_req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Cache-Control", "no-store");
+        res.end(JSON.stringify(health.healthReport()));
+      });
       server.middlewares.use("/api/room/", (req, res, next) => {
         const id = (req.url ?? "/").replace(/^\//, "").split("?")[0];
         const send = (status: number, body: unknown) => {
