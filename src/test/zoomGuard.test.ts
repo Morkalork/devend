@@ -500,6 +500,11 @@ describe("a scrolling panel that nobody marked", () => {
     const inner = document.createElement("p");
     box.appendChild(inner);
     document.body.appendChild(box);
+    // A real scrolling panel is BOTH: allowed to scroll, and with something to
+    // scroll. The fixture used to declare only the second, which made it a
+    // fixture for a box whose content merely spills - and the code agreed with
+    // it, which is the bug below.
+    box.style.overflowY = "auto";
     // jsdom does not lay out, so the measurements are declared.
     Object.defineProperty(box, "clientHeight", { value: 100, configurable: true });
     Object.defineProperty(box, "scrollHeight", { value: scrollable ? 400 : 100, configurable: true });
@@ -508,10 +513,39 @@ describe("a scrolling panel that nobody marked", () => {
     return { box, inner, clean: () => box.remove() };
   }
 
+  /** A box whose content SPILLS: bigger than its frame, and no scroller. */
+  function overflowingButStill() {
+    const box = document.createElement("div");
+    const inner = document.createElement("p");
+    box.appendChild(inner);
+    document.body.appendChild(box);
+    box.style.overflow = "visible";
+    Object.defineProperty(box, "clientHeight", { value: 100, configurable: true });
+    Object.defineProperty(box, "scrollHeight", { value: 700, configurable: true });
+    Object.defineProperty(box, "clientWidth", { value: 100, configurable: true });
+    Object.defineProperty(box, "scrollWidth", { value: 430, configurable: true });
+    return { box, inner, clean: () => box.remove() };
+  }
+
   it("lets a drag inside it scroll, marked or not", () => {
     const { inner, clean } = scroller(true);
     expect(touchStartsInAPanner(inner), "a scrolling overlay lost its scrolling")
       .toBe(true);
+    clean();
+  });
+
+  it("holds a drag inside a box whose content merely SPILLS", () => {
+    // The sixth zoom report: "I can still accidentally shrink the gameboard by
+    // drawing a fence that starts outside the gameboard". The play region is
+    // `overflow-visible` around a canvas deliberately bigger than the board, so
+    // measuring sizes alone called it a panner - and the one-finger refusal
+    // added for exactly that surface was switched off across the whole board.
+    //
+    // Content spilling out of a visible box scrolls nowhere, so no finger in it
+    // is panning anything.
+    const { inner, clean } = overflowingButStill();
+    expect(touchStartsInAPanner(inner), "an overflowing box was mistaken for a scroller")
+      .toBe(false);
     clean();
   });
 
