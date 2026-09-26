@@ -1889,7 +1889,7 @@
     "intro": "En spelplan, två mobiler, sida vid sida. Visa koden och låt den andra spelaren skanna den med kameran.",
     "showCode": "Visa koden",
     "showCodeHint": "Din partner skannar den och hoppar in",
-    "scanMe": "Skanna den här med den andra mobilens kamera.",
+    "scanMe": "Skanna med den andra telefonens kamera, eller skicka länken.",
     "preparing": "Förbereder koden",
     "joining": "Ansluter till din partner",
     "connected": "Anslutna. Banan startar.",
@@ -1946,6 +1946,12 @@
         "justWoke": "Din knackning väckte den. Nu är den helt uppe, så kör på och parkoppla.",
         "unreachable": "Kolla att telefonen har internet. Om den har det kan servern vara nere en stund: försök igen om en minut."
       }
-    }
+    },
+    "copyLink": "Kopiera länk",
+    "linkCopied": "Länken kopierad",
+    "shareLink": "Dela länk",
+    "shareTitle": "Dev/End: 2 spelare",
+    "shareText": "Gå med i mitt Dev/End-spel. Öppna på din telefon:",
+    "copyFailed": "Kunde inte kopiera. Markera länken nedan och kopiera den själv."
   }
 }

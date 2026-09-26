@@ -229,6 +229,21 @@ export async function postAnswer(room: string, answer: PackedSdp): Promise<void>
 }
 
 /**
+ * How long the host waits for somebody to take up the invitation.
+ *
+ * A minute was plenty for a QR held up across a table. It is not for a link
+ * sent in a message, which the partner may open a few minutes later; the host
+ * is looking at the code the whole time and can cancel, so the wait is long.
+ * The server's relay seat waits the same (server/relay.js, RELAY_WAIT_MS).
+ */
+export const INVITE_WAIT_MS = 10 * 60 * 1000;
+
+/** Poll briskly while somebody is probably scanning, then ease off. */
+const POLL_FAST_MS = 700;
+const POLL_SLOW_MS = 2000;
+const POLL_FAST_FOR_MS = 60_000;
+
+/**
  * Poll until the guest's answer turns up, the caller gives up, or the deadline
  * passes. Polling rather than a socket because the whole exchange is one
  * message and a socket would be more machinery than the thing it carries.
@@ -236,16 +251,20 @@ export async function postAnswer(room: string, answer: PackedSdp): Promise<void>
 export async function awaitAnswer(
   room: string,
   signal: AbortSignal,
-  timeoutMs = CONNECT_TIMEOUT_MS * 6,
+  timeoutMs = INVITE_WAIT_MS,
 ): Promise<PackedSdp> {
-  const deadline = Date.now() + timeoutMs;
+  const started = Date.now();
+  const deadline = started + timeoutMs;
   while (!signal.aborted && Date.now() < deadline) {
     const res = await fetch(`/api/room/${encodeURIComponent(room)}`, { cache: "no-store" });
     if (res.status === 200) {
       const body = await res.json() as { answer: string };
       return JSON.parse(body.answer) as PackedSdp;
     }
-    await new Promise(r => setTimeout(r, 700));
+    // A QR is scanned within the first minute or not at all; a link sent in a
+    // message can take several, and 850 polls for it would be noise.
+    const pause = Date.now() - started < POLL_FAST_FOR_MS ? POLL_FAST_MS : POLL_SLOW_MS;
+    await new Promise(r => setTimeout(r, pause));
   }
   throw new Error(signal.aborted ? "cancelled" : "nobody joined");
 }

@@ -1341,7 +1341,7 @@
     "intro": "One board, two phones, side by side. Show the code and let the other player scan it with their camera.",
     "showCode": "Show the code",
     "showCodeHint": "Your partner scans it and joins",
-    "scanMe": "Scan this with the other phone's camera.",
+    "scanMe": "Scan this with the other phone's camera, or send them the link.",
     "preparing": "Getting the code ready",
     "joining": "Joining your partner",
     "connected": "Connected. Starting the map.",
@@ -1398,6 +1398,12 @@
         "justWoke": "Your knock woke it. It is fully up now, so go ahead and pair.",
         "unreachable": "Check this phone has internet. If it does, the server may be down for a moment: try again in a minute."
       }
-    }
+    },
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "shareLink": "Share link",
+    "shareTitle": "Dev/End: 2 Player",
+    "shareText": "Join my Dev/End game. Open this on your phone:",
+    "copyFailed": "Could not copy. Select the link below and copy it yourself."
   }
 }

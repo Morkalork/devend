@@ -145,6 +145,17 @@ carries the game when the direct link cannot:
 Android is untouched: it pairs over Nearby Connections, which needs no network
 at all, so client isolation never reaches it.
 
+**The invitation as a link.** The QR has always been a link (step 5); the host
+screen now also offers **Copy link** and, where the phone has a share sheet,
+**Share link**, so the invitation can go through a message instead of a
+camera. A link can be opened minutes later, so the host waits up to ten minutes
+for an answer (`INVITE_WAIT_MS` in `webrtc.ts`, polling slower after the first
+minute) and the relay holds a waiting seat as long (`RELAY_WAIT_MS`). The
+"taking a while" hint starts when the partner answers, not when the code
+appears, since waiting for somebody to open a message is not a slow link. The
+two phones still need to be within reach of each other or of the relay: on
+different networks, it is the relay that carries them.
+
 ### Where it all lives
 
 | | |

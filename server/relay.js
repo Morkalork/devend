@@ -45,8 +45,13 @@ const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 /** Same shape as the mailbox's room ids: the room is the one the QR named. */
 const ROOM_ID = /^[a-z0-9]{4,32}$/;
 
-/** How long a phone may wait in a room for its partner before it is sent away. */
-export const RELAY_WAIT_MS = 2 * 60 * 1000;
+/**
+ * How long a phone may wait in a room for its partner before it is sent away.
+ * Matches how long the host waits for an answer (INVITE_WAIT_MS in webrtc.ts):
+ * an invitation sent as a link can be opened minutes later, and a seat that
+ * had already been cleared would leave that pair without the relay.
+ */
+export const RELAY_WAIT_MS = 10 * 60 * 1000;
 
 /** A paired socket that has said nothing for this long is gone. The phones
  *  ping every two seconds, so this is thirty missed heartbeats. */

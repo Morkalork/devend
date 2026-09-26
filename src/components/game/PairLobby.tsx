@@ -27,7 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft, Users, WifiOff, QrCode, Camera, Loader2, Radar,
-  Coffee, Moon, Sun, CloudOff, Info, X, Server,
+  Coffee, Moon, Sun, CloudOff, Info, X, Server, Link2, Share2, Check,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import qrcode from "qrcode-generator";
@@ -38,6 +38,7 @@ import { buildPairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
 import { RelayTransport, pickRoute, awaitHostHello, type PairRoute } from "@/lib/net/relay";
 import { probeServerNap, type NapState } from "@/lib/net/serverNap";
 import { isForceRelayEnabled, getSimulatedNap, type SimulatedNap } from "@/lib/devFlags";
+import { copyText, canShare, shareLink } from "@/lib/shareLink";
 import { takePairInvite } from "@/lib/net/pairInvite";
 import { getDeviceId, electPlayer } from "@/lib/net/deviceId";
 import {
@@ -203,6 +204,70 @@ function ServerNapChip({ state }: { state: NapState }) {
   );
 }
 
+/**
+ * The same invitation as the QR, as a link to send.
+ *
+ * The QR needs the two phones side by side and a camera that reads it; a link
+ * goes through whatever the players already talk on. Copy works everywhere;
+ * Share opens the phone's own share sheet where there is one. If the copy
+ * fails outright the link is shown in full, selectable, so it can still be
+ * copied by hand rather than the button simply doing nothing.
+ */
+function InviteLinkActions({ url }: { url: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+
+  const copy = async () => {
+    const ok = await copyText(url);
+    setCopied(ok ? "copied" : "failed");
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    // "Copied" fades back to the button; a failure stays, since the link it
+    // reveals is what the player now needs.
+    if (ok) resetTimer.current = setTimeout(() => setCopied("idle"), 2000);
+  };
+
+  return (
+    <div className="w-full max-w-xs flex flex-col gap-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          data-testid="copy-invite"
+          onClick={() => void copy()}
+          className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg bg-card border border-border hover:border-primary/50 font-semibold"
+        >
+          {copied === "copied"
+            ? <><Check className="w-4 h-4 text-primary" /> {t("pair.linkCopied")}</>
+            : <><Link2 className="w-4 h-4" /> {t("pair.copyLink")}</>}
+        </button>
+        {canShare() && (
+          <button
+            type="button"
+            data-testid="share-invite"
+            onClick={() => void shareLink({ url, title: t("pair.shareTitle"), text: t("pair.shareText") })}
+            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg bg-card border border-border hover:border-primary/50 font-semibold"
+          >
+            <Share2 className="w-4 h-4" /> {t("pair.shareLink")}
+          </button>
+        )}
+      </div>
+      {copied === "failed" && (
+        <>
+          <p className="text-xs text-amber-500">{t("pair.copyFailed")}</p>
+          <input
+            readOnly
+            value={url}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label={t("pair.copyLink")}
+            className="w-full px-2 py-1 rounded bg-background border border-border text-xs font-mono"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobbyProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<PairPhase>("choose");
@@ -359,7 +424,10 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     setPhase("hosting");
     const abort = new AbortController();
     abortRef.current = abort;
-    const slowTimer = setTimeout(() => setSlow(true), CONNECT_TIMEOUT_MS);
+    // The "taking a while" hint runs from the moment the partner answers, not
+    // from the moment the code appears: waiting for somebody to scan, or to
+    // open a link sent in a message, is not the connection being slow.
+    let slowTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       const room = newRoomId();
       roomRef.current = room;
@@ -371,6 +439,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       setPairUrl(buildPairUrl(window.location.origin, room, offer));
 
       const answer = await awaitAnswer(room, abort.signal);
+      slowTimer = setTimeout(() => setSlow(true), CONNECT_TIMEOUT_MS);
       await transport.acceptAnswer(answer);
       const relay = relayRef.current;
       const picked = await pickRoute(transport, relay, { forceRelay: isForceRelayEnabled() });
@@ -509,6 +578,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
               <>
                 <QrSvg text={pairUrl} className="w-full max-w-xs [&>svg]:w-full [&>svg]:h-auto bg-white p-4 rounded-xl" />
                 <p className="text-sm text-center text-muted-foreground">{t("pair.scanMe")}</p>
+                <InviteLinkActions url={pairUrl} />
               </>
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">

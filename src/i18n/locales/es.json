@@ -1889,7 +1889,7 @@
     "intro": "Un tablero, dos móviles, uno al lado del otro. Muestra el código y que el otro jugador lo escanee con su cámara.",
     "showCode": "Mostrar el código",
     "showCodeHint": "Tu pareja lo escanea y entra",
-    "scanMe": "Escanea esto con la cámara del otro móvil.",
+    "scanMe": "Escanéalo con la cámara del otro móvil, o envíale el enlace.",
     "preparing": "Preparando el código",
     "joining": "Entrando con tu pareja",
     "connected": "Conectados. Empieza el mapa.",
@@ -1946,6 +1946,12 @@
         "justWoke": "Tu llamada lo despertó. Ya está en pie, así que adelante, empareja.",
         "unreachable": "Comprueba que este móvil tiene internet. Si lo tiene, puede que el servidor esté caído un momento: prueba de nuevo en un minuto."
       }
-    }
+    },
+    "copyLink": "Copiar enlace",
+    "linkCopied": "Enlace copiado",
+    "shareLink": "Compartir enlace",
+    "shareTitle": "Dev/End: 2 jugadores",
+    "shareText": "Únete a mi partida de Dev/End. Ábrelo en tu móvil:",
+    "copyFailed": "No se pudo copiar. Selecciona el enlace de abajo y cópialo tú."
   }
 }
