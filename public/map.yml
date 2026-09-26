@@ -426,8 +426,8 @@ levels:
   # solid spine divides the board, with a neck at each end, and three teeth of
   # shards stick out of it into EACH room. Between the teeth are alcoves, and
   # each one closes with a single fence into a pocket that grades superior.
-  # The win asks for six of the eighteen shards - and every shard broken is a
-  # hole in an alcove wall. So the map asks the question the old one never
+  # The win asks for twelve of the eighteen shards - and every shard broken is
+  # a hole in an alcove wall. So the map asks the question the old one never
   # did: which alcoves do you keep, and which do you spend? Lock a ball in one
   # while its teeth stand, or let the balls chew through them for the win and
   # lose the pocket.
@@ -437,12 +437,18 @@ levels:
   # without tactics". The old map was one straight column of shards between
   # two rooms. It eroded where the balls hit it, but nothing depended on WHERE,
   # so there was nothing to decide. The win keeps its shape (clear to 75%,
-  # break a third of the shards); the shards moved from the divider into the
+  # break shards: a third of them then, two thirds since it was raised to 12); the shards moved from the divider into the
   # teeth, and the divider became solid so the two rooms stay two rooms.
   #
   # Teeth on BOTH sides, not only the far one: with the shards all in one room
   # the balls often never reached them, and the sweep fell to 9 of 16 with the
   # board cleared and the shard line short. Mirrored, it reads 14 of 16.
+  #
+  # Raised from six shards to twelve on request. The same sweep (16 seeds, 60s)
+  # fell from 14 of 16 to 1 of 16: four losses bury the win (with twelve of
+  # eighteen needed, sealing a seventh shard away ends the map) and most of the
+  # rest clear the board with the shard line short. The bot never aims at a
+  # shard, so a player will do far better, but this is now a hard map.
   #
   # Measured with the pocket probe: an alcove is about 182 by 122, 3.4% of the
   # board, superior at the start of the map. The nook in the far corner is the
@@ -472,7 +478,7 @@ levels:
         - kind: space
           threshold: 25
         - kind: smashed
-          count: 6
+          count: 12
           of: shards
     entities:
       - id: anchor-top
