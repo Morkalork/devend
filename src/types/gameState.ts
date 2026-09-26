@@ -182,6 +182,11 @@ export interface CanvasGameState {
    *  (1 + additionalConcurrentFences, +1 while Fence Overclock is active) lets
    *  more than one grow at once (#38). */
   activeWalls: GrowingWall[];
+  /**
+   * Whose go it is, in a pair (net/pairTurn.ts). Absent in solo play, which
+   * is what makes every turn check a yes there.
+   */
+  pairTurn?: import("@/lib/net/pairTurn").PairTurn | null;
 
   // ── Game flags ─────────────────────────────────────────────────────────
   /**

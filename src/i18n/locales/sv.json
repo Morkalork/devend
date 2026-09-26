@@ -1791,7 +1791,9 @@
     "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat.",
     "cutWouldTrapBall": "Det snittet hade stangt in en boll utan vag ut, sa det lades inte. Lamna en vag.",
     "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom.",
-    "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom."
+    "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom.",
+    "partnersTurn": "Det är din partners tur. Titta på deras staket, ditt är nästa.",
+    "oneFenceATurn": "Ett staket per tur. Din partner är på tur när det här är byggt."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",
@@ -1952,6 +1954,17 @@
     "shareLink": "Dela länk",
     "shareTitle": "Dev/End: 2 spelare",
     "shareText": "Gå med i mitt Dev/End-spel. Öppna på din telefon:",
-    "copyFailed": "Kunde inte kopiera. Markera länken nedan och kopiera den själv."
+    "copyFailed": "Kunde inte kopiera. Markera länken nedan och kopiera den själv.",
+    "turn": {
+      "yours": "Din tur",
+      "yoursHint": "dra ett staket",
+      "pass": "Stå över",
+      "building": "Ditt staket byggs",
+      "buildingHint": "sedan är det {{name}}s tur",
+      "spectating": "Tittar på",
+      "theirs": "{{name}}s tur",
+      "splashYours": "Din tur!",
+      "splashTheirs": "{{name}}s tur"
+    }
   }
 }

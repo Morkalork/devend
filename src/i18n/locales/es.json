@@ -1791,7 +1791,9 @@
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
     "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
-    "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó."
+    "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
+    "partnersTurn": "Le toca a tu compañero. Mira su valla, la siguiente es tuya.",
+    "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida."
   },
   "mapFailure": {
     "title": "Mapa fallido",
@@ -1952,6 +1954,17 @@
     "shareLink": "Compartir enlace",
     "shareTitle": "Dev/End: 2 jugadores",
     "shareText": "Únete a mi partida de Dev/End. Ábrelo en tu móvil:",
-    "copyFailed": "No se pudo copiar. Selecciona el enlace de abajo y cópialo tú."
+    "copyFailed": "No se pudo copiar. Selecciona el enlace de abajo y cópialo tú.",
+    "turn": {
+      "yours": "Tu turno",
+      "yoursHint": "dibuja una valla",
+      "pass": "Pasar",
+      "building": "Tu valla se está construyendo",
+      "buildingHint": "luego le toca a {{name}}",
+      "spectating": "Mirando",
+      "theirs": "Turno de {{name}}",
+      "splashYours": "¡Tu turno!",
+      "splashTheirs": "Turno de {{name}}"
+    }
   }
 }

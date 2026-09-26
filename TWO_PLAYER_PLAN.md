@@ -156,6 +156,43 @@ appears, since waiting for somebody to open a message is not a slow link. The
 two phones still need to be within reach of each other or of the relay: on
 different networks, it is the relay that carries them.
 
+### Turns  **[CHANGED]**
+
+The plan had both players drawing whenever they liked. In play that was the
+worst way to share one board: two fences growing into each other's balls,
+nobody sure whose line was whose, and the player waiting for a clean moment
+beaten to it by the one who was not. So a pair now **takes turns**.
+
+- **One fence a turn.** The player on turn draws one fence; the turn ends when
+  that fence is DONE, built or broken, and the board goes to the partner. Done
+  rather than drawn, so the partner never draws into a fence still growing.
+  While their fence builds, the player on turn keeps the rest of the turn:
+  freezing, tapping, abilities, a mover. Protecting the fence is part of it.
+- **Pass.** The player on turn can hand over without drawing, for when the
+  balls are wrong and waiting would hold the partner up.
+- **The spectator** can do nothing to the board: no fence, no tap, no ability.
+  Holding an object to read about it still works. A mover drag the turn ended
+  under them may still be let go, or the mover stays held by a hand that is no
+  longer allowed to move it.
+- **Who opens** alternates by map: the host opens odd maps, the guest even ones.
+- **Deterministic by construction.** The turn is simulation state
+  (`game.pairTurn`, `src/lib/net/pairTurn.ts`), changed only at the top of a
+  tick in `drainCommands`, and the rule is checked in `applyCommand` on both
+  phones from the same state, so both refuse the same commands and hand over on
+  the same tick with nothing extra on the wire. The input layer refuses first,
+  where the finger is, with a message. The turn is in the topology hash and in
+  the resync snapshot, because a turn hangs on whether a fence finished, which
+  is exactly what drifted motion can disagree about.
+- **On screen** (`PairTurnOverlay.tsx`): on your turn the board glows in your
+  fence colour and breathes, with a "Your turn" tag and Pass; while your fence
+  builds the glow holds steady. Spectating, the board dims under an eye and the
+  tag says whose turn it is, in the partner's fence colour. Every hand-over
+  plays a one-second splash, and the phone whose turn it now is buzzes.
+- **Admin:** Pair Loopback shows each board's turn in the readout and has a
+  Pass button per player; a cut sent out of turn is logged and watched being
+  refused on both boards.
+- Carrying on alone after the partner drops ends turns on the spot.
+
 ### Where it all lives
 
 | | |
@@ -174,7 +211,8 @@ different networks, it is the relay that carries them.
 | The public Wi-Fi relay | `server/relay.js`, `src/lib/net/relay.ts` |
 | Is the server awake | `server/health.js`, `src/lib/net/serverNap.ts` |
 | Admin | Pair Loopback, Nearby Diagnostics, Force 2-Player relay, Server nap readout |
-| Tests | `determinism`, `commands`, `lockstep`, `pairing`, `pairRelay`, `serverNap` |
+| Turns | `src/lib/net/pairTurn.ts`, `src/components/game/PairTurnOverlay.tsx` |
+| Tests | `determinism`, `commands`, `lockstep`, `pairing`, `pairRelay`, `serverNap`, `pairTurn` |
 
 The question that prompted it: **can this be done without a server in the
 middle?** Short answer, yes. The long answer is section 3.

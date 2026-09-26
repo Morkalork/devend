@@ -43,6 +43,7 @@ import { simNow, advanceSimClock } from "@/lib/simClock";
 import { createHoldClock } from "@/lib/holdClock";
 import { anyLockFlashActive, lockFlashEnd } from "@/lib/lockFlash";
 import { drainCommands, type CommandDeps } from "@/lib/net/commands";
+import { startPairTurns } from "@/lib/net/pairTurn";
 import { runStream } from "@/lib/runRng";
 
 /**
@@ -113,6 +114,8 @@ export interface GameLoopCallbacks {
    * frame is drawn anyway so the board does not appear to freeze.
    */
   lockstep?: () => import("@/lib/net/lockstep").LockstepSession | null;
+  /** The map's number, for who opens it in a pair (net/pairTurn.ts). */
+  levelNumber?: number;
 }
 
 /**
@@ -438,6 +441,12 @@ export function createGameLoop(
     // this drain handles only what is already waiting.
     const deps = callbacks.commandDeps?.();
     const pair = callbacks.lockstep?.() ?? null;
+    // A pair takes turns (net/pairTurn.ts). Started on the first pair frame,
+    // before any tick, and identically on both phones since both read the same
+    // map number; dropped the moment the pair ends and this player carries on
+    // alone, or they would be left waiting for a partner's turn that never comes.
+    if (pair) game.pairTurn ??= startPairTurns(callbacks.levelNumber ?? 1);
+    else if (game.pairTurn) game.pairTurn = null;
     if (pair && !pair.beginFrame(game)) {
       // Waiting to be put back on the host's board. Draw, do not step.
       game.lastTime = timestamp;

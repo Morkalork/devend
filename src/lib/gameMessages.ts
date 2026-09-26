@@ -56,7 +56,11 @@ export type GameMessageId =
   /** The finished cut would have put the slabs the win needs out of reach. */
   | "cutWouldBurySlabs"
   /** The finished cut would have left no ball that can still get into the zone the win needs. */
-  | "cutWouldBuryArea";
+  | "cutWouldBuryArea"
+  /** In a pair, it is the partner's turn: this player is watching (net/pairTurn.ts). */
+  | "partnersTurn"
+  /** In a pair, this turn's one fence is drawn; the next is the partner's. */
+  | "oneFenceATurn";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -120,6 +124,8 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   cutWouldTrapBall: true,
   cutWouldBurySlabs: true,
   cutWouldBuryArea: true,
+  partnersTurn: true,
+  oneFenceATurn: true,
 };
 
 export const GAME_MESSAGE_IDS = Object.keys(ALL_MESSAGE_IDS) as GameMessageId[];

@@ -45,6 +45,7 @@ import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityE
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { simNow } from "@/lib/simClock";
 import { tapSquashBug } from "@/lib/physics/bugs";
+import { commandAllowed, settlePairTurn, spendPairTurn, passPairTurn } from "@/lib/net/pairTurn";
 
 /** Player 0 is whoever started the run; player 1 is the partner. Solo play is
  *  all player 0, which is why nothing below special-cases it. */
@@ -144,6 +145,11 @@ export type GameCommand =
    * the rest of the map.
    */
   | { kind: "ability"; player: PlayerId; abilityId: string }
+  /**
+   * Hand the board to the partner without drawing (pairTurn.ts). Only means
+   * anything in a pair, and only from the player whose turn it is.
+   */
+  | { kind: "passTurn"; player: PlayerId }
   | { kind: "abilityTarget"; player: PlayerId; abilityId: string; target: Vector2 }
   | { kind: "rubberBand"; player: PlayerId; shape: import("@/lib/rubberBand").BandShape };
 
@@ -205,6 +211,11 @@ export function queueLocally(game: CanvasGameState, cmd: GameCommand): void {
  * pointer handlers' mutations used to land anyway.
  */
 export function drainCommands(game: CanvasGameState, deps: CommandDeps): void {
+  // A pair's turn changes hands HERE, at the top of a tick and before its
+  // commands, so both phones pass it on the same tick (pairTurn.ts). Before
+  // the empty-queue return: a fence finishing is not a command, and most
+  // ticks have none.
+  settlePairTurn(game);
   const queue = game.pending;
   if (!queue || queue.length === 0) return;
   // Take the whole queue first: applying a command can enqueue another (a
@@ -225,6 +236,11 @@ export function applyCommand(game: CanvasGameState, cmd: GameCommand, rawDeps: C
     ? rawDeps
     : { ...rawDeps, vibrate: undefined };
 
+  // Out of turn, in a pair. The pointer layer already refused it with a
+  // message where the finger was; this is the refusal that counts, and it is
+  // made on both phones from the same state, so both drop the same commands.
+  if (!commandAllowed(game, cmd)) return;
+
   switch (cmd.kind) {
     case "cut":          applyCut(game, cmd, deps); break;
     case "freezeTap":    applyFreezeTap(game, cmd, deps); break;
@@ -238,6 +254,7 @@ export function applyCommand(game: CanvasGameState, cmd: GameCommand, rawDeps: C
     case "ability":      applyAbility(game, cmd, deps); break;
     case "abilityTarget": applyAbilityTarget(game, cmd, deps); break;
     case "rubberBand":   applyRubberBand(game, cmd, deps); break;
+    case "passTurn":     passPairTurn(game); break;
   }
 }
 
@@ -314,6 +331,8 @@ function applyCut(
 
   game.wallCount += 1;
   deps.setCutCount?.(game.wallCount);
+  // The turn is now this fence's: it ends when the fence is built or broken.
+  spendPairTurn(game);
 
   const isInstant = game.wallCount <= deps.modifiers.instantFencesPerMap;
 

@@ -93,6 +93,12 @@ export function topologyHash(game: CanvasGameState): string {
   parts.push(`regions:${game.regions.length}`);
   parts.push(`walls:${game.wallCount}`);
   parts.push(`locked:${game.lockedBallsCount ?? 0}`);
+  // Whose turn it is. Two phones that disagree about it refuse each other's
+  // commands, which looks like lag rather than like a desync unless it is here.
+  if (game.pairTurn) {
+    const t = game.pairTurn;
+    parts.push(`turn:${t.player}|${t.spent ? 1 : 0}|${t.seq}`);
+  }
   return fnv1a(parts.join("\n"));
 }
 
@@ -157,6 +163,13 @@ export interface MotionSnapshot {
     state: string; regionId: string; speed: number;
   }[];
   movers: { id: string; offset: number; angle: number; driveRate: number }[];
+  /**
+   * Whose turn it is (net/pairTurn.ts). It changes hands when a fence is done,
+   * and whether a fence got done is exactly what drifted motion can disagree
+   * about, so a repair that put the balls back and left the turn would leave
+   * the two phones refusing each other's fences.
+   */
+  pairTurn?: import("@/lib/net/pairTurn").PairTurn | null;
 }
 
 export function captureMotion(game: CanvasGameState, tick: number): MotionSnapshot {
@@ -172,6 +185,7 @@ export function captureMotion(game: CanvasGameState, tick: number): MotionSnapsh
     movers: (game.movers ?? []).map(m => ({
       id: m.id, offset: m.offset, angle: m.angle ?? 0, driveRate: m.driveRate ?? 0,
     })),
+    pairTurn: game.pairTurn ? { ...game.pairTurn } : null,
   };
 }
 
@@ -207,6 +221,7 @@ export function applyMotion(game: CanvasGameState, snap: MotionSnapshot): boolea
     if (mover.angle !== undefined) mover.angle = s.angle;
     mover.driveRate = s.driveRate;
   }
+  if (snap.pairTurn) game.pairTurn = { ...snap.pairTurn };
   if (snap.moduleState) restoreSimModuleState(snap.moduleState);
   return true;
 }

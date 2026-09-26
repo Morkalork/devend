@@ -26,6 +26,7 @@ import { captureSimModuleState, restoreSimModuleState, type SimModuleState } fro
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
 import type { PlayerId } from "@/lib/net/commands";
+import { commandAllowed, startPairTurns } from "@/lib/net/pairTurn";
 import yaml from "js-yaml";
 import type { LevelConfig } from "@/types/level";
 
@@ -46,14 +47,24 @@ interface Readout {
   delayA: number; delayB: number;
   ballsA: number; ballsB: number;
   wallsA: number; wallsB: number;
+  /** Whose turn each board thinks it is (net/pairTurn.ts). */
+  turnA: string; turnB: string;
   log: string[];
 }
 
 const EMPTY: Readout = {
   tickA: 0, tickB: 0, hashA: "-", hashB: "-", agree: true,
   stallsA: 0, stallsB: 0, desyncs: 0, resyncs: 0, restarts: 0,
-  delayA: 6, delayB: 6, ballsA: 0, ballsB: 0, wallsA: 0, wallsB: 0, log: [],
+  delayA: 6, delayB: 6, ballsA: 0, ballsB: 0, wallsA: 0, wallsB: 0,
+  turnA: "-", turnB: "-", log: [],
 };
+
+/** A board's idea of whose turn it is, for the readout. */
+function turnLabel(game: { pairTurn?: { player: number; spent: boolean; seq: number } | null }): string {
+  const t = game.pairTurn;
+  if (!t) return "-";
+  return `P${t.player}${t.spent ? " building" : " to draw"} #${t.seq}`;
+}
 
 export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
   // The rig loads the ladder itself: it has to be reachable from the admin
@@ -99,6 +110,9 @@ export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
       installClock();
       setRunSeedText("admin-pair");
       const ctx = createBotGame(level, level.level ?? 1, plainModifiers());
+      // Turns, as the real pair plays them: the game loop starts them on the
+      // first pair frame, and this rig has no game loop.
+      ctx.game.pairTurn = startPairTurns(level.level ?? 1);
       const device: Device = {
         ctx, transport,
         mod: captureSimModuleState(),
@@ -175,6 +189,7 @@ export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
           delayA: a.session.delayTicks, delayB: b.session.delayTicks,
           ballsA: a.ctx.game.balls.length, ballsB: b.ctx.game.balls.length,
           wallsA: a.ctx.game.wallCount, wallsB: b.ctx.game.wallCount,
+          turnA: turnLabel(a.ctx.game), turnB: turnLabel(b.ctx.game),
           log: logRef.current,
         });
       }
@@ -191,12 +206,25 @@ export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
     const device = player === 0 ? pair.a : pair.b;
     const region = findRegionContainingPoint(device.ctx.game.regions, x, y);
     if (!region) { note(`P${player}: no region at ${x},${y}, nothing to cut`); return; }
-    device.session.submit({
-      kind: "cut", player,
+    const cmd = {
+      kind: "cut" as const, player,
       start: { x, y }, end: { x, y: y + 120 },
       path: null, regionId: region.id, fenceTypeId: STANDARD_FENCE_ID,
-    });
+    };
+    // Sent regardless, so the refusal on BOTH boards can be watched; the note
+    // says what the phone's own input layer would have said instead.
+    if (!commandAllowed(device.ctx.game, cmd)) note(`P${player}: not their turn, both boards will refuse it`);
+    device.session.submit(cmd);
     note(`P${player}: cut sent at ${x},${y}`);
+  };
+
+  /** Hand the turn over without drawing, as the Pass button does. */
+  const pass = (player: PlayerId) => {
+    const pair = pairRef.current;
+    if (!pair) return;
+    const device = player === 0 ? pair.a : pair.b;
+    device.session.submit({ kind: "passTurn", player });
+    note(`P${player}: pass sent`);
   };
 
   /** Nudge one board, the way a float difference between two builds would. */
@@ -274,6 +302,14 @@ export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
             className="p-3 rounded-lg bg-card border border-border hover:border-primary/50 text-sm">
             Player 1 cuts
           </button>
+          <button onClick={() => pass(0)}
+            className="p-3 rounded-lg bg-card border border-border hover:border-primary/50 text-sm">
+            Player 0 passes
+          </button>
+          <button onClick={() => pass(1)}
+            className="p-3 rounded-lg bg-card border border-border hover:border-primary/50 text-sm">
+            Player 1 passes
+          </button>
           <button onClick={forceDesync}
             className="col-span-2 p-3 rounded-lg bg-destructive/10 border border-destructive/40 hover:border-destructive text-sm font-semibold flex items-center justify-center gap-2">
             <Zap className="w-4 h-4" /> Force desync
@@ -292,6 +328,7 @@ export function PairLoopbackPanel({ onBack }: { onBack: () => void }) {
           {row("stalls", readout.stallsA, readout.stallsB)}
           {row("balls", readout.ballsA, readout.ballsB, readout.ballsA !== readout.ballsB)}
           {row("cuts", readout.wallsA, readout.wallsB, readout.wallsA !== readout.wallsB)}
+          {row("turn", readout.turnA, readout.turnB, readout.turnA !== readout.turnB)}
           <div className="pt-2 mt-1 border-t border-border text-xs">
             <span className={readout.agree ? "text-primary" : "text-destructive font-semibold"}>
               {readout.agree ? "boards agree" : "BOARDS DISAGREE"}

@@ -1243,7 +1243,9 @@
     "lifeLostMover": "A moving block cut through your fence. Life lost.",
     "cutWouldTrapBall": "That cut would have sealed a ball away with no way out, so it did not land. Leave it a route.",
     "cutWouldBurySlabs": "That cut would have put what you still need to break out of reach, so it did not land.",
-    "cutWouldBuryArea": "That cut would have left no ball that can still get into the zone, so it did not land."
+    "cutWouldBuryArea": "That cut would have left no ball that can still get into the zone, so it did not land.",
+    "partnersTurn": "It's your partner's turn. Watch their fence, yours is next.",
+    "oneFenceATurn": "One fence a turn. Your partner is up once this one is built."
   },
   "mapFailure": {
     "title": "Map failed",
@@ -1404,6 +1406,17 @@
     "shareLink": "Share link",
     "shareTitle": "Dev/End: 2 Player",
     "shareText": "Join my Dev/End game. Open this on your phone:",
-    "copyFailed": "Could not copy. Select the link below and copy it yourself."
+    "copyFailed": "Could not copy. Select the link below and copy it yourself.",
+    "turn": {
+      "yours": "Your turn",
+      "yoursHint": "draw one fence",
+      "pass": "Pass",
+      "building": "Your fence is building",
+      "buildingHint": "then it's {{name}}'s turn",
+      "spectating": "Spectating",
+      "theirs": "{{name}}'s turn",
+      "splashYours": "Your turn!",
+      "splashTheirs": "{{name}}'s turn"
+    }
   }
 }
