@@ -39,7 +39,7 @@ web-side override - so menu music there starts on the first interaction instead
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Node | 20.x | already used by the web build |
+| Node | 26.x | already used by the web build |
 | Android Studio | latest | provides the Android SDK + emulator |
 | JDK | **21** | Capacitor's Android libraries compile with Java 21. A current Android Studio bundles a JBR 21 (`jbr/`) that satisfies this — older Studio releases shipped JBR 17, which fails with `invalid source release: 21`. If you're on an older Studio, install a standalone JDK 21 (e.g. Temurin). |
 

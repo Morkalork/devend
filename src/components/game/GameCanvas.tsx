@@ -145,6 +145,7 @@ import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
 import { PendingResize } from "@/lib/boardResizeHold";
+import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -227,6 +228,14 @@ export interface GameStateInfo {
   fenceSlotIds?: string[];
   /** Choose the fence type the next cut draws. */
   onSelectFenceType?: (fenceTypeId: string) => void;
+  /**
+   * Whose turn it is, from this phone's side, in a pair (net/pairTurn.ts);
+   * null in solo play. `seq` changes on every hand-over, so the screen can
+   * mark the moment even when the view reads the same.
+   */
+  pairTurn?: { view: TurnView; seq: number } | null;
+  /** Hand the board to the partner without drawing. */
+  onPassTurn?: () => void;
 }
 
 /** A running time-based ability, for the countdown bar (#38). Wall-clock
@@ -1761,6 +1770,7 @@ export function GameCanvas({
       // it always carries the CURRENT modifiers rather than the ones the loop
       // was constructed with.
       lockstep: () => lockstepRef.current?.() ?? null,
+      levelNumber,
       commandDeps: () => ({
         modifiers: activeModifiersRef.current,
         setCutCount,
@@ -2096,6 +2106,31 @@ export function GameCanvas({
     [fenceSlotIdsProp],
   );
 
+  // Whose turn it is, mirrored from the sim for the screen. Polled rather
+  // than pushed: the turn changes inside the tick loop, three different ways
+  // (a fence finishing, a pass, a map start), and a tenth of a second is well
+  // inside how fast a player notices a hand-over.
+  const [pairTurn, setPairTurn] = useState<{ view: TurnView; seq: number } | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const turn = gameRef.current?.pairTurn;
+      const next = turn ? { view: turnViewFor(turn, getLocalPlayer()), seq: turn.seq } : null;
+      setPairTurn(prev => {
+        if (prev?.view === next?.view && prev?.seq === next?.seq) return prev;
+        // The board is this player's again: a buzz, for the one who looked away.
+        if (next?.view === "yours" && prev?.seq !== next.seq && navigator.vibrate) navigator.vibrate([30, 40, 30]);
+        return next;
+      });
+    };
+    read();
+    const timer = setInterval(read, 100);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handlePassTurn = useCallback(() => {
+    enqueueCommand(gameRef.current, { kind: "passTurn", player: getLocalPlayer() });
+  }, []);
+
   const handleSelectFenceType = useCallback((fenceTypeId: string) => {
     // Refuse a type that is not actually in a slot. The bar cannot produce one,
     // but a stale save or a dev flag can, and a selection the player cannot see
@@ -2124,6 +2159,12 @@ export function GameCanvas({
     const now = simNow();
     if (now - abilityLockoutRef.current < 250) return;
     const game = gameRef.current;
+    // A spectator's ability would be refused where it applies (pairTurn.ts);
+    // saying so here keeps the button from looking broken.
+    if (game.pairTurn && game.pairTurn.player !== getLocalPlayer()) {
+      onMessageRef.current?.("partnersTurn");
+      return;
+    }
     // Targeted abilities (Magnet) arm on tap and wait for a board tap; re-tapping
     // the armed ability cancels. The charge is spent when the target is picked.
     if (getAbility(abilityId)?.targeted) {
@@ -2299,9 +2340,11 @@ export function GameCanvas({
         selectedFenceTypeId,
         fenceSlotIds,
         onSelectFenceType: handleSelectFenceType,
+        pairTurn,
+        onPassTurn: handlePassTurn,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
+  }, [pairTurn, handlePassTurn, cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

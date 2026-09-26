@@ -56,8 +56,10 @@ describe("the host election", () => {
     const src = read("src/components/game/PairLobby.tsx");
     const handshake = src.slice(src.indexOf("const completeHandshake"), src.indexOf("const startNearby"));
     // The anchor is the AWAIT, not the first mention of the id: the election
-    // names that id itself, so "first mention" is the election.
-    const helloArrives = handshake.indexOf("const theirs = await");
+    // names that id itself, so "first mention" is the election. The guest may
+    // arrive holding the host's hello already (it follows the host onto the
+    // relay or the direct link by it), hence the optional `received ??`.
+    const helloArrives = handshake.search(/const theirs = (received \?\? )?await/);
     const elect = handshake.indexOf("electPlayer(");
     expect(helloArrives, "the handshake never waits for the partner's hello").toBeGreaterThan(-1);
     expect(elect, "the election is not in the handshake").toBeGreaterThan(-1);

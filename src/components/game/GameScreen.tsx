@@ -72,6 +72,9 @@ import { extraGoals, outstandingGoals } from '@/lib/goalTracker';
 import { BoardAlert } from '@/components/game/BoardAlert';
 import { pickContext } from '@/lib/hudContext';
 import { unreadManualCount } from '@/lib/manual';
+import { PairTurnOverlay } from '@/components/game/PairTurnOverlay';
+import { PARTNER_FENCE_HEX } from '@/lib/net/pairTurn';
+import { getLocalPlayer } from '@/lib/net/commands';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -1218,6 +1221,14 @@ export function GameScreen({
             // and a frame that lit for them would light on all forty.
             present={extraGoals(gameState.goals).length > 0 && !mapComplete}
             outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
+          />
+          {/* Pair turns: whose go it is, on the board itself. Nothing in solo. */}
+          <PairTurnOverlay
+            turn={mapComplete ? null : gameState.pairTurn}
+            partnerName={pairPartnerName ?? t("pair.partner")}
+            myColor={getLocalPlayer() === 0 ? accentColor : PARTNER_FENCE_HEX}
+            partnerColor={getLocalPlayer() === 0 ? PARTNER_FENCE_HEX : accentColor}
+            onPass={gameState.onPassTurn}
           />
           {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
               `fixed`: the page-transition transform breaks fixed positioning. */}

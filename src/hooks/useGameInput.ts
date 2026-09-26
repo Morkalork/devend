@@ -269,6 +269,16 @@ export function useGameInput(
         }
       }
 
+      // Spectating (a pair, and the partner's turn: net/pairTurn.ts). Nothing
+      // this finger could start would be applied, so nothing starts: no swipe
+      // line to draw a fence that will never exist. After the hold arming on
+      // purpose, since holding an object to read about it is watching, not
+      // playing. The message only when that is not what the press is for.
+      if (game.pairTurn && game.pairTurn.player !== getLocalPlayer()) {
+        if (holdTimer === null) onMessageRef?.current?.("partnersTurn");
+        return;
+      }
+
       // A press on a loaded Redeploy fence GRABS it instead of starting a cut.
       //
       // Deliberately before the fence-limit check: pulling a fence back is not
@@ -549,6 +559,10 @@ export function useGameInput(
               useCharge: !featureFreeze,
             });
           }
+        } else if (dist >= BASE_SWIPE_MIN_DISTANCE && game.pairTurn?.spent) {
+          // One fence a turn in a pair. Taps above still work, since guarding
+          // the fence that is building is still this player's turn.
+          onMessageRef?.current?.("oneFenceATurn");
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE) {
           // Bent fences (#66): keep the SHAPE of the drag and project only its
           // two loose ends. `bent` is null without the loadout, for a drag that

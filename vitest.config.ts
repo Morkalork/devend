@@ -22,6 +22,15 @@ export default defineConfig({
     // suite runs in about 165s), it just stops the clock being the thing that
     // decides.
     testTimeout: 30_000,
+    // Node 25 and later ship their own `localStorage`, and without a
+    // --localstorage-file it is an empty stub that sits on the global where
+    // jsdom's working one should go; every test that touches storage then
+    // fails on `undefined`. The game never runs under Node, so the built-in
+    // is switched off in the test workers and jsdom's takes its place again.
+    poolOptions: {
+      forks: { execArgv: ["--no-experimental-webstorage"] },
+      threads: { execArgv: ["--no-experimental-webstorage"] },
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

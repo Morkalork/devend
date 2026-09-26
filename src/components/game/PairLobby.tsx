@@ -15,15 +15,30 @@
  * The offline fallback is deliberately kept: with no internet at the table the
  * host can scan the guest's answer code instead, which is the only place a
  * camera appears in the app at all.
+ *
+ * Public Wi-Fi: the direct link needs the two phones to reach each other, and
+ * cafe, hotel and office networks forbid that (client isolation). So each
+ * phone also takes a seat in a relay on the same server (relay.ts), and when
+ * the direct link has not opened after a few seconds the host picks the relay
+ * instead and the guest follows. Because that makes the server part of the
+ * game, the screen also says whether the server is awake (serverNap.ts).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Users, WifiOff, QrCode, Camera, Loader2, Radar } from "lucide-react";
+import {
+  ArrowLeft, Users, WifiOff, QrCode, Camera, Loader2, Radar,
+  Coffee, Moon, Sun, CloudOff, Info, X, Server, Link2, Share2, Check,
+} from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import qrcode from "qrcode-generator";
 import {
   WebRtcTransport, postAnswer, awaitAnswer, cancelRoom, CONNECT_TIMEOUT_MS,
 } from "@/lib/net/webrtc";
 import { buildPairUrl, newRoomId, type PackedSdp } from "@/lib/net/sdp";
+import { RelayTransport, pickRoute, awaitHostHello, type PairRoute } from "@/lib/net/relay";
+import { probeServerNap, type NapState } from "@/lib/net/serverNap";
+import { isForceRelayEnabled, getSimulatedNap, type SimulatedNap } from "@/lib/devFlags";
+import { copyText, canShare, shareLink } from "@/lib/shareLink";
 import { takePairInvite } from "@/lib/net/pairInvite";
 import { getDeviceId, electPlayer } from "@/lib/net/deviceId";
 import {
@@ -87,6 +102,172 @@ function QrSvg({ text, className }: { text: string; className?: string }) {
   );
 }
 
+/** What each simulated nap stands in for. "asleep" holds the waking state,
+ *  which is the one a real nap spends its seconds in. */
+const SIMULATED: Record<Exclude<SimulatedNap, "off">, NapState> = {
+  asleep: "waking",
+  justWoke: "justWoke",
+  unreachable: "unreachable",
+};
+
+/**
+ * Whether the server is awake, asked once when the screen opens.
+ *
+ * Not on the Android app: its pages are served from the phone itself, so there
+ * is no server behind `/api/health` to ask, and it pairs with Nearby anyway.
+ */
+function useServerNap(): NapState | null {
+  const [state, setState] = useState<NapState | null>(null);
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+    const sim = getSimulatedNap();
+    if (sim !== "off") { setState(SIMULATED[sim]); return; }
+    return probeServerNap(setState);
+  }, []);
+  return state;
+}
+
+const NAP_ICON: Record<NapState, typeof Coffee> = {
+  checking: Server,
+  waking: Moon,
+  awake: Sun,
+  justWoke: Coffee,
+  unreachable: CloudOff,
+};
+
+/**
+ * The server's mood, as one line, with the whole story behind a hold.
+ *
+ * Hold rather than tap, and an Info mark so it reads as holdable: the game's
+ * standard gesture for "tell me more" (CLAUDE.md).
+ */
+function ServerNapChip({ state }: { state: NapState }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelHold = () => {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+  };
+  useEffect(() => cancelHold, []);
+  const Icon = NAP_ICON[state];
+  const tone = state === "unreachable" ? "text-destructive"
+    : state === "waking" ? "text-amber-500"
+    : state === "checking" ? "text-muted-foreground"
+    : "text-primary";
+
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="server-nap"
+        data-state={state}
+        onPointerDown={() => { cancelHold(); holdTimer.current = setTimeout(() => setOpen(true), 450); }}
+        onPointerUp={cancelHold}
+        onPointerLeave={cancelHold}
+        onPointerCancel={cancelHold}
+        onContextMenu={(e) => e.preventDefault()}
+        className="w-full flex items-center gap-3 rounded-lg bg-card/60 border border-border px-3 py-2 text-left select-none"
+      >
+        <Icon className={`w-5 h-5 shrink-0 ${tone} ${state === "waking" ? "animate-pulse" : ""}`} />
+        <span className="flex-1 text-sm">{t(`pair.nap.${state}`)}</span>
+        <Info className="w-4 h-4 shrink-0 text-muted-foreground" />
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 border-primary/40 bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label={t("common.close")}
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="overflow-y-auto p-5 space-y-3">
+              <div className="flex items-center gap-3 pr-6">
+                <Icon className={`w-7 h-7 shrink-0 ${tone}`} />
+                <div className="text-base font-bold">{t("pair.nap.whyTitle")}</div>
+              </div>
+              <p className="text-sm">{t("pair.nap.whyNap")}</p>
+              <p className="text-sm">{t("pair.nap.whyMatters")}</p>
+              <p className="text-sm text-muted-foreground">{t(`pair.nap.tip.${state}`)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The same invitation as the QR, as a link to send.
+ *
+ * The QR needs the two phones side by side and a camera that reads it; a link
+ * goes through whatever the players already talk on. Copy works everywhere;
+ * Share opens the phone's own share sheet where there is one. If the copy
+ * fails outright the link is shown in full, selectable, so it can still be
+ * copied by hand rather than the button simply doing nothing.
+ */
+function InviteLinkActions({ url }: { url: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+
+  const copy = async () => {
+    const ok = await copyText(url);
+    setCopied(ok ? "copied" : "failed");
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    // "Copied" fades back to the button; a failure stays, since the link it
+    // reveals is what the player now needs.
+    if (ok) resetTimer.current = setTimeout(() => setCopied("idle"), 2000);
+  };
+
+  return (
+    <div className="w-full max-w-xs flex flex-col gap-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          data-testid="copy-invite"
+          onClick={() => void copy()}
+          className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg bg-card border border-border hover:border-primary/50 font-semibold"
+        >
+          {copied === "copied"
+            ? <><Check className="w-4 h-4 text-primary" /> {t("pair.linkCopied")}</>
+            : <><Link2 className="w-4 h-4" /> {t("pair.copyLink")}</>}
+        </button>
+        {canShare() && (
+          <button
+            type="button"
+            data-testid="share-invite"
+            onClick={() => void shareLink({ url, title: t("pair.shareTitle"), text: t("pair.shareText") })}
+            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg bg-card border border-border hover:border-primary/50 font-semibold"
+          >
+            <Share2 className="w-4 h-4" /> {t("pair.shareLink")}
+          </button>
+        )}
+      </div>
+      {copied === "failed" && (
+        <>
+          <p className="text-xs text-amber-500">{t("pair.copyFailed")}</p>
+          <input
+            readOnly
+            value={url}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label={t("pair.copyLink")}
+            className="w-full px-2 py-1 rounded bg-background border border-border text-xs font-mono"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobbyProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<PairPhase>("choose");
@@ -97,6 +278,18 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   const abortRef = useRef<AbortController | null>(null);
   const roomRef = useRef<string | null>(null);
   const transportRef = useRef<WebRtcTransport | null>(null);
+  const relayRef = useRef<RelayTransport | null>(null);
+  const [route, setRoute] = useState<PairRoute | null>(null);
+  const nap = useServerNap();
+
+  /** Keep the link the pair settled on and close the other one. */
+  const settle = useCallback((chosen: Transport) => {
+    if (transportRef.current && transportRef.current !== chosen) transportRef.current.close();
+    if (relayRef.current && relayRef.current !== chosen) relayRef.current.close();
+    transportRef.current = null;
+    relayRef.current = null;
+    setRoute(chosen instanceof RelayTransport ? "relay" : "direct");
+  }, []);
 
   // ── Nearby (step 9), where it exists ───────────────────────────────────
   const [nearbyReady] = useState(isNearbyAvailable);
@@ -122,9 +315,12 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
    */
   const completeHandshake = useCallback(async (
     transport: Transport, role: { kind: "fixed"; localPlayer: PlayerId } | { kind: "elect" },
+    /** The partner's hello, when it already came in (the guest, which waits
+     *  for the host's hello to learn which link the host picked). */
+    received?: Extract<NetMessage, { t: "hello" }>,
   ) => {
     const deviceId = await getDeviceId();
-    const theirs = await new Promise<Extract<NetMessage, { t: "hello" }>>((resolve, reject) => {
+    const theirs = received ?? await new Promise<Extract<NetMessage, { t: "hello" }>>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("no hello")), CONNECT_TIMEOUT_MS);
       transport.onMessage(msg => {
         if (msg.t !== "hello") return;
@@ -139,6 +335,16 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
         build: BUILD_SHA,
       });
     });
+
+    if (received) {
+      transport.send({
+        t: "hello",
+        protocol: PROTOCOL_VERSION,
+        deviceId,
+        name: playerName,
+        build: BUILD_SHA,
+      });
+    }
 
     if (theirs.protocol !== PROTOCOL_VERSION) {
       // Said plainly, and early. The alternative is two boards that look fine
@@ -218,26 +424,38 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     setPhase("hosting");
     const abort = new AbortController();
     abortRef.current = abort;
-    const slowTimer = setTimeout(() => setSlow(true), CONNECT_TIMEOUT_MS);
+    // The "taking a while" hint runs from the moment the partner answers, not
+    // from the moment the code appears: waiting for somebody to scan, or to
+    // open a link sent in a message, is not the connection being slow.
+    let slowTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       const room = newRoomId();
       roomRef.current = room;
+      // Take the relay seat first: it connects while the offer is gathered
+      // and the partner finds their camera, so it is ready if it is needed.
+      relayRef.current = RelayTransport.connect(room, "host");
       const { transport, offer } = await WebRtcTransport.host();
       transportRef.current = transport;
       setPairUrl(buildPairUrl(window.location.origin, room, offer));
 
       const answer = await awaitAnswer(room, abort.signal);
+      slowTimer = setTimeout(() => setSlow(true), CONNECT_TIMEOUT_MS);
       await transport.acceptAnswer(answer);
-      await transport.waitOpen();
+      const relay = relayRef.current;
+      const picked = await pickRoute(transport, relay, { forceRelay: isForceRelayEnabled() });
+      const chosen: Transport = picked === "relay" && relay ? relay : transport;
+      settle(chosen);
       clearTimeout(slowTimer);
-      await completeHandshake(transport, { kind: "fixed", localPlayer: 0 });
+      await completeHandshake(chosen, { kind: "fixed", localPlayer: 0 });
     } catch (err) {
       clearTimeout(slowTimer);
+      relayRef.current?.close();
+      relayRef.current = null;
       if (abort.signal.aborted) return;
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("failed");
     }
-  }, [completeHandshake]);
+  }, [completeHandshake, settle]);
 
   /** Guest: we arrived on a pairing link. Answer it and post the answer. */
   const joinWith = useCallback(async (room: string, offer: PackedSdp) => {
@@ -248,16 +466,27 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     try {
       const { transport, answer } = await WebRtcTransport.guest(offer);
       transportRef.current = transport;
+      // In the relay room before the answer goes out, so the host finds the
+      // guest already seated whenever it decides the relay is the way.
+      relayRef.current = RelayTransport.connect(room, "guest");
       await postAnswer(room, answer);
-      await transport.waitOpen();
+      // The host picks the link; the guest answers on whichever one the
+      // host's hello arrives by, so the two can never settle on different ones.
+      const links: Transport[] = relayRef.current ? [transport, relayRef.current] : [transport];
+      const { transport: chosen, hello } = await awaitHostHello(links);
+      settle(chosen);
       clearTimeout(slowTimer);
-      await completeHandshake(transport, { kind: "fixed", localPlayer: 1 });
+      await completeHandshake(chosen, { kind: "fixed", localPlayer: 1 }, hello);
     } catch (err) {
       clearTimeout(slowTimer);
+      transportRef.current?.close();
+      relayRef.current?.close();
+      transportRef.current = null;
+      relayRef.current = null;
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("failed");
     }
-  }, [completeHandshake]);
+  }, [completeHandshake, settle]);
 
   // Arriving on a pairing link jumps straight past the menu: the player tapped
   // a QR their friend was holding up, and asking them what they meant by that
@@ -279,6 +508,8 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     if (roomRef.current) cancelRoom(roomRef.current);
     transportRef.current?.close();
     transportRef.current = null;
+    relayRef.current?.close();
+    relayRef.current = null;
     roomRef.current = null;
     stopNearbyRef.current?.();
     stopNearbyRef.current = null;
@@ -291,6 +522,9 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
     abortRef.current?.abort();
     if (roomRef.current) cancelRoom(roomRef.current);
     stopNearbyRef.current?.();
+    // A relay seat nobody settled on. The one a session took is out of this
+    // ref by now (settle), so the live game is not cut off here.
+    relayRef.current?.close();
   }, []);
 
   return (
@@ -308,6 +542,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
         {phase === "choose" && (
           <div className="flex-1 flex flex-col justify-center gap-4">
             <p className="text-sm text-muted-foreground">{t("pair.intro")}</p>
+            {nap && <ServerNapChip state={nap} />}
             {/* Where the radios exist, this is the better door and goes first:
                 no code, no camera, no network. The QR stays for the web build
                 and for a phone that will not grant the permissions. */}
@@ -343,6 +578,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
               <>
                 <QrSvg text={pairUrl} className="w-full max-w-xs [&>svg]:w-full [&>svg]:h-auto bg-white p-4 rounded-xl" />
                 <p className="text-sm text-center text-muted-foreground">{t("pair.scanMe")}</p>
+                <InviteLinkActions url={pairUrl} />
               </>
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -355,6 +591,9 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
                 <span>{t("pair.slowHint")}</span>
               </div>
             )}
+            {/* Only when it has something to say: a server that answered
+                promptly is not news while the QR is up. */}
+            {nap && nap !== "awake" && nap !== "checking" && <ServerNapChip state={nap} />}
             <button onClick={cancel}
               className="w-full p-3 rounded-lg bg-muted hover:bg-muted/80 font-semibold">
               {t("common.cancel")}
@@ -366,6 +605,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">{t("pair.joining")}</p>
+            {nap && nap !== "awake" && nap !== "checking" && <ServerNapChip state={nap} />}
             {slow && (
               <div className="flex items-start gap-2 text-sm text-amber-500 bg-amber-500/10 rounded-lg p-3">
                 <WifiOff className="w-4 h-4 mt-0.5 shrink-0" />
@@ -434,6 +674,11 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <Users className="w-10 h-10 text-primary" />
             <p className="font-semibold">{t("pair.connected")}</p>
+            {route && (
+              <p className="text-sm text-center text-muted-foreground">
+                {route === "relay" ? t("pair.viaRelay") : t("pair.viaDirect")}
+              </p>
+            )}
           </div>
         )}
 

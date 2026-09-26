@@ -1791,7 +1791,9 @@
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
     "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
-    "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó."
+    "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
+    "partnersTurn": "Le toca a tu compañero. Mira su valla, la siguiente es tuya.",
+    "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida."
   },
   "mapFailure": {
     "title": "Mapa fallido",
@@ -1889,12 +1891,12 @@
     "intro": "Un tablero, dos móviles, uno al lado del otro. Muestra el código y que el otro jugador lo escanee con su cámara.",
     "showCode": "Mostrar el código",
     "showCodeHint": "Tu pareja lo escanea y entra",
-    "scanMe": "Escanea esto con la cámara del otro móvil.",
+    "scanMe": "Escanéalo con la cámara del otro móvil, o envíale el enlace.",
     "preparing": "Preparando el código",
     "joining": "Entrando con tu pareja",
     "connected": "Conectados. Empieza el mapa.",
     "failed": "No se pudo contactar con el otro móvil.",
-    "slowHint": "Los dos móviles deben estar en la misma Wi-Fi. Si ya lo están, activa un punto de acceso en uno y conecta el otro.",
+    "slowHint": "Está tardando. Los dos móviles necesitan internet. En la misma Wi-Fi se conectan directamente, en cualquier otra a través de nuestro servidor.",
     "tryAgain": "Reintentar",
     "partner": "Pareja",
     "versionMismatch": "Un móvil tiene una versión antigua. Actualízalo y vuelve a intentarlo.",
@@ -1927,6 +1929,42 @@
       "continuing": "{{name}} decide si gastar una continuación."
     },
     "mismatchTitle": "No estáis jugando a lo mismo.",
-    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero."
+    "mismatchBody": "Uno tiene mejoras o certificados que el otro no, así que los dos tableros se comportarían distinto. Jugad una partida que tengáis los dos, o poneos al día primero.",
+    "viaRelay": "Conectados a través de nuestro servidor, porque esta red separa los móviles.",
+    "viaDirect": "Conectados directamente, de móvil a móvil.",
+    "nap": {
+      "checking": "Llamando a la puerta del servidor",
+      "waking": "El servidor estaba echando la siesta. Despertándolo, dale unos segundos.",
+      "awake": "El servidor está despierto y con su café.",
+      "justWoke": "El servidor acaba de despertarse. Aún bosteza, pero está listo.",
+      "unreachable": "El servidor no responde. ¿Tiene internet este móvil?",
+      "whyTitle": "¿Por qué iba a dormir un servidor?",
+      "whyNap": "Nuestro servidor vive en un plan de nube diminuto que se echa la siesta tras 30 minutos sin nadie jugando. La primera llamada lo despierta, y tarda unos 10 segundos en encontrar las zapatillas.",
+      "whyMatters": "Importa en 2 jugadores: el servidor pasa el código de emparejamiento entre móviles, y en la Wi-Fi de cafeterías, hoteles u oficinas lleva la partida entera, porque esas redes no dejan que los móviles hablen entre sí.",
+      "tip": {
+        "checking": "Un momento, suele responder en un parpadeo.",
+        "waking": "Solo queda esperar. Tu llamada es lo que lo está despertando, así que estará listo enseguida.",
+        "awake": "Todo bien. Sigue despierto mientras alguien esté jugando.",
+        "justWoke": "Tu llamada lo despertó. Ya está en pie, así que adelante, empareja.",
+        "unreachable": "Comprueba que este móvil tiene internet. Si lo tiene, puede que el servidor esté caído un momento: prueba de nuevo en un minuto."
+      }
+    },
+    "copyLink": "Copiar enlace",
+    "linkCopied": "Enlace copiado",
+    "shareLink": "Compartir enlace",
+    "shareTitle": "Dev/End: 2 jugadores",
+    "shareText": "Únete a mi partida de Dev/End. Ábrelo en tu móvil:",
+    "copyFailed": "No se pudo copiar. Selecciona el enlace de abajo y cópialo tú.",
+    "turn": {
+      "yours": "Tu turno",
+      "yoursHint": "dibuja una valla",
+      "pass": "Pasar",
+      "building": "Tu valla se está construyendo",
+      "buildingHint": "luego le toca a {{name}}",
+      "spectating": "Mirando",
+      "theirs": "Turno de {{name}}",
+      "splashYours": "¡Tu turno!",
+      "splashTheirs": "Turno de {{name}}"
+    }
   }
 }

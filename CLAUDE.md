@@ -53,7 +53,8 @@ constraints a map must satisfy, and the map archetypes in section 11),
 **DEMOLITION_PLAN.md** for the plan and build record of level 17, the first
 Demolition map (built), **TWO_PLAYER_PLAN.md** for the design and build record
 of Pair Programming, the two-phone co-op mode (built; deterministic lockstep
-over a WebRTC or Nearby Connections link, no server in play), and
+over a WebRTC or Nearby Connections link, with a WebSocket relay on the server
+for public Wi-Fi, where client isolation keeps the phones apart), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions
@@ -131,6 +132,11 @@ of the ask I deliberately left out or deferred belongs in the second line.
 
 When the prompt was a screenshot, a file or a link, say what I took FROM it,
 since that reading is the most likely thing to be wrong.
+
+After the recap, end with the time I finished, taken from
+`date -u '+%Y-%m-%d %H:%M UTC'` at the end rather than guessed, as the last
+line (e.g. `Finished 2026-09-25 14:32 UTC`). The owner runs several agents at
+once and reads it to see how long each has sat idle.
 
 **If CI failed at any point and I fixed it, say so when I wrap up.** Not only in
 the turn where it broke: a red build that got fixed three turns ago is still

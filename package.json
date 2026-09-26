@@ -16,7 +16,7 @@
     "android:open": "cap open android"
   },
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

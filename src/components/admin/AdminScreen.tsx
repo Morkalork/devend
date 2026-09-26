@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
+  isForceRelayEnabled, setForceRelayEnabled,
+  SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
   MAX_DEBUG_ASCENSION, getDebugAscensionOverride, setDebugAscensionOverride,
 } from '@/lib/devFlags';
 import {
@@ -21,6 +23,8 @@ interface AdminScreenProps {
 export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback, onNearbyDiagnostics }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [ascension, setAscension] = useState(getDebugAscensionOverride);
+  const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
+  const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -158,6 +162,63 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="text-sm text-muted-foreground">
                 Start a normal run with {DEV_LIVES} lives. Takes effect on the next
                 New Game, and keeps that run off the highscore ledger.
+              </div>
+            </div>
+          </button>
+
+          {/* Pair Programming's network path. At home the direct link always
+              wins, so the relay every public-Wi-Fi player uses would never be
+              seen from a desk without this. Persisted; only the HOST's
+              setting counts, since the host picks the link. */}
+          <button
+            onClick={() => { const next = !forceRelay; setForceRelayEnabled(next); setForceRelay(next); }}
+            aria-pressed={forceRelay}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              forceRelay ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${forceRelay ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Server className={`w-6 h-6 ${forceRelay ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Force 2-Player relay{' '}
+                <span className={`text-xs ${forceRelay ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {forceRelay ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Pair through the server even when the phones could link directly, as on
+                public Wi-Fi. Set it on the phone that shows the code.
+              </div>
+            </div>
+          </button>
+
+          {/* The 2-Player screen's server readout. A real nap needs half an
+              hour of nobody playing; this shows each state's copy on demand. */}
+          <button
+            onClick={() => {
+              const next = SIMULATED_NAPS[(SIMULATED_NAPS.indexOf(nap) + 1) % SIMULATED_NAPS.length];
+              setSimulatedNap(next);
+              setNap(next);
+            }}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              nap !== 'off' ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${nap !== 'off' ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Moon className={`w-6 h-6 ${nap !== 'off' ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Server nap readout{' '}
+                <span className={`text-xs ${nap !== 'off' ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {nap === 'off' ? 'REAL' : nap.toUpperCase()}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Tap to cycle what the 2-Player screen says about the server: the real
+                check, asleep, just woke, or unreachable.
               </div>
             </div>
           </button>

@@ -93,6 +93,106 @@ And three rough edges: haptics fired for the partner's actions, a pair run filed
 on the solo ladder where two players cutting twice as fast would have taken it
 over within an evening, and Nearby could be raced into two connections.
 
+### The relay, for public Wi-Fi  **[CHANGED]**
+
+The first real test away from home failed at every cafe: the pairing link
+opened, the answer reached the mailbox, and the two phones never connected.
+Public Wi-Fi (cafes, hotels, offices, most guest networks) runs **client
+isolation**: every device may reach the internet and none may reach another,
+so the host candidates the direct link is built on (section 3) knock on
+addresses that will not answer. The section-3 premise, "same network means the
+phones can see each other", is true at home and false almost everywhere else.
+
+Both phones CAN reach the server the game was loaded from, so that server now
+carries the game when the direct link cannot:
+
+- **`server/relay.js`**, a WebSocket relay on the same port as the site
+  (`/api/relay/<room>?role=host|guest`). Heroku routes HTTP and its upgrade and
+  nothing else, so TURN (UDP) cannot run on a dyno, and a hosted TURN service is
+  billed by the gigabyte; a WebSocket on the dyno the game already runs on costs
+  nothing extra. Zero dependencies, like the rest of the server: the handshake,
+  masking, fragmentation, ping and close of RFC 6455 are about a hundred lines,
+  and `ws` would have been the production server's first dependency. It
+  forwards frames byte for byte and never parses a game message.
+- **`src/lib/net/relay.ts`**, `RelayTransport`, the fourth implementation of
+  the transport interface. The lockstep cannot tell it from the others.
+- **The route choice.** Both phones take a relay seat in the room the QR names
+  as soon as they know it, in parallel with the direct link. The HOST gives the
+  direct link four seconds (`DIRECT_GRACE_MS`) once the answer is in, then
+  settles on the relay; it says hello on the link it picked, and the guest
+  answers on whichever link that hello arrived by. One side decides, so the two
+  can never end up on different links. A relay that is unreachable (an older
+  server, no WebSocket) leaves the direct link its full ten seconds, exactly the
+  behaviour before the relay existed.
+- **What it costs in play:** one extra trip to the server and back, which the
+  adaptive input delay already absorbs (it reads the round trip from the same
+  heartbeat), and a dependence on the dyno staying up for the run. A daily
+  dyno restart or a deploy drops every live relay; the pair save and resume
+  flow (step 6b) covers that the same way it covers a phone leaving Wi-Fi.
+  Rooms live in memory, so the app must run on ONE web dyno.
+- **Is the server awake?** An eco dyno sleeps after thirty idle minutes and
+  takes several seconds to boot on the next request, which on this screen
+  looked like the mode being broken. `/api/health` reports the process uptime;
+  `src/lib/net/serverNap.ts` pings it when the 2-Player screen opens and reads
+  a slow answer (over 1.5 s) or a young process (under 60 s) as a nap. The
+  screen says so in a line, with a tap-and-hold explainer about the server's
+  slippers. The ping is also what wakes it.
+- **Admin:** "Force 2-Player relay" (the relay otherwise never runs at a desk,
+  because the direct link wins at home) and "Server nap readout", which cycles
+  the readout through each state. The desk rig serves the relay and the health
+  check from `vite.config.ts`, as it does the mailbox.
+
+Android is untouched: it pairs over Nearby Connections, which needs no network
+at all, so client isolation never reaches it.
+
+**The invitation as a link.** The QR has always been a link (step 5); the host
+screen now also offers **Copy link** and, where the phone has a share sheet,
+**Share link**, so the invitation can go through a message instead of a
+camera. A link can be opened minutes later, so the host waits up to ten minutes
+for an answer (`INVITE_WAIT_MS` in `webrtc.ts`, polling slower after the first
+minute) and the relay holds a waiting seat as long (`RELAY_WAIT_MS`). The
+"taking a while" hint starts when the partner answers, not when the code
+appears, since waiting for somebody to open a message is not a slow link. The
+two phones still need to be within reach of each other or of the relay: on
+different networks, it is the relay that carries them.
+
+### Turns  **[CHANGED]**
+
+The plan had both players drawing whenever they liked. In play that was the
+worst way to share one board: two fences growing into each other's balls,
+nobody sure whose line was whose, and the player waiting for a clean moment
+beaten to it by the one who was not. So a pair now **takes turns**.
+
+- **One fence a turn.** The player on turn draws one fence; the turn ends when
+  that fence is DONE, built or broken, and the board goes to the partner. Done
+  rather than drawn, so the partner never draws into a fence still growing.
+  While their fence builds, the player on turn keeps the rest of the turn:
+  freezing, tapping, abilities, a mover. Protecting the fence is part of it.
+- **Pass.** The player on turn can hand over without drawing, for when the
+  balls are wrong and waiting would hold the partner up.
+- **The spectator** can do nothing to the board: no fence, no tap, no ability.
+  Holding an object to read about it still works. A mover drag the turn ended
+  under them may still be let go, or the mover stays held by a hand that is no
+  longer allowed to move it.
+- **Who opens** alternates by map: the host opens odd maps, the guest even ones.
+- **Deterministic by construction.** The turn is simulation state
+  (`game.pairTurn`, `src/lib/net/pairTurn.ts`), changed only at the top of a
+  tick in `drainCommands`, and the rule is checked in `applyCommand` on both
+  phones from the same state, so both refuse the same commands and hand over on
+  the same tick with nothing extra on the wire. The input layer refuses first,
+  where the finger is, with a message. The turn is in the topology hash and in
+  the resync snapshot, because a turn hangs on whether a fence finished, which
+  is exactly what drifted motion can disagree about.
+- **On screen** (`PairTurnOverlay.tsx`): on your turn the board glows in your
+  fence colour and breathes, with a "Your turn" tag and Pass; while your fence
+  builds the glow holds steady. Spectating, the board dims under an eye and the
+  tag says whose turn it is, in the partner's fence colour. Every hand-over
+  plays a one-second splash, and the phone whose turn it now is buzzes.
+- **Admin:** Pair Loopback shows each board's turn in the readout and has a
+  Pass button per player; a cut sent out of turn is logged and watched being
+  refused on both boards.
+- Carrying on alone after the partner drops ends turns on the spot.
+
 ### Where it all lives
 
 | | |
@@ -108,8 +208,11 @@ over within an evening, and Nearby could be raced into two connections.
 | The 2-Player screens | `src/components/game/PairLobby.tsx`, `PairDecision.tsx`, `PairLinkBanner.tsx` |
 | The run and the pair save | `src/hooks/usePairSession.ts`, `usePairRunSave.ts` |
 | The answer mailbox | `server/pairRooms.js`, and the same route in `vite.config.ts` |
-| Admin | Pair Loopback, Nearby Diagnostics |
-| Tests | `determinism`, `commands`, `lockstep`, `pairing` |
+| The public Wi-Fi relay | `server/relay.js`, `src/lib/net/relay.ts` |
+| Is the server awake | `server/health.js`, `src/lib/net/serverNap.ts` |
+| Admin | Pair Loopback, Nearby Diagnostics, Force 2-Player relay, Server nap readout |
+| Turns | `src/lib/net/pairTurn.ts`, `src/components/game/PairTurnOverlay.tsx` |
+| Tests | `determinism`, `commands`, `lockstep`, `pairing`, `pairRelay`, `serverNap`, `pairTurn` |
 
 The question that prompted it: **can this be done without a server in the
 middle?** Short answer, yes. The long answer is section 3.
@@ -600,6 +703,16 @@ A pair save is that record plus a pair identity, kept on **both** phones under
 its own key (`jezzball_pair_run_v1`), separate from the solo save so a pair
 run never overwrites a solo one:
 
+**[CHANGED]** "Separate" was only half true as built: the session's own per-map
+write kept running under a pair, so every pair run ALSO landed in the solo
+slot and turned up as the welcome screen's Continue, and a pair run's start
+and end cleared whatever solo run was parked there. A run started in 2-Player
+mode is now the pair's alone (`pairRunRef` in `useGameSession`): it neither
+writes nor clears the solo save, for the whole run, "carry on alone"
+included, and it is only ever offered again from the 2-Player screen. Every
+way a run starts decides this first, so the next solo start saves as before.
+Pinned in `pairRunKeepsOffContinue.test.tsx`.
+
 ```
 pair: { pairId, runId, seed, devices: [idA, idB], savedAt }
 run:  RunSave          // the same object the solo Continue uses
@@ -807,8 +920,11 @@ sessions.
 - **Versus / race.** Same seed, separate boards, only scores exchanged; a
   fifth of the work of this plan and a different game.
 - **More than two players.** Lockstep generalises; the QR pairing does not.
-- **Internet play.** Needs STUN at minimum and TURN in practice, which are
-  servers, and an input delay tuned for 100 ms round trips.
+- **Internet play.** The relay (above) would technically carry two phones in
+  different cities, but the pairing still starts with a QR held up to the
+  other phone, and the input delay is tuned for the same room. Playing apart
+  would need a way to invite without a camera and a delay tuned for 100 ms
+  round trips.
 - **Spectating, or a phone as a second screen.**
 - **iOS.** WKWebView has WebRTC and would work the same way; there is no iOS
   build to put it in. Nearby Connections has no iOS counterpart in the same
