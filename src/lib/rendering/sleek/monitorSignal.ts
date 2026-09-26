@@ -17,9 +17,15 @@
  * seeded Daily Stand-up runs reproducible.
  */
 
-/** A glitch in flight: when it fired, how hard, and how long it lasts. */
+/**
+ * A glitch in flight: when it started, how hard, and how long it lasts.
+ *
+ * `at` is null until the first `monitorLevel` read after the glitch fired, and
+ * is then stamped with THAT read's clock. See `monitorLevel` for why the
+ * glitch cannot be stamped when it fires.
+ */
 interface Pulse {
-  at: number;
+  at: number | null;
   strength: number;
   durationMs: number;
 }
@@ -32,8 +38,10 @@ let pulse: Pulse | null = null;
  */
 export function pulseMonitor(strength = 1, durationMs = 180): void {
   // A bigger pulse always wins; a smaller one must not cut short a big flash.
-  if (pulse && performance.now() - pulse.at < pulse.durationMs && pulse.strength > strength) return;
-  pulse = { at: performance.now(), strength: Math.max(0, Math.min(1, strength)), durationMs };
+  // A pulse that is still here is still in flight: `monitorLevel` drops each
+  // one the moment it has run its course.
+  if (pulse && pulse.strength > strength) return;
+  pulse = { at: null, strength: Math.max(0, Math.min(1, strength)), durationMs };
 }
 
 /**
@@ -96,8 +104,26 @@ function pulseShape(p: number, strength: number): number {
 export function monitorLevel(now: number = performance.now()): number {
   let level = 1 + idleShimmer(now);
   if (pulse) {
+    // ── One clock, whichever the reader uses ─────────────────────────────
+    //
+    // The glitch fires from CRTBackground, on the page's wall clock. The board
+    // reads the level on the SIMULATION clock (SleekRenderer passes simNow()),
+    // which starts at zero every map and so runs far behind the wall clock.
+    // The glitch used to be stamped with performance.now() when it fired and
+    // read against simNow() here, so `p` came out hugely negative, the decay
+    // term `(1 - p)^2.2` grew without bound, and the level slammed between
+    // its two clamps every frame. The pulse never reached p >= 1, so it never
+    // cleared: from the first glitch of a map, 4-10 seconds in, the whole
+    // board strobed for the rest of the map. Reported as "the whole gameboard
+    // background blinks".
+    //
+    // So the pulse is stamped by its first READ, in the reader's own clock,
+    // which makes mixing the two impossible. And a reader clock that goes
+    // backwards (the sim clock resets at every map start) drops the pulse
+    // rather than feeding a negative phase into the curve.
+    if (pulse.at === null) pulse.at = now;
     const p = (now - pulse.at) / pulse.durationMs;
-    if (p >= 1) pulse = null;
+    if (p >= 1 || p < 0 || !Number.isFinite(p)) pulse = null;
     else level += pulseShape(p, pulse.strength);
   }
   return Math.max(0.62, Math.min(1.18, level));
