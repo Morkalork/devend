@@ -25,6 +25,7 @@ import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
 import { AnimatePresence } from 'framer-motion';
 import { MapRuleBanner } from './MapRuleBanner';
+import { BoardPlaceholder } from './BoardPlaceholder';
 import { MapFailedOverlay } from './MapFailedOverlay';
 import type { MapFailure } from '@/lib/mapFailure';
 import { ShipEarlyBar } from './ShipEarlyBar';
@@ -407,10 +408,10 @@ export function GameScreen({
     gameMessage: null,
   });
 
-  // "Loading..." overlay for the run-start intro: the board takes ~half a
-  // second (renderer init + the assemble's slide-in delay) before it begins
-  // flying in over the background code. GameCanvas fires onCanvasReady the
-  // instant the first tiles present, and this fades out to reveal them.
+  // The board placeholder's cue: the board takes a moment (renderer chunk,
+  // WebGL init, and on the run intro the assemble's slide-in delay) before it
+  // first presents. GameCanvas fires onCanvasReady the instant it does, and the
+  // placeholder fades out to reveal it.
   const [canvasReady, setCanvasReady] = useState(false);
   const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
 
@@ -817,6 +818,18 @@ export function GameScreen({
     || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro
     || showCircuitOverlay || fenceSwitchIntro;
 
+  // Whether the board has been on screen yet. Ready is not enough: on a run's
+  // first map the board's fly-in waits for the opening explainer to be
+  // dismissed, so "ready" behind a card still meant an empty screen. The
+  // placeholder stays until the board is ready with no card over it, once;
+  // a card reopened mid-map does not bring it back.
+  const [boardShown, setBoardShown] = useState(false);
+  useEffect(() => {
+    if (canvasReady && !anyExplainerModal) {
+      setBoardShown(true);
+    }
+  }, [canvasReady, anyExplainerModal]);
+
 
   // Mechanics the player has just met. These used to stop the game to deliver a
   // paragraph; now they are filed in the Manual and the Specs button badges, so
@@ -1013,21 +1026,14 @@ export function GameScreen({
               </div>
             </div>
           )}
-          {/* Run-start "Loading..." sign: sits over the animating background
-              while the board loads, and fades out the moment the canvas begins
-              assembling in. Only for the run-intro map (introAssemble). */}
-          {introAssemble && (
-            <div
-              className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none transition-opacity duration-500 ${canvasReady ? 'opacity-0' : 'opacity-100'}`}
-            >
-              <span
-                className="font-display text-xl font-bold tracking-[0.35em] uppercase animate-pulse"
-                style={{ color: accentColor, textShadow: `0 0 18px ${accentColor}` }}
-              >
-                {t('common.loading')}
-              </span>
-            </div>
-          )}
+          {/* The board's outline, from the first frame until the real board
+              presents (renderer chunk + WebGL init can take a second or two on
+              a phone), then fades out beneath it. See BoardPlaceholder. */}
+          <BoardPlaceholder
+            visible={!boardShown}
+            accentColor={accentColor}
+            bottomInsetPx={bottomBarsPx}
+          />
           {/* Feature Freeze: tap-freezes left this map. Only shown when the
               upgrade (or Runway's freeze) is active, and hidden once the map is
               won. Dims to signal "out" at zero. */}

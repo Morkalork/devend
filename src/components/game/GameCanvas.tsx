@@ -1914,7 +1914,21 @@ export function GameCanvas({
       }
     } else {
       startGameLoop(game);
-      signalCanvasReady(); // normal start: board is visible on the first frame
+      // Normal start: the board is visible on the renderer's first frame, which
+      // on a fresh mount is not this one - the WebGL chunk and its init are
+      // still landing. Signalling now faded the board placeholder out over an
+      // empty frame. The 2D path draws synchronously, so it is ready at once.
+      const signalWhenDrawn = () => {
+        if (disposed) {
+          return;
+        }
+        if (ctx || pixiRef.current?.isReady) {
+          signalCanvasReady();
+          return;
+        }
+        requestAnimationFrame(signalWhenDrawn);
+      };
+      signalWhenDrawn();
     }
 
     // Once the level has run long enough for the perf window to fill, try (once)
