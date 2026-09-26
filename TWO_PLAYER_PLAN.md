@@ -703,6 +703,16 @@ A pair save is that record plus a pair identity, kept on **both** phones under
 its own key (`jezzball_pair_run_v1`), separate from the solo save so a pair
 run never overwrites a solo one:
 
+**[CHANGED]** "Separate" was only half true as built: the session's own per-map
+write kept running under a pair, so every pair run ALSO landed in the solo
+slot and turned up as the welcome screen's Continue, and a pair run's start
+and end cleared whatever solo run was parked there. A run started in 2-Player
+mode is now the pair's alone (`pairRunRef` in `useGameSession`): it neither
+writes nor clears the solo save, for the whole run, "carry on alone"
+included, and it is only ever offered again from the 2-Player screen. Every
+way a run starts decides this first, so the next solo start saves as before.
+Pinned in `pairRunKeepsOffContinue.test.tsx`.
+
 ```
 pair: { pairId, runId, seed, devices: [idA, idB], savedAt }
 run:  RunSave          // the same object the solo Continue uses
