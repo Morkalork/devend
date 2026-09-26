@@ -65,6 +65,12 @@ import type { Ball } from "@/types/game";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
 import { simNow } from "@/lib/simClock";
+import {
+  splitWarnSides, stepSplitWarnFade, splitWarnAlpha, splitHalfQuad, SPLIT_WARN_COLOR,
+} from "@/lib/splitWarn";
+import { dealtSplit } from "@/lib/winSpec";
+import { polygonBounds } from "@/lib/polygon";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
 export class SleekRenderer {
   private app = new Application();
@@ -80,6 +86,8 @@ export class SleekRenderer {
    * that casts it - see the draw order in init().
    */
   private shadowPlane = new Graphics();
+  /** How far each half's "this side is done" tint is faded in (splitWarn.ts). */
+  private splitFade = { before: 0, after: 0, at: -1 };
   /**
    * Pools of light travelling with the balls, occluded by the board's geometry.
    * Composited over the floor and UNDER everything standing on it, so a wall
@@ -307,6 +315,10 @@ export class SleekRenderer {
 
     // One clear per frame: every layer draws its shadows into this same plane.
     this.shadowPlane.clear();
+    // Drawn into the shadow plane on purpose: that plane is masked to LIVE
+    // ground, which is exactly where the warning belongs. Captured ground is
+    // settled and has nothing to warn about.
+    this.drawSplitWarn(game, w2s, now);
 
     this.board.sync(game, monitor, w2s, this.staticDirty);
     this.areas.sync(game, light, w2s, scale, tilt, rctx.accentColor);
@@ -337,6 +349,38 @@ export class SleekRenderer {
     this.probeForBeams(now);
 
     this.app.render();
+  }
+
+  /**
+   * A `splitLocks` map: the half that already has its lock tints a slow, faint
+   * red while a ball that could still be sealed is standing in it, because a
+   * second lock there is wasted (splitWarn.ts has the rule and the reasons).
+   * Faded in and out rather than switched, so a ball skimming the line does
+   * not make the half flicker.
+   */
+  private drawSplitWarn(
+    game: CanvasGameState, w2s: (x: number, y: number) => { x: number; y: number }, now: number,
+  ): void {
+    const clause = game.splitClause;
+    const fade = this.splitFade;
+    const dt = fade.at < 0 || now < fade.at ? 0 : Math.min(100, now - fade.at);
+    fade.at = now;
+    if (!clause) { fade.before = 0; fade.after = 0; return; }
+    const want = splitWarnSides(clause, game.mapRotation, game.lockPoints ?? [], game.balls);
+    fade.before = stepSplitWarnFade(fade.before, want.before, dt);
+    fade.after = stepSplitWarnFade(fade.after, want.after, dt);
+    if (fade.before <= 0 && fade.after <= 0) return;
+
+    const { axis, at } = dealtSplit(clause, game.mapRotation);
+    const bounds = game.boardPolygon
+      ? polygonBounds(game.boardPolygon)
+      : { minX: 0, minY: 0, maxX: BOARD_WIDTH, maxY: BOARD_HEIGHT };
+    for (const side of ["before", "after"] as const) {
+      const alpha = splitWarnAlpha(fade[side], now);
+      if (alpha < 0.005) continue;
+      const pts = splitHalfQuad(side, axis, at, bounds).map(p => w2s(p.x, p.y));
+      this.shadowPlane.poly(pts.flatMap(p => [p.x, p.y])).fill({ color: SPLIT_WARN_COLOR, alpha });
+    }
   }
 
   /**

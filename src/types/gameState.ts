@@ -199,6 +199,12 @@ export interface CanvasGameState {
    */
   winHighlights?: import("@/lib/winHighlight").HighlightRect[];
   /**
+   * The map's `splitLocks` clause, if it has one, for the board's "this side
+   * is already done" tint (lib/splitWarn.ts). Set at map start from the
+   * resolved win, so a run-added split clause gets the tint too.
+   */
+  splitClause?: Extract<import("@/types/winSpec").WinCondition, { kind: "splitLocks" }> | null;
+  /**
    * `activePlaySeconds` when a cut was last refused for burying the slabs the
    * win still needs (smashReach.cutWouldBurySmashes).
    *

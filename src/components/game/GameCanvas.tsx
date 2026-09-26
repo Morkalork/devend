@@ -146,6 +146,7 @@ import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
 import { PendingResize } from "@/lib/boardResizeHold";
 import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
+import { splitClauseOf } from "@/lib/splitWarn";
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -1393,6 +1394,8 @@ export function GameCanvas({
       // here because it reads destructibles, coloredAreas and deliveryBoxes,
       // which are all in place by now.
       game.winHighlights = winHighlightRects(resolveWinSpec(level, activeModifiers), game);
+      // The clause the board's side tint answers to (lib/splitWarn.ts).
+      game.splitClause = splitClauseOf(resolveWinSpec(level, activeModifiers));
       game.objectivesTotal    = data.objectivesTotal;
       game.initialSamplePoints = data.initialSamplePoints;
       game.spaceGrid          = data.spaceGrid;
