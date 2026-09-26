@@ -41,7 +41,7 @@
  * shimmer had been done by damping the signal as a whole, the background would
  * have gone on glitching over a board that no longer reacted to it.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { monitorLevel, pulseMonitor, resetMonitor } from "@/lib/rendering/sleek/monitorSignal";
 import { washAlphaAt } from "@/lib/rendering/sleek/boardWash";
 
@@ -216,6 +216,35 @@ describe("the deliberate glitch", () => {
     resetMonitor();
     expect(monitorLevel(after)).toBeCloseTo(monitorLevel(after), 10);
     expect(Math.abs(monitorLevel(after) - 1)).toBeLessThan(0.06);
+  });
+
+  it("does not strobe when the board reads it on the simulation clock", () => {
+    // The reported bug. CRTBackground fires the glitch on the wall clock; the
+    // renderer reads the level on the sim clock, which restarts at zero every
+    // map and so sits far behind. Stamped on one and read on the other, the
+    // phase went hugely negative and the level slammed between its clamps on
+    // every frame, for good. Here the wall clock is well ahead of the reader.
+    const wall = vi.spyOn(performance, "now").mockReturnValue(9_000_000);
+    pulseMonitor(1, 180);
+    wall.mockRestore();
+    const levels: number[] = [];
+    for (let simMs = 5_000; simMs < 7_000; simMs += 16) levels.push(monitorLevel(simMs));
+    const atClamp = levels.filter((l) => l <= 0.6201 || l >= 1.1799).length;
+    expect(atClamp, "the board is slamming between its clamps").toBeLessThan(3);
+    // Over within the glitch's own length, then just the idle shimmer.
+    const late = levels.slice(Math.ceil(400 / 16));
+    for (const l of late) expect(Math.abs(l - 1)).toBeLessThan(0.06);
+    // It still dipped: fixed, not deleted.
+    expect(Math.min(...levels.slice(0, 12))).toBeLessThan(0.85);
+  });
+
+  it("drops a glitch rather than replaying it when the reader's clock goes back", () => {
+    // The sim clock resets at every map start. A glitch read late in one map
+    // must not become a negative phase in the next.
+    pulseMonitor(1, 180);
+    monitorLevel(60_000);
+    const after = [0, 16, 32, 48].map((t) => monitorLevel(t));
+    for (const l of after) expect(Math.abs(l - 1)).toBeLessThan(0.06);
   });
 
   it("never darkens the board enough to lose a ball", () => {
