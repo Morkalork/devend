@@ -13,6 +13,24 @@
  * already spends brightness on intensity; a second brightness cue would fight
  * it. Texture is free, and a striped pocket reads apart from a plain one at any
  * tint level and from across the board.
+ *
+ * ── And then the stripes came off ───────────────────────────────────────────
+ *
+ * The hatch did its job and was retired the moment something better existed: a
+ * star that blinks by and fades inside the pocket (superiorSparkle.ts), asked
+ * for as "think Nintendo", and then "you can remove the striped lock filling".
+ *
+ * The trade is deliberate and worth stating, because it is the opposite of the
+ * one this file was opened to make. The hatch was ALWAYS there and said the
+ * same thing forever; the twinkle is there for half a second at a time and
+ * says it better when it does. Between twinkles a superior pocket now looks
+ * like any other locked pocket, which is a real loss of information bought
+ * with a real gain in quiet.
+ *
+ * What did NOT change is everything above the drawing: the grid still carries
+ * `superiorCaptured`, applyCut still marks it, and nothing downgrades a pocket
+ * that earned it. The sparkle reads those same cells, so the mask is still the
+ * one record of which pockets were sealed tight - only the brush changed.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -24,6 +42,8 @@ import { PALETTE } from "@/lib/rendering/sleek/palette";
 const read = (rel: string) => readFileSync(resolve(__dirname, rel), "utf8");
 const CUT = read("../lib/physics/applyCut.ts");
 const BOARD = read("../lib/rendering/sleek/boardLayer.ts");
+const FX = read("../lib/rendering/sleek/fxLayer.ts");
+const SPARKLE = read("../lib/rendering/sleek/superiorSparkle.ts");
 
 describe("the board remembers a tight seal", () => {
   it("carries a superior mask alongside the intensity one", () => {
@@ -88,45 +108,35 @@ describe("marking it", () => {
 });
 
 describe("drawing it", () => {
-  it("draws a hatch, not just another colour", () => {
-    expect(BOARD).toMatch(/drawSuperiorHatch/);
-    // Lines, not a fill: texture is the axis the tint is not already using.
-    const fn = BOARD.slice(BOARD.indexOf("private drawSuperiorHatch"));
-    expect(fn).toMatch(/moveTo\([^)]*\)\.lineTo\(/);
-    expect(fn).toMatch(/\.stroke\(\{/);
+  it("no longer stripes the pocket", () => {
+    // Removed on request once the sparkle existed. Pinned so it cannot drift
+    // back in beside the twinkle: two permanent-ish marks for one fact is the
+    // clutter the twinkle was made small to avoid.
+    expect(BOARD, "the hatch is back on the board surface").not.toMatch(/drawSuperiorHatch/);
+    expect(BOARD).not.toMatch(/private hatch = new Graphics\(\)/);
+    expect(BOARD).not.toMatch(/SUPERIOR_HATCH_WIDTH/);
   });
 
-  it("uses the same gold as the lock flash", () => {
-    expect(PALETTE.superior).toBe(0xffd54a);
-    expect(BOARD).toMatch(/PALETTE\.superior/);
-  });
-
-  it("spaces the stripes out instead of packing them at cell resolution", () => {
-    // Every anti-diagonal at a 15-unit cell is a near-solid wash, which reads as
-    // a brighter tint: exactly the cue this is trying not to duplicate.
-    expect(BOARD).toMatch(/\(\(col \+ row\) & 1\) !== 0\) continue;/);
-  });
-
-  it("is drawn on the board surface, not as a transient flash", () => {
-    // The whole point: it has to still be there a minute later.
-    expect(BOARD).toMatch(/this\.drawSuperiorHatch\(game, w2s\);/);
-    expect(BOARD).toMatch(/private hatch = new Graphics\(\)/);
-    expect(BOARD).toMatch(/this\.surface\.addChild\([^)]*this\.hatch/);
-  });
-
-  /**
-   * On its OWN Graphics rather than sharing `locked`. A Pixi Graphics carries
-   * one accumulating path, so stroking the hatch on the object that had just
-   * filled every locked-pocket contour risks stroking those contours too. The
-   * separation makes that impossible rather than relying on fill() having
-   * consumed the path.
-   */
-  it("cannot contaminate, or be contaminated by, the pocket fills", () => {
+  it("left the locked-pocket fills alone on the way out", () => {
+    // The hatch had its own Graphics because a Pixi Graphics accumulates one
+    // path and a stroke would have caught every locked contour already in it.
+    // Taking the hatch away must not have left a stroke behind on `locked`.
     expect(BOARD).not.toMatch(/this\.locked\.stroke\(/);
-    const fn = BOARD.slice(BOARD.indexOf("private drawSuperiorHatch"));
-    expect(fn).toMatch(/this\.hatch\.moveTo/);
-    expect(fn).toMatch(/this\.hatch\.stroke/);
-    expect(BOARD).toMatch(/this\.hatch\.clear\(\);/);
+    expect(BOARD).not.toMatch(/this\.hatch/);
+  });
+
+  it("marks the pocket with a twinkle instead, in the same gold", () => {
+    // Same colour as the lock flash and as the hatch before it: a superior
+    // lock has read gold since the first attempt at this and still does.
+    expect(PALETTE.superior).toBe(0xffd54a);
+    expect(FX).toMatch(/superiorSparkles\(game\.spaceGrid/);
+    expect(FX).toMatch(/PALETTE\.superior/);
+  });
+
+  it("draws the twinkle from the same cells the hatch used", () => {
+    // The mask outlived the stripes. If the sparkle read anything else, the
+    // marking tests above would be pinning a record nothing consults.
+    expect(SPARKLE).toMatch(/grid\.superiorCaptured/);
   });
 });
 
