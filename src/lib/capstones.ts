@@ -5,7 +5,6 @@
  */
 import { CapstoneConfig } from '@/types/capstone';
 import { fetchYamlCatalogue, parseModifiers, drawRandom } from '@/lib/yamlCatalogue';
-import { isAssignmentLevel } from '@/lib/doorDraft';
 
 export const DEFAULT_CAPSTONE_LEVEL = 10;
 /** Capstones offered in the (mandatory) 1-of-N draft. */
@@ -26,26 +25,14 @@ export function getCapstoneTriggerLevel(): number {
 /**
  * Is the Promotion due after completing `completedLevel`?
  *
- * At or past the trigger level, and NEVER on an assignment level. That second
- * clause is the whole point of this function.
- *
- * The draft used to be reachable only from inside the assignment phase, which
- * meant it could never have a moment of its own: finishing level 10 handed the
- * player a score screen, a Feature Unlocked modal, the finished contract's
- * summary, the Promotion, and the next contract, back to back. Five rewards in
- * a row is no rewards - the rarest choice in the game, once per run and with
- * the two you pass gone for good, arrived fourth in a queue and read as more
- * confetti.
- *
- * So it is offered after an ORDINARY level now, before that level's shop, where
- * it is the only thing on screen and where the perk can still inform what the
- * player buys. Enforced here rather than left to the authored number, because
- * `offeredAfterLevel` sitting on a multiple of the assignment cadence would
- * silently rebuild the pile-up.
+ * At or past the trigger level. It is offered after an ordinary level, before
+ * that level's shop, where it is the only thing on screen and the perk can
+ * still inform what the player buys. (It used to be spliced into the since
+ * removed assignment phase, where it arrived fourth in a queue of five reward
+ * screens and read as more confetti.)
  */
 export function capstoneDueAfter(completedLevel: number): boolean {
-  if (completedLevel < getCapstoneTriggerLevel()) return false;
-  return !isAssignmentLevel(completedLevel);
+  return completedLevel >= getCapstoneTriggerLevel();
 }
 
 /** Coerce one raw YAML entry into a CapstoneConfig, or null if it's unusable. */

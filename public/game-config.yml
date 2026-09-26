@@ -136,9 +136,8 @@ pickups:
       weight: 1         # rarest: the next OPEN store's cheapest offer is free
       value: 1
     # Stronger rewards (#52) so tokens stay worth chasing on later maps.
-    # Lives are deliberately NOT a pickup reward: the only life sources are the
-    # Fault Tolerance store line and the marquee Lockdown Protocol assignment,
-    # so lives stay scarce. Tokens pay overtime and utility instead.
+    # Lives are deliberately NOT a pickup reward: the Fault Tolerance store line
+    # is the main life source, so lives stay scarce. Tokens pay overtime and utility instead.
     overtime_percent:
       weight: 2
       value: 15         # pays this percent of your banked overtime, after the cap

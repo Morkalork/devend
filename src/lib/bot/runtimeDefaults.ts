@@ -107,7 +107,6 @@ export function runtimeDefaults() {
     lockPoints: [],
     superiorLockCount: 0,
     superiorLockBonus: 0,
-    breakablesSmashed: 0,
     zoneLockCount: 0,
     zoneLockBonus: 0,
     moneyMultiplier: 1,

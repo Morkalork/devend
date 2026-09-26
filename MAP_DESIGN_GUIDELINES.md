@@ -1312,9 +1312,9 @@ closes nothing on its own, and why the smash is what actually ends the rush.
 Locking everything leaves the smash unmet, and the lockedOut rule takes the
 life.
 
-Leaving the lock count off is deliberate the other way too: the Ship It
-assignment pays for clearing a map without sealing a single ball, and a win that
-demands a lock takes that map away from the mission. Maps 1-4 and the maps with
+Leaving the lock count off was also meant to keep maps open to the Ship It
+assignment (clear without sealing a ball); assignments have since been cut, so
+that half of the reason is gone. Maps 1-4 and the maps with
 nothing operable still ask for locks, because with nothing to smash or light it
 is the only honest ask they have.
 

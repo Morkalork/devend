@@ -7,7 +7,7 @@ import { backActionForScreen, BackAction } from "@/lib/screenBack";
 import { GameScreen } from "@/types/game";
 
 const ALL_SCREENS: GameScreen[] = [
-  'welcome', 'tutorial', 'game', 'upgradeShop', 'doorDraft', 'capstoneDraft',
+  'welcome', 'tutorial', 'game', 'upgradeShop', 'capstoneDraft',
   'runDraft', 'ascensionDraft', 'result', 'certificateStore', 'loadouts',
   'options', 'achievements', 'hallOfFame', 'admin', 'mapBuilder', 'animationTest',
   'upgradeAtlas',
@@ -36,7 +36,7 @@ describe("backActionForScreen", () => {
     // runDraft is deliberately NOT here: Sprint Planning is the one draft that
     // runs before the run begins, so there is no forced progression to skip
     // past and nothing has been committed yet.
-    for (const s of ['upgradeShop', 'doorDraft', 'capstoneDraft', 'ascensionDraft'] as GameScreen[]) {
+    for (const s of ['upgradeShop', 'capstoneDraft', 'ascensionDraft'] as GameScreen[]) {
       expect(backActionForScreen(s)).toBe('consume');
     }
   });

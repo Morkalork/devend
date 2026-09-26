@@ -8,13 +8,11 @@ import { useEffect } from 'react';
  */
 import { useTranslation } from 'react-i18next';
 import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
-import { X, Ticket, Award, Wind } from 'lucide-react';
+import { X, Award, Wind } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
 import { LoadoutConfig, AscensionRung } from '@/types/loadout';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
-import { AssignmentConfig } from '@/types/assignment';
-import type { AssignmentProgress } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
 import { ActiveMapMutator } from '@/types/mapMutator';
 import { ActiveMapObjective, ObjectiveProgress } from '@/types/objective';
@@ -62,11 +60,8 @@ interface TopBarDetailsPanelProps {
   // Attributes: merged modifiers + the sources that contribute to each.
   activeModifiers?: GameModifiers;
   modifierSources?: ModifierSource[];
-  // Assignment: the running contract, once-per-run Promotion, per-map mutator
-  // and optional objective (folded in from the old top-bar chips, #61).
-  activeDoor?: AssignmentConfig | null;
-  /** Live mission progress for the active assignment (completed maps + current). */
-  assignmentProgress?: AssignmentProgress | null;
+  // The run's once-per-run Promotion, per-map mutator and optional objective
+  // (folded in from the old top-bar chips, #61).
   capstone?: CapstoneConfig | null;
   mapMutator?: ActiveMapMutator | null;
   objective?: ActiveMapObjective | null;
@@ -111,8 +106,6 @@ export function TopBarDetailsPanel({
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
   activeModifiers,
   modifierSources = [],
-  activeDoor = null,
-  assignmentProgress = null,
   capstone = null,
   mapMutator = null,
   objective = null,
@@ -155,7 +148,7 @@ export function TopBarDetailsPanel({
   const objectiveOverBudget = objectiveProgress?.mode === 'limit' && objectiveProgress?.met === false;
 
   const hasBuild = (tagCounts && tagCounts.size > 0) || ascensionDepth > 0 || activeLoadouts.length > 0;
-  const hasAssignment = !!(activeDoor || capstone || mapMutator || objective);
+  const hasAssignment = !!(capstone || mapMutator || objective);
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
@@ -430,46 +423,11 @@ export function TopBarDetailsPanel({
           </div>
         </section>
 
-        {/* ── ASSIGNMENT ── contract, Promotion, map mutator, optional objective. */}
+        {/* ── ASSIGNMENT ── Promotion, map mutator, optional objective. */}
         {hasAssignment && (
           <section>
             <p style={sectionHeadStyle}>{t('topBarDetails.assignment')}</p>
             <div className="space-y-3">
-              {activeDoor && (
-                <div style={{ ...cardStyle, border: '1px solid #ffb34755' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Ticket className="w-4 h-4 flex-shrink-0" style={{ color: '#ffb347' }} />
-                    <span className="font-bold text-sm" style={{ color: '#ffb347' }}>{contentText.doorName(t, activeDoor)}</span>
-                  </div>
-                  {activeDoor.constraint && (
-                    <p className="text-xs"><span className="text-destructive font-semibold">{t('topBar.contractRisk')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.assignmentConstraint(t, activeDoor)}</span></p>
-                  )}
-                  <p className="text-xs mt-1"><span className="text-success font-semibold">{t('topBarDetails.mission')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.assignmentMission(t, activeDoor)}</span></p>
-                  {/* Live mission progress: current metric and each tier's status. */}
-                  {assignmentProgress && (
-                    <div className="mt-2 space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: '#c8ffd8', opacity: 0.7 }}>
-                          {assignmentProgress.mode === 'everyMap' ? t('topBarDetails.missionMapsPassed') : t('topBarDetails.missionProgress')}
-                        </span>
-                        <span className="font-bold tabular-nums" style={{ color: '#ffb347' }}>
-                          {assignmentProgress.current}{assignmentProgress.nextThreshold !== null ? ` / ${assignmentProgress.nextThreshold}` : ''}
-                        </span>
-                      </div>
-                      {assignmentProgress.tiers.map(tier => (
-                        <div key={tier.threshold} className="flex items-center justify-between text-[11px]" style={{ opacity: tier.reached ? 1 : 0.6 }}>
-                          <span style={{ color: tier.reached ? '#34d399' : '#c8ffd8' }}>
-                            {tier.reached ? '✓ ' : ''}<span className="tabular-nums font-bold">{tier.threshold}</span> {tier.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {activeDoor.clarify && (
-                    <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>{contentText.assignmentClarify(t, activeDoor)}</p>
-                  )}
-                </div>
-              )}
               {capstone && (
                 <div style={{ ...cardStyle, border: '1px solid #ffd54a55' }}>
                   <div className="flex items-center gap-2 mb-2">

@@ -1078,7 +1078,6 @@ export function triggerLevelComplete(
         zoneCount: (game.coloredAreas ?? []).length,
         multiLockBonus: game.multiLockBonus, multiLockBest: game.multiLockBest,
         lockedByType: { ...(game.lockedByType ?? {}) },
-        smashCount: game.breakablesSmashed ?? 0,
         breakBonus: game.breakBonus,
         breakMultiplier: game.breakMultiplier,
         chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,

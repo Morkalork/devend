@@ -31,7 +31,6 @@ const baseSave = (over: Partial<RunSaveInput> = {}): RunSaveInput => ({
   ownedUpgradeIds: [],
   lives: 3,
   continuesRemaining: 0,
-  activeDoorId: null,
   capstoneId: null,
   ascensionDepth: 0,
   draftedLoadoutIds: [],

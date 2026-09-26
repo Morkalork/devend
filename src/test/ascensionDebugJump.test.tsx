@@ -101,10 +101,9 @@ describe("starting a run at depth", () => {
     const hook = await startWith("ascension=4");
     const rules = hook.result.current.session.ascensionRules;
     expect(rules.shopEveryOtherLevel).toBe(true);  // rung 1
-    expect(rules.doorOffers).toBe(2);              // rung 2
-    expect(rules.noCapstone).toBe(true);           // rung 3
-    expect(rules.fencesWearOut).toBe(true);        // rung 4
-    expect(rules.everyMapMutated).toBe(false);     // rung 9, not yet
+    expect(rules.noCapstone).toBe(true);           // rung 2
+    expect(rules.fencesWearOut).toBe(true);        // rung 3
+    expect(rules.everyMapMutated).toBe(false);     // rung 8, not yet
   });
 
   it("reaches the deepest rungs too", async () => {

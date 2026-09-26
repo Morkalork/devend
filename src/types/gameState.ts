@@ -610,13 +610,6 @@ export interface CanvasGameState {
   /** Of lockBonus, the hours earned by superior locks (for the results split). */
   superiorLockBonus: number;
   /** Locks credited to a Colored Area this map (issue: areas were invisible). */
-  /**
-   * Breakables destroyed this map, however they went down.
-   *
-   * Counted in completeBreakable, so a slab TOPPLED off its supporter counts
-   * exactly like one a ball smashed - the player caused both.
-   */
-  breakablesSmashed: number;
   zoneLockCount: number;
   /**
    * Hours the SIMULTANEOUS-lock multiplier added, over locking the same balls

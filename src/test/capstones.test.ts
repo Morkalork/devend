@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { CapstoneConfig, CapstoneData } from "@/types/capstone";
 import { drawCapstoneOffers, capstoneDueAfter, getCapstoneTriggerLevel } from "@/lib/capstones";
-import { isAssignmentLevel, getDoorTriggerLevel } from "@/lib/doorDraft";
 import { computeGameModifiers } from "@/hooks/useActiveModifiers";
 
 // Guard the capstone pool straight from the YAML source of truth.
@@ -105,65 +104,22 @@ describe("when the Promotion is offered", () => {
   const trigger = getCapstoneTriggerLevel();
   const LADDER = 40;
 
-  it("is never due on an assignment level", () => {
-    // The entire point. An assignment level already turns in one contract and
-    // hands out the next; the Promotion has nothing to share it with.
-    let checked = 0;
-    for (let lv = 1; lv <= LADDER; lv++) {
-      if (!isAssignmentLevel(lv)) continue;
-      checked++;
-      expect(capstoneDueAfter(lv), `level ${lv} is an assignment level`).toBe(false);
-    }
-    expect(checked, "no assignment levels exist, so this proved nothing").toBeGreaterThan(0);
-  });
-
   it("is not due before the trigger level", () => {
     for (let lv = 1; lv < trigger; lv++) {
       expect(capstoneDueAfter(lv), `level ${lv} is before the trigger`).toBe(false);
     }
   });
 
-  it("is due on the first ordinary level at or past the trigger", () => {
-    let first = -1;
-    for (let lv = trigger; lv <= LADDER && first < 0; lv++) {
-      if (capstoneDueAfter(lv)) first = lv;
-    }
-    expect(first, "the draft is never offered at all").toBeGreaterThan(0);
-    expect(isAssignmentLevel(first), `level ${first} is an assignment level`).toBe(false);
-    // ...and nothing between the trigger and it was skipped for another reason.
-    for (let lv = trigger; lv < first; lv++) {
-      expect(isAssignmentLevel(lv), `level ${lv} was skipped but is ordinary`).toBe(true);
-    }
-  });
-
-  it("stays due until it is taken, so a run can never miss it", () => {
+  it("is due from the trigger on, so a run can never miss it", () => {
     // offerCapstoneIfDue stops asking once a capstone is held; until then every
-    // eligible level must still offer it, or a run that reached the trigger on
-    // an odd cadence would silently never get one.
-    const ordinary = [];
-    for (let lv = trigger; lv <= LADDER; lv++) if (!isAssignmentLevel(lv)) ordinary.push(lv);
-    expect(ordinary.length).toBeGreaterThan(0);
-    for (const lv of ordinary) expect(capstoneDueAfter(lv), `level ${lv}`).toBe(true);
+    // level at or past the trigger must still offer it.
+    for (let lv = trigger; lv <= LADDER; lv++) {
+      expect(capstoneDueAfter(lv), `level ${lv}`).toBe(true);
+    }
   });
 });
 
-describe("the authored trigger levels agree with each other", () => {
-  const assignments = yaml.load(
-    readFileSync(resolve(process.cwd(), "public/assignments.yml"), "utf8"),
-  ) as { offeredAfterLevel: number };
-
-  it("does not put the Promotion on an assignment level", () => {
-    // capstoneDueAfter would push past it anyway, but then the authored number
-    // would not be the level the draft actually appears on, and the next person
-    // to tune it would be tuning a value the game ignores.
-    const cadence = assignments.offeredAfterLevel;
-    expect(cadence, "the assignment cadence is missing").toBeGreaterThan(0);
-    expect(
-      doc.offeredAfterLevel % cadence,
-      `offeredAfterLevel ${doc.offeredAfterLevel} is a multiple of the ${cadence}-level assignment cadence`,
-    ).not.toBe(0);
-  });
-
+describe("the authored trigger level", () => {
   it("offers it after the first boss, not before", () => {
     // A run-defining perk drafted before the player has met a boss is drafted
     // blind: the build it is meant to crown does not exist yet.

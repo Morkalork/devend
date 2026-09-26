@@ -37,15 +37,10 @@ import { performTotalReset } from '@/lib/totalReset';
 import { loadAbilities, getAllAbilities, rollCappedAbilityReward } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
-import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
-import { scaleOffersForBlock, assignmentsPlayableInBlock } from '@/lib/assignmentScaling';
-import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
-import { drawRandom } from '@/lib/yamlCatalogue';
 import { isOnboardingMap, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
 import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
-import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
-import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
+import { UpgradeConfig } from '@/types/upgrade';
 import { loadCapstones, getCapstones, capstoneDueAfter, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
@@ -211,29 +206,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // don't burn it), and rides in the run save.
   const [carryFreeShopItems, setCarryFreeShopItems] = useState(0);
 
-  // Issue #49: how the CURRENT contract is going, accumulated across its
-  // 5-level block (a ref: bumped inside synchronous score/lives flows) and
-  // snapshotted into lastContractSummary when the next assignment draft opens,
-  // so the Assignment view can show how the finished contract went.
-  const blockStatsRef = useRef({ overtime: 0, maps: 0, locks: 0, livesLost: 0 });
-  const [lastContractSummary, setLastContractSummary] = useState<
-    {
-      doorId: string; doorName: string; overtime: number; maps: number; locks: number; livesLost: number;
-      // Issue #60: how the mission resolved. `rewardLabel` is the reached tier's
-      // label (null = mission missed); `missionText` recaps the task.
-      missionText?: string; rewardLabel?: string | null;
-    } | null
-  >(null);
-  // Issue #60: per-map results captured across the active assignment's block,
-  // for multi-map mission evaluation (the live HUD reads completed maps + the
-  // in-progress map; the block-end reward grant reads completed maps only).
-  const [blockResults, setBlockResults] = useState<AssignmentMapResult[]>([]);
-  // Issue #60: run-scoped modifier bundles granted by completed assignment
-  // rewards (scope: 'run'). Merged into the run's modifiers like a capstone.
-  const [assignmentRewardMods, setAssignmentRewardMods] = useState<Record<string, number>>({});
-  // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
-  // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
-  const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
   /**
    * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
    * run's depth, plus whether the loadout draft still follows once picked.
@@ -246,20 +218,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     /** What the previous run owned, so the screen can badge the continuation. */
     lastRunUpgradeIds: string[];
   } | null>(null);
-  // Issue #63: when the "Assignment Complete" summary is showing, whether its
-  // Continue should route into the run finale (ascension) rather than the next
-  // block's drafts. Set for the final block; cleared for mid-run boundaries.
-
-  // Assignments (doors): every 5th completed level replaces the shop with a
-  // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
-  // `activeDoor` is the picked contract and lives until the NEXT assignment
-  // replaces it (all 5 maps + their shops, so shop-facing rewards like extra
-  // slots pay out across the whole block). Cleared on ascend and run resets.
-  const [doorOffers, setDoorOffers] = useState<AssignmentConfig[]>([]);
-  const [activeDoor, setActiveDoor] = useState<AssignmentConfig | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
-  // at the first assignment at/past the trigger level. Permanent for the run
+  // at the first map end at/past the trigger level. Permanent for the run
   // (survives ascension); cleared only on run resets.
   const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
   const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
@@ -503,7 +464,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   /**
    * Every ladder rung in force at the current depth, folded into one rule set.
-   * Read by the shop, the assignment draft, the Promotion, fence durability,
+   * Read by the shop, the Promotion, fence durability,
    * the mutator roll and the forced curse, so a rung is authored once in
    * loadouts.yml and applies everywhere without a second switch statement.
    */
@@ -678,22 +639,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendCapture > 0) {
       bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
     }
-    // Accepted assignment: its constraint (curse modifiers + the no-Push flag)
-    // rides along for the whole block (#60). Skipped assignments (activeDoor
-    // null) add nothing.
-    if (activeDoor?.constraint) {
-      if (activeDoor.constraint.modifiers) {
-        bonuses = mergeBonuses(bonuses, activeDoor.constraint.modifiers as Partial<Record<keyof GameModifiers, number>>);
-      }
-      if (activeDoor.constraint.disablePushYourLuck) {
-        bonuses = mergeBonuses(bonuses, { disablePushYourLuck: 1 });
-      }
-    }
-    // Assignment rewards granted for the rest of the run (#60), folded like a
-    // capstone bundle.
-    if (Object.keys(assignmentRewardMods).length > 0) {
-      bonuses = mergeBonuses(bonuses, assignmentRewardMods as Partial<Record<keyof GameModifiers, number>>);
-    }
     // Warm Cache loadout: fence growth snowballs with each map cleared this run.
     // Translate the per-cleared-map coefficient into a fenceGenerationSpeedMultiplier
     // boost, capped so a deep run can't run away with it.
@@ -704,7 +649,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       });
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, assignmentRewardMods, runLevelsCompleted]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -770,14 +715,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'tagSet', id: s.tag, name: s.name, modifiers: s.modifiers });
     }
 
-    if (activeDoor?.constraint?.modifiers) {
-      sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.constraint.modifiers });
-    }
-
-    if (Object.keys(assignmentRewardMods).length > 0) {
-      sources.push({ kind: 'door', id: 'assignment-reward', name: 'Assignment reward', modifiers: assignmentRewardMods });
-    }
-
     if (capstone) {
       sources.push({ kind: 'capstone', id: capstone.id, name: capstone.name, modifiers: capstone.modifiers });
     }
@@ -792,7 +729,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, assignmentRewardMods, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -859,13 +796,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(0);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
-    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
-    setLastContractSummary(null);
-    setBlockResults([]);
-    setAssignmentRewardMods({});
-    setPendingTierDraft(null);
     setPendingTenure(null);
-    setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
@@ -911,10 +842,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendFenceSpeed,
     carrySpendCapture,
     carryFreeShopItems,
-    blockStats: blockStatsRef.current,
-    blockResults,
-    assignmentRewardModifiers: assignmentRewardMods,
-    activeDoorId: activeDoor?.id ?? null,
     capstoneId: capstone?.id ?? null,
     ascensionDepth,
     draftedLoadoutIds,
@@ -942,8 +869,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * boundary catches a crash.
    *
    * Per-map writes are the right granularity for the map, but they leave
-   * everything BETWEEN maps unsaved: upgrades bought, a draft taken, an
-   * assignment accepted. On a phone that window is very reachable - clear a
+   * everything BETWEEN maps unsaved: upgrades bought, a draft taken. On a phone that window is very reachable - clear a
    * map, open the shop, get distracted, the OS reclaims the tab - and you come
    * back to the map's start with the purchases gone, having paid for them.
    */
@@ -1042,8 +968,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         // catalogue standing rather than a board that quietly grows no bugs.
         loadBugs(),
         loadFeatures(),
-        // Door pool (doors.yml). On failure assignment levels fall back to the shop.
-        loadDoors(),
         // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
         loadCapstones(),
         // Map mutator pool (mapMutators.yml). Failure just plays maps unmutated.
@@ -1159,7 +1083,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         // catalogue standing rather than a board that quietly grows no bugs.
         loadBugs(),
         loadFeatures(),
-        loadDoors(),
         loadCapstones(),
         loadMapMutators(),
         loadMapObjectives(),
@@ -1198,7 +1121,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
    * fresh start), then restores every run-scoped field from the save and drops
-   * the player at the start of the map they were on. Doors/capstones are
+   * the player at the start of the map they were on. Capstones are
    * re-hydrated from the loaded pools by id; the exact level variants are
    * restored via restoreSequence so the resumed maps match what was saved.
    */
@@ -1245,15 +1168,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
-    blockStatsRef.current = save.blockStats ?? { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
-    setBlockResults(save.blockResults ?? []);
-    setAssignmentRewardMods(save.assignmentRewardModifiers ?? {});
-    setPendingTierDraft(null);
-    setLastContractSummary(null);
     spentThisShopVisitRef.current = 0;
     setAscensionDepth(save.ascensionDepth);
     setDraftedLoadoutIds(save.draftedLoadoutIds);
-    setActiveDoor(save.activeDoorId ? getDoors().find(d => d.id === save.activeDoorId) ?? null : null);
     setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
 
     // Resuming mid-run: no intro assemble, no leftover overlays/offers.
@@ -1306,7 +1223,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         // catalogue standing rather than a board that quietly grows no bugs.
         loadBugs(),
         loadFeatures(),
-        loadDoors(),
         loadCapstones(),
         loadMapMutators(),
         loadMapObjectives(),
@@ -1485,11 +1401,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const livesLost = currentLives - newLives;
     if (livesLost > 0) {
       recordLivesLost(livesLost);
-      // Contract bookkeeping (#49): lives lost while a contract runs.
-      if (activeDoor) blockStatsRef.current.livesLost += livesLost;
     }
     setCurrentLives(newLives);
-  }, [currentLives, recordLivesLost, activeDoor]);
+  }, [currentLives, recordLivesLost]);
 
   // A smashed chest granted one charge of an ability (issue #38): bank it
   // run-wide so it persists into every later map this run.
@@ -1516,7 +1430,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // A completion can only be delivered once per map: a stale second pipeline
     // (e.g. a leftover dissolve timeout firing after the overlay was already
     // continued) would double-score the level and resurrect the overlay over
-    // whatever screen came next - re-running the assignment phase and showing
+    // whatever screen came next - re-running the shop phase and showing
     // a second Promotion draft. The ref resets with each new run.
     if (lastDeliveredCompletionRef.current === currentLevelNum) return;
     lastDeliveredCompletionRef.current = currentLevelNum;
@@ -1639,37 +1553,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       daily: dailyKeyRef.current !== null,
     });
 
-    // Contract bookkeeping (#49): what this contract's maps have produced.
-    if (activeDoor) {
-      blockStatsRef.current.overtime += levelOvertime;
-      blockStatsRef.current.maps += 1;
-      blockStatsRef.current.locks += scoreData.lockedBallsCount ?? 0;
-      // Mission bookkeeping (#60): capture this map's metrics for the multi-map
-      // condition. `wonByAllLocked` is the auto-win from trapping every ball.
-      const mapResult: AssignmentMapResult = {
-        locks: scoreData.lockedBallsCount ?? 0,
-        superiorLocks: scoreData.superiorLockCount ?? 0,
-        cutsDelta: scoreData.cutCount - scoreData.expectedCuts,
-        clearSeconds: scoreData.clearTimeSeconds ?? 9999,
-        ballCount: scoreData.wonByAllLocked ? (scoreData.lockedBallsCount ?? 0) : 0,
-        allBallsLocked: scoreData.wonByAllLocked ?? false,
-        lockedByType: scoreData.lockedByType ?? {},
-        smashes: scoreData.smashCount ?? 0,
-        // Lives lost on THIS map: the level-start count against what is left.
-        // blockStatsRef tracks the same thing for the whole block, which cannot
-        // answer a per-map condition.
-        livesLost: Math.max(0, livesAtLevelStart - currentLives),
-        // Filled in by handlePurchaseUpgrade if the player buys anything in the
-        // store visit that follows. Zero here is the honest starting point: no
-        // shop has opened yet.
-        spent: 0,
-        // A push taken and banked. A push that FAILED still reports here (the
-        // map ends through handleGameOverFn's pushing branch), which is exactly
-        // why the bonus alone is not enough to call it a win.
-        pushWon: !scoreData.pushFailed && (scoreData.pushBonus ?? 0) > 0,
-      };
-      setBlockResults(prev => [...prev, mapResult]);
-    }
 
     // Extend this run's trajectory, and fire the personal-best banner once, the
     // moment the total passes the all-time best mid-run.
@@ -1698,7 +1581,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLevelPace(pace);
 
     // Functional, not `totalScore + levelOvertime`. Every other writer of this
-    // state already is (a purchase, an assignment's overtime reward), and a
+    // state already is (a purchase), and a
     // plain read-then-write here would silently discard anything that landed in
     // the same React batch. The wallet is the one number a player counts.
     setTotalScore(prev => prev + levelOvertime);
@@ -1713,150 +1596,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore, activeDoor]);
-
-  /**
-   * Enter the assignment draft (1-of-3, or skip). If the pool failed to load,
-   * fall back to the regular shop so the level exit never dead-ends.
-   */
-  const proceedToAssignment = useCallback(() => {
-    const doorPool = getDoors();
-    if (doorPool.length > 0) {
-      // Seeded runs key the roll by the level it lands on, so every player on
-      // the daily seed is offered the same assignments.
-      // Reduced Headcount (ascension rung 2) narrows the contract draft. No
-      // upgrade sells a third door, so this rung cannot be bought back.
-      const offerCount = Math.max(1, Math.min(ASSIGNMENT_OFFER_COUNT, ascRules.doorOffers ?? ASSIGNMENT_OFFER_COUNT));
-      // Drop anything this block cannot carry BEFORE drawing, not after: a
-      // ball-type bounty whose named type never spawns over these five maps is
-      // a dead mission, and removing it post-draw would leave a short draft.
-      const playable = assignmentsPlayableInBlock(doorPool, levels, currentLevelIndex + 1);
-      const drawn = drawDoorOffers(playable.length > 0 ? playable : doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`));
-      // Size the lock targets to the block they are actually set over. Authored
-      // as absolute numbers they were mostly impossible: lock_quota wanted 20
-      // locks from blocks that put 8 to 15 balls on the board, and taking the
-      // constraint for five maps to chase a reward that could never be reached
-      // is worse than a hard mission, it is a dead one.
-      setDoorOffers(scaleOffersForBlock(drawn, levels, currentLevelIndex + 1));
-      nav.goToDoorDraft();
-      return;
-    }
-    nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, ascRules.doorOffers, levels]);
-
-  /**
-   * After the finished assignment's reward is granted, route into the next
-   * assignment draft.
-   *
-   * The Promotion used to be spliced in here, which is why finishing level 10
-   * handed the player five reward screens in a row. It now rides an ORDINARY
-   * level instead (see capstoneDueAfter), so the assignment phase is the
-   * contract and nothing else.
-   */
-  const routeAfterAssignmentReward = proceedToAssignment;
-
-  /**
-   * Grant the just-finished assignment's reward (issue #60): the reward of the
-   * highest mission tier reached over the block (completed maps only). Lives and
-   * overtime are banked immediately; run-scoped modifier bundles fold in like a
-   * capstone; a tier-draft reward is queued in `pendingTierDraft`, which is the
-   * ONLY thing that decides whether the summary's Continue leads to the 1-of-3
-   * upgrade pick. (It used to also return a `tierDraftOwed` flag, described as
-   * being for the caller - both callers ignored it, so it was a second reading
-   * of the same fact that could only ever go stale.) Also writes the report
-   * card the summary and the next draft both read.
-   */
-  const grantAssignmentReward = useCallback((): void => {
-    if (!activeDoor) {
-      setLastContractSummary(null);
-      return;
-    }
-    const outcome = assignmentRewardForBlock(activeDoor, blockResults);
-    let rewardLabel: string | null = null;
-    if (outcome) {
-      const r = outcome.reward;
-      rewardLabel = activeDoor.mission.tiers[outcome.tierIndex]?.label ?? null;
-      switch (r.type) {
-        case 'lives':
-          setCurrentLives(prev => prev + r.count);
-          break;
-        case 'overtime':
-          setTotalScore(prev => prev + r.hours);
-          break;
-        case 'modifiers':
-          // "Enhance an owned upgrade" rewards only pay when that upgrade is owned.
-          if (!r.requiresUpgradeId || ownedUpgradeIds.includes(r.requiresUpgradeId)) {
-            setAssignmentRewardMods(prev => ({
-              ...mergeBonuses(prev, r.modifiers as Partial<Record<keyof GameModifiers, number>>),
-            }) as Record<string, number>);
-          } else {
-            rewardLabel = null; // gate not met: nothing granted
-          }
-          break;
-        case 'tierDraft': {
-          const pool = eligibleTierUpgrades(upgrades, r.tier, ownedUpgradeIds);
-          const offers = drawRandom(pool, 3, getRunRng(`tierDraft:${currentLevelIndex + 1}`));
-          if (offers.length > 0) {
-            setPendingTierDraft({ tier: r.tier, offers });
-          } else {
-            rewardLabel = null; // no eligible upgrades to grant
-          }
-          break;
-        }
-      }
-    }
-    setLastContractSummary({
-      doorId: activeDoor.id,
-      doorName: activeDoor.name,
-      ...blockStatsRef.current,
-      missionText: activeDoor.mission.text,
-      rewardLabel,
-    });
-  }, [activeDoor, blockResults, ownedUpgradeIds, upgrades, currentLevelIndex]);
-
-  /**
-   * Assignment level (every 5th): no shop. Grant the finished assignment's
-   * reward, then (if a tier draft is owed) show the 1-of-3 upgrade pick, else
-   * route into the capstone or assignment draft.
-   */
-  const beginAssignmentPhase = useCallback(() => {
-    setPendingLevelScore(null);
-    const hadAssignment = !!activeDoor;
-    grantAssignmentReward();
-    if (hadAssignment) {
-      // #63: recap how the finished mission went on its own screen before the
-      // next draft. Continuing from it routes into the tier pick / next draft.
-      nav.goToAssignmentSummary();
-      return;
-    }
-    // No assignment this block (skipped, or the first block): the summary would
-    // be empty, so route straight into the next draft.
-    routeAfterAssignmentReward();
-  }, [activeDoor, grantAssignmentReward, routeAfterAssignmentReward, nav.goToAssignmentSummary]);
-
-  /**
-   * Route out of the "Assignment Complete" summary: on into the
-   * capstone/assignment draft. (#63)
-   *
-   * It used to fork here, with a `summaryIsFinal` flag sending the final
-   * block's summary to the run finale instead. The final level no longer opens
-   * a summary at all - it goes straight to the finale - so the flag could only
-   * ever be false and the branch was unreachable. Removed rather than left
-   * looking like a live route.
-   */
-  const routeAfterSummary = routeAfterAssignmentReward;
-
-  /**
-   * Continue button on the assignment summary: a tier-draft reward is picked
-   * first (summary-first, then pick), otherwise straight on to the next phase.
-   */
-  const handleContinueFromSummary = useCallback(() => {
-    if (pendingTierDraft) {
-      nav.goToTierDraft();
-      return;
-    }
-    routeAfterSummary();
-  }, [pendingTierDraft, routeAfterSummary, nav.goToTierDraft]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1892,7 +1632,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Pulling them out satisfies the rule with no extra re-creation, and CI
   // lints with --max-warnings, so a new warning is a broken build rather than
   // a note.
-  const { goToUpgradeShop, goToCapstoneDraft, goToTierDraft, goToGame } = nav;
+  const { goToUpgradeShop, goToCapstoneDraft, goToGame } = nav;
 
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
@@ -1906,8 +1646,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
     const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
     // Hiring Freeze (ascension rung 1): on the levels the store skips there is
-    // nothing to show, so go straight on. Assignment levels never reach here,
-    // so a contract can never be swallowed by the cadence.
+    // nothing to show, so go straight on.
     if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
       finishShopPhase();
       return;
@@ -1944,11 +1683,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * The Promotion, on a level of its own.
    *
    * Offered after an ORDINARY level and before that level's shop, rather than
-   * spliced into the assignment phase where it used to arrive fourth in a queue
-   * of five reward screens. Returns true when it took the wheel.
+   * spliced into the (since removed) assignment phase, where it used to arrive
+   * fourth in a queue of five reward screens. Returns true when it took the wheel.
    */
   const offerCapstoneIfDue = useCallback((): boolean => {
-    // Promotion Freeze (ascension rung 3): no capstone is awarded at all.
+    // Promotion Freeze (ascension rung 2): no capstone is awarded at all.
     if (ascRules.noCapstone || capstone) return false;
     const pool = getCapstones();
     if (pool.length === 0) return false;
@@ -1969,27 +1708,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: grant the final block's assignment reward, then
-      // go STRAIGHT to the finale. The pending level score is kept so
-      // handleRetire can put it on the result screen.
-      //
-      // No contract recap in between. Level 35 is a multiple of the assignment
-      // cadence, so beating the game used to hand the player a report card and
-      // then a 1-of-3 upgrade pick before anything congratulated them - two
-      // admin screens between the last ball and the win.
-      //
-      // The rewards that can still matter are granted here: overtime and lives
-      // count toward a retiring player's final score. The 1-of-3 UPGRADE pick
-      // is not offered, because there is no longer anywhere for it to go - an
-      // ascension resets upgrades, and retiring ends the run.
-      grantAssignmentReward();
+      // Beat the final level: go STRAIGHT to the finale. The pending level
+      // score is kept so handleRetire can put it on the result screen.
       nav.goToAscensionDraft();
-    } else if (isAssignmentLevel(currentLevelIndex + 1)) {
-      beginAssignmentPhase();
     } else if (!offerCapstoneIfDue()) {
       proceedToShop();
     }
-  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, activeDoor, grantAssignmentReward, offerCapstoneIfDue, proceedToShop, nav.goToAssignmentSummary, nav.goToAscensionDraft]);
+  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, nav.goToAscensionDraft]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -2000,7 +1725,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * Ascend: start a FRESH run at depth + 1, keeping only what ascending is for.
    *
    * It used to carry the whole run across - score, every upgrade owned, the
-   * capstone, the assignment modifiers - which made the loop pointless: you
+   * capstone - which made the loop pointless: you
    * re-entered level 1 with a build assembled over thirty-five maps, and the
    * ladder's rung was the only thing that had changed. The harder rules landed
    * on a player who could already buy everything back on the first shop, so
@@ -2015,8 +1740,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    *   - runLevelsCompleted, the certificate-hours accumulator, so meta progress
    *     keeps building across loops and banks when the run finally ends.
    *
-   * Upgrades, overtime, the Promotion, assignment rewards and the mission block
-   * all go. Lives and continues refill to a run's starting values, because that
+   * Upgrades, overtime and the Promotion all go. Lives and continues refill to a run's starting values, because that
    * is what starting a run means.
    */
   const handleAscend = useCallback((loadoutId: string) => {
@@ -2101,13 +1825,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
     setTotalScore(prev => prev - price);
-    // Charge the spend to the map this visit followed, so a `noSpend` mission
-    // can ask a per-map question about something that happens between maps.
-    // Only while a contract is running; outside one there is nothing to record.
-    if (activeDoor && price > 0) {
-      setBlockResults(prev => prev.length === 0 ? prev : prev.map((r, i) =>
-        i === prev.length - 1 ? { ...r, spent: (r.spent ?? 0) + price } : r));
-    }
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     // Budget Cycle: purchases land as a synchronous burst right before the
     // shop-exit handler, so the visit's spend accumulates in a ref.
@@ -2127,7 +1844,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
-  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex, activeDoor]);
+  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex]);
 
   /**
    * Buy an ability retainer from the store's ability slot.
@@ -2140,17 +1857,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const handlePurchaseAbility = useCallback((abilityId: string, price: number) => {
     setTotalScore(prev => prev - price);
-    if (activeDoor && price > 0) {
-      setBlockResults(prev => prev.length === 0 ? prev : prev.map((r, i) =>
-        i === prev.length - 1 ? { ...r, spent: (r.spent ?? 0) + price } : r));
-    }
     spentThisShopVisitRef.current += price;
     setRetainedAbilityIds(prev => prev.includes(abilityId) ? prev : [...prev, abilityId]);
     // The first charge arrives now rather than at the next map start, so the
     // purchase is visible in the bar the moment the shop closes.
     setAbilityCharges(prev => ({ ...prev, [abilityId]: Math.max(1, prev[abilityId] ?? 0) }));
     everHeldAbilityIdsRef.current = heldAbilityIds({ [abilityId]: 1 }, everHeldAbilityIdsRef.current);
-  }, [activeDoor]);
+  }, []);
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
@@ -2173,7 +1886,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     finishShopPhase();
   }, [currentLevelIndex, activeModifiers, finishShopPhase, storeClosed, carryFreeShopItems]);
 
-  /** Capstone draft pick: permanent for the run, then on to the assignment. */
+  /** Capstone draft pick: permanent for the run, then on to the shop. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
     analytics.capstoneSelected({ capstoneId: pick.id });
     setCapstone(pick);
@@ -2182,46 +1895,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // the player decides what to buy.
     proceedToShop();
   }, [proceedToShop]);
-
-  /**
-   * Assignment pick (mandatory): the chosen contract replaces the previous
-   * one and runs until the next assignment swaps it out.
-   */
-  const handleSelectDoor = useCallback((door: AssignmentConfig) => {
-    analytics.doorSelected({ doorId: door.id, level: currentLevelIndex + 1 });
-    setActiveDoor(door);
-    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 }; // new contract, fresh card (#49)
-    setBlockResults([]); // new mission block (#60)
-    advanceToNextLevel();
-    nav.goToGame();
-  }, [advanceToNextLevel, nav.goToGame, currentLevelIndex]);
-
-  /**
-   * Skip the assignment (issue #60): take on no constraint and no mission for
-   * the next block. Neutral by design, which is what makes accepting a real
-   * choice. Clears any active assignment and its block accumulators.
-   */
-  const handleSkipAssignment = useCallback(() => {
-    analytics.doorSelected({ doorId: 'skip', level: currentLevelIndex + 1 });
-    setActiveDoor(null);
-    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
-    setBlockResults([]);
-    advanceToNextLevel();
-    nav.goToGame();
-  }, [advanceToNextLevel, nav.goToGame, currentLevelIndex]);
-
-  /**
-   * Tier-draft reward pick (issue #60): grant the chosen upgrade, then continue
-   * to the capstone or assignment draft.
-   */
-  const handleSelectTierUpgrade = useCallback((upgradeId: string) => {
-    setOwnedUpgradeIds(prev => (prev.includes(upgradeId) ? prev : [...prev, upgradeId]));
-    const upgrade = upgrades.find(u => u.id === upgradeId);
-    const extraLives = upgrade?.modifiers?.extraLives;
-    if (typeof extraLives === 'number' && extraLives !== 0) setCurrentLives(prev => prev + extraLives);
-    setPendingTierDraft(null);
-    routeAfterSummary();
-  }, [upgrades, routeAfterSummary]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -2471,29 +2144,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     tagCounts,
     tagSetThreshold,
     activeTagSets,
-    // Doors (branching map choice)
-    doorOffers,
-    activeDoor,
-    // Mission block state (#60): per-map results for the live progress readout,
-    // and the owed tier-draft reward (1-of-3 upgrade pick).
-    blockResults,
-    pendingTierDraft,
-    handleSkipAssignment,
-    handleSelectTierUpgrade,
-    // How the just-finished contract went (#49): block stats + reward, used by
-    // both the assignment draft report and the #63 summary screen.
-    lastContractSummary,
-    // Assignment-complete summary (#63): Continue routes on to the tier pick /
-    // next draft / finale.
-    handleContinueFromSummary,
-    // The map the door draft previews (null past the final level).
+    // The map after this one (null past the final level).
     nextLevel: levels[currentLevelIndex + 1] ?? null,
     // What the shop's condition chips are judged against.
     nextRunContext,
     // The map being played, for anything asking whether a conditional upgrade
     // is live right now rather than on the next map.
     runContext,
-    handleSelectDoor,
     // Capstone ("Promotion")
     capstoneOffers,
     capstone,

@@ -1005,7 +1005,6 @@ export function GameCanvas({
     mapRotation: 0 as MapRotation,
     superiorLockCount: 0,
     superiorLockBonus: 0,
-    breakablesSmashed: 0,
     zoneLockCount: 0,
     zoneLockBonus: 0,
     multiLockBonus: 0,
@@ -1490,7 +1489,6 @@ export function GameCanvas({
       game.magnetMarker = undefined;
       setAbilityIconFx(null);
       setBallCount(game.balls.length || 1);
-      game.breakablesSmashed = 0;
       game.wallCount = 0;
       game.completedCuts = 0;
       setCompletedCuts(0);

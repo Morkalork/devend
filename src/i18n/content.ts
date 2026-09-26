@@ -59,27 +59,6 @@ export const contentText = {
   capstoneClarify: (t: TFunction, c: WithId & { clarify?: string }) =>
     field(t, 'capstones', c.id, 'clarify', c.clarify),
 
-  /** Assignment (assignments.yml, #60): the multi-map mission gate. Keeps the
-   *  `doorName` accessor since the session threads it as the internal door. */
-  doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'assignments', d.id, 'name', d.name),
-  assignmentConstraint: (t: TFunction, a: WithId & { constraint?: { text?: string } }) =>
-    field(t, 'assignments', a.id, 'constraint', a.constraint?.text),
-  /**
-   * The mission line. A ball-type bounty's text carries a `{{ballType}}`
-   * placeholder, because the type is not known until the block is drawn - the
-   * assignment is authored as "seal a {{ballType}} ball" and the draft names
-   * it. Interpolating here rather than at each call site keeps every screen
-   * that shows a mission (draft, top bar, summary) reading the same string.
-   */
-  assignmentMission: (
-    t: TFunction,
-    a: WithId & { mission?: { text?: string; track?: { ballType?: string } } },
-  ) => field(t, 'assignments', a.id, 'mission', a.mission?.text, {
-    ballType: contentText.ballName(t, a.mission?.track?.ballType),
-  }),
-  assignmentClarify: (t: TFunction, a: WithId & { clarify?: string }) =>
-    field(t, 'assignments', a.id, 'clarify', a.clarify),
-
   /**
    * Ball type (balls.yml), by id. Falls back to the authored English name, and
    * to the id itself for a type the catalogue does not know - a mission that

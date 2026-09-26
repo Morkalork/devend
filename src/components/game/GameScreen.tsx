@@ -58,8 +58,6 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig, AscensionRung } from '@/types/loadout';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
-import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
-import { evaluateAssignment } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
@@ -165,10 +163,7 @@ interface GameScreenProps {
   ascensionDepth?: number;
   /** Best score per map id, for the Benchmarking highscore bar (#45). */
   mapHighscores?: Record<string, number>;
-  /** Active assignment + Promotion, for the top bar's contract chips (#49). */
-  activeDoor?: AssignmentConfig | null;
-  /** Per-map mission results this block (#60), for live progress in the Specs panel. */
-  blockResults?: AssignmentMapResult[];
+  /** The run's Promotion, for the Specs panel. */
   capstone?: CapstoneConfig | null;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
@@ -177,9 +172,9 @@ interface GameScreenProps {
   ascensionLadder?: AscensionRung[];
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
-  /** Constant Change (ascension rung 9): every eligible map rolls a mutator. */
+  /** Constant Change (ascension rung 8): every eligible map rolls a mutator. */
   everyMapMutated?: boolean;
-  /** Use It Or Lose It (ascension rung 7): multiplies pickup token lifetime. */
+  /** Use It Or Lose It (ascension rung 6): multiplies pickup token lifetime. */
   pickupLifetimeFactor?: number;
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
@@ -250,8 +245,6 @@ export function GameScreen({
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
   mapHighscores,
-  activeDoor = null,
-  blockResults = [],
   capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
@@ -564,21 +557,6 @@ export function GameScreen({
     [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts, gameState.bossDefeated],
   );
 
-  // Live assignment mission progress (issue #60): completed maps this block plus
-  // a provisional snapshot of the in-progress map, so the Specs panel tracks the
-  // multi-map task as it plays.
-  const assignmentProgress = useMemo(() => {
-    if (!activeDoor) return null;
-    const liveMap: AssignmentMapResult = {
-      locks: gameState.lockedBalls,
-      superiorLocks: gameState.superiorLocks,
-      cutsDelta: gameState.cutsUsed - level.expectedCuts,
-      clearSeconds: gameState.activeSeconds,
-      ballCount: gameState.ballCount,
-      allBallsLocked: gameState.ballCount > 0 && gameState.lockedBalls >= gameState.ballCount,
-    };
-    return evaluateAssignment(activeDoor, [...blockResults, liveMap]);
-  }, [activeDoor, blockResults, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, gameState.ballCount, level.expectedCuts]);
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -1187,7 +1165,7 @@ export function GameScreen({
             objective={mapObjective}
             pickupConfig={pickupLifetimeFactor === 1 ? config.pickups : {
               ...config.pickups,
-              // Use It Or Lose It (ascension rung 7). Floor at 1s so a deep
+              // Use It Or Lose It (ascension rung 6). Floor at 1s so a deep
               // ladder can never round a token's life down to zero, which
               // would delete it on the frame it spawned.
               lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
@@ -1688,8 +1666,6 @@ export function GameScreen({
         tagSetThreshold={tagSetThreshold}
         activeModifiers={activeModifiers}
         modifierSources={modifierSources}
-        activeDoor={activeDoor}
-        assignmentProgress={assignmentProgress}
         capstone={capstone}
         mapMutator={mapMutator}
         objective={mapObjective}

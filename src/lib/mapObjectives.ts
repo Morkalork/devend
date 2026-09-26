@@ -2,7 +2,7 @@
  * mapObjectives — per-map optional objectives (issue #55).
  *
  * A module-level catalogue loaded from public/objectives.yml (mirrors
- * doorDraft.ts / mapMutators.ts), a deterministic 0-or-1 per-map selector, and
+ * mapMutators.ts), a deterministic 0-or-1 per-map selector, and
  * a PURE evaluator over a snapshot of existing per-map counters. Graceful
  * fallback: a missing/broken file leaves an empty pool, so maps play without an
  * objective.

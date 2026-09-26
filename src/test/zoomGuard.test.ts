@@ -91,8 +91,7 @@ describe("which screens may zoom", () => {
     // and make.
     const played: GameScreen[] = [
       "welcome", "tutorial", "game", "upgradeShop", "result", "runDraft",
-      "doorDraft", "tierDraft", "capstoneDraft", "ascensionDraft",
-      "assignmentSummary", "tenureDraft", "certificateStore", "loadouts",
+      "capstoneDraft", "ascensionDraft", "tenureDraft", "certificateStore", "loadouts",
       "options", "achievements", "hallOfFame",
     ];
     for (const s of played) expect(zoomAllowedOn(s), s).toBe(false);

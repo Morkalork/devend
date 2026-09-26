@@ -8,9 +8,9 @@
  * exists.
  *
  * Resume granularity is one map: the run resumes at the START of the map the
- * player was on, with score, upgrades, lives, carries, door/capstone and
- * ascension state intact. Doors/capstones are stored by id and re-hydrated from
- * the loaded pools; the level sequence is stored by id so the resumed variants
+ * player was on, with score, upgrades, lives, carries, capstone and
+ * ascension state intact. The capstone is stored by id and re-hydrated from
+ * the loaded pool; the level sequence is stored by id so the resumed variants
  * match the ones the player was playing (the sequence is otherwise re-randomized
  * every run).
  *
@@ -18,7 +18,6 @@
  * picker) or the in-run Continue revive (a per-run resource spent on death).
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { AssignmentMapResult } from '@/types/assignment';
 
 const RUN_SAVE_KEY = 'jezzball_run_v1';
 const RUN_SAVE_VERSION = 1;
@@ -47,17 +46,9 @@ export interface RunSave {
   // Free-store-item pickups awaiting the next OPEN store (issue #48).
   // Optional: saves from before the feature default to 0.
   carryFreeShopItems?: number;
-  // Running contract report card (#49): what the active door's block has
-  // produced so far. Optional; missing = zeros.
-  blockStats?: { overtime: number; maps: number; locks: number; livesLost: number };
-  // Per-map mission results across the active assignment's block (#60), for
-  // resuming multi-map mission progress. Optional; missing = empty.
-  blockResults?: AssignmentMapResult[];
-  // Assignment reward modifiers granted for the rest of the run (#60), re-applied
-  // on resume. Optional; missing = none.
-  assignmentRewardModifiers?: Record<string, number>;
-  // Run-defining picks (re-hydrated from the loaded pools by id).
-  activeDoorId: string | null;
+  // Run-defining picks (re-hydrated from the loaded pools by id). Saves from
+  // before assignments were cut also carry blockStats, blockResults,
+  // assignmentRewardModifiers and activeDoorId; they are ignored on load.
   capstoneId: string | null;
   ascensionDepth: number;
   draftedLoadoutIds: string[];

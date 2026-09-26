@@ -42,7 +42,6 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     // forced progression), so we just swallow the gesture to prevent an exit.
     case 'upgradeShop':
     case 'tenureDraft':
-    case 'doorDraft':
     case 'capstoneDraft':
     case 'ascensionDraft':
       return 'consume';

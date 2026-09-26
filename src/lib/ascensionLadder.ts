@@ -1,5 +1,5 @@
 /**
- * The Ascension ladder: ten named rungs, applied cumulatively.
+ * The Ascension ladder: nine named rungs, applied cumulatively.
  *
  * Before this, every ascension depth was the same game with the balls 8% faster
  * (speedRampPerDepth ^ depth) plus one blanket rule (completed fences wear out)
@@ -8,9 +8,8 @@
  * like. That is a slider, not a ladder.
  *
  * Each rung now names one specific change, and the rungs below it stay in
- * force, so a depth is describable: at 4 the shop is every other level, the
- * assignment offers two doors, there is no Promotion, and completed fences wear
- * out. The player can recite it.
+ * force, so a depth is describable: at 3 the shop is every other level, there
+ * is no Promotion, and completed fences wear out. The player can recite it.
  *
  * RULES, NOT NERFS. Most rungs change a rule rather than subtracting from a
  * stat, and that is deliberate. A rung that does `fenceDurabilityBonus: -1`
@@ -18,8 +17,7 @@
  * add ascension fence durability: buying it cancels the rung exactly, so the
  * rung turns one upgrade into a mandatory tax and leaves it useless everywhere
  * else. The test is not "does anything counter this" but "is the counter exact
- * and cheap". Nothing in the shop sells you a third assignment door, so
- * `doorOffers` cannot be bought back at any price.
+ * and cheap".
  *
  * Two rungs deliberately DO collide, because their counter is a real decision
  * rather than a purchase: the overtime cap against the Stock Options capstone
@@ -34,12 +32,11 @@ import type { AscensionRung, AscensionRules } from "@/types/loadout";
 
 /** How many rungs the ladder has. Depths past this repeat the last rung's
  *  state; the ladder is the named part, not the ceiling. */
-export const LADDER_LENGTH = 10;
+export const LADDER_LENGTH = 9;
 
 /** Nothing applied: the normal, unascended game. */
 export const NO_ASCENSION_RULES: AscensionRules = {
   shopEveryOtherLevel: false,
-  doorOffers: null,
   abilitySlots: MAX_ABILITY_SLOTS,
   noCapstone: false,
   fencesWearOut: false,
@@ -76,11 +73,7 @@ export function ascensionRules(depth: number, ladder: AscensionRung[]): Ascensio
     if (e.noCapstone) out.noCapstone = true;
     if (e.fencesWearOut) out.fencesWearOut = true;
     if (e.everyMapMutated) out.everyMapMutated = true;
-    // A tighter door count wins, so a later rung can never widen the draft.
-    if (typeof e.doorOffers === "number") {
-      out.doorOffers = out.doorOffers == null ? e.doorOffers : Math.min(out.doorOffers, e.doorOffers);
-    }
-    // Same rule for ability slots: the ladder only ever takes away.
+    // A tighter ability cap wins: the ladder only ever takes away.
     if (typeof e.abilitySlots === "number") {
       out.abilitySlots = Math.max(1, Math.min(out.abilitySlots, e.abilitySlots));
     }
@@ -120,9 +113,7 @@ const MULTIPLICATIVE = new Set([
  * Whether the shop opens after clearing `levelNumber`.
  *
  * Every other level counted from the first, so level 1's shop still opens and
- * the run is never left with no way to spend its opening income. Assignment
- * levels are unaffected: they replace the shop with the door draft anyway, and
- * silently eating one would cost the player a contract.
+ * the run is never left with no way to spend its opening income.
  */
 export function shopOpensAfter(levelNumber: number, rules: AscensionRules): boolean {
   if (!rules.shopEveryOtherLevel) return true;

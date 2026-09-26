@@ -145,7 +145,7 @@ export interface GameModifiers {
   // Additive (sum) — Deadline Extension: extra seconds PER BALL added to every
   // Ship Early window (2 = each window gains 2s x the map's ball count)
   shipEarlySecondsPerBall: number;
-  // Additive (sum) — Hard Deadline door: >0 = Scope Creep's grace window is
+  // Additive (sum) — Hard Deadline rung / Hotfix In Prod: >0 = Scope Creep's grace window is
   // removed, so the first speed surge lands at second 0 of active play
   scopeCreepImmediate: number;
   // Additive (sum) — Runway (reworked Venture Capital): each value is a bank
@@ -202,7 +202,7 @@ export interface GameModifiers {
   // multiplier a ball normally forfeits for destroying a mirror or a mover.
   smashKeepsLockMultiplier: number;
 
-  // Multiplicative — Hard Deadline door: scales the Ship Early payout
+  // Multiplicative — scales the Ship Early payout
   shipEarlyBonusMultiplier: number;
 
   // Multiplicative — Tech Evangelist: scales the space-optimization bonus
@@ -212,8 +212,8 @@ export interface GameModifiers {
   ballPathPredictionBounces: number; // how many bounces ahead to show
   ballPathPredictionBalls: number;   // how many balls to track (by speed desc; ≥100 = all)
 
-  // Additive (sum) — Assignment constraint (#60): >0 disables Push Your Luck for
-  // the block (the map banks straight through instead of prompting to push).
+  // Additive (sum) — Bus Factor loadout: >0 disables Push Your Luck (the map
+  // banks straight through instead of prompting to push).
   disablePushYourLuck: number;
   // Additive (sum) — Feature Freeze: seconds a tapped ball stays frozen (0 = upgrade not owned)
   ballFreezeDuration: number;
@@ -304,7 +304,7 @@ export const MAX_STARTING_CAPTURE_PERCENT = 40;
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'door' | 'capstone';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'capstone';
   id: string;
   name: string;
   modifiers: Record<string, number>;

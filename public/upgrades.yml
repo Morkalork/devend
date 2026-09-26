@@ -33,7 +33,7 @@ pricing:
   # did what a map buys.
   anchorHours: 48
   # Market rates: effective prices multiply by this per completed 5-level
-  # assignment block (levels 1-5 at face value, 6-10 x1.15, 11-15 x1.32...).
+  # block (levels 1-5 at face value, 6-10 x1.15, 11-15 x1.32...).
   # Softer than the 1.35 it replaces because the base prices it compounds on
   # are ~4.5x larger relative to the old anchor: 1.35 reached x2.46 by level 15,
   # which would have put the cheapest card past what any map can pay. Scale-free

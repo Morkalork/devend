@@ -7,12 +7,10 @@
 # crown a build or rescue a weak one. Keys are GameModifiers
 # (see README-modifiers.md).
 #
-# NOT an assignment level (every 5th by default). The draft used to ride the
-# assignment phase, so it arrived fourth in a queue of five reward screens after
-# the level-10 boss and read as more confetti rather than as the rarest choice
-# in the game. capstoneDueAfter() skips assignment levels whatever this says, so
-# setting it to a multiple of 5 pushes the draft to the next ordinary level
-# rather than rebuilding the pile-up.
+# Offered after an ordinary level, before that level's shop. It used to ride
+# the (since removed) assignment phase, where it arrived fourth in a queue of
+# five reward screens after the level-10 boss and read as more confetti rather
+# than as the rarest choice in the game.
 #
 # 12 rather than 11: two maps of clear air after the boss, and still two thirds
 # of the run left for the pick to matter.

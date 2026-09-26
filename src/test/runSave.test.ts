@@ -18,7 +18,6 @@ const SAMPLE: RunSaveInput = {
   carryInstantFences: 1,
   carrySpendFences: 0,
   carrySpendFenceSpeed: 0.2,
-  activeDoorId: "cold_call",
   capstoneId: "cryo_protocol",
   ascensionDepth: 0,
   draftedLoadoutIds: [],
