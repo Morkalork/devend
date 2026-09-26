@@ -20,6 +20,7 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
 import { BUG_RADIUS, BUG_SPLAT_MS } from "@/lib/physics/bugs";
 import { getBug } from "@/lib/bugs";
+import { superiorSparkles, sparklePoints, SPARKLE_RADIUS } from "./superiorSparkle";
 import {
   computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments,
   trajectoryTurnsFor,
@@ -139,6 +140,7 @@ export class FxLayer {
     this.drawBugSplats(game, w2s, scale, now);
     this.drawMoverFriction(game, w2s, scale, now);
     this.drawLockMarkers(game, w2s, scale);
+    this.drawSuperiorSparkles(game, w2s, scale, now);
     this.drawBallPops(game, w2s, scale, now);
     this.drawTrajectory(game, mods, w2s, scale);
   }
@@ -287,6 +289,54 @@ export class FxLayer {
       const r = 5 * scale * pop;
       this.under.circle(p.x, p.y, r * 1.9).fill({ color, alpha: 0.16 });
       this.under.circle(p.x, p.y, r).fill({ color, alpha: 0.9 });
+    }
+  }
+
+  /**
+   * The twinkle inside a superior pocket.
+   *
+   * Drawn into `over`, above the pocket's own tint and hatch: it is a catch of
+   * light ON the ground, and a sparkle drawn under the wash would be a sparkle
+   * nobody sees on the darkest part of the board.
+   *
+   * Three passes, because a single filled star is a gold polygon and not a
+   * glint: a soft halo underneath it for the bloom, the star itself in gold,
+   * and a small white core. The core is what sells it - a sparkle's centre is
+   * always brighter than its arms, and without it the shape reads as a cut-out
+   * rather than as something emitting.
+   *
+   * The schedule and the geometry are in superiorSparkle.ts; this only paints
+   * what that hands back.
+   */
+  private drawSuperiorSparkles(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const sparkles = superiorSparkles(game.spaceGrid, game.superiorLockCount ?? 0, now);
+    if (sparkles.length === 0) return;
+
+    for (const s of sparkles) {
+      const p = w2s(s.x, s.y);
+      const r = SPARKLE_RADIUS * s.scale * scale;
+      if (r < 0.4) continue;
+
+      // Bloom, as two stacked discs rather than one. A single flat circle at a
+      // low alpha reads as a disc WITH a star on it - the edge is visible, and
+      // a glint does not have an edge. Two rings approximate the falloff a
+      // gradient would give for the cost of one more fill.
+      this.over
+        .circle(p.x, p.y, r * 2.1)
+        .fill({ color: PALETTE.superior, alpha: s.alpha * 0.07 });
+      this.over
+        .circle(p.x, p.y, r * 1.3)
+        .fill({ color: PALETTE.superior, alpha: s.alpha * 0.13 });
+
+      const pts = sparklePoints(p.x, p.y, r, s.rotation);
+      this.over.moveTo(pts[0], pts[1]);
+      for (let i = 2; i < pts.length; i += 2) this.over.lineTo(pts[i], pts[i + 1]);
+      this.over.closePath();
+      this.over.fill({ color: PALETTE.superior, alpha: s.alpha * 0.95 });
+
+      this.over
+        .circle(p.x, p.y, Math.max(0.4, r * 0.3))
+        .fill({ color: 0xffffff, alpha: s.alpha });
     }
   }
 
