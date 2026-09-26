@@ -116,6 +116,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     if (pairPhase !== 'playing' || !pairRunState) return;
     // The pair's seed goes in with it: starting a run clears the seed, and a
     // pair run that lost it dealt and rolled everything separately per phone.
+    // A pair's run, and only the pair's: it lives in the pair save and never
+    // becomes the welcome screen's Continue (useGameSession, pairRunRef).
+    session.beginPairRun();
     if (pairRunState.resumed && pairRunState.run) session.resumeRunFrom(pairRunState.run, pairRunState.seed);
     else session.handleStartGame(undefined, undefined, pairRunState.seed);
     // handleStartGame/handleResumeSavedRun are stable session actions.

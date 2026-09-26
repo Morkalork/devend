@@ -357,6 +357,27 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const markRunIneligible = useCallback(() => {
     recordEligibleRef.current = false;
   }, []);
+
+  /**
+   * Whether the run in progress was started in 2-Player mode.
+   *
+   * Such a run belongs to the pair. It is saved under the pair's own key on
+   * both phones (usePairRunSave) and offered again from the 2-Player screen,
+   * and it must never become the welcome screen's Continue: that button would
+   * drop one player alone into a run two people were building, under a seed
+   * and turn order that only mean anything with the partner there. So a pair
+   * run neither writes the solo save nor clears it; whatever solo run the
+   * player had parked before pairing is still there when they come back.
+   *
+   * Set for the whole run, including after "carry on alone": the run was
+   * still born in a pair. Decided at the START of every run, by whichever
+   * entry point starts it: the pair arms `pairStartPendingRef` just before it
+   * calls in, and every start consumes it, so a solo start (New Game,
+   * Continue, the Daily, the level picker) always lands on false.
+   */
+  const pairRunRef = useRef(false);
+  const pairStartPendingRef = useRef(false);
+  const beginPairRun = useCallback(() => { pairStartPendingRef.current = true; }, []);
   // The mid-run "new personal best" banner fires once per run.
   const pbCelebratedRef = useRef(false);
   // Personal-best banner payload for the current level-complete overlay.
@@ -839,6 +860,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (nav.currentScreen !== 'game') return;
     const snap = runSnapshotRef.current;
     if (!snap || snap.levelSequenceIds.length === 0) return;
+    if (pairRunRef.current) return; // the pair keeps its own save
     saveRun(snap);
   }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
 
@@ -855,6 +877,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     registerRunFlush(() => {
       const snap = runSnapshotRef.current;
       if (!snap || snap.levelSequenceIds.length === 0) return;
+      if (pairRunRef.current) return; // the pair keeps its own save
       saveRun(snap);
     });
     const uninstall = installRunFlushListeners();
@@ -912,6 +935,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean, runSeed?: string) => {
+    // Whose run this is, decided first (see pairRunRef).
+    pairRunRef.current = pairStartPendingRef.current;
+    pairStartPendingRef.current = false;
     // A normal run must never inherit a previous daily's seed: disarm BEFORE
     // loading, because loadLevels() already rolls the level lineup.
     clearDailyMode();
@@ -957,8 +983,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (levelsSuccess && upgradesSuccess) {
       resetRunScopedState();
-      // New Game discards any prior save; the fresh run re-saves on its first map.
-      clearRun();
+      // New Game discards any prior save; the fresh run re-saves on its first
+      // map. Not a pair's new game: the solo run parked before pairing stays.
+      if (!pairRunRef.current) clearRun();
 
       // getLoadedCertBonuses(), not the `certBonuses` memo: the load two dozen
       // lines up happened INSIDE this handler, so the memo in this closure is
@@ -1032,6 +1059,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * all-time one.
    */
   const handleStartDaily = useCallback(async () => {
+    // Whose run this is, decided first (see pairRunRef).
+    pairRunRef.current = pairStartPendingRef.current;
+    pairStartPendingRef.current = false;
     const key = todayKey();
     setRunSeedText(dailySeedText(key));
     dailyKeyRef.current = key;
@@ -1165,6 +1195,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [restoreRunProgress, restoreSequence, bestScore]);
 
   const resumeRunFrom = useCallback(async (save: RunSave, runSeed?: string) => {
+    // Whose run this is, decided first (see pairRunRef).
+    pairRunRef.current = pairStartPendingRef.current;
+    pairStartPendingRef.current = false;
 
     // Restore the run's seeded context (or lack of it) BEFORE loading: the
     // shops/drafts/pickups ahead must keep rolling from the daily seed. A pair
@@ -1286,7 +1319,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
     fileRunOnLedger(totalScore);
-    clearRun(); // the run is over: no Continue on the welcome screen
+    // The run is over: no Continue on the welcome screen. A pair run never
+    // held that slot, and the solo run parked in it is not the one that ended.
+    if (!pairRunRef.current) clearRun();
     nav.endGame({
       ...result,
       totalScore,
@@ -1769,7 +1804,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
     fileRunOnLedger(totalScore);
-    clearRun(); // retiring banks and ends the run
+    if (!pairRunRef.current) clearRun(); // retiring banks and ends the run
     nav.endGame({
       isWin: true,
       remainingPercent: pendingLevelScore?.remainingPercent || 0,
@@ -2128,6 +2163,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     /** Resume a run from a record (the pair save; see TWO_PLAYER_PLAN step 6b). */
     resumeRunFrom,
     markRunIneligible,
+    /** The next run started is a pair's: kept off the solo save (see pairRunRef). */
+    beginPairRun,
     /**
      * Put the run into the state a record describes, without reloading the
      * catalogues or navigating. What a pair's guest does at the start of every

@@ -168,6 +168,9 @@ export function dragIsAlwaysGameplay(screen: GameScreen): boolean {
  */
 export const PAN_OPT_OUT_ATTR = "data-pans";
 
+/** The `overflow` values that actually give an element a scroller. */
+const SCROLLING_OVERFLOW = new Set(["auto", "scroll", "overlay"]);
+
 /**
  * Can this element be scrolled by a drag, right now?
  *
@@ -177,12 +180,37 @@ export const PAN_OPT_OUT_ATTR = "data-pans";
  * attribute would have taken its scrolling away the first time it appeared,
  * and the next scrolling thing added would break the same way.
  *
+ * ── Overflowing is not scrolling ────────────────────────────────────────────
+ *
+ * This measured the SIZES alone, and that is a different question with the
+ * same shape: `scrollHeight > clientHeight` is true of anything whose content
+ * spills, and content spilling out of an `overflow: visible` box scrolls
+ * nowhere. The play region is exactly such a box - `flex-1 min-h-0 relative
+ * overflow-visible`, wrapping a canvas that is deliberately bigger than the
+ * board - so EVERY touch anywhere on the board answered "yes, this pans",
+ * which switched off the one-finger refusal across the whole play surface.
+ *
+ * That is the surface the refusal was added for. The sixth zoom report is what
+ * found it: "I can still accidentally shrink the gameboard by drawing a fence
+ * that starts outside the gameboard". Beside the board the game itself does
+ * nothing with the drag (isPointInBoard refuses a cut there), so the browser's
+ * gesture was the only thing left, and it was being handed back.
+ *
+ * So the overflow is consulted first. An element scrolls when it is allowed to
+ * AND has something to scroll, in the same axis; either half alone is a guess.
+ *
  * One pixel of slack, because a box whose content matches its height to the
  * pixel reports a one-off difference on some zoom levels and is not scrollable
  * in any sense a finger would notice.
  */
 function canScroll(el: Element): boolean {
-  return el.scrollHeight - el.clientHeight > 1 || el.scrollWidth - el.clientWidth > 1;
+  const style = el.ownerDocument.defaultView?.getComputedStyle(el);
+  if (!style) return false;
+  const scrollsY = SCROLLING_OVERFLOW.has(style.overflowY);
+  const scrollsX = SCROLLING_OVERFLOW.has(style.overflowX);
+  if (!scrollsY && !scrollsX) return false;
+  return (scrollsY && el.scrollHeight - el.clientHeight > 1)
+    || (scrollsX && el.scrollWidth - el.clientWidth > 1);
 }
 
 /**
