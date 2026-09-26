@@ -53,6 +53,7 @@ import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import { BoardPlaceholder, type BoardFrameCss } from "./BoardPlaceholder";
 import { PairGuestGate } from "./PairGuestGate";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -75,6 +76,7 @@ import {
   BALL_WON_REGION_THRESHOLD,
   LEVEL_CLEAR_SHIMMER_MS,
   LEVEL_CLEAR_HOLD_MS,
+  ARENA_MARGIN,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -113,6 +115,7 @@ import {
   BOARD_HEIGHT,
   BoardRect,
   computeBoardRect,
+  BOARD_FRAME_THICKNESS,
   screenToWorld,
   isPointInBoard,
   getDevicePixelRatio,
@@ -324,6 +327,8 @@ interface GameCanvasProps {
   bugConfig?: BugConfig;
   regionColor?: string;
   accentColor?: string;
+  /** Show the board's loading outline (BoardPlaceholder) over the canvas. */
+  showBoardPlaceholder?: boolean;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
   /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
@@ -390,6 +395,27 @@ function timeTierFor(remainingFraction: number): number {
   return 3;
 }
 
+/**
+ * The drawn board - arena plus its outer frame - in CSS pixels inside the
+ * canvas container, for the loading outline. Read off the arena polygon when
+ * the map has one (a starting capture shrinks it), else the default arena.
+ */
+function frameInCss(rect: BoardRect, arena: { vertices: { x: number; y: number }[] } | null, dpr: number): BoardFrameCss {
+  const margin = BOARD_WIDTH * ARENA_MARGIN;
+  const xs = arena && arena.vertices.length > 0 ? arena.vertices.map(v => v.x) : [margin, BOARD_WIDTH - margin];
+  const ys = arena && arena.vertices.length > 0 ? arena.vertices.map(v => v.y) : [margin, BOARD_HEIGHT - margin];
+  const f = BOARD_FRAME_THICKNESS;
+  const x0 = Math.min(...xs) - f, x1 = Math.max(...xs) + f;
+  const y0 = Math.min(...ys) - f, y1 = Math.max(...ys) + f;
+  return {
+    left: (rect.left + x0 * rect.scale) / dpr,
+    top: (rect.top + y0 * rect.scale) / dpr,
+    width: ((x1 - x0) * rect.scale) / dpr,
+    height: ((y1 - y0) * rect.scale) / dpr,
+    frame: (f * rect.scale) / dpr,
+  };
+}
+
 export function GameCanvas({
   level,
   levelNumber,
@@ -432,6 +458,7 @@ export function GameCanvas({
   bugConfig = DEFAULT_BUG_CONFIG,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
+  showBoardPlaceholder = false,
   activeModifiers,
   cumulativeLockedBalls = 0,
   fenceDurability = null,
@@ -829,6 +856,10 @@ export function GameCanvas({
   const [canvasCssHeight, setCanvasCssHeight] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0, boardTopPct: 5 });
+  // Where the board will be drawn, in CSS pixels inside the container: the
+  // arena's bounds plus the outer frame, from the same boardRect the renderer
+  // draws with. Feeds the loading outline, which must land on the board exactly.
+  const [boardFrameCss, setBoardFrameCss] = useState<BoardFrameCss | null>(null);
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
   // Did the player lock ANY ball this map? Set true whenever a lock fires
   // (setLockedBallsCount is only called on a lock), reset per map. Drives the
@@ -1557,6 +1588,7 @@ export function GameCanvas({
         gameInitializedRef.current = true;
         initGame();
       }
+      setBoardFrameCss(frameInCss(game.boardRect, game.boardPolygon, dpr));
     };
 
     const rctx: RenderContext = {
@@ -2447,6 +2479,7 @@ export function GameCanvas({
       )}
 
       <div ref={containerRef} className="flex-1 min-h-0 relative overflow-visible" style={{ height: "70%" }}>
+        <BoardPlaceholder visible={showBoardPlaceholder} accentColor={accentColor} frame={boardFrameCss} />
         {bonusPulseKey > 0 && (
           <div
             key={bonusPulseKey}

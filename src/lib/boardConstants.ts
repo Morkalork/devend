@@ -13,11 +13,34 @@ export const TOP_UI_PERCENT = 0.05;
 export const BOARD_BAND_PERCENT = 0.90;
 export const BOTTOM_UI_PERCENT = 0.05;
 
-// The square board spans this fraction of the shortest viewport side, so on a
-// portrait phone it nearly fills the width. Applied uniformly to every device:
-// computeBoardRect is fed physical (DPR-scaled) pixels, so the old CSS-pixel
-// mobile/desktop breakpoint misfired on high-DPR phones and capped them at 50%.
-export const BOARD_SIZE_PERCENT = 0.95;
+// The VISIBLE board - the arena plus its outer frame - spans this fraction of
+// the shortest viewport side, so on a portrait phone it nearly fills the width.
+// Applied uniformly to every device: computeBoardRect is fed physical
+// (DPR-scaled) pixels, so the old CSS-pixel mobile/desktop breakpoint misfired
+// on high-DPR phones and capped them at 50%.
+//
+// It used to size the whole 900-unit WORLD at 95%, but the arena only fills
+// the middle of it (ARENA_MARGIN, 45 units a side, less the 14-unit frame), so
+// what the player saw was about 88% of the width with an empty strip down each
+// side. Reported as "too much space left on the sides of the board".
+export const BOARD_SIZE_PERCENT = 0.97;
+
+/** The board's outer frame, in world units, drawn just outside the arena edge.
+ *  Heavier than a fence (6) so the enclosure reads as structure rather than as
+ *  a cut. Lives here, not in the renderer, so layout code can use it without
+ *  pulling the WebGL chunk in. */
+export const BOARD_FRAME_THICKNESS = 14;
+
+/**
+ * How much of the world rectangle is actually drawn: the arena (inset by
+ * ARENA_MARGIN on every side) plus the outer frame, which sits OUTSIDE the
+ * arena edge (BOARD_FRAME_THICKNESS). (900 - 2*45 + 2*14) / 900.
+ *
+ * A literal rather than an import, because this file imports nothing of ours
+ * (that is what keeps boardTilt's cycle closed). boardPlaceholder.test pins it
+ * to the two constants it is made of.
+ */
+export const VISIBLE_BOARD_FRACTION = (900 - 2 * 45 + 2 * BOARD_FRAME_THICKNESS) / 900;
 
 // Cap the canvas backing-store resolution at 2× CSS pixels. Phones commonly
 // report a native devicePixelRatio of 2.6–3.0; rendering at that means 2–2.5×
@@ -107,10 +130,11 @@ export interface BoardRect {
 export const MAX_BOTTOM_INSET_PERCENT = 0.5;
 
 /**
- * Compute the board rectangle in screen pixels.
- * The square board spans BOARD_SIZE_PERCENT (~95%) of the shortest viewport
- * side, but is never taller than the board band reserved between the top/bottom
- * UI strips, so it can't overlap the HUD on short/wide screens.
+ * Compute the board rectangle in screen pixels: the whole 900-unit world.
+ * Its visible part (arena + frame, VISIBLE_BOARD_FRACTION of it) spans
+ * BOARD_SIZE_PERCENT (97%) of the shortest viewport side, but is never taller
+ * than the board band reserved between the top/bottom UI strips, so it can't
+ * overlap the HUD on short/wide screens.
  *
  * `bottomInset` is height at the bottom of the surface the board must keep off,
  * in the same (physical) pixels as the rest of the arguments. GameScreen pins a
@@ -137,12 +161,16 @@ export function computeBoardRect(
   // against the usable height rather than the whole surface for consistency
   // with the band clamp below; the clamp is stricter and so always wins when
   // the two would disagree.
+  //
+  // Sized by what is SEEN: the world rectangle is scaled up so its visible part
+  // (arena + frame) hits the target, and the invisible margin around it may run
+  // past the screen edge, where there is nothing to see anyway.
   const shortestSide = Math.min(screenWidth, usableHeight);
-  let boardWidth = shortestSide * BOARD_SIZE_PERCENT;
+  let boardWidth = (shortestSide * BOARD_SIZE_PERCENT) / VISIBLE_BOARD_FRACTION;
 
-  // Clamp so the board fits inside the vertical band reserved for it.
+  // Clamp so the visible board fits inside the vertical band reserved for it.
   const availableHeight = usableHeight * BOARD_BAND_PERCENT;
-  boardWidth = Math.min(boardWidth, availableHeight * BOARD_ASPECT);
+  boardWidth = Math.min(boardWidth, (availableHeight * BOARD_ASPECT) / VISIBLE_BOARD_FRACTION);
 
   const boardHeight = boardWidth / BOARD_ASPECT;
 

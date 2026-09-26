@@ -25,7 +25,6 @@ import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
 import { AnimatePresence } from 'framer-motion';
 import { MapRuleBanner } from './MapRuleBanner';
-import { BoardPlaceholder } from './BoardPlaceholder';
 import { MapFailedOverlay } from './MapFailedOverlay';
 import type { MapFailure } from '@/lib/mapFailure';
 import { ShipEarlyBar } from './ShipEarlyBar';
@@ -1026,14 +1025,6 @@ export function GameScreen({
               </div>
             </div>
           )}
-          {/* The board's outline, from the first frame until the real board
-              presents (renderer chunk + WebGL init can take a second or two on
-              a phone), then fades out beneath it. See BoardPlaceholder. */}
-          <BoardPlaceholder
-            visible={!boardShown}
-            accentColor={accentColor}
-            bottomInsetPx={bottomBarsPx}
-          />
           {/* Feature Freeze: tap-freezes left this map. Only shown when the
               upgrade (or Runway's freeze) is active, and hidden once the map is
               won. Dims to signal "out" at zero. */}
@@ -1147,6 +1138,7 @@ export function GameScreen({
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
             onCanvasReady={handleCanvasReady}
             onBoardTopPct={handleBoardTopPct}
+            showBoardPlaceholder={!boardShown}
             bottomInsetPx={bottomBarsPx}
             introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}

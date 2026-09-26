@@ -21,6 +21,7 @@ import {
 } from "@/lib/wallImpactEffects";
 import { advanceSimClock, resetSimClock } from "@/lib/simClock";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
+import { BOARD_FRAME_THICKNESS } from "@/lib/boardConstants";
 
 /**
  * The envelope is sim-clock driven (simClock.ts), and it peaks 85ms after
@@ -200,8 +201,10 @@ describe("the board's outer wall", () => {
   });
 
   it("fits inside the board's margin instead of overhanging the page", () => {
-    const m = SRC.match(/const OUTER_WALL_THICKNESS = (\d+)/);
-    const thickness = Number(m![1]);
+    // Defined beside the board layout (boardConstants) so the loading outline
+    // can match it; wallLayer re-exports it as OUTER_WALL_THICKNESS.
+    expect(SRC).toMatch(/OUTER_WALL_THICKNESS = BOARD_FRAME_THICKNESS/);
+    const thickness = BOARD_FRAME_THICKNESS;
     // initGame insets the play area by ARENA_MARGIN of the board on each side;
     // the frame is drawn into that gap, so it has to be narrower than it.
     const margin = 900 * 0.05;
@@ -209,9 +212,7 @@ describe("the board's outer wall", () => {
   });
 
   it("is heavier than a fence, so the frame reads as structure", () => {
-    const m = SRC.match(/const OUTER_WALL_THICKNESS = (\d+)/);
-    expect(m, "the outer wall needs its own thickness").toBeTruthy();
-    expect(Number(m![1])).toBeGreaterThan(WALL_THICKNESS);
+    expect(BOARD_FRAME_THICKNESS).toBeGreaterThan(WALL_THICKNESS);
   });
 });
 

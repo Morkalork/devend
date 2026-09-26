@@ -22,14 +22,15 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
+import { BOARD_FRAME_THICKNESS } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { ambientAt, contactFor, facing, shadowFor, type LightScope } from "./light";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 
-/** How thick the board's outer frame is, in world units. Heavier than a
- *  fence (6) so the enclosure reads as structure rather than as a cut. */
-export const OUTER_WALL_THICKNESS = 14;
+/** How thick the board's outer frame is, in world units. Defined beside the
+ *  board layout (boardConstants) so the loading placeholder can match it. */
+export const OUTER_WALL_THICKNESS = BOARD_FRAME_THICKNESS;
 
 /**
  * Ambient occlusion along the base of a fence: how far out it reaches (as a

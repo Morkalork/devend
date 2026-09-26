@@ -15,7 +15,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  computeBoardRect, MAX_BOTTOM_INSET_PERCENT, BOTTOM_UI_PERCENT,
+  computeBoardRect, MAX_BOTTOM_INSET_PERCENT, BOTTOM_UI_PERCENT, VISIBLE_BOARD_FRACTION,
 } from "@/lib/boardConstants";
 
 /**
@@ -116,6 +116,9 @@ describe("the flat percentage this replaces", () => {
     // assumed to fit inside it.
     expect(BOTTOM_UI_PERCENT).toBeGreaterThan(0);
     const r = computeBoardRect(1000, 1000);
-    expect(bottom(r)).toBeLessThanOrEqual(1000 * (1 - BOTTOM_UI_PERCENT) + 1);
+    // The VISIBLE board's bottom edge: the world rectangle is sized so only its
+    // drawn part (arena + frame) has to fit, and its empty margin may overrun.
+    const visibleBottom = r.top + r.height * (1 + VISIBLE_BOARD_FRACTION) / 2;
+    expect(visibleBottom).toBeLessThanOrEqual(1000 * (1 - BOTTOM_UI_PERCENT) + 1);
   });
 });

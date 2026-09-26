@@ -6,58 +6,48 @@
  * shaders, so on a phone the first map can take a second or two to present.
  * With nothing but a "Loading" label over the background for that long, the
  * screen read as broken rather than busy. This fills the gap with the thing
- * that is coming: the board's own frame and grid, in exactly the rectangle
- * the canvas will draw into, so the real board replaces it in place instead
- * of popping in somewhere new.
+ * that is coming: the board's own frame and grid, so the real board replaces
+ * it in place instead of popping in somewhere new.
  *
- * The rectangle comes from computeBoardRect, the same function GameCanvas
- * sizes the board with, fed the same surface and bottom inset in CSS pixels.
- * It is scale-free (every term is a share of the surface), so CSS and physical
- * pixels give the same shape.
+ * It does not measure anything itself. GameCanvas renders it inside its own
+ * container and hands it the frame it is about to draw (see boardFrameCss),
+ * worked out from the same boardRect and arena the renderer uses, so the two
+ * cannot disagree. A first version measured its own box and re-ran
+ * computeBoardRect on it; that box was not the canvas's, and it sized the
+ * whole world rather than the arena, so the outline came out larger than the
+ * board and offset from it.
  */
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { computeBoardRect } from '@/lib/boardConstants';
-import type { BoardRect } from '@/lib/boardConstants';
+
+/** The drawn board in CSS pixels, relative to the canvas container. */
+export interface BoardFrameCss {
+  /** Outer edge of the frame. */
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  /** How thick the frame band is, so the arena sits exactly inside it. */
+  frame: number;
+}
 
 interface BoardPlaceholderProps {
   /** False once the real board is presenting; the placeholder fades out. */
   visible: boolean;
   accentColor: string;
-  /** Height of the bars pinned under the board, as GameCanvas is given it. */
-  bottomInsetPx: number;
+  /** Where the board will be drawn; null until the canvas has been sized. */
+  frame: BoardFrameCss | null;
 }
 
-/** Grid spacing as a share of the board, so it reads the same on any screen. */
+/** Grid spacing as a share of the arena, so it reads the same on any screen. */
 const GRID_CELLS = 12;
 
-export function BoardPlaceholder({ visible, accentColor, bottomInsetPx }: BoardPlaceholderProps) {
+export function BoardPlaceholder({ visible, accentColor, frame }: BoardPlaceholderProps) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [rect, setRect] = useState<BoardRect | null>(null);
   // Kept mounted through the fade, then dropped so it costs nothing in play.
   const [gone, setGone] = useState(false);
-
-  // Layout effect, not a plain one: measured before the first paint, so the
-  // outline is there on the very first frame rather than one frame late.
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) {
-      return;
-    }
-    const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width > 0 && height > 0) {
-        setRect(computeBoardRect(width, height, bottomInsetPx));
-      }
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [bottomInsetPx]);
 
   useEffect(() => {
     if (visible) {
@@ -68,29 +58,36 @@ export function BoardPlaceholder({ visible, accentColor, bottomInsetPx }: BoardP
     return () => window.clearTimeout(timer);
   }, [visible]);
 
-  if (gone) {
+  if (gone || !frame) {
     return null;
   }
 
-  const cell = rect ? rect.width / GRID_CELLS : 0;
+  const arena = frame.width - frame.frame * 2;
+  const cell = arena / GRID_CELLS;
 
   return (
     <div
-      ref={containerRef}
       className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
       aria-hidden={!visible}
       data-testid="board-placeholder"
     >
-      {rect && (
+      <div
+        data-testid="board-placeholder-frame"
+        className="absolute"
+        style={{
+          left: frame.left,
+          top: frame.top,
+          width: frame.width,
+          height: frame.height,
+          // The frame band, the same thickness the renderer gives the outer wall.
+          border: `${frame.frame}px solid ${accentColor}33`,
+          boxShadow: `0 0 18px ${accentColor}26`,
+        }}
+      >
         <div
-          className="absolute overflow-hidden rounded-sm"
+          className="absolute inset-0 overflow-hidden"
           style={{
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-            border: `1px solid ${accentColor}88`,
-            boxShadow: `0 0 18px ${accentColor}33, inset 0 0 24px ${accentColor}1a`,
+            outline: `1px solid ${accentColor}66`,
             backgroundColor: 'rgba(0,10,5,0.55)',
             backgroundImage:
               `linear-gradient(${accentColor}14 1px, transparent 1px),` +
@@ -98,17 +95,17 @@ export function BoardPlaceholder({ visible, accentColor, bottomInsetPx }: BoardP
             backgroundSize: `${cell}px ${cell}px`,
           }}
         >
-          {/* A scan line sweeping down the board: the one moving thing, so the
+          {/* A scan line sweeping down the arena: the one moving thing, so the
               wait reads as work in progress rather than a frozen frame. */}
           {!reduceMotion && (
             <motion.div
               className="absolute left-0 right-0"
               style={{
-                height: Math.max(24, rect.height * 0.12),
+                height: Math.max(24, arena * 0.12),
                 background: `linear-gradient(to bottom, transparent, ${accentColor}26, transparent)`,
               }}
-              initial={{ y: -rect.height * 0.12 }}
-              animate={{ y: rect.height }}
+              initial={{ y: -arena * 0.12 }}
+              animate={{ y: arena }}
               transition={{ duration: 1.6, ease: 'linear', repeat: Infinity }}
             />
           )}
@@ -121,7 +118,7 @@ export function BoardPlaceholder({ visible, accentColor, bottomInsetPx }: BoardP
             </span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
