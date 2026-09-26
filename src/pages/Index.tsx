@@ -29,11 +29,7 @@ import { adminOnHere } from '@/lib/adminAccess';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
-import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
-import { TierDraftScreen } from '@/components/game/TierDraftScreen';
-import { REWARD_GOLD } from '@/components/game/rewardTheme';
-import { AssignmentSummaryScreen } from '@/components/game/AssignmentSummaryScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { TenureDraftScreen } from '@/components/game/TenureDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
@@ -158,8 +154,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
    *
    * The run used to sync once, at the Continue-or-New decision, and never
    * again. That is enough for map one and wrong from map two: between maps the
-   * two phones walked their own shop, their own drafts and their own
-   * assignment screens, so they arrived at the next board with different
+   * two phones walked their own shop and their own drafts, so they arrived at the next board with different
    * upgrades, computed different modifiers, and played two different games off
    * one seed. Whatever this phone did in between is overwritten, because the
    * host owns the run.
@@ -551,8 +546,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
-                activeDoor={session.activeDoor}
-                blockResults={session.blockResults}
                 capstone={session.capstone}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
@@ -630,38 +623,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 offers={session.capstoneOffers}
                 onSelect={session.handleSelectCapstone}
                 accentColor={accentHex}
-              />
-            )}
-            {navigation.currentScreen === 'doorDraft' && session.nextLevel && (
-              <DoorDraftScreen
-                nextLevel={session.nextLevel}
-                offers={session.doorOffers}
-                onSelect={session.handleSelectDoor}
-                onSkip={session.handleSkipAssignment}
-                accentColor={accentHex}
-              />
-            )}
-            {navigation.currentScreen === 'assignmentSummary' && session.activeDoor && session.lastContractSummary && (
-              <AssignmentSummaryScreen
-                assignment={session.activeDoor}
-                results={session.blockResults}
-                blockStats={session.lastContractSummary}
-                rewardLabel={session.lastContractSummary.rewardLabel ?? null}
-                nextIsUpgradePick={!!session.pendingTierDraft}
-                onContinue={session.handleContinueFromSummary}
-              />
-            )}
-            {navigation.currentScreen === 'tierDraft' && session.pendingTierDraft && (
-              <TierDraftScreen
-                offers={session.pendingTierDraft.offers}
-                tier={session.pendingTierDraft.tier}
-                onSelect={session.handleSelectTierUpgrade}
-                /* Gold, not the run accent: this screen is the second half of
-                   the Assignment Complete summary, whose reward button is gold,
-                   and two screens in one handover have to look like one thing.
-                   The accent is also the player's own colour and gets re-skinned
-                   red on boss maps, neither of which a reward should follow. */
-                accentColor={REWARD_GOLD}
               />
             )}
             {navigation.currentScreen === 'ascensionDraft' && (

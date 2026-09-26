@@ -52,20 +52,8 @@ export function useScreenNavigation() {
     setCurrentScreen('runDraft');
   }, []);
 
-  const goToDoorDraft = useCallback(() => {
-    setCurrentScreen('doorDraft');
-  }, []);
-
   const goToCapstoneDraft = useCallback(() => {
     setCurrentScreen('capstoneDraft');
-  }, []);
-
-  const goToTierDraft = useCallback(() => {
-    setCurrentScreen('tierDraft');
-  }, []);
-
-  const goToAssignmentSummary = useCallback(() => {
-    setCurrentScreen('assignmentSummary');
   }, []);
 
   const goToAscensionDraft = useCallback(() => {
@@ -140,10 +128,7 @@ export function useScreenNavigation() {
     goToUpgradeShop,
     goToGame,
     goToRunDraft,
-    goToDoorDraft,
     goToCapstoneDraft,
-    goToTierDraft,
-    goToAssignmentSummary,
     goToAscensionDraft,
     goToCertificateStore,
     goToLoadouts,

@@ -16,7 +16,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
-import { blockLockCapacity } from "@/lib/assignmentScaling";
 import { getBallType } from "@/lib/ballTypes";
 import { parseMutatorEntry } from "@/lib/mapMutators";
 import type { MapMutator } from "@/types/mapMutator";
@@ -55,18 +54,6 @@ describe("the act exists and is the right shape", () => {
   it("does not collapse its cut count the way it used to", () => {
     // 9 cuts at level 19 and then 4 at 31-33 was the shape of the collapse.
     for (const l of PLAYABLE) expect(l.expectedCuts, `level ${l.level}`).toBeGreaterThanOrEqual(8);
-  });
-
-  /**
-   * The knock-on nobody would look for: the assignment block spanning 31-35
-   * scales its lock targets to how many balls the block puts on the board, so a
-   * thin act quietly gave the last block of the run the weakest missions.
-   */
-  it("puts enough balls on the board to carry its assignment block", () => {
-    const actIV = blockLockCapacity(LEVELS, 31);
-    const actIII = blockLockCapacity(LEVELS, 26);
-    expect(actIV, `act IV block has ${actIV} against act III's ${actIII}`)
-      .toBeGreaterThanOrEqual(actIII - 3);
   });
 });
 

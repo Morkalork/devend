@@ -50,8 +50,6 @@ export interface AscensionRung {
 export interface AscensionRungEffects {
   /** The shop opens only after odd-numbered levels. */
   shopEveryOtherLevel?: boolean;
-  /** Cap the assignment door draft at this many offers. */
-  doorOffers?: number;
   /**
    * Cap the DISTINCT abilities holdable at once, below the normal
    * MAX_ABILITY_SLOTS. A rules change rather than a stat nerf: the same
@@ -76,7 +74,6 @@ export interface AscensionRungEffects {
 /** Every rung at or below the current depth, folded into one rule set. */
 export interface AscensionRules {
   shopEveryOtherLevel: boolean;
-  doorOffers: number | null;
   /** Distinct abilities holdable at once; MAX_ABILITY_SLOTS unless tightened. */
   abilitySlots: number;
   noCapstone: boolean;

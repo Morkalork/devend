@@ -37,7 +37,9 @@ function draftScreens(): { name: string; text: string }[] {
 describe("the between-map draft screens", () => {
   it("are all present, or this guard is looking at nothing", () => {
     const names = draftScreens().map(s => s.name);
-    expect(names.length, `found: ${names.join(", ")}`).toBeGreaterThanOrEqual(6);
+    // Four since assignments were cut (their door and tier drafts went with
+    // them): Sprint Planning, Tenure, the Promotion and the ascension draft.
+    expect(names.length, `found: ${names.join(", ")}`).toBeGreaterThanOrEqual(4);
   });
 
   it("all offer their choices through the shared card", () => {

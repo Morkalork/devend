@@ -33,13 +33,12 @@ ascension:
   # RULES, NOT NERFS. Most rungs change a rule instead of subtracting from a
   # stat, because a rung that docks a stat meets the shop upgrade that adds to
   # it: `fenceDurabilityBonus: -1` versus Defensive Programming cancels exactly,
-  # making that upgrade a mandatory tax and useless everywhere else. Nothing in
-  # the shop sells a third assignment door, so `doorOffers` cannot be bought
-  # back at any price. Two rungs collide on purpose (the overtime cap against
+  # making that upgrade a mandatory tax and useless everywhere else. Two rungs
+  # collide on purpose (the overtime cap against
   # the Stock Options capstone, ball speed against Runtime Optimisation)
   # because there the counter is a real decision, not a purchase.
   #
-  # Depths past 10 keep the whole ladder and fall back to speedRampPerDepth for
+  # Depths past 9 keep the whole ladder and fall back to speedRampPerDepth for
   # further escalation. Displayed text: no em-dashes.
   ladder:
     - depth: 1
@@ -49,31 +48,25 @@ ascension:
         shopEveryOtherLevel: true
 
     - depth: 2
-      name: Reduced Headcount
-      description: Every assignment offers two contracts to choose from, not three.
-      effects:
-        doorOffers: 2
-
-    - depth: 3
       name: Promotion Freeze
       description: No Promotion is awarded this run, whatever you achieve.
       effects:
         noCapstone: true
 
-    - depth: 4
+    - depth: 3
       name: Technical Debt
       description: Finished fences wear out under repeated ball hits and finally break.
       effects:
         fencesWearOut: true
 
-    - depth: 5
+    - depth: 4
       name: Hard Deadline
       description: Scope Creep starts the moment a map does, with no grace period.
       effects:
         modifiers:
           scopeCreepImmediate: 1
 
-    - depth: 6
+    - depth: 5
       name: Budget Cuts
       description: Each map pays 3 fewer overtime hours before hitting its ceiling.
       effects:
@@ -83,27 +76,27 @@ ascension:
     # Two rules with one theme: you cannot stockpile. Tokens rot, and the
     # ability bar is one slot narrower, so a chest stops being free and starts
     # being a question about what you are willing to stop carrying.
-    - depth: 7
+    - depth: 6
       name: Use It Or Lose It
       description: Power-up tokens expire in half the time, and you can carry one fewer ability.
       effects:
         pickupLifetimeFactor: 0.5
         abilitySlots: 4
 
-    - depth: 8
+    - depth: 7
       name: Velocity Targets
       description: Balls move 8% faster.
       effects:
         modifiers:
           ballSpeedMultiplier: 1.08
 
-    - depth: 9
+    - depth: 8
       name: Constant Change
       description: Every map that can roll a mutator does. No quiet maps left.
       effects:
         everyMapMutated: true
 
-    - depth: 10
+    - depth: 9
       name: Performance Improvement Plan
       description: A permanent curse joins the run and cannot be dropped, and you can carry only three abilities.
       effects:
@@ -112,7 +105,7 @@ ascension:
 
 loadouts:
 
-  # Imposed by Ascension rung 10, never drafted: a curse with no blessing, so
+  # Imposed by Ascension rung 9, never drafted: a curse with no blessing, so
   # nobody would ever pick it and it must not appear as one of three "rewards".
   - id: performance_improvement_plan
     name: Performance Improvement Plan

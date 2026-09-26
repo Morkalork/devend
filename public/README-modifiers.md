@@ -111,17 +111,17 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ## capstones.yml
 
-Capstones are the once-per-run exclusive perk ("Promotion"). At the first
-assignment level at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3
-draft is offered before the door pick; the pick applies **permanently for the
-rest of the run** (surviving
+Capstones are the once-per-run exclusive perk ("Promotion"). After the first
+completed level at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3
+draft is offered before that level's shop; the pick applies **permanently for
+the rest of the run** (surviving
 ascension) and the two passed-over capstones are gone for good. Capstones are
 rule-breakers, not stat bumps - the pool covers one per archetype (enforced by
 tests) so any build can find its crown.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `offeredAfterLevel` | number | | First assignment level at/past which the draft appears (default 10) |
+| `offeredAfterLevel` | number | | First completed level at/past which the draft appears (default 10) |
 | `capstones[].id` | string | ✓ | Unique identifier |
 | `capstones[].name` | string | ✓ | Display name on the draft card |
 | `capstones[].description` | string | ✓ | Shown on the card |
@@ -129,36 +129,6 @@ tests) so any build can find its crown.
 | `capstones[].modifiers` | map | ✓ | One or more **GameModifier keys** |
 
 > A missing or broken capstones.yml simply skips the draft.
-
----
-
-## doors.yml
-
-Doors are the "Next Assignment" contracts. Every 5th completed level replaces
-the shop with a **mandatory** draft: pick one of three doors rolled from this
-pool (no neutral option). The picked door's modifiers run for the whole
-5-level block — all maps and their shops — until the next assignment replaces
-it. Shop-facing rewards (`extraShopItems`, `shopRestockCount`) therefore apply
-to every shop in the block, and per-map rewards (`instantFencesPerMap`) fire
-on each map. The draft screen also briefs the next map with real intel (exact
-ball spawns, par, capture target, obstacle count).
-
-A top-level **`offeredAfterLevel`** (default 5) is the assignment cadence:
-assignments land after every multiple of that level (5, 10, 15, ...), so the
-early maps stay clean while players learn the base game. If the pool fails to
-load, assignment levels fall back to the regular shop.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `id` | string | ✓ | Unique identifier |
-| `name` | string | ✓ | Display name on the door card |
-| `risk` | string | ✓ | Downside text (shown in red) |
-| `reward` | string | ✓ | Payoff text (shown in accent colour) |
-| `modifiers` | map | ✓ | One or more **GameModifier keys**; must include at least one adverse value (enforced by tests: no free lunches) |
-
-> Overtime-facing rewards fold under the per-map cap, so doors buy consistency
-> and side payoffs, not inflation. An empty or missing doors.yml makes
-> assignment levels fall back to the shop.
 
 ---
 
@@ -319,7 +289,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
 | `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
 | `shipEarlySecondsPerBall` | `0` | Extra seconds PER BALL added to every Ship Early bonus window (Deadline Extension). With `2`, a 4-ball map's windows each gain 8s. | `2` |
-| `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (Hard Deadline door). | `1` |
+| `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (Hard Deadline ascension rung, Hotfix In Prod loadout). | `1` |
 | `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `25` |
 | `runwayConcurrentFenceAt` | `0` | Runway: while the bank is at/above this threshold, +1 concurrent fence. | `200` |
 | `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
@@ -329,7 +299,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `spawnFreezeSeconds` | `0` | Seconds every ball stays frozen at map start (Cold Boot). Rides the Feature Freeze `frozenUntil` path; the spawn thaw carries no re-freeze cooldown. | `2` |
 | `pickupChanceBonus` | `0` | Extra pickup-token spawn chance per roll, in absolute probability (0.03 = +3 percentage points on the game-config base). Only applies on maps where pickups are enabled; never turns them on. Player-facing copy stays vague on purpose (Benefits Package). | `0.03` |
 | `pickupPayoutLevel` | `0` | Enhances every pickup payout per level: +1h on overtime and cap tokens, +1s on freeze charges, and the Fork's split balls fly 5% slower per level (never below their minimum speed). At level 3 the Fork splits a ball into THREE (Total Compensation). | `1` |
-| `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp (Hard Deadline door). Still folds under the per-map overtime cap. | `2` |
+| `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp. Still folds under the per-map overtime cap. | `2` |
 
 ---
 

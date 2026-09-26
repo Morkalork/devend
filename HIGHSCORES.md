@@ -119,9 +119,9 @@ days on the Performance Review screen).
 
 Determinism model (`src/lib/runRng.ts`): the run seed is armed module-wide;
 every content roll draws a FRESH mulberry32 generator keyed by seed + a stable
-context ("levels", "shop:5", "doors:10", "obstacles:level-3",
+context ("levels", "shop:5", "obstacles:level-3",
 "pickups:level-3:roll:7"), which makes rolls replayable, order-independent and
-StrictMode-safe. Seeded: level lineup, loadout/door/capstone offers, shop
+StrictMode-safe. Seeded: level lineup, loadout/capstone offers, shop
 shelves + restocks, random obstacles + variety geometry, pickup spawn timing
 and effect. Ball types were already deterministic per map id. NOT seeded (by
 design): live physics (spawn angles, yellow-ball speeds, fork targets) and

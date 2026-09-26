@@ -2,7 +2,8 @@
  * mapMutators — per-map environmental modifiers (issue #54).
  *
  * A module-level catalogue loaded from public/mapMutators.yml (mirrors
- * doorDraft.ts), plus a deterministic per-map selector and the pure application
+ * the other YAML catalogues), plus a deterministic per-map selector and the
+ * pure application
  * helpers the physics/scoring layer calls. Graceful fallback: a missing/broken
  * file leaves an empty pool, so maps simply play without a mutator.
  *

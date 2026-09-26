@@ -694,7 +694,7 @@ its own ladder (`HIGHSCORES.md` keeps solo records honest by not mixing them).
 
 The run save already exists and already has the right shape. `useRunSave`
 writes a `RunSave` at the start of every map (level sequence by id, level
-index, score, upgrades, lives, continues, carries, door and capstone by id,
+index, score, upgrades, lives, continues, carries, capstone by id,
 block stats) and the welcome screen offers Continue while one exists. Resume
 granularity is one map, which is also the only granularity a pair can resume
 at: the mid-map state is the thing this plan deliberately never serialises.

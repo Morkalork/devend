@@ -35,9 +35,9 @@ const UPGRADES = (yaml.load(readFileSync(resolve(PUBLIC, "upgrades.yml"), "utf8"
   { upgrades: UpgradeConfig[] }).upgrades;
 
 describe("the ladder as authored", () => {
-  it("has ten rungs, one per depth, in order", () => {
+  it("has nine rungs, one per depth, in order", () => {
     expect(LADDER).toHaveLength(LADDER_LENGTH);
-    expect(LADDER.map(r => r.depth)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(LADDER.map(r => r.depth)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it("gives every rung a name and a description, with no em-dashes", () => {
@@ -54,7 +54,7 @@ describe("the ladder as authored", () => {
       const e = r.effects ?? {};
       const does = Object.keys(e).length > 0 &&
         (e.shopEveryOtherLevel || e.noCapstone || e.fencesWearOut || e.everyMapMutated ||
-         e.doorOffers != null || e.pickupLifetimeFactor != null ||
+         e.abilitySlots != null || e.pickupLifetimeFactor != null ||
          e.forcedCurseLoadoutId != null || Object.keys(e.modifiers ?? {}).length > 0);
       expect(does, `depth ${r.depth} (${r.name}) has no effect`).toBe(true);
     }
@@ -91,7 +91,7 @@ describe("the ladder as authored", () => {
   it("is mostly rules, so most rungs cannot be bought back at any price", () => {
     const ruleShaped = LADDER.filter(r => {
       const e = r.effects ?? {};
-      return Boolean(e.shopEveryOtherLevel || e.doorOffers != null || e.noCapstone ||
+      return Boolean(e.shopEveryOtherLevel || e.noCapstone ||
         e.fencesWearOut || e.everyMapMutated || e.pickupLifetimeFactor != null ||
         e.forcedCurseLoadoutId);
     });
@@ -151,9 +151,9 @@ describe("folding rules together", () => {
   const mk = (depth: number, effects: AscensionRung["effects"]): AscensionRung =>
     ({ depth, name: `r${depth}`, description: "d", effects });
 
-  it("takes the tighter door count, so a later rung can never widen the draft", () => {
-    const l = [mk(1, { doorOffers: 2 }), mk(2, { doorOffers: 3 })];
-    expect(ascensionRules(2, l).doorOffers).toBe(2);
+  it("takes the tighter ability cap, so a later rung can never widen the bar", () => {
+    const l = [mk(1, { abilitySlots: 3 }), mk(2, { abilitySlots: 4 })];
+    expect(ascensionRules(2, l).abilitySlots).toBe(3);
   });
 
   it("multiplies pickup lifetime, so two halvings quarter it", () => {

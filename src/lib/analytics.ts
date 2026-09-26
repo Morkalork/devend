@@ -91,10 +91,6 @@ export const analytics = {
     daily: boolean;
   }) => track('run_ended', p),
 
-  /** Player picked a contract assignment from the 1-of-3 draft. */
-  doorSelected: (p: { doorId: string; level: number }) =>
-    track('door_selected', p),
-
   /** Player picked (or skipped) a loadout at the run-start draft. */
   loadoutSelected: (p: { loadoutId: string | null }) =>
     track('loadout_selected', p),
