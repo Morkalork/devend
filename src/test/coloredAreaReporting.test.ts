@@ -53,9 +53,9 @@ const LEVEL = {
   maxBalls: 2, entities: [], randomShapes: 0,
 } as unknown as LevelConfig;
 
-/** A `let` (2x) bonus pocket in the top-right corner of the playable board. */
+/** A `dark` (2x) bonus pocket in the top-right corner of the playable board. */
 const LET: ColoredArea = {
-  kind: "let", x: 640, y: 45, width: 215, height: 215, required: false,
+  kind: "dark", x: 640, y: 45, width: 215, height: 215, required: false,
 } as ColoredArea;
 
 const noopCallbacks = new Proxy({}, {
@@ -152,7 +152,7 @@ describe("the results screen can see the zone", () => {
   it("matches the kind's multiplier", () => {
     const withZone = sealCorner([LET]);
     const without = sealCorner([]);
-    const mult = areaStyle("let").multiplier; // 2x
+    const mult = areaStyle("dark").multiplier; // 2x
     expect(withZone.game.lockBonus).toBe(Math.round(without.game.lockBonus * mult));
     expect(getLockValue()).toBeGreaterThan(0); // the pay is real, not a zero-times-zero pass
   });
@@ -173,7 +173,7 @@ describe("the lock is legible the moment it happens", () => {
   it("stamps when the zone was activated, not just that it was", () => {
     const before = simNow();
     const { game } = sealCorner([LET]);
-    const area = game.coloredAreas!.find(a => a.kind === "let")!;
+    const area = game.coloredAreas!.find(a => a.kind === "dark")!;
 
     expect(area.satisfied).toBe(true);
     expect(area.satisfiedAt).toBeGreaterThanOrEqual(before);
@@ -190,7 +190,7 @@ describe("the lock is legible the moment it happens", () => {
 
   it("tints the pocket flash with the zone colour", () => {
     const { game, ball } = sealCorner([LET]);
-    expect(game.assimilations.get(ball.id)?.zoneColor).toBe(areaStyle("let").color);
+    expect(game.assimilations.get(ball.id)?.zoneColor).toBe(areaStyle("dark").color);
   });
 
   it("leaves the flash untinted when no zone paid", () => {
@@ -211,7 +211,7 @@ describe("lockDebug can answer 'why did my zone not count?'", () => {
 
     expect(decision).toBeTruthy();
     expect(decision!.area).toBeTruthy();
-    expect(decision!.area!.creditedKind).toBe("let");
+    expect(decision!.area!.creditedKind).toBe("dark");
     expect(decision!.area!.bestCoverFraction).toBeGreaterThan(0);
   });
 
@@ -299,7 +299,7 @@ describe("the activation pulse", () => {
  * state has to be visibly impoverished in its own right.
  */
 describe("a dormant zone reads as dormant", () => {
-  const KINDS = ["var", "let", "const"] as const;
+  const KINDS = ["light", "dark"] as const;
   const packed = (kind: typeof KINDS[number]) =>
     Number.parseInt(areaStyle(kind).color.replace("#", ""), 16);
   /** Chroma, the thing "bleak" actually refers to. */
@@ -392,17 +392,20 @@ describe("dormant opacity stays below live, for every element", () => {
  * translations quietly lying about the payout.
  */
 describe("the explainer quotes the multipliers the code actually pays", () => {
-  const KINDS: AreaKind[] = ["var", "let", "const"];
+  const KINDS: AreaKind[] = ["light", "dark"];
 
   for (const locale of ["en", "es", "sv"] as const) {
     it(`matches in ${locale}`, () => {
       const bundle = JSON.parse(
         readFileSync(resolve(process.cwd(), `src/i18n/locales/${locale}.json`), "utf8"),
       );
-      const body: string = bundle.levelComplete.info.zoneLocks.body;
-      expect(body.length, "the zone explainer is missing").toBeGreaterThan(0);
+      // The zone-locks explainer, and the hold-to-explain card on the board.
+      const bodies: string[] = [bundle.levelComplete.info.zoneLocks.body, bundle.boardInfo.area.body];
+      for (const body of bodies) {
+        expect(body.length, "the zone explainer is missing").toBeGreaterThan(0);
+      }
 
-      for (const kind of KINDS) {
+      for (const [kind, body] of KINDS.flatMap(k => bodies.map(b => [k, b] as const))) {
         const m = areaStyle(kind).multiplier;
         // Swedish writes 1,5x rather than 1.5x, so accept either decimal mark.
         const quoted = new RegExp(`(?<![0-9.,])${String(m).replace(".", "[.,]")}x`);

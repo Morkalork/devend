@@ -72,7 +72,7 @@ const ROWS: Row[] = DOC
 
 /** The ledger's own name for a mechanic, mapped to mechanicSpread's label. */
 const LABEL: Record<string, string> = {
-  "colored area": "Colored area", mover: "Mover", breakable: "Breakable",
+  "syntax area": "Syntax highlighting area", mover: "Mover", breakable: "Breakable",
   chest: "Chest", brittle: "Brittle", reveals: "Reveals", "pickup spots": "Pickup spots",
   launcher: "Launcher", bumper: "Bumper", deformable: "Deformable",
   phasing: "Phasing", rotor: "Rotor", mirror: "Mirror", terminals: "Terminals",
@@ -101,7 +101,7 @@ describe("the ledger describes the maps that exist", () => {
     // Every row except the roster note should resolve. A row naming something
     // mechanicSpread does not know is a mechanic that was renamed or removed.
     const unknown = ROWS.map(r => r.mechanic)
-      .filter(m => !LABEL[m] && m !== "colored area (gate)" && m !== "the second ball");
+      .filter(m => !LABEL[m] && m !== "syntax area (gate)" && m !== "the second ball");
     expect(unknown, "the ledger names a mechanic the engine does not").toEqual([]);
   });
 

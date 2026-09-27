@@ -119,7 +119,7 @@ describe("level 18 is the windmill map", () => {
     const areas = level.coloredAreas ?? [];
     expect(areas).toHaveLength(1);
     const a = areas[0];
-    expect(a.kind).toBe("const");
+    expect(a.kind).toBe("dark");
     // required:true here would be a gate that gates nothing (section 6.4): the
     // authored win never asks for an area clause, so it would pay its
     // multiplier while being invisible as a requirement.

@@ -75,7 +75,7 @@ describe("the boss is the win, not the zone", () => {
     // through a map that derives one.
     const gateOnly = {
       id: "x", level: 1, sizeThreshold: 30, expectedCuts: 5, points: 20,
-      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var", required: true }],
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "light", required: true }],
     } as unknown as LevelConfig;
     expect(resolveWinSpec(gateOnly, NO_RUN_RULES).require).toEqual([{ kind: "area", count: 1 }]);
   });

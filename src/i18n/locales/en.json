@@ -361,7 +361,7 @@
     "baseOvertime": "Base Overtime",
     "zonesSealed": "Zones Sealed",
     "zonesMissed": "Zones Missed",
-    "zonesMissedHint": "Colored areas not taken",
+    "zonesMissedHint": "Syntax areas not taken",
     "scoreOutOf": "Score",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
@@ -420,7 +420,7 @@
       },
       "zoneLocks": {
         "title": "Zone Locks",
-        "body": "Coloured var, let and const boxes pay 1.5x, 2x, 3x on any ball locked inside. It stacks with everything, so a Superior lock in a const box is the biggest payout in the game. Already counted in your lock income above.",
+        "body": "Syntax highlighting areas pay on any ball locked inside: light code boxes 1.5x, dark code boxes 2x. It stacks with everything, so a Superior lock in a dark box is the biggest payout in the game. Already counted in your lock income above.",
         "tip": "The zone lights up when a lock counts. Dark means the pocket missed the box: settle the ball inside the border, not near it."
       },
       "multiLocks": {
@@ -819,7 +819,7 @@
     "shortClear": "clear {{percent}}% of the board",
     "shortLock": "lock {{count}} balls",
     "shortSuperior": "land {{count}} superior locks",
-    "shortArea": "lock {{count}} in the coloured area",
+    "shortArea": "lock {{count}} in the syntax area",
     "shortLockType": "lock {{count}} {{ball}}",
     "shortBoss": "defeat the boss",
     "shortAllLocked": "lock every ball",
@@ -949,7 +949,7 @@
       "well": "Maps with a gravity well",
       "mover": "Maps with a mover",
       "breakable": "Maps with something breakable",
-      "area": "Maps with a coloured area",
+      "area": "Maps with a syntax highlighting area",
       "boss": "Boss maps"
     }
   },
@@ -1179,8 +1179,8 @@
       "body": "Solid. Balls bounce off it and fences stop against it: a good anchor for a pocket."
     },
     "area": {
-      "title": "Marked zone",
-      "body": "Lock a ball inside this zone for a multiplier. On some maps it is the only way to win."
+      "title": "Syntax highlighting area",
+      "body": "Lock a ball inside this code box for a multiplier: light pays 1.5x, dark pays 2x. On some maps it is the only way to win."
     }
   },
   "gameMessages": {
@@ -1368,5 +1368,9 @@
       "splashYours": "Your turn!",
       "splashTheirs": "{{name}}'s turn"
     }
+  },
+  "areaKind": {
+    "light": "light syntax",
+    "dark": "dark syntax"
   }
 }

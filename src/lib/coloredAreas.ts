@@ -1,9 +1,14 @@
 /**
- * Colored Areas: typed var/let/const lock zones (MAP_DESIGN_GUIDELINES.md).
+ * Syntax Highlighting areas: lock zones drawn as a patch of highlighted code
+ * (MAP_DESIGN_GUIDELINES.md). Two kinds, a light-theme editor and a dark one:
+ * light 1.5x < dark 2x, the light one larger (easier) by convention.
  *
- * Every area pays its kind's multiplier to a ball locked inside, easiest
- * (biggest, by convention) to hardest (smallest): var 1.5x < let 2x < const 3x.
- * What differs is the stakes, per `ColoredArea.required`:
+ * They were "Colored Areas" with three kinds, var 1.5x < let 2x < const 3x.
+ * Cut to two on request; var reads as light and let and const as dark
+ * (normalizeAreaKind), so an old map or save keeps its zones and the old top
+ * tier is downgraded to the new one rather than dropped.
+ *
+ * What differs between areas is the stakes, per `ColoredArea.required`:
  * - GATE (default): the map's SOLE win path. Lock a TARGET ball inside one (boss
  *   map: the boss ball; otherwise any ball) to win; locking the target OUTSIDE
  *   fails the map (lose a life, restart).
@@ -11,40 +16,108 @@
  *   nothing; the map is won the normal way whether or not it is used.
  *
  * Pure geometry + kind lookups; the win/fail decision lives in checkBallWonState
- * + evaluateWinConditions, and rendering in the two renderers.
+ * + evaluateWinConditions, and rendering in the sleek renderer's area layer.
  */
 import type { AreaKind, ColoredArea } from "@/types/level";
 import { gridIndexToWorld, worldToGridIndex, CellState, type SpaceGrid } from "@/lib/spaceGrid";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
+/** The colours of one editor theme's highlighting, as #rrggbb. */
+export interface SyntaxTheme {
+  /** The editor background the zone is filled with. */
+  background: string;
+  /** Angle brackets and the slash. */
+  punctuation: string;
+  /** The tag name. */
+  tag: string;
+  /** The attribute name. */
+  attribute: string;
+  /** Plain text content. */
+  text: string;
+  /** The number. */
+  number: string;
+}
+
 export interface AreaStyle {
-  /** Centred label = the kind keyword. */
+  /** The kind's id, also its short admin label. */
   label: string;
-  /** Light fill/border colour (#rrggbb). */
+  /** Border and lock-effect colour (#rrggbb): the theme's accent. */
   color: string;
   /** Lock-points multiplier for a ball locked inside. */
   multiplier: number;
+  /** The highlighting the zone's code snippet is drawn in. */
+  theme: SyntaxTheme;
 }
 
+/** GitHub's light theme and VS Code's Dark+, the two most familiar pairs. */
 export const AREA_KINDS: Record<AreaKind, AreaStyle> = {
-  var:   { label: "var",   color: "#ff9ebf", multiplier: 1.5 }, // light pink
-  let:   { label: "let",   color: "#ffbf80", multiplier: 2 },   // light orange
-  const: { label: "const", color: "#7fe3d4", multiplier: 3 },   // light teal
+  light: {
+    label: "light", color: "#0969da", multiplier: 1.5,
+    theme: {
+      background: "#f6f8fa", punctuation: "#24292f", tag: "#116329",
+      attribute: "#0550ae", text: "#24292f", number: "#cf222e",
+    },
+  },
+  dark: {
+    label: "dark", color: "#c586c0", multiplier: 2,
+    theme: {
+      background: "#1e1e1e", punctuation: "#808080", tag: "#569cd6",
+      attribute: "#9cdcfe", text: "#d4d4d4", number: "#b5cea8",
+    },
+  },
 };
 
-export function areaStyle(kind: AreaKind): AreaStyle {
-  return AREA_KINDS[kind] ?? AREA_KINDS.var;
+/**
+ * Any authored kind, old or new, as one of the two that exist.
+ *
+ * The three-kind names are still read so nothing authored against them breaks:
+ * var was the low tier and becomes light; let and const were the higher two and
+ * both become dark. Anything unrecognised falls back to light, the low tier, so
+ * a typo never pays more than it was meant to.
+ */
+export function normalizeAreaKind(kind: string | undefined | null): AreaKind {
+  if (kind === "dark" || kind === "let" || kind === "const") {
+    return "dark";
+  }
+  return "light";
+}
+
+export function areaStyle(kind: AreaKind | string): AreaStyle {
+  return AREA_KINDS[normalizeAreaKind(kind)];
+}
+
+/**
+ * The code a zone shows: a lock tag around its payout, so the patch reads as
+ * "lock a ball here for more points" in the language of the board it sits on.
+ * One entry per coloured token, lines as arrays of tokens.
+ */
+export type SnippetToken = { text: string; role: keyof Omit<SyntaxTheme, "background"> };
+
+export function areaSnippet(kind: AreaKind | string): SnippetToken[][] {
+  const mult = areaStyle(kind).multiplier;
+  return [
+    [
+      { text: "<", role: "punctuation" }, { text: "lock", role: "tag" },
+      { text: " ball", role: "attribute" }, { text: ">", role: "punctuation" },
+    ],
+    [
+      { text: "  pts x", role: "text" }, { text: String(mult), role: "number" },
+    ],
+    [
+      { text: "</", role: "punctuation" }, { text: "lock", role: "tag" },
+      { text: ">", role: "punctuation" },
+    ],
+  ];
 }
 
 /**
  * Starting size (square, world units) for a new area of each kind. Encodes the
- * authoring convention: var is the easiest kind so it's drawn biggest, const the
- * hardest so it's smallest.
+ * authoring convention: light is the easier kind so it's drawn bigger, dark the
+ * harder so it's smaller.
  */
 export const AREA_DEFAULT_SIZE: Record<AreaKind, number> = {
-  var: 340,
-  let: 260,
-  const: 180,
+  light: 340,
+  dark: 220,
 };
 
 /** Smallest area the editors allow: below this a ball can't be fenced in. */

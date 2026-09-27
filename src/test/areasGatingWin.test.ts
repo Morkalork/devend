@@ -24,9 +24,9 @@ import { gateAreas } from "@/lib/coloredAreas";
 import type { ColoredArea } from "@/types/level";
 import type { WinCondition } from "@/types/winSpec";
 
-const bonus = (kind: ColoredArea["kind"] = "var"): ColoredArea =>
+const bonus = (kind: ColoredArea["kind"] = "light"): ColoredArea =>
   ({ kind, x: 0, y: 0, width: 100, height: 100, required: false });
-const gate = (kind: ColoredArea["kind"] = "var"): ColoredArea =>
+const gate = (kind: ColoredArea["kind"] = "light"): ColoredArea =>
   ({ kind, x: 0, y: 0, width: 100, height: 100 });
 
 const AREA: WinCondition = { kind: "area", count: 1 };
@@ -34,7 +34,7 @@ const LOCKS: WinCondition = { kind: "locks", count: 1 };
 
 describe("when the win starts asking for an area", () => {
   it("turns the map's bonus pockets into gates", () => {
-    const out = areasGatingWin([bonus(), bonus("let")], [AREA], []);
+    const out = areasGatingWin([bonus(), bonus("dark")], [AREA], []);
     expect(gateAreas(out)).toHaveLength(2);
   });
 
@@ -47,9 +47,9 @@ describe("when the win starts asking for an area", () => {
   });
 
   it("keeps everything else about the area untouched", () => {
-    const area: ColoredArea = { kind: "let", x: 600, y: 625, width: 275, height: 250, required: false };
+    const area: ColoredArea = { kind: "dark", x: 600, y: 625, width: 275, height: 250, required: false };
     const [out] = areasGatingWin([area], [AREA], []);
-    expect(out).toEqual({ kind: "let", x: 600, y: 625, width: 275, height: 250 });
+    expect(out).toEqual({ kind: "dark", x: 600, y: 625, width: 275, height: 250 });
   });
 
   it("counts a clause in alsoWinIf too", () => {
@@ -62,7 +62,7 @@ describe("when the win starts asking for an area", () => {
 
 describe("when it should leave the map alone", () => {
   it("does nothing without an area clause", () => {
-    const areas = [bonus(), bonus("let")];
+    const areas = [bonus(), bonus("dark")];
     const out = areasGatingWin(areas, [LOCKS], []);
     expect(out).toBe(areas);
     expect(gateAreas(out)).toHaveLength(0);
@@ -73,14 +73,14 @@ describe("when it should leave the map alone", () => {
     // reward is a real arrangement, and the clause is already satisfiable, so
     // there is nothing here to fix. Promoting everything would quietly rewrite
     // the author's design.
-    const areas = [gate(), bonus("let")];
+    const areas = [gate(), bonus("dark")];
     const out = areasGatingWin(areas, [AREA], []);
     expect(out).toBe(areas);
     expect(gateAreas(out)).toHaveLength(1);
   });
 
   it("leaves an all-gate map exactly as it is", () => {
-    const areas = [gate(), gate("let")];
+    const areas = [gate(), gate("dark")];
     expect(areasGatingWin(areas, [AREA], [])).toBe(areas);
   });
 
@@ -95,8 +95,8 @@ describe("the level-5 shape, end to end", () => {
   it("clears the condition that made the map's own clause unreachable", () => {
     // Exactly what was in map.yml: two bonus pockets and a required area lock.
     const areas = [
-      { kind: "var", x: 600, y: 625, width: 275, height: 250, required: false },
-      { kind: "let", x: 0, y: 625, width: 300, height: 250, required: false },
+      { kind: "light", x: 600, y: 625, width: 275, height: 250, required: false },
+      { kind: "dark", x: 0, y: 625, width: 300, height: 250, required: false },
     ] as ColoredArea[];
     expect(gateAreas(areas), "the starting state was already fine").toHaveLength(0);
 

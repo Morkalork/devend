@@ -8,6 +8,7 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
+import { normalizeAreaKind } from "@/lib/coloredAreas";
 import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
 import { MoverState, buildMoverPolygon, buildRotorOutline } from "@/lib/physics/moverState";
 import { GameModifiers, MAX_STARTING_CAPTURE_PERCENT } from "@/hooks/useActiveModifiers";
@@ -1457,7 +1458,10 @@ export function createInitialGameData(
     // Authored in the standard orientation, so they turn with the obstacles
     // they were placed against.
     gravityWells: (level.gravityWells ?? []).map(w => rotateGravityWell(w, mapRotation)),
-    coloredAreas: (level.coloredAreas ?? []).map(a => rotateColoredArea(a, mapRotation)),
+    // Kinds normalised on the way in, so a map or save authored with the old
+    // var/let/const names plays as the two kinds that exist now.
+    coloredAreas: (level.coloredAreas ?? [])
+      .map(a => rotateColoredArea({ ...a, kind: normalizeAreaKind(a.kind) }, mapRotation)),
     pickupSpots: (level.pickupSpots ?? []).map(sp => rotatePoint(sp.x, sp.y, mapRotation)),
     bugSquashChance: Math.max(0, Math.min(100, activeModifiers.bugSquashChance ?? 0)),
     bugSquashSeconds: Math.max(0, activeModifiers.bugSquashSeconds ?? 0),

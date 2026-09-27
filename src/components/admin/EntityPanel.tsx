@@ -5,7 +5,7 @@ import {
   muzzleVector, launcherRunway, MIN_LAUNCH_RUNWAY_FRACTION,
   type LauncherPlacement, type Blocker,
 } from '@/lib/launcher';
-import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
+import { Plus, Trash2, Circle, Pentagon, Square, Copy, CodeXml,
   ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
   MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package, AlertTriangle, Waves } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
@@ -214,7 +214,7 @@ export function EntityPanel({
               }`}
             >
               <div className="flex items-center gap-2">
-                <SquareDashed className="w-4 h-4" style={{ color: areaStyle(area.kind).color }} />
+                <CodeXml className="w-4 h-4" style={{ color: areaStyle(area.kind).color }} />
                 <span className="text-sm font-mono">{area.kind}</span>
                 <span className="text-xs text-muted-foreground">
                   x{areaStyle(area.kind).multiplier} - {Math.round(area.width)}x{Math.round(area.height)}

@@ -360,7 +360,7 @@ levels:
     coloredAreas:
       # A first taste of the bonus pocket in a mirror map: the reflected lanes make
       # the corner easy to reach and hard to hold.
-      - kind: var
+      - kind: light
         x: 45
         'y': 630
         width: 225
@@ -533,7 +533,7 @@ levels:
     coloredAreas:
       # Opposite the pillar, across the divider: the pocket is cheap to fence and
       # expensive to reach, which is the trade the map is about.
-      - kind: let
+      - kind: dark
         x: 655
         'y': 45
         width: 200
@@ -755,7 +755,7 @@ levels:
     timeLimit: 95
     # Colored Area win gate: fence BOTH chained boss halves into this var area.
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 500
         'y': 45
         width: 355
@@ -852,7 +852,7 @@ levels:
     coloredAreas:
       # Act III opens the board up again. The spine keeps this corner honest: you
       # have to commit to the left half to bank it.
-      - kind: let
+      - kind: dark
         x: 45
         'y': 45
         width: 200
@@ -922,7 +922,7 @@ levels:
         height: 200
         turnRate: 3.2
     coloredAreas:
-      - kind: let
+      - kind: dark
         x: 630
         'y': 625
         width: 220
@@ -1087,7 +1087,7 @@ levels:
     coloredAreas:
       # Above the catch shelf, where the pillars cannot help you. Taking it means
       # working the top of the board while the shelf collects everything else.
-      - kind: let
+      - kind: dark
         x: 655
         'y': 45
         width: 200
@@ -1213,7 +1213,7 @@ levels:
           count: 1
     coloredAreas:
       # Far from the core and both nodes, so the greedy line is the long one.
-      - kind: let
+      - kind: dark
         x: 45
         'y': 45
         width: 200
@@ -1394,7 +1394,7 @@ levels:
     coloredAreas:
       # Small, high, and on the far side of the phasing roof: reachable only in the
       # window where the roof is out.
-      - kind: const
+      - kind: dark
         x: 685
         'y': 45
         width: 170
@@ -1465,7 +1465,7 @@ levels:
         height: 180
         turnRate: 2.9
     coloredAreas:
-      - kind: let
+      - kind: dark
         x: 610
         'y': 610
         width: 210
@@ -1535,7 +1535,7 @@ levels:
     maxBalls: 1
     timeLimit: 80
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 500
         'y': 45
         width: 355
@@ -1636,7 +1636,7 @@ levels:
     coloredAreas:
       # Act IV: a const pocket tucked under the right shelf. Worth 3x, and the
       # shelf is in the way of every comfortable cut to it.
-      - kind: const
+      - kind: dark
         x: 685
         'y': 685
         width: 170
@@ -1879,7 +1879,7 @@ levels:
           count: 1
           bonusPercent: 30
     coloredAreas:
-      - kind: const
+      - kind: dark
         x: 630
         'y': 45
         width: 225
@@ -1993,7 +1993,7 @@ levels:
     # gravity map that only sometimes pulls is a different map most of the time.
     mutator: tipping
     coloredAreas:
-      - kind: const
+      - kind: dark
         x: 350
         'y': 330
         width: 220
@@ -2085,7 +2085,7 @@ levels:
     # game, and the only one that has to survive two wipes on purpose.
     timeLimit: 115
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 500
         'y': 45
         width: 355

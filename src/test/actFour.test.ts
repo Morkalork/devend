@@ -262,7 +262,7 @@ describe("34 is built for the gate it sets", () => {
   it("has a gate area for the balls to be herded into", () => {
     const gates = (L34.coloredAreas ?? []).filter(a => a.required !== false);
     expect(gates, "the area clause needs a gate area").toHaveLength(1);
-    expect(gates[0].kind).toBe("const");
+    expect(gates[0].kind).toBe("dark");
   });
 
   it("spawns more balls than the gate asks for", () => {

@@ -148,8 +148,8 @@ levels:
 
   # 3 "Standup" - MEET the marked zone.
   #
-  # The game's first Colored Area, and it is the WIN: clear the board and lock
-  # a ball inside the pink box. It used to be the bonus form (required: false),
+  # The game's first syntax highlighting area, and it is the WIN: clear the board and lock
+  # a ball inside the light syntax box. It used to be the bonus form (required: false),
   # on the theory that the first map to show a symbol must not punish misreading
   # it. Played, it read the other way round: a bright box on an otherwise bare
   # board that the win never mentions is a signal with nothing behind it, and
@@ -172,7 +172,7 @@ levels:
   # passage, and adding a ball is the axis of last resort.
   - id: level-3
     level: 3
-    premise: "The one where the pink box is the win: clear the board and lock a ball inside it."
+    premise: "The one where the light syntax box is the win: clear the board and lock a ball inside it."
     sizeThreshold: 34
     expectedCuts: 4
     points: 5
@@ -208,7 +208,7 @@ levels:
         width: 225
         height: 24
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 630
         'y': 45
         width: 225
@@ -269,7 +269,7 @@ levels:
         - kind: area
           count: 1
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 630
         'y': 45
         width: 225
@@ -949,7 +949,7 @@ levels:
         - kind: area
           count: 1
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 579
         'y': 45
         width: 276
@@ -1024,7 +1024,7 @@ levels:
   # The act ends on a map with no toys in it, because the boss is never the
   # first test of an act's content. Everything here has been met and developed:
   # a doorway, a patrol across it, a breakable that merges what it separates, a
-  # chest that pays for being smashed, and a pink box that pays for being sealed
+  # chest that pays for being smashed, and a syntax box that pays for being sealed
   # around. Three balls, and the tightest threshold of the act at 84%.
   #
   # The one thing it adds is that all five compete for the same attention at
@@ -1074,7 +1074,7 @@ levels:
           count: 1
           of: monoliths
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 45
         'y': 610
         width: 200
@@ -1240,7 +1240,7 @@ levels:
 
   - id: level-10
     level: 10
-    premise: "The one where the release candidate has to be fenced into the pink box before it ships."
+    premise: "The one where the release candidate has to be fenced into the syntax box before it ships."
     sizeThreshold: 15
     expectedCuts: 8
     points: 5
@@ -1248,17 +1248,17 @@ levels:
     randomShapes: 0
     maxBalls: 1
     timeLimit: 65
-    # Colored Area (required win-gate): trap the boss INSIDE this pink var area to
+    # Colored Area (required win-gate): trap the boss INSIDE this light syntax area to
     # ship it; trapping it outside fails the map (lose a life, restart). var is the
     # easiest kind (1.5x). ~20% of the board, top-right in the standard orientation.
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 500
         'y': 45
         width: 355
         height: 335
     # Boss (issue #56): the first boss, gating the Promotion. The Release Candidate
-    # is a big/fast antagonist you must DEFEAT by fencing it into the var area above;
+    # is a big/fast antagonist you must DEFEAT by fencing it into the syntax area above;
     # clearing space alone will not complete the map (the area is the win gate), and
     # the deadline is the fail state. Scope Creep runs hot from second 0. Beating it
     # routes into the once-per-run Promotion draft.
@@ -1267,21 +1267,21 @@ levels:
       intro: >-
         Your first boss. The Release Candidate is loose: a big, fast ball, with
         Scope Creep hot from the first second. Clearing the board is not enough:
-        fence it into the pink var area (top right) to ship it. Trap it anywhere
+        fence it into the light syntax area (top right) to ship it. Trap it anywhere
         else and you lose a life. Beat the deadline.
       creepFromStart: true
       objective:
         id: defeat-rc
         name: Defeat the Release Candidate
-        description: Fence the boss into the var area to ship it.
+        description: Fence the boss into the syntax area to ship it.
         clarify: >-
-          Trap the Release Candidate inside the pink var area to defeat it. Trapping
+          Trap the Release Candidate inside the light syntax area to defeat it. Trapping
           it outside the area fails the map (you lose a life and the map restarts).
           Running out of time also fails.
         kind: defeatBoss
         reward: 12
       bossBall:
-        # No HP: the boss is won by fencing it into the var area (the Colored Area
+        # No HP: the boss is won by fencing it into the syntax area (the syntax area
         # gate decides it). hp 1 => no HP pips in the HUD. It KEEPS spawning adds
         # (maxMinions = the concurrent cap, refilled as you lock them away), so
         # managing the minions is the second layer while you corner the boss.
@@ -1363,7 +1363,7 @@ levels:
           count: 2
           of: shards
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 640
         'y': 90
         width: 170
@@ -1593,7 +1593,7 @@ levels:
   # 13 "Code Review" - MEET the mirror.
   #
   # Someone else decides where your work goes. A fence that meets the mirror
-  # reflects and keeps going, so one drag becomes a bent line, and the pink
+  # reflects and keeps going, so one drag becomes a bent line, and the syntax
   # box sits where no straight fence closes it. The box is the win: clear the
   # board, and lock a ball in the box the mirror is for.
   #
@@ -1629,7 +1629,7 @@ levels:
         - kind: area
           count: 1
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 660
         'y': 150
         width: 170
@@ -1774,7 +1774,7 @@ levels:
         - kind: area
           count: 1
     coloredAreas:
-      - kind: var
+      - kind: light
         x: 355
         'y': 650
         width: 190
@@ -1877,7 +1877,7 @@ levels:
     # purpose: the pocket that pays is the one with a machine in it whose whole
     # job is throwing balls back out. Cheap to seal, hard to seal with a ball
     # still inside.
-    # No colored area. A bonus var box sat in the top-left room, and the win
+    # No colored area. A bonus syntax box sat in the top-left room, and the win
     # never mentioned it: the same promise-with-nothing-behind-it the act I
     # review found on levels 3 and 5. This map's subject is the divider.
     entities:
@@ -2390,7 +2390,7 @@ levels:
           count: 2
           of: monoliths
     coloredAreas:
-      - kind: const
+      - kind: dark
         x: 340
         'y': 340
         width: 220

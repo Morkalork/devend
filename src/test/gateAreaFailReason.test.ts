@@ -38,7 +38,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { WinCondition } from "@/types/winSpec";
 
 /** Level 8's shape: a gate zone, a clear to make, and three balls to do it with. */
-const GATE_AREA = { kind: "var", x: 600, y: 60, width: 240, height: 240 };
+const GATE_AREA = { kind: "light", x: 600, y: 60, width: 240, height: 240 };
 
 function level(win: WinCondition[]): LevelConfig {
   return {

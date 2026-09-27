@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown, Layers, Users } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown, Layers, Users, CodeXml } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
@@ -19,7 +19,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   baseOvertime: { icon: Clock, color: 'text-foreground' },
   threadLocks: { icon: Lock, color: 'text-cyan-400' },
   superiorLocks: { icon: Medal, color: 'text-cyan-300' },
-  zoneLocks: { icon: Target, color: 'text-fuchsia-300' },
+  zoneLocks: { icon: CodeXml, color: 'text-fuchsia-300' },
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
   winBonus: { icon: Trophy, color: 'text-violet-400' },
@@ -546,7 +546,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             {zoneCount > 0 && zoneLockCount > 0 && (
               <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
                 <span className="text-muted-foreground flex items-center gap-1">
-                  <Target className="w-3 h-3 text-fuchsia-300" />
+                  <CodeXml className="w-3 h-3 text-fuchsia-300" />
                   {t('levelComplete.zonesSealed')}
                 </span>
                 <span className="font-bold text-fuchsia-300">
@@ -577,7 +577,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             {zonesMissedCost > 0 && (
               <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
                 <span className="text-muted-foreground flex items-center gap-1">
-                  <Target className="w-3 h-3" />
+                  <CodeXml className="w-3 h-3" />
                   {t('levelComplete.zonesMissed')}
                 </span>
                 <span className="font-bold text-destructive">-{zonesMissedCost}h</span>

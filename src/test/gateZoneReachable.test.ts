@@ -58,7 +58,7 @@ function board(): SpaceGrid {
 }
 
 /** The zone, sitting entirely in the right-hand room (cols 14-18, rows 2-6). */
-const ZONE: ColoredArea = { x: 210, y: 30, width: 75, height: 75, kind: "var" };
+const ZONE: ColoredArea = { x: 210, y: 30, width: 75, height: 75, kind: "light" };
 
 /** A ball at the centre of a cell. */
 type Probe = { state: string; isBoss?: boolean; position: { x: number; y: number } };
@@ -127,7 +127,7 @@ describe("claimed ground", () => {
   it("is judged per zone, so a map with a live one keeps going", () => {
     const grid = board();
     for (const idx of areaCellIndices(grid, [ZONE])) grid.cells[idx] = CellState.REMOVED;
-    const alsoLeft: ColoredArea = { x: 30, y: 30, width: 75, height: 75, kind: "let" };
+    const alsoLeft: ColoredArea = { x: 30, y: 30, width: 75, height: 75, kind: "dark" };
     expect(anyGateTargetCanReach(grid, [IN_LEFT], [ZONE, alsoLeft])).toBe(true);
   });
 });

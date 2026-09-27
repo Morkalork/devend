@@ -724,10 +724,14 @@ export interface DataStreamConfig {
 }
 
 /**
- * A Colored Area: a typed, labelled zone where locking pays the kind's
- * multiplier. Three kinds, easiest to hardest:
- *   var (light pink, 1.5x) < let (light orange, 2x) < const (light teal, 3x).
- * By convention a var area is drawn largest (easiest), a const smallest.
+ * A Syntax Highlighting area: a zone drawn as a patch of highlighted code
+ * that pays its kind's multiplier to a ball locked inside. Two kinds:
+ *   light (a light-theme editor, 1.5x) < dark (a dark-theme editor, 2x).
+ * By convention a light area is drawn larger (easier), a dark one smaller.
+ *
+ * It used to be "Colored Areas" with three kinds, var < let < const (1.5x, 2x,
+ * 3x). Old data still loads: normalizeAreaKind reads var as light and let and
+ * const as dark, so the top tier is downgraded rather than lost.
  *
  * An area is either a GATE or a BONUS pocket (`required`), which is the single
  * authorable form of MAP_DESIGN_GUIDELINES.md's greed hook:
@@ -739,7 +743,7 @@ export interface DataStreamConfig {
  * The teaching arc runs bonus first (early maps: "the pink box pays more") and
  * gate later (L10's boss: "the pink box is the only way to ship it").
  */
-export type AreaKind = "var" | "let" | "const";
+export type AreaKind = "light" | "dark";
 
 /**
  * Which way a well pulls, in SCREEN space.

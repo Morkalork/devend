@@ -53,7 +53,7 @@ describe("which families a map offers", () => {
   it("takes breakables, zones, circuits, streams and boxes", () => {
     const p = engagementProgress(state({
       destructibles: [brk(4, true)],
-      coloredAreas: [{ kind: "var", x: 0, y: 0, width: 1, height: 1 }] as never,
+      coloredAreas: [{ kind: "light", x: 0, y: 0, width: 1, height: 1 }] as never,
       zoneLockCount: 1,
       circuit: { terminals: [{ lit: true }, { lit: false }] } as never,
       dataStream: { harvested: [true, false, false, false] } as never,

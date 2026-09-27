@@ -142,8 +142,8 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 A map's payout is its flat base (scaled by the over-par multiplier) plus six
 independently-capped **Performance Review axes**: `delivery` (did you lock the
 balls), `engagement` (did you operate the features the map put on the board:
-breakables smashed, colored areas locked into, terminals lit, seams harvested,
-boxes delivered into), `craft` (superior / colored-area / simultaneous quality),
+breakables smashed, syntax areas locked into, terminals lit, seams harvested,
+boxes delivered into), `craft` (superior / syntax-area / simultaneous quality),
 `tempo` (ship early), `thrift` (under par) and `greed` (clearing past the
 requirement, plus push-your-luck). Each pays `ceiling x ratio`, and every ratio is
 measured against what THIS map could give, so the same quality of play is worth

@@ -29,7 +29,7 @@ import type { LevelConfig } from "@/types/level";
 
 const level = (over: Partial<LevelConfig>) => over as LevelConfig;
 const area = (satisfied = false) =>
-  ({ kind: "var" as const, x: 0, y: 0, width: 10, height: 10, satisfied });
+  ({ kind: "light" as const, x: 0, y: 0, width: 10, height: 10, satisfied });
 
 describe("how much of a map rides on its zones", () => {
   it("is nothing at all on a map with no areas", () => {

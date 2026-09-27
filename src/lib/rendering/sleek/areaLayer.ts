@@ -1,5 +1,8 @@
 /**
- * Colored Areas (var / let / const) as floor markings.
+ * Syntax Highlighting areas (light / dark) as floor markings: a patch of
+ * editor background in the kind's theme, with its code snippet on top
+ * (areaSnippet.ts). They used to be Colored Areas, a tinted box with a
+ * var / let / const keyword.
  *
  * These are painted ON the board, not objects sitting on it, so they take no
  * cast shadow - they take the ambient wash like the surface they belong to.
@@ -19,9 +22,10 @@
  * stays key-gated and is not rebuilt sixty times a second.
  */
 
-import { Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { areaStyle, isGateArea } from "@/lib/coloredAreas";
+import { areaStyle, areaSnippet, isGateArea, normalizeAreaKind } from "@/lib/coloredAreas";
+import { snippetTexture, snippetFontPx } from "./areaSnippet";
 import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
 import { snapRect, hairline, type Pt } from "./pixelGrid";
@@ -75,6 +79,14 @@ export const AREA_ALPHA = {
              gate:  { fill: 0.085, border: 0.64, label: 0.80 } },
   live:    { fill: 0.12, border: 0.95, label: 1 },
 } as const;
+
+/**
+ * How strongly the editor background is laid down, per theme, on top of the
+ * fill alpha above. A pale light-theme wash over the dark board stands out at a
+ * fraction of the strength a dark-theme one needs to register at all, so the
+ * two are scaled to read as equally present rather than drawn at one alpha.
+ */
+export const THEME_FILL_BOOST = { light: 1.6, dark: 4 } as const;
 
 /** Activation flare length, and the steady breath's cycle, in ms. */
 export const FLARE_MS = 1100;
@@ -196,7 +208,7 @@ export class AreaLayer {
   private g = new Graphics();
   /** Redrawn per frame while any zone is pulsing; cleared once when none are. */
   private pulseG = new Graphics();
-  private labels: Text[] = [];
+  private labels: (Text | Sprite)[] = [];
   private key = "";
   private wasPulsing = false;
 
@@ -259,6 +271,8 @@ export class AreaLayer {
       // A dormant zone is drawn drained and faint; a live one keeps full chroma
       // and gets the pulse on top. The gap between the two is the whole point.
       const inkColor = lit ? color : dormantColor(color, gate);
+      const kind = normalizeAreaKind(a.kind);
+      const background = Number.parseInt(st.theme.background.replace("#", ""), 16);
 
       const q = worldRectQuad(a.x, a.y, a.width, a.height, w2s);
 
@@ -270,7 +284,11 @@ export class AreaLayer {
       // fainter still, so the contrast lives in the gap between them.
       const dormantAlpha = gate ? AREA_ALPHA.dormant.gate : AREA_ALPHA.dormant.bonus;
       const fill = (lit ? AREA_ALPHA.live.fill : dormantAlpha.fill) * (0.55 + amb * 0.45);
-      shapeOf(this.g, q, 0).fill({ color: inkColor, alpha: fill });
+      // The editor background of the kind's theme: light or dark, like the
+      // two editors the snippet is highlighted for.
+      shapeOf(this.g, q, 0).fill({
+        color: background, alpha: Math.min(1, fill * THEME_FILL_BOOST[kind]),
+      });
 
       if (lit) {
         // Occupied: solid and bright, unmistakably "this one is done".
@@ -291,44 +309,20 @@ export class AreaLayer {
         });
       }
 
-      // The label stays UPRIGHT rather than turning with the marking it sits
+      // The snippet stays UPRIGHT rather than turning with the marking it sits
       // on. It is information, not decoration, and a floor decal rotated past
-      // 90 degrees carries its text upside down.
-      const cx = q.cx;
-      const cy = q.cy;
-      const labelPx = Math.max(13, Math.min(q.w, q.h) * 0.2);
-      // The label carries the state too: a dormant bonus zone reads as a faded
-      // stencil, a live one as a lit sign.
-      const alpha = lit ? AREA_ALPHA.live.label : dormantAlpha.label;
+      // 90 degrees carries its text upside down. Baked once per kind and size
+      // (snippetTexture), so this only places a sprite.
+      const fontPx = snippetFontPx(areaSnippet(kind), q.w, q.h);
+      const snippet = new Sprite(snippetTexture(kind, fontPx));
+      snippet.anchor.set(0.5, 0.5);
+      snippet.position.set(Math.round(q.cx), Math.round(q.cy));
+      // The snippet carries the state too: a dormant bonus zone reads as faded
+      // code, a live one as the lit editor.
+      snippet.alpha = lit ? AREA_ALPHA.live.label : dormantAlpha.label;
 
-      const kind = new Text({
-        text: st.label,
-        style: new TextStyle({
-          fontFamily: "monospace",
-          fontWeight: "bold",
-          fontSize: labelPx,
-          fill: inkColor,
-        }),
-      });
-      kind.anchor.set(0.5, 1);
-      kind.position.set(Math.round(cx), Math.round(cy + labelPx * 0.25));
-      kind.alpha = alpha;
-
-      const mult = new Text({
-        text: `×${st.multiplier}`,
-        style: new TextStyle({
-          fontFamily: "monospace",
-          fontWeight: "bold",
-          fontSize: labelPx * 0.6,
-          fill: inkColor,
-        }),
-      });
-      mult.anchor.set(0.5, 0);
-      mult.position.set(Math.round(cx), Math.round(cy + labelPx * 0.35));
-      mult.alpha = alpha;
-
-      this.container.addChild(kind, mult);
-      this.labels.push(kind, mult);
+      this.container.addChild(snippet);
+      this.labels.push(snippet);
     }
   }
 

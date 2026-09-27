@@ -8,10 +8,11 @@
  *
  * The economy has two lock multipliers that MULTIPLY each other, and no map had
  * ever set up both at once:
- *   - the Colored Area kind      const = 3x   (checkBallWonState: zoneMult)
+ *   - the syntax area kind       dark = 2x    (checkBallWonState: zoneMult;
+ *                                 the map's old `const` box read as dark)
  *   - lock quality               superior = 2x (pocket <= 40% of base threshold)
- * so 6x existed in the code and was unreachable in play. This map is authored
- * around that stack, with a middle rung (3x, not superior) between skipping the
+ * so 4x existed in the code and was unreachable in play. This map is authored
+ * around that stack, with a middle rung (2x, not superior) between skipping the
  * hook and taking it.
  *
  * What makes the rungs worth a test is that a lock GRADE is not a property of
@@ -96,13 +97,13 @@ const IN_NOOK: Vector2 = { x: 800, y: 85 };
 const SUPERIOR_PCT = BALL_WON_REGION_THRESHOLD * getLockQuality().superiorThresholdFraction;
 
 describe("the map is authored the way the design says", () => {
-  it("carries exactly one hook: a single const BONUS area", () => {
+  it("carries exactly one hook: a single dark BONUS area", () => {
     const areas = LEVEL.coloredAreas ?? [];
     expect(areas).toHaveLength(1);
-    expect(areas[0].kind).toBe("const");
+    expect(areas[0].kind).toBe("dark");
     // Bonus, not gate: skipping the hook must never fail the map.
     expect(areas[0].required).toBe(false);
-    expect(areaStyle(areas[0].kind).multiplier).toBe(3);
+    expect(areaStyle(areas[0].kind).multiplier).toBe(2);
   });
 
   it("suppresses random obstacles, which would resize the nook", () => {
@@ -263,15 +264,15 @@ describe("what each rung actually pays", () => {
   const lockValue = getLockValue();
   const { superiorMultiplier } = getLockQuality();
 
-  it("rung 2, the alcove: the const multiplier, but NOT the quality one", () => {
+  it("rung 2, the alcove: the dark multiplier, but NOT the quality one", () => {
     const game = makeGame();
     const { ball, superior, paid } = seal(game, IN_ALCOVE, ALCOVE_CUT);
 
     expect(ball.state).toBe("won");
     expect(superior).toBe(false);
     expect(game.superiorLockBonus).toBe(0);
-    // 3x for landing in the const box, and nothing for quality.
-    expect(paid).toBe(Math.round((ball.lockMultiplier ?? 1) * 3 * lockValue));
+    // 2x for landing in the dark box, and nothing for quality.
+    expect(paid).toBe(Math.round((ball.lockMultiplier ?? 1) * 2 * lockValue));
   });
 
   it("rung 3, the nook: both multipliers, which is the point of the map", () => {
@@ -280,8 +281,8 @@ describe("what each rung actually pays", () => {
 
     expect(ball.state).toBe("won");
     expect(superior).toBe(true);
-    // 3x (const) AND 2x (superior), multiplied - the payout the roster never reached.
-    expect(paid).toBe(Math.round((ball.lockMultiplier ?? 1) * 3 * lockValue * superiorMultiplier));
+    // 2x (dark) AND 2x (superior), multiplied - the payout the roster never reached.
+    expect(paid).toBe(Math.round((ball.lockMultiplier ?? 1) * 2 * lockValue * superiorMultiplier));
     expect(game.superiorLockBonus).toBe(paid);
   });
 
@@ -293,9 +294,9 @@ describe("what each rung actually pays", () => {
 
   /**
    * The reason the map is interesting rather than merely generous: the same
-   * ball, sealed the same way but anywhere else on the board, pays a sixth.
+   * ball, sealed the same way but anywhere else on the board, pays a quarter.
    */
-  it("stacks to 6x what an ordinary sloppy lock pays", () => {
+  it("stacks to 4x what an ordinary sloppy lock pays", () => {
     const game = makeGame();
     const plain = makeGame();
     // A roomy pocket in the lower-left chamber: no area, no quality bonus.
@@ -305,6 +306,6 @@ describe("what each rung actually pays", () => {
     expect(p.ball.state).toBe("won");
     expect(p.superior).toBe(false);
     expect(p.paid).toBe(Math.round((p.ball.lockMultiplier ?? 1) * lockValue));
-    expect(t.paid).toBe(p.paid * 6);
+    expect(t.paid).toBe(p.paid * 4);
   });
 });

@@ -37,11 +37,11 @@ describe("winConditionsBody", () => {
     // halves of a chained pair - so the area lines travel with it. Losing them
     // would have left the map saying "defeat the boss" with no word on how.
     const body = winConditionsBody(t, base({
-      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "light" }],
       boss: {} as LevelConfig["boss"],
     }), 10, NO_RUN_RULES);
     expect(body).toContain("winConditions.areaWin");
-    expect(body).toContain('"area":"var"');
+    expect(body).toContain('"area":"areaKind.light"');
     expect(body).toContain('"mult":1.5');
     // The BOSS wording, which is the one map shape where "trap it outside and
     // you lose" is true: anyGateTargetInPlay counts only the boss there.
@@ -54,7 +54,7 @@ describe("winConditionsBody", () => {
   it("says a chained pair is one win", () => {
     // Neither trap ends the map on its own, and nothing on the board says so.
     const pair = winConditionsBody(t, base({
-      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "light" }],
       boss: { bossBall: { count: 2 } } as unknown as LevelConfig["boss"],
     }), 20, NO_RUN_RULES);
     expect(pair).toContain("winConditions.bossPair");
@@ -95,14 +95,14 @@ describe("shouldAnnounceWinConditions", () => {
     expect(shouldAnnounceWinConditions(t, base({ fenceBudget: 4 }), 6, NO_RUN_RULES)).toBe(true);
     expect(shouldAnnounceWinConditions(t, base({ boss: {} as LevelConfig["boss"] }), 10, NO_RUN_RULES)).toBe(true);
     expect(shouldAnnounceWinConditions(t, base({
-      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "light" }],
     }), 10, NO_RUN_RULES)).toBe(true);
   });
 
   // A bonus pocket is upside, not a win condition, and the board already marks it.
   it("does not announce a bonus-only colored area", () => {
     expect(shouldAnnounceWinConditions(t, base({
-      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var", required: false }],
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "light", required: false }],
     }), 10, NO_RUN_RULES)).toBe(false);
   });
 

@@ -361,7 +361,7 @@
     "baseOvertime": "Bas-övertid",
     "zonesSealed": "Zoner förseglade",
     "zonesMissed": "Missade zoner",
-    "zonesMissedHint": "Färgade områden som inte togs",
+    "zonesMissedHint": "Syntaxområden som inte togs",
     "scoreOutOf": "Poäng",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
@@ -420,7 +420,7 @@
       },
       "zoneLocks": {
         "title": "Zonlås",
-        "body": "Färgade var-, let- och const-rutor betalar 1,5x, 2x, 3x på varje boll låst inuti. Det staplas med allt, så ett Superiort lås i en const-ruta är spelets största betalning. Redan räknat i din låsinkomst ovan.",
+        "body": "Syntaxmarkerade områden betalar för varje boll låst inuti: ljusa kodrutor 1,5x, mörka kodrutor 2x. Det staplas med allt, så ett Superiort lås i en mörk ruta är spelets största betalning. Redan räknat i din låsinkomst ovan.",
         "tip": "Zonen tänds när ett lås räknas. Mörk betyder att fickan missade rutan: låt bollen stanna innanför kanten, inte nära den."
       },
       "multiLocks": {
@@ -807,7 +807,7 @@
     "menuItem": "Acceptanskriterier",
     "targetBoss": "bossen",
     "targetBall": "en boll",
-    "areaWin": "Lås in {{target}} i {{area}}-området för {{mult}}x utbetalning.",
+    "areaWin": "Lås in {{target}} i det {{area}} syntaxområdet för {{mult}}x utbetalning.",
     "boss": "Besegra bossen för att skeppa den.",
     "clear": "Rensa {{percent}}% av spelplanen.",
     "time": "Klockan på {{seconds}}s tar slut.",
@@ -838,7 +838,7 @@
       "fail": "Misslyckande:"
     },
     "groupRequiredAll": "Mål:",
-    "bonusArea": "Lås in en boll i {{area}}-området för {{mult}}x betalning. Att strunta i den kostar ingenting.",
+    "bonusArea": "Lås in en boll i det {{area}} syntaxområdet för {{mult}}x betalning. Att strunta i den kostar ingenting.",
     "tradeBudgetBonus": "Dina staket är ransonerade. Den valfria fickan och en bekväm rensning tävlar om dem.",
     "lock_one": "Lås in minst {{count}} boll.",
     "lock_other": "Lås in minst {{count}} bollar.",
@@ -854,10 +854,10 @@
     "harvested_other": "Skörda {{count}} sträckor av dataströmmen.",
     "delivered_one": "Leverera {{count}} boll i en låda.",
     "delivered_other": "Leverera {{count}} bollar i en låda.",
-    "areaWinMany_one": "Lås in {{count}} boll i {{area}}-området för {{mult}}x betalning.",
-    "areaWinMany_other": "Lås in {{count}} bollar i {{area}}-området för {{mult}}x betalning.",
-    "areaFail_one": "Du låser inte in minst en boll i {{area}}-zonen.",
-    "areaFail_other": "Du låser inte in minst {{count}} bollar i {{area}}-zonen.",
+    "areaWinMany_one": "Lås in {{count}} boll i det {{area}} syntaxområdet för {{mult}}x betalning.",
+    "areaWinMany_other": "Lås in {{count}} bollar i det {{area}} syntaxområdet för {{mult}}x betalning.",
+    "areaFail_one": "Du låser inte in minst en boll i det {{area}} syntaxområdet.",
+    "areaFail_other": "Du låser inte in minst {{count}} bollar i det {{area}} syntaxområdet.",
     "areaFailBoss_one": "Du fångar bossen utanför zonen.",
     "areaFailBoss_other": "Du fångar bossarna utanför zonen.",
     "splitLocks_one": "Lås in en boll på varje sida av planen.",
@@ -949,7 +949,7 @@
       "well": "Banor med en gravitationsbrunn",
       "mover": "Banor med ett rörligt hinder",
       "breakable": "Banor med något krossbart",
-      "area": "Banor med ett färgat område",
+      "area": "Banor med ett syntaxmarkerat område",
       "boss": "Bossbanor"
     }
   },
@@ -1727,8 +1727,8 @@
       "body": "Fast. Bollar studsar på den och staket stannar mot den: ett bra fäste för en ficka."
     },
     "area": {
-      "title": "Markerad zon",
-      "body": "Lås in en boll i den här zonen för en multiplikator. På vissa banor är det enda sättet att vinna."
+      "title": "Syntaxmarkerat område",
+      "body": "Lås in en boll i den här kodrutan för en multiplikator: ljus betalar 1,5x, mörk 2x. På vissa banor är det enda sättet att vinna."
     }
   },
   "gameMessages": {
@@ -1916,5 +1916,9 @@
       "splashYours": "Din tur!",
       "splashTheirs": "{{name}}s tur"
     }
+  },
+  "areaKind": {
+    "light": "ljusa",
+    "dark": "mörka"
   }
 }

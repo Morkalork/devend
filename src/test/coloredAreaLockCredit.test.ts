@@ -22,7 +22,7 @@ const COVER = 0.7;
 const grid = createSpaceGrid(createRectPolygon(45, 45, 855, 855), [], 15);
 
 // Level 3's actual zone: 170x170 at (670, 60).
-const LET: ColoredArea = { kind: "let", x: 670, y: 60, width: 170, height: 170, required: false } as ColoredArea;
+const LET: ColoredArea = { kind: "dark", x: 670, y: 60, width: 170, height: 170, required: false } as ColoredArea;
 
 /** Every cell whose centre is inside the given world rect. */
 function cellsIn(x0: number, y0: number, x1: number, y1: number): number[] {
@@ -66,9 +66,9 @@ describe("colored area lock credit", () => {
   });
 
   it("breaks ties toward the richer zone when both qualify", () => {
-    const cheap: ColoredArea = { kind: "var", x: 670, y: 60, width: 170, height: 170 } as ColoredArea;
-    const rich: ColoredArea = { kind: "const", x: 670, y: 60, width: 170, height: 170 } as ColoredArea;
+    const cheap: ColoredArea = { kind: "light", x: 670, y: 60, width: 170, height: 170 } as ColoredArea;
+    const rich: ColoredArea = { kind: "dark", x: 670, y: 60, width: 170, height: 170 } as ColoredArea;
     const pocket = cellsIn(670, 60, 840, 230);
-    expect(areaForLock(grid, pocket, 750, 140, [cheap, rich], COVER)?.kind).toBe("const");
+    expect(areaForLock(grid, pocket, 750, 140, [cheap, rich], COVER)?.kind).toBe("dark");
   });
 });

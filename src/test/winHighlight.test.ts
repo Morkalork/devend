@@ -78,8 +78,8 @@ describe("which objects the map points at", () => {
       spec([{ kind: "space", threshold: 30 }, { kind: "area", count: 1 }]),
       board({
         coloredAreas: [
-          { kind: "var", x: 10, y: 10, width: 100, height: 100, required: false },
-          { kind: "let", x: 200, y: 200, width: 80, height: 80 },
+          { kind: "light", x: 10, y: 10, width: 100, height: 100, required: false },
+          { kind: "dark", x: 200, y: 200, width: 80, height: 80 },
         ],
       } as unknown as Partial<CanvasGameState>),
     );

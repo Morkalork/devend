@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   AREA_KINDS,
   AREA_MIN_SIZE,
+  areaSnippet,
   areaStyle,
+  normalizeAreaKind,
   gateAreas,
   isGateArea,
   makeColoredArea,
@@ -23,19 +25,47 @@ const area = (x: number, y: number, w: number, h: number, kind: ColoredArea["kin
 });
 
 describe("area kinds", () => {
-  it("map var/let/const to 1.5 / 2 / 3 with the keyword as label", () => {
-    expect(areaStyle("var").multiplier).toBe(1.5);
-    expect(areaStyle("let").multiplier).toBe(2);
-    expect(areaStyle("const").multiplier).toBe(3);
-    expect(AREA_KINDS.var.label).toBe("var");
-    expect(AREA_KINDS.const.label).toBe("const");
-    // Ordering reflects "var easier (lower reward) than const".
-    expect(areaStyle("var").multiplier).toBeLessThan(areaStyle("const").multiplier);
+  it("has exactly two tiers: light 1.5x and dark 2x", () => {
+    expect(Object.keys(AREA_KINDS).sort()).toEqual(["dark", "light"]);
+    expect(areaStyle("light").multiplier).toBe(1.5);
+    expect(areaStyle("dark").multiplier).toBe(2);
+    expect(AREA_KINDS.light.label).toBe("light");
+    expect(AREA_KINDS.dark.label).toBe("dark");
+    // Light is the easy, low-pay tier; dark the high one.
+    expect(areaStyle("light").multiplier).toBeLessThan(areaStyle("dark").multiplier);
+  });
+
+  it("reads the retired keyword kinds: var as light, let and const as dark", () => {
+    expect(normalizeAreaKind("light")).toBe("light");
+    expect(normalizeAreaKind("dark")).toBe("dark");
+    expect(normalizeAreaKind("dark")).toBe("dark");
+    expect(normalizeAreaKind("light")).toBe("light");
+    expect(normalizeAreaKind("dark")).toBe("dark");
+    // A map still carrying a 3x const box pays dark's 2x, not a crash or a 1x.
+    expect(areaStyle("dark").multiplier).toBe(2);
+    expect(areaStyle("light").multiplier).toBe(1.5);
+  });
+
+  it("gives each tier a snippet that says to lock a ball, with its own pay", () => {
+    for (const kind of ["light", "dark"] as const) {
+      const lines = areaSnippet(kind);
+      const text = lines.map(l => l.map(tok => tok.text).join("")).join("\n");
+      expect(text).toContain("<lock ball>");
+      expect(text).toContain("</lock>");
+      expect(text).toContain(`x${AREA_KINDS[kind].multiplier}`);
+      // Every token names a colour the kind's editor theme defines.
+      for (const tok of lines.flat()) {
+        expect(AREA_KINDS[kind].theme[tok.role]).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+    // Light is a light editor, dark a dark one.
+    expect(AREA_KINDS.light.theme.background).toBe("#f6f8fa");
+    expect(AREA_KINDS.dark.theme.background).toBe("#1e1e1e");
   });
 });
 
 describe("pointInArea / coloredAreaAt", () => {
-  const a = area(500, 45, 355, 335, "var");
+  const a = area(500, 45, 355, 335, "light");
   it("detects inside, outside, and the boundary", () => {
     expect(pointInArea(600, 200, a)).toBe(true);
     expect(pointInArea(400, 200, a)).toBe(false); // left of it
@@ -43,24 +73,24 @@ describe("pointInArea / coloredAreaAt", () => {
     expect(pointInArea(855, 380, a)).toBe(true);   // bottom-right corner
   });
   it("coloredAreaAt returns the containing area or null", () => {
-    expect(coloredAreaAt(600, 200, [a])?.kind).toBe("var");
+    expect(coloredAreaAt(600, 200, [a])?.kind).toBe("light");
     expect(coloredAreaAt(100, 100, [a])).toBeNull();
   });
 });
 
 describe("coloredAreaMultiplierAt", () => {
   it("returns the kind multiplier inside, 1 outside, max when overlapping", () => {
-    expect(coloredAreaMultiplierAt(600, 200, [area(500, 45, 355, 335, "var")])).toBe(1.5);
-    expect(coloredAreaMultiplierAt(100, 100, [area(500, 45, 355, 335, "var")])).toBe(1);
-    const overlap = [area(0, 0, 300, 300, "let"), area(100, 100, 300, 300, "const")];
-    expect(coloredAreaMultiplierAt(150, 150, overlap)).toBe(3); // inside both -> max (const)
+    expect(coloredAreaMultiplierAt(600, 200, [area(500, 45, 355, 335, "light")])).toBe(1.5);
+    expect(coloredAreaMultiplierAt(100, 100, [area(500, 45, 355, 335, "light")])).toBe(1);
+    const overlap = [area(0, 0, 300, 300, "light"), area(100, 100, 300, 300, "dark")];
+    expect(coloredAreaMultiplierAt(150, 150, overlap)).toBe(2); // inside both -> max (dark)
   });
 });
 
 describe("regionWithinAreas (boss fenced-into-area win, level-10 fix)", () => {
   // A 900x900 board grid; a var area filling the top-right quadrant.
   const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
-  const a = area(450, 0, 450, 450, "var");
+  const a = area(450, 0, 450, 450, "light");
   const cellsAt = (pts: Array<[number, number]>) => pts.map(([x, y]) => worldToGridIndex(grid, x, y));
 
   it("is true when every region cell sits inside the area", () => {
@@ -81,7 +111,7 @@ describe("regionWithinAreas (boss fenced-into-area win, level-10 fix)", () => {
 
 describe("regionCoversAreas (win gate: cover >=70% of the AREA, not 70% of the pocket)", () => {
   const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
-  const a = area(0, 0, 60, 60, "var"); // 4x4 = 16 cells (centres 7.5, 22.5, 37.5, 52.5)
+  const a = area(0, 0, 60, 60, "light"); // 4x4 = 16 cells (centres 7.5, 22.5, 37.5, 52.5)
   const centres = [7.5, 22.5, 37.5, 52.5];
   const areaCells: number[] = [];
   for (const y of centres) for (const x of centres) areaCells.push(worldToGridIndex(grid, x, y));
@@ -113,8 +143,8 @@ describe("regionCoversAreas (win gate: cover >=70% of the AREA, not 70% of the p
 });
 
 describe("gate vs bonus areas", () => {
-  const gate = area(0, 0, 300, 300, "var");
-  const bonus: ColoredArea = { ...area(400, 400, 200, 200, "const"), required: false };
+  const gate = area(0, 0, 300, 300, "light");
+  const bonus: ColoredArea = { ...area(400, 400, 200, 200, "dark"), required: false };
 
   it("treats an area as a win gate unless it opts out", () => {
     expect(isGateArea(gate)).toBe(true);
@@ -128,29 +158,28 @@ describe("gate vs bonus areas", () => {
   });
 
   it("still pays the kind multiplier inside a bonus pocket", () => {
-    // The greed hook: locking here pays 3x even though it gates nothing.
-    expect(coloredAreaMultiplierAt(500, 500, [bonus])).toBe(3);
+    // The greed hook: locking here pays 2x even though it gates nothing.
+    expect(coloredAreaMultiplierAt(500, 500, [bonus])).toBe(2);
     expect(coloredAreaMultiplierAt(700, 700, [bonus])).toBe(1);
   });
 
   it("keeps the bonus flag through a rotation", () => {
     const r = rotateColoredArea(bonus, 1);
     expect(r.required).toBe(false);
-    expect(r.kind).toBe("const");
+    expect(r.kind).toBe("dark");
     expect(isGateArea(r)).toBe(false);
   });
 });
 
 describe("makeColoredArea (map-editor default)", () => {
-  it("sizes var biggest and const smallest, never below the minimum", () => {
-    const sizes = (["var", "let", "const"] as const).map(k => makeColoredArea(k).width);
+  it("sizes light bigger than dark, never below the minimum", () => {
+    const sizes = (["light", "dark"] as const).map(k => makeColoredArea(k).width);
     expect(sizes[0]).toBeGreaterThan(sizes[1]);
-    expect(sizes[1]).toBeGreaterThan(sizes[2]);
-    expect(sizes[2]).toBeGreaterThanOrEqual(AREA_MIN_SIZE);
+    expect(sizes[1]).toBeGreaterThanOrEqual(AREA_MIN_SIZE);
   });
 
   it("keeps the rect on the board and offsets each additional area", () => {
-    for (const kind of ["var", "let", "const"] as const) {
+    for (const kind of ["light", "dark"] as const) {
       for (let i = 0; i < 6; i++) {
         const a = makeColoredArea(kind, i);
         expect(a.kind).toBe(kind);
@@ -161,21 +190,21 @@ describe("makeColoredArea (map-editor default)", () => {
       }
     }
     // A second area doesn't land exactly on the first.
-    const first = makeColoredArea("const", 0);
-    const second = makeColoredArea("const", 1);
+    const first = makeColoredArea("dark", 0);
+    const second = makeColoredArea("dark", 1);
     expect(second.x !== first.x || second.y !== first.y).toBe(true);
   });
 });
 
 describe("rotateColoredArea", () => {
   it("is a no-op at rotation 0", () => {
-    const a = area(500, 45, 355, 335, "var");
+    const a = area(500, 45, 355, 335, "light");
     expect(rotateColoredArea(a, 0)).toBe(a);
   });
   it("rotates the rect and keeps the kind", () => {
-    const a = area(500, 0, 300, 40, "const");
+    const a = area(500, 0, 300, 40, "dark");
     const r = rotateColoredArea(a, 1); // 90 left: width/height swap
-    expect(r.kind).toBe("const");
+    expect(r.kind).toBe("dark");
     expect(r.width).toBeCloseTo(40);
     expect(r.height).toBeCloseTo(300);
   });

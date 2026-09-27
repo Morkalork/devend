@@ -63,7 +63,7 @@ describe("board entity hit-testing", () => {
   it("skips a destroyed breakable and reports what is underneath", () => {
     const g = game({
       destructibles: [{ kind: "breakable", destroyed: true, obstaclePolygon: rect(300, 300, 200, 200) }] as never,
-      coloredAreas: [{ kind: "var", x: 250, y: 250, width: 300, height: 300 }] as never,
+      coloredAreas: [{ kind: "light", x: 250, y: 250, width: 300, height: 300 }] as never,
     });
     expect(boardEntityAt(g, 400, 400)?.kind).toBe("area");
   });
@@ -73,7 +73,7 @@ describe("board entity hit-testing", () => {
     const g = game({
       pickups: [{ position: { x: 400, y: 400 }, effect: "fork" }] as never,
       obstaclePolygons: [rect(300, 300, 200, 200)],
-      coloredAreas: [{ kind: "let", x: 200, y: 200, width: 400, height: 400 }] as never,
+      coloredAreas: [{ kind: "dark", x: 200, y: 200, width: 400, height: 400 }] as never,
     });
     expect(boardEntityAt(g, 400, 400)?.kind).toBe("pickup");
   });
@@ -81,16 +81,16 @@ describe("board entity hit-testing", () => {
   it("resolves a ball standing inside a marked zone as the ball", () => {
     const g = game({
       balls: [{ id: "a", state: "active", position: { x: 400, y: 400 }, radius: 18, typeId: "red" }] as never,
-      coloredAreas: [{ kind: "const", x: 200, y: 200, width: 400, height: 400 }] as never,
+      coloredAreas: [{ kind: "dark", x: 200, y: 200, width: 400, height: 400 }] as never,
     });
     expect(boardEntityAt(g, 400, 400)?.kind).toBe("ball");
   });
 
   it("falls through to the zone when nothing is standing in it", () => {
     const g = game({
-      coloredAreas: [{ kind: "const", x: 200, y: 200, width: 400, height: 400 }] as never,
+      coloredAreas: [{ kind: "dark", x: 200, y: 200, width: 400, height: 400 }] as never,
     });
-    expect(boardEntityAt(g, 400, 400)).toMatchObject({ kind: "area", detail: "const" });
+    expect(boardEntityAt(g, 400, 400)).toMatchObject({ kind: "area", detail: "dark" });
   });
 
   it("hits a terminal from slightly off-centre, since fingers are not precise", () => {

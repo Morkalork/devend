@@ -361,7 +361,7 @@
     "baseOvertime": "Horas extra base",
     "zonesSealed": "Zonas selladas",
     "zonesMissed": "Zonas perdidas",
-    "zonesMissedHint": "Áreas de color no tomadas",
+    "zonesMissedHint": "Áreas de sintaxis no tomadas",
     "scoreOutOf": "Puntuación",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
@@ -420,7 +420,7 @@
       },
       "zoneLocks": {
         "title": "Bloqueos de zona",
-        "body": "Las cajas de color var, let y const pagan 1,5x, 2x y 3x por cualquier bola encerrada dentro. Se acumula con todo, así que un Encierro Superior en una caja const es el mayor pago del juego. Ya está contado en tus ingresos por encierro de arriba.",
+        "body": "Las áreas de resaltado de sintaxis pagan por cualquier bola encerrada dentro: las cajas de código claras 1,5x, las oscuras 2x. Se acumula con todo, así que un Encierro Superior en una caja oscura es el mayor pago del juego. Ya está contado en tus ingresos por encierro de arriba.",
         "tip": "La zona se ilumina cuando un encierro cuenta. Si sigue apagada, el hueco no cayó dentro de la caja: haz que la bola se asiente dentro del borde, no cerca."
       },
       "multiLocks": {
@@ -819,7 +819,7 @@
     "shortClear": "despeja el {{percent}}% del tablero",
     "shortLock": "encierra {{count}} bolas",
     "shortSuperior": "consigue {{count}} cierres superiores",
-    "shortArea": "encierra {{count}} en el area de color",
+    "shortArea": "encierra {{count}} en el área de sintaxis",
     "shortLockType": "encierra {{count}} {{ball}}",
     "shortBoss": "derrota al jefe",
     "shortAllLocked": "encierra todas las bolas",
@@ -949,7 +949,7 @@
       "well": "Mapas con un pozo de gravedad",
       "mover": "Mapas con un obstáculo móvil",
       "breakable": "Mapas con algo rompible",
-      "area": "Mapas con un área de color",
+      "area": "Mapas con un área de resaltado de sintaxis",
       "boss": "Mapas de jefe"
     }
   },
@@ -1727,8 +1727,8 @@
       "body": "Sólido. Las bolas rebotan y las vallas se detienen contra él: buen anclaje para un hueco."
     },
     "area": {
-      "title": "Zona marcada",
-      "body": "Encierra una bola dentro de esta zona para un multiplicador. En algunos mapas es la única forma de ganar."
+      "title": "Área de resaltado de sintaxis",
+      "body": "Encierra una bola dentro de esta caja de código para un multiplicador: la clara paga 1,5x, la oscura 2x. En algunos mapas es la única forma de ganar."
     }
   },
   "gameMessages": {
@@ -1916,5 +1916,9 @@
       "splashYours": "¡Tu turno!",
       "splashTheirs": "Turno de {{name}}"
     }
+  },
+  "areaKind": {
+    "light": "de sintaxis clara",
+    "dark": "de sintaxis oscura"
   }
 }

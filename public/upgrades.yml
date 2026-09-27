@@ -744,7 +744,7 @@ upgrades:
   - id: severance_package_principal_b
     name: Severance Package
     tier: Principal
-    description: "On maps with a coloured area, +11 overtime for every superior lock."
+    description: "On maps with a syntax highlighting area, +11 overtime for every superior lock."
     unlockLevel: 18
     prerequisites:
       - severance_package_senior

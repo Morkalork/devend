@@ -3,7 +3,7 @@
  * alike. Kept out of GoalChip.tsx so that file exports only its component.
  */
 import {
-  Diamond, Crosshair, Palette, Skull, Lock, Scissors, Timer, Hammer,
+  Diamond, Crosshair, CodeXml, Skull, Lock, Scissors, Timer, Hammer,
   PackageCheck, Zap, Waves, Target, BrickWall, Cuboid,
   type LucideIcon,
 } from 'lucide-react';
@@ -14,7 +14,7 @@ const ICONS = {
   space: Target,
   locks: Lock,
   superiorLocks: Diamond,
-  area: Palette,
+  area: CodeXml,
   lockType: Crosshair,
   boss: Skull,
   allLocked: Lock,

@@ -88,7 +88,7 @@ export const MECHANICS: Mechanic[] = [
   { key: "boardEdges", label: "Live outer walls", headline: true,
     detect: l => Object.values(l.boardEdges ?? {}).some(
       e => !!e && (e.bearing !== undefined || (e.kick !== undefined && e.kick !== 1))) },
-  { key: "coloredArea", label: "Colored area", headline: true, detect: l => !!l.coloredAreas?.length },
+  { key: "coloredArea", label: "Syntax highlighting area", headline: true, detect: l => !!l.coloredAreas?.length },
   { key: "circuit", label: "Terminals", headline: true, detect: l => !!l.circuit },
   { key: "charge", label: "Charge", headline: true, detect: l => !!l.charges?.length },
   { key: "dataStream", label: "Data stream", headline: true, detect: l => !!l.dataStream },

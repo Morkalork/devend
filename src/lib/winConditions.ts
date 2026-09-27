@@ -33,7 +33,7 @@
 import type { TFunction } from "i18next";
 import type { LevelConfig } from "@/types/level";
 import { getMapTimeLimit } from "@/lib/mapTiming";
-import { AREA_KINDS, gateAreas } from "@/lib/coloredAreas";
+import { areaStyle, gateAreas, normalizeAreaKind } from "@/lib/coloredAreas";
 import { resolveWinSpec, type RunWinRules } from "@/lib/winSpec";
 import type { WinCondition } from "@/types/winSpec";
 import { getBallType } from "@/lib/ballTypes";
@@ -108,10 +108,11 @@ function winConditionParts(
         break;
       case "area": {
         const kind = areas[0]?.kind;
-        const mult = kind ? (AREA_KINDS[kind]?.multiplier ?? 1) : 1;
+        const mult = kind ? areaStyle(kind).multiplier : 1;
+        const name = kind ? areaName(t, kind) : "";
         must(c.count > 1
-          ? t("winConditions.areaWinMany", { count: c.count, area: kind, mult })
-          : t("winConditions.areaWin", { target, area: kind, mult }));
+          ? t("winConditions.areaWinMany", { count: c.count, area: name, mult })
+          : t("winConditions.areaWin", { target, area: name, mult }));
         // The fail is a FAIL, not a second thing to do. Sitting beside the win
         // in one paragraph, "trap it outside and you lose a life" read as an
         // instruction rather than as the penalty it is.
@@ -131,7 +132,7 @@ function winConditionParts(
         // the failure. This names the count and the zone, which is what the
         // player is actually deciding about, and the heading supplies the
         // consequence.
-        say("fail", t("winConditions.areaFail", { count: c.count, area: kind }));
+        say("fail", t("winConditions.areaFail", { count: c.count, area: name }));
         break;
       }
       case "lockType":
@@ -159,8 +160,8 @@ function winConditionParts(
         // them.
         const zone = areas[0]?.kind;
         if (zone) {
-          const mult = AREA_KINDS[zone]?.multiplier ?? 1;
-          must(t("winConditions.areaWin", { target, area: zone, mult }));
+          const mult = areaStyle(zone).multiplier;
+          must(t("winConditions.areaWin", { target, area: areaName(t, zone), mult }));
           // Its OWN string, because on a boss map the rule really is "trap it
           // outside and you lose": gateTargets counts only the boss, so
           // one target locked in the wrong place ends the map. That is exactly
@@ -242,12 +243,12 @@ function winConditionParts(
   //
   // Listed, but NOT noteworthy: a bonus pocket does not on its own earn an
   // unprompted modal. It is upside rather than a condition, the board already
-  // draws it with its keyword, and 19 of the 31 playable maps carry one - so
+  // draws it with its code, and 19 of the 31 playable maps carry one - so
   // announcing it would interrupt most of the game to say something optional.
   // Being in the body is the fix; being in the trigger would be a regression.
   for (const a of bonusAreas) {
-    const mult = AREA_KINDS[a.kind]?.multiplier ?? 1;
-    say("optional", t("winConditions.bonusArea", { area: a.kind, mult }));
+    const mult = areaStyle(a.kind).multiplier;
+    say("optional", t("winConditions.bonusArea", { area: areaName(t, a.kind), mult }));
   }
 
   // ── THE TRADE: two things this map will not let you have both of ─────────
@@ -276,6 +277,11 @@ function winConditionParts(
  * preview. Shares its wording with the sentences above so the builder shows the
  * player's words rather than an editor's paraphrase of them.
  */
+/** A kind's name in the player's language ("light syntax"), never its id. */
+function areaName(t: TFunction, kind: string): string {
+  return t(`areaKind.${normalizeAreaKind(kind)}`);
+}
+
 export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): string {
   switch (c.kind) {
     case "space": return t("winConditions.shortClear", { percent: Math.max(1, 100 - c.threshold) });

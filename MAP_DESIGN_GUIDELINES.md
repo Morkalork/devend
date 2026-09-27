@@ -34,7 +34,7 @@ each map:
 | axis | what changes | example |
 |---|---|---|
 | **Topology** | the shape of the sealing problem | two big chambers vs five small ones |
-| **Economy** | what a lock is worth and where | a `const` pocket at 3x; a chest; a delivery box |
+| **Economy** | what a lock is worth and where | a `dark` pocket at 2x; a chest; a delivery box |
 | **Mechanic** | a new verb on the board | a mirror, a portal, a gravity well |
 | **Tempo** | when you may act | a WIP limit, a deadline, a mover's cycle |
 | **Constraint** | what you may not do | fence ground at 45%, a thread lock, a pinned mutator |
@@ -262,7 +262,7 @@ catch:
 
 | map | verdict | what was on the board and out of the win |
 |---|---|---|
-| 3 | not good | a pink box, on a map otherwise identical to 2 |
+| 3 | not good | a light syntax box, on a map otherwise identical to 2 |
 | 4 | so-so | a patrol, guarding a doorway for a win that never involved it |
 | 5 | ok | two bonus boxes on the map that introduces the shard |
 | 7 | not good | a chest ("why go for the monolith") |
@@ -354,7 +354,7 @@ mirror, a one-way membrane is a half-step, not a new idea.
 | **A. Solids that change** | breakable, chest, reveals, deformable, phasing, latch | *this wall will not be the same wall in a minute* |
 | **B. Solids that redirect** | mirror, bend, one-way, ball gate, portal | *this wall changes where a thing goes, instead of stopping it* |
 | **C. Machines that move balls** | mover, rotor, launcher, bumper, gravity well | *this thing acts on its own schedule, not yours* |
-| **D. Rules on the ground** | colored area, fence ground, WIP limit, thread lock, pinned mutator | *the board is not uniform; where and how you cut is priced* |
+| **D. Rules on the ground** | syntax area, fence ground, WIP limit, thread lock, pinned mutator | *the board is not uniform; where and how you cut is priced* |
 | **E. The scripted board** | terminals, cage, data stream, charge, delivery box, pickup spots | *something happens that you did not do* |
 
 Family order across the ladder is deliberate: **A and D first** (they change the
@@ -375,7 +375,7 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| colored area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 18, 21, 22, 24, 26, 28, 29, 31, 33 |
+| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 18, 21, 22, 24, 26, 28, 29, 31, 33 |
 | mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 18, 19, 22, 23, 29, 33 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
@@ -403,7 +403,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | ball gate | B | Compressed | 33 | 34 | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 19 | - |
-| colored area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 20 (boss), 34, 35 |
+| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 20 (boss), 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |
@@ -554,7 +554,7 @@ Read as *row mechanic acting on column mechanic*.
 
 | combination | the behaviour neither has alone | map |
 |---|---|---|
-| breakable **conceals** portal | a shortcut you must pay to discover, into a room priced at 3x | 15 |
+| breakable **conceals** portal | a shortcut you must pay to discover, into a room priced at 2x | 15 |
 | breakable **supports** reveals | smashing the floor resizes the bonus box you already sized a pocket for | 8 |
 | mirror **bends** the only fence line to a chest | the vault whose approach cannot be drawn straight | 12 |
 | portal **poisons** a pocket | the cheapest-looking seal on the board pays nothing, because a region holding a live portal cannot lock | 14 |
@@ -567,7 +567,7 @@ Read as *row mechanic acting on column mechanic*.
 | terminals **wake** caged balls mid-seal | the fence you spent wiring is the fence you needed for the neck | 18 |
 | phasing **uncovers** a charge fuse | the slab will not be there in 1.4 seconds, and neither will the wall you anchored on | 27 |
 | fence ground **prices** the cheapest chamber | the easiest pocket on the board is the longest stand-still | 24 |
-| WIP limit **vs** a colored area | the bonus is affordable or the map is, not both | 13 |
+| WIP limit **vs** a syntax area | the bonus is affordable or the map is, not both | 13 |
 | ball gate **sorts** a launcher's roster | the barrel fires four types and only one may enter the paying lane | 34 |
 | latch **opens** on your own progress | the wall you were using as an anchor leaves when you succeed | 31 |
 | data stream **crosses** fence ground | the one lane you must cross is the one that builds slowest | 28 |
@@ -637,12 +637,12 @@ why, and change it back only once the runtime gap guard measures what ships.
 |---|---|---|---|
 | 1 | - (the doorway) | - | Two rooms, one doorway, one ball. Locking every ball wins outright, so the corner nook is a button marked "finish now". |
 | 2 | the second ball, **split locks** | topology | The same doorway, two schedules, and a win that asks WHERE. One ball sealed in each half, so the doorway stops being scenery: it is the thing keeping the two balls apart, and you have to spend it at the right moment. |
-| 3 | **Meet** colored area | topology | The pink box is the win: clear the board and lock a ball inside it. (It was a bonus; a box the win ignored read as a promise with nothing behind it.) |
-| 4 | **Meet** mover | **Use** colored area | A guard walks across the box's door, so closing the box is "can I draw it NOW". (It guarded a doorway for a split-lock win that never involved it, and read as scenery.) |
+| 3 | **Meet** syntax area | topology | The light syntax box is the win: clear the board and lock a ball inside it. (It was a bonus; a box the win ignored read as a promise with nothing behind it.) |
+| 4 | **Meet** mover | **Use** syntax area | A guard walks across the box's door, so closing the box is "can I draw it NOW". (It guarded a doorway for a split-lock win that never involved it, and read as scenery.) |
 | 5 | **Meet** brittle | - | One touch opens a slot in a short column, and the doorway beside it is already open. The verb, with nothing else attached (its bonus boxes and its patrol came off for contradicting that). |
 | 6 | - | Fight brittle | Each room's best pockets are alcoves walled with the shards the win asks you to break: keep an alcove, or spend it. |
 | 7 | **Compressed** chest | Use brittle, Fight mover | The chest is in the win: one monolith of two chests, plus four shards. The better chest sits behind the patrol, the other in the open. |
-| 8 | **Compressed** reveals | Break colored area, Break mover | The box is behind a curtain only a ball in its room can break, and a sliding door in the only doorway decides who gets in. |
+| 8 | **Compressed** reveals | Break syntax area, Break mover | The box is behind a curtain only a ball in its room can break, and a sliding door in the only doorway decides who gets in. |
 | 9 | - skill check | all of act I | No new toys, and the win names each one: the box, four shards of ten, one monolith of two, at 81%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
@@ -755,7 +755,7 @@ clock at 2% remaining, not a dead end.
 #### 13 "Code Review" - Meet mirror  *(built)*
 
 **Someone else decides where your work goes.** A fence that meets the mirror
-reflects and keeps going, so one drag becomes a bent line, and the pink box
+reflects and keeps going, so one drag becomes a bent line, and the syntax box
 sits where no straight fence closes it. The box is the win: clear to 86% and
 lock a ball in the box the mirror is for.
 
@@ -1062,13 +1062,13 @@ and twice a revolution it swings across a corner and squeezes that neck to about
 25 units a side. **The room has two doors and they are never both properly open
 at the same moment.**
 
-The prize is a `const` bonus area painted on the room's floor (3x, `required:
+The prize is a `dark` bonus area painted on the room's floor (2x, `required:
 false`). Sealing it costs two cuts, both across a corner the arm periodically
 fills - and a fence grown into a mover costs a LIFE, which is the level-4 rule
 the wiper on 17 restated. That is the whole map: **every cut across the centre
 is a bet on where the arm will be.**
 
-**Two answers.** Seal the room for the 3x and accept two bets, or ignore it
+**Two answers.** Seal the room for the 2x and accept two bets, or ignore it
 entirely and work the outer board - three slabs in three different quadrants
 carry the `smashed: 2` clause (four breakables on the map, so the count has
 slack), and a superior-sized nook in the bottom-left corner pays 2x for one
@@ -1127,7 +1127,7 @@ life. Cutting safely and cutting where the balls are are two different places.
 **The win is two chests of four.** The pull brings the balls to a chest every
 phase, so the smash comes to you; the other two are the greed hook, and each
 one means fencing next to a bar. Chests (monoliths) rather than plain
-breakables, because act II already has breakable, brittle and colored areas on
+breakables, because act II already has breakable, brittle and syntax areas on
 four of its maps each and a fifth would let one idea own the act.
 
 **Turn:** a 12% speed spike at 40% remaining, announced.
@@ -1152,7 +1152,7 @@ Board tilt unlocks at 21. Lodestone 21, black 25.
 | 21 | **Use** gravity well (first map past the random-tilt gate) | Use bonus pocket | The route between chambers is where your ball stops going where you aimed it. The well MEETS at 15 now; what 21 adds is the sporadic board tilt, which needs both a well and TILT_MIN_LEVEL to fire at all. |
 | 22 | - | Use gravity well + rotor | Slingshot: a paying pocket with a mouth no straight line reaches, and an arm sweeping the open half. |
 | 23 | **Meet** one-way + **Meet** delivery box | Fight mover | A membrane balls fall through and cannot climb, and a lock that only counts inside the box. |
-| 24 | **Meet** fence ground | Break colored area | Ground that builds fences slowly. The cheapest pocket is the longest stand-still. |
+| 24 | **Meet** fence ground | Break syntax area | Ground that builds fences slowly. The cheapest pocket is the longest stand-still. |
 | 25 | **Meet** charge | Use deformable, Break breakable | A fuse, a delay, and a slab that will not be there in 1.4 seconds. Black ball unlocks here. |
 | 26 | **Meet** data stream + **Compressed** latch | Fight gravity well | The stream is behind a curtain that lifts on your first lock, so the harvest cannot be the opening move on the map that teaches harvesting. |
 | 27 | - | Use data stream + fence ground | Two seams to take, on ground that fights you for the fences to take them with. |
@@ -1226,7 +1226,7 @@ identity.
 - Always leave a real safe path, or it is not a choice.
 - **Exactly one hook.** Two focal points equal no focus.
 
-#### Colored areas: bonus or gate
+#### Syntax areas: bonus or gate
 
 One primitive, two stakes, chosen with `required`:
 
@@ -1241,20 +1241,24 @@ the symbol is already familiar. On the built ladder that is **map 3 bonus, map 5
 charged for, map 8 gate** - three maps apart, with the same drawing, which is
 what makes the third one read as a promotion rather than a new mechanic.
 
-| kind | colour | multiplier |
-|------|--------|------------|
-| `var` | light pink | 1.5x |
-| `let` | light orange | 2x |
-| `const` | light teal | 3x |
+| kind | drawn as | multiplier |
+|------|----------|------------|
+| `light` | light-theme code box | 1.5x |
+| `dark` | dark-theme code box | 2x |
 
-#### The 6x rung, and the sizing trap
+The box paints a tiny syntax-highlighted snippet (`<lock ball>` / `pts x2` /
+`</lock>`) in the kind's editor theme instead of a flat colour and a keyword.
+There used to be three kinds (`var` 1.5x, `let` 2x, `const` 3x); the loader
+still reads the old names, `var` as `light` and `let` / `const` as `dark`.
 
-Area kind and lock quality **multiply**: a superior lock (2x) inside a `const`
-area (3x) pays **6x**, the top of the curve. A map that offers both has a
+#### The 4x rung, and the sizing trap
+
+Area kind and lock quality **multiply**: a superior lock (2x) inside a `dark`
+area (2x) pays **4x**, the top of the curve. A map that offers both has a
 three-rung decision (skip / take it loosely / take it tight), which is the most
 interesting shape a greed hook has.
 
-The trap is that "draw `const` smallest" fights this. A `const` box small enough
+The trap is that "draw `dark` smallest" fights this. A `dark` box small enough
 to *look* like the hardest kind is itself superior-sized, so every lock in it
 grades superior automatically and the two multipliers collapse into one. Draw
 the box **large enough to hold both a sloppy and a tight seal**, and let a shelf
@@ -1363,7 +1367,7 @@ produce**.
 | The map's content | The clause that makes it matter |
 |---|---|
 | a breakable, a chest | `smashed` |
-| a gate colored area | `area` |
+| a gate syntax area | `area` |
 | a delivery box | `delivered` |
 | a circuit | `terminals` |
 | a data stream | `harvested` |
@@ -1507,7 +1511,7 @@ late-ladder set-pieces (level 25's 40-hit plug, which the black ball exists
 for) are not covered by this.
 
 **Everything the win requires is announced when the map opens.** The startup
-pulse used to ring the floor markings only - colored areas and delivery boxes -
+pulse used to ring the floor markings only - syntax areas and delivery boxes -
 which was right while a win was "clear the board" and became misleading the
 moment a map could ask you to break something: on level 5 the slab the win
 requires had no announcement while the bonus zone beside it pulsed, so the

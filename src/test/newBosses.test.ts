@@ -75,7 +75,7 @@ describe("boss pair spawn (#64)", () => {
   const PAIR_LEVEL: LevelConfig = {
     id: "pair-test", level: 20, sizeThreshold: 20, expectedCuts: 5, points: 20,
     maxBalls: 1, variety: 0, randomShapes: 0,
-    coloredAreas: [{ kind: "var", x: 500, y: 45, width: 355, height: 335 }],
+    coloredAreas: [{ kind: "light", x: 500, y: 45, width: 355, height: 335 }],
     boss: {
       name: "Pair", intro: "x",
       objective: { id: "d", name: "d", description: "d", kind: "defeatBoss", reward: 10 },
@@ -131,7 +131,7 @@ describe("colored area lights up when a ball locks inside it", () => {
   const AREA_LEVEL = {
     id: "area-lit", level: 10, sizeThreshold: 15, expectedCuts: 8, points: 20,
     maxBalls: 1, variety: 0, randomShapes: 0,
-    coloredAreas: [{ kind: "var", x: 500, y: 45, width: 355, height: 335 }],
+    coloredAreas: [{ kind: "light", x: 500, y: 45, width: 355, height: 335 }],
     boss: {
       name: "B", intro: "x",
       objective: { id: "d", name: "d", description: "d", kind: "defeatBoss", reward: 10 },

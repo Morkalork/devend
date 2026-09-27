@@ -39,7 +39,7 @@ const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   ...over,
 });
 
-const gateArea = { kind: "const", x: 0, y: 0, width: 100, height: 100, required: true };
+const gateArea = { kind: "dark", x: 0, y: 0, width: 100, height: 100, required: true };
 
 // ── The compatibility contract ─────────────────────────────────────────────
 

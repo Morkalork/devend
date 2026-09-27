@@ -74,7 +74,7 @@ describe("and left off the maps that cannot", () => {
 
   it("leaves a gate-area map alone, whose ending is the zone", () => {
     const l = level({ coloredAreas: [
-      { kind: "const", x: 0, y: 0, width: 100, height: 100, required: true },
+      { kind: "dark", x: 0, y: 0, width: 100, height: 100, required: true },
     ] } as Partial<LevelConfig>);
     expect(kinds(l, NO_RUN_RULES)).toEqual(["area"]);
     expect(kinds(l, ON)).toEqual(["area"]);
