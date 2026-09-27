@@ -1,11 +1,12 @@
 /**
  * The code snippet a Syntax Highlighting area shows, baked to a texture.
  *
- * A zone reads as a patch of editor: its kind's theme (light or dark) and a
- * lock tag around its payout (areaSnippet). Drawn once per kind and font size
- * into a canvas and cached as a Texture, so the area layer only positions a
- * Sprite. It used to create two pixi Text objects per zone on every rebuild of
- * that layer, which on a tilting gravity map was every frame.
+ * A zone reads as a patch of editor: its kind's theme (light or dark) and an
+ * HTML lock tag around its payout, which becomes assembly once a ball is
+ * locked in (areaSnippet). Drawn once per kind, state and font size into a
+ * canvas and cached as a Texture, so the area layer only positions a Sprite.
+ * It used to create two pixi Text objects per zone on every rebuild of that
+ * layer, which on a tilting gravity map was every frame.
  *
  * The fit (snippetFontPx) is split from the canvas work so the fit can be
  * tested without a canvas.
@@ -39,20 +40,20 @@ const cache = new Map<string, Texture>();
 const FONT = "'JetBrains Mono', 'Fira Code', monospace";
 
 /**
- * The snippet texture for a kind at a font size, built once and reused.
+ * The snippet texture for a kind, state and font size, built once and reused.
  *
  * Transparent around the glyphs: the area layer fills the whole zone with the
  * theme's editor background, and the code is sized to fill that editor. A
  * version that put the code on its own small chip left most of the zone
  * showing the board, which read as a sticker on a coloured box, not a zone.
  */
-export function snippetTexture(kind: AreaKind, fontPx: number): Texture {
-  const key = `${kind}|${fontPx}`;
+export function snippetTexture(kind: AreaKind, locked: boolean, fontPx: number): Texture {
+  const key = `${kind}|${locked ? "asm" : "html"}|${fontPx}`;
   const hit = cache.get(key);
   if (hit) {
     return hit;
   }
-  const lines = areaSnippet(kind);
+  const lines = areaSnippet(kind, locked);
   const theme = areaStyle(kind).theme;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");

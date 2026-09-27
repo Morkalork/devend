@@ -33,3 +33,29 @@ describe("snippetFontPx", () => {
     expect(big).toBeGreaterThan(small);
   });
 });
+
+describe("the snippet compiles when a ball is locked in", () => {
+  const text = (kind: "light" | "dark", locked: boolean) =>
+    areaSnippet(kind, locked).map(l => l.map(t => t.text).join("")).join("\n");
+
+  it("is HTML while the zone waits for a ball", () => {
+    for (const kind of ["light", "dark"] as const) {
+      expect(text(kind, false)).toContain("<lock ball>");
+      expect(areaSnippet(kind)).toEqual(areaSnippet(kind, false));
+    }
+  });
+
+  it("is assembly once a ball is locked, still quoting the payout", () => {
+    expect(text("light", true)).toBe("lock ball\nmul  pts, 1.5\nret");
+    expect(text("dark", true)).toBe("lock ball\nmul  pts, 2\nret");
+    for (const kind of ["light", "dark"] as const) {
+      expect(text(kind, true)).not.toMatch(/[<>]/);
+    }
+  });
+
+  it("fits the locked zone as well as the waiting one", () => {
+    const px = snippetFontPx(areaSnippet("dark", true), 220, 220);
+    const cols = Math.max(...areaSnippet("dark", true).map(l => l.reduce((n, t) => n + t.text.length, 0)));
+    expect((cols * MONO_ADVANCE + TEXT_PAD * 2) * px).toBeLessThanOrEqual(220);
+  });
+});

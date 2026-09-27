@@ -87,21 +87,33 @@ export function areaStyle(kind: AreaKind | string): AreaStyle {
 }
 
 /**
- * The code a zone shows: a lock tag around its payout, so the patch reads as
- * "lock a ball here for more points" in the language of the board it sits on.
- * One entry per coloured token, lines as arrays of tokens.
+ * The code a zone shows. Unclaimed, it is HTML: a lock tag around its payout,
+ * so the patch reads as "lock a ball here for more points". Once a ball is
+ * locked inside, it compiles down to assembly that does exactly that, so the
+ * zone itself says the lock went through. One entry per coloured token, lines
+ * as arrays of tokens.
  */
 export type SnippetToken = { text: string; role: keyof Omit<SyntaxTheme, "background"> };
 
-export function areaSnippet(kind: AreaKind | string): SnippetToken[][] {
-  const mult = areaStyle(kind).multiplier;
+export function areaSnippet(kind: AreaKind | string, locked = false): SnippetToken[][] {
+  const mult = String(areaStyle(kind).multiplier);
+  if (locked) {
+    return [
+      [{ text: "lock", role: "tag" }, { text: " ball", role: "attribute" }],
+      [
+        { text: "mul", role: "tag" }, { text: "  pts", role: "attribute" },
+        { text: ",", role: "punctuation" }, { text: " " + mult, role: "number" },
+      ],
+      [{ text: "ret", role: "tag" }],
+    ];
+  }
   return [
     [
       { text: "<", role: "punctuation" }, { text: "lock", role: "tag" },
       { text: " ball", role: "attribute" }, { text: ">", role: "punctuation" },
     ],
     [
-      { text: "  pts x", role: "text" }, { text: String(mult), role: "number" },
+      { text: "  pts x", role: "text" }, { text: mult, role: "number" },
     ],
     [
       { text: "</", role: "punctuation" }, { text: "lock", role: "tag" },

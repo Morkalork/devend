@@ -317,9 +317,10 @@ export class AreaLayer {
       // The snippet stays UPRIGHT rather than turning with the marking it sits
       // on. It is information, not decoration, and a floor decal rotated past
       // 90 degrees carries its text upside down. Baked once per kind and size
-      // (snippetTexture), so this only places a sprite.
-      const fontPx = snippetFontPx(areaSnippet(kind), q.w, q.h);
-      const snippet = new Sprite(snippetTexture(kind, fontPx));
+      // (snippetTexture), so this only places a sprite. HTML while the zone
+      // waits for a ball, assembly once one is locked in: the lock compiled.
+      const fontPx = snippetFontPx(areaSnippet(kind, lit), q.w, q.h);
+      const snippet = new Sprite(snippetTexture(kind, lit, fontPx));
       snippet.anchor.set(0.5, 0.5);
       snippet.position.set(Math.round(q.cx), Math.round(q.cy));
       // The snippet carries the state too: a dormant bonus zone reads as faded
