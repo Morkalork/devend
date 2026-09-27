@@ -5,19 +5,19 @@
 import { describe, it, expect } from "vitest";
 import { areaSnippet } from "@/lib/coloredAreas";
 import {
-  snippetFontPx, MIN_FONT_PX, MAX_FONT_PX, MONO_ADVANCE, LINE_HEIGHT, CHIP_PAD,
+  snippetFontPx, MIN_FONT_PX, MAX_FONT_PX, MONO_ADVANCE, LINE_HEIGHT, TEXT_PAD,
 } from "@/lib/rendering/sleek/areaSnippet";
 
 const cols = (kind: "light" | "dark") =>
   Math.max(...areaSnippet(kind).map(l => l.reduce((n, t) => n + t.text.length, 0)));
 
 describe("snippetFontPx", () => {
-  it("fits the snippet and its editor chip inside a normal zone, both ways", () => {
+  it("fits the snippet and its padding inside a normal zone, both ways", () => {
     for (const kind of ["light", "dark"] as const) {
       for (const [w, h] of [[340, 340], [220, 220], [400, 120], [120, 400]]) {
         const px = snippetFontPx(areaSnippet(kind), w, h);
-        expect((cols(kind) * MONO_ADVANCE + CHIP_PAD * 2) * px).toBeLessThanOrEqual(w);
-        expect((areaSnippet(kind).length * LINE_HEIGHT + CHIP_PAD * 2) * px).toBeLessThanOrEqual(h);
+        expect((cols(kind) * MONO_ADVANCE + TEXT_PAD * 2) * px).toBeLessThanOrEqual(w);
+        expect((areaSnippet(kind).length * LINE_HEIGHT + TEXT_PAD * 2) * px).toBeLessThanOrEqual(h);
       }
     }
   });

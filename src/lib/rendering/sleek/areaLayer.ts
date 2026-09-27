@@ -81,12 +81,16 @@ export const AREA_ALPHA = {
 } as const;
 
 /**
- * How strongly the editor background is laid down, per theme, on top of the
- * fill alpha above. A pale light-theme wash over the dark board stands out at a
- * fraction of the strength a dark-theme one needs to register at all, so the
- * two are scaled to read as equally present rather than drawn at one alpha.
+ * How solidly the zone is painted in its theme's editor background. The whole
+ * zone IS the editor, so this is near-opaque rather than the faint wash the
+ * old coloured areas used: a light zone reads as a light editor, a dark one as
+ * a dark editor, from anywhere on the board. A dormant zone is still laid down
+ * a little thinner than a live one, gate above bonus, like every other element.
  */
-export const THEME_FILL_BOOST = { light: 1.6, dark: 4 } as const;
+export const EDITOR_FILL = {
+  dormant: { bonus: 0.8, gate: 0.88 },
+  live: 0.96,
+} as const;
 
 /** Activation flare length, and the steady breath's cycle, in ms. */
 export const FLARE_MS = 1100;
@@ -283,11 +287,12 @@ export class AreaLayer {
       // stacked at the old weight read as a solid block. A dormant one paints
       // fainter still, so the contrast lives in the gap between them.
       const dormantAlpha = gate ? AREA_ALPHA.dormant.gate : AREA_ALPHA.dormant.bonus;
-      const fill = (lit ? AREA_ALPHA.live.fill : dormantAlpha.fill) * (0.55 + amb * 0.45);
-      // The editor background of the kind's theme: light or dark, like the
-      // two editors the snippet is highlighted for.
+      const editorFill = lit ? EDITOR_FILL.live : (gate ? EDITOR_FILL.dormant.gate : EDITOR_FILL.dormant.bonus);
+      // The whole zone is filled with the editor background of the kind's
+      // theme, light or dark, like the two editors the snippet is highlighted
+      // for. Ambient light only shades it a little: it is a screen, not paint.
       shapeOf(this.g, q, 0).fill({
-        color: background, alpha: Math.min(1, fill * THEME_FILL_BOOST[kind]),
+        color: background, alpha: editorFill * (0.85 + amb * 0.15),
       });
 
       if (lit) {

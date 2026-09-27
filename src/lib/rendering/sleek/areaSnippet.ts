@@ -20,18 +20,18 @@ export const MONO_ADVANCE = 0.6;
 export const LINE_HEIGHT = 1.3;
 /** Never smaller than this (physical px) - below it the code is noise. */
 export const MIN_FONT_PX = 7;
-/** Never larger: a big zone should not shout. */
-export const MAX_FONT_PX = 40;
+/** Never larger, so a huge zone still reads as code rather than a banner. */
+export const MAX_FONT_PX = 72;
 /** How much of the zone the snippet may take, each way. */
-export const FIT_SHARE = 0.78;
-/** Padding around the code inside its editor chip, as a share of the font size. */
-export const CHIP_PAD = 0.45;
+export const FIT_SHARE = 0.9;
+/** Breathing room kept around the code, as a share of the font size. */
+export const TEXT_PAD = 0.45;
 
-/** The font size that fits a snippet, chip included, into a zone of w x h px. */
+/** The font size that fills a zone of w x h px with the snippet. */
 export function snippetFontPx(lines: SnippetToken[][], w: number, h: number): number {
   const cols = Math.max(1, ...lines.map(l => l.reduce((n, t) => n + t.text.length, 0)));
-  const byWidth = (w * FIT_SHARE) / (cols * MONO_ADVANCE + CHIP_PAD * 2);
-  const byHeight = (h * FIT_SHARE) / (lines.length * LINE_HEIGHT + CHIP_PAD * 2);
+  const byWidth = (w * FIT_SHARE) / (cols * MONO_ADVANCE + TEXT_PAD * 2);
+  const byHeight = (h * FIT_SHARE) / (lines.length * LINE_HEIGHT + TEXT_PAD * 2);
   return Math.max(MIN_FONT_PX, Math.min(MAX_FONT_PX, Math.floor(Math.min(byWidth, byHeight))));
 }
 
@@ -41,11 +41,10 @@ const FONT = "'JetBrains Mono', 'Fira Code', monospace";
 /**
  * The snippet texture for a kind at a font size, built once and reused.
  *
- * The code sits on an opaque chip in its theme's editor background, so a light
- * zone reads as a light editor and a dark one as a dark editor whatever the
- * board behind it, and the token colours keep the contrast they were picked
- * for. A bare snippet over the dark board left the light theme's tag and
- * attribute colours all but invisible.
+ * Transparent around the glyphs: the area layer fills the whole zone with the
+ * theme's editor background, and the code is sized to fill that editor. A
+ * version that put the code on its own small chip left most of the zone
+ * showing the board, which read as a sticker on a coloured box, not a zone.
  */
 export function snippetTexture(kind: AreaKind, fontPx: number): Texture {
   const key = `${kind}|${fontPx}`;
@@ -64,15 +63,11 @@ export function snippetTexture(kind: AreaKind, fontPx: number): Texture {
   // font that runs wider still fits its own chip.
   ctx.font = `${fontPx}px ${FONT}`;
   const textW = Math.max(...lines.map(l => ctx.measureText(l.map(t => t.text).join("")).width));
-  const pad = Math.ceil(fontPx * CHIP_PAD);
+  const pad = Math.ceil(fontPx * TEXT_PAD);
   const lineH = Math.ceil(fontPx * LINE_HEIGHT);
   canvas.width = Math.ceil(textW) + pad * 2;
   canvas.height = lineH * lines.length + pad * 2;
   // Resizing a canvas resets its context state.
-  ctx.fillStyle = theme.background;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, canvas.width, canvas.height, Math.ceil(fontPx * 0.3));
-  ctx.fill();
   ctx.font = `${fontPx}px ${FONT}`;
   ctx.textBaseline = "top";
   lines.forEach((line, row) => {
