@@ -69,6 +69,7 @@ import {
   splitWarnSides, stepSplitWarnFade, splitWarnAlpha, splitHalfQuad, SPLIT_WARN_COLOR,
 } from "@/lib/splitWarn";
 import { dealtSplit } from "@/lib/winSpec";
+import { visibleOutline } from "@/lib/headStartStrip";
 import { polygonBounds } from "@/lib/polygon";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
@@ -466,18 +467,27 @@ export class SleekRenderer {
     showBeamReadout(lines);
   }
 
-  /** Clip everything to the board polygon so nothing bleeds into the margin. */
+  /**
+   * Clip everything to the board so nothing bleeds into the margin.
+   *
+   * The VISIBLE outline, not the physics one: on a board a starting capture
+   * trimmed, the strip between them is part of the board, shaded as captured
+   * ground (lib/headStartStrip.ts). Clipping to the trimmed board is what used
+   * to hide the head start entirely.
+   */
   private syncMask(game: CanvasGameState): void {
-    const { boardRect, boardPolygon } = game;
-    const key = `${boardRect.left},${boardRect.top},${boardRect.width},${boardRect.height},${boardPolygon?.vertices.length ?? 0}`;
+    const { boardRect } = game;
+    const outline = visibleOutline(game);
+    const key = `${boardRect.left},${boardRect.top},${boardRect.width},${boardRect.height},`
+      + `${outline?.vertices.length ?? 0},${outline?.vertices[0]?.x ?? 0}`;
     if (key === this.maskKey) return;
     this.maskKey = key;
 
     this.boardMask.clear();
-    if (boardPolygon && boardPolygon.vertices.length >= 3) {
+    if (outline && outline.vertices.length >= 3) {
       this.boardMask
         .poly(
-          boardPolygon.vertices.map(v => ({
+          outline.vertices.map(v => ({
             x: Math.round(boardRect.left + v.x * boardRect.scale),
             y: Math.round(boardRect.top + v.y * boardRect.scale),
           })),

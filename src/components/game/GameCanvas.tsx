@@ -150,6 +150,7 @@ import { simNow } from "@/lib/simClock";
 import { PendingResize } from "@/lib/boardResizeHold";
 import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 import { splitClauseOf } from "@/lib/splitWarn";
+import { visibleOutline } from "@/lib/headStartStrip";
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -399,8 +400,8 @@ function timeTierFor(remainingFraction: number): number {
 
 /**
  * The drawn board - arena plus its outer frame - in CSS pixels inside the
- * canvas container, for the loading outline. Read off the arena polygon when
- * the map has one (a starting capture shrinks it), else the default arena.
+ * canvas container, for the loading outline. Read off the outline the renderer
+ * frames (visibleOutline), else the default arena.
  */
 function frameInCss(rect: BoardRect, arena: { vertices: { x: number; y: number }[] } | null, dpr: number): BoardFrameCss {
   const margin = BOARD_WIDTH * ARENA_MARGIN;
@@ -1403,6 +1404,7 @@ export function GameCanvas({
       game.obstaclePolygons   = data.obstaclePolygons;
       game.mirrorPolygons     = data.mirrorPolygons;
       game.boardPolygon       = data.boardPolygon;
+      game.arenaPolygon       = data.arenaPolygon ?? null;
       // The four outer walls' behaviour, from the level. Copied here like every
       // other built field: initGame returning it is not the same as the running
       // game having it, and a live floor that never reached the game would be a
@@ -1593,7 +1595,7 @@ export function GameCanvas({
         gameInitializedRef.current = true;
         initGame();
       }
-      setBoardFrameCss(frameInCss(game.boardRect, game.boardPolygon, dpr));
+      setBoardFrameCss(frameInCss(game.boardRect, visibleOutline(game), dpr));
     };
 
     const rctx: RenderContext = {

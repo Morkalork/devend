@@ -160,6 +160,12 @@ export interface CanvasGameState {
   mirrorPolygons: Polygon[];
   /** Original board boundary polygon for ball collision. */
   boardPolygon: Polygon | null;
+  /**
+   * The untrimmed arena, set only when a starting capture (Onboarding, the
+   * Equity Grant certificate) shrank `boardPolygon` inside it. Drawing only:
+   * physics never reads it. See lib/headStartStrip.ts.
+   */
+  arenaPolygon?: Polygon | null;
   /** Total original board area (world units²). */
   originalArea: number;
   /** Playable area after subtracting obstacles at init. */

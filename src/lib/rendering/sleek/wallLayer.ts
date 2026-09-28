@@ -20,9 +20,10 @@
 
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import type { Wall } from "@/lib/wallGeometry";
+import { WALL_THICKNESS, type Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { BOARD_FRAME_THICKNESS } from "@/lib/boardConstants";
+import { visibleOutline, outwardEdges, headStartFenceSegments } from "@/lib/headStartStrip";
 import { PALETTE, mix } from "./palette";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { ambientAt, contactFor, facing, shadowFor, type LightScope } from "./light";
@@ -256,7 +257,9 @@ export class WallLayer {
   private drawOuterWall(
     game: CanvasGameState, light: LightScope, w2s: W2S, scale: number,
   ): void {
-    const poly = game.boardPolygon;
+    // The VISIBLE outline: on a trimmed board the frame stays on the full
+    // arena and the head-start strip sits inside it (lib/headStartStrip.ts).
+    const poly = visibleOutline(game);
     if (!poly || poly.vertices.length < 3) return;
 
     const bodies = this.bodies, rims = this.rims;
@@ -264,33 +267,18 @@ export class WallLayer {
     this.bodies = this.outerBodies;
     this.rims = this.outerRims;
     try {
-      const cx = poly.vertices.reduce((n, v) => n + v.x, 0) / poly.vertices.length;
-      const cy = poly.vertices.reduce((n, v) => n + v.y, 0) / poly.vertices.length;
-      const push = OUTER_WALL_THICKNESS / 2;
-      const n = poly.vertices.length;
-      // Offset each EDGE along its own outward normal, rather than pushing the
-      // vertices away from the centroid. A radial push is a scale-out: on a
-      // rectangle it moves corners further than edge midpoints, so the frame
-      // ends up a different distance from the boundary depending on where you
-      // look at it, and the corners open up.
-      for (let i = 0; i < n; i++) {
-        const a = poly.vertices[i];
-        const b = poly.vertices[(i + 1) % n];
-        const ex = b.x - a.x, ey = b.y - a.y;
-        const len = Math.hypot(ex, ey);
-        if (len < 1) continue;
-        let nx = -ey / len, ny = ex / len;
-        // Point it away from the middle of the board.
-        const mx = (a.x + b.x) / 2 - cx, my = (a.y + b.y) / 2 - cy;
-        if (nx * mx + ny * my < 0) { nx = -nx; ny = -ny; }
-        // Extended half a thickness at each end so neighbouring edges overlap
-        // into a mitre instead of leaving a notch at every corner.
-        const tx = (ex / len) * push, ty = (ey / len) * push;
-        this.drawSegment(
-          { x: a.x + nx * push - tx, y: a.y + ny * push - ty },
-          { x: b.x + nx * push + tx, y: b.y + ny * push + ty },
-          OUTER_WALL_THICKNESS, true, light, w2s, scale, true,
-        );
+      // Each EDGE offset along its own outward normal and extended half a
+      // thickness at each end, so neighbouring edges mitre instead of leaving
+      // a notch at every corner (outwardEdges says why not a radial push).
+      for (const seg of outwardEdges(poly, OUTER_WALL_THICKNESS / 2)) {
+        this.drawSegment(seg.start, seg.end, OUTER_WALL_THICKNESS, true, light, w2s, scale, true);
+      }
+      // ...and on a trimmed board, the trimmed edge as a standard fence: the
+      // strip is ground on the far side of a fence, which is what captured
+      // ground always is. Here rather than with the other fences because the
+      // fence mask is the trimmed board, and this fence lies just outside it.
+      for (const seg of headStartFenceSegments(game, WALL_THICKNESS)) {
+        this.drawSegment(seg.start, seg.end, WALL_THICKNESS, false, light, w2s, scale, true);
       }
     } finally {
       this.bodies = bodies;

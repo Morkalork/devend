@@ -193,7 +193,11 @@ describe("the board's outer wall", () => {
     // A radial push is a scale-out: on a rectangle it moves corners further
     // than edge midpoints, so the frame sits at a different distance from the
     // boundary depending where you look, and the corners open up.
-    expect(SRC).toMatch(/nx \* mx \+ ny \* my < 0/);
+    // The offset is the shared outwardEdges (lib/headStartStrip.ts), which the
+    // head-start fence uses too; the frame has to be drawn through it.
+    const helper = readFileSync(resolve(process.cwd(), "src/lib/headStartStrip.ts"), "utf8");
+    expect(helper).toMatch(/nx \* mx \+ ny \* my < 0/);
+    expect(SRC).toMatch(/outwardEdges\(poly, OUTER_WALL_THICKNESS \/ 2\)/);
   });
 
   it("stops the masked pass drawing board edges twice", () => {
@@ -349,7 +353,7 @@ describe("the outer wall is rigid", () => {
 
   it("passes it from the outer wall, and only there", () => {
     const outer = SRC.slice(SRC.indexOf("private drawOuterWall"), SRC.indexOf("/** A wall's sub-segments"));
-    expect(outer).toMatch(/OUTER_WALL_THICKNESS, true, light, w2s, scale, true,/);
+    expect(outer).toMatch(/OUTER_WALL_THICKNESS, true, light, w2s, scale, true[,)]/);
     // The fence pass must NOT be rigid: that is where the effect lives now.
     //
     // Asserted as "does not ask for rigid", not as the exact argument list. The

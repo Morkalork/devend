@@ -199,6 +199,13 @@ export interface InitialGameData {
   bentFenceBends: number;
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
+  /**
+   * The full-size arena, when a starting capture shrank the board inside it.
+   * Drawing only (lib/headStartStrip.ts): the renderer frames this and shades
+   * the strip between it and `boardPolygon` as captured ground, so the head
+   * start shows. Absent when nothing was trimmed.
+   */
+  arenaPolygon?: Polygon;
   /** Behaviour for the four outer walls, from the level. Absent on most maps. */
   boardEdges?: BoardEdgeSpecs;
   originalArea: number;
@@ -281,6 +288,12 @@ export function createInitialGameData(
   const bottom = centerY + shrunkHeight / 2;
 
   const boardPolygon = createRectPolygon(left, top, right, bottom);
+  // The arena as authored, before the trim: what the player is shown the head
+  // start was taken OUT of. Square and centred like the board, so no map
+  // rotation can move it.
+  const arenaPolygon = startingCapture > 0
+    ? createRectPolygon(margin, margin, BOARD_WIDTH - margin, BOARD_HEIGHT - margin)
+    : undefined;
 
   // ── Build walls array (board edges → obstacle edges) ───────────────────
   const allWalls: Wall[] = createWallsFromPolygon(boardPolygon, "board");
@@ -1468,6 +1481,7 @@ export function createInitialGameData(
     bentFenceBends: Math.max(0, Math.round(activeModifiers.bentFenceBends ?? 0)),
     mirrorPolygons,
     boardPolygon,
+    arenaPolygon,
     // Screen space, and only meaningful because a map that authors these
     // also pins `neverRotates` - see the field's own note on LevelConfig.
     boardEdges: level.boardEdges,
