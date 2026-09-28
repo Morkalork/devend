@@ -147,7 +147,7 @@ describe("what the catalogue actually sells", () => {
     const grants = upgrades.filter(u => u.grantsFenceType);
     const open = grants.filter(u =>
       (u.prerequisites ?? []).length === 0 && !u.unlockAfterChoice);
-    expect(open.map(u => u.id)).toEqual(["set_a_breakpoint"]);
+    expect(open.map(u => u.id)).toEqual(["add_guardrails"]);
 
     for (const u of grants) {
       if (open.includes(u)) continue;

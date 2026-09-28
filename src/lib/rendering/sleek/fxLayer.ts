@@ -27,7 +27,7 @@ import {
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
 import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
-import { isArmedBreakpoint } from "@/lib/physics/breakpointFence";
+import { isArmedGuardrail } from "@/lib/physics/guardrailFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
 import { lockImpact } from "./lockImpact";
@@ -77,9 +77,9 @@ function parseColor(c: string, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** How long the Breakpoint's "held it" ring burns. Nothing else reads this:
- *  the physics clears no flash, so the fade below is the whole lifetime. */
-const BREAKPOINT_FLASH_MS = 650;
+/** How long the Guardrail's "took the hit" ring burns. Nothing else reads
+ *  this: the physics clears no flash, so the fade below is the whole lifetime. */
+const GUARDRAIL_FLASH_MS = 650;
 
 /** Must match CLAIM_FLASH_MS in applyCut, which stamps the flashes. */
 const CLAIM_FLASH_MS = 420;
@@ -125,7 +125,7 @@ export class FxLayer {
 
     this.drawCutPreview(game, w2s, scale);
     this.drawSlings(game, w2s, scale, now);
-    this.drawBreakpoints(game, w2s, scale, now);
+    this.drawGuardrails(game, w2s, scale, now);
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
@@ -146,45 +146,50 @@ export class FxLayer {
   }
 
   /**
-   * The Breakpoint fences: a mark while the map's hold is still there.
+   * The Guardrail fences: a shield on a growing one while the map's shield is
+   * still there.
    *
-   * The budget is per MAP, so every Breakpoint on the board is armed or none
-   * of them is, and they all go dark together the moment one fires. That is
-   * the whole of the UI it needs: no counter, no meter, just a fence that
-   * looks live and then does not.
+   * On the GROWING fence, because that is the only fence the shield covers: a
+   * finished fence cannot be cut through, so marking finished Guardrails would
+   * promise something they do not do. The budget is per MAP, so the mark goes
+   * off every Guardrail at once when one spends it; the slot bar says the
+   * same thing before the cut is drawn.
    *
-   * Drawn as a bracket rather than a dot - the grip idiom belongs to Redeploy,
-   * and two different mechanics wearing one mark would be worse than either
-   * being unmarked.
+   * Two arcs either side of where the cut began, like a rail's two posts, and
+   * not a ring: a ring is the lock and pop idiom, and a mark that looked like
+   * either would read as a ball being taken.
    */
-  private drawBreakpoints(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
-    for (const wall of game.walls) {
-      if (!isArmedBreakpoint(game, wall)) continue;
+  private drawGuardrails(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    for (const wall of game.activeWalls ?? []) {
+      if (!isArmedGuardrail(game, wall.fenceTypeId)) continue;
       const colour = parseColor(getFenceType(wall.fenceTypeId).color, PALETTE.accent);
-      const a = w2s(wall.start.x, wall.start.y);
-      const b = w2s(wall.end.x, wall.end.y);
-      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      // Across the fence, not along it: the mark has to read at a glance on a
-      // fence drawn at any angle.
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len;
-      const arm = 9 * scale;
+      const o = w2s(wall.origin.x, wall.origin.y);
+      const r = 11 * scale;
+      // Across the fence: the arcs open along it, so they read at any angle.
+      const ang = Math.atan2(wall.direction.y, wall.direction.x);
       const pulse = 0.6 + 0.4 * Math.sin(now / 380);
-      this.over
-        .moveTo(mid.x - nx * arm, mid.y - ny * arm)
-        .lineTo(mid.x + nx * arm, mid.y + ny * arm)
-        .stroke({ width: Math.max(2, 3 * scale), color: colour, alpha: 0.9 * pulse });
-      this.over.circle(mid.x, mid.y, 3 * scale).fill({ color: colour, alpha: 0.95 });
+      const width = Math.max(2, 2.5 * scale);
+      // Flattened to points, never Pixi's arc(): that leaves a corrupt end
+      // point behind on a shared Graphics (compassRing.test.ts).
+      const STEPS = 8;
+      for (const side of [0, Math.PI]) {
+        const a0 = ang + Math.PI / 2 + side - 0.9;
+        this.over.moveTo(o.x + Math.cos(a0) * r, o.y + Math.sin(a0) * r);
+        for (let i = 1; i <= STEPS; i++) {
+          const a = a0 + (1.8 * i) / STEPS;
+          this.over.lineTo(o.x + Math.cos(a) * r, o.y + Math.sin(a) * r);
+        }
+        this.over.stroke({ width, color: colour, alpha: 0.85 * pulse });
+      }
     }
 
-    // The moment it fires, where it fired. A ring rather than a label: the ball
-    // stopping is the message, and this only has to say WHICH stop that was.
-    const flash = game.breakpointFlash;
+    // The moment it takes the hit, where it took it. A ring that GROWS, unlike
+    // a lock's, which closes: something pushed back, nothing was taken.
+    const flash = game.guardrailFlash;
     if (!flash) return;
     const elapsed = now - flash.startTime;
-    if (elapsed < 0 || elapsed >= BREAKPOINT_FLASH_MS) return;
-    const t = elapsed / BREAKPOINT_FLASH_MS;
+    if (elapsed < 0 || elapsed >= GUARDRAIL_FLASH_MS) return;
+    const t = elapsed / GUARDRAIL_FLASH_MS;
     const p = w2s(flash.x, flash.y);
     this.over.circle(p.x, p.y, (18 + 34 * t) * scale)
       .stroke({ width: Math.max(2, 3 * scale), color: 0xb8a1ff, alpha: (1 - t) * 0.9 });

@@ -25,7 +25,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info } from 'lucide-react';
+import { Info, Shield, ShieldOff } from 'lucide-react';
 import {
   getFenceType, standardFenceType, FENCE_SLOTS, STANDARD_FENCE_ID,
   type FenceTypeDef,
@@ -49,6 +49,12 @@ interface FenceSlotBarProps {
   selectedId: string;
   accentColor: string;
   onSelect: (fenceTypeId: string) => void;
+  /**
+   * The map's Guardrail shield is gone. A type with `shieldsPerMap` shows a lit
+   * shield on its slot until then, and a struck-out one after, so the player
+   * can see before a risky cut whether it is still covered.
+   */
+  shieldSpent?: boolean;
   /** Signals when the explainer opens/closes, so the shell can pause the game. */
   onInfoOpenChange?: (open: boolean) => void;
   /**
@@ -64,7 +70,7 @@ interface FenceSlotBarProps {
 }
 
 export function FenceSlotBar({
-  slotIds, selectedId, accentColor, onSelect, onInfoOpenChange, deferAutoInfo = false,
+  slotIds, selectedId, accentColor, onSelect, shieldSpent = false, onInfoOpenChange, deferAutoInfo = false,
 }: FenceSlotBarProps) {
   const { t } = useTranslation();
   const [info, setInfo] = useState<FenceTypeDef | null>(null);
@@ -210,6 +216,9 @@ export function FenceSlotBar({
                 style={{ width: 3, height: 18, backgroundColor: color, boxShadow: `0 0 6px ${color}` }}
               />
               <span>{f.name}</span>
+              {f.shieldsPerMap > 0 && (shieldSpent
+                ? <ShieldOff data-fence-shield="spent" aria-label={t('fenceTypes.shieldSpent') as string} className="w-3.5 h-3.5 opacity-50" />
+                : <Shield data-fence-shield="ready" aria-label={t('fenceTypes.shieldReady') as string} className="w-3.5 h-3.5" style={{ filter: `drop-shadow(0 0 3px ${color})` }} />)}
               {/* The hold hint, per CLAUDE.md: an element that is holdable has
                   to look holdable. */}
               <Info className="w-3 h-3 opacity-50" />

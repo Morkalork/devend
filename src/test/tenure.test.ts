@@ -391,7 +391,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // ladder with an ungated head (its Principal is a fork, which Tenure walks
     // like Onboarding's), so every threshold gained one.
     //
-    // Before that, 18/15/14: Set A Breakpoint, the open-shelf fence upgrade, is a Junior
+    // Before that, 18/15/14: the open-shelf fence upgrade (now Add Guardrails) is a Junior
     // root with no siblings, so it resolves as a chain at the SHALLOWEST
     // threshold only - one step is one rung. At 20 and 30 the walk needs a
     // Senior and a Principal to continue into and finds none, so it drops out.

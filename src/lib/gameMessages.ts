@@ -42,6 +42,8 @@ export type GameMessageId =
   | "lifeLostBall"
   /** A moving block ran through the fence you were drawing, and it cost a life. */
   | "lifeLostMover"
+  /** A ball cut through a Guardrail fence, and its shield saved the life. */
+  | "guardrailCaught"
   /**
    * The finished cut would have sealed a ball away from the board.
    *
@@ -121,6 +123,7 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   launcherLoaded: true,
   lifeLostBall: true,
   lifeLostMover: true,
+  guardrailCaught: true,
   cutWouldTrapBall: true,
   cutWouldBurySlabs: true,
   cutWouldBuryArea: true,

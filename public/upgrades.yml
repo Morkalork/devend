@@ -2315,14 +2315,14 @@ upgrades:
   # never told how to fill.
   #
   # Junior, so it is cheap. It is the introduction, not the reward.
-  - id: set_a_breakpoint
-    name: Set A Breakpoint
+  - id: add_guardrails
+    name: Add Guardrails
     tier: Junior
-    description: "Adds the Breakpoint fence: once a map it holds the first ball to touch it, 2s. Builds 15% slower."
+    description: "Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. 15% slower."
     unlockLevel: 4
-    icon: pause
+    icon: shield
     tags: [safety]
-    grantsFenceType: breakpoint
+    grantsFenceType: guardrail
     modifiers: {}
 
   - id: cold_storage_ice

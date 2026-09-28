@@ -1242,6 +1242,10 @@
         "name": "SCRUM Master",
         "description": "Muestra la previsualización de trayectoria de todas las bolas simultáneamente."
       },
+      "add_guardrails": {
+        "name": "Añadir Guardrails",
+        "description": "Añade la valla Guardrail: una vez por mapa, una bola que la cruza cuesta la valla, no una vida."
+      },
       "defensive_programming_junior": {
         "name": "Programación Defensiva",
         "description": "Reduce todas las bolas un 8%. La seguridad primero."
@@ -1739,6 +1743,7 @@
     "launcherLoaded": "El lanzador todavia esta disparando. No puedes trazar vallas hasta que hayan salido todas las bolas.",
     "lifeLostBall": "Una bola atraveso tu valla. Vida perdida.",
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
+    "guardrailCaught": "Tu valla Guardrail aguantó el golpe. Pierdes la valla, no la vida. Su escudo ya está gastado en este mapa.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
     "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
     "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
@@ -1813,7 +1818,9 @@
     "buildsSlower": "Se construye un {{percent}}% más lento que una valla normal. Ese es su precio.",
     "buildsFaster": "Se construye un {{percent}}% más rápido que una valla normal.",
     "staysSelected": "Toca una ranura para seleccionarla. Sigue activa hasta que la cambies y nunca se agota.",
-    "emptySlot": "Ranura de valla vacía"
+    "emptySlot": "Ranura de valla vacía",
+    "shieldReady": "Escudo listo para este mapa",
+    "shieldSpent": "Escudo gastado en este mapa"
   },
   "goal": {
     "par": "Vallas"

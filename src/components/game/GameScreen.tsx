@@ -1241,6 +1241,7 @@ export function GameScreen({
                 selectedId={gameState.selectedFenceTypeId ?? STANDARD_FENCE_ID}
                 accentColor={accentColor}
                 onSelect={gameState.onSelectFenceType ?? (() => {})}
+                shieldSpent={gameState.guardrailSpent ?? false}
                 onInfoOpenChange={setFenceInfoOpen}
                 deferAutoInfo={fenceSwitchIntro}
               />

@@ -27,9 +27,10 @@
 #                 to a ceiling; debounced, so one contact counts once.
 #   maxHits       ball hits this fence survives before it fractures. Absent =
 #                 the game's default (FENCE_FRACTURE_HITS).
-#   holdMs        milliseconds the first ball to bounce off a FINISHED fence of
-#                 this type is held still. Spent once per MAP, not per fence.
-#   holdsPerMap   how many of those a map gets. Only meaningful with holdMs.
+#   shieldsPerMap how many times a map forgives a ball cutting through a
+#                 GROWING fence of this type: the fence is lost, the life is
+#                 not. Spent per MAP, not per fence, across every fence of the
+#                 type. Absent = 0, which is every type but one.
 #   lockBand      [min, max] balls a pocket must hold for a cut of this type to
 #                 lock it at all. Absent = no band, which is every other type.
 #                 Outside the band the seal is REFUSED, not failed: the pocket
@@ -45,7 +46,7 @@
 #   anchorOnBreakable  true = a cut may START on a breakable. Only the drill.
 #   drillDamage   damage per second dealt to a breakable this fence touches.
 #   source        where it comes from: always | upgrade | certificate.
-#                 Five come from upgrades.yml: `breakpoint` is a ROOT, the open
+#                 Five come from upgrades.yml: `guardrail` is a ROOT, the open
 #                 shelf anyone can be offered, and the other four are the crown
 #                 of a MAXED family (unlockAfterChoice). The drill is a
 #                 certificate - the only ACCOUNT-scoped one, so it is in the bar
@@ -97,23 +98,29 @@ fences:
     description: "A finished fence is a slingshot, once: pull it back, aim, and it flings the balls in front of it."
     howTo: "Build it across a lane, then press on it and drag back. What it catches leaves at up to 3x speed."
 
-  # The one you can find without committing to anything (upgrades.yml: Set A
-  # Breakpoint is a root). Every other special is the crown of a maxed family;
+  # The one you can find without committing to anything (upgrades.yml: Add
+  # Guardrails is a root). Every other special is the crown of a maxed family;
   # this exists so a player who spreads their buys still meets the system.
   #
-  # Once per MAP rather than once per fence, and that is the whole balance of
-  # it: a fence type is unlimited once owned, so per-fence would let a player
-  # chain-hold one ball across a whole board - stronger than the Cron Job line
-  # costs twenty-four levels to reach.
-  - id: breakpoint
-    name: Breakpoint
+  # It replaced Breakpoint, which held the first ball to bounce off a FINISHED
+  # fence for two seconds, once a map. A finished fence is already safe, so the
+  # hold landed where nothing was at risk and players stopped slotting it. This
+  # one pays out at the one moment a fence can go wrong: while it is growing.
+  #
+  # The shield is the Defensive Programming shield (upgrades.yml), carried by
+  # the fence instead of the run: the first ball to cut through a growing
+  # Guardrail costs the fence, not a life. Once per MAP rather than once per
+  # fence, and that is the whole balance of it: a fence type is unlimited once
+  # owned, so per-fence would be a free life on every cut - more than the whole
+  # Defensive Programming line sells for four purchases.
+  - id: guardrail
+    name: Guardrail
     color: "#b8a1ff"
     buildSpeed: 0.85
-    holdMs: 2000
-    holdsPerMap: 1
+    shieldsPerMap: 1
     source: upgrade
-    description: "Once a map, the first ball to bounce off a finished fence is held still for 2 seconds."
-    howTo: "Build it in a lane you need to stop using, and let a ball find it."
+    description: "Comes with a shield: the first time a ball cuts through a growing Guardrail, you lose the fence, not a life. Once a map."
+    howTo: "Use it for the risky cut. Once the shield is spent it is a slower Standard until the next map."
 
   # ── The two lock-band fences ───────────────────────────────────────────────
   #

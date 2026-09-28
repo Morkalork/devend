@@ -97,7 +97,7 @@ export function sideOfEdge(
  * way every other collision responder here does.
  *
  * A zero-length velocity is left alone rather than given a direction: it can
- * only happen to a ball that is already being held (a Breakpoint fence), and
+ * only happen to a ball that is already being held (a freeze or a squash), and
  * launching one out of a wall it is resting against would take the hold away.
  */
 export function applyBoardEdge(ball: Ball, spec: BoardEdgeSpec | undefined): void {

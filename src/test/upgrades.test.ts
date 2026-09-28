@@ -82,7 +82,7 @@ const EXPECTED_ROOTS = [
   // a run with a bar of empty slots and no idea what fills them. This is the
   // one that needs no commitment, so it has to be a root: a root is exactly
   // "can turn up in any shop for any build", which is what open means here.
-  "set_a_breakpoint",
+  "add_guardrails",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

@@ -1191,6 +1191,7 @@
     "launcherLoaded": "The launcher is still firing. You cannot fence until every ball has left it.",
     "lifeLostBall": "A ball cut through your fence. Life lost.",
     "lifeLostMover": "A moving block cut through your fence. Life lost.",
+    "guardrailCaught": "Your Guardrail took the hit. Fence lost, life kept. Its shield is spent for this map.",
     "cutWouldTrapBall": "That cut would have sealed a ball away with no way out, so it did not land. Leave it a route.",
     "cutWouldBurySlabs": "That cut would have put what you still need to break out of reach, so it did not land.",
     "cutWouldBuryArea": "That cut would have left no ball that can still get into the zone, so it did not land.",
@@ -1265,7 +1266,9 @@
     "buildsSlower": "Builds {{percent}}% slower than a standard fence. That is what it costs.",
     "buildsFaster": "Builds {{percent}}% faster than a standard fence.",
     "staysSelected": "Tap a slot to select it. It stays selected until you change it, and never runs out.",
-    "emptySlot": "Empty fence slot"
+    "emptySlot": "Empty fence slot",
+    "shieldReady": "Shield ready for this map",
+    "shieldSpent": "Shield spent for this map"
   },
   "goal": {
     "par": "Fences"

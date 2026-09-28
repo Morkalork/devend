@@ -4,7 +4,7 @@
  * The bar is on screen from map one, and until this it had exactly ONE
  * explanation anywhere in the game: the modal that auto-opens the first time a
  * fence type is acquired. That fires at level 4 at the very earliest (Set A
- * Breakpoint's unlockLevel, and only if the shop rolls it and the player buys
+ * Guardrail's unlockLevel, and only if the shop rolls it and the player buys
  * it), and never at all for a player who never buys one. Before then the bar is
  * four empty boxes that nothing on any screen accounts for.
  *
@@ -34,13 +34,13 @@ describe("Re-enable All Tutorials", () => {
   beforeEach(() => localStorage.clear());
 
   it("brings back the fence-type explainers", () => {
-    markFenceTypeSeen("breakpoint");
-    expect(hasSeenFenceType("breakpoint")).toBe(true);
+    markFenceTypeSeen("guardrail");
+    expect(hasSeenFenceType("guardrail")).toBe(true);
 
     const { result } = renderHook(() => useTutorialManager());
     act(() => { result.current.resetAllTutorials(); });
 
-    expect(hasSeenFenceType("breakpoint"), "the button that re-enables tutorials skipped this one")
+    expect(hasSeenFenceType("guardrail"), "the button that re-enables tutorials skipped this one")
       .toBe(false);
   });
 
@@ -77,7 +77,7 @@ describe("the manual entry", () => {
   });
 
   it("is filed a map BEFORE the first fence type can be bought", () => {
-    // Set A Breakpoint is the open-shelf fence and unlocks at level 4. The
+    // Add Guardrails is the open-shelf fence and unlocks at level 4. The
     // bottom-strip explainer fires at level 3, so the slots are accounted for
     // by the time the shop can offer something to put in one.
     const src = read("src/components/game/GameScreen.tsx");
@@ -85,8 +85,8 @@ describe("the manual entry", () => {
     expect(src).toMatch(/fileManualEntry\('fenceSlots'\)/);
 
     const upgrades = read("public/upgrades.yml");
-    const breakpoint = upgrades.slice(upgrades.indexOf("id: set_a_breakpoint"));
-    const unlock = Number(/unlockLevel: (\d+)/.exec(breakpoint)?.[1]);
+    const guardrail = upgrades.slice(upgrades.indexOf("id: add_guardrails"));
+    const unlock = Number(/unlockLevel: (\d+)/.exec(guardrail)?.[1]);
     expect(unlock, "the open-shelf fence moved earlier than the explanation")
       .toBeGreaterThan(3);
   });

@@ -294,7 +294,7 @@ What still breaks determinism, found by reading `useGameLoop.ts`,
 
 The tick reads `performance.now()` in over fifty places (22 in `useGameLoop.ts`, the rest across `src/lib/physics`): fence growth
 (`wall.startTime`), freeze and thaw (`frozenUntil`, `freezeReadyAt`), the
-auto-freeze interval, cages, chains, boss phases, the breakpoint hold, the
+auto-freeze interval, cages, chains, boss phases, the (since retired) breakpoint hold, the
 frozen-ball release, ball effects, the lock glide, launcher dematerialise, the
 dud stamp, `destructibles.ts:735`. Two phones have two clocks, so the same tick
 would compute different elapsed times. The harness works around this by

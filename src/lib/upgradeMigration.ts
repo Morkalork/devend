@@ -10,7 +10,7 @@
  * So ids are never simply removed. A merged rung points at the rung that
  * absorbed it, and everything that reads a saved id maps it through here first.
  *
- * ── Why these two ──────────────────────────────────────────────────────────
+ * ── Why the SCRUM Master pair ──────────────────────────────────────────────────────────
  *
  * SCRUM Master carried its effect twice at the same tier: `_2` and `_3` were
  * both Senior granting one more tracked ball, `_4` and `_5` both Principal
@@ -27,6 +27,9 @@ export const UPGRADE_ALIASES: Record<string, string> = {
   scrum_master_3: "scrum_master_2",
   // Merged into scrum_master_4, which now grants both extra traced bounces.
   scrum_master_5: "scrum_master_4",
+  // The open-shelf fence upgrade. Breakpoint was retired and Guardrail took its
+  // place, price and level, so a run that owned the one now owns the other.
+  set_a_breakpoint: "add_guardrails",
 };
 
 /**

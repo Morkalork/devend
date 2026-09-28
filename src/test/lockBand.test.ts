@@ -54,7 +54,7 @@ describe("the catalogue entries", () => {
   });
 
   it("leaves every other type unbanded, so nothing else changed", () => {
-    for (const id of ["standard", "ice", "flare", "tripwire", "redeploy", "drill", "breakpoint"]) {
+    for (const id of ["standard", "ice", "flare", "tripwire", "redeploy", "drill", "guardrail"]) {
       expect(lockBandOf(id), `${id} grew a lock band`).toBeNull();
       expect(bandAllowsLock(id, 1)).toBe(true);
       expect(bandAllowsLock(id, 4)).toBe(true);

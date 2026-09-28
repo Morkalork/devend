@@ -55,7 +55,6 @@ import { runStream } from "@/lib/runRng";
 import { ballMayPass } from "@/lib/physics/obstacleRules";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
-import { holdOnBreakpoint } from "@/lib/physics/breakpointFence";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
 import { simNow } from "@/lib/simClock";
@@ -390,7 +389,7 @@ export function updateBall(
 
   const now = simNow();
 
-  // A held ball (tap-freeze, Cold Boot, a Breakpoint fence, Bug Squash) does
+  // A held ball (tap-freeze, Cold Boot, Bug Squash) does
   // not move. Decided HERE and not only in the game loop: the browser loop
   // already skips a frozen ball before calling this, but the headless harness
   // calls updateBall for every ball unconditionally, so until this line a
@@ -914,10 +913,6 @@ export function updateBall(
       // from a remembered id: a ball can touch two fences in one step, and the
       // one that changes its speed has to be one it really hit.
       applyFenceSpeedStep(ball, wall, now);
-      // ...and a Breakpoint holds it still, once per map. Same site and the
-      // same argument: a ball can touch two fences in one step, and the one
-      // that stops it has to be one it really hit.
-      holdOnBreakpoint(game, ball, wall, now);
       // The same dent from the edge as from the face. `wall.deformable` is the
       // very object the polygon map holds, so the two paths cannot disagree.
       // Read the normal off the wall BEFORE the dent moves it.

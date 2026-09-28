@@ -109,7 +109,7 @@ describe("the reported board", () => {
   });
 
   it("counts a dormant or frozen target as able, since it has not played yet", () => {
-    // A circuit sleeper waiting to be woken, or a ball held by a Breakpoint.
+    // A circuit sleeper waiting to be woken, or a ball held by a freeze.
     // Reading these as gone made a gate map lose on its first frame once.
     expect(anyGateTargetCanReach(board(), [at(16, 4, "dormant")], [ZONE])).toBe(true);
   });

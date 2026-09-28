@@ -294,15 +294,14 @@ export interface CanvasGameState {
   /** Passes that earned some, for the results line. */
   qualifiedLockCount?: number;
   /**
-   * Breakpoint holds spent on this map (breakpointFence.ts).
+   * Guardrail shields spent on this map (guardrailFence.ts).
    *
    * On the MAP rather than on the walls: the budget is a property of the map,
-   * so it survives the fence that spent it being broken - which is correct.
-   * Spending your hold and then losing the fence must not refund it.
+   * and the fence that spends it is destroyed by the very hit it forgives.
    */
-  breakpointHoldsUsed?: number;
-  /** Where the map's Breakpoint fired, for the renderer's flash. */
-  breakpointFlash?: { x: number; y: number; startTime: number } | null;
+  guardrailShieldsUsed?: number;
+  /** Where the map's Guardrail shield took a hit, for the renderer's ring. */
+  guardrailFlash?: { x: number; y: number; startTime: number } | null;
   /**
    * A Redeploy fence being pulled back right now (slingFence.ts).
    *

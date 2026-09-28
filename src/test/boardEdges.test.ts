@@ -106,7 +106,7 @@ describe("what an edge does to a ball", () => {
   });
 
   it("leaves a held ball held", () => {
-    // Zero velocity is a ball a Breakpoint fence is holding. Giving it a
+    // Zero velocity is a ball a freeze is holding. Giving it a
     // direction would take the hold away, from a wall it is resting against.
     const b = ball(0, 0);
     applyBoardEdge(b, { bearing: "up", kick: 2 });

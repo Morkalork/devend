@@ -228,7 +228,7 @@ export function updateFenceWallFn(
     if (!hit) continue;
 
     ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
-      fenceDeath("ballHitFence", game, level, activeModifiers));
+      fenceDeath("ballHitFence", game, level, activeModifiers), wall.fenceTypeId);
     return;
   }
 }

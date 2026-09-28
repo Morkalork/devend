@@ -192,3 +192,24 @@ describe("the hold hint", () => {
     expect(src).toMatch(/LONG_PRESS_MS = 450/);
   });
 });
+
+describe("the Guardrail slot shows its shield", () => {
+  // The shield is per MAP, so the player needs to know before a risky cut
+  // whether the Guardrail still covers it. The slot is where they choose it.
+  const shieldOn = (id: string) =>
+    document.querySelector(`[data-fence-slot="${id}"] [data-fence-shield]`)?.getAttribute("data-fence-shield");
+
+  it("lit while the shield is up, struck out once it is spent", () => {
+    draw({ slotIds: ["guardrail", "ice"] });
+    expect(shieldOn("guardrail")).toBe("ready");
+    cleanup();
+    draw({ slotIds: ["guardrail", "ice"], shieldSpent: true });
+    expect(shieldOn("guardrail")).toBe("spent");
+  });
+
+  it("only on a type that carries a shield", () => {
+    draw({ slotIds: ["guardrail", "ice"] });
+    expect(shieldOn("ice")).toBeUndefined();
+    expect(shieldOn("standard")).toBeUndefined();
+  });
+});

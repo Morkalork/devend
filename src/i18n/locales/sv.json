@@ -1218,6 +1218,10 @@
         "name": "Totalersättning",
         "description": "Toppförmåner: bolldelaren delar bollen i tre, och symbolutdelningen stiger ett steg vid 5 andra Risk-uppgraderingar."
       },
+      "add_guardrails": {
+        "name": "Lägg till Guardrails",
+        "description": "Ger Guardrail-staketet: en gång per bana kostar en boll genom det staketet, inte ett liv."
+      },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",
         "description": "Krymp alla bollar med 8%. Säkerheten först."
@@ -1739,6 +1743,7 @@
     "launcherLoaded": "Avfyraren skjuter fortfarande. Du kan inte dra stangsel forran alla bollar har lamnat den.",
     "lifeLostBall": "En boll gick genom ditt staket. Ett liv forlorat.",
     "lifeLostMover": "Ett rorligt block gick genom ditt staket. Ett liv forlorat.",
+    "guardrailCaught": "Ditt Guardrail-staket tog smällen. Staketet förlorat, livet kvar. Skölden är förbrukad för den här banan.",
     "cutWouldTrapBall": "Det snittet hade stangt in en boll utan vag ut, sa det lades inte. Lamna en vag.",
     "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom.",
     "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom.",
@@ -1813,7 +1818,9 @@
     "buildsSlower": "Byggs {{percent}}% långsammare än ett vanligt staket. Det är vad det kostar.",
     "buildsFaster": "Byggs {{percent}}% snabbare än ett vanligt staket.",
     "staysSelected": "Tryck på en plats för att välja den. Den förblir vald tills du byter, och tar aldrig slut.",
-    "emptySlot": "Tom staketplats"
+    "emptySlot": "Tom staketplats",
+    "shieldReady": "Skölden är redo för den här banan",
+    "shieldSpent": "Skölden förbrukad för den här banan"
   },
   "goal": {
     "par": "Staket"

@@ -132,9 +132,10 @@ describe("the fence copy says fence", () => {
     }
   });
 
-  it("still says what Breakpoint and Redeploy do", () => {
+  it("still says what Guardrail and Redeploy do", () => {
     const byId = new Map(fences.fences.map(f => [f.id, f]));
-    expect(byId.get("breakpoint")!.description).toMatch(/finished fence/);
+    expect(byId.get("guardrail")!.description).toMatch(/growing Guardrail/);
+    expect(byId.get("guardrail")!.description).toMatch(/not a life/);
     expect(byId.get("redeploy")!.description).toMatch(/finished fence/);
   });
 });

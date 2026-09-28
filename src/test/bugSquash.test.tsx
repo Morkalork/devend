@@ -386,7 +386,7 @@ describe("a stuck ball stays put and then carries on", () => {
   it("holds ANY frozen ball in the harness, not only a squashed one", () => {
     // The pre-existing divergence this feature closed: the browser loop skips
     // a frozen ball before updateBall, the harness never did. A tap-freeze,
-    // Cold Boot or a Breakpoint hold now stops a ball in a bot sweep too.
+    // Cold Boot or a freeze now stops a ball in a bot sweep too.
     setRunSeedText("frozen-probe");
     installClock();
     const ctx = createBotGame(BOARD, 7, plainModifiers());

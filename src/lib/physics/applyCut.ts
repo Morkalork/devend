@@ -211,7 +211,8 @@ export function applyCutFn(
       // or a frame after. That is not something a player decides or can even
       // see, so it cannot be something they are charged differently for.
       ballStruckFence(game, ball, level, levelNumber, activeModifiers, callbacks,
-        mapFailure("ballHitFence", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
+        mapFailure("ballHitFence", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)),
+        wall.fenceTypeId);
       return;
     }
   }

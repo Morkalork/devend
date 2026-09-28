@@ -107,7 +107,7 @@ the roster of four is a real choice from the moment the second is owned.
 | `ice` | blue, frosted | a ball bouncing off it loses a speed step | builds 30% slower | upgrade chain (Feature Freeze) **[CHANGED]** |
 | `flare` | red, hot | a ball bouncing off it gains a speed step | builds 30% slower, and a faster ball is more dangerous to *you* | upgrade chain (Breaking Change) |
 | `drill` | black, pulsing | may anchor on a breakable; damages it while touching; resumes growing when it dies | builds 50% slower, and the resumed growth is unprotected | certificate store (account-scoped) |
-| `breakpoint` | violet | once a map, the first ball to bounce off a finished one is held still for 2s | builds 15% slower, and the hold is one per MAP however many you draw | upgrade root, the open shelf **[CHANGED]** |
+| `guardrail` | violet | carries a shield: once a map, the first ball to cut through a growing Guardrail costs the fence, not a life (spent before the run's Defensive Programming shields) | builds 15% slower, and the shield is one per MAP however many you draw | upgrade root, the open shelf **[CHANGED]**: replaced `breakpoint` (a 2s hold on a ball bouncing off a FINISHED fence), which paid out where nothing was at risk; saved runs map `set_a_breakpoint` to `add_guardrails` |
 | `mutex` | pale blue | locks a pocket only while ONE ball is in it, and pays qualified overtime for each | builds 20% slower, and refuses every greedy seal | upgrade, crown of Fault Tolerance **[CHANGED]** |
 | `semaphore` | pink | locks a pocket only while TWO OR MORE are in it, and pays qualified overtime on a steep curve | builds 40% slower, and a cut that catches one ball captures nothing | upgrade, crown of Budget Cycle **[CHANGED]** |
 | `redeploy` | rubber pink | a FINISHED one can be grabbed once, pulled back like a rubber band, aimed and released, and it flings the balls in front of it at up to 3x | builds 40% slower, and the ball it throws stays fast for the rest of the map | upgrade chain (Free Fall) **[CHANGED]** |
@@ -224,7 +224,7 @@ The only genuinely new physics, and it gets its own step for that reason.
 
 ### Step 7 - Acquisition  **[CHANGED]**
 
-- **Upgrades**: `breakpoint` on the open shelf, and `ice`, `redeploy`, `flare`
+- **Upgrades**: `guardrail` on the open shelf, and `ice`, `redeploy`, `flare`
   and `tripwire` as the crown of a MAXED family. See Step 9. A fence type is a change of VERB and worth walking to;
   a root would put it on the shelf of a player who has shown no interest in
   the line it belongs to.
@@ -292,7 +292,7 @@ sat the fence BESIDE a chain rather than at the end of it.
 
 | Shelf | Types | How |
 |---|---|---|
-| Open | `breakpoint` | A root: no prerequisites, Junior, level 4. Eligible in any shop for any build, never guaranteed. |
+| Open | `guardrail` | A root: no prerequisites, Junior, level 4. Eligible in any shop for any build, never guaranteed. |
 | Crown of a maxed family | `ice`, `tripwire`, `flare`, `redeploy` | `unlockAfterChoice`, on the family's top tier, whichever of its two options was taken. |
 | Account | `drill` | Certificate, unchanged. |
 

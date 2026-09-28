@@ -71,18 +71,13 @@ export interface FenceTypeDef {
   /** Ball hits this fence survives before fracturing. Undefined = the default. */
   maxHits?: number;
   /**
-   * Milliseconds the first ball to bounce off a FINISHED fence of this type is
-   * held still. 0 = this type does not hold.
-   */
-  holdMs: number;
-  /**
-   * How many holds the MAP gets, across every fence of this type on it.
+   * How many times a MAP forgives a ball cutting through a growing fence of
+   * this type: the fence is lost, the life is not (physics/guardrailFence.ts).
    *
    * Per map rather than per fence, because a fence type is unlimited once
-   * owned: per fence would let a player chain-hold one ball across a whole
-   * board, which is a stronger effect than any freeze upgrade in the tree.
+   * owned: per fence would be a free life on every cut. 0 = no shield.
    */
-  holdsPerMap: number;
+  shieldsPerMap: number;
   /**
    * Can a finished fence of this type be grabbed and thrown with?
    *
@@ -159,11 +154,7 @@ function parseEntry(raw: unknown): FenceTypeDef | null {
     buildSpeed,
     ballSpeedStep: num(r.ballSpeedStep, 0),
     maxHits,
-    holdMs: Math.max(0, num(r.holdMs, 0)),
-    // Defaulted to one rather than zero: a type that states a holdMs and no
-    // count means "it holds", and reading that as "it holds zero times" would
-    // be a fence whose whole entry does nothing with nothing on screen to say.
-    holdsPerMap: Math.max(0, Math.round(num(r.holdsPerMap, r.holdMs ? 1 : 0))),
+    shieldsPerMap: Math.max(0, Math.round(num(r.shieldsPerMap, 0))),
     lockBand: parseBand(r.lockBand),
     qualifiedByCount: Array.isArray(r.qualifiedByCount)
       ? r.qualifiedByCount.map(v => Math.max(0, num(v, 0)))
@@ -199,8 +190,7 @@ const LAST_RESORT: FenceTypeDef = {
   color: "#00ff88",
   buildSpeed: 1,
   ballSpeedStep: 0,
-  holdMs: 0,
-  holdsPerMap: 0,
+  shieldsPerMap: 0,
   lockBand: null,
   qualifiedByCount: [],
   slingshot: false,

@@ -232,6 +232,8 @@ export interface GameStateInfo {
   fenceSlotIds?: string[];
   /** Choose the fence type the next cut draws. */
   onSelectFenceType?: (fenceTypeId: string) => void;
+  /** The Guardrail fence's shield has been spent on this map (guardrailFence.ts). */
+  guardrailSpent?: boolean;
   /**
    * Whose turn it is, from this phone's side, in a pair (net/pairTurn.ts);
    * null in solo play. `seq` changes on every hand-over, so the screen can
@@ -737,6 +739,8 @@ export function GameCanvas({
   const [cutCount, setCutCount] = useState(0);
   const [completedCuts, setCompletedCuts] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
+  // The Guardrail's per-map shield, for the slot bar: lit until it is spent.
+  const [guardrailSpent, setGuardrailSpent] = useState(false);
   // Repaint hook exposed for the ability bar's Clear All Fences (which fires
   // synchronously on a button press, outside the game loop's callbacks).
   const repaintRegionCanvasRef = useRef<() => void>(() => {});
@@ -1303,12 +1307,13 @@ export function GameCanvas({
       // gone, and a drag left pointing at a dead id would swallow the first
       // pointerup of the next map.
       game.moverDrag = null;
-      // ...and so does the Breakpoint fence's hold, which is per MAP. Reset in
+      // ...and so does the Guardrail fence's shield, which is per MAP. Reset in
       // this block for the reason its own comment gives: a field this block
-      // forgets is a field that is never set at all, and a hold budget that
-      // carried over would give map two no Breakpoint and no sign of why.
-      game.breakpointHoldsUsed = 0;
-      game.breakpointFlash = null;
+      // forgets is a field that is never set at all, and a shield that stayed
+      // spent would give map two a Guardrail that forgives nothing.
+      game.guardrailShieldsUsed = 0;
+      game.guardrailFlash = null;
+      setGuardrailSpent(false);
       // Qualified overtime is per MAP like every other bank here; carrying it
       // over would pay map two for a seal made on map one.
       game.qualifiedOvertime = 0;
@@ -1741,7 +1746,11 @@ export function GameCanvas({
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
-      onGameMessage: (id: GameMessageId) => onMessageRef.current?.(id),
+      onGameMessage: (id: GameMessageId) => {
+        // The one message that is also state: the slot bar's shield goes out.
+        if (id === "guardrailCaught") setGuardrailSpent(true);
+        onMessageRef.current?.(id);
+      },
       onTutorialCutSuccess,
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.
@@ -2387,11 +2396,12 @@ export function GameCanvas({
         selectedFenceTypeId,
         fenceSlotIds,
         onSelectFenceType: handleSelectFenceType,
+        guardrailSpent,
         pairTurn,
         onPassTurn: handlePassTurn,
       });
     }
-  }, [pairTurn, handlePassTurn, cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType]);
+  }, [pairTurn, handlePassTurn, cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType, guardrailSpent]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

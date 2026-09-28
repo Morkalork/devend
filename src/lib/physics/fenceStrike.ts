@@ -30,6 +30,7 @@ import { RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
 import { simNow } from "@/lib/simClock";
+import { spendGuardrailShield } from "./guardrailFence";
 
 /**
  * How long a post-break freeze may last before the loop lifts it regardless.
@@ -154,6 +155,9 @@ function dockOrEnd(
  * running while the screen says it was caught; and the shield has to be spent
  * before the push is failed, or a shield the player bought does nothing on the
  * one cut they most wanted it for.
+ *
+ * `fenceTypeId` is the struck fence's type: a Guardrail brings a shield of its
+ * own, spent before the run's (guardrailFence.ts says why).
  */
 export function ballStruckFence(
   game: CanvasGameState,
@@ -163,6 +167,7 @@ export function ballStruckFence(
   activeModifiers: GameModifiers,
   callbacks: GameCallbacks,
   failure: MapFailure,
+  fenceTypeId?: string,
 ): void {
   // Freeze the ball. This is what tells the player WHICH ball did it: the
   // board stops with the culprit sitting on the fence it broke.
@@ -188,6 +193,17 @@ export function ballStruckFence(
     }
     clearFreeze(game);
   };
+
+  // The Guardrail's own shield absorbs the hit. The same forgiveness as the
+  // run's shield below, and said out loud: the fence vanishing with no life
+  // gone would otherwise look like the hit simply did not count.
+  if (spendGuardrailShield(game, ball, fenceTypeId, simNow())) {
+    game.activeWalls = [];
+    callbacks.onGameMessage?.("guardrailCaught");
+    recover(game, callbacks);
+    flashAndShake(callbacks, 150, unfreezeAfterShake);
+    return;
+  }
 
   // Shield absorbs the hit.
   if (game.wallShieldsRemaining > 0) {
