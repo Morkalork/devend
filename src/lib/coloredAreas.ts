@@ -36,6 +36,10 @@ export interface SyntaxTheme {
   text: string;
   /** The number. */
   number: string;
+  /** A quoted string value. */
+  string: string;
+  /** A comment. */
+  comment: string;
 }
 
 export interface AreaStyle {
@@ -56,6 +60,7 @@ export const AREA_KINDS: Record<AreaKind, AreaStyle> = {
     theme: {
       background: "#f6f8fa", punctuation: "#24292f", tag: "#116329",
       attribute: "#0550ae", text: "#24292f", number: "#cf222e",
+      string: "#0a3069", comment: "#6e7781",
     },
   },
   dark: {
@@ -63,6 +68,7 @@ export const AREA_KINDS: Record<AreaKind, AreaStyle> = {
     theme: {
       background: "#1e1e1e", punctuation: "#808080", tag: "#569cd6",
       attribute: "#9cdcfe", text: "#d4d4d4", number: "#b5cea8",
+      string: "#ce9178", comment: "#6a9955",
     },
   },
 };
@@ -87,38 +93,47 @@ export function areaStyle(kind: AreaKind | string): AreaStyle {
 }
 
 /**
- * The code a zone shows. Unclaimed, it is HTML: a lock tag around its payout,
- * so the patch reads as "lock a ball here for more points". Once a ball is
- * locked inside, it compiles down to assembly that does exactly that, so the
- * zone itself says the lock went through. One entry per coloured token, lines
- * as arrays of tokens.
+ * The code a zone shows. Unclaimed, it is a block of ordinary HTML with a lock
+ * tag and its payout in the middle, so the patch reads as "lock a ball here
+ * for more points". Once a ball is locked inside, it is replaced by a hacky
+ * scrap of assembly (a hack: label, a NOP to trust, a jump to 0xDEADBEEF) that does
+ * the lock, so the zone visibly turns into something else: a different shape,
+ * different colours, comments. Lines stay at 18 characters or fewer, because
+ * the widest line sets the font size in a small zone. One entry per coloured
+ * token, lines as arrays of tokens.
  */
 export type SnippetToken = { text: string; role: keyof Omit<SyntaxTheme, "background"> };
+
+const tok = (text: string, role: SnippetToken["role"]): SnippetToken => ({ text, role });
+/** `<name` */
+const open = (indent: string, name: string): SnippetToken[] =>
+  [tok(indent + "<", "punctuation"), tok(name, "tag")];
+/** ` attr="value"` */
+const attr = (name: string, value: string): SnippetToken[] =>
+  [tok(" " + name, "attribute"), tok("=", "punctuation"), tok(`"${value}"`, "string")];
 
 export function areaSnippet(kind: AreaKind | string, locked = false): SnippetToken[][] {
   const mult = String(areaStyle(kind).multiplier);
   if (locked) {
     return [
-      [{ text: "lock", role: "tag" }, { text: " ball", role: "attribute" }],
-      [
-        { text: "mul", role: "tag" }, { text: "  pts", role: "attribute" },
-        { text: ",", role: "punctuation" }, { text: " " + mult, role: "number" },
-      ],
-      [{ text: "ret", role: "tag" }],
+      [tok("; DO NOT TOUCH", "comment")],
+      [tok("hack", "tag"), tok(":", "punctuation")],
+      [tok("  xor", "tag"), tok("  eax", "attribute"), tok(",", "punctuation"), tok("eax", "attribute")],
+      [tok("  mov", "tag"), tok("  ebx", "attribute"), tok(",", "punctuation"), tok("[ball]", "attribute")],
+      [tok("  lock cmpxchg", "tag")],
+      [tok("  imul", "tag"), tok(" pts", "attribute"), tok(",", "punctuation"), tok(mult, "number")],
+      [tok("  nop", "tag"), tok("  ; trust me", "comment")],
+      [tok("  jmp", "tag"), tok("  0xDEADBEEF", "number")],
     ];
   }
   return [
-    [
-      { text: "<", role: "punctuation" }, { text: "lock", role: "tag" },
-      { text: " ball", role: "attribute" }, { text: ">", role: "punctuation" },
-    ],
-    [
-      { text: "  pts x", role: "text" }, { text: mult, role: "number" },
-    ],
-    [
-      { text: "</", role: "punctuation" }, { text: "lock", role: "tag" },
-      { text: ">", role: "punctuation" },
-    ],
+    [...open("", "div"), ...attr("id", "zone"), tok(">", "punctuation")],
+    [tok("  <!-- todo -->", "comment")],
+    [...open("  ", "lock"), ...attr("ball", "1"), tok(">", "punctuation")],
+    [...open("    ", "pts"), ...attr("x", mult), tok("/>", "punctuation")],
+    [tok("  </", "punctuation"), tok("lock", "tag"), tok(">", "punctuation")],
+    [...open("  ", "p"), tok(">", "punctuation"), tok("lock it", "text"), tok("</", "punctuation"), tok("p", "tag"), tok(">", "punctuation")],
+    [tok("</", "punctuation"), tok("div", "tag"), tok(">", "punctuation")],
   ];
 }
 

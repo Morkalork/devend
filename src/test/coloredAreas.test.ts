@@ -50,11 +50,11 @@ describe("area kinds", () => {
     for (const kind of ["light", "dark"] as const) {
       const lines = areaSnippet(kind);
       const text = lines.map(l => l.map(tok => tok.text).join("")).join("\n");
-      expect(text).toContain("<lock ball>");
+      expect(text).toContain("<lock ball=\"1\">");
       expect(text).toContain("</lock>");
-      expect(text).toContain(`x${AREA_KINDS[kind].multiplier}`);
-      // Every token names a colour the kind's editor theme defines.
-      for (const tok of lines.flat()) {
+      expect(text).toContain(`x="${AREA_KINDS[kind].multiplier}"`);
+      // Every token, waiting or locked, names a colour the kind's theme defines.
+      for (const tok of [...lines.flat(), ...areaSnippet(kind, true).flat()]) {
         expect(AREA_KINDS[kind].theme[tok.role]).toMatch(/^#[0-9a-f]{6}$/);
       }
     }
