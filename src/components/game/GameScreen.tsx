@@ -17,7 +17,7 @@ import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditi
 import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
-import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
+import { useMeasuredBottomBars, BOTTOM_BARS_FALLBACK_PX } from '@/hooks/useBottomBarsHeight';
 import { hasSeenFenceSwitching, markFenceSwitchingSeen } from '@/lib/fenceSeen';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
@@ -427,7 +427,9 @@ export function GameScreen({
   // be cut along its bottom edge at all (issue #78). Measured off the live
   // stack rather than reserved as a percentage: it is five rows deep on a bad
   // day and the ability row wraps, so no constant survives contact.
-  const bottomBarsPx = useBottomBarsHeight();
+  // Null until the first reading: the board lays out against the live stack
+  // rather than a guess (lib/boardLayoutLatch).
+  const bottomBarsPx = useMeasuredBottomBars();
 
   /**
    * The first special fence a player ever owns, and the thing nobody told them.
@@ -1247,12 +1249,17 @@ export function GameScreen({
               />
             </div>
           )}
-          {!mapComplete && gameState.onUseAbility && (
+          {/* Mounted with the rest of the stack, not when the game reports
+              its handler a commit later: a row that arrives late grows the
+              stack after the board has been laid out against it, which is one
+              of the ways the board used to move once it was on screen. Taps
+              before the handler lands do nothing. */}
+          {!mapComplete && (
             <div className="pointer-events-auto">
               <AbilityBar
                 charges={abilityCharges ?? {}}
                 accentColor={accentColor}
-                onUse={gameState.onUseAbility}
+                onUse={gameState.onUseAbility ?? (() => {})}
                 armedAbilityId={gameState.armedAbility}
                 onInfoOpenChange={setAbilityInfoOpen}
               />
@@ -1601,7 +1608,7 @@ export function GameScreen({
             // the slots lit so the player reads the sentence and the row it is
             // about at the same time. The height is the measured stack, so the
             // hole cannot drift from what it is cutting around.
-            spotlightArea: 'bottom' as const, spotlightHeightPx: bottomBarsPx,
+            spotlightArea: 'bottom' as const, spotlightHeightPx: bottomBarsPx ?? BOTTOM_BARS_FALLBACK_PX,
             onDismiss: () => { fileManualEntry('fenceSlots'); setFenceSwitchIntro(false); },
           },
           {

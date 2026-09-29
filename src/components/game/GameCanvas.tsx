@@ -148,6 +148,8 @@ import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
 import { PendingResize } from "@/lib/boardResizeHold";
+import { layoutInset, stackCoversBoard } from "@/lib/boardLayoutLatch";
+import { measureBottomBars, BOTTOM_BARS_FALLBACK_PX } from "@/hooks/useBottomBarsHeight";
 import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 import { splitClauseOf } from "@/lib/splitWarn";
 import { visibleOutline } from "@/lib/headStartStrip";
@@ -366,8 +368,12 @@ interface GameCanvasProps {
    * useBottomBarsHeight); the board is centred in what is left rather than in
    * the whole frame. Those bars take taps, so board drawn under them cannot be
    * cut at all - which is what issue #78 was.
+   *
+   * Null until the stack has been measured. The board then reads the stack
+   * itself at layout time, rather than laying out against a guess and moving
+   * once the real number lands (lib/boardLayoutLatch).
    */
-  bottomInsetPx?: number;
+  bottomInsetPx?: number | null;
 }
 
 /**
@@ -396,6 +402,12 @@ function timeTierFor(remainingFraction: number): number {
   if (remainingFraction > 0.33) return 1;
   if (remainingFraction > 0.15) return 2;
   return 3;
+}
+
+/** How a re-layout was asked for. See lib/boardLayoutLatch. */
+interface ResizeOpts {
+  /** Only move the board if the bottom stack now covers it. */
+  onlyIfCovered?: boolean;
 }
 
 /**
@@ -517,8 +529,11 @@ export function GameCanvas({
   // level - and re-running it every time a bar wraps would restart the map.
   const bottomInsetRef = useRef(bottomInsetPx);
   bottomInsetRef.current = bottomInsetPx;
-  const resizeCanvasRef = useRef<(() => void) | null>(null);
-  useEffect(() => { resizeCanvasRef.current?.(); }, [bottomInsetPx]);
+  const resizeCanvasRef = useRef<((opts?: ResizeOpts) => void) | null>(null);
+  // A change to the stack alone moves the board only if the stack now covers
+  // it. Everything else about the stack settling is absorbed by the gap under
+  // the board; see lib/boardLayoutLatch.
+  useEffect(() => { resizeCanvasRef.current?.({ onlyIfCovered: true }); }, [bottomInsetPx]);
   // Read once per mount: flipped in the admin screen, which can only be reached
   // by leaving the game, so it cannot change mid-map.
   const [perfHudPersisted] = useState(isPerfHudEnabled);
@@ -1543,7 +1558,15 @@ export function GameCanvas({
       rainState.lastTime = 0;
     };
 
-    const resizeCanvas = () => {
+    const resizeCanvas = (opts?: ResizeOpts) => {
+      // The latch: once a map is laid out, the stack growing or settling is not
+      // a reason to move the board unless it would now cover it. This is what
+      // keeps the board exactly where it first appeared.
+      if (opts?.onlyIfCovered && game.boardRect.width > 0) {
+        const dprNow = !useFallback2d ? Math.min(nativeDevicePixelRatio(), 3) : getDevicePixelRatio();
+        const inset = layoutInset(measureBottomBars(), bottomInsetRef.current ?? null, BOTTOM_BARS_FALLBACK_PX);
+        if (!stackCoversBoard(game.boardRect, game.screenSize.height, inset * dprNow)) return;
+      }
       // Not while a fence is being drawn. `100dvh` moves when the mobile URL
       // bar does, and a drag begun beside the board is the scroll gesture that
       // collapses it - so the board was being re-laid out under the finger,
@@ -1574,7 +1597,10 @@ export function GameCanvas({
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
       game.screenSize = { width: physW, height: physH };
       // The inset is in CSS pixels; computeBoardRect works in physical ones.
-      game.boardRect = computeBoardRect(physW, physH, bottomInsetRef.current * dpr);
+      // Read off the stack NOW, not the prop alone: on a map's first layout
+      // the prop is still the measuring hook's first-commit guess.
+      const insetCss = layoutInset(measureBottomBars(), bottomInsetRef.current ?? null, BOTTOM_BARS_FALLBACK_PX);
+      game.boardRect = computeBoardRect(physW, physH, insetCss * dpr);
       clearBallRenderCache();
       clearBallSphereCache();
       clearRainGlyphCache();
@@ -1936,7 +1962,32 @@ export function GameCanvas({
 
     resizeCanvas();
     resizeCanvasRef.current = resizeCanvas;
-    window.addEventListener("resize", resizeCanvas);
+    // A real viewport change is a full re-layout (held while a fence is in
+    // flight). Wrapped so the event is never read as resize options.
+    const onWindowResize = () => resizeCanvas();
+    window.addEventListener("resize", onWindowResize);
+    // Dev guard. The board is placed inside this container, so anything that
+    // changes the container's size without the viewport changing - a HUD row
+    // that paints empty and fills a commit later was the last one - moves the
+    // board on screen with no re-layout to show for it. Say so, loudly, in the
+    // build a change is tested in, rather than wait for it to be seen on a phone.
+    let layoutGuard: ResizeObserver | undefined;
+    if (process.env.NODE_ENV === "development" && typeof ResizeObserver !== "undefined") {
+      let seen: { w: number; h: number; vw: number; vh: number } | null = null;
+      layoutGuard = new ResizeObserver(() => {
+        const { width: w, height: h } = container.getBoundingClientRect();
+        const now = { w, h, vw: window.innerWidth, vh: window.innerHeight };
+        if (seen && seen.vw === now.vw && seen.vh === now.vh && (seen.w !== w || seen.h !== h)) {
+          console.warn(
+            `[board] the board's container went from ${seen.w}x${seen.h} to ${w}x${h} with the viewport unchanged, `
+            + "so the board just moved on screen. Something around it changed height after layout: "
+            + "give it a fixed height from its first frame (lib/boardLayoutLatch).",
+          );
+        }
+        seen = now;
+      });
+      layoutGuard.observe(container);
+    }
     let disposed = false;
     if (introPendingRef.current) {
       introPendingRef.current = false;
@@ -1987,7 +2038,7 @@ export function GameCanvas({
       let dprRampChecks = 0;
       dprRampInterval = window.setInterval(() => {
         dprRampChecks++;
-        if (maybeRampDpr(resizeCanvas) || dprRampChecks >= 8) {
+        if (maybeRampDpr(() => resizeCanvas()) || dprRampChecks >= 8) {
           window.clearInterval(dprRampInterval);
         }
       }, 1000);
@@ -1996,7 +2047,8 @@ export function GameCanvas({
     return () => {
       disposed = true;
       resizeCanvasRef.current = null;
-      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("resize", onWindowResize);
+      layoutGuard?.disconnect();
       if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
       if (readyTimer !== undefined) window.clearTimeout(readyTimer);
       stopGameLoop(game);

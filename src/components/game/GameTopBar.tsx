@@ -254,9 +254,15 @@ export function GameTopBar({
           made the map different sitting last. It is now the win spec, in the
           order the Acceptance Criteria modal states it, and the budget after.
           Scrolls rather than wraps: a map can carry four requirements and this
-          is one line on a phone. */}
+          is one line on a phone.
+
+          A fixed height, not a content height. The goals arrive a commit after
+          the screen mounts, so this row used to paint empty (14px) and then
+          grow to 34px, pushing the whole board down 20px after it had been
+          placed. Border-box: 12px padding + a 20px chip line + the 2px rule. */}
       <div
-        className={`px-3 py-1.5 flex items-center gap-4 overflow-x-auto no-scrollbar${onExpand ? ' cursor-pointer' : ''}`}
+        data-goal-row=""
+        className={`h-[34px] flex-shrink-0 px-3 py-1.5 flex items-center gap-4 overflow-x-auto overflow-y-hidden no-scrollbar${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
         onTouchStart={handleSwipeTouchStart}
         onTouchEnd={handleSwipeTouchEnd}

@@ -106,7 +106,7 @@ describe("the two ends of the chain, in the source", () => {
     // Measuring first and discarding would still run the expensive part on
     // every frame of a collapsing URL bar.
     const canvas = read("src/components/game/GameCanvas.tsx");
-    const fn = canvas.slice(canvas.indexOf("const resizeCanvas = () => {"));
+    const fn = canvas.slice(canvas.indexOf("const resizeCanvas = (opts?: ResizeOpts) => {"));
     const guard = fn.indexOf("pendingResizeRef.current.offer");
     const measure = fn.indexOf("container.getBoundingClientRect()");
     expect(guard, "the resize handler no longer consults the hold").toBeGreaterThan(-1);

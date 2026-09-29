@@ -146,7 +146,9 @@ describe("the readers", () => {
   it("hands the board the measured height, not a constant", () => {
     const src = read("src/components/game/GameScreen.tsx");
     expect(src).toMatch(/bottomInsetPx=\{bottomBarsPx\}/);
-    expect(src).toMatch(/const bottomBarsPx = useBottomBarsHeight\(\)/);
+    // The null-before-measured form: the board must be able to tell "not
+    // measured yet" from a height (boardLayoutLatch.test.ts).
+    expect(src).toMatch(/const bottomBarsPx = useMeasuredBottomBars\(\)/);
   });
 
   it("converts the inset to the pixels computeBoardRect works in", () => {
@@ -154,13 +156,14 @@ describe("the readers", () => {
     // ones. Passing the raw number would under-reserve by the whole DPR, which
     // on the reported phone is a factor of three.
     const src = read("src/components/game/GameCanvas.tsx");
-    expect(src).toMatch(/computeBoardRect\(physW, physH, bottomInsetRef\.current \* dpr\)/);
+    expect(src).toMatch(/computeBoardRect\(physW, physH, insetCss \* dpr\)/);
   });
 
-  it("re-lays out on a changed inset without restarting the map", () => {
+  it("answers a changed inset without restarting the map", () => {
     // The setup effect builds the renderer, the loop and the level. Putting the
     // inset in its dependencies would remount the game every time a bar wrapped.
+    // It only moves the board if the stack now covers it (boardLayoutLatch).
     const src = read("src/components/game/GameCanvas.tsx");
-    expect(src).toMatch(/useEffect\(\(\) => \{ resizeCanvasRef\.current\?\.\(\); \}, \[bottomInsetPx\]\)/);
+    expect(src).toMatch(/useEffect\(\(\) => \{ resizeCanvasRef\.current\?\.\(\{ onlyIfCovered: true \}\); \}, \[bottomInsetPx\]\)/);
   });
 });

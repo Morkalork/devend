@@ -48,9 +48,28 @@ export const BOTTOM_BARS_SELECTOR = '[data-bottom-bars]';
 export const BOTTOM_BARS_FALLBACK_PX = 200;
 
 /**
+ * The stack's height right now, in CSS pixels, or null when it cannot be read
+ * (no node, or a node with no height yet). For a caller that must lay out
+ * against the stack at a known moment rather than a render later: the hook's
+ * value trails the DOM by one commit, and on the first commit it is still the
+ * fallback, which is how a map's first layout came to use a guess.
+ */
+export function measureBottomBars(): number | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.querySelector(BOTTOM_BARS_SELECTOR);
+  if (!(el instanceof HTMLElement)) return null;
+  const h = el.getBoundingClientRect().height;
+  return h > 0 ? h : null;
+}
+
+/**
+ * The deepest measurement so far, or null before the first one lands. The
+ * board uses this form, so it can tell "not measured yet" from a real height
+ * and never lay out against the fallback (lib/boardLayoutLatch).
+ *
  * @param resetKey re-query the node when this changes (a remount replaces it).
  */
-export function useBottomBarsHeight(resetKey?: unknown): number {
+export function useMeasuredBottomBars(resetKey?: unknown): number | null {
   // null, not the fallback, so the first real measurement can be SMALLER than
   // the fallback. A fallback used as a floor would over-reserve for the whole
   // run on any screen whose stack is shorter than the guess.
@@ -91,5 +110,15 @@ export function useBottomBarsHeight(resetKey?: unknown): number {
     };
   }, [resetKey]);
 
-  return height ?? BOTTOM_BARS_FALLBACK_PX;
+  return height;
+}
+
+/**
+ * The deepest measurement, or the fallback before the first one: for callers
+ * that need a number to float things above the stack.
+ *
+ * @param resetKey re-query the node when this changes (a remount replaces it).
+ */
+export function useBottomBarsHeight(resetKey?: unknown): number {
+  return useMeasuredBottomBars(resetKey) ?? BOTTOM_BARS_FALLBACK_PX;
 }
