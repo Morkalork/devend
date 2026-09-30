@@ -68,12 +68,13 @@ export function BoardAlert({ urgent, seconds }: Props) {
           rather than queueing. Large, brief, and gone: it is a flash marking
           the change, not a clock to read. */}
       {seconds != null && (
-        <motion.div
+        // The same CSS flash as DeadlineFrame's milestones, so the two read
+        // as one countdown; it replays only when the second changes.
+        <div
           key={seconds}
-          className="absolute inset-0 flex items-center justify-center"
-          initial={{ opacity: 0, scale: 1.35 }}
-          animate={{ opacity: [0, 0.9, 0], scale: 1 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          data-testid="board-alert-numeral"
+          className="absolute inset-0 flex items-center justify-center animate-deadline-flash"
+          style={{ animationDuration: '0.8s' }}
           aria-hidden
         >
           <span
@@ -86,7 +87,7 @@ export function BoardAlert({ urgent, seconds }: Props) {
           >
             {seconds}
           </span>
-        </motion.div>
+        </div>
       )}
       {/* The words, for a player who does look. Kept off the middle of the
           board, where the balls are. */}

@@ -54,6 +54,7 @@ import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { BoardPlaceholder, type BoardFrameCss } from "./BoardPlaceholder";
+import { DeadlineFrame } from "./DeadlineFrame";
 import { PairGuestGate } from "./PairGuestGate";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -345,6 +346,10 @@ interface GameCanvasProps {
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
   showPerfOverlay?: boolean;
+  /** Whole seconds left on a timed map's clock, drawn round the board's frame; null when there is none. */
+  deadlineSecondsLeft?: number | null;
+  /** The timed map's limit in seconds, the length of the frame's drain. */
+  deadlineLimit?: number | null;
   /** Admin/Playground: on clear, play the drain shimmer then freeze on the drained
    *  frame instead of completing the level (no overlay, no dissolve). */
   freezeOnComplete?: boolean;
@@ -481,6 +486,8 @@ export function GameCanvas({
   paused = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
+  deadlineSecondsLeft = null,
+  deadlineLimit = null,
   freezeOnComplete = false,
   onCanvasReady,
   onBoardTopPct,
@@ -2544,6 +2551,12 @@ export function GameCanvas({
 
       <div ref={containerRef} className="flex-1 min-h-0 relative overflow-visible" style={{ height: "70%" }}>
         <BoardPlaceholder visible={showBoardPlaceholder} accentColor={accentColor} frame={boardFrameCss} />
+        {/* The map clock, on the board's own frame where the eyes already are. */}
+        <DeadlineFrame
+          frame={showBoardPlaceholder ? null : boardFrameCss}
+          secondsLeft={deadlineSecondsLeft}
+          limit={deadlineLimit}
+        />
         {bonusPulseKey > 0 && (
           <div
             key={bonusPulseKey}

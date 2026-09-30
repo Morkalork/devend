@@ -26,6 +26,7 @@ const VOLUME = {
   bossLand: 0.22,
   bossCharge: 0.14,
   heartbeat: 0.2,
+  deadlineTick: 0.1,
 };
 
 // Everything above this gets rolled off by the master low-pass; procedural
@@ -683,6 +684,36 @@ export function playHeartbeatSound(): void {
   };
   thump(now, 1);          // lub
   thump(now + 0.18, 0.7); // dub
+}
+
+/**
+ * Deadline milestone tick: a short, soft clock tick when a timed map passes a
+ * milestone (30s, 20s left). Deliberately quieter and higher than the
+ * heartbeat, which owns the final ten seconds.
+ */
+export function playDeadlineTickSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) {
+    return;
+  }
+  const bus = openSfxBus(ctx);
+  if (!bus) {
+    return;
+  }
+  const now = ctx.currentTime;
+  const tick = (at: number, freq: number) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, at);
+    osc.connect(g); g.connect(bus);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(VOLUME.deadlineTick, at + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.07);
+    osc.start(at); osc.stop(at + 0.09);
+  };
+  tick(now, 1400);        // tick
+  tick(now + 0.12, 1050); // tock
 }
 
 /**

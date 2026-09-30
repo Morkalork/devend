@@ -46,7 +46,8 @@ import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
-import { playHeartbeatSound } from '@/lib/gameAudio';
+import { playDeadlineTickSound, playHeartbeatSound } from '@/lib/gameAudio';
+import { deadlineMilestone } from '@/lib/deadlineDisplay';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator, getMapMutators, mutatorById } from '@/lib/mapMutators';
@@ -733,6 +734,16 @@ export function GameScreen({
   useEffect(() => {
     if (deadlineUrgent) playHeartbeatSound();
   }, [deadlineUrgent, deadlineRemaining]);
+  // The clock on the board's frame (DeadlineFrame), for as long as it can
+  // still run out; and a soft tick as it passes each milestone on the way
+  // down to the heartbeat.
+  const deadlineShown = deadlineRemaining != null && !gameState.bossDefeated && !mapComplete;
+  useEffect(() => {
+    if (deadlineShown && deadlineRemaining != null && mapTimeLimit != null
+      && deadlineMilestone(deadlineRemaining, mapTimeLimit) != null) {
+      playDeadlineTickSound();
+    }
+  }, [deadlineShown, deadlineRemaining, mapTimeLimit]);
 
   // Close menu and unpause when the game ends so the overlays appear cleanly
   /**
@@ -1185,6 +1196,8 @@ export function GameScreen({
             parallaxTickRef={memParallaxTickRef}
             showBallSpeeds={showBallSpeeds}
             showPerfOverlay={showPerfOverlay}
+            deadlineSecondsLeft={deadlineShown ? deadlineRemaining : null}
+            deadlineLimit={mapTimeLimit ?? null}
           />
           {/* Out of time. Over the board because that is where the eyes are;
               red and pulsing so it stays separable from the win frame's steady

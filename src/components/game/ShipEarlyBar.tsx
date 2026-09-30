@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
 import { getShipEarlyThresholds, getShipEarlyPercent, getShipEarlyMaxPercent, getAxisCeilings } from '@/lib/scoring';
 import { tempoRatio } from '@/lib/scoreAxes';
+import { deadlineColor as drainColor } from '@/lib/deadlineDisplay';
 
 interface ShipEarlyBarProps {
   /** Whole active-play seconds elapsed this map (1Hz from the loop). */
@@ -32,11 +33,6 @@ interface ShipEarlyBarProps {
   visible: boolean;
 }
 
-/** Green (full) -> red (empty) by fraction of time remaining. */
-function drainColor(remaining: number): string {
-  const hue = Math.max(0, Math.min(120, 120 * remaining)); // 120 green .. 0 red
-  return `hsl(${hue}, 85%, 52%)`;
-}
 
 export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBall = 0, bonusMultiplier = 1, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();

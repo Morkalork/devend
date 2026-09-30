@@ -113,6 +113,7 @@ const SOUNDS = [
   "playDeathSound", "playBallLockSound", "playCutClaimedSound",
   "playPickupClaimedSound", "playBossJumpSound", "playHeartbeatSound",
   "playBossChargeSound", "playBossLandSound", "playLevelCompleteSound",
+  "playDeadlineTickSound",
 ] as const;
 
 beforeEach(() => vi.useFakeTimers());
