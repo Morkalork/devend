@@ -25,6 +25,7 @@ import { commitMapYaml, mapCommitConfig, configProblem, secretMatches } from "./
 import { putAnswer, takeAnswer, dropRoom } from "./pairRooms.js";
 import { handleRelayUpgrade } from "./relay.js";
 import { healthReport } from "./health.js";
+import { pickEncoding, isCompressible, compressedBody, warmCompressedCache } from "./compress.js";
 
 const PORT = process.env.PORT || 8080;
 const DIST = resolve(process.cwd(), "dist");
@@ -117,13 +118,24 @@ async function handleMapSave(req, res) {
     : { error: result.error });
 }
 
-/** Serve a file from dist, or null when there is nothing there. */
-async function sendFile(res, filePath) {
+/**
+ * Serve a file from dist, or false when there is nothing there. Compressed when
+ * the browser accepts it and the format is text (server/compress.js): sent raw,
+ * the main bundle alone was most of a phone's wait for the first screen.
+ */
+async function sendFile(req, res, filePath) {
   try {
     const info = await stat(filePath);
     if (!info.isFile()) return false;
-    const body = await readFile(filePath);
-    res.writeHead(200, {
+    const raw = await readFile(filePath);
+    const compressible = isCompressible(filePath, info.size);
+    const encoding = compressible ? pickEncoding(req.headers["accept-encoding"]) : null;
+    let body = raw;
+    if (encoding) {
+      try { body = await compressedBody(filePath, info.mtimeMs, encoding, raw); }
+      catch { body = raw; }
+    }
+    const headers = {
       "Content-Type": TYPES[extname(filePath).toLowerCase()] || "application/octet-stream",
       // The built assets are content-hashed, so they can be cached hard. The
       // HTML and the YAML are not, and map.yml in particular has to be re-read
@@ -131,8 +143,15 @@ async function sendFile(res, filePath) {
       "Cache-Control": filePath.includes("/assets/")
         ? "public, max-age=31536000, immutable"
         : "no-cache",
-    });
-    res.end(body);
+      "Content-Length": body.length,
+    };
+    // Vary on every compressible file, sent compressed or not, so a cache in
+    // between never hands a raw copy to a browser that asked for brotli or the
+    // reverse.
+    if (compressible) headers["Vary"] = "Accept-Encoding";
+    if (body !== raw) headers["Content-Encoding"] = encoding;
+    res.writeHead(200, headers);
+    res.end(req.method === "HEAD" ? undefined : body);
     return true;
   } catch {
     return false;
@@ -192,10 +211,10 @@ const server = createServer(async (req, res) => {
   // not stop it once the leading slash is gone.
   const rel = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
   const target = join(DIST, rel);
-  if (target.startsWith(DIST) && await sendFile(res, target)) return;
+  if (target.startsWith(DIST) && await sendFile(req, res, target)) return;
 
   // SPA fallback, the `-s` in `serve -s dist`.
-  if (await sendFile(res, join(DIST, "index.html"))) return;
+  if (await sendFile(req, res, join(DIST, "index.html"))) return;
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not found. Has `npm run build` run?");
 });
@@ -210,6 +229,9 @@ server.listen(PORT, () => {
   const cfg = mapCommitConfig(process.env);
   const problem = configProblem(cfg);
   console.log(`dev/end listening on ${PORT}`);
+  // Compress the build now rather than on the first phone's request after a
+  // deploy. In the background: requests are answered meanwhile.
+  warmCompressedCache(DIST).then(n => console.log(`compressed ${n} static files`));
   console.log(problem
     ? `map saving DISABLED: ${problem}`
     : `map saving enabled -> ${cfg.repo}@${cfg.branch}:${cfg.path}`);
