@@ -255,6 +255,8 @@ export class BallLightPass {
    * with this one.
    */
   readonly worldLights: MoteLight[] = [];
+  /** Set by build(): this frame only lists its lights (see build). */
+  private lightsOnly = false;
 
   constructor() {
     this.sprite.blendMode = "add";
@@ -267,8 +269,18 @@ export class BallLightPass {
   build(
     game: CanvasGameState, w2s: W2S, scale: number, now: number = simNow(),
     monitor?: LightScope,
+    /**
+     * Work out the lights but draw none of them. The 3D renderer
+     * (rendering/three) lights the board with real lights and real shadow
+     * maps; what it needs from this pass is only the LIST - every ball's
+     * light, flash, spark and tip, measured exactly as the 2D pools are - so
+     * the two renderers agree about what is lit. Skips every occluder quad,
+     * which is most of this pass's cost.
+     */
+    lightsOnly = false,
   ): void {
     this.live = 0;
+    this.lightsOnly = lightsOnly;
     this.worldLights.length = 0;
     const tex = poolTex();
 
@@ -303,16 +315,16 @@ export class BallLightPass {
       e.glow.tint = light.color;
       e.glow.alpha = light.intensity * flick;
 
-      e.shade.visible = true;
-      this.drawShadows(e.shade, light, p, game, w2s, scale, ball);
-      this.note(p.x, p.y, light, scale, flick);
+      e.shade.visible = !this.lightsOnly;
+      if (!this.lightsOnly) this.drawShadows(e.shade, light, p, game, w2s, scale, ball);
+      this.note(p.x, p.y, light, scale, flick, ball.id);
 
       // The bright core inside this ball's own shadow (flashLight.ts). It is
       // placed from the MONITOR, not from the ball's light: it is the monitor's
       // beam being focused by a translucent body, and the shadow it sits in is
       // the monitor's too.
       const causticGain = getLightLook().caustic;
-      const caustic = monitor && causticGain > 0.001
+      const caustic = monitor && causticGain > 0.001 && !this.lightsOnly
         ? causticFor(ball, m.c, m.r, light.color, light.intensity * causticGain * flick, monitor)
         : null;
       if (caustic) this.place(this.emitterAt(this.live++), caustic, tex, p, game, w2s, scale, ball);
@@ -497,18 +509,18 @@ export class BallLightPass {
     e.glow.scale.set(light.reach / BAKE_RADIUS);
     e.glow.tint = light.color;
     e.glow.alpha = light.intensity;
-    e.shade.visible = true;
-    this.drawShadows(e.shade, light, world, game, w2s, scale, skip, derived);
+    e.shade.visible = !this.lightsOnly;
+    if (!this.lightsOnly) this.drawShadows(e.shade, light, world, game, w2s, scale, skip, derived);
     this.note(world.x, world.y, light, scale, 1);
   }
 
   /** Remember an emitter in world units. */
   private note(
-    x: number, y: number, light: PlacedLight, scale: number, flick: number,
+    x: number, y: number, light: PlacedLight, scale: number, flick: number, ballId?: string,
   ): void {
     const intensity = light.intensity * flick;
     if (intensity <= 0.002) return;
-    this.worldLights.push({ x, y, reach: light.reach / scale, intensity, color: light.color });
+    this.worldLights.push({ x, y, reach: light.reach / scale, intensity, color: light.color, ballId });
   }
 
   /**

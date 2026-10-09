@@ -40,7 +40,9 @@
  * would have needed, so finishing the tail is a checklist rather than a hunt.
  */
 
-import { Application, Container, Graphics, RenderTexture } from "pixi.js";
+import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from "pixi.js";
+import type { WebGLRenderer, Texture as PixiTexture } from "pixi.js";
+import type { MoteLight } from "@/lib/rendering/motes";
 import { boardAngleFor, tiltWorldPoint } from "@/lib/boardTilt";
 import { BeamProbe, beamProbeMode, showBeamReadout } from "./beamProbe";
 import type { CanvasGameState } from "@/types/gameState";
@@ -60,7 +62,7 @@ import { FxLayer } from "./fxLayer";
 import { ChromeLayer } from "./chromeLayer";
 import { SweepTransition, ShatterTransition } from "./transitions";
 import { lightScope, lampScope, type LightScope } from "./light";
-import { handoverProgress, lampSample } from "@/lib/lampBall";
+import { handoverProgress, lampSample, lampLevel, type LampState } from "@/lib/lampBall";
 import type { Ball } from "@/types/game";
 import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE, mix } from "./palette";
@@ -72,6 +74,60 @@ import { dealtSplit } from "@/lib/winSpec";
 import { visibleOutline } from "@/lib/headStartStrip";
 import { polygonBounds } from "@/lib/polygon";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
+
+/**
+ * The 3D renderer, seen from here (rendering/three/ThreeRenderer.ts).
+ *
+ * With a host, this renderer stops being the whole picture and becomes the
+ * two flat halves of it, on the host's WebGL context:
+ *
+ *   UNDER  the board's marks - surface, areas, props, the tops of walls and
+ *     slabs, trails, pocket fills - drawn under a FLAT light (no baked wash,
+ *     no baked shadows) into a texture the 3D floor and solids are coloured
+ *     from. Real lights and shadow maps do the lighting this layer used to
+ *     fake.
+ *   OVER   everything that sits on top of a lit scene - coronas, rings, marks,
+ *     labels, motes, effects, the rim and danger frame - composited over the
+ *     host's frame, which arrives here as an ordinary sprite. That is what
+ *     keeps the sweep, the shatter and the first-frame capture working
+ *     unchanged: they snapshot a container, and the 3D frame is in it.
+ *
+ * Without a host nothing here changes; the plain 2D board is exactly what it
+ * was, which is also what the 3D renderer falls back to.
+ */
+export interface HybridHost {
+  /** The context Pixi shares. The host created it, on the board's canvas. */
+  readonly gl: WebGL2RenderingContext;
+  /** Pixi is up; textures can now be handed across. */
+  attach(renderer: WebGLRenderer): void;
+  /**
+   * The 3D frame's size changed (or is first known). Returns the Pixi texture
+   * showing it and the scale it is drawn at relative to the canvas.
+   */
+  resizeScene(widthPx: number, heightPx: number): { texture: PixiTexture; scale: number };
+  /** Draw the 3D frame, coloured from `surface`. */
+  renderScene(frame: HybridFrame): void;
+  /** Free the 3D side. Called while Pixi is still up, so shared textures can be let go. */
+  destroyScene(): void;
+}
+
+/** Everything the host needs for one frame. */
+export interface HybridFrame {
+  game: CanvasGameState;
+  now: number;
+  /** The flat marks, at the 3D frame's resolution. */
+  surface: RenderTexture;
+  /** surface pixels per canvas pixel. */
+  surfaceScale: number;
+  /** Every light the 2D light pass measured (ballLightPass.worldLights). */
+  lights: readonly MoteLight[];
+  /** The monitor's flicker. */
+  monitorLevel: number;
+  /** 0..1 while a ball holds the lamp; dims the monitor. */
+  lampLevel: number;
+  /** Where the lamp is, in world units, while a ball holds it (lampBall.ts). */
+  lamp: { x: number; y: number; level: number; color: number } | null;
+}
 
 export class SleekRenderer {
   private app = new Application();
@@ -115,6 +171,21 @@ export class SleekRenderer {
   private shatterRT: RenderTexture | null = null;
 
   private staticDirty = true;
+
+  // ── Hybrid (3D) mode only ────────────────────────────────────────────────
+  /** The flat marks the 3D scene is coloured from. */
+  private surfaceStage = new Container();
+  private surfaceScope = new Container();
+  private surfaceMask = new Graphics();
+  private surfaceRT: RenderTexture | null = null;
+  private surfaceScale = 1;
+  /** The host's 3D frame, shown as the bottom of the board. */
+  private sceneSprite = new Sprite(Texture.EMPTY);
+  /** Where layers draw shadows nobody will see: the 3D scene casts real ones. */
+  private shadowSink = new Graphics();
+
+  constructor(private readonly host: HybridHost | null = null) {}
+
   /** `?beam=1` detect / `?beam=2` dump. Read once: the URL cannot change. */
   private readonly probeMode = beamProbeMode();
   private readonly probe = new BeamProbe();
@@ -137,8 +208,16 @@ export class SleekRenderer {
       autoStart: false,
       sharedTicker: false,
       powerPreference: "high-performance",
+      // Under the 3D renderer, the context is the host's (one context, two
+      // libraries: textureBridge.ts).
+      ...(this.host ? { context: this.host.gl, preference: "webgl" as const } : {}),
     });
     this.app.ticker.stop(); // the game loop drives presentation
+
+    if (this.host) {
+      this.initHybrid(width, height);
+      return;
+    }
 
     // Draw order: surface, floor markings, THE SHADOW PLANE, then everything
     // that stands on the floor, then effects and actors.
@@ -223,17 +302,91 @@ export class SleekRenderer {
     }
   }
 
+  /**
+   * The scene tree under the 3D renderer: the floor-level layers into the
+   * surface stage, the over-the-top layers onto the stage around the host's
+   * frame. The layers that faked light (the shadow plane's casts, the ball
+   * light buffer, face light, bounce) are simply not in it.
+   */
+  private initHybrid(width: number, height: number): void {
+    const host = this.host!;
+    this.board.showWash = false;
+    this.balls.hybrid = true;
+    this.fx.hybrid = true;
+
+    // The split-warn tint still lives in the shadow plane; nothing else does.
+    this.shadowPlane.mask = this.board.shadowMask;
+    this.surfaceScope.addChild(
+      this.board.container,
+      this.areas.container,
+      this.board.shadowMask,
+      this.shadowPlane,
+      this.props.container,
+      this.balls.trails,
+      this.fx.under,
+      this.entities.container,
+      this.objects.container,
+      this.walls.container,
+    );
+    this.surfaceScope.mask = this.surfaceMask;
+    // The frame is drawn outside the board mask, as on the plain board; the
+    // 3D frame's blocks take their colour from it.
+    this.surfaceStage.addChild(this.surfaceScope, this.surfaceMask, this.walls.outer);
+
+    this.boardScope.addChild(
+      this.motes.container,
+      this.fx.container,
+      this.balls.container,
+      this.chrome.container,
+    );
+    this.boardScope.mask = this.boardMask;
+    this.root.addChild(this.sceneSprite, this.boardScope, this.boardMask);
+    this.app.stage.addChild(
+      this.board.underlay,
+      this.root,
+      this.chrome.outer,
+      this.shatter.container,
+    );
+
+    host.attach(this.app.renderer as WebGLRenderer);
+    this.ready = true;
+    this.resize(width, height, true);
+    if (this.pendingSize) {
+      this.resize(this.pendingSize.w, this.pendingSize.h);
+      this.pendingSize = null;
+    }
+  }
+
+  /** Size the surface texture and the host's frame together. */
+  private resizeHybrid(widthPx: number, heightPx: number): void {
+    const host = this.host!;
+    const { texture, scale } = host.resizeScene(widthPx, heightPx);
+    this.surfaceScale = scale;
+    this.sceneSprite.texture = texture;
+    // The host draws GL-side up; Pixi's textures are y-down.
+    this.sceneSprite.scale.set(1 / scale, -1 / scale);
+    this.sceneSprite.position.set(0, heightPx);
+    this.surfaceStage.scale.set(scale);
+    const w = Math.max(1, Math.round(widthPx * scale));
+    const h = Math.max(1, Math.round(heightPx * scale));
+    if (!this.surfaceRT || this.surfaceRT.width !== w || this.surfaceRT.height !== h) {
+      this.surfaceRT?.destroy(true);
+      this.surfaceRT = RenderTexture.create({ width: w, height: h, antialias: true });
+    }
+  }
+
   get isReady(): boolean {
     return this.ready;
   }
 
-  resize(widthPx: number, heightPx: number): void {
+  resize(widthPx: number, heightPx: number, force = false): void {
     if (!this.ready) {
       this.pendingSize = { w: widthPx, h: heightPx };
       return;
     }
-    if (this.app.renderer.width === widthPx && this.app.renderer.height === heightPx) return;
+    if (!force && this.app.renderer.width === widthPx && this.app.renderer.height === heightPx) return;
     this.app.renderer.resize(widthPx, heightPx);
+    if (this.host) this.resizeHybrid(widthPx, heightPx);
     // Every bake is sized in device pixels, so a real resize invalidates all.
     clearSphereCache();
     this.staticDirty = true;
@@ -276,6 +429,11 @@ export class SleekRenderer {
       return;
     }
     if (this.sweep.active) this.teardownSweep();
+
+    if (this.host) {
+      this.renderHybrid(game, rctx, now);
+      return;
+    }
 
     const { boardRect } = game;
     const scale = boardRect.scale;
@@ -349,6 +507,73 @@ export class SleekRenderer {
 
     this.probeForBeams(now);
 
+    this.app.render();
+  }
+
+  /**
+   * One frame under the 3D renderer: the layers draw under a flat light, the
+   * flat marks go into the surface texture, the host draws the lit 3D frame
+   * from it, and the stage composites that frame with everything over it.
+   */
+  private renderHybrid(game: CanvasGameState, rctx: RenderContext, now: number): void {
+    const host = this.host!;
+    const { boardRect } = game;
+    const scale = boardRect.scale;
+    const monitor = lightScope(boardRect, now);
+    const lamp = this.lampLight(game, boardRect, now);
+    const light = lamp ?? monitor;
+    // FLAT: the layers keep their rims and materials but bake in no falloff
+    // and no flicker. Reach is what drives the falloff (light.ts ambientAt).
+    const flat: LightScope = { ...light, level: 1, reach: 1e7 };
+    const flatRoom: LightScope = { ...monitor, level: 1, reach: 1e7 };
+
+    const tilt = boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
+    const w2s = tilt === 0
+      ? (x: number, y: number) => ({
+          x: boardRect.left + x * scale,
+          y: boardRect.top + y * scale,
+        })
+      : (x: number, y: number) => {
+          const p = tiltWorldPoint(x, y, tilt);
+          return { x: boardRect.left + p.x * scale, y: boardRect.top + p.y * scale };
+        };
+
+    this.syncMask(game);
+    this.shadowPlane.clear();
+    this.drawSplitWarn(game, w2s, now);
+    const sink = this.shadowSink;
+    sink.clear();
+
+    this.board.sync(game, flatRoom, w2s, this.staticDirty);
+    this.areas.sync(game, flat, w2s, scale, tilt, rctx.accentColor);
+    this.props.sync(game, flat, sink, w2s, scale, now);
+    this.entities.sync(game, flat, sink, w2s, scale, now);
+    this.objects.sync(game, flat, sink, w2s, scale);
+    this.walls.sync(game, flat, sink, w2s, scale);
+    this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
+    this.balls.sync(game, flat, sink, w2s, scale, now);
+    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);
+    sink.clear();
+    this.staticDirty = false;
+
+    // The light LIST only; the 3D scene lights it.
+    this.ballLights.build(game, w2s, scale, now, monitor, true);
+    this.motes.sync(game, this.ballLights.worldLights, w2s, scale, now);
+
+    const surface = this.surfaceRT;
+    if (surface) {
+      this.app.renderer.render({ container: this.surfaceStage, target: surface, clear: true });
+      const lampState = game.lamp;
+      host.renderScene({
+        game, now, surface, surfaceScale: this.surfaceScale,
+        lights: this.ballLights.worldLights,
+        monitorLevel: monitor.level,
+        lampLevel: lamp ? handoverLevel(lampState, now) : 0,
+        lamp: lamp ? this.lampWorld(game, now) : null,
+      });
+      // The host drew with its own GL state; Pixi must not trust its cache.
+      this.app.renderer.resetState();
+    }
     this.app.render();
   }
 
@@ -434,6 +659,27 @@ export class SleekRenderer {
   }
 
   /**
+   * The lamp in WORLD units, sampled exactly as lampLight samples it, for the
+   * 3D renderer, which places its own light and applies the tilt itself.
+   */
+  private lampWorld(
+    game: CanvasGameState, now: number,
+  ): { x: number; y: number; level: number; color: number } | null {
+    const lamp = game.lamp;
+    if (!lamp?.ballId) return null;
+    const to = game.balls.find(b => b.id === lamp.ballId);
+    if (!to) return null;
+    const t = handoverProgress(lamp, now);
+    const from = lamp.fromBallId ? game.balls.find(b => b.id === lamp.fromBallId) : undefined;
+    const pos = (b: Ball) => b.renderPosition ?? b.position;
+    const world = lampSample(from ? pos(from) : pos(to), pos(to), t);
+    const color = from
+      ? mix(parseBallColor(from.color), parseBallColor(to.color), world.blend)
+      : parseBallColor(to.color);
+    return { x: world.x, y: world.y, level: world.level, color };
+  }
+
+  /**
    * `?beam=1` names a stray; `?beam=2` dumps the longest run in every layer.
    *
    * A reported beam has survived two correct fixes, a nine-layer headless
@@ -484,8 +730,20 @@ export class SleekRenderer {
     this.maskKey = key;
 
     this.boardMask.clear();
+    this.drawOutline(this.boardMask, outline, boardRect);
+    // Under the 3D renderer the flat marks have their own scope, and a Pixi
+    // mask belongs to one container, so it gets its own copy of the outline.
+    if (this.host) {
+      this.surfaceMask.clear();
+      this.drawOutline(this.surfaceMask, outline, boardRect);
+    }
+  }
+
+  private drawOutline(
+    mask: Graphics, outline: ReturnType<typeof visibleOutline>, boardRect: BoardRect,
+  ): void {
     if (outline && outline.vertices.length >= 3) {
-      this.boardMask
+      mask
         .poly(
           outline.vertices.map(v => ({
             x: Math.round(boardRect.left + v.x * boardRect.scale),
@@ -494,7 +752,7 @@ export class SleekRenderer {
         )
         .fill({ color: 0xffffff });
     } else {
-      this.boardMask
+      mask
         .rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
         .fill({ color: 0xffffff });
     }
@@ -568,6 +826,11 @@ export class SleekRenderer {
   }
 
   destroy(): void {
+    // The host releases its textures while Pixi is still up to let go of them.
+    try { this.host?.destroyScene(); } catch { /* half-initialised host */ }
+    this.surfaceRT?.destroy(true);
+    this.surfaceRT = null;
+    this.shadowSink.destroy();
     clearSphereCache();
     clearPoolTexture();
     clearBounceTextures();
@@ -602,4 +865,10 @@ export class SleekRenderer {
 function parseBallColor(c: string): number {
   const n = Number.parseInt(c.replace("#", ""), 16);
   return Number.isFinite(n) ? n : 0xffffff;
+}
+
+/** How strongly a ball holds the lamp right now (the handover dips it). */
+function handoverLevel(lamp: LampState | undefined, now: number): number {
+  if (!lamp?.ballId) return 0;
+  return lampLevel(handoverProgress(lamp, now));
 }

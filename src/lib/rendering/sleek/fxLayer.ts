@@ -87,7 +87,14 @@ const CLAIM_FLASH_MS = 420;
 export class FxLayer {
   readonly container = new Container();
 
-  private under = new Graphics();  // pocket fills, below the actors
+  /** Pocket fills, below the actors. Under the 3D renderer this is drawn into
+   *  the floor's surface texture rather than over the scene. */
+  readonly under = new Graphics();
+  /**
+   * Under the 3D renderer, debris, shell tiles and rubble are real shards in
+   * the scene (rendering/three/explosions3d.ts) and are not drawn here.
+   */
+  hybrid = false;
   private over = new Graphics();   // sparks, chains, debris
   /** Splat names (see drawBugSplats). Above the Graphics, so text is never buried. */
   private labels = new Container();
@@ -129,10 +136,12 @@ export class FxLayer {
     this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
-    this.drawRubble(game, light, w2s, scale, now);
+    if (!this.hybrid) this.drawRubble(game, light, w2s, scale, now);
     this.drawMirrorGlints(game, w2s, scale);
-    this.drawDebris(game, w2s, scale, now);
-    this.drawShellShatters(game, light, w2s, scale, now);
+    if (!this.hybrid) {
+      this.drawDebris(game, w2s, scale, now);
+      this.drawShellShatters(game, light, w2s, scale, now);
+    }
     this.drawFalling(game, light, w2s, now);
     this.drawAbilityFx(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);

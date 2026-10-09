@@ -138,6 +138,28 @@ describe("every persisted dev switch has an admin control", () => {
   }
 });
 
+describe("every board renderer setting has an Admin control", () => {
+  // A NEW CLASS of thing, added with the 3D renderer (RENDER_3D_PLAN.md): the
+  // renderer choice and the 3D board's quality, field of view and wall height
+  // are stored device settings with no URL form. A setter nothing calls is a
+  // setting nobody can change - and "did the 3D board start, or did it fall
+  // back to 2D" is a question a tester has to be able to answer by switching.
+  const SETTINGS = read("src/lib/rendering/render3dSettings.ts");
+  const setters = [...SETTINGS.matchAll(/export function (set\w+)\(/g)].map(m => m[1]);
+
+  it("is checking a real set of settings", () => {
+    expect(setters).toEqual(expect.arrayContaining([
+      "setRendererChoice", "setQualitySetting", "setFov", "setHeightScale",
+    ]));
+  });
+
+  for (const setter of setters) {
+    it(`${setter} is called from Admin`, () => {
+      expect(ADMIN).toMatch(new RegExp(`${setter}\\(`));
+    });
+  }
+});
+
 describe("every level field has a Map Builder editor", () => {
   /**
    * Structured fields with their own editor elsewhere, or authored in YAML by

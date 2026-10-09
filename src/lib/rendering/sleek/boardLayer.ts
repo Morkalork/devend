@@ -89,6 +89,8 @@ export class BoardLayer {
    */
   readonly shadowMask = new Graphics();
   private wash: Sprite | null = null; // baked ambient falloff, multiplied over
+  /** Off under the 3D renderer, whose lights do the falloff for real. */
+  showWash = true;
   private drop: Sprite | null = null; // baked drop shadow under the whole board
 
   private geometryKey = "";
@@ -424,6 +426,13 @@ export class BoardLayer {
    * sprite's alpha, which costs nothing.
    */
   private syncWash(game: CanvasGameState, room: LightScope): void {
+    // The 3D renderer lights the board with real lights, whose falloff IS this
+    // wash; painting it into the surface as well would darken the far corner
+    // twice.
+    if (!this.showWash) {
+      if (this.wash) this.wash.visible = false;
+      return;
+    }
     const { boardRect } = game;
     // Board size ONLY. The bake is a radial gradient, which is rotationally
     // symmetric, so where the light is can be expressed by MOVING the sprite

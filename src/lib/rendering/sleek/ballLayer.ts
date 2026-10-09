@@ -60,6 +60,9 @@ import { warmup, WARMUP_EMBER } from "@/lib/rendering/ballTell";
 import { compassRing } from "./compassRing";
 import { simNow } from "@/lib/simClock";
 
+/** The corona's strength over the 3D renderer's sphere (see drawBall). */
+export const HYBRID_CORONA = 0.55;
+
 /**
  * Nominal buff durations, for the ring's sweep only.
  *
@@ -395,7 +398,7 @@ export class SleekBallLayer {
    * Motion smears, UNDER the bodies: a trail drawn over its own ball would sit
    * on the lit sphere and flatten it.
    */
-  private trails = new Graphics();
+  readonly trails = new Graphics();
   private bodies = new Container();
   /**
    * Every corona, in ONE additive layer above every body.
@@ -414,6 +417,13 @@ export class SleekBallLayer {
   private shadows!: Graphics;
   private fastestId: string | null = null;
   private now = 0;
+  /**
+   * Under the 3D renderer the BODY is a lit sphere (rendering/three/balls3d.ts)
+   * and this layer draws only what sits on or around it: corona, marks, rings,
+   * frost, cues, the liquid melt. The trails are reparented under the 3D scene
+   * by the renderer, so a smear lies on the floor behind the sphere.
+   */
+  hybrid = false;
 
   constructor() {
     // No shadow child: cast shadows go to the renderer's shared floor plane.
@@ -837,7 +847,7 @@ export class SleekBallLayer {
       web.visible = false;
     } else {
       if (view.liquid) view.liquid.body.visible = view.liquid.glow.visible = false;
-      body.visible = true;
+      body.visible = !this.hybrid;
       body.texture = sphereTexture(bodyColor, bucket(r));
       body.alpha = bodyAlpha;
 
@@ -855,7 +865,9 @@ export class SleekBallLayer {
       // rotation, which the physics has always advanced and nothing drew.
       const sizeFade = Math.min(1, Math.max(0, (r - (WEB_FULL_PX - WEB_FADE_PX)) / WEB_FADE_PX));
       const webAlpha = look.web * WEB_ALPHA * sizeFade * bodyAlpha;
-      web.visible = webAlpha > 0.01;
+      // The 3D sphere carries its own etched shell, which rolls; a flat web
+      // over it would turn on a different axis from the ball under it.
+      web.visible = webAlpha > 0.01 && !this.hybrid;
       if (web.visible) {
         webPos.set(bodyPos);
         webPos[0] = sx(core.x, core.y);
@@ -901,7 +913,11 @@ export class SleekBallLayer {
         // The whitening is what reads as heat, so a cold bulb gets less of it:
         // at switch-on the bloom is the ember's own colour and barely there.
         corona.tint = mix(bodyColor, 0xffffff, (0.4 + CORONA_FLARE * heart) * warmGain);
-        corona.alpha = body.alpha * (0.55 + 0.45 * flick) * warmGain;
+        corona.alpha = body.alpha * (0.55 + 0.45 * flick) * warmGain
+          // Over a 3D sphere the bloom is half the glow, not all of it: the
+          // sphere glows on its own, and a full corona washes out the etched
+          // shell that shows it rolling.
+          * (this.hybrid ? HYBRID_CORONA : 1);
       }
     }
 

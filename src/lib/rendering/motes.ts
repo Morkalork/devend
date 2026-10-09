@@ -73,6 +73,8 @@ export interface MoteLight {
   reach: number;
   intensity: number;
   color: number;
+  /** The ball whose own light this is, when it is one (the 3D renderer seats it there). */
+  ballId?: string;
 }
 
 /**

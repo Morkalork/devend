@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
@@ -10,6 +10,11 @@ import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
 } from '@/lib/buildInfo';
+import {
+  getRendererChoice, setRendererChoice, getQualitySetting, setQualitySetting, QUALITY_SETTINGS,
+  getFov, setFov, FOV_RANGE, DEFAULT_FOV, getHeightScale, setHeightScale, HEIGHT_RANGE,
+  DEFAULT_HEIGHT_SCALE, type QualitySetting, type RendererChoice,
+} from '@/lib/rendering/render3dSettings';
 
 interface AdminScreenProps {
   onBack: () => void;
@@ -25,6 +30,10 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [ascension, setAscension] = useState(getDebugAscensionOverride);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
+  const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
+  const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
+  const [fov, setFovState] = useState(getFov);
+  const [heightScale, setHeightState] = useState(getHeightScale);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -260,6 +269,125 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               }}
               className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
               aria-label="Ascension depth"
+            />
+          </label>
+        </div>
+
+        {/* The board renderer (RENDER_3D_PLAN.md). Device settings, applied
+            to the next board; the quality, field of view and height also take
+            effect between maps. */}
+        <div className="mt-6 space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Board renderer</h2>
+
+          <button
+            onClick={() => {
+              const next: RendererChoice = renderer === 'three' ? 'sleek' : 'three';
+              setRendererChoice(next);
+              setRenderer(next);
+            }}
+            aria-pressed={renderer === 'three'}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              renderer === 'three' ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${renderer === 'three' ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Box className={`w-6 h-6 ${renderer === 'three' ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                3D board{' '}
+                <span className={`text-xs ${renderer === 'three' ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {renderer === 'three' ? '3D' : '2D'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Real lights and shadows, standing walls and rolling balls. Off runs the
+                2D board it is built on. Takes effect on the next board.
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              const next = QUALITY_SETTINGS[(QUALITY_SETTINGS.indexOf(quality) + 1) % QUALITY_SETTINGS.length];
+              setQualitySetting(next);
+              setQuality(next);
+            }}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              quality !== 'auto' ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${quality !== 'auto' ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Gauge className={`w-6 h-6 ${quality !== 'auto' ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                3D quality{' '}
+                <span className={`text-xs ${quality !== 'auto' ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {quality.toUpperCase()}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Tap to cycle. Auto picks by device and steps down a tier between maps
+                when frames run slow; the others pin a tier, for comparing.
+              </div>
+            </div>
+          </button>
+
+          <label className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
+            fov !== DEFAULT_FOV ? 'border-primary' : 'border-border'
+          }`}>
+            <div className={`p-3 rounded-lg ${fov !== DEFAULT_FOV ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Eye className={`w-6 h-6 ${fov !== DEFAULT_FOV ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">Field of view <span className="text-xs text-muted-foreground">{fov} deg</span></div>
+              <div className="text-sm text-muted-foreground">
+                Wider leans the walls further out from the middle of the board; narrower is flatter.
+              </div>
+            </div>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={FOV_RANGE[0]}
+              max={FOV_RANGE[1]}
+              value={fov}
+              onChange={(e) => {
+                const next = Math.max(FOV_RANGE[0], Math.min(FOV_RANGE[1], Number(e.target.value) || DEFAULT_FOV));
+                setFov(next);
+                setFovState(next);
+              }}
+              className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
+              aria-label="Field of view in degrees"
+            />
+          </label>
+
+          <label className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
+            heightScale !== DEFAULT_HEIGHT_SCALE ? 'border-primary' : 'border-border'
+          }`}>
+            <div className={`p-3 rounded-lg ${heightScale !== DEFAULT_HEIGHT_SCALE ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <MoveVertical className={`w-6 h-6 ${heightScale !== DEFAULT_HEIGHT_SCALE ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">Wall height <span className="text-xs text-muted-foreground">x{heightScale}</span></div>
+              <div className="text-sm text-muted-foreground">
+                How tall fences, the frame and obstacles stand, and so how long their shadows are.
+              </div>
+            </div>
+            <input
+              type="number"
+              inputMode="decimal"
+              step={0.1}
+              min={HEIGHT_RANGE[0]}
+              max={HEIGHT_RANGE[1]}
+              value={heightScale}
+              onChange={(e) => {
+                const next = Math.max(HEIGHT_RANGE[0], Math.min(HEIGHT_RANGE[1], Number(e.target.value) || DEFAULT_HEIGHT_SCALE));
+                setHeightScale(next);
+                setHeightState(next);
+              }}
+              className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
+              aria-label="Wall height multiplier"
             />
           </label>
         </div>

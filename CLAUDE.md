@@ -55,8 +55,10 @@ Demolition map (built), **TWO_PLAYER_PLAN.md** for the design and build record
 of Pair Programming, the two-phone co-op mode (built; deterministic lockstep
 over a WebRTC or Nearby Connections link, with a WebSocket relay on the server
 for public Wi-Fi, where client isolation keeps the phones apart), and
-**RENDER_3D_PLAN.md** for the planned move of the board renderer to a
-three.js 3D scene seen from above (planned, not built), and
+**RENDER_3D_PLAN.md** for the design and build record of the 3D board, a
+three.js scene seen from above that is now the default renderer (built; it
+shares one WebGL context with the sleek 2D renderer, which still draws the
+board's flat marks into it and its effects over it, and is the fallback), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions

@@ -133,6 +133,7 @@ import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
+import { getRendererChoice, type RendererChoice } from "@/lib/rendering/render3dSettings";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
@@ -503,6 +504,10 @@ export function GameCanvas({
   // fresh, contextless canvas — one that has had a WebGL context cannot hand
   // out a 2D one.
   const [useFallback2d, setUseFallback2d] = useState(false);
+  // Which WebGL renderer this board starts with (render3dSettings.ts): the 3D
+  // one unless Admin chose the 2D one. A 3D renderer that will not start drops
+  // to the 2D one, and that one to the emergency board below.
+  const [glKind, setGlKind] = useState<RendererChoice>(getRendererChoice);
   const pixiRef = useRef<BoardRenderer | null>(null);
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -1151,10 +1156,12 @@ export function GameCanvas({
     game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
     setWallShieldCount(game.wallShieldsRemaining);
 
-    // The sleek WebGL renderer is the only renderer. `useFallback2d` is set ONLY
-    // when its init fails (old WebView, blocklisted GPU), and swaps in the
-    // emergency 2D board so the player gets something legible rather than a
-    // black rectangle. It is not a user-selectable alternative.
+    // Two WebGL renderers: the 3D one (rendering/three, the default) and the
+    // sleek 2D one it is built on, chosen in Admin and the step down when the
+    // 3D one will not start. `useFallback2d` is set ONLY when WebGL itself
+    // fails (old WebView, blocklisted GPU), and swaps in the emergency 2D board
+    // so the player gets something legible rather than a black rectangle. It
+    // is not a user-selectable alternative.
     const ctx = useFallback2d ? canvas.getContext("2d") : null;
     if (useFallback2d && !ctx) return;
     if (ctx) {
@@ -1167,18 +1174,25 @@ export function GameCanvas({
     if (!useFallback2d && !pixiInitStartedRef.current) {
       pixiInitStartedRef.current = true;
       const fallback = (err: unknown) => {
-        console.warn("[renderer] WebGL init failed, using the emergency 2D board:", err);
         try { pixiRef.current?.destroy(); } catch { /* half-initialized app */ }
         pixiRef.current = null;
         pixiInitStartedRef.current = false;
-        // Remounts the canvas element (see its key) so the 2D path gets a fresh,
-        // contextless canvas — a canvas that has had a WebGL context cannot
-        // hand out a 2D one.
+        // Both steps remount the canvas element (see its key): a canvas that
+        // has had one context cannot be trusted to hand out a clean other one.
+        if (glKind === "three") {
+          console.warn("[renderer] 3D init failed, using the 2D renderer:", err);
+          setGlKind("sleek");
+          return;
+        }
+        console.warn("[renderer] WebGL init failed, using the emergency 2D board:", err);
         setUseFallback2d(true);
       };
-      import("@/lib/rendering/sleek/SleekRenderer").then(m => {
+      const load: Promise<() => BoardRenderer> = glKind === "three"
+        ? import("@/lib/rendering/three/ThreeRenderer").then(m => () => new m.ThreeRenderer())
+        : import("@/lib/rendering/sleek/SleekRenderer").then(m => () => new m.SleekRenderer());
+      load.then(make => {
         if (pixiRef.current) return;
-        const renderer = new m.SleekRenderer();
+        const renderer = make();
         pixiRef.current = renderer;
         const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
         renderer.init(canvas, size.w, size.h).then(() => {
@@ -2070,7 +2084,7 @@ export function GameCanvas({
       clearBallEffectsCache();
       clearPickupSpriteCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability, useFallback2d]);
+  }, [level, levelNumber, activeModifiers, fenceDurability, useFallback2d, glKind]);
 
   // The renderer survives level changes (the effect above re-runs per
   // level); the GPU context is torn down only when the component unmounts.
@@ -2569,7 +2583,7 @@ export function GameCanvas({
             }}
           />
         )}
-        <canvas key={useFallback2d ? '2d' : 'gl'} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        <canvas key={useFallback2d ? '2d' : glKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"

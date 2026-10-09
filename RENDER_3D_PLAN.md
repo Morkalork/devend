@@ -3,9 +3,45 @@
 The plan for moving the board's graphics from the 2D Pixi renderer to a real 3D
 scene, still seen from above.
 
-Status: **PLANNED**. Nothing here is built yet. The plan follows the convention
-of the other plan docs: when the build departs from it, the departure is marked
-**[CHANGED]** with the reason, rather than the plan being quietly rewritten.
+Status: **BUILT**, all ten steps in one pass, and the 3D board is the default
+renderer on `dev`. The plan below is kept as written, with the places the build
+departed from it marked **[CHANGED]** and the reason given, the convention of
+the other plan docs.
+
+The one thing NOT done is the thing that needs hardware: step 0's measurement
+on a named low-end Android phone. This sandbox has only a software GPU, so the
+gate was replaced by guards that act on the device itself (the quality
+governor and the fallback chain, step 8) and the owner's test on a phone is the
+open item. See "What is still open" at the end.
+
+Departures, in order of how much they changed the shape:
+
+1. **The 2D layers were not ported; they became the 3D board's paint.** The
+   plan ported sleek's layers to three one by one, bottom up. Instead, sleek
+   draws the board's flat marks (ground, lattice, areas, props, the tops of
+   walls and slabs, trails, pocket fills) into ONE surface texture, under a
+   flat light, and every 3D surface samples it at its own world (x, y). The 3D
+   side adds height, lights and shadows; how anything LOOKS still comes from
+   the 2D layers. Step 6's long tail therefore collapsed: every kind of object
+   the 2D board draws is on the 3D board on day one, and the checklist test
+   it called for is not needed because nothing can be missing.
+2. **Pixi composites the frame, not three.** three renders into a texture that
+   sleek shows as a sprite under everything that sits on top. That is what kept
+   the sweep, the shatter and the first-frame capture working with no changes
+   (step 7's "re-point the transitions" was free). Textures cross between the
+   two libraries in both directions on the shared context
+   (`three/textureBridge.ts`), which the PixiJS guide does not cover.
+3. **The lamp is the key light, not the monitor.** On nearly every map a ball
+   holds the lamp (`lampBall.ts`), so the monitor is a fallback, not the light
+   the board is usually lit by. The lamp is a shadowed point light over its
+   ball; the monitor yields to it, and stops rendering its own shadow map
+   while it does.
+4. **Pools are lit, not painted, with two departures from physics.** See
+   section 3, Lighting.
+5. **Walls stand 1.4x their authored height by default.** Open question 3:
+   under real lights the authored 13 units throws shadows too short to read.
+
+---
 
 What was asked for: much better light and shadows; fences with real height that
 the balls roll against; balls that visibly roll; and shadows that are correct
@@ -77,6 +113,13 @@ The camera is a **perspective camera looking straight down**, with a narrow
 field of view (about 20-30 degrees). It uses an off-axis projection
 (`setViewOffset`) so that the floor plane fills `boardRect` exactly.
 
+**[CHANGED]** The off-axis frustum is written directly (`three/floorCamera.ts`,
+26 degrees by default) rather than through `setViewOffset`, which is defined
+against a full frame the board does not have. A test pins every floor point to
+`boardRect` across surfaces and fields of view. Balls are the one raised thing
+that does NOT lean: each sphere is nudged toward the eye by its own parallax,
+so it sits under the 2D corona and rings drawn round it.
+
 A plane parallel to the image plane projects affinely. So for the floor:
 
 - `computeBoardRect`, the layout latch and `screenToWorld` stay
@@ -99,9 +142,21 @@ only depth cue, which is the problem today.
   all as `CanvasTexture`s. `markStaticDirty()` keeps its meaning: re-upload.
   Captured ground could sit a hair lower or carry a different finish, which
   makes "locked away" physical.
+
+  **[CHANGED]** GameCanvas no longer makes those bakes (sleek draws the board
+  from the space grid), so the floor samples the surface texture instead
+  (departure 1). The visible outline, triangulated, translucent over the page
+  like the 2D surface. Captured ground has no separate finish yet.
 - **Fences and walls.** Each segment is extruded into a bevelled prism and
   merged into one `BufferGeometry` per fence type. The merged mesh is rebuilt
   when a cut lands; the fence in flight is a separate small dynamic mesh.
+
+  **[CHANGED]** One instanced box per straight run instead (`three/walls3d.ts`):
+  one draw call for every wall, frame and growing cut, re-laid each frame for
+  the cost of a few hundred matrices. No per-type material: a fence's top shows
+  what the 2D wall layer painted for it, type colour included. The impact
+  bulge splits a run into short blocks, sampled in world space like the 2D one.
+  No bevel.
   - Breakable dents (today carved into the 2D hull) become notches in the
     extrusion.
   - The outer frame becomes a real bevelled rim.
@@ -111,9 +166,20 @@ only depth cue, which is the problem today.
 - **Balls.** Instanced spheres. The squash effects (`getSquishEffect`,
   `getWallHitEffect`) become a non-uniform scale along the impact normal,
   which is what the 2D squash was imitating.
+
+  **[CHANGED]** One mesh per ball (a handful on any map, each with its own
+  colour and glow), squashed and flight-stretched by a matrix built from the
+  same functions the 2D body uses (`three/balls3d.ts`). A Bug Squash melt stays
+  2D: the sphere hides and the 2D liquid shows.
 - **Obstacles, props, chests and destructibles.** Extruded polygon slabs with
   real heights. Rubble and debris become small rigid chunks. They are animated
   by the existing render-side debris state, not by a physics engine.
+
+  **[CHANGED]** Props stay flat marks on the floor. Obstacles, breakables,
+  mirrors, deformables, bumpers (lower), movers (taller), launcher shells and
+  phasing pillars (sinking as they fade) are one merged mesh, rebuilt only when
+  a fingerprint of every footprint changes (`three/solids3d.ts`). Portals are
+  never solid. Dents come from the same bulge the 2D hull uses.
 
 ### Rolling
 
@@ -126,6 +192,9 @@ from the interpolated position delta `d` and radius `r`:
 
 It never touches the simulation, so lockstep is unaffected.
 
+**[CHANGED]** Kept in a `Map` keyed by ball id, the same key the sphere pool
+uses, and dropped with the sphere when its ball leaves the board.
+
 **This changes the lamp design, and it is a design decision for the user, not
 a technical one.** A ball with a centred bulb has nothing on it to show it
 turning. The proposal: keep the emissive body (so the ball is still the
@@ -133,6 +202,11 @@ brightest, easiest thing to track, which is why it became a lamp), and etch a
 darker pattern into it that rolls with the ball. Seams or circuit traces suit
 the theme, with each ball type's look coming from `ballLook.ts`. The etching
 must stay subtle enough that a ball at speed does not shimmer.
+
+**Decided:** the etched lamp. A seam winding round the ball like a tennis
+ball's and six vias, darker than the glow, antialiased with `fwidth`. The 2D
+corona over it is drawn at 0.55 strength under the 3D board, or it washes the
+seam out.
 
 ### Lighting
 
@@ -151,6 +225,26 @@ convention:
    short, very bright point light with a falloff curve, plus particles and an
    optional ring of displacement on the floor. Its shadows are correct for
    free: walls block it the same way they block a ball's light.
+
+**[CHANGED]** Rule 1 as written lasts only until a ball takes the lamp, which
+on nearly every map is from the first second. The lamp is then the key light:
+a shadowed point light 200 units over its ball, so a slab a typical distance
+away throws about the 2D shadow length, lighting the board about as brightly
+as the monitor did. The monitor drops to a quarter and its shadow fades out.
+
+**[CHANGED]** Pools are lit, not painted, and that needed two departures from
+physics (`three/surfaceMaterial.ts`, POOL LIGHTING). The 2D pools were ADDED to
+the picture; a real light multiplies the surface, and on this board's
+near-black live space a lamp multiplied in shows nothing. So point lights see
+every surface as no darker than a faint grey (a "sheen" only they catch, so the
+palette is untouched wherever none reaches), and most of a light's grazing
+angle is ignored on the floor, leaving the pool's falloff to distance. Walls
+still block them, which is the point.
+
+**[CHANGED]** Rule 2's "a point light at its centre, the ball excluded as a
+caster of its own light" is done with no exclusion list: the ball's material
+casts shadows from its FRONT faces only, and seen from inside the sphere every
+face is a back face.
 
 Shadows: two strategies. Step 0 measures both and picks one.
 
@@ -177,11 +271,24 @@ Shadows: two strategies. Step 0 measures both and picks one.
 The proposal is to **build A first, because it gives the fastest true picture,
 and keep B ready for the moment A misses the budget on the reference phone.**
 
+**[CHANGED]** A was built; B was not needed to get a picture and is still the
+answer if the phone test says A is too slow. Two three.js behaviours had to be
+worked round, both pinned by tests: a shadowed light whose map was never drawn
+breaks EVERY draw that uses the shader (so each pooled light draws its map
+once at creation), and shadow bias is in each light's own depth range (so it
+is set per light from a world distance).
+
 On top of the lights:
 
 - ACES or AgX tone mapping;
 - bloom, which replaces the hand-built coronas and pixi-filters;
 - an optional ambient-occlusion pass (GTAO) on high-tier devices only.
+
+**[CHANGED]** A shoulder instead of ACES or AgX (`three/outputPass.ts`): both
+reshape the whole range and would have repainted the palette; the shoulder
+passes everything at normal brightness through untouched and only rolls off
+explosion cores and hot spots. No bloom: the 2D coronas still do that job over
+the sphere. No GTAO.
 
 ## 4. How the migration runs: two renderers on one context
 
@@ -190,6 +297,13 @@ the **same canvas**. Each frame:
 
 1. `three.resetState()`, render the 3D scene;
 2. `pixi.renderer.resetState()`, render the Pixi stage on top.
+
+**[CHANGED]** Three passes, not two (departures 1 and 2): sleek draws the flat
+marks into the surface texture; three draws the scene into an HDR target from
+it and tone-maps into a texture; sleek composites that texture with the layers
+that sit on top. The light-faking layers (the shadow plane's casts, the ball
+light buffer, face light, bounce) are simply left out of the hybrid tree, and
+the ball light pass runs in a lights-only mode that hands three its LIST.
 
 This gives a strangler-fig migration instead of a big-bang rewrite:
 
@@ -217,6 +331,10 @@ This gives a strangler-fig migration instead of a big-bang rewrite:
 One cost of the hybrid: an object still drawn by Pixi casts no 3D shadow and
 does not occlude the 3D lights. That is acceptable on an Admin-only flag, and
 it is the order in which porting removes the gaps.
+
+**[CHANGED]** What stays flat for good under the surface-texture approach:
+props, areas, data streams, circuit terminals, pickups and bugs, which are
+marks ON the floor. They are lit and shadowed as floor, but cast nothing.
 
 ## 5. Steps
 
@@ -286,6 +404,13 @@ relative: S is one session, M is a few, L is many.
 7. **Effects and transitions.** (M)
    - Explosions (light, particles, debris, a short camera shake), motes as
      instanced particles lit by the scene.
+
+   **[CHANGED]** Explosions are read off the state the 2D fx layer reads (a
+   destructible breaking or chipping, a Deploy Charge going off, a launcher
+   shell letting go, a ball popping): a pooled light that casts shadows, a hot
+   core, a shockwave ring, and the debris as real shards thrown up, bouncing
+   and settling (`three/explosions3d.ts`). Rubble is 3D too. No camera shake:
+   the flat layers over the scene would not shake with it. Motes stay 2D.
    - The level-clear sweep, the shatter dissolve and the startup pulse,
      re-pointed at three's output.
 8. **Quality tiers and devices.** (M)
@@ -293,6 +418,13 @@ relative: S is one session, M is a few, L is many.
      lights, ambient occlusion on or off, bloom resolution.
    - `adaptiveDpr` extends into a tier ramp, upward only as it is today, and
      the perf HUD reports which tier is chosen.
+
+   **[CHANGED]** A separate governor (`three/quality.ts`) that steps DOWN only:
+   `auto` starts at a tier guessed from the device (coarse pointer, core
+   count), and a median frame over budget across 120 frames steps it down one,
+   applied between maps, because a rebuild compiles shaders and a hitch
+   mid-map is what it exists to prevent. The light pool is a fixed size per
+   tier for the same reason. The perf HUD does not show the tier yet.
    - Validate in the Android build (Capacitor WebView), including a cold
      start and a context loss.
    - Admin gets a tier override.
@@ -301,6 +433,10 @@ relative: S is one session, M is a few, L is many.
    - Sleek stays one release as the second fallback, then its layers are
      deleted, and the about 61 test files that pin Sleek source are migrated
      or retired with them.
+
+   **[CHANGED]** Sleek is not retired and cannot be: under departure 1 it is
+   half of the 3D board. Its light-faking layers are what a future clean-up can
+   delete once the 2D-only path is no longer wanted.
    - The Canvas-2D emergency board stays as it is.
    - ARCHITECTURE.md and CLAUDE.md are updated.
 
@@ -325,3 +461,18 @@ relative: S is one session, M is a few, L is many.
 3. **How tall should fences be?** Taller reads better in 3D but hides more of
    the floor from the edge-on parallax. Proposed: keep today's 13 units as the
    default and tune with the Admin knob.
+
+**[CHANGED]** Answered in the build, since the ask was to do it all in one go:
+1 the etched lamp; 3 the Admin knob, defaulting to 1.4x. 2 is still open.
+
+## What is still open
+
+- **A phone.** Nothing here has run on real GPU hardware. In this sandbox the
+  3D board ran at about the same frame rate as the 2D board on a software GPU,
+  and the bundle grew by 133 KB brotli (lazy, after "Tap to start"), but a
+  phone's fill rate is the budget that matters. If it is too slow: Admin's
+  quality knob pins `low`; `auto` steps down between maps on its own; Admin's
+  renderer switch goes back to 2D.
+- **Context loss** is handled (both libraries restore, and the shared
+  textures are re-made and re-wrapped) but was not provoked on a device.
+- **The perf HUD** does not report the 3D tier.
