@@ -135,6 +135,7 @@ import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { getRendererChoice, type RendererChoice } from "@/lib/rendering/render3dSettings";
 import { recordRendererStart } from "@/lib/rendering/rendererDiag";
+import { recordZoomEvent } from "@/lib/zoomRecorder";
 import { BUILD_SHA } from "@/lib/buildInfo";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
@@ -1634,6 +1635,8 @@ export function GameCanvas({
       // the prop is still the measuring hook's first-commit guess.
       const insetCss = layoutInset(measureBottomBars(), bottomInsetRef.current ?? null, BOTTOM_BARS_FALLBACK_PX);
       game.boardRect = computeBoardRect(physW, physH, insetCss * dpr);
+      recordZoomEvent("board",
+        `${Math.round(width)}x${Math.round(height)}css board ${Math.round(game.boardRect.width)}px scale ${game.boardRect.scale.toFixed(3)}`);
       clearBallRenderCache();
       clearBallSphereCache();
       clearRainGlyphCache();
