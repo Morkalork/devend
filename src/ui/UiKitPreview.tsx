@@ -3,15 +3,17 @@
  * stage 1): the place to look at a change to the kit before any screen does.
  */
 import { useState } from "react";
-import { Snowflake, Zap, Shield, ArrowLeft } from "lucide-react";
+import { Snowflake, Zap, Shield, ArrowLeft, LayoutGrid } from "lucide-react";
 import { UiHost } from "./UiHost";
 import { useViewportSize } from "./viewport";
+import { UiScreenContext } from "./screen";
+import { Gallery } from "./dev/Gallery";
 import { COLOR, RADIUS, TEXT } from "./theme";
 import {
   Appear, Button, HoldHint, Icon, Label, Modal, Pressable, ProgressBar, ScrollView, TextField, View, tint,
 } from "./kit";
 
-function Preview({ onClose }: { onClose: () => void }) {
+function Preview({ onClose, onGallery }: { onClose: () => void; onGallery: () => void }) {
   const screen = useViewportSize();
   const [taps, setTaps] = useState(0);
   const [held, setHeld] = useState(false);
@@ -21,6 +23,8 @@ function Preview({ onClose }: { onClose: () => void }) {
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Button icon={ArrowLeft} text="Back" variant="ghost" onTap={onClose} />
         <Label text="Canvas UI kit" size={TEXT.xl} font="display" color={COLOR.primary} />
+        <View layout={{ flex: 1 }} />
+        <Button icon={LayoutGrid} text="Screens" variant="outline" size="sm" onTap={onGallery} />
       </View>
       <ScrollView layout={{ flex: 1, gap: 12 }}>
         <Appear fromY={12}>
@@ -63,10 +67,17 @@ function Preview({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Admin's look at the canvas interface: the kit's pieces, and every screen in the gallery. */
 export function UiKitPreview({ onClose }: { onClose: () => void }) {
+  const screen = useViewportSize();
+  const [gallery, setGallery] = useState(false);
   return (
     <UiHost>
-      <Preview onClose={onClose} />
+      <UiScreenContext.Provider value={screen}>
+        {gallery
+          ? <Gallery onBack={() => setGallery(false)} />
+          : <Preview onClose={onClose} onGallery={() => setGallery(true)} />}
+      </UiScreenContext.Provider>
     </UiHost>
   );
 }
