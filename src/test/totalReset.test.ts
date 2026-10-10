@@ -28,7 +28,7 @@ const GAME_STATE_KEYS = [
 
 const PRESERVED_KEYS = [
   LANGUAGE_STORAGE_KEY, // 'jezzball_language'
-  "devend:renderer",
+  "devend:board-renderer",
   "devend:musicVolume",
   "devend:sfxVolume",
   "devend:soundMuted",

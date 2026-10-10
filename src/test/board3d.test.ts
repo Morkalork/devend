@@ -32,7 +32,7 @@ import { QualityGovernor, QUALITY_PRESETS, stepDown } from "@/lib/rendering/thre
 import { poolLightsChunk } from "@/lib/rendering/three/surfaceMaterial";
 import {
   autoTier, getFov, getHeightScale, getQualitySetting, getRendererChoice, setFov, setHeightScale,
-  setQualitySetting, setRendererChoice, FOV_RANGE, HEIGHT_RANGE, RENDERER_KEY,
+  setQualitySetting, setRendererChoice, FOV_RANGE, HEIGHT_RANGE, RENDERER_KEY, LEGACY_RENDERER_KEY,
   DEFAULT_LEAN, LEAN_RANGE, getLean, setLean,
 } from "@/lib/rendering/render3dSettings";
 import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
@@ -488,6 +488,15 @@ describe("settings", () => {
     expect(getQualitySetting()).toBe("auto");
     expect(getFov()).toBe(26);
     expect(getHeightScale()).toBe(1.4);
+  });
+
+  it("ignore a 2D choice left over from before the 3D board, and drop it", () => {
+    // The old key held the 2D renderers' own choice; a phone that had picked
+    // "sleek" back then never saw the 3D board.
+    localStorage.setItem(LEGACY_RENDERER_KEY, "sleek");
+    expect(getRendererChoice()).toBe("three");
+    expect(localStorage.getItem(LEGACY_RENDERER_KEY)).toBeNull();
+    expect(RENDERER_KEY).not.toBe(LEGACY_RENDERER_KEY);
   });
 
   it("store the default as no key at all, and clamp what they keep", () => {

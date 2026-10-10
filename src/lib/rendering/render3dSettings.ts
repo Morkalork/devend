@@ -22,7 +22,15 @@ export type RendererChoice = "three" | "sleek";
 export type QualityTier = "low" | "medium" | "high";
 export type QualitySetting = QualityTier | "auto";
 
-export const RENDERER_KEY = "devend:renderer";
+/**
+ * A NEW key, on purpose. `devend:renderer` predates the 3D board: it held the
+ * 2D renderers' own choice, so a device that had picked "sleek" back then read
+ * as "switched to 2D" here and never saw the 3D board, with nothing saying
+ * why. The 3D board is the default for everyone; only a choice made since it
+ * shipped counts, and the old key is dropped the first time it is seen.
+ */
+export const RENDERER_KEY = "devend:board-renderer";
+export const LEGACY_RENDERER_KEY = "devend:renderer";
 export const QUALITY_KEY = "devend:render3d:quality";
 export const FOV_KEY = "devend:render3d:fov";
 export const HEIGHT_KEY = "devend:render3d:height";
@@ -76,6 +84,7 @@ function write(key: string, value: string | null): void {
 
 /** The renderer the next board starts with. Anything unknown is the default. */
 export function getRendererChoice(): RendererChoice {
+  if (read(LEGACY_RENDERER_KEY) !== null) write(LEGACY_RENDERER_KEY, null);
   return read(RENDERER_KEY) === "sleek" ? "sleek" : "three";
 }
 

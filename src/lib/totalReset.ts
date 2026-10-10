@@ -22,7 +22,7 @@ import { RENDERER_KEY, QUALITY_KEY, FOV_KEY, HEIGHT_KEY, LEAN_KEY } from '@/lib/
 // volume, or a different renderer. Everything else is game state and is deleted.
 const PRESERVED_KEYS = new Set<string>([
   LANGUAGE_STORAGE_KEY, // 'jezzball_language'
-  RENDERER_KEY, // 'devend:renderer'
+  RENDERER_KEY, // 'devend:board-renderer'
   QUALITY_KEY,  // the 3D board's tuning: device settings, like the renderer
   FOV_KEY,
   HEIGHT_KEY,

@@ -556,6 +556,14 @@ The one 2D layer that had to follow is the balls': what is drawn ON a ball
 angle" sets the lean (0 is the old straight-down view, default 0.6), applied
 between maps.
 
+**Why a phone showed the 2D board.** The renderer setting was stored under
+`devend:renderer`, a key that predates the 3D board and held the old 2D
+renderers' choice, so a device that had picked "sleek" back then read as
+"switched to 2D". The setting now lives under `devend:board-renderer` and the
+old key is dropped on sight. The three-quarter view above was built while the
+cause was unknown. Admin's "3D on this device" card (`rendererDiag.ts`)
+records whether each 3D start worked and why not.
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the
