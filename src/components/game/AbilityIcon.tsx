@@ -50,7 +50,7 @@ function RushClockIcon({ className }: { className?: string }) {
 /** Every effect kind's glyph. Exhaustive by type: a new kind will not compile
  *  until it is given one. Private, so this module exports components only and
  *  callers all go through AbilityIcon rather than growing a second lookup. */
-const ICON_BY_KIND: Record<AbilityKind, (p: { className?: string }) => JSX.Element> = {
+const ICON_BY_KIND: Record<AbilityKind, (p: { className?: string }) => React.JSX.Element> = {
   freeze: ({ className }) => <Snowflake className={className} />,
   slow: ({ className }) => <Snail className={className} />,
   slowArea: ({ className }) => <Hourglass className={className} />,

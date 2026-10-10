@@ -167,7 +167,7 @@ describe("the playground toolbars fit on a phone", () => {
     // A flex row that is allowed to shrink its children will do that instead of
     // scrolling, and the buttons become unreadable slivers rather than
     // overflowing into the scroll area.
-    const toolbarButtons = SRC.match(/className="flex items-center (?:justify-center )?[^"]*(?:w-9 h-9|px-3 py-2|px-4 py-2)[^"]*rounded-lg[^"]*shadow-lg[^"]*"/g) ?? [];
+    const toolbarButtons: string[] = SRC.match(/className="flex items-center (?:justify-center )?[^"]*(?:w-9 h-9|px-3 py-2|px-4 py-2)[^"]*rounded-lg[^"]*shadow-lg[^"]*"/g) ?? [];
     expect(toolbarButtons.length, "no toolbar buttons matched").toBeGreaterThan(6);
     const unpinned = toolbarButtons.filter(c => !c.includes("flex-shrink-0"));
     expect(unpinned).toEqual([]);

@@ -1,0 +1,65 @@
+/**
+ * The non-component half of the kit: text styles, colours with alpha, the
+ * text resolution. Split from the components so a hot reload of one does not
+ * reload the other.
+ */
+import { TextStyle, type TextStyleFontWeight } from "pixi.js";
+import { COLOR, FONT, TEXT, type FontRole } from "../theme";
+
+export interface TextLook {
+  size?: number;
+  color?: number;
+  font?: FontRole;
+  weight?: TextStyleFontWeight;
+  wrap?: boolean;
+  align?: "left" | "center" | "right";
+  letterSpacing?: number;
+  lineHeight?: number;
+  glow?: number;
+}
+
+export const RESOLUTION = typeof window !== "undefined" ? Math.min(3, window.devicePixelRatio || 1) : 1;
+
+export function textStyle(p: TextLook): TextStyle {
+  const size = p.size ?? TEXT.sm;
+  return new TextStyle({
+    fontFamily: FONT[p.font ?? "body"],
+    fontSize: size,
+    fontWeight: p.weight ?? "400",
+    fill: p.color ?? COLOR.foreground,
+    align: p.align ?? "left",
+    wordWrap: !!p.wrap,
+    wordWrapWidth: 4000,
+    breakWords: !!p.wrap,
+    letterSpacing: p.letterSpacing ?? 0,
+    lineHeight: p.lineHeight ?? Math.round(size * 1.35),
+    ...(p.glow ? { dropShadow: { color: p.color ?? COLOR.foreground, blur: p.glow, distance: 0, alpha: 0.6 } } : {}),
+  });
+}
+
+
+// ── Colour helpers ─────────────────────────────────────────────────────────
+
+/** A colour at an opacity, for a background or border (Tailwind's `bg-primary/10`). */
+export function tint(color: number, alpha: number): string {
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255);
+  return `#${color.toString(16).padStart(6, "0")}${a.toString(16).padStart(2, "0")}`;
+}
+
+/**
+ * A colour over the dark card background at an opacity, flattened: Yoga
+ * backgrounds take one colour, and Tailwind's `bg-primary/10` was exactly a
+ * translucent tint over a near-black surface.
+ */
+export function withAlpha(color: number, alpha: number, over: number = COLOR.background): number {
+  const mixc = (s: number) => {
+    const a = (color >> s) & 255, b = (over >> s) & 255;
+    return Math.round(b + (a - b) * alpha) & 255;
+  };
+  return (mixc(16) << 16) | (mixc(8) << 8) | mixc(0);
+}
+
+/** The same, for a border (drawn over the card colour). */
+export function withAlphaHex(color: number, alpha: number): number {
+  return withAlpha(color, alpha, COLOR.card);
+}

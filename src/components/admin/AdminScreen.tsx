@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
+import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
 import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical } from 'lucide-react';
 import {
@@ -38,6 +39,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [fov, setFovState] = useState(getFov);
   const [heightScale, setHeightState] = useState(getHeightScale);
   const [lean, setLeanState] = useState(getLean);
+  const [kitOpen, setKitOpen] = useState(false);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -53,6 +55,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
     setInfiniteLives(next);
   };
 
+  if (kitOpen) return <UiKitPreview onClose={() => setKitOpen(false)} />;
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-md mx-auto">
@@ -83,6 +86,22 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="font-semibold">Map Builder</div>
               <div className="text-sm text-muted-foreground">
                 Create and edit game levels
+              </div>
+            </div>
+          </button>
+
+          <button
+            id="admin-canvas-kit"
+            onClick={() => setKitOpen(true)}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Layers className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Canvas UI kit</div>
+              <div className="text-sm text-muted-foreground">
+                Every piece the canvas interface is built from, at phone size (CANVAS_UI_PLAN.md)
               </div>
             </div>
           </button>
