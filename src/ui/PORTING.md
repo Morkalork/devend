@@ -18,11 +18,9 @@ out with Yoga flexbox instead of `<div>`s styled with Tailwind.
 - Keep the DOM file's explanatory comments that still apply (shortened where
   they described DOM/CSS mechanics). The codebase is heavily commented on
   purpose; a port that drops the reasoning is a worse file.
-- **Never edit files outside the ones you were assigned to create.** Not the
-  kit, not GameScreen, not Index, not the DOM originals, not tests you did not
-  write. If you need something the kit lacks, write it in your own folder
-  (e.g. `src/ui/<area>/fooParts.tsx`) and say so in your report.
-- **Do not run git.** Do not start a dev server.
+- Kit gaps get fixed in the kit (`src/ui/kit`), once, rather than worked
+  around in each screen; a helper only one area needs lives beside it
+  (`src/ui/<area>/fooParts.tsx`).
 
 ## Import everything from one place
 
@@ -38,9 +36,9 @@ import { Snowflake } from "lucide-react";     // the same import as the DOM file
 | Piece | Use |
 |---|---|
 | `View layout={...}` | a `div`. Layout is Yoga flexbox: `flexDirection`, `gap`, `padding*`, `margin*`, `width`, `height`, `flex`, `alignItems`, `justifyContent`, `position: "absolute"` with `left/top/right/bottom`, plus `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `overflow: "hidden"`. Also `alpha`, `visible`, `zIndex`. |
-| `Label text size color font weight wrap align upper letterSpacing lineHeight glow alpha layout` | text. `font` is `"display"` (Michroma, Tailwind `font-display`), `"body"` (Space Grotesk, default), `"mono"`. `weight` is a string: `"700"` for `font-bold`. `upper` for `uppercase`. `glow` (px blur) for a text-shadow glow. |
+| `Label text size color font weight wrap truncate align upper letterSpacing lineHeight glow alpha layout` | text. `truncate` is Tailwind's `truncate`: one line, cut with an ellipsis to the box's width. `font` is `"display"` (Michroma, Tailwind `font-display`), `"body"` (Space Grotesk, default), `"mono"`. `weight` is a string: `"700"` for `font-bold`. `upper` for `uppercase`. `glow` (px blur) for a text-shadow glow. |
 | `Icon icon={LucideIcon} size color strokeWidth alpha` | an icon: pass the lucide-react component itself (so existing maps like `goalIcon()`, `upgradeIcon()`, the ability glyph table work as they are). `w-4 h-4` is `size={16}`. |
-| `Pressable onTap onHold disabled layout pressedAlpha` | anything clickable. `onHold` is the game's 450ms tap-and-hold (CLAUDE.md). Moving the finger >10px cancels both, so a scroll that starts on it does not press it. |
+| `Pressable onTap onHold disabled layout pressedAlpha label` | anything clickable. Give it a `label` (what a screen reader would say; scripts and the gallery find controls by it). Disabled, it still swallows its taps, like a disabled DOM button. `onHold` is the game's 450ms tap-and-hold (CLAUDE.md). Moving the finger >10px cancels both, so a scroll that starts on it does not press it. |
 | `Button text icon variant size tint onTap` | a standard button (`primary`, `outline`, `ghost`, `danger`, `secondary`). Use a `Pressable` when the DOM button was custom-styled. |
 | `ScrollView direction layout` | `overflow-y-auto` / `overflow-x-auto`. Give it a bounded size (`flex: 1` in a column with a fixed-height parent, or a `height`). |
 | `Modal screen onClose title accent maxWidth dismissable` | the backdrop + card + X used by every explainer. `screen` is `useUiScreen()`. |
@@ -87,7 +85,9 @@ screen CSS px. Add it to every position.
 
 ## Text and fonts
 
-- `whitespace-nowrap` text: a plain `Label`. Paragraphs: `Label wrap`.
+- `whitespace-nowrap` text: a plain `Label`. Paragraphs: `Label wrap`. `truncate`: `Label truncate`. A plain
+  `Label` never shrinks or cuts itself, so one that can outgrow its row overflows onto its neighbours: wrap or
+  truncate anything whose length you do not control (names, titles, translated strings).
 - `tabular-nums`: `font="mono"` if alignment matters, otherwise ignore.
 - `t('key', values)` unchanged. Never hardcode a user-facing string (CLAUDE.md:
   every string through i18n, no em-dashes in UI text).
@@ -110,15 +110,15 @@ screen CSS px. Add it to every position.
 (and types). Hooks, constants and helpers go in a `.ts` file. CI caps the
 warning count, so your files must produce **zero** warnings.
 
-## Before you report
+## Before you commit
 
 ```sh
-# Other components are being ported at the same time, so filter to yours:
-npx tsc --noEmit -p tsconfig.app.json 2>&1 | grep -E "src/ui/<area>/|src/test/canvas/<yours>"   # must print nothing
-npx eslint src/ui/<your files>           # zero warnings
-npx vitest run src/test/canvas/<yours>   # green
+npx tsc --noEmit -p tsconfig.app.json
+npx eslint src/ui/<your files>           # zero warnings: CI caps the total
+npx vitest run src/test/canvas/<yours>
 ```
 
-Report: the files you created, any prop or behaviour difference, anything you
-could not port faithfully (and why), helpers you wrote that belong in the kit,
-and test assertions you could not carry over.
+Then look at it: add the piece to the Admin screen gallery
+(`src/ui/dev/gallery/<area>.tsx`) with realistic props and open it at phone
+size (390x844 and 360x740). Most port bugs are only visible: text running into
+its neighbour, an icon clipped, a page that cannot scroll to its last button.

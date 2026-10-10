@@ -67,7 +67,10 @@ export function usePress({ onTap, onHold, disabled }: PressHandlers) {
   return {
     pressed,
     props: {
-      eventMode: disabled ? ("none" as const) : ("static" as const),
+      // Still a touch target while disabled, like a disabled DOM button: it
+      // swallows the tap rather than letting it through to what is under it
+      // (the board would take it as the start of a fence).
+      eventMode: "static" as const,
       cursor: disabled ? "default" : "pointer",
       onPointerDown,
       onPointerUp,

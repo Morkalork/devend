@@ -33,6 +33,12 @@ function Preview({ onClose, onGallery }: { onClose: () => void; onGallery: () =>
             <Label text="Michroma display" font="display" size={TEXT.lg} />
             <Label text="Space Grotesk body text that wraps across the card width when it is long enough to need more than one line." wrap />
             <Label text="JetBrains Mono 0123456789" font="mono" color={COLOR.primary} />
+            <View layout={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+              <View layout={{ flex: 1 }}>
+                <Label text="A single line far too long for its box, cut with an ellipsis" truncate />
+              </View>
+              <Label text="Levels 1-5" size={TEXT.xs} color={COLOR.mutedForeground} />
+            </View>
           </View>
         </Appear>
         <View layout={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>

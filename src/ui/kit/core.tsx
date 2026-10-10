@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Texture, TextStyleFontWeight } from "pixi.js";
 import type { LayoutStyles } from "@pixi/layout";
 import { COLOR, RADIUS, TEXT, type FontRole } from "../theme";
-import { RESOLUTION, textStyle, tint } from "./style";
+import { RESOLUTION, textStyle, tint, truncateToWidth } from "./style";
 import { iconTexture, type IconSource } from "./icons";
 import { usePress, type PressHandlers } from "./press";
 import "../elements";
@@ -54,6 +54,12 @@ export interface LabelProps {
   weight?: TextStyleFontWeight;
   /** Wrap at the box's width instead of running on one line. */
   wrap?: boolean;
+  /**
+   * One line, cut to the box's width with an ellipsis (Tailwind's `truncate`).
+   * Like `wrap`, the label fills its parent's width: give it a column or a
+   * `flex: 1` box in a row.
+   */
+  truncate?: boolean;
   align?: "left" | "center" | "right";
   alpha?: number;
   letterSpacing?: number;
@@ -75,6 +81,7 @@ export interface LabelProps {
  * that width, which gives the leaf its real, multi-line height.
  */
 export function Label(p: LabelProps) {
+  const fitted = !!(p.wrap || p.truncate);
   const [wrapWidth, setWrapWidth] = useState(0);
   const style = useMemo(() => {
     const st = textStyle(p);
@@ -98,8 +105,11 @@ export function Label(p: LabelProps) {
     const done = box.layout?.computedLayout;
     if (done && done.width > 0) onLayout({ computedLayout: done });
     return () => { box.off("layout", onLayout); };
-  }, [p.wrap]);
-  if (!p.wrap) {
+  }, [fitted]);
+  const shown = useMemo(
+    () => (p.truncate && !p.wrap && wrapWidth > 0 ? truncateToWidth(text, style, wrapWidth) : text),
+    [p.truncate, p.wrap, text, style, wrapWidth]);
+  if (!fitted) {
     return (
       <uiText text={text} style={style} resolution={RESOLUTION} alpha={p.alpha ?? 1} layout={p.layout ?? true} />
     );
@@ -114,7 +124,7 @@ export function Label(p: LabelProps) {
         // An explicit width, because @pixi/layout resets a wrapping text's
         // wrap width to its box's width on every pass, and an intrinsic box is
         // the text's own previous bounds: the wrap would ratchet narrower.
-        <uiText text={text} style={style} resolution={RESOLUTION}
+        <uiText text={shown} style={style} resolution={RESOLUTION}
           // Pixi centres or right-aligns lines against the longest line; the
           // block itself is placed in the box the same way.
           layout={{ width: wrapWidth, objectFit: "none",

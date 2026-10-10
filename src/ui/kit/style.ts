@@ -3,7 +3,7 @@
  * text resolution. Split from the components so a hot reload of one does not
  * reload the other.
  */
-import { TextStyle, type TextStyleFontWeight } from "pixi.js";
+import { CanvasTextMetrics, TextStyle, type TextStyleFontWeight } from "pixi.js";
 import { COLOR, FONT, TEXT, type FontRole } from "../theme";
 
 export interface TextLook {
@@ -39,6 +39,18 @@ export function textStyle(p: TextLook): TextStyle {
   });
 }
 
+/** `text` cut with an ellipsis to fit `width` on one line in `style`. */
+export function truncateToWidth(text: string, style: Parameters<typeof CanvasTextMetrics.measureText>[1], width: number): string {
+  const fits = (s: string) => CanvasTextMetrics.measureText(s, style).width <= width;
+  if (fits(text)) return text;
+  // The longest prefix that still fits with the ellipsis after it.
+  let lo = 0, hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (fits(text.slice(0, mid).trimEnd() + "\u2026")) lo = mid; else hi = mid - 1;
+  }
+  return lo > 0 ? text.slice(0, lo).trimEnd() + "\u2026" : "\u2026";
+}
 
 // ── Colour helpers ─────────────────────────────────────────────────────────
 

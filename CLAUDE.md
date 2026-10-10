@@ -67,9 +67,18 @@ Admin from React DOM onto the canvas (plan, not started), and
 
 - **TypeScript everywhere**; prefer explicit types for shared structures
   (`src/types/`). Path alias `@/` maps to `src/`.
-- **Match the surrounding style** — this codebase uses concise inline comments,
-  `framer-motion` for animation, Tailwind utility classes, and `lucide-react`
-  for icons. Don't introduce new icon assets; use `lucide-react`.
+- **Match the surrounding style** — this codebase uses concise inline comments
+  and `lucide-react` for icons. Don't introduce new icon assets; use
+  `lucide-react`.
+- **The game's interface is drawn on a canvas** (CANVAS_UI_PLAN.md). Every
+  screen but Admin's is React rendered by `@pixi/react` with `@pixi/layout`
+  (Yoga flexbox), built from the kit in `src/ui/kit` (`View`, `Label`, `Icon`,
+  `Pressable`, `Button`, `ScrollView`, `Modal`, `Appear`, ...) and filed onto the
+  one interface canvas with `<CanvasLayer>`; `src/ui/PORTING.md` is the guide.
+  Tailwind and `framer-motion` remain for Admin (and the DOM backdrops) only.
+  lucide-react icons go straight into the kit's `Icon`. A new canvas screen,
+  bar or modal gets an entry in the Admin screen gallery
+  (`src/ui/dev/gallery/`), so it can be looked at without playing to it.
 - **Config-driven content**: gameplay tuning (points, costs, levels, upgrades)
   lives in `public/*.yml`, not hardcoded. When adding game content, edit the
   YAML and the matching type in `src/types/`.

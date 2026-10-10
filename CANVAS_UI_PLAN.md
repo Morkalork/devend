@@ -4,7 +4,8 @@ The plan for moving the whole game interface - everything except Admin - from
 React DOM onto the canvas, so the game is one full-screen canvas the browser
 has nothing to scroll, pan or resize under.
 
-Status: **plan, not started.** Written after the eighth report of the board
+Status: **built** (stages 0 to 4, and the shell work of stage 5 that matters;
+see section 9, the build record). Written after the eighth report of the board
 zooming or shrinking while a fence is drawn.
 
 ---
@@ -225,3 +226,79 @@ again, but mechanical once the toolkit exists.
    time on Pixi's accessibility layer?
 4. **Stop after stage 2** if the zoom is gone, or carry on to every screen
    regardless?
+
+---
+
+## 9. Build record
+
+Stages 0 to 4 shipped together, with the owner's go-ahead to do all of it in
+one pass ("start with stage 0, then do the rest"). Decisions 1 and 2 above were
+taken as recommended (stage 0 first; option A). Decision 3 was not asked and
+defaults to accepting the screen-reader regression; decision 4 was answered by
+the go-ahead: every screen moved.
+
+### What was built, and where it differs from the plan
+
+- **Stage 0.** `src/lib/zoomRecorder.ts` records every `visualViewport` and
+  window resize and every board resize, with the finger state and the element
+  a touch began on; Admin shows it (ZoomRecorderCard).
+- **Stage 1.** React 19, `@pixi/react` 8, `@pixi/layout` 3, `motion`. The kit is
+  `src/ui/kit` (View, Label, Icon, Pressable, Button, ScrollView, Modal, Appear,
+  ProgressBar, TextField, HoldHint, the press and tween hooks); the theme is
+  `src/ui/theme.ts`; Admin > Canvas UI kit shows every piece, and its Screens
+  gallery draws every canvas screen, bar and modal with sample props.
+- **One canvas, but not the board's.** The plan put the board inside the
+  interface's Pixi application. It stayed its own WebGL canvas instead: the 3D
+  and 2D renderers share a context and a fallback chain that a second owner
+  would have complicated, and nothing in the zoom history needs them merged.
+  The interface is one full-screen transparent canvas over everything
+  (`CanvasUiRoot`), with `pointer-events: none`; Pixi listens on `<body>`, so
+  every touch reaches both, and the board asks `uiCovers` (hitGate.ts) before
+  starting a fence. The board keeps its DOM box, sized by two spacers whose
+  heights come from `hudMetrics.ts`, the canvas HUD's own fixed heights, so the
+  board sits exactly where it did.
+- **Screens file their trees as layers.** A React portal cannot cross from
+  react-dom into Pixi's renderer, so a screen hands its canvas tree to
+  `<CanvasLayer id z lock>` (layerStore.ts) and the root draws every layer in
+  z order. A layer's `lock` puts `canvas-ui` on `<html>` (fixed, no scroll, no
+  overscroll, `touch-action: none`) while it is up; the admin Playground hosts
+  the play screen unlocked, inside a `UiFrame` fitted to its pane.
+- **Icons** are lucide-react components rasterised by the browser (Pixi's SVG
+  parser rejects lucide's arc syntax), cached per icon, colour and size.
+- **No `@pixi/ui`, no BitmapText.** Scroll views are @pixi/layout's trackpad;
+  text entry is a hidden DOM input (TextField). Live numbers are plain Text;
+  nothing measured needed BitmapText yet.
+- **CRTBackground stays DOM**, drawn once under every canvas screen: it is
+  decorative, takes no touches and so plays no part in the zoom problem.
+- **Tests** follow section 5: each port moved its logic into a pure model
+  (`*Model.ts`) and carried its behavioural tests into `src/test/canvas`; the
+  source-reading HUD tests read the canvas files; `adminCoverage.test.ts`
+  holds every rendered canvas piece to having a gallery entry.
+
+### What bit, for whoever touches this next
+
+- **Yoga twice.** Every `LayoutSystem.init` loads a fresh Yoga and makes it the
+  global one, and StrictMode inits the application twice; boxes from the two
+  instances refuse each other ("Expected null or instance of Node, got an
+  instance of Node"). `setup.ts` keeps the first instance.
+- **A box is a touch target by default** in @pixi/layout, so every tinted
+  overlay would have eaten the cut under it: `<layoutContainer>` is passive
+  unless it says otherwise.
+- **Pixi's preventDefault on `<body>`** cancelled every DOM click on the page;
+  it is off, and the page lock is CSS.
+- **Positions taken from DOM boxes go stale under a transform.** The screen
+  slide moves an element without resizing it; Index announces the end of the
+  slide (`SCREEN_SETTLED_EVENT`) and `useScreenBox` re-reads then.
+- **Text does not shrink or cut itself.** A single-line Label wider than its
+  row overflows onto its neighbour; `wrap` or `truncate` anything whose length
+  is not fixed. Most port bugs found in review were this.
+- **A glow is drawn into the text's texture**, which Pixi sizes to the glyphs:
+  without padding for the blur it is cut off in a hard box.
+
+### Still open
+
+- The real-phone checkpoint of stage 2: whether the zoom reports stop. The
+  recorder in Admin is how to tell.
+- The interface canvas renders every frame, on top of the board. Cheap on a
+  desktop GPU; to be measured on a low-end phone with the perf overlay.
+
