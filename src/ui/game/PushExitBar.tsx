@@ -4,7 +4,7 @@
  * the player is about to walk away with.
  */
 import { useTranslation } from "react-i18next";
-import { Landmark } from "lucide";
+import { Landmark } from "lucide-react";
 import { HUD } from "./hudMetrics";
 import { hex } from "../theme";
 import { Icon, Label, Pressable, RADIUS, TEXT, View } from "../kit/ui";

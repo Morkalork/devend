@@ -30,7 +30,7 @@ out with Yoga flexbox instead of `<div>`s styled with Tailwind.
 import { View, Label, Icon, Pressable, Button, ScrollView, Modal, ProgressBar,
   TextField, Appear, HoldHint, useTween, usePulse, usePress, tint, withAlpha,
   COLOR, FONT, RADIUS, TEXT, hex, useUiScreen } from "../kit/ui";
-import { Snowflake } from "lucide";           // was: from "lucide-react"
+import { Snowflake } from "lucide-react";     // the same import as the DOM file
 ```
 
 ## The kit
@@ -39,7 +39,7 @@ import { Snowflake } from "lucide";           // was: from "lucide-react"
 |---|---|
 | `View layout={...}` | a `div`. Layout is Yoga flexbox: `flexDirection`, `gap`, `padding*`, `margin*`, `width`, `height`, `flex`, `alignItems`, `justifyContent`, `position: "absolute"` with `left/top/right/bottom`, plus `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `overflow: "hidden"`. Also `alpha`, `visible`, `zIndex`. |
 | `Label text size color font weight wrap align upper letterSpacing lineHeight glow alpha layout` | text. `font` is `"display"` (Michroma, Tailwind `font-display`), `"body"` (Space Grotesk, default), `"mono"`. `weight` is a string: `"700"` for `font-bold`. `upper` for `uppercase`. `glow` (px blur) for a text-shadow glow. |
-| `Icon icon={LucideIcon} size color strokeWidth alpha` | an icon. `w-4 h-4` is `size={16}`. |
+| `Icon icon={LucideIcon} size color strokeWidth alpha` | an icon: pass the lucide-react component itself (so existing maps like `goalIcon()`, `upgradeIcon()`, the ability glyph table work as they are). `w-4 h-4` is `size={16}`. |
 | `Pressable onTap onHold disabled layout pressedAlpha` | anything clickable. `onHold` is the game's 450ms tap-and-hold (CLAUDE.md). Moving the finger >10px cancels both, so a scroll that starts on it does not press it. |
 | `Button text icon variant size tint onTap` | a standard button (`primary`, `outline`, `ghost`, `danger`, `secondary`). Use a `Pressable` when the DOM button was custom-styled. |
 | `ScrollView direction layout` | `overflow-y-auto` / `overflow-x-auto`. Give it a bounded size (`flex: 1` in a column with a fixed-height parent, or a `height`). |

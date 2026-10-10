@@ -34,7 +34,6 @@
     "i18next": "^26.3.2",
     "js-yaml": "^4.1.1",
     "jsqr": "^1.4.0",
-    "lucide": "^1.55.0",
     "lucide-react": "^1.55.0",
     "motion": "^14.1.0",
     "pixi-filters": "^6.1.5",

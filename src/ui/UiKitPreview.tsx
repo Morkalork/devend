@@ -3,7 +3,7 @@
  * stage 1): the place to look at a change to the kit before any screen does.
  */
 import { useState } from "react";
-import { Snowflake, Zap, Shield, ArrowLeft } from "lucide";
+import { Snowflake, Zap, Shield, ArrowLeft } from "lucide-react";
 import { UiHost } from "./UiHost";
 import { useViewportSize } from "./viewport";
 import { COLOR, RADIUS, TEXT } from "./theme";

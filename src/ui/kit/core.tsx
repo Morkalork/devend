@@ -12,9 +12,8 @@ import type { Texture, TextStyleFontWeight } from "pixi.js";
 import type { LayoutStyles } from "@pixi/layout";
 import { COLOR, RADIUS, TEXT, type FontRole } from "../theme";
 import { RESOLUTION, textStyle, tint } from "./style";
-import { iconTexture } from "./icons";
+import { iconTexture, type IconSource } from "./icons";
 import { usePress, type PressHandlers } from "./press";
-import type { IconNode } from "lucide";
 import "../elements";
 import type { LayoutContainer } from "@pixi/layout/components";
 
@@ -121,7 +120,7 @@ export function Label(p: LabelProps) {
 // ── Icon ───────────────────────────────────────────────────────────────────
 
 export interface IconProps {
-  icon: IconNode;
+  icon: IconSource;
   size?: number;
   color?: number;
   strokeWidth?: number;
@@ -178,7 +177,7 @@ export type ButtonVariant = "primary" | "outline" | "ghost" | "danger" | "second
 
 export interface ButtonProps extends PressHandlers {
   text?: string;
-  icon?: IconNode;
+  icon?: IconSource;
   variant?: ButtonVariant;
   size?: "sm" | "md" | "lg";
   /** The colour of an outline or ghost button. */

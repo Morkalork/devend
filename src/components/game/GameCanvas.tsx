@@ -894,6 +894,13 @@ export function GameCanvas({
   // NOTE: game.screenSize is in physical pixels (×devicePixelRatio); the overlay
   // lives in CSS-pixel/viewport space, so it must use these instead.
   const [canvasCssWidth, setCanvasCssWidth] = useState(0);
+  /**
+   * The container's top-left and size on screen, in CSS px. The board's
+   * overlays are drawn on the interface canvas (CANVAS_UI_PLAN.md), which
+   * covers the whole screen, so they are positioned from here rather than
+   * inside this container.
+   */
+  const [containerBox, setContainerBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [canvasCssHeight, setCanvasCssHeight] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0, boardTopPct: 5 });
@@ -2523,6 +2530,8 @@ export function GameCanvas({
       const container = containerRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
+      setContainerBox(prev => (prev.x === rect.left && prev.y === rect.top && prev.width === rect.width && prev.height === rect.height)
+        ? prev : { x: rect.left, y: rect.top, width: rect.width, height: rect.height });
       // The tutorial overlay renders `absolute inset-0` INSIDE this container, so
       // it shares the container's coordinate space (and any page-transition
       // transform). Give it the ACTUAL board box relative to the container's

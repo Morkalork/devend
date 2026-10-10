@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate } from "motion";
 import type { LayoutContainer } from "@pixi/layout/components";
-import { X, Info } from "lucide";
+import { X, Info } from "lucide-react";
 import { COLOR, RADIUS, TEXT } from "../theme";
 import { Icon, Label, Pressable, View, type Layout } from "./core";
 import { tint } from "./style";
