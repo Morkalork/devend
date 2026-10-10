@@ -54,7 +54,8 @@ export const FONT = {
 export type FontRole = keyof typeof FONT;
 
 /** The radius the DOM interface used (--radius: 0.75rem). */
-export const RADIUS = { sm: 6, md: 8, lg: 12, xl: 16, full: 999 } as const;
+/** Tailwind's radii with this project's --radius (0.75rem): `rounded` 4, sm 8, md 10, lg 12, xl 12, 2xl 16. */
+export const RADIUS = { base: 4, sm: 8, md: 10, lg: 12, xl: 12, "2xl": 16, "3xl": 24, full: 999 } as const;
 
 /** Tailwind's spacing unit, so `p-4` becomes `SPACE * 4`. */
 export const SPACE = 4;

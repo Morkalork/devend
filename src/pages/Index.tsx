@@ -26,6 +26,7 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { GameErrorBoundary } from '@/components/GameErrorBoundary';
 import { flushRunSave } from '@/lib/runSaveFlush';
 import { adminOnHere } from '@/lib/adminAccess';
+import { CanvasUiRoot } from '@/ui/CanvasUiRoot';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
@@ -56,6 +57,8 @@ import { todayKey, previousDayKey } from '@/lib/runRng';
  */
 // `GameScreenName`, aliased: the bare name is the component in this file.
 const BOARD_SCREENS: GameScreenName[] = ['game', 'tutorial', 'pairLoopback'];
+/** Admin's own tools: DOM screens with no canvas interface at all. */
+const DOM_ONLY_SCREENS: GameScreenName[] = ['admin', 'mapBuilder', 'upgradeAtlas', 'nearbyDiagnostics', 'pairLoopback'];
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
@@ -824,6 +827,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
       />
 
       <TapToStartGate accentColor={accentHex} />
+
+      {/* The interface canvas (CANVAS_UI_PLAN.md): one for every screen but
+          the DOM admin tools. Screens draw on it through <CanvasLayer>. */}
+      {!DOM_ONLY_SCREENS.includes(navigation.currentScreen) && <CanvasUiRoot />}
     </>
   );
 }

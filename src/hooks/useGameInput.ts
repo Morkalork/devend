@@ -6,6 +6,7 @@
  */
 
 import { useEffect, RefObject } from "react";
+import { uiCovers } from "@/ui/hitGate";
 import { boardAngleFor } from "@/lib/boardTilt";
 import { CanvasGameState } from "@/types/gameState";
 import { boardEntityAt, type BoardEntityHit } from "@/lib/boardEntityInfo";
@@ -167,6 +168,9 @@ export function useGameInput(
 
       const game = gameRef.current;
       if (!game) return;
+      // A touch on a canvas-interface widget that sits over the board (a
+      // banner, an overlay's handle) is the widget's, not a cut (ui/hitGate).
+      if (uiCovers(e.clientX, e.clientY)) return;
 
       // Second-finger cancel, for a Redeploy pull. The same meaning the second
       // finger already has for a cut, and it must come first: a throw that

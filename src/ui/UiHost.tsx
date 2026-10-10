@@ -110,7 +110,11 @@ function EventBridge(): null {
   return null;
 }
 
-export function UiHost({ children }: { children: ReactNode }) {
+/**
+ * `lockPage` false leaves the page lock to the caller (CanvasUiRoot locks only
+ * while a layer is up); the Admin preview locks for as long as it is open.
+ */
+export function UiHost({ children, lockPage = true }: { children: ReactNode; lockPage?: boolean }) {
   const [fontsReady, setFontsReady] = useState(false);
   // Children wait for the application's own init, which is where @pixi/layout
   // loads Yoga. @pixi/react renders updates that arrive while init is still
@@ -125,10 +129,11 @@ export function UiHost({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!lockPage) return;
     const html = document.documentElement;
     html.classList.add("canvas-ui");
     return () => html.classList.remove("canvas-ui");
-  }, []);
+  }, [lockPage]);
 
   if (!fontsReady) return null;
   return (
