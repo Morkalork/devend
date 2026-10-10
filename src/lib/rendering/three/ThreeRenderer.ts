@@ -48,6 +48,8 @@ import { Solids3D } from "./solids3d";
 import { Balls3D } from "./balls3d";
 import { LAMP_HEIGHT, Lights3D, monitorPlacement, roomLevel, wantedLights, type BallTone } from "./lights3d";
 import { Explosions3D } from "./explosions3d";
+import { Props3D } from "./props3d";
+import { Zones3D } from "./zones3d";
 import { OutputPass } from "./outputPass";
 import { CutPreview3D, createPreviewUniforms, shadowOnlyMaterial } from "./cutPreview3d";
 import {
@@ -67,6 +69,8 @@ interface Rig {
   solids: Solids3D;
   balls: Balls3D;
   explosions: Explosions3D;
+  props: Props3D;
+  zones: Zones3D;
   lights: Lights3D;
   materials: Material[];
 }
@@ -172,12 +176,18 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     });
     const wallMat = makeSurfaceMaterial(this.shared, { tier, sampleSquash: [1, 1, 0.42], roughness: 0.7 });
     const solidMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75 });
+    // Plates lie on the floor, so they darken with it under the cut preview.
+    const plateMat = makeSurfaceMaterial(this.shared, {
+      tier, inset: true, roughness: 0.9, preview: this.previewUniforms,
+    });
     const floor = new Floor3D(floorMat);
     const walls = new Walls3D(wallMat);
     const solids = new Solids3D(solidMat);
     this.board.add(floor.mesh, walls.mesh, solids.mesh);
     const balls = new Balls3D(this.board, preset.sphereSegments);
     const explosions = new Explosions3D(this.board, preset.maxShards);
+    const props = new Props3D(this.board, preset.sphereSegments);
+    const zones = new Zones3D(this.board, plateMat);
     const lights = new Lights3D(this.scene, this.board, preset);
     const preview = new CutPreview3D(this.board, this.previewUniforms);
     const phaseMat = shadowOnlyMaterial();
@@ -185,9 +195,9 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     phaseShadows.mesh.receiveShadow = false;
     this.board.add(phaseShadows.mesh);
     this.rig = {
-      preset, floor, walls, solids, balls, explosions, lights,
+      preset, floor, walls, solids, balls, explosions, props, zones, lights,
       preview, phaseShadows, sparks: new CircuitSparks(),
-      materials: [floorMat, wallMat, solidMat, phaseMat],
+      materials: [floorMat, wallMat, solidMat, plateMat, phaseMat],
     };
     this.governor.reset(performance.now());
     // The frame's resolution and MSAA are part of the tier. Through sleek, so
@@ -204,6 +214,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     rig.solids.dispose();
     rig.balls.dispose();
     rig.explosions.dispose();
+    rig.props.dispose();
+    rig.zones.dispose();
     rig.preview.dispose();
     this.board.remove(rig.phaseShadows.mesh);
     rig.phaseShadows.dispose();
@@ -302,6 +314,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       pxPerUnit: game.boardRect.scale * this.size.scale,
     });
     rig.explosions.sync(game, now);
+    rig.props.sync(game, now);
+    rig.zones.sync(game, now);
 
     // Light as a mechanic (lightMechanics.ts, cutPreview3d.ts).
     const look = getLightLook();

@@ -9,7 +9,8 @@
  */
 
 import { normalizeAreaKind } from "@/lib/coloredAreas";
-import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
+import { entityRise } from "@/lib/objectRise";
+import { BendShapeFields, LevelConfig, LevelEntity, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
 import { MoverState, buildMoverPolygon, buildRotorOutline } from "@/lib/physics/moverState";
 import { GameModifiers, MAX_STARTING_CAPTURE_PERCENT } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
@@ -169,6 +170,8 @@ export interface InitialGameData {
   deliveryBoxes: DeliveryBoxState[];
   launchers: LauncherState[];
   bouncers: Map<Polygon, BouncerSpec>;
+  /** Authored 3D heights, by polygon identity (LevelEntity.rise). */
+  obstacleRise: Map<Polygon, number>;
   deformables: Map<Polygon, DeformState>;
   portals: Map<Polygon, PortalSpec>;
   cages: CageState[];
@@ -303,6 +306,11 @@ export function createInitialGameData(
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
   const bouncers = new Map<Polygon, BouncerSpec>();
+  const obstacleRise = new Map<Polygon, number>();
+  const noteRise = (poly: Polygon, entity: LevelEntity) => {
+    const r = entityRise(entity);
+    if (r !== undefined) obstacleRise.set(poly, r);
+  };
   const deformables = new Map<Polygon, DeformState>();
   const portals = new Map<Polygon, PortalSpec>();
   const cages: CageState[] = [];
@@ -448,6 +456,7 @@ export function createInitialGameData(
           if (side === entity.facing) continue; // the muzzle
           const turned = spin(poly);
           obstaclePolygons.push(turned);
+          noteRise(turned, entity);
           shell.push(turned);
           allWalls.push(...createWallsFromPolygon(turned, `launcher-${entity.id}-${side}`, false));
         }
@@ -483,6 +492,7 @@ export function createInitialGameData(
         const mouthId = `${entity.id}-mouth`;
         for (const { side, poly } of sides) {
           obstaclePolygons.push(poly);
+          noteRise(poly, entity);
           const walls = createWallsFromPolygon(
             poly, side === entity.facing ? `obstacle-${mouthId}` : `cage-${entity.id}-${side}`, false,
           );
@@ -526,6 +536,7 @@ export function createInitialGameData(
         ];
         for (const { side, poly } of sides) {
           obstaclePolygons.push(poly);
+          noteRise(poly, entity);
           const walls = createWallsFromPolygon(poly, `box-${entity.id}-${side}`, false);
           if (side === entity.mouth) {
             // The mouth admits balls travelling INTO the box: a lid on top is
@@ -683,6 +694,7 @@ export function createInitialGameData(
           };
         }
         obstaclePolygons.push(obstaclePolygon);
+        noteRise(obstaclePolygon, entity);
         // One-way membranes and ball-type gates. Recorded only when they say
         // something, so an ordinary wall costs nothing and the map stays empty
         // of no-op entries.
@@ -1331,6 +1343,7 @@ export function createInitialGameData(
       direction: 1,
       polygon:   { vertices: [] },
       ...shapeProps,
+      ...(entityRise(e) !== undefined ? { rise: entityRise(e) } : {}),
     };
     // A bent mover carries its arc as an offset-from-home outline, computed
     // once here. See MoverState.bentOutline for why it cannot be per-step.
@@ -1462,6 +1475,7 @@ export function createInitialGameData(
     deliveryBoxes,
     launchers,
     bouncers,
+    obstacleRise,
     deformables,
     portals,
     cages,

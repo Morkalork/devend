@@ -315,6 +315,7 @@ export class SleekRenderer {
     this.board.showWash = false;
     this.balls.hybrid = true;
     this.fx.hybrid = true;
+    this.props.hybrid = true;
 
     // The split-warn tint still lives in the shadow plane; nothing else does.
     this.shadowPlane.mask = this.board.shadowMask;

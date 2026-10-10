@@ -35,6 +35,8 @@ export interface MoverState {
    * cost of a rotation is the same two multiplies as a translation.
    */
   rotorOutline?: { x: number; y: number }[];
+  /** Authored 3D height multiple (BaseEntity.rise), rendering only. */
+  rise?: number;
   /** Current displacement from home (−range/2 … +range/2). */
   offset: number;
   direction: 1 | -1;

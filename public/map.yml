@@ -43,6 +43,7 @@ levels:
   # bar at this map's denominator (one ball, so it never drops below the initial
   # cell count). Nothing points at it. Some players will seal there by accident
   # and get paid, which teaches pocket size better than any explanation.
+  # Heights (3D board, objectRise.ts): the doorway is the map, so its jambs stand tall; the nook's lip sits low, the invitation to seal.
   - id: level-1
     level: 1
     premise: "The one where locking the only ball wins outright, so the corner nook is a button marked finish now."
@@ -60,6 +61,7 @@ levels:
           count: 1
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -67,6 +69,7 @@ levels:
         width: 26
         height: 300
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -74,6 +77,7 @@ levels:
         width: 26
         height: 300
       - id: nook-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 700
@@ -94,6 +98,7 @@ levels:
   #
   # A nook per chamber, both 155x150 and both superior-sized, so the choice is
   # which one to spend a ball on and not whether a pocket qualifies.
+  # Heights (3D board, objectRise.ts): tall jambs for the doorway that keeps the balls apart, low lips on the two nooks.
   - id: level-2
     level: 2
     premise: "The one where the doorway keeps two balls apart, and the win wants one sealed on each side of it."
@@ -117,6 +122,7 @@ levels:
           count: 1
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -124,6 +130,7 @@ levels:
         width: 26
         height: 330
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -131,6 +138,7 @@ levels:
         width: 26
         height: 330
       - id: nook-lip-right
+        rise: 0.75
         kind: wall
         shape: rect
         x: 700
@@ -138,6 +146,7 @@ levels:
         width: 155
         height: 24
       - id: nook-lip-left
+        rise: 0.75
         kind: wall
         shape: rect
         x: 45
@@ -170,6 +179,7 @@ levels:
   # has just learned is now wrong, which is the cheapest legible complication
   # available this early - no mechanic on the board yet can open or close a
   # passage, and adding a ball is the axis of last resort.
+  # Heights (3D board, objectRise.ts): tall jambs, a low lip; the syntax box is an inlaid plate, ground rather than a room.
   - id: level-3
     level: 3
     premise: "The one where the light syntax box is the win: clear the board and lock a ball inside it."
@@ -187,6 +197,7 @@ levels:
           count: 1
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -194,6 +205,7 @@ levels:
         width: 26
         height: 330
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -201,6 +213,7 @@ levels:
         width: 26
         height: 330
       - id: nook-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 630
@@ -251,6 +264,7 @@ levels:
   # board reacts to you, and then it does not. A duplication beat would have
   # been the obvious choice and is a no-op below level 11 (DUPLICATION_MIN_LEVEL)
   # - it was in the first draft of this map and mapBeats.test.ts caught it.
+  # Heights (3D board, objectRise.ts): tall jambs, a low lip; the guard stands at a mover's height, prouder than the lip it walks past.
   - id: level-4
     level: 4
     premise: "The one where a guard walks across the box's door, so closing the box is a question of when."
@@ -276,6 +290,7 @@ levels:
         height: 225
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -283,6 +298,7 @@ levels:
         width: 26
         height: 300
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -290,6 +306,7 @@ levels:
         width: 26
         height: 300
       - id: nook-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 630
@@ -345,6 +362,7 @@ levels:
   # The seams between shards are 8 units, passages to nothing. The doorway
   # below the column is 210. Those numbers only survive because this map is at
   # variety 0; see the note at the top of act I.
+  # Heights (3D board, objectRise.ts): tall jambs; the shards take the shard default (low), so the column visibly drops where one touch opens it.
   - id: level-5
     level: 5
     premise: "The one where a single touch opens a slot in a short column of shards, and nothing else is new."
@@ -363,6 +381,7 @@ levels:
           of: shards
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -402,6 +421,7 @@ levels:
         height: 28
         brittle: true
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -464,6 +484,7 @@ levels:
   # goes whether the balls got there or not, announced. It is the rescue for
   # the shard line, and it opens the two right-hand alcoves into one: whoever
   # was saving that pair loses it.
+  # Heights (3D board, objectRise.ts): the spine and its anchors stand tall as the building; the teeth are low shards, plainly the part that goes.
   - id: level-6
     level: 6
     premise: "The one where each room's best pockets are walled with the shards you have to break."
@@ -482,6 +503,7 @@ levels:
           of: shards
     entities:
       - id: anchor-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -489,6 +511,7 @@ levels:
         width: 26
         height: 84
       - id: spine
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -496,6 +519,7 @@ levels:
         width: 26
         height: 510
       - id: anchor-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -647,6 +671,7 @@ levels:
         height: 28
         brittle: true
       - id: nook-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 700
@@ -691,6 +716,7 @@ levels:
   # one out in the open bottom right, easy to reach. Which one you break is the
   # map's decision. The shard count came down from six to four to pay for the
   # new line.
+  # Heights (3D board, objectRise.ts): the vault lip sits low; the chests are squat and the partition is a low run of shards, so nothing on this board reads as permanent but the frame.
   - id: level-7
     level: 7
     premise: "The one where the chest is worth breaking, and the better of the two sits behind the patrol."
@@ -731,6 +757,7 @@ levels:
       # the left. The lip still makes it a pocket you have to mean to enter,
       # and the patrol below still decides when.
       - id: vault-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 585
@@ -933,6 +960,7 @@ levels:
   # was closing out the map, and their remaining% - the one number they have
   # been steering by for eight maps - goes up. Telegraphed, so it is a shock
   # rather than an ambush.
+  # Heights (3D board, objectRise.ts): the sliding door stands as tall as the jambs it sits between, flush in the wall; the curtain stands at fence height.
   - id: level-8
     level: 8
     premise: "The one where only a ball in the curtain's room can open the box, and a sliding door decides who gets in."
@@ -963,6 +991,7 @@ levels:
         'y': 640
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -970,6 +999,7 @@ levels:
         width: 26
         height: 300
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -981,6 +1011,7 @@ levels:
       # plugs the doorway 43% of the time on a four-second rhythm and stands
       # on the line a closing fence would take 27% of it.
       - id: door
+        rise: 1.5
         kind: mover
         shape: rect
         x: 437
@@ -991,6 +1022,7 @@ levels:
         range: 120
         speed: 60
       - id: curtain-jamb
+        rise: 1.5
         kind: wall
         shape: rect
         x: 555
@@ -1047,6 +1079,7 @@ levels:
   # THE TURN: map 3's speed spike, back at its smallest and latest. The act
   # opened by teaching that the board reacts to progress; it closes by charging
   # for it when there is the least room left to absorb it.
+  # Heights (3D board, objectRise.ts): tall jambs with the patrol filling the doorway at their height; low lips on the pay nook and the vault.
   - id: level-9
     level: 9
     premise: "The one where everything act I taught is in the win at once: the box, the shards and a monolith."
@@ -1086,6 +1119,7 @@ levels:
         'y': 200
     entities:
       - id: jamb-top
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -1093,6 +1127,7 @@ levels:
         width: 26
         height: 285
       - id: jamb-bottom
+        rise: 1.5
         kind: wall
         shape: rect
         x: 437
@@ -1100,6 +1135,7 @@ levels:
         width: 26
         height: 315
       - id: pay-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 45
@@ -1107,6 +1143,7 @@ levels:
         width: 200
         height: 24
       - id: vault-lip
+        rise: 0.75
         kind: wall
         shape: rect
         x: 585
@@ -1215,6 +1252,7 @@ levels:
         height: 29
         brittle: true
       - id: patrol
+        rise: 1.5
         kind: mover
         shape: rect
         x: 437
@@ -1238,6 +1276,7 @@ levels:
     balls: []
 
 
+  # Heights (3D board, objectRise.ts): the pillar is the one object on the board, and stands like a monument the release candidate circles.
   - id: level-10
     level: 10
     premise: "The one where the release candidate has to be fenced into the syntax box before it ships."
@@ -1297,6 +1336,7 @@ levels:
         maxMinions: 2
     entities:
       - id: pillar
+        rise: 1.8
         kind: wall
         shape: circle
         cx: 450
@@ -1342,6 +1382,7 @@ levels:
   # (fifteen brakes) only reached 1.9x at 30 s for half as much hazard pay
   # again, so two it is. If the top of the pull is still unlockable in the
   # hand, the next lever is the pull's ceiling, not more bumpers.
+  # Heights (3D board, objectRise.ts): the rafter and the curtain's jamb stand tall as structure; the slab is a proud monolith and the grit low shards.
   - id: level-11
     level: 11
     premise: "The one where the launch sets the whole map's speed before any fence exists, and two bumpers let you spend it back."
@@ -1398,6 +1439,7 @@ levels:
         bounceHours: 2
         bounceKick: 1
       - id: rafter
+        rise: 1.5
         kind: wall
         shape: rect
         x: 250
@@ -1446,6 +1488,7 @@ levels:
         height: 28
         brittle: true
       - id: curtain-jamb
+        rise: 1.5
         kind: wall
         shape: rect
         x: 560
@@ -1482,6 +1525,7 @@ levels:
   #
   # The bumper met on 11 as a brake that never accelerates. Here it is the
   # whole machine: green while its bank lasts, a red pop bumper once spent.
+  # Heights (3D board, objectRise.ts): nothing authored; the roles say it: bumpers sit sprung and low, the strut and sump stand proud as monoliths, the grit low as shards.
   - id: level-12
     level: 12
     premise: "The one where bumpers pay to brake your speed until their bank runs dry, then start throwing balls faster."
@@ -1608,6 +1652,7 @@ levels:
   # THE TURN: a small speed spike at 35% remaining, announced. The map runs at
   # 0.75 speed so a bent cut can be planned; the spike charges for taking too
   # long to plan it.
+  # Heights (3D board, objectRise.ts): the mirror stands tall and thin, a pane on its edge rather than another slab.
   - id: level-13
     level: 13
     premise: "The one where the box sits where no straight fence can close it, and the mirror bends your cut around it."
@@ -1636,6 +1681,7 @@ levels:
         height: 160
     entities:
       - id: mirror-a
+        rise: 1.4
         kind: wall
         shape: rect
         x: 470
@@ -1651,6 +1697,7 @@ levels:
     balls: []
 
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
+  # Heights (3D board, objectRise.ts): nothing stands on this board but the frame; the turning room is the mechanic.
   - id: level-14
     level: 14
     premise: "The one where the room turns a quarter every ten seconds and down goes with it."
@@ -1720,6 +1767,7 @@ levels:
     entities: []
     balls: []
 
+  # Heights (3D board, objectRise.ts): the cup's walls stand tall, so the cup reads as a vessel the well pours into.
   - id: level-15
     level: 15
     premise: "The one where a gravity well drops balls into the cup the win needs, if you close the lid in time."
@@ -1783,6 +1831,7 @@ levels:
     # Its mouth is the line y 650 between their tops, one fence wide.
     entities:
       - id: cup-west
+        rise: 1.3
         kind: wall
         shape: rect
         x: 329
@@ -1790,6 +1839,7 @@ levels:
         width: 26
         height: 205
       - id: cup-east
+        rise: 1.3
         kind: wall
         shape: rect
         x: 545
@@ -1798,6 +1848,7 @@ levels:
         height: 205
     balls: []
 
+  # Heights (3D board, objectRise.ts): the phasing pillars stand tall, so they visibly sink and rise; the deformable stands proud between them and the backlog slabs sit low.
   - id: level-16
     level: 16
     premise: "The one where the pillars in the divider vanish on a cycle, and the win wants a ball sealed on each side."
@@ -1909,6 +1960,7 @@ levels:
       # names, and it caught this before it was ever played. Every real way
       # across this board is now a 75-unit neck at the frame.
       - id: flake-top
+        rise: 1.6
         kind: wall
         shape: rect
         x: 430
@@ -1918,6 +1970,7 @@ levels:
         isPhasing: true
         phaseCycleSeconds: 9
       - id: flake-bottom
+        rise: 1.6
         kind: wall
         shape: rect
         x: 430
@@ -1934,6 +1987,7 @@ levels:
       # a clear 75-unit neck), so the board is never actually sealed in half - a
       # divider with no gap at all would make each half a separate map.
       - id: the-slab
+        rise: 1.2
         kind: wall
         shape: rect
         x: 425
@@ -1971,6 +2025,7 @@ levels:
       # has a cheap first move and a lock is never gated on threading the
       # middle. Plain solids, no flags: the map already has three ideas.
       - id: backlog-a
+        rise: 0.8
         kind: wall
         shape: rect
         x: 110
@@ -1978,6 +2033,7 @@ levels:
         width: 150
         height: 40
       - id: backlog-b
+        rise: 0.8
         kind: wall
         shape: rect
         x: 640
@@ -1991,6 +2047,7 @@ levels:
   # build record in DEMOLITION_PLAN.md): a wall of glass along the top edge,
   # a vault set into its back row, and a serve fired up into it from the
   # bottom. Every strip you seal from the bottom shortens the bounce.
+  # Heights (3D board, objectRise.ts): the wall of bricks is low shards under the vault's squat chest; the corner shelf sits low.
   - id: level-17
     level: 17
     premise: "The one where the balls are your hammer, and the wall of shards opens wherever they hit it."
@@ -2352,6 +2409,7 @@ levels:
         height: 22
         brittle: true
       - id: corner-shelf
+        rise: 0.75
         kind: wall
         shape: rect
         x: 760
@@ -2368,6 +2426,7 @@ levels:
   # level 4 and the wiper on 17 restated), so every cut across the centre is a
   # bet on where the arm will be. The rotor's second map, and the one Control
   # Freak is aimed at: braking the arm turns the bet into a decision.
+  # Heights (3D board, objectRise.ts): the windmill's room stands taller than anything else, its breakable side matching the rest of the room.
   - id: level-18
     level: 18
     premise: "The one where a windmill turns inside the room that pays triple, and every cut across it is a bet on the arm."
@@ -2417,6 +2476,7 @@ levels:
         axis: horizontal
         range: 0
       - id: wm-n
+        rise: 1.4
         kind: wall
         shape: rect
         x: 320
@@ -2424,6 +2484,7 @@ levels:
         width: 190
         height: 20
       - id: wm-w
+        rise: 1.4
         kind: wall
         shape: rect
         x: 320
@@ -2431,6 +2492,7 @@ levels:
         width: 20
         height: 170
       - id: wm-s
+        rise: 1.4
         kind: wall
         shape: rect
         x: 390
@@ -2440,6 +2502,7 @@ levels:
         breakable: true
         hitsToBreak: 3
       - id: wm-e
+        rise: 1.4
         kind: wall
         shape: rect
         x: 560
@@ -2447,6 +2510,7 @@ levels:
         width: 20
         height: 170
       - id: nook-shelf
+        rise: 0.75
         kind: wall
         shape: rect
         x: 45
@@ -2497,6 +2561,7 @@ levels:
   # a chest every phase and smashing them is the win. Two of four are needed;
   # the other two are the greed hook, and cracking one means fencing near a
   # bar. Four bouncy sides at 1.05, like 14, so nothing pools dead on a floor.
+  # Heights (3D board, objectRise.ts): nothing authored; four patrol bars at a mover's height sweep over four squat chests.
   - id: level-19
     level: 19
     premise: "The one where four patrol bars sweep a board whose floor turns every ten seconds, and two of four chests are the win."

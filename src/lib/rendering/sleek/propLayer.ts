@@ -18,7 +18,7 @@
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { dashedLine } from "./dashedLine";
-import { PALETTE, mix } from "./palette";
+import { PALETTE, PICKUP_COLORS, mix } from "./palette";
 import { ambientAt, contactFor, shadowFor, slabHeight, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
 import { getBug } from "@/lib/bugs";
@@ -26,19 +26,14 @@ import { BUG_BIRTH_SECONDS, BUG_EXPIRY_WARN_SECONDS, BUG_RADIUS } from "@/lib/ph
 
 type W2S = (x: number, y: number) => Pt;
 
-/** Colour per pickup effect, so a token is identifiable before you read it. */
-const PICKUP_COLORS: Record<string, number> = {
-  overtime: 0x00ff88,
-  capRaise: 0xffd76b,
-  freezeCharge: 0xbfefff,
-  fork: 0xff9ebf,
-  freeShopItem: 0x9fe6ff,
-  extraLife: 0xff5b7a,
-  rainbowConvert: 0xffbf80,
-};
-
 export class PropLayer {
   readonly container = new Container();
+  /**
+   * Under the 3D board the props' bodies are real meshes (three/props3d.ts),
+   * so this layer keeps only what lies on the floor: glows, the fuse's blast
+   * ring, the terminal's link, a bug's birth and warning rings.
+   */
+  hybrid = false;
 
   /** The renderer's shared floor plane, set each frame in sync(). */
   private shadows!: Graphics;
@@ -137,6 +132,7 @@ export class PropLayer {
       this.glows
         .circle(p.x, p.y, r + (t.lit ? 5 : 4 + 6 * pulse) * scale)
         .fill({ color, alpha: t.lit ? 0.22 : 0.10 + pulse * 0.06 });
+      if (this.hybrid) continue;
       this.bodies
         .circle(p.x, p.y, r + (t.lit ? 0 : 1.5 * pulse * scale))
         .stroke({ width: Math.max(2, 3 * scale), color, alpha: t.lit ? 1 : 0.7 + 0.3 * pulse });
@@ -169,11 +165,13 @@ export class PropLayer {
         this.bodies
           .circle(p.x, p.y, ch.blastRadius * scale)
           .stroke({ width: 1, color: PALETTE.danger, alpha: 0.20 + blink * 0.25 });
+        if (this.hybrid) continue;
         this.bodies
           .circle(p.x, p.y, r)
           .fill({ color: PALETTE.danger, alpha: 0.7 + blink * 0.3 });
       } else {
         this.glows.circle(p.x, p.y, r * 1.8).fill({ color: PALETTE.amber, alpha: 0.10 });
+        if (this.hybrid) continue;
         this.bodies.circle(p.x, p.y, r).stroke({ width: Math.max(1, 2 * scale), color: PALETTE.amber, alpha: 0.8 });
         this.bodies.circle(p.x, p.y, r * 0.35).fill({ color: PALETTE.amber, alpha: 0.9 });
       }
@@ -216,6 +214,12 @@ export class PropLayer {
       this.glows
         .circle(c.x, c.y, r * (1.5 + pulse * 0.25))
         .fill({ color, alpha: (0.10 + pulse * 0.08) * fade });
+      if (this.hybrid) {
+        if (game.freezePickups) {
+          this.glows.circle(c.x, c.y, r * 1.15).stroke({ width: 1, color: PALETTE.frost, alpha: 0.6 * fade });
+        }
+        continue;
+      }
 
       const amb = ambientAt(light, c.x, c.y);
       this.bodies
@@ -318,7 +322,7 @@ export class PropLayer {
 
       // Six legs, three a side, swinging on the flight code's own phase.
       const amb = ambientAt(light, c.x, c.y);
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 3 && !this.hybrid; i++) {
         const along = (i - 1) * r * 0.55;
         const swing = Math.sin(bug.wander * 2.1 + bug.wanderSeed + i) * 0.5;
         for (const side of [1, -1]) {
@@ -333,19 +337,19 @@ export class PropLayer {
       }
 
       // Abdomen and head: two bodies along the heading, so it has a front.
-      this.bodies
+      if (!this.hybrid) this.bodies
         .ellipse(c.x - cos * r * 0.35, c.y - sin * r * 0.35, r * 0.95, r * 0.7)
         .fill({ color: mix(PALETTE.shadow, color, 0.45 + amb * 0.45), alpha: fade });
       this.bodies
         .circle(c.x + cos * r * 0.6, c.y + sin * r * 0.6, r * 0.5)
         .fill({ color: mix(PALETTE.shadow, color, 0.6 + amb * 0.4), alpha: fade });
-      this.bodies
+      if (!this.hybrid) this.bodies
         .ellipse(c.x - cos * r * 0.35, c.y - sin * r * 0.35, r * 0.95, r * 0.7)
         .stroke({ width: 1, color, alpha: 0.85 * fade });
 
       // The lit limb every round object on this board wears, aimed at the monitor.
       const bearing = Math.atan2(light.y - c.y, light.x - c.x);
-      this.bodies
+      if (!this.hybrid) this.bodies
         .circle(c.x + Math.cos(bearing) * r * 0.3, c.y + Math.sin(bearing) * r * 0.3, r * 0.22)
         .fill({ color: 0xffffff, alpha: 0.45 * light.level * fade });
 
@@ -385,6 +389,7 @@ export class PropLayer {
         .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r, r * 0.6)
         .fill({ color: PALETTE.shadow, alpha: cast.alpha * 0.8 });
       this.glows.circle(c.x, c.y, r * 2).fill({ color: PALETTE.amber, alpha: 0.14 });
+      if (this.hybrid) continue;
       this.bodies.circle(c.x, c.y, r).fill({ color: PALETTE.amber, alpha: 0.95 });
       this.bodies.circle(c.x, c.y, r).stroke({ width: 1, color: 0xffe9b0, alpha: 0.9 });
     }

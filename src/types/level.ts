@@ -72,6 +72,19 @@ export interface BaseEntity {
   id: string;
   kind: string;
   shape: "rect" | "polygon" | "circle";
+  /**
+   * How tall this object stands on the 3D board, as a multiple of the
+   * standard slab (rendering/three/heights3d.ts). Absent takes the default for
+   * what the object IS - shards low, monoliths proud, chests squat - so this is
+   * only authored where a map has something to say with height: the doorway
+   * that is the map's idea standing taller than the lip that invites a seal.
+   *
+   * Rendering only. Physics is flat and a ball never goes over anything, so
+   * height may tell the player what an object is for but must never hint that
+   * it can be crossed. Honoured by walls, movers and the sides of launchers,
+   * cages and boxes; 0.25 to 2.5.
+   */
+  rise?: number;
 }
 
 // Wall entity - carves away playable space (subtracted from regions like cuts)

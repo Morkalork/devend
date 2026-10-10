@@ -1537,6 +1537,35 @@ a `lockedOut` failure costing a life. That is the tactical decision the win is
 there to create - keep a ball alive to break with - so the top-bar chip turns
 to a warning at one ball left, and the failure screen names what was missing.
 
+### 6.5 Height says what an object is for  *(Convention 5, 3D board)*
+
+The 3D board stands everything up, and how tall a thing stands is read before
+anything else about it. So height follows one rule across the ladder
+(`lib/objectRise.ts`), and a map authors `rise:` only where it has something
+to say with it:
+
+| | rise | why |
+|---|---|---|
+| shard | 0.6 (default) | glass a ball breaks on its way somewhere else; under a ball's own height |
+| chest | 0.8 (default) | a box worth opening, not part of the building |
+| plain wall | 1 (default) | the standard slab |
+| monolith | 1.25 (default) | three deliberate drives: a plan, so it stands proud |
+| membrane / gate | 0.35 (default) | some balls pass it, and a full wall a ball rolls through is the one thing height must never say |
+| the map's architecture | 1.3 to 1.8, authored | the doorway, spine or room that IS the premise |
+| lips and shelves | 0.75, authored | the invitation to seal, low enough to read as one |
+
+Bumpers sit low (0.7) and movers a little proud (1.15) whatever the map. Floor
+zones (syntax areas, wells, slow areas, fence-speed ground) are not furniture:
+they are plates a couple of units proud of the floor, because a boxed region
+reads as something a ball bounces off.
+
+Height is rendering only. Physics is flat and a ball never goes over
+anything, so height may say what an object is FOR but never that it can be
+crossed. Every ladder map carries a one-line `# Heights` note above its map
+entry (outside it, where the Map Builder's save keeps comments) saying what
+its heights are saying; `mapHeights.test.ts` holds the rule, the range and the
+notes.
+
 ## 7. Hard constraints the engine imposes
 
 These are not style advice. A map that breaks one of them is rejected by a test,

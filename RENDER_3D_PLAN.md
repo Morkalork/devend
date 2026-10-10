@@ -502,6 +502,39 @@ where 0 is the board without it (`lightLook.ts`):
 
 The 2D board has none of these; they are a reason to keep the 3D board on.
 
+## 9. The maps in 3D (built after the plan)
+
+"Rewrite the maps to 3D", read as: finish the 3D look on every map, gameplay
+untouched. Three parts:
+
+- **Authored heights.** Every object's height is a multiple of the slab,
+  `rise` on the entity (`lib/objectRise.ts`), editable in the Map Builder's
+  entity panel. Absent, it takes its role's default - shards 0.6, chests 0.8,
+  monoliths 1.25, one-way membranes and gates 0.35 - read off the live board
+  by `solids3d.roleRises`, so the defaults apply to every map, random shapes
+  included. All 19 ladder maps were then given heights by the same rule
+  (MAP_DESIGN_GUIDELINES.md 6.5): the architecture that is each map's premise
+  stands 1.3 to 1.8, the lips and shelves that invite a seal sit at 0.75, and
+  each map says so in a `# Heights` line above its entry in map.yml.
+  Rendering only.
+- **Props as bodies** (`three/props3d.ts`). Pickup tokens and chest loot are
+  faceted gems hovering over the floor, bugs are beetles on six legs facing
+  their heading, charge fuses are canisters whose cap blinks with the fuse,
+  terminals are pedestals with a lit lens. All cast real shadows. The 2D prop
+  layer keeps only what lies on the floor under them (`propLayer.hybrid`):
+  glows, the blast ring, the terminal's link, the bug's birth and warning
+  rings.
+- **Zones as plates, portals as rims** (`three/zones3d.ts`). Syntax areas,
+  gravity wells, slow areas and fence-speed ground are plates 1.6 units proud
+  of the floor, their tops showing what the 2D layer painted; they darken with
+  the floor under the cut preview. Portals get a breathing emissive rim.
+
+What did not change: the camera still looks straight down, so height reads
+through shadow length, the lit edges and the parallax toward the board's
+edges rather than through a slanted view. A slanted camera was offered and not
+chosen; it would change how touch maps onto the board. The 2D renderer ignores
+`rise` and draws its props as before.
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the

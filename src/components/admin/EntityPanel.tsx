@@ -21,6 +21,7 @@ import { withCurve, MAX_BEND } from "@/lib/admin/bendHandles";
 import { getAllBallTypes } from '@/lib/ballTypes';
 import { clampZoneSpeed, MIN_ZONE_SPEED, MAX_ZONE_SPEED, type FenceZone } from '@/lib/physics/fenceZones';
 import { normaliseDegrees } from '@/lib/bendRotation';
+import { defaultRise, entityRise, RISE_MIN, RISE_MAX } from '@/lib/objectRise';
 import { entityAddType, entityQualifiers, ADD_TYPE_LABEL } from '@/lib/admin/entityKind';
 
 /** The four bearings, laid out the way they point. */
@@ -780,6 +781,11 @@ export function EntityPanel({
             onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
           />
 
+          <RiseEditor
+            entity={selectedEntity}
+            onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
+          />
+
           {!isMoverEntity(selectedEntity) && (
             <PassRulesEditor
               entity={selectedEntity as WallRectEntity}
@@ -1174,6 +1180,55 @@ function PassRulesEditor({ entity, onUpdate }: {
               : 'Only the named types pass. Everything else treats this as a solid wall.'}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * How tall the object stands on the 3D board (LevelEntity.rise). Blank keeps
+ * the role's default, which the placeholder names, so a map only records a
+ * height it has something to say with.
+ */
+function RiseEditor({ entity, onUpdate }: {
+  entity: LevelEntity;
+  onUpdate: (updates: Partial<LevelEntity>) => void;
+}) {
+  const fallback = defaultRise(entity);
+  const set = (raw: string) => {
+    const v = entityRise({ rise: raw === '' ? undefined : Number(raw) });
+    onUpdate({ rise: v === undefined ? undefined : Math.round(v * 100) / 100 } as Partial<LevelEntity>);
+  };
+  return (
+    <div className="space-y-1 pt-2 border-t border-border">
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-sky-400 font-semibold whitespace-nowrap">3D height</span>
+        <input
+          id={`rise-${entity.id}`}
+          type="range"
+          min={RISE_MIN}
+          max={RISE_MAX}
+          step={0.05}
+          value={entity.rise ?? fallback.rise}
+          onChange={(e) => set(e.target.value)}
+          className="flex-1"
+        />
+        <input
+          type="number"
+          min={RISE_MIN}
+          max={RISE_MAX}
+          step={0.05}
+          value={entity.rise ?? ''}
+          placeholder={String(fallback.rise)}
+          onChange={(e) => set(e.target.value)}
+          className="w-16 px-1 py-0.5 rounded bg-background border border-border"
+        />
+      </label>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        {entity.rise === undefined
+          ? `Default for a ${fallback.role}: ${fallback.rise}x the slab. `
+          : `Authored. Blank it to go back to the ${fallback.role} default (${fallback.rise}x). `}
+        3D board only; physics is flat.
+      </p>
     </div>
   );
 }

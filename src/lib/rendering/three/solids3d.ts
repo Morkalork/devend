@@ -22,6 +22,7 @@ import type { Polygon, Vector2 } from "@/lib/polygon";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { simNow } from "@/lib/simClock";
 import { HEIGHTS } from "./heights3d";
+import { ROLE_RISE } from "@/lib/objectRise";
 
 export interface Solid {
   vertices: Vector2[];
@@ -63,19 +64,51 @@ function disc(cx: number, cy: number, r: number): Vector2[] {
   return out;
 }
 
+/**
+ * What each obstacle IS, as a height (objectRise.ts): shards, monoliths,
+ * chests and membranes. Rebuilt per call - a few dozen entries at most.
+ */
+export function roleRises(game: CanvasGameState): Map<Polygon, number> {
+  const out = new Map<Polygon, number>();
+  for (const d of game.destructibles ?? []) {
+    if (d.kind !== "breakable" || !d.obstaclePolygon || d.destroyed) continue;
+    // A fence-style breakable is drawn as a barrier line, so it stands like one.
+    const rise = d.chest ? ROLE_RISE.chest
+      : d.brittle ? ROLE_RISE.shard
+      : d.fenceStyle ? 1
+      : ROLE_RISE.monolith;
+    out.set(d.obstaclePolygon, rise);
+  }
+  for (const [poly, rule] of game.obstacleRules ?? []) {
+    if (rule.oneWay || rule.passTypes?.length) out.set(poly, ROLE_RISE.membrane);
+  }
+  return out;
+}
+
+/** An obstacle's height as a multiple of the slab: authored, else its role's. */
+export function obstacleRiseOf(
+  game: CanvasGameState, poly: Polygon, roles: Map<Polygon, number>,
+): number {
+  const authored = game.obstacleRise?.get(poly);
+  if (authored !== undefined) return authored;
+  if (game.bouncers?.has(poly)) return HEIGHTS.bouncer / HEIGHTS.slab;
+  return roles.get(poly) ?? 1;
+}
+
 /** Every solid standing on the board this frame, untilted world units. */
 export function collectSolids(game: CanvasGameState, heightScale: number, now = simNow()): Solid[] {
   const out: Solid[] = [];
   const portals = new Set<Polygon>(game.portals ? [...game.portals.keys()] : []);
   const phasing = new Map<Polygon, number>();
   for (const p of game.phasingObjects ?? []) phasing.set(p.polygon, p.alpha);
+  const roles = roleRises(game);
 
   for (const poly of game.obstaclePolygons) {
     if (portals.has(poly)) continue;
     const presence = phasing.get(poly) ?? 1;
     if (presence < 0.03) continue;
-    const base = game.bouncers?.has(poly) ? HEIGHTS.bouncer : HEIGHTS.slab;
-    out.push({ vertices: dented(poly.vertices), height: base * heightScale * presence });
+    const rise = obstacleRiseOf(game, poly, roles);
+    out.push({ vertices: dented(poly.vertices), height: HEIGHTS.slab * rise * heightScale * presence });
   }
 
   // A launcher shell standing in for its slabs until each section lets go.
@@ -88,12 +121,13 @@ export function collectSolids(game: CanvasGameState, heightScale: number, now = 
   }
 
   for (const m of game.movers) {
+    const height = (m.rise !== undefined ? HEIGHTS.slab * m.rise : HEIGHTS.mover) * heightScale;
     if (m.shape === "rect") {
-      out.push({ vertices: dented(m.polygon.vertices), height: HEIGHTS.mover * heightScale });
+      out.push({ vertices: dented(m.polygon.vertices), height });
     } else {
       const cx = m.homeX + (m.axis === "horizontal" ? m.offset : 0);
       const cy = m.homeY + (m.axis === "vertical" ? m.offset : 0);
-      out.push({ vertices: disc(cx, cy, m.radius ?? 18), height: HEIGHTS.mover * heightScale });
+      out.push({ vertices: disc(cx, cy, m.radius ?? 18), height });
     }
   }
   return out;

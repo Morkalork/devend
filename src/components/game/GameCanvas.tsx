@@ -1411,6 +1411,7 @@ export function GameCanvas({
       // shipped inert. launcherWiring.test.ts now fails if a field initGame
       // returns is never read here.
       game.bouncers = data.bouncers;
+      game.obstacleRise = data.obstacleRise;
       game.deformables = data.deformables;
       game.portals = data.portals;
       game.cages = data.cages;

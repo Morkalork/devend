@@ -191,3 +191,14 @@ export const PALETTE = {
 
 /** Ball body colours are authored per ball type; this is the fallback. */
 export const BALL_FALLBACK = 0xffffff;
+
+/** Colour per pickup effect, so a token is identifiable before you read it. */
+export const PICKUP_COLORS: Record<string, number> = {
+  overtime: 0x00ff88,
+  capRaise: 0xffd76b,
+  freezeCharge: 0xbfefff,
+  fork: 0xff9ebf,
+  freeShopItem: 0x9fe6ff,
+  extraLife: 0xff5b7a,
+  rainbowConvert: 0xffbf80,
+};

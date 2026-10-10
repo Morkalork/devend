@@ -117,6 +117,11 @@ export interface CanvasGameState {
   obstaclePolygons: Polygon[];
   /** Per-obstacle pass rules (one-way membranes, ball-type gates), by polygon identity. */
   obstacleRules?: ObstacleRuleMap;
+  /**
+   * Authored 3D heights (LevelEntity.rise), by polygon identity. Rendering
+   * only; an obstacle not in it takes its role's default (heights3d.ts).
+   */
+  obstacleRise?: Map<Polygon, number>;
   /** Pop bumpers, keyed by polygon identity the same way obstacleRules is. */
   bouncers?: Map<Polygon, BouncerSpec>;
   /** Deformables: walls that dent and tax rather than break. Keyed by the same

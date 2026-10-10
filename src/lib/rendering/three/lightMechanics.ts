@@ -23,9 +23,9 @@
  * The cut preview is the sixth and has its own module (cutPreview3d.ts).
  */
 import type { CanvasGameState, CircuitRuntimeTerminal } from "@/types/gameState";
-import type { Solid } from "./solids3d";
+import { obstacleRiseOf, roleRises, type Solid } from "./solids3d";
 import type { WantedLight } from "./lights3d";
-import { polygonCentroid } from "@/lib/polygon";
+import { polygonCentroid, type Polygon } from "@/lib/polygon";
 import { worldToGridIndex } from "@/lib/spaceGrid";
 import { getLockQuality } from "@/lib/scoring";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
@@ -147,11 +147,14 @@ export const PHASE_LEAD_SECONDS = 0.8;
 export function phaseCasters(game: CanvasGameState, gain: number, heightScale: number): Solid[] {
   const out: Solid[] = [];
   if (gain <= 0.001) return out;
+  let roles: Map<Polygon, number> | null = null;
   for (const obj of game.phasingObjects ?? []) {
     const until = secondsUntilSolid(obj, game.activePlaySeconds);
     if (until === null || until > PHASE_LEAD_SECONDS) continue;
     const rise = 1 - until / PHASE_LEAD_SECONDS;
-    out.push({ vertices: obj.polygon.vertices, height: HEIGHTS.slab * heightScale * rise * gain });
+    roles ??= roleRises(game);
+    const tall = obstacleRiseOf(game, obj.polygon, roles);
+    out.push({ vertices: obj.polygon.vertices, height: HEIGHTS.slab * tall * heightScale * rise * gain });
   }
   return out;
 }

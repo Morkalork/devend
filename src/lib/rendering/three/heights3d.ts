@@ -9,8 +9,10 @@
  * lower than a wall, which is a reading of the board in its own right.
  *
  * Every value is multiplied by the Admin height knob (render3dSettings.ts).
+ * Obstacles further take their role's or their map's `rise` (objectRise.ts).
  */
 import { SLAB_HEIGHT_WORLD } from "@/lib/rendering/sleek/light";
+import { BOUNCER_RISE, MOVER_RISE } from "@/lib/objectRise";
 
 export const HEIGHTS = {
   /** A fence the player drew. The slab height the 2D shadows were tuned to. */
@@ -20,7 +22,7 @@ export const HEIGHTS = {
   /** Static obstacles, breakables, mirrors, deformables. */
   slab: SLAB_HEIGHT_WORLD,
   /** Movers: a machine, a little prouder than the furniture it patrols past. */
-  mover: SLAB_HEIGHT_WORLD * 1.15,
+  mover: SLAB_HEIGHT_WORLD * MOVER_RISE,
   /** Pop bumpers: sprung, so lower and wider-looking. */
-  bouncer: SLAB_HEIGHT_WORLD * 0.7,
+  bouncer: SLAB_HEIGHT_WORLD * BOUNCER_RISE,
 } as const;
