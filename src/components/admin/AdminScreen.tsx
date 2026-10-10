@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RendererDiagCard } from './RendererDiagCard';
 import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
@@ -280,6 +281,8 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             effect between maps. */}
         <div className="mt-6 space-y-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Board renderer</h2>
+
+          <RendererDiagCard choice={renderer} />
 
           <button
             onClick={() => {

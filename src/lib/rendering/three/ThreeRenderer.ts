@@ -56,6 +56,7 @@ import {
   CircuitSparks, POCKET_GOLD, chargeLights, phaseCasters, pocketHeat, powerLevel,
 } from "./lightMechanics";
 import { getLightLook } from "@/lib/lightLook";
+import { recordShaderError } from "@/lib/rendering/rendererDiag";
 
 /** The live scene for one quality tier. Rebuilt whole when the tier changes. */
 interface Rig {
@@ -142,6 +143,14 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.renderer.autoClear = true;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFShadowMap;
+    // A shader that will not compile does not throw: that material simply
+    // stops drawing. Recorded so Admin can say so (rendererDiag.ts).
+    this.renderer.debug.onShaderError = (gl, program, vs, fs) => {
+      const text = [gl.getProgramInfoLog(program), gl.getShaderInfoLog(vs), gl.getShaderInfoLog(fs)]
+        .filter(Boolean).join(" | ");
+      console.error("[renderer] 3D shader error:", text);
+      recordShaderError(text);
+    };
     canvas.addEventListener("webglcontextlost", this.onLost);
     canvas.addEventListener("webglcontextrestored", this.onRestored);
     this.readSettings();

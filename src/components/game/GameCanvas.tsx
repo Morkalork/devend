@@ -134,6 +134,8 @@ import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { getRendererChoice, type RendererChoice } from "@/lib/rendering/render3dSettings";
+import { recordRendererStart } from "@/lib/rendering/rendererDiag";
+import { BUILD_SHA } from "@/lib/buildInfo";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
@@ -1187,6 +1189,8 @@ export function GameCanvas({
         // has had one context cannot be trusted to hand out a clean other one.
         if (glKind === "three") {
           console.warn("[renderer] 3D init failed, using the 2D renderer:", err);
+          // Silent for the player, recorded for Admin (rendererDiag.ts).
+          recordRendererStart("failed", err, BUILD_SHA);
           setGlKind("sleek");
           return;
         }
@@ -1202,6 +1206,7 @@ export function GameCanvas({
         pixiRef.current = renderer;
         const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
         renderer.init(canvas, size.w, size.h).then(() => {
+          if (glKind === "three") recordRendererStart("ok", undefined, BUILD_SHA);
           const latest = pixiSizeRef.current;
           if (latest && (latest.w !== size.w || latest.h !== size.h)) {
             renderer.resize(latest.w, latest.h);
