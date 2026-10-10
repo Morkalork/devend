@@ -13,8 +13,7 @@
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { WALL_THICKNESS } from "@/lib/wallGeometry";
 // Imported, never re-declared: these govern how long the physics keeps a marker
 // alive, and a local copy that drifts makes markers disappear early.
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
@@ -38,11 +37,10 @@ import { REACH_RADII } from "./ballLight";
 import { closestOnSegment } from "./ballBounce";
 import { LOCK_FLASH_MS, SUPERIOR_FLASH_MS } from "./flashLight";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
-import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
-import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
+import { previewCutPaths } from "@/lib/cutPreview";
 
 /** Opacity of the predicted path. A forecast, so never fully opaque. */
 const TRAJECTORY_ALPHA = 0.5;
@@ -820,36 +818,21 @@ export class FxLayer {
    * player deserves to know before they commit rather than after.
    */
   private drawCutPreview(game: CanvasGameState, w2s: W2S, scale: number): void {
-    const { swipeStart, currentSwipePos, swipeRegionId } = game;
-    if (!swipeStart || !currentSwipePos || !swipeRegionId) return;
-
-    const delta = vec2Sub(currentSwipePos, swipeStart);
-    // Below this the direction is noise, and a preview that flails around while
-    // the finger settles is worse than none.
-    if (vec2Length(delta) < 5) return;
-
     // Bent fences (#66): the preview is cast off the SAME path the cut will
     // follow, through the same function the input handler calls, because a
     // preview that draws a straight line for a fence that lands bent is worse
-    // than no preview.
-    const bent = bentDrawnPath(game);
-    const dir = bent ? outgoingDirection(bent) : vec2Normalize(delta);
-    const backDir = bent ? incomingDirection(bent) : { x: -dir.x, y: -dir.y };
-    const fwd = castRayWithReflections(bent ? bent[bent.length - 1] : swipeStart, dir, game.walls);
-    const bwd = castRayWithReflections(bent ? bent[0] : swipeStart, backDir, game.walls);
-    if (!fwd || !bwd) return;
-
-    const forwardPath = bent ? joinProjection(bent, fwd.waypoints) : fwd.waypoints;
-    const fEnd = forwardPath[forwardPath.length - 1];
-    const bEnd = bwd.waypoints[bwd.waypoints.length - 1];
-    const isDud = cutAnchorsBreakable(game, fEnd, bEnd, WALL_THICKNESS + 6);
+    // than no preview. Shared with the 3D board (lib/cutPreview.ts), which
+    // stands the same line up as a wall the balls' light stops at.
+    const preview = previewCutPaths(game);
+    if (!preview) return;
+    const isDud = preview.dud;
 
     const outer = isDud ? 0xff8080 : 0xffffff;
     const inner = isDud ? PALETTE.danger : PALETTE.accent;
     const dot = isDud ? 0xff5b5b : PALETTE.mirror;
     const alpha = isDud ? 0.3 : 0.15;
 
-    const paths = [forwardPath, bwd.waypoints];
+    const paths = preview.paths;
     const stroke = (width: number, color: number) => {
       for (const wps of paths) {
         for (let i = 0; i < wps.length - 1; i++) {

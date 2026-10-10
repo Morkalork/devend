@@ -59,6 +59,25 @@ function phaseAt(t: number): { phase: "in" | "out"; alpha: number } {
 }
 
 /**
+ * Seconds until a cycling pillar turns solid again, or null when that is not
+ * a question with an answer: it is solid now, it is a latch (opens once, for
+ * good) or it is a cage mouth (the cage decides).
+ *
+ * Read by the 3D board, which grows the pillar's shadow in on the floor just
+ * BEFORE the pillar comes back (rendering/three/lightMechanics.ts). Worked out
+ * from the same cycle tickPhasing runs, so the warning cannot drift from the
+ * event it warns of. Render-only: nothing here changes the object.
+ */
+export function secondsUntilSolid(obj: PhasingObjectState, nowActiveSeconds: number): number | null {
+  if (obj.cageOf || obj.latchAfter !== undefined || obj.phase === "in") return null;
+  const cyc = obj.cycleSeconds > 0 ? obj.cycleSeconds : 10;
+  const t = ((nowActiveSeconds - obj.startedAt) % cyc + cyc) % cyc / cyc;
+  // Solid again halfway through the fade back in (phaseAt).
+  const solidAt = 1 - FADE / 2;
+  return (((solidAt - t) % 1 + 1) % 1) * cyc;
+}
+
+/**
  * Advance every phasing object. `nowActiveSeconds` is game.activePlaySeconds.
  * When an object crosses into its `out` phase it fires a one-shot shockwave.
  */

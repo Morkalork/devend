@@ -46,13 +46,22 @@ import { Floor3D } from "./floor3d";
 import { Walls3D } from "./walls3d";
 import { Solids3D } from "./solids3d";
 import { Balls3D } from "./balls3d";
-import { LAMP_HEIGHT, Lights3D, monitorPlacement, roomLevel, wantedLights } from "./lights3d";
+import { LAMP_HEIGHT, Lights3D, monitorPlacement, roomLevel, wantedLights, type BallTone } from "./lights3d";
 import { Explosions3D } from "./explosions3d";
 import { OutputPass } from "./outputPass";
+import { CutPreview3D, createPreviewUniforms, shadowOnlyMaterial } from "./cutPreview3d";
+import {
+  CircuitSparks, POCKET_GOLD, chargeLights, phaseCasters, pocketHeat, powerLevel,
+} from "./lightMechanics";
+import { getLightLook } from "@/lib/lightLook";
 
 /** The live scene for one quality tier. Rebuilt whole when the tier changes. */
 interface Rig {
   preset: QualityPreset;
+  preview: CutPreview3D;
+  /** Shadow-only pillars about to turn solid (the phase tell). */
+  phaseShadows: Solids3D;
+  sparks: CircuitSparks;
   floor: Floor3D;
   walls: Walls3D;
   solids: Solids3D;
@@ -73,6 +82,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   /** The board: everything that turns with the tilt lives in here. */
   private board = new Group();
   private shared = createSurfaceShared();
+  private previewUniforms = createPreviewUniforms();
   private rig: Rig | null = null;
   private tier: QualityTier = "medium";
   private auto = true;
@@ -157,7 +167,9 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.disposeRig();
     const preset = QUALITY_PRESETS[tier];
     this.tier = tier;
-    const floorMat = makeSurfaceMaterial(this.shared, { tier, translucent: true, roughness: 0.9 });
+    const floorMat = makeSurfaceMaterial(this.shared, {
+      tier, translucent: true, roughness: 0.9, preview: this.previewUniforms,
+    });
     const wallMat = makeSurfaceMaterial(this.shared, { tier, sampleSquash: [1, 1, 0.42], roughness: 0.7 });
     const solidMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75 });
     const floor = new Floor3D(floorMat);
@@ -167,9 +179,15 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const balls = new Balls3D(this.board, preset.sphereSegments);
     const explosions = new Explosions3D(this.board, preset.maxShards);
     const lights = new Lights3D(this.scene, this.board, preset);
+    const preview = new CutPreview3D(this.board, this.previewUniforms);
+    const phaseMat = shadowOnlyMaterial();
+    const phaseShadows = new Solids3D(phaseMat);
+    phaseShadows.mesh.receiveShadow = false;
+    this.board.add(phaseShadows.mesh);
     this.rig = {
       preset, floor, walls, solids, balls, explosions, lights,
-      materials: [floorMat, wallMat, solidMat],
+      preview, phaseShadows, sparks: new CircuitSparks(),
+      materials: [floorMat, wallMat, solidMat, phaseMat],
     };
     this.governor.reset(performance.now());
     // The frame's resolution and MSAA are part of the tier. Through sleek, so
@@ -186,6 +204,9 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     rig.solids.dispose();
     rig.balls.dispose();
     rig.explosions.dispose();
+    rig.preview.dispose();
+    this.board.remove(rig.phaseShadows.mesh);
+    rig.phaseShadows.dispose();
     rig.lights.dispose();
     for (const m of rig.materials) m.dispose();
     this.rig = null;
@@ -282,10 +303,24 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     });
     rig.explosions.sync(game, now);
 
+    // Light as a mechanic (lightMechanics.ts, cutPreview3d.ts).
+    const look = getLightLook();
+    rig.preview.sync(game, now, look.cutPreview, this.heightScale);
+    rig.phaseShadows.syncSolids(phaseCasters(game, look.phaseTell, this.heightScale));
+    const extras = [...chargeLights(game, look.chargeTell), ...rig.sparks.sync(game, now, look.circuitSpark)];
+    const tones = new Map<string, BallTone>();
+    if (look.pocketGlow > 0.001) {
+      for (const [id, t] of pocketHeat(game)) {
+        tones.set(id, { gain: 1 + 1.3 * t.heat * look.pocketGlow, tint: POCKET_GOLD, mix: 0.85 * t.gold * look.pocketGlow });
+      }
+    }
+    const limit = frame.deadlineLimit;
+    const power = limit ? powerLevel(limit - game.activePlaySeconds, limit, look.powerDrain) : 1;
+
     const centres = new Map<string, { x: number; z: number; y: number }>();
     for (const [id, p] of rig.balls.poses) centres.set(id, { x: p.x, z: p.z, y: p.r * p.sy });
-    const wanted = wantedLights(frame.lights, rig.explosions.lights, centres, frame.lamp);
-    rig.lights.sync(wanted, frame.monitorLevel, frame.lampLevel, roomLevel(game.mapLight));
+    const wanted = wantedLights(frame.lights, rig.explosions.lights, centres, frame.lamp, extras, tones);
+    rig.lights.sync(wanted, frame.monitorLevel, frame.lampLevel, roomLevel(game.mapLight) * power);
     // The lamp, when there is one, is ranked first, so it is point light 0.
     this.shared.uLampSlot.value = wanted[0]?.rank === 0 ? 1 : 0;
 

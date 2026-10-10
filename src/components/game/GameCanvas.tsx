@@ -508,6 +508,12 @@ export function GameCanvas({
   // one unless Admin chose the 2D one. A 3D renderer that will not start drops
   // to the 2D one, and that one to the emergency board below.
   const [glKind, setGlKind] = useState<RendererChoice>(getRendererChoice);
+  // The map clock, for the 3D board's power drain (RenderContext.deadlineLimit).
+  // Refs, because the render closure is built once per map.
+  const deadlineSecondsLeftRef = useRef(deadlineSecondsLeft);
+  deadlineSecondsLeftRef.current = deadlineSecondsLeft;
+  const deadlineLimitRef = useRef(deadlineLimit);
+  deadlineLimitRef.current = deadlineLimit;
   const pixiRef = useRef<BoardRenderer | null>(null);
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -1680,6 +1686,7 @@ export function GameCanvas({
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
       rctx.showPerfOverlay = showPerfOverlayRef.current;
+      rctx.deadlineLimit = deadlineSecondsLeftRef.current != null ? deadlineLimitRef.current : null;
       if (!ctx) {
         if (introHold && !game.dissolve) return;
         // Pixi path — a no-op until the async init lands (a few skipped frames).

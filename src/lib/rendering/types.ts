@@ -34,4 +34,11 @@ export interface RenderContext {
    *  `overtime` needs none (the renderers format "+Nh" from the feedback
    *  value); capRaise may contain a `{n}` placeholder for its hours. */
   pickupLabels?: { fork?: string; capRaise?: string; freezeCharge?: string; freeShopItem?: string; extraLife?: string; rainbowConvert?: string };
+  /**
+   * The map clock's limit in seconds while the clock is showing, else null.
+   * The 3D board dims the room through its last stretch (lightMechanics.ts),
+   * reading the seconds left off game.activePlaySeconds so the dimming is
+   * smooth rather than stepping once a second like the display.
+   */
+  deadlineLimit?: number | null;
 }

@@ -1784,6 +1784,129 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
               </div>
 
+              {/* Light as a mechanic: each of these makes the light carry
+                  information the board did not show before. 3D board only;
+                  every one reaches 0, which is the board without it. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-cut-preview" style={{ color: lightLook.cutPreview > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Cut preview by light: {Math.round(lightLook.cutPreview * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    While you drag a cut, each ball lights its own side and the side you would capture goes dark. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-cut-preview"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.cutPreview * 100)}
+                  onChange={e => setLightLookState(setLightLook({ cutPreview: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-pocket-glow" style={{ color: lightLook.pocketGlow > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Pocket glow: {Math.round(lightLook.pocketGlow * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A ball glows hotter as its pocket shrinks, and gold when halving the pocket would make a superior lock. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-pocket-glow"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.pocketGlow * 100)}
+                  onChange={e => setLightLookState(setLightLook({ pocketGlow: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-charge-tell" style={{ color: lightLook.chargeTell > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Charge tell: {Math.round(lightLook.chargeTell * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    An armed charge lights its blast radius red, pulsing faster as it nears. Fences in the red go with it. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-charge-tell"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.chargeTell * 100)}
+                  onChange={e => setLightLookState(setLightLook({ chargeTell: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-phase-tell" style={{ color: lightLook.phaseTell > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Pillar shadow warning: {Math.round(lightLook.phaseTell * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    A phasing pillar casts its shadow just before it turns solid again. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-phase-tell"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.phaseTell * 100)}
+                  onChange={e => setLightLookState(setLightLook({ phaseTell: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-power-drain" style={{ color: lightLook.powerDrain > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Room loses power: {Math.round(lightLook.powerDrain * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    The room dims in the last stretch of a timed map and stutters at 30s and 20s. The balls stay bright. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-power-drain"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.powerDrain * 100)}
+                  onChange={e => setLightLookState(setLightLook({ powerDrain: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-circuit-spark" style={{ color: lightLook.circuitSpark > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Circuit spark: {Math.round(lightLook.circuitSpark * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Lighting a terminal sends a spark to the ball it wakes. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-circuit-spark"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.circuitSpark * 100)}
+                  onChange={e => setLightLookState(setLightLook({ circuitSpark: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
               {/* Forced mutator: `?mutator=<id>` as a picker, from the catalogue so
                   a new mutator is offered the moment it is authored. Re-deals the
                   board, because a mutator is rolled when a map mounts. */}

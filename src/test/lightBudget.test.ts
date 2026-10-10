@@ -212,6 +212,7 @@ describe("the light budget on a board heavier than any that ships", () => {
     const dark: LightLook = {
       bounce: 0, reflected: 0, caustic: 0, flash: 0, tell: 0, ballShadows: 0,
       reaction: 0, energy: 0, exposure: 0, facing: 0, softShadows: 0, motes: 0,
+      cutPreview: 0, pocketGlow: 0, chargeTell: 0, phaseTell: 0, powerDrain: 0, circuitSpark: 0,
     };
 
     let off = Infinity, on = Infinity;

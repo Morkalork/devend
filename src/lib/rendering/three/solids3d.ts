@@ -219,7 +219,11 @@ export class Solids3D {
   }
 
   sync(game: CanvasGameState, heightScale: number): void {
-    const solids = collectSolids(game, heightScale);
+    this.syncSolids(collectSolids(game, heightScale));
+  }
+
+  /** Lay out an explicit list of solids (the pillars' early shadows use this). */
+  syncSolids(solids: Solid[]): void {
     const h = solidsHash(solids);
     if (h === this.hash && this.mesh.geometry.getIndex()) return;
     this.hash = h;

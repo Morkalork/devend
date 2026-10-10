@@ -74,6 +74,21 @@ export interface WantedLight {
   rank: number;
   /** A ball's light: placed at the ball's own centre. */
   ballId?: string;
+  /**
+   * Light that must END at its reach, evenly bright inside it: the charge's
+   * blast radius, where "inside the red" has to mean exactly "inside the
+   * blast". An ordinary pool fades out well past its reach instead.
+   */
+  cutoff?: boolean;
+}
+
+/** How one ball's own light is retoned this frame (the pocket glow). */
+export interface BallTone {
+  /** Brightness multiplier. */
+  gain: number;
+  /** Colour to blend toward, and how far (0 = the ball's own). */
+  tint: number;
+  mix: number;
 }
 
 /**
@@ -93,6 +108,10 @@ const SHADOW_BIAS_WORLD = -0.5;
  */
 const POINT_DECAY = 1.3;
 const POINT_GAIN = 1300;
+/** A cut-off light's falloff and gain (WantedLight.cutoff). */
+const CUTOFF_DECAY = 0.35;
+const CUTOFF_GAIN = 18;
+
 /**
  * The lamp: on most maps one ball holds it (lampBall.ts), and then it, not the
  * monitor, is the board's key light. High enough over its ball that a slab a
@@ -142,8 +161,12 @@ export function wantedLights(
   blasts: readonly BlastLight[],
   ballCentres: ReadonlyMap<string, { x: number; z: number; y: number }>,
   lamp: LampLight | null,
+  /** Lights from the light mechanics (charges, sparks), already ranked. */
+  extras: readonly WantedLight[] = [],
+  /** Per-ball retoning of each ball's own light (the pocket glow). */
+  tones?: ReadonlyMap<string, BallTone>,
 ): WantedLight[] {
-  const out: WantedLight[] = [];
+  const out: WantedLight[] = [...extras];
   // The lamp stands high over where the 2D lamp scope puts it, so it throws the
   // monitor's kind of shadow from a new place, which is the whole lamp
   // mechanic (light.ts). Mostly white: in 2D its colour tinted rims, and a
@@ -160,14 +183,15 @@ export function wantedLights(
   }
   for (const l of worldLights) {
     const ball = l.ballId ? ballCentres.get(l.ballId) : undefined;
+    const tone = l.ballId ? tones?.get(l.ballId) : undefined;
     out.push({
       // A ball's light at its centre: its glass does not block it (balls3d.ts).
       x: ball ? ball.x : l.x,
       y: ball ? ball.z : l.y,
       height: ball ? ball.y : 22,
       reach: l.reach,
-      intensity: l.intensity,
-      color: l.color,
+      intensity: l.intensity * (tone?.gain ?? 1),
+      color: tone && tone.mix > 0 ? mix(l.color, tone.tint, tone.mix) : l.color,
       rank: ball ? 2 : 3,
       ballId: l.ballId,
     });
@@ -260,9 +284,17 @@ export class Lights3D {
       }
       return;
     }
-    l.decay = POINT_DECAY;
-    l.distance = Math.max(20, w.reach * 2.2);
-    l.intensity = w.intensity * POINT_GAIN * Math.pow(Math.max(30, w.reach) / 97, POINT_DECAY);
+    if (w.cutoff) {
+      // Nearly flat out to the reach, then three's distance window takes it to
+      // nothing right AT the reach, so the lit disc is the reach.
+      l.decay = CUTOFF_DECAY;
+      l.distance = Math.max(20, w.reach);
+      l.intensity = w.intensity * CUTOFF_GAIN;
+    } else {
+      l.decay = POINT_DECAY;
+      l.distance = Math.max(20, w.reach * 2.2);
+      l.intensity = w.intensity * POINT_GAIN * Math.pow(Math.max(30, w.reach) / 97, POINT_DECAY);
+    }
     if (l.castShadow) {
       l.shadow.autoUpdate = true;
       l.shadow.camera.far = l.distance;

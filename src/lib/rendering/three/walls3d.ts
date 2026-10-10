@@ -155,7 +155,11 @@ export class Walls3D {
       this.cache = new WeakMap();
       this.cacheKey = game.obstaclePolygons.length;
     }
-    const runs = collectWallRuns(game, heightScale, this.runs, this.cache);
+    return this.syncRuns(collectWallRuns(game, heightScale, this.runs, this.cache));
+  }
+
+  /** Lay out an explicit list of runs (the cut preview's wall uses this). */
+  syncRuns(runs: readonly WallRun[]): InstancedMesh {
     if (runs.length > this.mesh.instanceMatrix.count) {
       const old = this.mesh;
       this.mesh = this.build(Math.max(runs.length, old.instanceMatrix.count * 2));

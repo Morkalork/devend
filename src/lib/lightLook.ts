@@ -83,12 +83,43 @@ export interface LightLook {
    * light already means. 0 is a board with no air in it, which is what it was.
    */
   motes: number;
+  /**
+   * A cut being dragged blocks the balls' light, and the ground it would capture goes dark (3D board).
+   * 0 is off, the board without it.
+   */
+  cutPreview: number;
+  /**
+   * A ball's light grows hotter as its pocket tightens, turning gold within one halving of a superior lock (3D board).
+   * 0 is off, the board without it.
+   */
+  pocketGlow: number;
+  /**
+   * An armed Deploy Charge glows red over exactly its blast radius, pulsing faster as it nears (3D board).
+   * 0 is off, the board without it.
+   */
+  chargeTell: number;
+  /**
+   * A phasing pillar's shadow grows in on the floor just before the pillar turns solid (3D board).
+   * 0 is off, the board without it.
+   */
+  phaseTell: number;
+  /**
+   * The room dims through a timed map's last stretch and stutters at the milestones; ball light stays steady (3D board).
+   * 0 is off, the board without it.
+   */
+  powerDrain: number;
+  /**
+   * Lighting a circuit terminal sends a spark of light to the ball it wakes (3D board).
+   * 0 is off, the board without it.
+   */
+  circuitSpark: number;
 }
 
 const KEY = "devend.lightLook";
 export const DEFAULT_LIGHT_LOOK: LightLook = {
   bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1,
   energy: 0.85, exposure: 1, facing: 0.9, softShadows: 0.9, motes: 0.8,
+  cutPreview: 1, pocketGlow: 1, chargeTell: 1, phaseTell: 1, powerDrain: 1, circuitSpark: 1,
 };
 
 let current: LightLook | null = null;
@@ -111,6 +142,12 @@ function sanitise(l: LightLook): LightLook {
     facing: unit(l.facing, DEFAULT_LIGHT_LOOK.facing),
     softShadows: unit(l.softShadows, DEFAULT_LIGHT_LOOK.softShadows),
     motes: unit(l.motes, DEFAULT_LIGHT_LOOK.motes),
+    cutPreview: unit(l.cutPreview, DEFAULT_LIGHT_LOOK.cutPreview),
+    pocketGlow: unit(l.pocketGlow, DEFAULT_LIGHT_LOOK.pocketGlow),
+    chargeTell: unit(l.chargeTell, DEFAULT_LIGHT_LOOK.chargeTell),
+    phaseTell: unit(l.phaseTell, DEFAULT_LIGHT_LOOK.phaseTell),
+    powerDrain: unit(l.powerDrain, DEFAULT_LIGHT_LOOK.powerDrain),
+    circuitSpark: unit(l.circuitSpark, DEFAULT_LIGHT_LOOK.circuitSpark),
   };
 }
 

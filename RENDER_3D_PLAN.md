@@ -484,6 +484,24 @@ relative: S is one session, M is a few, L is many.
 **[CHANGED]** Answered in the build, since the ask was to do it all in one go:
 1 the etched lamp; 3 the Admin knob, defaulting to 1.4x. 2 is still open.
 
+## 8. Light as a mechanic (built after the plan)
+
+Once the board had real lights, the light could carry information the board
+never showed. Six were built, all on the 3D board only, all reading state the
+simulation already keeps and changing none of it, each with a Playground dial
+where 0 is the board without it (`lightLook.ts`):
+
+| Mechanic | What the light says | How it stays honest |
+|---|---|---|
+| Cut preview | While a cut is dragged, each ball lights its own side and the side the cut would capture goes dark | The dark side is the REAL capture, simulated on a copy of the grid (`lib/cutPreview.ts`, like smashReach and areaReach); the would-be fence also stands up as a wall only light sees, so pools stop at it |
+| Pocket glow | A ball's light grows hotter as its pocket nears the lock threshold, gold within one halving of a superior lock | Graded with the lock check's own denominator and thresholds |
+| Charge tell | An armed Deploy Charge lights exactly its blast radius red, pulsing faster to the blast | Centred where physics centres the blast; a cut-off light whose lit disc IS the radius |
+| Pillar shadow | A phasing pillar's shadow grows in on the floor before the pillar turns solid | `phasing.secondsUntilSolid`, from the same cycle tickPhasing runs |
+| Power drain | The room dims through a timed map's last stretch and stutters at 30s and 20s; the balls stay bright | Read off the map clock; room lights only, never the balls' |
+| Circuit spark | Lighting a terminal sends a spark to the ball it wakes | Fires on the terminal's lit transition, not on terminals lit at map start |
+
+The 2D board has none of these; they are a reason to keep the 3D board on.
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the

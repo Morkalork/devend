@@ -127,6 +127,8 @@ export interface HybridFrame {
   lampLevel: number;
   /** Where the lamp is, in world units, while a ball holds it (lampBall.ts). */
   lamp: { x: number; y: number; level: number; color: number } | null;
+  /** The map clock's limit while it is showing (RenderContext.deadlineLimit). */
+  deadlineLimit: number | null;
 }
 
 export class SleekRenderer {
@@ -570,6 +572,7 @@ export class SleekRenderer {
         monitorLevel: monitor.level,
         lampLevel: lamp ? handoverLevel(lampState, now) : 0,
         lamp: lamp ? this.lampWorld(game, now) : null,
+        deadlineLimit: rctx.deadlineLimit ?? null,
       });
       // The host drew with its own GL state; Pixi must not trust its cache.
       this.app.renderer.resetState();
