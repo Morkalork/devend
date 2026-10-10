@@ -87,3 +87,22 @@ export function coronaStops(): { offset: number; alpha: number }[] {
     { offset: 1, alpha: 0 },
   ];
 }
+
+/**
+ * The corona over the 3D renderer's sphere: the same falloff outside the ball,
+ * nothing at all on it. The 2D corona's ramp up to the rim lands on the
+ * sphere's face, where it washes out the patterned shell that shows it
+ * rolling; the sphere glows on its own, so the halo only has to start at the
+ * edge. The peak sits just outside it, because the sphere's rim is soft.
+ */
+export function haloStops(): { offset: number; alpha: number }[] {
+  const edge = 1 / CORONA_RADII;
+  return [
+    { offset: 0, alpha: 0 },
+    { offset: edge, alpha: 0 },
+    { offset: edge * 1.1, alpha: 0.5 },
+    { offset: edge * 1.55, alpha: 0.2 },
+    { offset: edge * 2.15, alpha: 0.05 },
+    { offset: 1, alpha: 0 },
+  ];
+}

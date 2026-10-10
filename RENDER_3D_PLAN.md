@@ -208,6 +208,25 @@ ball's and six vias, darker than the glow, antialiased with `fwidth`. The 2D
 corona over it is drawn at 0.55 strength under the 3D board, or it washes the
 seam out.
 
+**[CHANGED]** The thin seam read as movement but barely, so the shell became a
+lampshade (`three/balls3d.ts`, `shell`):
+
+- **Big shapes, one per type.** Seven patterns (seam, stripe, bands, quarters,
+  panels, dimples, plain), each type's set by `pattern:` in `balls.yml`, so
+  types can also be told apart without colour.
+- **Light held back, not paint.** The pattern decides how much of the light
+  inside gets through, and the body sits just under the output curve's knee
+  so the ribs keep their contrast instead of being flattened into one colour.
+- **A glint that holds still** toward the key light (the lamp, else the
+  monitor) while the pattern turns under it.
+- **No strobing.** The pattern fades out as the turn per presented frame
+  passes half a radian, and on a ball under about 5 pixels of radius.
+- **A halo, not a disc.** The 2D corona under the 3D board starts at the
+  ball's edge (`bulb.haloStops`), so nothing lands on the patterned face.
+
+The Playground has a slider for pattern depth and one for the glint, and a
+picker that forces one pattern on every ball for comparing.
+
 ### Lighting
 
 Today's rules carry over unchanged. They become geometry instead of

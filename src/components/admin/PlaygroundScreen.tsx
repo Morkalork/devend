@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ModifierInput } from '@/components/admin/ModifierInput';
-import { getBallLook, setBallLook } from '@/lib/ballLook';
+import { getBallLook, setBallLook, type BallLook } from '@/lib/ballLook';
 import { getLightLook, setLightLook } from '@/lib/lightLook';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stepLevelIndex } from '@/lib/levelStep';
@@ -18,7 +18,7 @@ import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
-import { BallTypeDef, getAllBallTypes, getBallType, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
+import { BallTypeDef, BALL_PATTERNS, getAllBallTypes, getBallType, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
@@ -1482,6 +1482,62 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: ballLook.flicker ? 19 : 3 }} />
                   </span>
                 </button>
+
+                {/* The 3D board's shell (rendering/three/balls3d.ts): what shows a
+                    ball rolling. Depth and glint are judged in play, so sliders;
+                    the pattern override puts every ball in one pattern so they
+                    can be compared side by side, "auto" being each type's own
+                    from balls.yml. */}
+                <label className="block text-xs font-semibold mt-3 mb-1" htmlFor="ball-shade-strength" style={{ color: ballLook.shade > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Ball pattern depth (3D): {Math.round(ballLook.shade * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    How much the shell's pattern holds the light back. 0 is a bare bulb with nothing to show it rolling.
+                  </span>
+                </label>
+                <input
+                  id="ball-shade-strength"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(ballLook.shade * 100)}
+                  onChange={e => setBallLookState(setBallLook({ shade: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+                <label className="block text-xs font-semibold mt-3 mb-1" htmlFor="ball-glint-strength" style={{ color: ballLook.glint > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Ball glint (3D): {Math.round(ballLook.glint * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    The highlight facing the light. It holds still while the pattern turns under it.
+                  </span>
+                </label>
+                <input
+                  id="ball-glint-strength"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(ballLook.glint * 100)}
+                  onChange={e => setBallLookState(setBallLook({ glint: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+                <label className="block text-xs font-semibold mt-3 mb-1" htmlFor="ball-pattern">
+                  Ball pattern (3D)
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Auto gives each type its own. Pick one to put every ball in it.
+                  </span>
+                </label>
+                <select
+                  id="ball-pattern"
+                  value={ballLook.pattern}
+                  onChange={e => setBallLookState(setBallLook({ pattern: e.target.value as BallLook['pattern'] }))}
+                  className="w-full px-2 py-1 rounded bg-background border border-border text-xs"
+                >
+                  {(['auto', ...BALL_PATTERNS] as const).map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </div>
 
               {/* The light model (lightLook.ts). One slider per dial, and every

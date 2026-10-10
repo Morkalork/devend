@@ -33,9 +33,17 @@ describe("the look setting", () => {
   it("persists across a reload and clamps the web to 0..1", () => {
     setBallLook({ web: 3, flicker: false });
     resetBallLookCache();
-    expect(getBallLook()).toEqual({ web: 1, flicker: false });
+    expect(getBallLook()).toMatchObject({ web: 1, flicker: false });
     setBallLook({ web: -1 });
     expect(getBallLook().web).toBe(0);
+  });
+
+  it("clamps the 3D shell's dials and refuses a pattern that does not exist", () => {
+    setBallLook({ shade: 2, glint: -1, pattern: "dimples" });
+    resetBallLookCache();
+    expect(getBallLook()).toMatchObject({ shade: 1, glint: 0, pattern: "dimples" });
+    setBallLook({ pattern: "zebra" as never });
+    expect(getBallLook().pattern).toBe("auto");
   });
 });
 

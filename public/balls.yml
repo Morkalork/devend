@@ -9,6 +9,10 @@
 #   id             unique key (also used for the ball's element id)
 #   name           display name (tutorial)
 #   color          hex colour WITH a leading '#' (quote it so YAML keeps the '#')
+#   pattern        the shell's pattern on the 3D board, which is what shows it rolling:
+#                  seam | stripe | bands | quarters | panels | dimples | plain
+#                  (absent = seam). Big shapes, so they read at phone size; one per
+#                  type, so types can be told apart without relying on colour.
 #   baseSpeed      flat base speed in world units/second
 #   minimumSpeed   speed floor; slow-down/slow-others/range effects never go below this
 #   unlockLevel    minimum level number at which this type may appear
@@ -37,6 +41,7 @@ balls:
   - id: red
     name: Red
     color: "#ff5b5b"
+    pattern: seam
     baseSpeed: 250
     minimumSpeed: 150
     unlockLevel: 1
@@ -48,6 +53,7 @@ balls:
   - id: blue
     name: Blue
     color: "#00b4ff"
+    pattern: stripe
     baseSpeed: 250
     minimumSpeed: 150
     unlockLevel: 2
@@ -59,6 +65,7 @@ balls:
   - id: yellow
     name: Yellow
     color: "#ffd93d"
+    pattern: dimples
     minimumSpeed: 150
     baseSpeed: 280
     unlockLevel: 4
@@ -71,6 +78,7 @@ balls:
   - id: purple
     name: Purple
     color: "#b06bff"
+    pattern: panels
     baseSpeed: 340
     minimumSpeed: 150
     unlockLevel: 7
@@ -83,6 +91,7 @@ balls:
   - id: green
     name: Green
     color: "#00c853"
+    pattern: quarters
     baseSpeed: 300
     minimumSpeed: 180
     unlockLevel: 13
@@ -94,6 +103,7 @@ balls:
   - id: grey
     name: Grey
     color: "#aeaeae"
+    pattern: bands
     baseSpeed: 200
     minimumSpeed: 150
     unlockLevel: 10
@@ -115,6 +125,7 @@ balls:
   - id: compass
     name: Compass
     color: "#c08cff"
+    pattern: quarters
     baseSpeed: 235
     minimumSpeed: 150
     unlockLevel: 18
@@ -132,6 +143,7 @@ balls:
   - id: lodestone
     name: Lodestone
     color: "#ff9e4d"
+    pattern: bands
     baseSpeed: 210
     minimumSpeed: 150
     unlockLevel: 21
@@ -145,6 +157,7 @@ balls:
   - id: black
     name: Black
     color: "#2b2f3a"
+    pattern: panels
     baseSpeed: 200
     minimumSpeed: 150
     unlockLevel: 25
@@ -161,6 +174,7 @@ balls:
   - id: rainbow
     name: Rainbow
     color: "#ff4db8"
+    pattern: stripe
     baseSpeed: 360
     minimumSpeed: 260
     unlockLevel: 11
@@ -178,6 +192,7 @@ balls:
   - id: white
     name: White
     color: "#ffffff"
+    pattern: plain
     baseSpeed: 320
     minimumSpeed: 180
     unlockLevel: 12

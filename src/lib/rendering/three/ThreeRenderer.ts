@@ -25,7 +25,7 @@
  * shard in flight) live in this object, so two-player lockstep cannot see them.
  */
 import {
-  Group, HalfFloatType, PCFShadowMap, PerspectiveCamera, Scene, UnsignedByteType,
+  Group, HalfFloatType, PCFShadowMap, Vector3, PerspectiveCamera, Scene, UnsignedByteType,
   WebGLRenderTarget, WebGLRenderer, type ExternalTexture, type Material,
 } from "three";
 import type { RenderTexture, Texture as PixiTexture, WebGLRenderer as PixiWebGLRenderer } from "pixi.js";
@@ -46,7 +46,7 @@ import { Floor3D } from "./floor3d";
 import { Walls3D } from "./walls3d";
 import { Solids3D } from "./solids3d";
 import { Balls3D } from "./balls3d";
-import { Lights3D, roomLevel, wantedLights } from "./lights3d";
+import { LAMP_HEIGHT, Lights3D, monitorPlacement, roomLevel, wantedLights } from "./lights3d";
 import { Explosions3D } from "./explosions3d";
 import { OutputPass } from "./outputPass";
 
@@ -91,6 +91,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private size = { w: 1, h: 1, scale: 1 };
   private lost = false;
   private tiltNow = 0;
+  private keyLight = new Vector3();
 
   constructor() {
     this.sleek = new SleekRenderer(this);
@@ -271,7 +272,14 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const wallMesh = rig.walls.sync(game, this.heightScale);
     if (wallMesh.parent !== this.board) this.board.add(wallMesh);
     rig.solids.sync(game, this.heightScale);
-    rig.balls.sync(game, now, eyeDistance(this.fov), fitScale(this.tiltNow));
+    // The key light the balls' glint faces: the lamp over its ball, else the
+    // monitor, in the scene's (tilted) space.
+    if (frame.lamp) this.keyLight.set(frame.lamp.x, LAMP_HEIGHT, frame.lamp.y).applyMatrix4(this.board.matrix);
+    else { const m = monitorPlacement(); this.keyLight.set(m.x, m.y, m.z); }
+    rig.balls.sync(game, now, eyeDistance(this.fov), fitScale(this.tiltNow), {
+      board: this.board.matrix, view: this.camera.matrixWorldInverse, key: this.keyLight,
+      pxPerUnit: game.boardRect.scale * this.size.scale,
+    });
     rig.explosions.sync(game, now);
 
     const centres = new Map<string, { x: number; z: number; y: number }>();

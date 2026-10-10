@@ -58,12 +58,24 @@ export type BallAbility =
   | 'turnTimer'     // compass: turns ninety degrees on a timer, wearing the countdown
   | 'attract';      // lodestone: continuously pulls the other balls toward it
 
+/**
+ * The pattern on a ball's shell, which is what shows it rolling on the 3D
+ * board (rendering/three/balls3d.ts). Big shapes only, because a ball is 15-30
+ * pixels across on a phone: a fine pattern is a grey blur there, while a few
+ * large panels visibly slide across the ball and foreshorten at its rim. Each
+ * type has its own, which also tells types apart without relying on colour.
+ */
+export type BallPattern = 'seam' | 'stripe' | 'bands' | 'quarters' | 'panels' | 'dimples' | 'plain';
+export const BALL_PATTERNS: readonly BallPattern[] = ['seam', 'stripe', 'bands', 'quarters', 'panels', 'dimples', 'plain'];
+
 export interface BallTypeDef {
   id: string;
   /** Display name (tutorial). */
   name: string;
   /** Hex colour WITH leading '#'. */
   color: string;
+  /** The shell's pattern on the 3D board. Absent = the seam. */
+  pattern?: BallPattern;
   /** Flat base speed in world units/second. */
   baseSpeed: number;
   /**
@@ -185,6 +197,9 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     id,
     name: typeof r.name === 'string' ? r.name : id,
     color,
+    pattern: typeof r.pattern === 'string' && (BALL_PATTERNS as readonly string[]).includes(r.pattern)
+      ? r.pattern as BallPattern
+      : undefined,
     baseSpeed,
     minimumSpeed,
     unlockLevel: Number.isFinite(Number(r.unlockLevel)) ? Math.max(1, Math.round(Number(r.unlockLevel))) : 1,

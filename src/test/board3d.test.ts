@@ -19,7 +19,9 @@ import {
 } from "@/lib/rendering/three/floorCamera";
 import { collectWallRuns } from "@/lib/rendering/three/walls3d";
 import { collectSolids, extrude } from "@/lib/rendering/three/solids3d";
-import { ballPose, parallaxFactor, rollStep } from "@/lib/rendering/three/balls3d";
+import { ballPose, parallaxFactor, patternIndex, rollStep, shellContrast } from "@/lib/rendering/three/balls3d";
+import { BALL_PATTERNS, getAllBallTypes } from "@/lib/ballTypes";
+import { haloStops, CORONA_RADII } from "@/lib/rendering/sleek/bulb";
 import {
   monitorConeAngle, monitorPlacement, roomLevel, wantedLights,
 } from "@/lib/rendering/three/lights3d";
@@ -489,5 +491,42 @@ describe("the wiring", () => {
     expect(frame).toMatch(/const flat: LightScope = \{ \.\.\.light, level: 1, reach: 1e7 \}/);
     expect(frame).toMatch(/this\.walls\.sync\(game, flat, sink, w2s, scale\)/);
     expect(sleek).toMatch(/this\.board\.showWash = false;/);
+  });
+});
+
+describe("the shell shows a ball rolling", () => {
+  it("gives every ball type its own pattern from balls.yml", () => {
+    const types = getAllBallTypes();
+    expect(types.length).toBeGreaterThanOrEqual(10);
+    for (const t of types) expect(t.pattern, t.id).toBeDefined();
+    // Not all the same: the pattern is also how types are told apart.
+    expect(new Set(types.map(t => t.pattern)).size).toBeGreaterThanOrEqual(5);
+  });
+
+  it("wears its type's pattern unless the Playground forces one", () => {
+    const red = ball({ typeId: "red" } as Partial<Ball>);
+    expect(BALL_PATTERNS[patternIndex(red, "auto")]).toBe("seam");
+    expect(BALL_PATTERNS[patternIndex(red, "dimples")]).toBe("dimples");
+    expect(BALL_PATTERNS[patternIndex(ball({ typeId: "nope" } as Partial<Ball>), "auto")]).toBe("seam");
+  });
+
+  it("has a shader branch for every pattern, in BALL_PATTERNS order", () => {
+    const src = read("src/lib/rendering/three/balls3d.ts");
+    const order = [...src.matchAll(/\/\/ (seam|stripe|bands|quarters|panels|dimples|plain)\b/g)].map(m => m[1]);
+    expect(order).toEqual([...BALL_PATTERNS]);
+  });
+
+  it("fades the pattern before it can strobe, and on a ball too small to carry it", () => {
+    expect(shellContrast(0.1, 20)).toBeCloseTo(1, 6);
+    expect(shellContrast(1.2, 20)).toBe(0);
+    expect(shellContrast(0.6, 20)).toBeGreaterThan(0);
+    expect(shellContrast(0.6, 20)).toBeLessThan(1);
+    expect(shellContrast(0.1, 3)).toBe(0);
+  });
+
+  it("keeps the 3D halo off the ball's face, where the pattern is", () => {
+    const edge = 1 / CORONA_RADII;
+    for (const st of haloStops()) if (st.offset <= edge) expect(st.alpha).toBe(0);
+    expect(Math.max(...haloStops().map(st => st.alpha))).toBeGreaterThan(0.3);
   });
 });

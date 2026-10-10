@@ -65,7 +65,7 @@ describe("every look dial has a Playground slider", () => {
   // interface fails here until its slider exists.
   const dials: [string, string][] = [
     ...Object.keys(DEFAULT_LIGHT_LOOK).map(k => [k, `light-${kebab(k)}`] as [string, string]),
-    ...Object.keys(DEFAULT_BALL_LOOK).filter(k => k !== "flicker")
+    ...Object.keys(DEFAULT_BALL_LOOK).filter(k => k !== "flicker" && k !== "pattern")
       .map(k => [k, `ball-${kebab(k)}-strength`] as [string, string]),
   ];
 
@@ -87,6 +87,14 @@ describe("every look dial has a Playground slider", () => {
 
   it("the flicker is a toggle rather than a slider, and is still reachable", () => {
     expect(PLAYGROUND).toMatch(/setBallLook\(\{ flicker:/);
+  });
+
+  it("the 3D shell pattern is a picker over every pattern, not a list", () => {
+    // Forcing one pattern on every ball is how they get compared; the picker
+    // reads BALL_PATTERNS, so a new pattern is listed without remembering.
+    expect(PLAYGROUND).toMatch(/id="ball-pattern"/);
+    expect(PLAYGROUND).toMatch(/\['auto', \.\.\.BALL_PATTERNS\]/);
+    expect(PLAYGROUND).toMatch(/setBallLook\(\{ pattern:/);
   });
 });
 

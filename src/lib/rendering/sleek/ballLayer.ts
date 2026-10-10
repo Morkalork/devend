@@ -52,7 +52,7 @@ import { getBallLook } from "@/lib/ballLook";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { getHeadingCue } from "@/lib/rendering/headingCue";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
-import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
+import { CORONA_RADII, bulbStops, coronaStops, haloStops } from "./bulb";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import { causticShadow } from "./flashLight";
 import { getLightLook } from "@/lib/lightLook";
@@ -61,7 +61,7 @@ import { compassRing } from "./compassRing";
 import { simNow } from "@/lib/simClock";
 
 /** The corona's strength over the 3D renderer's sphere (see drawBall). */
-export const HYBRID_CORONA = 0.55;
+export const HYBRID_CORONA = 0.8;
 
 /**
  * Nominal buff durations, for the ring's sweep only.
@@ -162,6 +162,8 @@ export const SELF_LIT_SHADOW = 0.35;
 /** Corona bake radius, in texture pixels. Mapped onto the ball by the fan UVs. */
 const CORONA_BAKE = 96;
 let coronaTexture: Texture | null = null;
+/** The 3D renderer's variant: nothing on the ball's face (bulb.haloStops). */
+let haloTexture: Texture | null = null;
 
 /**
  * The bloom around a bulb: nothing at the centre, peaking exactly at the ball's
@@ -176,24 +178,26 @@ let coronaTexture: Texture | null = null;
  * One texture for every ball, tinted per colour: a white radial tinted is
  * exactly the coloured version of itself, which is not true of the body bake.
  */
-function coronaTex(): Texture {
-  if (coronaTexture) return coronaTexture;
+function coronaTex(halo = false): Texture {
+  const cached = halo ? haloTexture : coronaTexture;
+  if (cached) return cached;
   const size = CORONA_BAKE * 2;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return (coronaTexture = Texture.WHITE);
+  if (!ctx) return Texture.WHITE;
 
   const g = ctx.createRadialGradient(
     CORONA_BAKE, CORONA_BAKE, 0, CORONA_BAKE, CORONA_BAKE, CORONA_BAKE,
   );
-  for (const stop of coronaStops()) g.addColorStop(stop.offset, `rgba(255,255,255,${stop.alpha})`);
+  for (const stop of halo ? haloStops() : coronaStops()) g.addColorStop(stop.offset, `rgba(255,255,255,${stop.alpha})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
 
-  coronaTexture = Texture.from(canvas);
-  return coronaTexture;
+  const tex = Texture.from(canvas);
+  if (halo) haloTexture = tex; else coronaTexture = tex;
+  return tex;
 }
 
 /** Drop every baked sphere (level change / resize). */
@@ -202,6 +206,8 @@ export function clearSphereCache(): void {
   sphereCache.clear();
   coronaTexture?.destroy(true);
   coronaTexture = null;
+  haloTexture?.destroy(true);
+  haloTexture = null;
   clearWebTextures();
 }
 
@@ -898,7 +904,7 @@ export class SleekBallLayer {
       // it drains.
       corona.visible = !dormant && body.alpha > 0.01;
       if (corona.visible) {
-        corona.texture = coronaTex();
+        corona.texture = coronaTex(this.hybrid);
         // The bloom takes the body's SHAPE, not just its place. It is additive
         // and it bleeds past the silhouette, so a round one over a splatted
         // ball does not merely fail to help - it erases the splat, which was
@@ -914,9 +920,8 @@ export class SleekBallLayer {
         // at switch-on the bloom is the ember's own colour and barely there.
         corona.tint = mix(bodyColor, 0xffffff, (0.4 + CORONA_FLARE * heart) * warmGain);
         corona.alpha = body.alpha * (0.55 + 0.45 * flick) * warmGain
-          // Over a 3D sphere the bloom is half the glow, not all of it: the
-          // sphere glows on its own, and a full corona washes out the etched
-          // shell that shows it rolling.
+          // Over a 3D sphere the bloom is a halo round the ball (haloStops)
+          // and a little softer: the sphere glows on its own.
           * (this.hybrid ? HYBRID_CORONA : 1);
       }
     }

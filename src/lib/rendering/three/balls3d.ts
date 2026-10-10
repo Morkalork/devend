@@ -10,8 +10,9 @@
  * wall squash all come from the same functions the 2D ball uses.
  *
  * WHAT IS NEW. It rolls. A smooth glowing sphere cannot show that it turns, so
- * the shell is etched: a seam winding round it and a few vias, darker than the
- * glow and fixed to the ball, turning with it. The roll is worked out here from
+ * the light shines through a patterned shell fixed to the ball (each type its
+ * own pattern, balls.yml), with a glint that holds still toward the key light
+ * while the pattern turns under it (see `shell`). The roll is worked out here from
  * how far the ball moved since the last frame - about the axis `up x motion`,
  * by `distance / radius` - and lives only in this renderer, in a map keyed by
  * ball. The simulation never sees it, so two-player lockstep cannot either.
@@ -31,6 +32,8 @@ import { BREATHE, flightStretch, heartbeat, heartPhase, heartRate } from "@/lib/
 import { warmup, WARMUP_EMBER } from "@/lib/rendering/ballTell";
 import { getLightLook } from "@/lib/lightLook";
 import { PALETTE, mix, BALL_FALLBACK } from "@/lib/rendering/sleek/palette";
+import { BALL_PATTERNS, getBallType, type BallPattern } from "@/lib/ballTypes";
+import { getBallLook } from "@/lib/ballLook";
 import { BOARD_CENTRE } from "./floorCamera";
 
 /** What a ball looks like this frame, in world units. */
@@ -149,50 +152,125 @@ export function rollStep(q: Quaternion, dx: number, dz: number, radius: number):
   return true;
 }
 
-/** The etched shell and the inner glow, added to a standard material. */
-function etch(material: MeshStandardMaterial, uniforms: { uGlow: { value: number }; uEtch: { value: number } }): void {
+/**
+ * How much of the shell's pattern to show, 0..1, from how far the ball turned
+ * this frame and how big it is on screen.
+ *
+ * SPEED: past about half a radian a frame a pattern starts to strobe - the
+ *   wagon-wheel effect, where a fast ball appears to spin slowly or backwards.
+ *   The pattern fades out instead, which reads as motion blur. Measured per
+ *   PRESENTED frame, which is what the eye samples, so a 120 Hz screen keeps
+ *   its pattern to twice the speed a 60 Hz one does, which is right.
+ * SIZE: below about 5 pixels of radius even big shapes are a smudge that
+ *   crawls as it turns; the ball goes back to a plain bulb.
+ */
+export function shellContrast(spinPerFrame: number, radiusPx: number): number {
+  const smooth = (a: number, b: number, x: number) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  return (1 - smooth(0.35, 0.9, spinPerFrame)) * smooth(4, 9, radiusPx);
+}
+
+/** The shell's uniforms, per ball. */
+interface ShellUniforms {
+  uGlow: { value: number };
+  /** Pattern depth this frame: the look's shade times shellContrast. */
+  uShade: { value: number };
+  /** Index into BALL_PATTERNS. */
+  uPattern: { value: number };
+  uGlint: { value: number };
+  /** Direction to the key light, in VIEW space. */
+  uGlintDir: { value: Vector3 };
+}
+
+/**
+ * The shell, added to a standard material: a lamp behind a patterned shade.
+ *
+ * A LAMPSHADE, NOT PAINT. The pattern is how much of the light inside gets
+ * through: open panels glow at full strength, the ribs pass less. So the ball
+ * stays the brightest thing on the board (the reason it became a lamp in the
+ * first place) and the pattern still has real contrast, which a dark pattern
+ * painted onto a glowing ball never did.
+ *
+ * THE GLINT stays where the key light is while the pattern turns under it.
+ * That is what makes a billiard ball read as rolling: the shine holds still
+ * and the stripes go round. It replaces most of the old hot spot in the dead
+ * centre, which moved with nothing and so said nothing.
+ *
+ * Patterns are worked out from the OBJECT-space normal, so they are fixed to
+ * the ball and turn with it, and antialiased with fwidth.
+ */
+function shell(material: MeshStandardMaterial, u: ShellUniforms): void {
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
-    shader.uniforms.uGlow = uniforms.uGlow;
-    shader.uniforms.uEtch = uniforms.uEtch;
+    Object.assign(shader.uniforms, u);
     shader.vertexShader = "varying vec3 vBallN;\n" + shader.vertexShader.replace(
       "#include <beginnormal_vertex>",
       "#include <beginnormal_vertex>\nvBallN = normal;",
     );
     shader.fragmentShader = `
 uniform float uGlow;
-uniform float uEtch;
+uniform float uShade;
+uniform float uPattern;
+uniform float uGlint;
+uniform vec3 uGlintDir;
 varying vec3 vBallN;
-float ballEtch(vec3 n) {
-  // A seam winding round the ball like a tennis ball's, and six vias at the
-  // poles of each axis. Antialiased with fwidth so a small ball does not
-  // shimmer as it turns.
-  float ang = atan(n.z, n.x);
-  float seam = abs(n.y - 0.32 * sin(ang * 2.0));
-  float w = 0.085;
-  float aa = fwidth(seam) * 1.5 + 1e-4;
-  float m = 1.0 - smoothstep(w - aa, w + aa, seam);
-  vec3 an = abs(n);
-  float via = max(max(an.x, an.y), an.z);
-  float va = fwidth(via) * 1.5 + 1e-4;
-  m = max(m, smoothstep(0.985 - va, 0.985 + va, via) * 0.85);
-  return m;
+float aastep(float edge, float v) {
+  float w = fwidth(v) * 0.75 + 1e-4;
+  return smoothstep(edge - w, edge + w, v);
+}
+// 1 on a rib (light held back), 0 on an open panel. Order is BALL_PATTERNS.
+float ballShade(vec3 n) {
+  if (uPattern < 0.5) {                                   // seam
+    float f = abs(n.y - 0.32 * sin(2.0 * atan(n.z, n.x)));
+    return 1.0 - aastep(0.15, f);
+  } else if (uPattern < 1.5) {                            // stripe: lit band, shaded caps
+    return aastep(0.4, abs(n.y));
+  } else if (uPattern < 2.5) {                            // bands
+    return aastep(0.0, sin(n.y * 6.2832));
+  } else if (uPattern < 3.5) {                            // quarters: beach-ball gores
+    return aastep(0.0, sin(2.0 * atan(n.z, n.x)));
+  } else if (uPattern < 4.5) {                            // panels: cube faces, three shades
+    vec3 a = abs(n);
+    float xd = aastep(0.0, a.x - max(a.y, a.z));
+    float zd = aastep(0.0, a.z - max(a.x, a.y));
+    return xd + 0.55 * zd;
+  } else if (uPattern < 5.5) {                            // dimples: twelve big dots
+    const float P = 1.618034;
+    float m = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float s1 = (i & 1) == 0 ? 1.0 : -1.0;
+      float s2 = (i & 2) == 0 ? 1.0 : -1.0;
+      int k = i / 4;
+      vec3 d = k == 0 ? vec3(0.0, s1, s2 * P) : k == 1 ? vec3(s1, s2 * P, 0.0) : vec3(s2 * P, 0.0, s1);
+      m = max(m, aastep(0.955, dot(n, normalize(d))));
+    }
+    return m;
+  }
+  return 0.0;                                             // plain
 }
 ` + shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",
       `#include <emissivemap_fragment>
 {
-  vec3 bn = normalize(vBallN);
-  float facing = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+  vec3 N = normalize(normal);
+  vec3 V = normalize(vViewPosition);
+  float facing = clamp(dot(N, V), 0.0, 1.0);
   // A lamp: brightest through the middle, its hue at the rim, never dark.
-  vec3 glowCol = totalEmissiveRadiance * mix(0.5, 1.15, facing)
-    + vec3(1.0) * pow(facing, 5.0) * 0.55 * uGlow;
+  // Kept just under the output curve's knee (outputPass.ts): a body pushed
+  // past it is flattened into one colour, and the shade's ribs with it.
+  vec3 glowCol = totalEmissiveRadiance * mix(0.45, 0.85, facing)
+    + vec3(1.0) * pow(facing, 5.0) * 0.2 * uGlow;
   glowCol *= uGlow;
-  glowCol *= 1.0 - uEtch * ballEtch(bn);
+  glowCol *= 1.0 - 0.9 * uShade * ballShade(normalize(vBallN));
+  // The glint: fixed toward the key light, so the pattern rolls under it.
+  vec3 H = normalize(uGlintDir + V);
+  glowCol += vec3(1.0) * pow(max(dot(N, H), 0.0), 48.0) * uGlint * 1.6;
   totalEmissiveRadiance = glowCol;
 }`,
     );
   };
-  material.customProgramCacheKey = () => "ball-lamp";
+  material.customProgramCacheKey = () => "ball-shell";
 }
 
 /**
@@ -206,11 +284,31 @@ export function parallaxFactor(eye: number, height: number): number {
 interface BallView {
   mesh: Mesh;
   material: MeshStandardMaterial;
-  uniforms: { uGlow: { value: number }; uEtch: { value: number } };
+  uniforms: ShellUniforms;
   q: Quaternion;
   lastX: number;
   lastZ: number;
+  /** Radians turned per frame, smoothed, for shellContrast. */
+  spin: number;
   seen: boolean;
+}
+
+/** Where the scene is being looked at from, for the glint. */
+export interface ShellView {
+  /** The board group's matrix (the tilt). */
+  board: Matrix4;
+  /** The camera's world-to-view matrix. */
+  view: Matrix4;
+  /** The key light, in scene space: the lamp over its ball, else the monitor. */
+  key: Vector3;
+  /** 3D-frame pixels per world unit, for the size fade. */
+  pxPerUnit: number;
+}
+
+/** The pattern a ball wears: the Playground's override, else its type's own. */
+export function patternIndex(ball: Ball, override: BallPattern | "auto"): number {
+  const p = override !== "auto" ? override : getBallType(ball.typeId)?.pattern ?? "seam";
+  return Math.max(0, BALL_PATTERNS.indexOf(p));
 }
 
 const tmpColor = new Color();
@@ -222,6 +320,7 @@ export class Balls3D {
   private m = new Matrix4();
   private r = new Matrix4();
   private a = new Matrix4();
+  private c = new Vector3();
   /** The last frame's poses, by ball id, for the light placement. */
   readonly poses = new Map<string, BallPose>();
 
@@ -232,19 +331,22 @@ export class Balls3D {
   private viewFor(ball: Ball): BallView {
     let v = this.views.get(ball.id);
     if (v) return v;
-    const uniforms = { uGlow: { value: 1 }, uEtch: { value: 0.62 } };
+    const uniforms: ShellUniforms = {
+      uGlow: { value: 1 }, uShade: { value: 0 }, uPattern: { value: 0 },
+      uGlint: { value: 0 }, uGlintDir: { value: new Vector3(0, 0, 1) },
+    };
     const material = new MeshStandardMaterial({ color: 0x222222, roughness: 0.32, metalness: 0 });
     // The ball's own light sits at its centre. Front faces only in the shadow
     // pass means that, seen from inside, the shell casts nothing - the lamp is
     // not blocked by its own glass - while every OTHER light still sees a solid.
     material.shadowSide = FrontSide;
-    etch(material, uniforms);
+    shell(material, uniforms);
     const mesh = new Mesh(this.geometry, material);
     mesh.matrixAutoUpdate = false;
     mesh.castShadow = true;
     mesh.receiveShadow = false;
     this.parent.add(mesh);
-    v = { mesh, material, uniforms, q: new Quaternion(), lastX: NaN, lastZ: NaN, seen: true };
+    v = { mesh, material, uniforms, q: new Quaternion(), lastX: NaN, lastZ: NaN, spin: 0, seen: true };
     this.views.set(ball.id, v);
     return v;
   }
@@ -256,9 +358,10 @@ export class Balls3D {
    * rings and marks round. Walls are left to lean, which is the point of them;
    * a ball whose glow sat a few pixels off its body would just look broken.
    */
-  sync(game: CanvasGameState, now: number, eye = Infinity, k = 1): void {
+  sync(game: CanvasGameState, now: number, eye = Infinity, k = 1, look?: ShellView): void {
     for (const v of this.views.values()) v.seen = false;
     this.poses.clear();
+    const dress = getBallLook();
     for (const ball of game.balls) {
       const v = this.viewFor(ball);
       v.seen = true;
@@ -270,8 +373,14 @@ export class Balls3D {
 
       const p = ball.renderPosition ?? ball.position;
       const rolling = !pose.dormant && ball.state === "active";
-      if (rolling && Number.isFinite(v.lastX)) rollStep(v.q, p.x - v.lastX, p.y - v.lastZ, ball.radius);
+      let turned = 0;
+      if (rolling && Number.isFinite(v.lastX)
+        && rollStep(v.q, p.x - v.lastX, p.y - v.lastZ, ball.radius)) {
+        turned = Math.hypot(p.x - v.lastX, p.y - v.lastZ) / ball.radius;
+      }
       v.lastX = p.x; v.lastZ = p.y;
+      // Smoothed, so a single long frame does not blink the pattern off.
+      v.spin = v.spin * 0.7 + turned * 0.3;
 
       v.mesh.visible = !pose.liquid && pose.alpha > 0.01;
       if (!v.mesh.visible) continue;
@@ -294,6 +403,16 @@ export class Balls3D {
       v.material.emissive.copy(tmpColor);
       v.material.color.setHex(mix(pose.color, 0x000000, 0.7));
       v.uniforms.uGlow.value = pose.glow;
+      v.uniforms.uPattern.value = patternIndex(ball, dress.pattern);
+      v.uniforms.uShade.value = dress.shade
+        * shellContrast(v.spin, pose.r * (look?.pxPerUnit ?? 1));
+      v.uniforms.uGlint.value = pose.dormant ? 0 : dress.glint * pose.glow;
+      if (look) {
+        // The ball's centre in the scene, then the way to the key light, turned
+        // into view space where the shader's normals are.
+        this.c.set(pose.x, pose.r * pose.sy, pose.z).applyMatrix4(look.board);
+        v.uniforms.uGlintDir.value.copy(look.key).sub(this.c).normalize().transformDirection(look.view);
+      }
       const translucent = pose.alpha < 0.99;
       v.material.transparent = translucent;
       v.material.depthWrite = !translucent;
