@@ -42,7 +42,13 @@ function interactiveAt(app: PixiApplication, clientX: number, clientY: number): 
   const rect = canvas.getBoundingClientRect();
   const x = clientX - rect.left;
   const y = clientY - rect.top;
-  const hit = app.renderer.events.rootBoundary.hitTest(x, y) as Container | null;
+  const boundary = app.renderer.events.rootBoundary;
+  // Pixi sets the boundary's root only inside its own event handlers, and the
+  // board asks before those have run (its listener fires first), so it is set
+  // here; without it the first touch on the board would throw.
+  boundary.rootTarget = app.stage;
+  let hit: Container | null = null;
+  try { hit = boundary.hitTest(x, y) as Container | null; } catch { return false; }
   // The full-screen root is not interactive; a hit means a widget.
   return !!hit && hit !== app.stage;
 }
@@ -94,8 +100,13 @@ function EventBridge(): null {
       }
       this.setCursor(this.rootBoundary.cursor);
     }.bind(internal);
+    // Never preventDefault: Pixi does it on every touch at its target by
+    // default, and on <body> that cancels the click of every DOM element on
+    // the page (a DOM screen's buttons, Admin). The page lock is CSS instead.
+    events.autoPreventDefault = false;
     events.setTargetElement(target);
     setUiHitTester((x, y) => interactiveAt(app, x, y));
+    if (import.meta.env.DEV) (window as unknown as { __uiApp?: PixiApplication }).__uiApp = app;
     return () => {
       setUiHitTester(null);
       try { events.setTargetElement(null as unknown as HTMLElement); } catch { /* torn down */ }

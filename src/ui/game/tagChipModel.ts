@@ -7,6 +7,7 @@
  */
 import type { TFunction } from "i18next";
 import { TAG_COLORS, type UpgradeTag } from "@/types/upgrade";
+import { conditionText, type UpgradeCondition } from "@/lib/upgradeConditions";
 import { COLOR, TEXT } from "../theme";
 
 /** Tailwind v3's palette, for the families and shades the game's class tables use. */
@@ -74,4 +75,10 @@ export function conditionChipLook(live: boolean): ConditionChipLook {
   return live
     ? { color: COLOR.primary, border: COLOR.primary, borderAlpha: 0.6, background: COLOR.primary, backgroundAlpha: 0.15 }
     : { color: COLOR.mutedForeground, border: COLOR.mutedForeground, borderAlpha: 0.4, background: COLOR.muted, backgroundAlpha: 0.4 };
+}
+
+/** The condition in words, and the hover title's live / not-now line. */
+export function conditionChipText(t: TFunction, condition: UpgradeCondition, live: boolean): { text: string; title: string } {
+  const { key, params } = conditionText(condition);
+  return { text: t(key, params), title: live ? t("upgradeConditions.liveNow") : t("upgradeConditions.notNow") };
 }

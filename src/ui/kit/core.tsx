@@ -34,7 +34,11 @@ export interface ViewProps {
 /** A flexbox box: Tailwind's `div`, with backgroundColor, borderColor/Width, borderRadius. */
 export function View({ layout, children, alpha, visible, zIndex, label }: ViewProps) {
   return (
-    <layoutContainer layout={layout ?? {}} alpha={alpha ?? 1} visible={visible ?? true} zIndex={zIndex ?? 0} label={label}>
+    // Passive: a View is never a touch target itself (LayoutContainer defaults
+    // to "static", and its background then counts as a hit), so a tinted
+    // overlay over the board lets touches through to it. Its Pressable
+    // children are still hit-tested.
+    <layoutContainer layout={layout ?? {}} alpha={alpha ?? 1} visible={visible ?? true} zIndex={zIndex ?? 0} label={label} eventMode="passive">
       {children}
     </layoutContainer>
   );
@@ -111,7 +115,10 @@ export function Label(p: LabelProps) {
         // wrap width to its box's width on every pass, and an intrinsic box is
         // the text's own previous bounds: the wrap would ratchet narrower.
         <uiText text={text} style={style} resolution={RESOLUTION}
-          layout={{ width: wrapWidth, objectFit: "none", objectPosition: "top left" }} />
+          // Pixi centres or right-aligns lines against the longest line; the
+          // block itself is placed in the box the same way.
+          layout={{ width: wrapWidth, objectFit: "none",
+            objectPosition: p.align === "center" ? "top center" : p.align === "right" ? "top right" : "top left" }} />
       )}
     </layoutContainer>
   );

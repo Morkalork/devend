@@ -11,11 +11,26 @@ import "@pixi/layout";
 import "@pixi/layout/react";
 import { extend } from "@pixi/react";
 import { Container, Graphics, Sprite, Text } from "pixi.js";
-import { LayoutContainer } from "@pixi/layout/components";
+import { LayoutContainer, type LayoutContainerOptions } from "@pixi/layout/components";
 import { UiGraphics, UiText } from "./elements";
 import { Layout } from "@pixi/layout";
 
-extend({ Container, Graphics, Sprite, Text, LayoutContainer, UiText, UiGraphics });
+/**
+ * `<layoutContainer>` is passive unless it says otherwise. @pixi/layout makes
+ * every LayoutContainer "static", and its background then counts as a hit, so
+ * every box in the interface was a touch target: the board defers to any hit
+ * (hitGate), and a tinted toast or banner over the board would have eaten the
+ * cut under it. Something that handles touches sets `eventMode="static"`
+ * (Pressable, ScrollView and the drag surfaces do).
+ */
+class UiLayoutContainer extends LayoutContainer {
+  constructor(options?: LayoutContainerOptions) {
+    super(options);
+    this.eventMode = options?.eventMode ?? "passive";
+  }
+}
+
+extend({ Container, Graphics, Sprite, Text, LayoutContainer: UiLayoutContainer, UiText, UiGraphics });
 
 // Boxes stack top to bottom unless told otherwise, the way the DOM's block
 // elements did. @pixi/layout's default is CSS flexbox's `row`, so every

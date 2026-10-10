@@ -30,6 +30,8 @@ export function ScrollView({ layout, children, direction = "vertical" }: ScrollV
   return (
     <layoutContainer
       layout={{ overflow: "scroll", flexDirection: vertical ? "column" : "row", ...(layout ?? {}) }}
+      // The trackpad listens on this box, so it must be a touch target.
+      eventMode="static"
       trackpad={vertical ? { xConstrainPercent: -1, yConstrainPercent: 0.15 } : { yConstrainPercent: -1, xConstrainPercent: 0.15 }}
     >
       {children}
@@ -61,7 +63,9 @@ export function Appear({ children, layout, fromY = 0, fromScale = 1, duration = 
       onUpdate: (t: number) => {
         if (node.destroyed) return;
         node.alpha = t;
-        node.pivot.y = -fromY * (1 - t);
+        // `y`, not pivot: @pixi/layout builds the transform from the layout
+        // position plus `position`, and ignores pivot.
+        node.y = fromY * (1 - t);
         const s = fromScale + (1 - fromScale) * t;
         node.scale.set(s);
       },
@@ -106,7 +110,10 @@ export function Modal({ screen, onClose, children, accent = COLOR.primary, title
         layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.7) }}
       />
       <Appear fromScale={0.94} duration={0.18}>
-        <View layout={{
+        {/* A Pressable with no handlers: it is interactive, so a tap on the
+            card stops here instead of falling through to the backdrop, which
+            would close the modal. */}
+        <Pressable pressedAlpha={1} layout={{
           width, padding: 20, gap: 12, borderRadius: RADIUS.xl,
           backgroundColor: COLOR.card, borderColor: tint(accent, 0.5), borderWidth: 1,
         }}>
@@ -122,7 +129,7 @@ export function Modal({ screen, onClose, children, accent = COLOR.primary, title
             </Pressable>
           </View>
           {children}
-        </View>
+        </Pressable>
       </Appear>
     </View>
   );

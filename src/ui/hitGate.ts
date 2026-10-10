@@ -19,3 +19,8 @@ export function setUiHitTester(t: Tester | null): void {
 export function uiCovers(clientX: number, clientY: number): boolean {
   return tester ? tester(clientX, clientY) : false;
 }
+
+// A handle for poking at ownership from the console, dev builds only.
+if (import.meta.env?.DEV && typeof window !== "undefined") {
+  (window as unknown as { __uiCovers?: typeof uiCovers }).__uiCovers = uiCovers;
+}
