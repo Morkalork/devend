@@ -15,7 +15,7 @@
 import { LANGUAGE_STORAGE_KEY } from '@/i18n';
 import { disableRunFlush } from '@/lib/runSaveFlush';
 import { PANEL_SIDE_KEY } from '@/lib/admin/panelSide';
-import { RENDERER_KEY, QUALITY_KEY, FOV_KEY, HEIGHT_KEY } from '@/lib/rendering/render3dSettings';
+import { RENDERER_KEY, QUALITY_KEY, FOV_KEY, HEIGHT_KEY, LEAN_KEY } from '@/lib/rendering/render3dSettings';
 
 // Device/app preferences that are NOT game progression. A total reset keeps
 // these so the player isn't dropped back into the wrong UI language, a blaring
@@ -26,6 +26,7 @@ const PRESERVED_KEYS = new Set<string>([
   QUALITY_KEY,  // the 3D board's tuning: device settings, like the renderer
   FOV_KEY,
   HEIGHT_KEY,
+  LEAN_KEY,
   'devend:musicVolume',
   'devend:sfxVolume',
   'devend:soundMuted',

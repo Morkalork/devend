@@ -98,6 +98,12 @@ import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 export interface HybridHost {
   /** The context Pixi shares. The host created it, on the board's canvas. */
   readonly gl: WebGL2RenderingContext;
+  /**
+   * The three-quarter view's lean (floorCamera.leanProjection): screen units
+   * a thing rises per unit of its height. The floor never moves, so only what
+   * this layer draws ON a ball has to rise with the sphere.
+   */
+  readonly lean: number;
   /** Pixi is up; textures can now be handed across. */
   attach(renderer: WebGLRenderer): void;
   /**
@@ -547,6 +553,7 @@ export class SleekRenderer {
     const sink = this.shadowSink;
     sink.clear();
 
+    this.balls.lift = host.lean;
     this.board.sync(game, flatRoom, w2s, this.staticDirty);
     this.areas.sync(game, flat, w2s, scale, tilt, rctx.accentColor);
     this.props.sync(game, flat, sink, w2s, scale, now);

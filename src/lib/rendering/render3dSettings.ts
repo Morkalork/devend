@@ -26,6 +26,7 @@ export const RENDERER_KEY = "devend:renderer";
 export const QUALITY_KEY = "devend:render3d:quality";
 export const FOV_KEY = "devend:render3d:fov";
 export const HEIGHT_KEY = "devend:render3d:height";
+export const LEAN_KEY = "devend:render3d:lean";
 
 export const QUALITY_SETTINGS: readonly QualitySetting[] = ["auto", "low", "medium", "high"];
 
@@ -43,6 +44,18 @@ export const FOV_RANGE: readonly [number, number] = [8, 50];
  */
 export const DEFAULT_HEIGHT_SCALE = 1.4;
 export const HEIGHT_RANGE: readonly [number, number] = [0.4, 2.5];
+
+/**
+ * The three-quarter view (floorCamera.leanProjection): how far everything
+ * standing on the board leans back up the screen, in world units of screen
+ * offset per unit of height. 0 is the camera looking straight down, where a
+ * wall is its top and nothing else and the board reads as flat; at 0.6 a
+ * wall shows its front face, a ball sits up off its shadow and the board reads
+ * as a room seen from the near side. The floor itself never moves, so touch,
+ * every overlay and the layout are the same at any lean.
+ */
+export const DEFAULT_LEAN = 0.6;
+export const LEAN_RANGE: readonly [number, number] = [0, 1];
 
 function read(key: string): string | null {
   try {
@@ -102,6 +115,15 @@ export function getHeightScale(): number {
 export function setHeightScale(k: number): void {
   const v = Math.min(HEIGHT_RANGE[1], Math.max(HEIGHT_RANGE[0], k));
   write(HEIGHT_KEY, v === DEFAULT_HEIGHT_SCALE ? null : String(v));
+}
+
+export function getLean(): number {
+  return readNumber(LEAN_KEY, DEFAULT_LEAN, LEAN_RANGE);
+}
+
+export function setLean(k: number): void {
+  const v = Math.min(LEAN_RANGE[1], Math.max(LEAN_RANGE[0], k));
+  write(LEAN_KEY, v === DEFAULT_LEAN ? null : String(v));
 }
 
 /**

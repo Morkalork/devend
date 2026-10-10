@@ -13,7 +13,8 @@ import {
 import {
   getRendererChoice, setRendererChoice, getQualitySetting, setQualitySetting, QUALITY_SETTINGS,
   getFov, setFov, FOV_RANGE, DEFAULT_FOV, getHeightScale, setHeightScale, HEIGHT_RANGE,
-  DEFAULT_HEIGHT_SCALE, type QualitySetting, type RendererChoice,
+  DEFAULT_HEIGHT_SCALE, getLean, setLean, LEAN_RANGE, DEFAULT_LEAN,
+  type QualitySetting, type RendererChoice,
 } from '@/lib/rendering/render3dSettings';
 
 interface AdminScreenProps {
@@ -34,6 +35,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
   const [fov, setFovState] = useState(getFov);
   const [heightScale, setHeightState] = useState(getHeightScale);
+  const [lean, setLeanState] = useState(getLean);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -333,6 +335,38 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               </div>
             </div>
           </button>
+
+          <label className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
+            lean !== DEFAULT_LEAN ? 'border-primary' : 'border-border'
+          }`}>
+            <div className={`p-3 rounded-lg ${lean !== DEFAULT_LEAN ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Box className={`w-6 h-6 ${lean !== DEFAULT_LEAN ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">View angle <span className="text-xs text-muted-foreground">{lean}</span></div>
+              <div className="text-sm text-muted-foreground">
+                The three-quarter view: how far walls, props and balls lean back so their fronts show.
+                0 looks straight down. The floor and touch never move. Applies from the next map.
+              </div>
+            </div>
+            <input
+              id="admin-view-angle"
+              type="number"
+              inputMode="decimal"
+              step={0.1}
+              min={LEAN_RANGE[0]}
+              max={LEAN_RANGE[1]}
+              value={lean}
+              onChange={(e) => {
+                const raw = Number(e.target.value);
+                const next = Math.max(LEAN_RANGE[0], Math.min(LEAN_RANGE[1], Number.isFinite(raw) ? raw : DEFAULT_LEAN));
+                setLean(next);
+                setLeanState(next);
+              }}
+              className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
+              aria-label="View angle"
+            />
+          </label>
 
           <label className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
             fov !== DEFAULT_FOV ? 'border-primary' : 'border-border'

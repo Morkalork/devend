@@ -87,18 +87,47 @@ export function floorCamera(
 }
 
 /**
+ * THE THREE-QUARTER VIEW. Looking straight down, a wall is its top and nothing
+ * else, and the board reads as flat however real its lights are. Tilting the
+ * camera would show the walls' faces but would move the floor, and the floor
+ * is the contract everything outside the renderer relies on (see the top of
+ * this file): input, the overlays, the layout. So the camera does not tilt.
+ * Its projection is SHEARED instead: every point is pushed up the screen by
+ * `lean` times its height, in camera space, after lighting and before the
+ * perspective divide. The floor (height 0) does not move at all; a wall's top
+ * rises off its footprint and its front face shows beneath it; a ball sits up
+ * off its own shadow. It is the oblique view top-down games have always used,
+ * on a camera whose floor still lands on exactly the 2D board's pixels.
+ *
+ * Depth is untouched, so what hides what is still decided by height: the
+ * nearer (taller) surface wins, as it does when looking down.
+ *
+ * Returned row-major, the order three's Matrix4.set takes. In camera space y
+ * is up the screen and z is height minus the eye's distance `d`, so the push
+ * is y += lean * (z + d).
+ */
+export function leanProjection(lean: number, d: number): number[] {
+  return [
+    1, 0, 0, 0,
+    0, 1, lean, lean * d,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  ];
+}
+
+/**
  * Where a scene point lands on the surface, in pixels: the camera's own
  * projection written out, for tests and for anything that needs to put a 2D
  * mark on a 3D object. For a floor point (y = 0) this is exactly
- * (left + x * scale, top + z * scale).
+ * (left + x * scale, top + z * scale), at any lean.
  */
 export function projectToSurface(
-  cam: FloorCamera, width: number, height: number, x: number, y: number, z: number,
+  cam: FloorCamera, width: number, height: number, x: number, y: number, z: number, lean = 0,
 ): { x: number; y: number } {
   const depth = cam.eye.y - y;
-  // Into camera space, then onto the near plane.
+  // Into camera space (sheared by the lean), then onto the near plane.
   const cx = (x - cam.eye.x) * (cam.near / depth);
-  const cy = (cam.eye.z - z) * (cam.near / depth);
+  const cy = (cam.eye.z - z + lean * y) * (cam.near / depth);
   const nx = ((cx - cam.left) / (cam.right - cam.left)) * 2 - 1;
   const ny = ((cy - cam.bottom) / (cam.top - cam.bottom)) * 2 - 1;
   return { x: ((nx + 1) / 2) * width, y: ((1 - ny) / 2) * height };

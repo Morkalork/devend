@@ -529,11 +529,32 @@ untouched. Three parts:
   of the floor, their tops showing what the 2D layer painted; they darken with
   the floor under the cut preview. Portals get a breathing emissive rim.
 
-What did not change: the camera still looks straight down, so height reads
-through shadow length, the lit edges and the parallax toward the board's
-edges rather than through a slanted view. A slanted camera was offered and not
-chosen; it would change how touch maps onto the board. The 2D renderer ignores
-`rise` and draws its props as before.
+The 2D renderer ignores `rise` and draws its props as before.
+
+## 10. The three-quarter view (built after the plan)
+
+Played on staging, the finished 3D board was reported as "still the old 2D
+design". It was the 3D board (three.js loaded, nothing fell back), but a camera
+looking straight down shows a wall as its top and nothing else, so heights,
+props and lighting only showed as shadows; and a new game opens on the empty
+onboarding board, which has nothing standing on it at all. A wider lens and
+taller walls were measured and still read as flat.
+
+A real camera tilt would have moved the floor, and the floor is the contract
+input, every overlay and the layout rely on (floorCamera.ts). So the camera
+does not tilt: its projection is SHEARED (`floorCamera.leanProjection`). Every
+point moves up the screen by `lean` times its height, in camera space, after
+lighting and before the perspective divide. The floor does not move at all, so
+touch, the 2D overlay, the DOM overlays and the layout are untouched; a wall's
+top rises off its footprint and its front face shows beneath it; a ball sits up
+off its shadow; the frame becomes a tray with an inside face. Depth is
+untouched, so occlusion is still decided by height.
+
+The one 2D layer that had to follow is the balls': what is drawn ON a ball
+(corona, marks, rings) rises with the sphere by `lean x radius`
+(`ballLayer.lift`); its trail and a melt stay on the floor. Admin's "View
+angle" sets the lean (0 is the old straight-down view, default 0.6), applied
+between maps.
 
 ## What is still open
 

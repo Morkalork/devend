@@ -56,7 +56,7 @@ of Pair Programming, the two-phone co-op mode (built; deterministic lockstep
 over a WebRTC or Nearby Connections link, with a WebSocket relay on the server
 for public Wi-Fi, where client isolation keeps the phones apart), and
 **RENDER_3D_PLAN.md** for the design and build record of the 3D board, a
-three.js scene seen from above that is now the default renderer (built; it
+three.js scene seen from above in a three-quarter view (a sheared projection, so the floor and touch never move) that is now the default renderer (built; it
 shares one WebGL context with the sleek 2D renderer, which still draws the
 board's flat marks into it and its effects over it, and is the fallback), and
 **ANDROID.md** for Capacitor/Play-Store packaging.

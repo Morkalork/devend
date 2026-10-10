@@ -12,10 +12,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { Group, Quaternion, Vector3 } from "three";
+import { Group, Matrix4, PerspectiveCamera, Quaternion, Vector3 } from "three";
 import { computeBoardRect, fitScale, tiltWorldPoint } from "@/lib/boardConstants";
 import {
-  BOARD_CENTRE, boardTiltElements, eyeDistance, floorCamera, projectToSurface, surfaceToFloor,
+  BOARD_CENTRE, boardTiltElements, eyeDistance, floorCamera, leanProjection, projectToSurface,
+  surfaceToFloor,
 } from "@/lib/rendering/three/floorCamera";
 import { collectWallRuns } from "@/lib/rendering/three/walls3d";
 import { collectSolids, extrude } from "@/lib/rendering/three/solids3d";
@@ -32,6 +33,7 @@ import { poolLightsChunk } from "@/lib/rendering/three/surfaceMaterial";
 import {
   autoTier, getFov, getHeightScale, getQualitySetting, getRendererChoice, setFov, setHeightScale,
   setQualitySetting, setRendererChoice, FOV_RANGE, HEIGHT_RANGE, RENDERER_KEY,
+  DEFAULT_LEAN, LEAN_RANGE, getLean, setLean,
 } from "@/lib/rendering/render3dSettings";
 import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
 import { SLAB_HEIGHT_WORLD } from "@/lib/rendering/sleek/light";
@@ -99,6 +101,57 @@ describe("the floor lands on the 2D board's pixels", () => {
     const cam = floorCamera(780, 1341, rect, 26);
     expect(cam.eye).toEqual({ x: BOARD_CENTRE, y: eyeDistance(26), z: BOARD_CENTRE });
     expect(eyeDistance(10)).toBeGreaterThan(eyeDistance(40));
+  });
+
+  it("keeps the floor exactly in place under the three-quarter view", () => {
+    // The whole reason the view is a shear and not a tilt: input, overlays and
+    // the layout all speak boardRect, and the floor still obeys it.
+    for (const [w, h, inset] of SURFACES) {
+      const rect = computeBoardRect(w, h, inset);
+      const cam = floorCamera(w, h, rect);
+      for (const lean of [0.3, DEFAULT_LEAN, 1]) {
+        for (const [x, z] of [[45, 45], [855, 855], [450, 450], [720, 130]]) {
+          const p = projectToSurface(cam, w, h, x, 0, z, lean);
+          expect(p.x).toBeCloseTo(rect.left + x * rect.scale, 3);
+          expect(p.y).toBeCloseTo(rect.top + z * rect.scale, 3);
+        }
+      }
+    }
+  });
+
+  it("stands raised things up the screen by the lean times their height", () => {
+    const rect = computeBoardRect(780, 1341, 284);
+    const cam = floorCamera(780, 1341, rect);
+    const h = 40;
+    const foot = projectToSurface(cam, 780, 1341, 450, 0, 450, DEFAULT_LEAN);
+    const top = projectToSurface(cam, 780, 1341, 450, h, 450, DEFAULT_LEAN);
+    // Up the screen (smaller y), so a wall's front face shows beneath its top.
+    const rise = (foot.y - top.y) / rect.scale;
+    expect(rise).toBeGreaterThan(DEFAULT_LEAN * h * 0.95);
+    expect(rise).toBeLessThan(DEFAULT_LEAN * h * 1.1);
+    expect(top.x).toBeCloseTo(foot.x, 6);
+  });
+
+  it("builds the camera matrix the renderer uses to the same projection", () => {
+    const w = 780, hgt = 1341;
+    const rect = computeBoardRect(w, hgt, 284);
+    const cam = floorCamera(w, hgt, rect);
+    const camera = new PerspectiveCamera();
+    camera.position.set(cam.eye.x, cam.eye.y, cam.eye.z);
+    camera.up.set(0, 0, -1);
+    camera.lookAt(cam.eye.x, 0, cam.eye.z);
+    camera.updateMatrixWorld();
+    camera.projectionMatrix.makePerspective(cam.left, cam.right, cam.top, cam.bottom, cam.near, cam.far);
+    camera.projectionMatrix.multiply(
+      new Matrix4().set(...(leanProjection(DEFAULT_LEAN, cam.eye.y) as Parameters<Matrix4["set"]>)),
+    );
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+    for (const [x, y, z] of [[300, 0, 610], [800, 30, 100], [450, 18, 450]]) {
+      const v = new Vector3(x, y, z).project(camera);
+      const want = projectToSurface(cam, w, hgt, x, y, z, DEFAULT_LEAN);
+      expect(((v.x + 1) / 2) * w).toBeCloseTo(want.x, 2);
+      expect(((1 - v.y) / 2) * hgt).toBeCloseTo(want.y, 2);
+    }
   });
 
   it("reads a surface pixel back onto the floor", () => {
@@ -450,9 +503,29 @@ describe("settings", () => {
     expect(getHeightScale()).toBe(HEIGHT_RANGE[0]);
   });
 
+  it("defaults the view angle to the three-quarter view, and clamps it", () => {
+    expect(getLean()).toBe(DEFAULT_LEAN);
+    expect(DEFAULT_LEAN).toBeGreaterThan(0);
+    setLean(9);
+    expect(getLean()).toBe(LEAN_RANGE[1]);
+    setLean(-1);
+    expect(getLean()).toBe(0);
+    setLean(DEFAULT_LEAN);
+    expect(localStorage.getItem("devend:render3d:lean")).toBeNull();
+  });
+
   it("survive a total reset, like the renderer choice always has", () => {
     const src = read("src/lib/totalReset.ts");
-    for (const k of ["RENDERER_KEY", "QUALITY_KEY", "FOV_KEY", "HEIGHT_KEY"]) expect(src).toMatch(new RegExp(`\\b${k},`));
+    for (const k of ["RENDERER_KEY", "QUALITY_KEY", "FOV_KEY", "HEIGHT_KEY", "LEAN_KEY"]) expect(src).toMatch(new RegExp(`\\b${k},`));
+  });
+});
+
+describe("the three-quarter view's wiring", () => {
+  it("leans the camera and lifts the balls' marks by the same amount", () => {
+    expect(read("src/lib/rendering/three/ThreeRenderer.ts")).toMatch(/leanProjection\(this\.leanNow/);
+    expect(read("src/lib/rendering/sleek/SleekRenderer.ts")).toMatch(/this\.balls\.lift = host\.lean/);
+    // The trail stays on the floor, laid from the footprint, not the lifted centre.
+    expect(read("src/lib/rendering/sleek/ballLayer.ts")).toMatch(/ballTrail\(ball, floor,/);
   });
 });
 

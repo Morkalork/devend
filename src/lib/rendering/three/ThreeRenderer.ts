@@ -25,7 +25,7 @@
  * shard in flight) live in this object, so two-player lockstep cannot see them.
  */
 import {
-  Group, HalfFloatType, PCFShadowMap, Vector3, PerspectiveCamera, Scene, UnsignedByteType,
+  Group, HalfFloatType, Matrix4, PCFShadowMap, Vector3, PerspectiveCamera, Scene, UnsignedByteType,
   WebGLRenderTarget, WebGLRenderer, type ExternalTexture, type Material,
 } from "three";
 import type { RenderTexture, Texture as PixiTexture, WebGLRenderer as PixiWebGLRenderer } from "pixi.js";
@@ -36,9 +36,9 @@ import { SleekRenderer, type HybridFrame, type HybridHost } from "@/lib/renderin
 import { boardAngleFor } from "@/lib/boardTilt";
 import { fitScale } from "@/lib/boardConstants";
 import {
-  autoTier, getFov, getHeightScale, getQualitySetting, type QualityTier,
+  autoTier, getFov, getHeightScale, getLean, getQualitySetting, type QualityTier,
 } from "@/lib/rendering/render3dSettings";
-import { boardTiltElements, eyeDistance, floorCamera } from "./floorCamera";
+import { boardTiltElements, eyeDistance, floorCamera, leanProjection } from "./floorCamera";
 import { QUALITY_PRESETS, QualityGovernor, stepDown, type QualityPreset } from "./quality";
 import { createSurfaceShared, makeSurfaceMaterial } from "./surfaceMaterial";
 import { pixiGlTexture, releasePixiWrap, threeViewOf, wrapForPixi } from "./textureBridge";
@@ -95,6 +95,9 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private pendingTier: QualityTier | null = null;
   private heightScale = 1;
   private fov = 26;
+  /** The three-quarter view's lean (floorCamera.leanProjection). */
+  private leanNow = 0;
+  private leanM = new Matrix4();
 
   private sceneRT: WebGLRenderTarget | null = null;
   private outRT: WebGLRenderTarget | null = null;
@@ -116,6 +119,11 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   get gl(): WebGL2RenderingContext {
     if (!this.renderer) throw new Error("ThreeRenderer: no context yet");
     return this.renderer.getContext() as WebGL2RenderingContext;
+  }
+
+  /** How far standing things lean back up the screen; sleek lifts the balls' marks to match. */
+  get lean(): number {
+    return this.leanNow;
   }
 
   get isReady(): boolean {
@@ -165,6 +173,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       : q;
     this.heightScale = getHeightScale();
     this.fov = getFov();
+    this.leanNow = getLean();
   }
 
   private buildRig(tier: QualityTier): void {
@@ -357,6 +366,10 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.camera.near = cam.near;
     this.camera.far = cam.far;
     this.camera.projectionMatrix.makePerspective(cam.left, cam.right, cam.top, cam.bottom, cam.near, cam.far);
+    if (this.leanNow > 0) {
+      this.leanM.set(...(leanProjection(this.leanNow, cam.eye.y) as Parameters<Matrix4["set"]>));
+      this.camera.projectionMatrix.multiply(this.leanM);
+    }
     this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
   }
 

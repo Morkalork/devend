@@ -430,6 +430,13 @@ export class SleekBallLayer {
    * by the renderer, so a smear lies on the floor behind the sphere.
    */
   hybrid = false;
+  /**
+   * The 3D board's three-quarter lean (floorCamera.leanProjection). A sphere's
+   * centre stands a radius off the floor, so it shows `lift * radius` up the
+   * screen from where the ball is; the corona, marks and rings drawn on it go
+   * up with it. Its trail and a melt stay on the floor, where they are.
+   */
+  lift = 0;
 
   constructor() {
     // No shadow child: cast shadows go to the renderer's shared floor plane.
@@ -590,11 +597,21 @@ export class SleekBallLayer {
   ): void {
     const { body, bodyPos, corona, coronaPos, web, webPos, webUv } = view;
     const p = ball.renderPosition ?? ball.position;
-    const c = w2s(p.x, p.y);
+    const floor = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
+    // Up with the sphere under the three-quarter view, except while it lies
+    // melted on the floor.
+    const melted = !!ball.splatScene && ball.effects.squishHoldUntil > 0;
+    const liftPx = this.hybrid && !melted ? this.lift * r : 0;
+    if (liftPx > 0) {
+      const flat = w2s;
+      w2s = (x: number, y: number) => { const q = flat(x, y); return { x: q.x, y: q.y - liftPx }; };
+    }
+    const c = w2s(p.x, p.y);
 
-    // The smear first, so the sphere lands on top of its own blur.
-    const trail = ballTrail(ball, c, r, scale, this.now);
+    // The smear first, so the sphere lands on top of its own blur. It lies on
+    // the floor, so it is laid from the ball's footprint.
+    const trail = ballTrail(ball, floor, r, scale, this.now);
     if (trail) {
       this.trails
         .moveTo(trail.from.x, trail.from.y)
