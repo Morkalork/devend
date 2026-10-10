@@ -636,6 +636,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
       <div style={{ flex: 1, overflow: 'hidden', transform: 'translateZ(0)', position: 'relative' }}>
         <GameScreen
           key={gameKey}
+          canvasPageLock={false}
           level={activeLevel}
           levelNumber={activeLevel.level}
           totalLevels={1}

@@ -13,7 +13,7 @@ import { extend } from "@pixi/react";
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { LayoutContainer, type LayoutContainerOptions } from "@pixi/layout/components";
 import { UiGraphics, UiText } from "./elements";
-import { Layout } from "@pixi/layout";
+import { Layout, LayoutSystem, getYoga, getYogaConfig, setYoga, setYogaConfig } from "@pixi/layout";
 
 /**
  * `<layoutContainer>` is passive unless it says otherwise. @pixi/layout makes
@@ -43,3 +43,25 @@ Layout.defaultStyle.shared.flexDirection = "column";
 // fit the view, and text squeezed with it scales down. A box that should give
 // way says so (`flex: 1` or `flexShrink: 1`).
 Layout.defaultStyle.shared.flexShrink = 0;
+
+// ONE Yoga for the life of the page. Every LayoutSystem.init loads a fresh
+// Yoga and makes it the global one, and an application is initialised more
+// than once (StrictMode mounts it twice; leaving Admin makes a new one). The
+// boxes made under the first instance then get children made under the
+// second, and Yoga refuses them ("Expected null or instance of Node, got an
+// instance of Node") from the first component to mount after the swap: the
+// tutorial hand, the pause sheet. So whichever instance finishes loading first
+// is kept, and a later init puts it back before its application is told it is
+// ready (nothing is laid out until then: UiHost waits for onInit).
+type YogaPair = { yoga: ReturnType<typeof getYoga>; config: ReturnType<typeof getYogaConfig> };
+let firstYoga: YogaPair | null = null;
+const loadLayout = LayoutSystem.prototype.init;
+LayoutSystem.prototype.init = async function init(this: LayoutSystem, ...args: Parameters<typeof loadLayout>) {
+  await loadLayout.apply(this, args);
+  if (firstYoga) {
+    setYoga(firstYoga.yoga);
+    setYogaConfig(firstYoga.config);
+  } else {
+    firstYoga = { yoga: getYoga(), config: getYogaConfig() };
+  }
+};

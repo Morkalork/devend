@@ -7,44 +7,42 @@
  * The top bar's Specs button (and tapping the bar) opens the full-screen
  * TopBarDetailsPanel: the run's build, upgrades, assignment and attributes.
  */
-import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObject } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, isValidElement, cloneElement, type MutableRefObject, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark, ClipboardList, Unlink, Grab } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
 import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
-import { MapTuningModal } from './MapTuningModal';
+import { MapTuningModal } from '@/ui/game/MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { useMeasuredBottomBars, BOTTOM_BARS_FALLBACK_PX } from '@/hooks/useBottomBarsHeight';
 import { hasSeenFenceSwitching, markFenceSwitchingSeen } from '@/lib/fenceSeen';
-import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
-import { BoardEntityInfoModal } from './BoardEntityInfoModal';
+import { SuperiorLockInfoModal } from '@/ui/game/SuperiorLockInfoModal';
+import { BoardEntityInfoModal } from '@/ui/game/BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
-import { GameTopBar } from './GameTopBar';
-import { AnimatePresence } from 'framer-motion';
-import { MapRuleBanner } from './MapRuleBanner';
-import { MapFailedOverlay } from './MapFailedOverlay';
+import { GameTopBar } from '@/ui/game/GameTopBar';
+import { MapRuleBanner } from '@/ui/game/MapRuleBanner';
+import { MapFailedOverlay } from '@/ui/game/MapFailedOverlay';
 import type { MapFailure } from '@/lib/mapFailure';
-import { ShipEarlyBar } from './ShipEarlyBar';
-import { AbilityBar } from './AbilityBar';
-import { FenceSlotBar } from './FenceSlotBar';
+import { ShipEarlyBar } from '@/ui/game/ShipEarlyBar';
+import { AbilityBar } from '@/ui/game/AbilityBar';
+import { FenceSlotBar } from '@/ui/game/FenceSlotBar';
 import { STANDARD_FENCE_ID } from '@/lib/fences';
-import { GameMessageBar } from './GameMessageBar';
-import { AbilityCountdownBar } from './AbilityCountdownBar';
-import { TopBarDetailsPanel, type PanelFocus } from './TopBarDetailsPanel';
+import { GameMessageBar } from '@/ui/game/GameMessageBar';
+import { AbilityCountdownBar } from '@/ui/game/AbilityCountdownBar';
+import { TopBarDetailsPanel, type PanelFocus } from '@/ui/game/TopBarDetailsPanel';
 import { shouldAutoPause, shouldPauseForZoom } from '@/lib/autoPause';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
-import { TutorialOverlay } from './TutorialOverlay';
-import { LockDebugOverlay } from './LockDebugOverlay';
+import { TutorialOverlay } from '@/ui/game/TutorialOverlay';
+import { LockDebugOverlay } from '@/ui/game/LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
 import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY, BOX_SEEN_KEY, LAUNCHER_SEEN_KEY } from '@/lib/circuitHint';
 import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
-import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
-import { BossBanner } from './BossBanner';
+import { FenceArt } from '@/ui/game/TutorialArt';
+import { BossBanner } from '@/ui/game/BossBanner';
 import { contentText } from '@/i18n/content';
 import { playDeadlineTickSound, playHeartbeatSound } from '@/lib/gameAudio';
 import { deadlineMilestone } from '@/lib/deadlineDisplay';
@@ -64,16 +62,27 @@ import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
 import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
-import { PushExitBar } from '@/components/game/PushExitBar';
+import { PushExitBar } from '@/ui/game/PushExitBar';
 import { canStopPushing } from '@/lib/pushLuck';
-import { WinGateFrame } from '@/components/game/WinGateFrame';
+import { WinGateFrame } from '@/ui/game/WinGateFrame';
 import { extraGoals, outstandingGoals } from '@/lib/goalTracker';
-import { BoardAlert } from '@/components/game/BoardAlert';
+import { BoardAlert } from '@/ui/game/BoardAlert';
 import { pickContext } from '@/lib/hudContext';
 import { unreadManualCount } from '@/lib/manual';
-import { PairTurnOverlay } from '@/components/game/PairTurnOverlay';
+import { PairTurnOverlay } from '@/ui/game/PairTurnOverlay';
 import { PARTNER_FENCE_HEX } from '@/lib/net/pairTurn';
 import { getLocalPlayer } from '@/lib/net/commands';
+import { getAllAbilities } from '@/lib/abilities';
+import { CanvasLayer } from '@/ui/CanvasLayer';
+import { UiFrame } from '@/ui/UiFrame';
+import { PlayFrameContext, useScreenBox } from '@/ui/screenBox';
+import { View } from '@/ui/kit/ui';
+import { PlayLayout, type PlayRegion } from '@/ui/game/PlayLayout';
+import { HUD, topBarHeight, bottomStackHeight } from '@/ui/game/hudMetrics';
+import { ControlsRow } from '@/ui/game/ControlsRow';
+import { PlayChips } from '@/ui/game/PlayChips';
+import { ScreenFx } from '@/ui/game/ScreenFx';
+import { PauseOverlay } from '@/ui/game/PauseOverlay';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -194,6 +203,12 @@ interface GameScreenProps {
   introAssemble?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
+  /**
+   * Lock the page while the play screen's canvas interface is up (index.css
+   * `canvas-ui`). The admin Playground hosts this screen inside a scrolling
+   * DOM page and passes false so its own controls keep scrolling.
+   */
+  canvasPageLock?: boolean;
 }
 
 /** The mutator named by ?mutator=<id>, if it is in the catalogue. */
@@ -261,6 +276,7 @@ export function GameScreen({
   onMapComplete,
   introAssemble = false,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
+  canvasPageLock = true,
 }: GameScreenProps) {
   const { t } = useTranslation();
   // Hard map deadline (null on the tutorial band, where the countdown bar and
@@ -624,6 +640,7 @@ export function GameScreen({
   const [entityInfo, setEntityInfo] = useState<BoardEntityHit | null>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const paneRef = useRef<HTMLDivElement>(null);
   /** Admin live map tuner (par / clear threshold), opened from the menu. */
   const [tuningOpen, setTuningOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -711,7 +728,6 @@ export function GameScreen({
   // Set once the map is won; freezes the scrolling-code background through the
   // clear shimmer. Resets naturally when the next map remounts this screen.
   const [mapComplete, setMapComplete] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
 
   // Deadline tension ramp (issue #56): in the final 10s of a timed map a red
@@ -918,807 +934,476 @@ export function GameScreen({
   }, [viewportZoomStuck, isPaused, modalOverlayActive]);
 
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    // pointerdown covers touch/pen/mouse uniformly; mousedown alone is
-    // unreliable on the touch-only Android WebView target.
-    document.addEventListener('pointerdown', handler);
-    return () => document.removeEventListener('pointerdown', handler);
-  }, [menuOpen]);
+
+  // The play screen's interface is drawn on the canvas (CANVAS_UI_PLAN.md):
+  // the DOM keeps only the backgrounds, the board, and two spacers that
+  // reserve the HUD's space so GameCanvas lays the board out exactly where
+  // the canvas HUD leaves room for it (ui/game/hudMetrics).
+  const topHeight = topBarHeight(showHighscoreBar);
+  // The pane the play screen fills: the window in the game, a pane beside its
+  // controls in the admin Playground. The canvas interface is framed to it.
+  const paneBox = useScreenBox(paneRef);
+  const pushExitShown = canStopPushing({
+    mapComplete,
+    pushMode: gameState.pushMode,
+    hasHandler: gameState.onBankAndContinue != null,
+  });
+  const hasAbilities = getAllAbilities().some(a => ((abilityCharges ?? {})[a.id] ?? 0) > 0);
+  const stackHeight = bottomStackHeight({ mapComplete, hasAbilities, pushExit: pushExitShown });
+  const chip = (left: number, total: number) => ({ left, total: Math.round(total) });
 
   return (
     <>
       {/* CRT Terminal Background */}
       <CRTBackground accentColor={accentColor} paused={mapComplete || staticBg} />
-      
+
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
 
-      {/* Boss nameplate (issue #56): name + deadline countdown + HP bar */}
-      {level.boss && gameState.bossActive && (
-        <BossBanner
-          name={contentText.bossName(t, { id: level.id, name: level.boss.name })}
-          timeLimit={mapTimeLimit}
-          activeSeconds={gameState.activeSeconds}
-          hp={gameState.bossHp}
-          maxHp={gameState.bossMaxHp}
-          defeated={gameState.bossDefeated}
-          accentColor={accentColor}
-        />
-      )}
-
-      {/* Deadline tension: pulsing red vignette in the final seconds. */}
-      {deadlineUrgent && (
-        <div
-          className="pointer-events-none absolute inset-0 z-20 animate-pulse"
-          style={{ boxShadow: 'inset 0 0 140px 40px rgba(255, 30, 60, 0.55)' }}
-        />
-      )}
-
-      {/* Boss phase banner: HOTFIX INCOMING / PANIC MODE as HP drops. */}
-      {bossPhaseLabel && !gameState.bossDefeated && (
-        <div className="pointer-events-none absolute left-1/2 top-1/3 z-40 -translate-x-1/2 -translate-y-1/2">
-          <span
-            className="font-display text-2xl font-bold uppercase tracking-widest animate-pulse"
-            style={{ color: '#ff2d55', textShadow: '0 0 18px #ff2d55, 0 0 6px #000' }}
-          >
-            {bossPhaseLabel}
-          </span>
-        </div>
-      )}
-
-      {/* SHIPPED IT: the boss-defeat payoff flash. */}
-      {shippedIt && (
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(circle, rgba(74,222,128,0.18) 0%, transparent 60%)' }} />
-          <span
-            className="font-display text-4xl sm:text-5xl font-bold uppercase tracking-widest animate-pulse"
-            style={{ color: '#4ade80', textShadow: '0 0 24px #4ade80, 0 0 8px #000' }}
-          >
-            {t('boss.shippedIt')}
-          </span>
-        </div>
-      )}
-
-      <div className="absolute inset-0 flex flex-col z-10">
-        {/* Game Top Bar - Two rows */}
-        <div>
-          <GameTopBar
-            levelNumber={levelNumber}
-            cutsUsed={gameState.cutsUsed}
-            parCuts={level.expectedCuts}
-            lives={lives}
-            continuesRemaining={continuesRemaining}
-            spaceRemaining={gameState.spaceRemaining}
-            spaceRequired={level.sizeThreshold}
-            lockedBalls={mapLockedBalls}
-            threadLockRequired={level.threadLockRequired}
-            goals={gameState.goals}
-            ballsInPlay={gameState.ballsInPlay}
-            onExplainWin={() => setWinModalOpen(true)}
-            scopeCreepPercent={gameState.creepPercent}
-            accentColor={accentColor}
-            certificateProgress={certificateProgress}
-            ascensionDepth={ascensionDepth}
-            showHighscoreBar={showHighscoreBar}
-            highscoreCurrent={projectedScore}
-            highscoreTarget={highscoreTarget}
-            // Opened to BROWSE, so nothing leads. Clearing here as well as on
-            // close means this does not depend on the panel having been closed
-            // the tidy way to behave correctly.
-            onExpand={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
-          />
-        </div>
-
-        {/* Game Canvas Area */}
+      <div ref={paneRef} className="absolute inset-0 flex flex-col z-10">
+        <div style={{ height: topHeight, flexShrink: 0 }} />
         <div className="flex-1 min-h-0 relative">
-          {/* The map's rule, if it has one: centred in the gutter between the
-              top bar and the board's top edge, rather than pinned under the bar.
-              Floating rather than in the flow so it costs the board no height.
-              The wrapper takes no pointer events; the banner itself does, so it
-              can never swallow a cut aimed near the top of the board. */}
-          {mapMutator && (
-            <div
-              className="absolute left-0 right-0 z-30 flex justify-center pointer-events-none"
-              style={{ top: `${boardTopPct / 2}%`, transform: 'translateY(-50%)' }}
-            >
-              {/* w-full so the announcing strip spans the frame, and centred
-                  so the collapsed chip sits in the middle rather than hugging
-                  the left edge. */}
-              <div className="pointer-events-auto w-full flex justify-center">
-                <MapRuleBanner
-                  mutator={mapMutator}
-                  onExplain={() => { setTopPanelFocus('mapRule'); setTopPanelOpen(true); }}
-                />
-              </div>
-            </div>
-          )}
-          {/* Feature Freeze: tap-freezes left this map. Only shown when the
-              upgrade (or Runway's freeze) is active, and hidden once the map is
-              won. Dims to signal "out" at zero. */}
-          {activeModifiers.freezeUsesPerMap > 0 && !mapComplete && (
-            <div
-              className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
-              style={{
-                backgroundColor: 'rgba(0,10,5,0.7)',
-                border: `1px solid ${accentColor}44`,
-                color: accentColor,
-                opacity: gameState.freezeUsesRemaining > 0 ? 1 : 0.4,
+          <PlayFrameContext.Provider value={paneBox}>
+            <GameCanvas
+              level={level}
+              levelNumber={levelNumber}
+              totalLevels={totalLevels}
+              totalScore={totalScore}
+              lives={lives}
+              lockstep={lockstep}
+              isPairGuest={isPairGuest}
+              pairPartnerName={pairPartnerName}
+              onLivesChange={onLivesChange}
+              onGrantAbility={onGrantAbility}
+              abilityCharges={abilityCharges ?? {}}
+              abilitySlots={abilitySlots}
+              fenceSlotIds={fenceSlotIds}
+              onSpendAbility={onSpendAbility}
+              onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
+              onRequestEntityInfo={setEntityInfo}
+              onGameEnd={handleGameEnd}
+              onMapTimedOut={handleMapFailed}
+              onLevelComplete={handleLevelComplete}
+              onBallTypeLocked={onBallTypeLocked}
+              onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+              onCanvasReady={handleCanvasReady}
+              onBoardTopPct={handleBoardTopPct}
+              showBoardPlaceholder={!boardShown}
+              bottomInsetPx={bottomBarsPx}
+              introAssemble={introAssemble}
+              freezeOnComplete={freezeOnClear}
+              onGameStateChange={handleGameStateChange}
+              paused={isPaused || modalOverlayActive}
+              tutorialMode={inGameStep === 'fence' && !fenceIntroOpen}
+              tutorialStep={inGameStep === 'fence' && !fenceIntroOpen ? 'waitingForSuccessfulCut' : 'completed'}
+              onTutorialCutSuccess={() => {
+                setInGameStep('done');
+                onFenceSeen?.();
               }}
-              aria-label={t('game.freezeUsesLeft', { count: gameState.freezeUsesRemaining })}
-            >
-              <Snowflake className="w-3.5 h-3.5" />
-              <span className="font-display text-sm font-bold tabular-nums">
-                {gameState.freezeUsesRemaining}/{Math.round(activeModifiers.freezeUsesPerMap)}
-              </span>
-            </div>
-          )}
-          {/* Control Freak rations: the two Principal verbs are the only ones
-              counted, because the brake and the crank are paid for with the
-              finger (a hand on a mover is a hand not drawing a fence). Stacked
-              under the freeze chip and dimmed at zero, same as it is. */}
-          {activeModifiers.moverDerailPerMap > 0 && !mapComplete && (
-            <div
-              className="absolute top-11 right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
-              style={{
-                backgroundColor: 'rgba(0,10,5,0.7)',
-                border: `1px solid ${accentColor}44`,
-                color: accentColor,
-                opacity: gameState.moverDerailsRemaining > 0 ? 1 : 0.4,
+              canvasOpacity={config.visuals.canvas_opacity}
+              fenceSpeedBase={config.fence.speed_base}
+              fenceSpeedMin={config.fence.speed_min}
+              fenceSpeedPerLevel={config.fence.speed_per_level}
+              moverFenceDragPerFence={config.mover.fence_drag_per_fence}
+              moverFenceDragFloor={config.mover.fence_drag_floor}
+              lockWinThresholdPercent={config.lock.win_threshold_percent}
+              lockMinRegionCells={config.lock.min_region_cells}
+              scopeCreep={scopeCreepConfig}
+              mapMutator={mapMutator}
+              objective={mapObjective}
+              pickupConfig={pickupLifetimeFactor === 1 ? config.pickups : {
+                ...config.pickups,
+                // Use It Or Lose It (ascension rung 6). Floor at 1s so a deep
+                // ladder can never round a token's life down to zero, which
+                // would delete it on the frame it spawned.
+                lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
               }}
-              aria-label={t('game.moverDerailsLeft', { count: gameState.moverDerailsRemaining })}
-            >
-              <Unlink className="w-3.5 h-3.5" />
-              <span className="font-display text-sm font-bold tabular-nums">
-                {gameState.moverDerailsRemaining}/{Math.round(activeModifiers.moverDerailPerMap)}
-              </span>
-            </div>
-          )}
-          {/* The two are a choiceGroup, so a player can only ever own one; the
-              Playground can set both at once, and stacking rather than
-              overlapping is what makes that testable. */}
-          {activeModifiers.moverBandPerMap > 0 && !mapComplete && (
-            <div
-              className={`absolute ${activeModifiers.moverDerailPerMap > 0 ? 'top-20' : 'top-11'} right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none`}
-              style={{
-                backgroundColor: 'rgba(0,10,5,0.7)',
-                border: `1px solid ${accentColor}44`,
-                color: accentColor,
-                opacity: gameState.moverBandsRemaining > 0 ? 1 : 0.4,
+              bugConfig={pickupLifetimeFactor === 1 ? config.bugs : {
+                ...config.bugs,
+                // Use It Or Lose It shortens a bug's life exactly as it shortens
+                // a token's. A bug is claimed by getting a ball to it, so a rung
+                // that squeezes the window squeezes the harder of the two.
+                lifetimeSeconds: Math.max(1, Math.round(config.bugs.lifetimeSeconds * pickupLifetimeFactor)),
               }}
-              aria-label={t('game.moverBandsLeft', { count: gameState.moverBandsRemaining })}
-            >
-              <Grab className="w-3.5 h-3.5" />
-              <span className="font-display text-sm font-bold tabular-nums">
-                {gameState.moverBandsRemaining}/{Math.round(activeModifiers.moverBandPerMap)}
-              </span>
-            </div>
-          )}
-          {/* Fence budget / WIP Limit: completed fences left this map. Warns
-              (amber) at 2 or fewer, dims at zero. Only shown when the map sets
-              a budget and it isn't already won. */}
-          {level.fenceBudget != null && !mapComplete && (() => {
-            const left = fencesLeft(level.fenceBudget, gameState.completedCuts ?? 0);
-            const col = left <= 2 ? '#ff8a5b' : accentColor;
-            return (
-              <div
-                className="absolute top-2 left-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
-                style={{
-                  backgroundColor: 'rgba(0,10,5,0.7)',
-                  border: `1px solid ${col}44`,
-                  color: col,
-                  opacity: left > 0 ? 1 : 0.4,
-                }}
-                aria-label={t('game.fenceBudgetLeft', { count: left })}
-              >
-                <Fence className="w-3.5 h-3.5" />
-                <span className="font-display text-sm font-bold tabular-nums">
-                  {left}/{level.fenceBudget}
-                </span>
-              </div>
-            );
-          })()}
-          {/* The pair's link, when it needs saying. Inside the board's own
-              stacking context so a dropped link covers the board rather than
-              the whole app. */}
-          {pairBanner}
-          <GameCanvas
-            level={level}
-            levelNumber={levelNumber}
-            totalLevels={totalLevels}
-            totalScore={totalScore}
-            lives={lives}
-            lockstep={lockstep}
-            isPairGuest={isPairGuest}
-            pairPartnerName={pairPartnerName}
-            onLivesChange={onLivesChange}
-            onGrantAbility={onGrantAbility}
-            abilityCharges={abilityCharges ?? {}}
-            abilitySlots={abilitySlots}
-            fenceSlotIds={fenceSlotIds}
-            onSpendAbility={onSpendAbility}
-            onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
-            onRequestEntityInfo={setEntityInfo}
-            onGameEnd={handleGameEnd}
-            onMapTimedOut={handleMapFailed}
-            onLevelComplete={handleLevelComplete}
-            onBallTypeLocked={onBallTypeLocked}
-            onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
-            onCanvasReady={handleCanvasReady}
-            onBoardTopPct={handleBoardTopPct}
-            showBoardPlaceholder={!boardShown}
-            bottomInsetPx={bottomBarsPx}
-            introAssemble={introAssemble}
-            freezeOnComplete={freezeOnClear}
-            onGameStateChange={handleGameStateChange}
-            paused={isPaused || modalOverlayActive}
-            tutorialMode={inGameStep === 'fence' && !fenceIntroOpen}
-            tutorialStep={inGameStep === 'fence' && !fenceIntroOpen ? 'waitingForSuccessfulCut' : 'completed'}
-            onTutorialCutSuccess={() => {
-              setInGameStep('done');
-              onFenceSeen?.();
-            }}
-            canvasOpacity={config.visuals.canvas_opacity}
-            fenceSpeedBase={config.fence.speed_base}
-            fenceSpeedMin={config.fence.speed_min}
-            fenceSpeedPerLevel={config.fence.speed_per_level}
-            moverFenceDragPerFence={config.mover.fence_drag_per_fence}
-            moverFenceDragFloor={config.mover.fence_drag_floor}
-            lockWinThresholdPercent={config.lock.win_threshold_percent}
-            lockMinRegionCells={config.lock.min_region_cells}
-            scopeCreep={scopeCreepConfig}
-            mapMutator={mapMutator}
-            objective={mapObjective}
-            pickupConfig={pickupLifetimeFactor === 1 ? config.pickups : {
-              ...config.pickups,
-              // Use It Or Lose It (ascension rung 6). Floor at 1s so a deep
-              // ladder can never round a token's life down to zero, which
-              // would delete it on the frame it spawned.
-              lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
-            }}
-            bugConfig={pickupLifetimeFactor === 1 ? config.bugs : {
-              ...config.bugs,
-              // Use It Or Lose It shortens a bug's life exactly as it shortens
-              // a token's. A bug is claimed by getting a ball to it, so a rung
-              // that squeezes the window squeezes the harder of the two.
-              lifetimeSeconds: Math.max(1, Math.round(config.bugs.lifetimeSeconds * pickupLifetimeFactor)),
-            }}
-            regionColor={getRegionColor()}
-            accentColor={accentColor}
-            activeModifiers={activeModifiers}
-            cumulativeLockedBalls={cumulativeLockedBalls}
-            fenceDurability={fenceDurability}
-            parallaxTickRef={memParallaxTickRef}
-            showBallSpeeds={showBallSpeeds}
-            showPerfOverlay={showPerfOverlay}
-            deadlineSecondsLeft={deadlineShown ? deadlineRemaining : null}
-            deadlineLimit={mapTimeLimit ?? null}
-          />
-          {/* Out of time. Over the board because that is where the eyes are;
-              red and pulsing so it stays separable from the win frame's steady
-              amber on the same edge. Never takes a tap. */}
-          <BoardAlert urgent={deadlineUrgent && !mapComplete} seconds={deadlineRemaining} />
-          {/* This map wants something beyond an ordinary clear. One state, not
-              a colour per kind: see WinGateFrame for why a border language does
-              not survive being seen three times in a run. */}
-          <WinGateFrame
-            // The frame is about the UNUSUAL part of a map, so it reads the
-            // extras rather than every goal: space and locks are on every map
-            // and a frame that lit for them would light on all forty.
-            present={extraGoals(gameState.goals).length > 0 && !mapComplete}
-            outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
-          />
-          {/* Pair turns: whose go it is, on the board itself. Nothing in solo. */}
-          <PairTurnOverlay
-            turn={mapComplete ? null : gameState.pairTurn}
-            partnerName={pairPartnerName ?? t("pair.partner")}
-            myColor={getLocalPlayer() === 0 ? accentColor : PARTNER_FENCE_HEX}
-            partnerColor={getLocalPlayer() === 0 ? PARTNER_FENCE_HEX : accentColor}
-            onPass={gameState.onPassTurn}
-          />
-          {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
-              `fixed`: the page-transition transform breaks fixed positioning. */}
-          <LockDebugOverlay visible={lockDebug} />
-        </div>
-
-        {/* Live action bars pinned to the bottom in their own fixed wrapper (a
-            plain sibling in the flex column would sit under the board). Ability
-            controls, the Ship Early countdown and ability timers ride here; the
-            modifier stats they used to sit beside now live in the Specs panel.
-            Once the map is won they go visibility:hidden instantly - they must
-            never outlive the board (a fade lagged behind the wave on-device).
-            The wrapper is click-through; only the AbilityBar re-enables taps. */}
-        <div
-          // The admin Playground floats its testers above this stack and
-          // MEASURES it through this attribute rather than assuming a height.
-          // Assuming one is how the ability tester came to be drawn across the
-          // fence slots: the stack is five rows deep on a bad day (slots,
-          // abilities, the context lane, the push-exit bar, the control row)
-          // and the ability row wraps, so no constant is ever right for long.
-          data-bottom-bars=""
-          className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
-          style={{ visibility: mapComplete ? 'hidden' : 'visible' }}
-        >
-          {/* The fence slots sit ABOVE the ability buttons and below the
-              board, because they are about the cut you are about to draw
-              rather than a thing to press: the eye travels board -> what am I
-              drawing with -> what can I fire. Always five, empties included,
-              so acquiring a type never moves the board. */}
-          {!mapComplete && (
-            <div className="pointer-events-auto">
-              <FenceSlotBar
-                slotIds={gameState.fenceSlotIds ?? []}
-                selectedId={gameState.selectedFenceTypeId ?? STANDARD_FENCE_ID}
-                accentColor={accentColor}
-                onSelect={gameState.onSelectFenceType ?? (() => {})}
-                shieldSpent={gameState.guardrailSpent ?? false}
-                onInfoOpenChange={setFenceInfoOpen}
-                deferAutoInfo={fenceSwitchIntro}
-              />
-            </div>
-          )}
-          {/* Mounted with the rest of the stack, not when the game reports
-              its handler a commit later: a row that arrives late grows the
-              stack after the board has been laid out against it, which is one
-              of the ways the board used to move once it was on screen. Taps
-              before the handler lands do nothing. */}
-          {!mapComplete && (
-            <div className="pointer-events-auto">
-              <AbilityBar
-                charges={abilityCharges ?? {}}
-                accentColor={accentColor}
-                onUse={gameState.onUseAbility ?? (() => {})}
-                armedAbilityId={gameState.armedAbility}
-                onInfoOpenChange={setAbilityInfoOpen}
-              />
-            </div>
-          )}
-          {/* ONE line for the three readouts that used to have a bar each.
-              None of them is on most of the time, but each appeared and
-              disappeared independently, so the whole bottom of the screen moved
-              whenever any of them changed - with the ability buttons directly
-              underneath. The wrapper reserves its height whether or not a lane
-              is using it, which is the part that stops the shifting; see
-              lib/hudContext for who gets the slot. */}
-          <div className="min-h-[34px] flex items-end">
-            {contextLane === 'message' && (
-              <GameMessageBar
-                message={gameState.gameMessage ?? null}
-                accentColor={accentColor}
-                visible
-              />
-            )}
-            {contextLane === 'shipEarly' && (
-              <ShipEarlyBar
-                seconds={gameState.activeSeconds}
-                ballCount={gameState.ballCount}
-                timeLimit={mapTimeLimit ?? 0}
-                extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
-                bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
-                visible
-              />
-            )}
-            {contextLane === 'abilityTimers' && (
-              <AbilityCountdownBar timers={gameState.abilityTimers ?? []} visible />
-            )}
-          </div>
-
-          {/* Stays its own row rather than joining the slot above: it is an
-              ACTION, not a readout, and it was reported missing once already
-              while it was on screen. It is not going into a queue behind a
-              transient message. */}
-          {canStopPushing({
-            mapComplete,
-            pushMode: gameState.pushMode,
-            hasHandler: gameState.onBankAndContinue != null,
-          }) && (
-            <PushExitBar
-              bonusSoFar={gameState.pushBonusSoFar}
-              onBank={gameState.onBankAndContinue!}
+              regionColor={getRegionColor()}
               accentColor={accentColor}
+              activeModifiers={activeModifiers}
+              cumulativeLockedBalls={cumulativeLockedBalls}
+              fenceDurability={fenceDurability}
+              parallaxTickRef={memParallaxTickRef}
+              showBallSpeeds={showBallSpeeds}
+              showPerfOverlay={showPerfOverlay}
+              deadlineSecondsLeft={deadlineShown ? deadlineRemaining : null}
+              deadlineLimit={mapTimeLimit ?? null}
             />
-          )}
-                {/* Every control the map has, in one place, in the thumb zone.
-                    These used to float at top-left at 32px, on top of the status
-                    bar, while abilities sat at the bottom - four homes for one
-                    category of thing, which is why nothing could be found. */}
-                <div ref={menuRef} className="pointer-events-auto relative flex items-center justify-center gap-2 px-3 pb-2 pt-1">
-            <button
-              onClick={() => setMenuOpen(prev => !prev)}
-              className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
-              style={{
-                backgroundColor: menuOpen ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
-                border: `1px solid ${accentColor}55`,
-                color: accentColor,
-              }}
-              aria-label={t('game.gameMenu')}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            {canPause && (
-              <button
-                onClick={() => { setMenuOpen(false); setIsPaused(prev => !prev); }}
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
-                style={{
-                  backgroundColor: isPaused ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
-                  border: `1px solid ${accentColor}55`,
-                  color: accentColor,
-                }}
-                aria-label={isPaused ? t('game.resume') : t('game.pause')}
-              >
-                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              </button>
-            )}
-              <button
-                onClick={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
-                className="relative flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
-                style={{
-                  backgroundColor: 'rgba(0,10,5,0.85)',
-                  border: `1px solid ${accentColor}55`,
-                  color: accentColor,
-                }}
-                aria-label={t('topBar.specs')}
-              >
-                <ClipboardList className="w-5 h-5" strokeWidth={1.5} />
-                {/* A new mechanic has been filed in the Manual. The badge came
-                    with the button: it is what replaced the modal that used to
-                    announce one, so the player learns something is there
-                    without losing the frame they were playing. */}
-                {manualUnread > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
-                    style={{ background: accentColor, color: '#04160d' }}
-                    aria-label={t('topBar.specsNew', { count: manualUnread })}
-                  >
-                    {manualUnread}
-                  </span>
+          </PlayFrameContext.Provider>
+        </div>
+        {/* The bottom stack's space, held for the canvas bars. The admin
+            Playground and GameCanvas measure the stack through this attribute,
+            exactly as they measured the DOM stack. */}
+        <div
+          data-bottom-bars=""
+          className="fixed bottom-0 left-0 right-0 pointer-events-none"
+          style={{ height: stackHeight }}
+        />
+      </div>
+
+      <CanvasLayer id="play" z={10} lock={canvasPageLock}>
+        <UiFrame box={paneBox}>
+          <PlayLayout
+            topHeight={topHeight}
+            top={
+              <GameTopBar
+                levelNumber={levelNumber}
+                cutsUsed={gameState.cutsUsed}
+                parCuts={level.expectedCuts}
+                lives={lives}
+                continuesRemaining={continuesRemaining}
+                spaceRemaining={gameState.spaceRemaining}
+                spaceRequired={level.sizeThreshold}
+                lockedBalls={mapLockedBalls}
+                threadLockRequired={level.threadLockRequired}
+                goals={gameState.goals}
+                ballsInPlay={gameState.ballsInPlay}
+                onExplainWin={() => setWinModalOpen(true)}
+                scopeCreepPercent={gameState.creepPercent}
+                accentColor={accentColor}
+                certificateProgress={certificateProgress}
+                ascensionDepth={ascensionDepth}
+                showHighscoreBar={showHighscoreBar}
+                highscoreCurrent={projectedScore}
+                highscoreTarget={highscoreTarget}
+                // Opened to BROWSE, so nothing leads.
+                onExpand={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
+              />
+            }
+            region={r => (
+              <>
+                {/* Out of time: over the board, red and pulsing, never takes a tap. */}
+                <BoardAlert urgent={deadlineUrgent && !mapComplete} seconds={deadlineRemaining}
+                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height} />
+                {/* The UNUSUAL part of a map, so the extras rather than every goal. */}
+                <WinGateFrame
+                  present={extraGoals(gameState.goals).length > 0 && !mapComplete}
+                  outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
+                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height}
+                />
+                <PairTurnOverlay
+                  turn={mapComplete ? null : gameState.pairTurn}
+                  partnerName={pairPartnerName ?? t("pair.partner")}
+                  myColor={getLocalPlayer() === 0 ? accentColor : PARTNER_FENCE_HEX}
+                  partnerColor={getLocalPlayer() === 0 ? PARTNER_FENCE_HEX : accentColor}
+                  onPass={gameState.onPassTurn}
+                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height}
+                />
+                <LockDebugOverlay visible={lockDebug} origin={{ x: r.x, y: r.y }} width={r.width} height={r.height} />
+                <PlayChips
+                  accentColor={accentColor}
+                  top={r.y}
+                  freeze={activeModifiers.freezeUsesPerMap > 0 && !mapComplete
+                    ? chip(gameState.freezeUsesRemaining, activeModifiers.freezeUsesPerMap) : null}
+                  derails={activeModifiers.moverDerailPerMap > 0 && !mapComplete
+                    ? chip(gameState.moverDerailsRemaining, activeModifiers.moverDerailPerMap) : null}
+                  bands={activeModifiers.moverBandPerMap > 0 && !mapComplete
+                    ? chip(gameState.moverBandsRemaining, activeModifiers.moverBandPerMap) : null}
+                  fenceBudget={level.fenceBudget != null && !mapComplete
+                    ? chip(fencesLeft(level.fenceBudget, gameState.completedCuts ?? 0), level.fenceBudget) : null}
+                />
+                {/* The map's rule, centred in the gutter between the top bar and
+                    the board's top edge, costing the board no height. */}
+                {mapMutator && (
+                  <MapRuleBanner
+                    mutator={mapMutator}
+                    onExplain={() => { setTopPanelFocus('mapRule'); setTopPanelOpen(true); }}
+                    layout={{
+                      position: "absolute", left: r.x, top: r.y,
+                      width: r.width, height: Math.max(0, (r.height * boardTopPct) / 100),
+                    }}
+                  />
                 )}
-              </button>
-              <button
-                onClick={() => setWinModalOpen(true)}
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
-                style={{
-                  backgroundColor: 'rgba(0,10,5,0.85)',
-                  border: `1px solid ${accentColor}55`,
-                  color: accentColor,
-                }}
-                aria-label={t('winConditions.menuItem')}
-              >
-                <Target className="w-5 h-5" />
-              </button>
-            {menuOpen && (
-              <div
-                className="absolute bottom-full left-0 mb-2 rounded-lg overflow-hidden min-w-[180px]"
-                style={{
-                  backgroundColor: 'rgba(0, 15, 8, 0.95)',
-                  border: `1px solid ${accentColor}55`,
-                  boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
-                }}
-              >
-                <button
-                  onClick={() => {
+                {level.boss && gameState.bossActive && (
+                  <BossBanner
+                    name={contentText.bossName(t, { id: level.id, name: level.boss.name })}
+                    timeLimit={mapTimeLimit}
+                    activeSeconds={gameState.activeSeconds}
+                    hp={gameState.bossHp}
+                    maxHp={gameState.bossMaxHp}
+                    defeated={gameState.bossDefeated}
+                    accentColor={accentColor}
+                    layout={{ position: "absolute", left: 0, top: 70, width: r.width, alignItems: "center" }}
+                  />
+                )}
+                {/* A dropped pair link covers the board, not the whole app. */}
+                {pairBanner && isValidElement<{ region?: PlayRegion }>(pairBanner)
+                  ? cloneElement(pairBanner, { region: r }) : pairBanner}
+              </>
+            )}
+            bottom={
+              // Gone the instant the map is won: the bars must never outlive the board.
+              <View visible={!mapComplete} layout={{ alignSelf: "stretch" }}>
+                {!mapComplete && (
+                  <FenceSlotBar
+                    slotIds={gameState.fenceSlotIds ?? []}
+                    selectedId={gameState.selectedFenceTypeId ?? STANDARD_FENCE_ID}
+                    accentColor={accentColor}
+                    onSelect={gameState.onSelectFenceType ?? (() => {})}
+                    shieldSpent={gameState.guardrailSpent ?? false}
+                    onInfoOpenChange={setFenceInfoOpen}
+                    deferAutoInfo={fenceSwitchIntro}
+                  />
+                )}
+                {!mapComplete && (
+                  <AbilityBar
+                    charges={abilityCharges ?? {}}
+                    accentColor={accentColor}
+                    onUse={gameState.onUseAbility ?? (() => {})}
+                    armedAbilityId={gameState.armedAbility}
+                    onInfoOpenChange={setAbilityInfoOpen}
+                  />
+                )}
+                {/* ONE lane for the three readouts (lib/hudContext); it holds its
+                    height whether or not a readout is using it. */}
+                {contextLane === 'message' ? (
+                  <GameMessageBar message={gameState.gameMessage ?? null} accentColor={accentColor} visible />
+                ) : contextLane === 'shipEarly' ? (
+                  <ShipEarlyBar
+                    seconds={gameState.activeSeconds}
+                    ballCount={gameState.ballCount}
+                    timeLimit={mapTimeLimit ?? 0}
+                    extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+                    bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
+                    visible
+                  />
+                ) : contextLane === 'abilityTimers' ? (
+                  <AbilityCountdownBar timers={gameState.abilityTimers ?? []} visible />
+                ) : (
+                  <View layout={{ height: HUD.contextLane }} />
+                )}
+                {/* An ACTION, not a readout: its own row, never queued behind a message. */}
+                {pushExitShown && (
+                  <PushExitBar
+                    bonusSoFar={gameState.pushBonusSoFar}
+                    onBank={gameState.onBankAndContinue!}
+                    accentColor={accentColor}
+                  />
+                )}
+                {/* Every control the map has, in one place, in the thumb zone. */}
+                <ControlsRow
+                  accentColor={accentColor}
+                  menuOpen={menuOpen}
+                  onToggleMenu={() => setMenuOpen(prev => !prev)}
+                  onCloseMenu={() => setMenuOpen(false)}
+                  canPause={canPause}
+                  isPaused={isPaused}
+                  onTogglePause={() => { setMenuOpen(false); setIsPaused(prev => !prev); }}
+                  manualUnread={manualUnread}
+                  onOpenSpecs={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
+                  onOpenWin={() => setWinModalOpen(true)}
+                  soundMuted={soundMuted}
+                  onToggleSound={() => {
                     const next = !soundMuted;
                     setSoundMuted(next);
                     setSoundMutedState(next);
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  {soundMuted ? t('game.soundOff') : t('game.soundOn')}
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); setWinModalOpen(true); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <Target className="w-4 h-4" />
-                  {t('winConditions.menuItem')}
-                </button>
-                {announcement && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setAscModalOpen(true); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                    style={{ color: '#ffb347', backgroundColor: 'transparent' }}
-                    onPointerEnter={e => (e.currentTarget.style.backgroundColor = '#ffb34718')}
-                    onPointerDown={e => (e.currentTarget.style.backgroundColor = '#ffb34730')}
-                    onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <TrendingUp className="w-4 h-4" />
-                    {t('ascension.menuItem')}
-                  </button>
+                  hasAscensionAnnouncement={!!announcement}
+                  onOpenAscension={() => { setMenuOpen(false); setAscModalOpen(true); }}
+                  adminMode={!!adminMode}
+                  onOpenTuning={() => { setMenuOpen(false); setTuningOpen(true); }}
+                  onRestart={() => { setMenuOpen(false); onRestart(); }}
+                  onMainMenu={() => { setMenuOpen(false); onMainMenu(); }}
+                />
+              </View>
+            }
+            over={
+              <>
+                <ScreenFx
+                  deadlineUrgent={deadlineUrgent}
+                  bossPhaseLabel={bossPhaseLabel}
+                  bossDefeated={!!gameState.bossDefeated}
+                  shippedIt={!!shippedIt}
+                />
+                {/* Superior-lock explainer (opened by holding a superior lock's star) */}
+                {superiorInfoOpen && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
+                {entityInfo && (
+                  <BoardEntityInfoModal hit={entityInfo} accentColor={accentColor} onClose={() => setEntityInfo(null)} />
                 )}
-                {adminMode && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setTuningOpen(true); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                    style={{ color: accentColor, backgroundColor: 'transparent' }}
-                    onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                    onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                    onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Tune map
-                  </button>
+                {isPaused && (
+                  <PauseOverlay accentColor={accentColor} zoomStuck={viewportZoomStuck} onResume={() => setIsPaused(false)} />
                 )}
-                <button
-                  onClick={() => { setMenuOpen(false); onRestart(); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  {t('game.restartRun')}
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onMainMenu(); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <Home className="w-4 h-4" />
-                  {t('game.mainMenu')}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Superior-lock explainer (opened by holding a superior lock's star) */}
-      {superiorInfoOpen && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
-      {entityInfo && (
-        <BoardEntityInfoModal hit={entityInfo} accentColor={accentColor} onClose={() => setEntityInfo(null)} />
-      )}
-
-      {/* Pause overlay */}
-      {isPaused && (
-        <div
-          className="fixed inset-0 z-[65] flex flex-col items-center justify-center gap-6"
-          style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
-        >
-          <p
-            className="font-display text-4xl font-bold tracking-widest"
-            style={{ color: accentColor, textShadow: `0 0 24px ${accentColor}` }}
-          >
-            {t('game.paused')}
-          </p>
-          {/* Why, when the player did not ask for this. A pause nobody chose is
-              a bug unless it says what it is: the view is zoomed, the game is
-              waiting, pinch back and carry on. */}
-          {viewportZoomStuck && (
-            <p className="max-w-xs text-center text-sm opacity-80 px-6" style={{ color: accentColor }}>
-              {t('game.pausedZoom')}
-            </p>
-          )}
-          <button
-            className="arcade-button-primary px-8 py-3 rounded-lg flex items-center gap-2 text-base font-bold"
-            onClick={() => setIsPaused(false)}
-          >
-            <Play className="w-5 h-5" />
-            {t('game.resume')}
-          </button>
-        </div>
-      )}
-
-      {/* Always-visible menu — floats above all overlays */}
-
-      {/* Explainer modal QUEUE: only ONE shows at a time. Ordered by priority;
-          dismissing the active one flips its trigger off, so the next queued
-          modal appears (a natural queue). The game stays paused via
-          modalOverlayActive until the whole queue is cleared. Boss context
-          first, then the per-map "how to win", then one-time teaching overlays,
-          and finally the Draw-A-Fence coach (#62). */}
-      {anyExplainerModal && (() => {
-        type Explainer = {
-          show: boolean; accentColor: string; title: string; body: string;
-          onDismiss: () => void; graphic?: React.ReactNode; align?: "center" | "left";
-          /** Cut a hole in the scrim over the thing being talked about. */
-          spotlightArea?: 'top' | 'bottom'; spotlightHeightPx?: number;
-        };
-        const queue: Explainer[] = [
-          ...(level.boss ? [{
-            show: showBossOverlay,
-            accentColor: '#ff4d6d',
-            title: t('game.bossIntroTitle', { name: contentText.bossName(t, { id: level.id, name: level.boss.name }) }),
-            body: contentText.bossIntro(t, { id: level.id, intro: level.boss.intro }),
-            onDismiss: () => {
-              setBossIntroSeen(true);
-              try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
+                {anyExplainerModal && (() => {
+          type Explainer = {
+            show: boolean; accentColor: string; title: string; body: string;
+            onDismiss: () => void; graphic?: ReactNode; align?: "center" | "left";
+            /** Cut a hole in the scrim over the thing being talked about. */
+            spotlightArea?: 'top' | 'bottom'; spotlightHeightPx?: number;
+          };
+          const queue: Explainer[] = [
+            ...(level.boss ? [{
+              show: showBossOverlay,
+              accentColor: '#ff4d6d',
+              title: t('game.bossIntroTitle', { name: contentText.bossName(t, { id: level.id, name: level.boss.name }) }),
+              body: contentText.bossIntro(t, { id: level.id, intro: level.boss.intro }),
+              onDismiss: () => {
+                setBossIntroSeen(true);
+                try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
+              },
+            }] : []),
+            ...(announcement ? [{
+              show: ascModalOpen,
+              accentColor: '#ffb347',
+              title: announcement.title,
+              body: announcement.body,
+              onDismiss: () => setAscModalOpen(false),
+            }] : []),
+            {
+              show: showLauncherIntro,
+              accentColor: '#ffb347',
+              title: t('game.launcherIntroTitle'),
+              body: t('game.launcherIntroBody'),
+              onDismiss: () => {
+                fileManualEntry('launcher');
+                setShowLauncherIntro(false);
+                try { localStorage.setItem(LAUNCHER_SEEN_KEY, '1'); } catch { /* ignore */ }
+              },
             },
-          }] : []),
-          ...(announcement ? [{
-            show: ascModalOpen,
-            accentColor: '#ffb347',
-            title: announcement.title,
-            body: announcement.body,
-            onDismiss: () => setAscModalOpen(false),
-          }] : []),
-          {
-            show: showLauncherIntro,
-            accentColor: '#ffb347',
-            title: t('game.launcherIntroTitle'),
-            body: t('game.launcherIntroBody'),
-            onDismiss: () => {
-              fileManualEntry('launcher');
-              setShowLauncherIntro(false);
-              try { localStorage.setItem(LAUNCHER_SEEN_KEY, '1'); } catch { /* ignore */ }
+            {
+              show: showCircuitOverlay,
+              accentColor: '#7fe3d4',
+              title: t('game.circuitTutorialTitle'),
+              body: t('game.circuitTutorialBody'),
+              onDismiss: () => {
+                fileManualEntry('circuit');
+                setShowCircuitIntro(false);
+                try { localStorage.setItem(circuitSeenKey(level.id), '1'); } catch { /* ignore */ }
+              },
             },
-          },
-          {
-            show: showCircuitOverlay,
-            accentColor: '#7fe3d4',
-            title: t('game.circuitTutorialTitle'),
-            body: t('game.circuitTutorialBody'),
-            onDismiss: () => {
-              fileManualEntry('circuit');
-              setShowCircuitIntro(false);
-              try { localStorage.setItem(circuitSeenKey(level.id), '1'); } catch { /* ignore */ }
+            {
+              show: showBoxIntro,
+              accentColor: '#ffb347',
+              title: t('game.boxIntroTitle'),
+              body: t('game.boxIntroBody'),
+              onDismiss: () => {
+                fileManualEntry('box');
+                setShowBoxIntro(false);
+                try { localStorage.setItem(BOX_SEEN_KEY, '1'); } catch { /* ignore */ }
+              },
             },
-          },
-          {
-            show: showBoxIntro,
-            accentColor: '#ffb347',
-            title: t('game.boxIntroTitle'),
-            body: t('game.boxIntroBody'),
-            onDismiss: () => {
-              fileManualEntry('box');
-              setShowBoxIntro(false);
-              try { localStorage.setItem(BOX_SEEN_KEY, '1'); } catch { /* ignore */ }
+            {
+              show: showWinModal, accentColor,
+              title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber, activeModifiers),
+              // The one explainer that is a LIST rather than a paragraph.
+              align: 'left' as const,
+              onDismiss: () => setWinModalOpen(false),
             },
-          },
-          {
-            show: showWinModal, accentColor,
-            title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber, activeModifiers),
-            // The one explainer that is a LIST rather than a paragraph.
-            align: 'left' as const,
-            onDismiss: () => setWinModalOpen(false),
-          },
-          {
-            show: showTimeLimitOverlay, accentColor,
-            title: t('game.timeLimitTutorialTitle'), body: t('game.timeLimitTutorialBody'),
-            onDismiss: () => onTimeLimitTutorialSeen?.(),
-          },
-          {
-            show: showCreepOverlay, accentColor: '#ff6b6b',
-            title: t('game.creepTutorialTitle'), body: t('game.creepTutorialBody'),
-            onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
-          },
-          {
-            // The same words the Manual files under `fenceSlots`, deliberately:
-            // one statement of how the bar works, read here the first time and
-            // available from Specs forever after.
-            show: fenceSwitchIntro, accentColor,
-            title: t('game.fenceSlotsTutorialTitle'), body: t('game.fenceSlotsTutorialBody'),
-            // Over the bar itself, which is the whole point: the scrim leaves
-            // the slots lit so the player reads the sentence and the row it is
-            // about at the same time. The height is the measured stack, so the
-            // hole cannot drift from what it is cutting around.
-            spotlightArea: 'bottom' as const, spotlightHeightPx: bottomBarsPx ?? BOTTOM_BARS_FALLBACK_PX,
-            onDismiss: () => { fileManualEntry('fenceSlots'); setFenceSwitchIntro(false); },
-          },
-          {
-            show: fenceIntroOpen, accentColor,
-            title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'), graphic: <FenceArt />,
-            // Dismissing marks it seen. The modal IS the explanation; the guided
-            // hint that follows is practice, and it still runs this map either
-            // way. Previously only a successful tutorial cut persisted anything,
-            // so dismissing this and then dying on level 1 - or reloading a
-            // ?level= / ?ascension= debug jump without finishing the map - re-armed
-            // it on every single run, forever.
-            onDismiss: () => { setFenceIntroOpen(false); onFenceSeen?.(); },
-          },
-        ];
-        const active = queue.find(m => m.show);
-        return active ? (
-          <TutorialOverlay
-            visible
-            onDismiss={active.onDismiss}
-            accentColor={active.accentColor}
-            title={active.title}
-            body={active.body}
-            align={active.align}
-            graphic={active.graphic}
-            spotlightArea={active.spotlightArea}
-            spotlightHeightPx={active.spotlightHeightPx}
+            {
+              show: showTimeLimitOverlay, accentColor,
+              title: t('game.timeLimitTutorialTitle'), body: t('game.timeLimitTutorialBody'),
+              onDismiss: () => onTimeLimitTutorialSeen?.(),
+            },
+            {
+              show: showCreepOverlay, accentColor: '#ff6b6b',
+              title: t('game.creepTutorialTitle'), body: t('game.creepTutorialBody'),
+              onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
+            },
+            {
+              // The same words the Manual files under `fenceSlots`, deliberately:
+              // one statement of how the bar works, read here the first time and
+              // available from Specs forever after.
+              show: fenceSwitchIntro, accentColor,
+              title: t('game.fenceSlotsTutorialTitle'), body: t('game.fenceSlotsTutorialBody'),
+              // Over the bar itself, which is the whole point: the scrim leaves
+              // the slots lit so the player reads the sentence and the row it is
+              // about at the same time. The height is the measured stack, so the
+              // hole cannot drift from what it is cutting around.
+              spotlightArea: 'bottom' as const, spotlightHeightPx: bottomBarsPx ?? BOTTOM_BARS_FALLBACK_PX,
+              onDismiss: () => { fileManualEntry('fenceSlots'); setFenceSwitchIntro(false); },
+            },
+            {
+              show: fenceIntroOpen, accentColor,
+              title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'), graphic: <FenceArt />,
+              // Dismissing marks it seen. The modal IS the explanation; the guided
+              // hint that follows is practice, and it still runs this map either
+              // way. Previously only a successful tutorial cut persisted anything,
+              // so dismissing this and then dying on level 1 - or reloading a
+              // ?level= / ?ascension= debug jump without finishing the map - re-armed
+              // it on every single run, forever.
+              onDismiss: () => { setFenceIntroOpen(false); onFenceSeen?.(); },
+            },
+          ];
+          const active = queue.find(m => m.show);
+          return active ? (
+            <TutorialOverlay
+              visible
+              onDismiss={active.onDismiss}
+              accentColor={active.accentColor}
+              title={active.title}
+              body={active.body}
+              align={active.align}
+              graphic={active.graphic}
+              spotlightArea={active.spotlightArea}
+              spotlightHeightPx={active.spotlightHeightPx}
+            />
+          ) : null;
+        })()}
+                {/* Admin live map tuner, showing the tuned view against the authored map. */}
+                {tuningOpen && adminMode && (
+                  <MapTuningModal level={level} onClose={() => setTuningOpen(false)} />
+                )}
+                {/* Full-screen Specs panel: build, objectives, assignment, status,
+                    upgrades and the full attribute breakdown. */}
+                <TopBarDetailsPanel
+                  visible={topPanelOpen}
+                  focus={topPanelFocus}
+                  onClose={() => { setTopPanelOpen(false); setTopPanelFocus(null); }}
+                  levelNumber={levelNumber}
+                  cutsUsed={gameState.cutsUsed}
+                  parCuts={level.expectedCuts}
+                  lives={lives}
+                  continuesRemaining={continuesRemaining}
+                  spaceRemaining={gameState.spaceRemaining}
+                  spaceRequired={level.sizeThreshold}
+                  lockedBalls={mapLockedBalls}
+                  threadLockRequired={level.threadLockRequired}
+                  ownedUpgrades={ownedUpgrades}
+                  accentColor={accentColor}
+                  certificateProgress={certificateProgress}
+                  microManagerPerLock={activeModifiers.microManagerPerLock}
+                  ascensionDepth={ascensionDepth}
+                  ascensionRungs={rungsInForce}
+                  scalingReadouts={scalingReadouts}
+                  activeLoadouts={activeLoadouts}
+                  tagCounts={tagCounts}
+                  tagSetThreshold={tagSetThreshold}
+                  activeModifiers={activeModifiers}
+                  modifierSources={modifierSources}
+                  capstone={capstone}
+                  mapMutator={mapMutator}
+                  objective={mapObjective}
+                  objectiveProgress={objectiveProgress}
+                />
+                {/* Above everything: a life just went. The run-ending case first:
+                    if both were ever set, the milder one would be the wrong choice. */}
+                {runEndingLoss?.failure ? (
+                  <MapFailedOverlay
+                    failure={runEndingLoss.failure}
+                    livesLeft={0}
+                    runOver
+                    accentColor={accentColor}
+                    onDismiss={dismissRunEndingLoss}
+                  />
+                ) : mapFailure ? (
+                  <MapFailedOverlay
+                    failure={mapFailure}
+                    livesLeft={lives}
+                    accentColor={accentColor}
+                    onDismiss={dismissMapFailure}
+                  />
+                ) : null}
+              </>
+            }
           />
-        ) : null;
-      })()}
-
-      {/* Admin live map tuner. `level` here is already the tuned view, so the
-          modal shows what is in play and compares against the authored map. */}
-      {tuningOpen && adminMode && (
-        <MapTuningModal level={level} onClose={() => setTuningOpen(false)} />
-      )}
-
-      {/* Full-screen Specs panel: build, objectives, assignment, status,
-          upgrades and the full attribute breakdown. */}
-      <TopBarDetailsPanel
-        visible={topPanelOpen}
-        focus={topPanelFocus}
-        onClose={() => { setTopPanelOpen(false); setTopPanelFocus(null); }}
-        levelNumber={levelNumber}
-        cutsUsed={gameState.cutsUsed}
-        parCuts={level.expectedCuts}
-        lives={lives}
-        continuesRemaining={continuesRemaining}
-        spaceRemaining={gameState.spaceRemaining}
-        spaceRequired={level.sizeThreshold}
-        lockedBalls={mapLockedBalls}
-        threadLockRequired={level.threadLockRequired}
-        ownedUpgrades={ownedUpgrades}
-        accentColor={accentColor}
-        certificateProgress={certificateProgress}
-        microManagerPerLock={activeModifiers.microManagerPerLock}
-        ascensionDepth={ascensionDepth}
-        ascensionRungs={rungsInForce}
-        scalingReadouts={scalingReadouts}
-        activeLoadouts={activeLoadouts}
-        tagCounts={tagCounts}
-        tagSetThreshold={tagSetThreshold}
-        activeModifiers={activeModifiers}
-        modifierSources={modifierSources}
-        capstone={capstone}
-        mapMutator={mapMutator}
-        objective={mapObjective}
-        objectiveProgress={objectiveProgress}
-      />
-
-      {/* Above everything: a life just went, and nothing else on screen says
-          why. Dismissing it is what restarts the map - or, on the last life,
-          what ends the run. One overlay for both, because the question the
-          player is asking is the same one either way; only the promise
-          underneath it differs.
-
-          The run-ending case is checked FIRST. The two states cannot both be
-          set today (the last life takes the game-over branch and never reaches
-          the retry one), and if that ever stopped being true, showing the
-          milder of the two would be the wrong choice. */}
-      <AnimatePresence>
-        {runEndingLoss?.failure ? (
-          <MapFailedOverlay
-            failure={runEndingLoss.failure}
-            livesLeft={0}
-            runOver
-            accentColor={accentColor}
-            onDismiss={dismissRunEndingLoss}
-          />
-        ) : mapFailure ? (
-          <MapFailedOverlay
-            failure={mapFailure}
-            livesLeft={lives}
-            accentColor={accentColor}
-            onDismiss={dismissMapFailure}
-          />
-        ) : null}
-      </AnimatePresence>
+        </UiFrame>
+      </CanvasLayer>
     </>
   );
 }

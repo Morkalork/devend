@@ -74,8 +74,15 @@ describe("the slot's height", () => {
     // shifts while you reach for it is worse than one slightly too small.
     const screenSrc = readFileSync(
       resolve(process.cwd(), "src/components/game/GameScreen.tsx"), "utf8");
-    const stack = screenSrc.slice(screenSrc.indexOf("fixed bottom-0"));
-    expect(stack, "the context slot lost its reserved height").toMatch(/min-h-\[\d+px\]/);
+    const stack = screenSrc.slice(screenSrc.indexOf("bottom={"), screenSrc.indexOf("over={"));
+    // The empty lane is a spacer of the lane's own height (ui/game/hudMetrics)...
+    expect(stack, "the context slot lost its reserved height")
+      .toContain("<View layout={{ height: HUD.contextLane }} />");
+    // ...and the stack the board is laid out around always counts the lane.
+    const metrics = readFileSync(resolve(process.cwd(), "src/ui/game/hudMetrics.ts"), "utf8");
+    const fn = metrics.slice(metrics.indexOf("export function bottomStackHeight"));
+    expect(fn.slice(0, fn.indexOf("\n}")), "the board no longer leaves room for the lane")
+      .toMatch(/HUD\.contextLane/);
   });
 
   it("keeps the push exit out of the queue", () => {
@@ -84,8 +91,8 @@ describe("the slot's height", () => {
     // undo that on exactly the maps where it matters.
     const screenSrc = readFileSync(
       resolve(process.cwd(), "src/components/game/GameScreen.tsx"), "utf8");
-    const stack = screenSrc.slice(screenSrc.indexOf("fixed bottom-0"));
-    const slotEnd = stack.indexOf("</div>", stack.indexOf("min-h-["));
+    const stack = screenSrc.slice(screenSrc.indexOf("bottom={"), screenSrc.indexOf("over={"));
+    const slotEnd = stack.indexOf("<View layout={{ height: HUD.contextLane }} />");
     const pushAt = stack.indexOf("<PushExitBar");
     expect(pushAt, "the push exit is gone").toBeGreaterThan(-1);
     expect(pushAt, "the push exit was folded into the shared slot")

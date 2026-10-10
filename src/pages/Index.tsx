@@ -19,29 +19,35 @@ import { usePairSession } from '@/hooks/usePairSession';
 import type { PairedSession } from '@/components/game/PairLobby';
 import { useMenuHighlights } from '@/hooks/useMenuHighlights';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
-import { WelcomeScreen } from '@/components/game/WelcomeScreen';
-import { TutorialScreen } from '@/components/game/TutorialScreen';
-import { OptionsScreen } from '@/components/game/OptionsScreen';
+import { WelcomeScreen } from '@/ui/screens/WelcomeScreen';
+import { TutorialScreen } from '@/ui/screens/TutorialScreen';
+import { OptionsScreen } from '@/ui/screens/OptionsScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { GameErrorBoundary } from '@/components/GameErrorBoundary';
 import { flushRunSave } from '@/lib/runSaveFlush';
 import { adminOnHere } from '@/lib/adminAccess';
 import { CanvasUiRoot } from '@/ui/CanvasUiRoot';
-import { ResultScreen } from '@/components/game/ResultScreen';
-import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
-import { UpgradeShop } from '@/components/game/UpgradeShop';
-import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
-import { RunDraftScreen } from '@/components/game/RunDraftScreen';
-import { TenureDraftScreen } from '@/components/game/TenureDraftScreen';
-import { ContinuePrompt } from '@/components/game/ContinuePrompt';
-import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
-import { CertificateStore } from '@/components/game/CertificateStore';
-import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
-import { FeatureUnlockedModal } from '@/components/game/FeatureUnlockedModal';
-import { AchievementsScreen } from '@/components/game/AchievementsScreen';
-import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
-import { JukeboxScreen } from '@/components/game/JukeboxScreen';
-import { TapToStartGate } from '@/components/game/TapToStartGate';
+import { CanvasLayer } from '@/ui/CanvasLayer';
+import { SCREEN_SETTLED_EVENT } from '@/ui/screenBox';
+import { CRTBackground } from '@/components/game/CRTBackground';
+import { ResultScreen } from '@/ui/screens/ResultScreen';
+import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
+import { UpgradeShop } from '@/ui/screens/UpgradeShop';
+import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
+import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
+import { TenureDraftScreen } from '@/ui/screens/TenureDraftScreen';
+import { ContinuePrompt } from '@/ui/screens/ContinuePrompt';
+import { AscensionDraftScreen } from '@/ui/screens/AscensionDraftScreen';
+import { CertificateStore } from '@/ui/screens/CertificateStore';
+import { LoadoutGalleryScreen } from '@/ui/screens/LoadoutGalleryScreen';
+import { FeatureUnlockedModal } from '@/ui/game/FeatureUnlockedModal';
+import { PairMismatchNotice } from '@/ui/game/PairMismatchNotice';
+import { PairGuestGate } from '@/ui/game/PairGuestGate';
+import { PairLinkBanner } from '@/ui/game/PairLinkBanner';
+import { AchievementsScreen } from '@/ui/screens/AchievementsScreen';
+import { HallOfFameScreen } from '@/ui/screens/HallOfFameScreen';
+import { JukeboxScreen } from '@/ui/screens/JukeboxScreen';
+import { TapToStartGate } from '@/ui/screens/TapToStartGate';
 import { playMainMusic, stopMusic } from '@/lib/gameMusic';
 import { loadMusicCatalogue, getMusicCatalogue } from '@/lib/musicCatalogue';
 import type { MusicCatalogue } from '@/types/music';
@@ -59,17 +65,21 @@ import { todayKey, previousDayKey } from '@/lib/runRng';
 const BOARD_SCREENS: GameScreenName[] = ['game', 'tutorial', 'pairLoopback'];
 /** Admin's own tools: DOM screens with no canvas interface at all. */
 const DOM_ONLY_SCREENS: GameScreenName[] = ['admin', 'mapBuilder', 'upgradeAtlas', 'nearbyDiagnostics', 'pairLoopback'];
+/**
+ * Screens that draw their own background: the game (its CRT runs paused with
+ * the map) and the admin tools. Every other screen is a canvas screen over the
+ * one shared CRT backdrop, which stays DOM: it is decorative and takes no
+ * touches, so it has no part in the zoom problem the canvas exists to end.
+ */
+const OWN_BACKGROUND_SCREENS: GameScreenName[] = [...DOM_ONLY_SCREENS, 'game', 'animationTest', 'pairLobby'];
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
 const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScreen').then(m => ({ default: m.UpgradeAtlasScreen })));
 const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
-const PairLobby = lazy(() => import('@/components/game/PairLobby').then(m => ({ default: m.PairLobby })));
-const PairDecision = lazy(() => import('@/components/game/PairDecision').then(m => ({ default: m.PairDecision })));
-const PairMismatchNotice = lazy(() => import('@/components/game/PairMismatchNotice').then(m => ({ default: m.PairMismatchNotice })));
-const PairGuestGate = lazy(() => import('@/components/game/PairGuestGate').then(m => ({ default: m.PairGuestGate })));
-const PairLinkBanner = lazy(() => import('@/components/game/PairLinkBanner').then(m => ({ default: m.PairLinkBanner })));
+const PairLobby = lazy(() => import('@/ui/screens/PairLobby').then(m => ({ default: m.PairLobby })));
+const PairDecision = lazy(() => import('@/ui/screens/PairDecision').then(m => ({ default: m.PairDecision })));
 const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagnosticsPanel').then(m => ({ default: m.NearbyDiagnosticsPanel })));
 
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
@@ -393,6 +403,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             animate="center"
             exit="exit"
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+            // The canvas interface places what it draws over DOM elements from
+            // their boxes, which the slide moves without a resize (ui/screenBox).
+            onAnimationComplete={() => window.dispatchEvent(new Event(SCREEN_SETTLED_EVENT))}
             style={{
               willChange: 'transform',
               position: 'relative',
@@ -424,59 +437,65 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             }}
           >
             {navigation.currentScreen === 'welcome' && (
-              <WelcomeScreen
-                onStartGame={() => session.handleStartGame()}
-                onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
-                savedRunAscension={session.savedRun?.ascensionDepth ?? 0}
-                onTutorial={navigation.goToTutorial}
-                onOptions={navigation.goToOptions}
-                onOpenCertificateStore={
-                  session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
-                }
-                onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
-                onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
-                onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
-                onTwoPlayer={navigation.goToPairLobby}
-                showDailyIntro={session.shouldShowDaily}
-                onDailyIntroSeen={session.markDailySeen}
-                // A streak is only shown while alive: attended today, or
-                // yesterday with today still open.
-                dailyStreak={
-                  session.dailyStreak.lastKey === todayKey() || session.dailyStreak.lastKey === previousDayKey(todayKey())
-                    ? session.dailyStreak.count
-                    : 0
-                }
-                dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
-                onAchievements={session.isFeatureUnlocked('achievements') ? () => navigation.goToAchievements() : undefined}
-                onJukebox={musicCatalogue ? navigation.goToJukebox : undefined}
-                onAdmin={adminUnlocked ? navigation.goToAdmin : undefined}
-                onSecretUnlock={adminUnlocked ? undefined : handleSecretAdminUnlock}
-                isLoading={session.isLoading}
-                error={session.error}
-                accentColor={accentHex}
-                totalCertificateHours={session.totalCertificateHours}
-                completedAchievementCount={session.completedAchievementIds.length}
-                highlights={menuHighlights.highlights}
-                onHighlightSeen={menuHighlights.acknowledge}
-              />
+              <CanvasLayer id="screen-WelcomeScreen" z={10}>
+                <WelcomeScreen
+                  onStartGame={() => session.handleStartGame()}
+                  onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
+                  savedRunAscension={session.savedRun?.ascensionDepth ?? 0}
+                  onTutorial={navigation.goToTutorial}
+                  onOptions={navigation.goToOptions}
+                  onOpenCertificateStore={
+                    session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
+                  }
+                  onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
+                  onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
+                  onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
+                  onTwoPlayer={navigation.goToPairLobby}
+                  showDailyIntro={session.shouldShowDaily}
+                  onDailyIntroSeen={session.markDailySeen}
+                  // A streak is only shown while alive: attended today, or
+                  // yesterday with today still open.
+                  dailyStreak={
+                    session.dailyStreak.lastKey === todayKey() || session.dailyStreak.lastKey === previousDayKey(todayKey())
+                      ? session.dailyStreak.count
+                      : 0
+                  }
+                  dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
+                  onAchievements={session.isFeatureUnlocked('achievements') ? () => navigation.goToAchievements() : undefined}
+                  onJukebox={musicCatalogue ? navigation.goToJukebox : undefined}
+                  onAdmin={adminUnlocked ? navigation.goToAdmin : undefined}
+                  onSecretUnlock={adminUnlocked ? undefined : handleSecretAdminUnlock}
+                  isLoading={session.isLoading}
+                  error={session.error}
+                  accentColor={accentHex}
+                  totalCertificateHours={session.totalCertificateHours}
+                  completedAchievementCount={session.completedAchievementIds.length}
+                  highlights={menuHighlights.highlights}
+                  onHighlightSeen={menuHighlights.acknowledge}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'tutorial' && (
-              <TutorialScreen
-                onBack={navigation.goToWelcome}
-                accentColor={accentHex}
-                encounteredBallTypeIds={session.encounteredBallTypeIds}
-              />
+              <CanvasLayer id="screen-TutorialScreen" z={10}>
+                <TutorialScreen
+                  onBack={navigation.goToWelcome}
+                  accentColor={accentHex}
+                  encounteredBallTypeIds={session.encounteredBallTypeIds}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'options' && (
-              <OptionsScreen
-                onBack={navigation.goToWelcome}
-                onReEnableTutorials={() => {
-                  session.handleReEnableAllTutorials();
-                  menuHighlights.resetHighlights();
-                }}
-                onTotalReset={session.handleTotalReset}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-OptionsScreen" z={10}>
+                <OptionsScreen
+                  onBack={navigation.goToWelcome}
+                  onReEnableTutorials={() => {
+                    session.handleReEnableAllTutorials();
+                    menuHighlights.resetHighlights();
+                  }}
+                  onTotalReset={session.handleTotalReset}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {/* The game screen gets its own boundary so a crash on the board
                 costs the MAP, not the app: the run is saved to the current map
@@ -496,15 +515,13 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 pairBanner={
                   pair.phase === 'playing' && (pair.stalled || pair.dropped)
                     ? (
-                        <Suspense fallback={null}>
-                          <PairLinkBanner
-                            stalled={pair.stalled}
-                            dropped={pair.dropped}
-                            remoteName={pair.remoteName}
-                            onRepair={leavePair}
-                            onContinueSolo={pair.continueSolo}
-                          />
-                        </Suspense>
+                        <PairLinkBanner
+                          stalled={pair.stalled}
+                          dropped={pair.dropped}
+                          remoteName={pair.remoteName}
+                          onRepair={leavePair}
+                          onContinueSolo={pair.continueSolo}
+                        />
                       )
                     : undefined
                 }
@@ -564,164 +581,186 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               </GameErrorBoundary>
             )}
             {navigation.currentScreen === 'tenureDraft' && session.pendingTenure && (
-              <TenureDraftScreen
-                offers={session.pendingTenure.offers}
-                earnedAtLevel={session.pendingTenure.earnedAtLevel}
-                lastRunUpgradeIds={session.pendingTenure.lastRunUpgradeIds}
-                onConfirm={session.handleTenurePicked}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-TenureDraftScreen" z={10}>
+                <TenureDraftScreen
+                  offers={session.pendingTenure.offers}
+                  earnedAtLevel={session.pendingTenure.earnedAtLevel}
+                  lastRunUpgradeIds={session.pendingTenure.lastRunUpgradeIds}
+                  onConfirm={session.handleTenurePicked}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'runDraft' && (
-              <RunDraftScreen
-                loadouts={session.availableLoadouts}
-                draftedLoadoutIds={session.draftedLoadoutIds}
-                onConfirm={session.handleConfirmLoadout}
-                onBack={session.handleBackToWelcome}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-RunDraftScreen" z={10}>
+                <RunDraftScreen
+                  loadouts={session.availableLoadouts}
+                  draftedLoadoutIds={session.draftedLoadoutIds}
+                  onConfirm={session.handleConfirmLoadout}
+                  onBack={session.handleBackToWelcome}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'upgradeShop' && (
-              <UpgradeShop
-                runContext={session.nextRunContext}
-                playerPoints={session.totalScore}
-                upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
-                ownedUpgradeIds={session.ownedUpgradeIds}
-                completedLevel={session.currentLevelIndex + 1}
-                isLocked={session.isUpgradeLocked}
-                onPurchase={session.handlePurchaseUpgrade}
-                onContinue={session.handleContinueFromShop}
-                accentColor={accentHex}
-                extraShopItems={session.activeModifiers.extraShopItems}
-                shopRestockCount={session.activeModifiers.shopRestockCount}
-                shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}
-                showTutorial={session.shouldShowStore}
-                onTutorialDismiss={session.markStoreSeen}
-                newlyUnlockedCerts={session.shopUnlockedCerts}
-                certificates={session.certificates}
-                // What the fence bar already holds, so the shelf stops offering
-                // a fence type the bar has no room for. Same list the bar is
-                // drawn from; a second derivation here would be free to
-                // disagree with what the player is looking at.
-                heldFenceTypeIds={session.fenceSlotIds}
-                maxTierCounts={session.maxTierCounts}
-                unlockedCertIds={session.unlockedCertIds}
-                tagSetThreshold={session.tagSetThreshold}
-                freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
-                activeModifiers={session.activeModifiers}
-                closed={session.storeClosed}
-                locksHave={session.storeLockProgress.have}
-                locksNeed={session.storeLockProgress.need}
-                heldAbilityIds={session.heldAbilityIdsNow}
-                abilitySlots={session.abilitySlots}
-                mapsRemaining={session.mapsRemaining}
-                // Open Source Contribution trades the slot away for a free
-                // ability on arrival, so the shelf loses its ability card.
-                abilityOfferCount={session.activeModifiers.freeAbilityPerStore > 0
-                  ? 0
-                  : 1 + Math.max(0, Math.round(session.activeModifiers.extraAbilityOffers))}
-                onPurchaseAbility={session.handlePurchaseAbility}
-                freeAbilityGrant={session.freeAbilityGrant}
-              />
+              <CanvasLayer id="screen-UpgradeShop" z={10}>
+                <UpgradeShop
+                  runContext={session.nextRunContext}
+                  playerPoints={session.totalScore}
+                  upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
+                  ownedUpgradeIds={session.ownedUpgradeIds}
+                  completedLevel={session.currentLevelIndex + 1}
+                  isLocked={session.isUpgradeLocked}
+                  onPurchase={session.handlePurchaseUpgrade}
+                  onContinue={session.handleContinueFromShop}
+                  accentColor={accentHex}
+                  extraShopItems={session.activeModifiers.extraShopItems}
+                  shopRestockCount={session.activeModifiers.shopRestockCount}
+                  shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}
+                  showTutorial={session.shouldShowStore}
+                  onTutorialDismiss={session.markStoreSeen}
+                  newlyUnlockedCerts={session.shopUnlockedCerts}
+                  certificates={session.certificates}
+                  // What the fence bar already holds, so the shelf stops offering
+                  // a fence type the bar has no room for. Same list the bar is
+                  // drawn from; a second derivation here would be free to
+                  // disagree with what the player is looking at.
+                  heldFenceTypeIds={session.fenceSlotIds}
+                  maxTierCounts={session.maxTierCounts}
+                  unlockedCertIds={session.unlockedCertIds}
+                  tagSetThreshold={session.tagSetThreshold}
+                  freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
+                  activeModifiers={session.activeModifiers}
+                  closed={session.storeClosed}
+                  locksHave={session.storeLockProgress.have}
+                  locksNeed={session.storeLockProgress.need}
+                  heldAbilityIds={session.heldAbilityIdsNow}
+                  abilitySlots={session.abilitySlots}
+                  mapsRemaining={session.mapsRemaining}
+                  // Open Source Contribution trades the slot away for a free
+                  // ability on arrival, so the shelf loses its ability card.
+                  abilityOfferCount={session.activeModifiers.freeAbilityPerStore > 0
+                    ? 0
+                    : 1 + Math.max(0, Math.round(session.activeModifiers.extraAbilityOffers))}
+                  onPurchaseAbility={session.handlePurchaseAbility}
+                  freeAbilityGrant={session.freeAbilityGrant}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'capstoneDraft' && (
-              <CapstoneDraftScreen
-                offers={session.capstoneOffers}
-                onSelect={session.handleSelectCapstone}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-CapstoneDraftScreen" z={10}>
+                <CapstoneDraftScreen
+                  offers={session.capstoneOffers}
+                  onSelect={session.handleSelectCapstone}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'ascensionDraft' && (
-              <AscensionDraftScreen
-                loadouts={session.loadouts}
-                draftedLoadoutIds={session.draftedLoadoutIds}
-                ascensionDepth={session.ascensionDepth}
-                ladder={session.ascensionLadder}
-                totalScore={session.totalScore}
-                onAscend={session.handleAscend}
-                onRetire={session.handleRetire}
-                accentColor={accentHex}
-                showTutorial={session.shouldShowAscension}
-                onTutorialDismiss={session.markAscensionSeen}
-              />
+              <CanvasLayer id="screen-AscensionDraftScreen" z={10}>
+                <AscensionDraftScreen
+                  loadouts={session.loadouts}
+                  draftedLoadoutIds={session.draftedLoadoutIds}
+                  ascensionDepth={session.ascensionDepth}
+                  ladder={session.ascensionLadder}
+                  totalScore={session.totalScore}
+                  onAscend={session.handleAscend}
+                  onRetire={session.handleRetire}
+                  accentColor={accentHex}
+                  showTutorial={session.shouldShowAscension}
+                  onTutorialDismiss={session.markAscensionSeen}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'result' && navigation.lastResult && (
-              <ResultScreen
-                result={navigation.lastResult}
-                onMainMenu={navigation.goToWelcome}
-                onPlayAgain={session.handlePlayAgain}
-                onRestart={session.handleRestartRun}
-                checkpointLevel={session.certStartingLevel}
-                accentColor={accentHex}
-                runHoursAwarded={session.lastRunHoursAwarded}
-                runLevelsCompleted={session.lastRunLevelsCompleted}
-                newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
-                runRecap={session.lastRunRecap}
-                runRank={session.lastRunRank}
-                dailyKey={session.dailyKey}
-                onRecords={session.topRuns.length > 0 ? () => openHallFrom('result') : undefined}
-              />
+              <CanvasLayer id="screen-ResultScreen" z={10}>
+                <ResultScreen
+                  result={navigation.lastResult}
+                  onMainMenu={navigation.goToWelcome}
+                  onPlayAgain={session.handlePlayAgain}
+                  onRestart={session.handleRestartRun}
+                  checkpointLevel={session.certStartingLevel}
+                  accentColor={accentHex}
+                  runHoursAwarded={session.lastRunHoursAwarded}
+                  runLevelsCompleted={session.lastRunLevelsCompleted}
+                  newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
+                  runRecap={session.lastRunRecap}
+                  runRank={session.lastRunRank}
+                  dailyKey={session.dailyKey}
+                  onRecords={session.topRuns.length > 0 ? () => openHallFrom('result') : undefined}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'certificateStore' && (
-              <CertificateStore
-                certificates={session.certificates}
-                totalCertificateHours={session.totalCertificateHours}
-                certLevelsOwned={session.certLevelsOwned}
-                unlockedCertIds={session.unlockedCertIds}
-                maxTierCounts={session.maxTierCounts}
-                onPurchaseCertLevel={session.handlePurchaseCertLevel}
-                onBack={navigation.goToWelcome}
-                accentColor={accentHex}
-                showTutorial={session.shouldShowCertStore}
-                onTutorialDismiss={session.markCertStoreSeen}
-                upgrades={session.upgrades}
-                achievements={session.achievements}
-                metaStats={session.metaStats}
-                lifetimeHoursSpent={session.lifetimeHoursSpent}
-              />
+              <CanvasLayer id="screen-CertificateStore" z={10}>
+                <CertificateStore
+                  certificates={session.certificates}
+                  totalCertificateHours={session.totalCertificateHours}
+                  certLevelsOwned={session.certLevelsOwned}
+                  unlockedCertIds={session.unlockedCertIds}
+                  maxTierCounts={session.maxTierCounts}
+                  onPurchaseCertLevel={session.handlePurchaseCertLevel}
+                  onBack={navigation.goToWelcome}
+                  accentColor={accentHex}
+                  showTutorial={session.shouldShowCertStore}
+                  onTutorialDismiss={session.markCertStoreSeen}
+                  upgrades={session.upgrades}
+                  achievements={session.achievements}
+                  metaStats={session.metaStats}
+                  lifetimeHoursSpent={session.lifetimeHoursSpent}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'loadouts' && (
-              <LoadoutGalleryScreen
-                loadouts={session.loadouts}
-                wonLoadoutIds={session.wonLoadoutIds}
-                onBack={navigation.goToWelcome}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-LoadoutGalleryScreen" z={10}>
+                <LoadoutGalleryScreen
+                  loadouts={session.loadouts}
+                  wonLoadoutIds={session.wonLoadoutIds}
+                  onBack={navigation.goToWelcome}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'hallOfFame' && (
-              <HallOfFameScreen
-                topRuns={session.topRuns}
-                monthlyBests={session.monthlyBests}
-                dailyBests={session.dailyBests}
-                dailyStreak={session.dailyStreak}
-                archetypeBests={session.archetypeBests}
-                mapHighscores={session.mapHighscores}
-                metaStats={session.metaStats}
-                onBack={handleHallBack}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-HallOfFameScreen" z={10}>
+                <HallOfFameScreen
+                  topRuns={session.topRuns}
+                  monthlyBests={session.monthlyBests}
+                  dailyBests={session.dailyBests}
+                  dailyStreak={session.dailyStreak}
+                  archetypeBests={session.archetypeBests}
+                  mapHighscores={session.mapHighscores}
+                  metaStats={session.metaStats}
+                  onBack={handleHallBack}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'jukebox' && musicCatalogue && (
-              <JukeboxScreen
-                catalogue={musicCatalogue}
-                onBack={navigation.goToWelcome}
-                accentColor={accentHex}
-                // The jukebox owns the speakers while it is open: the menu loop
-                // playing under a track the player chose is just two songs.
-                onEnter={stopMusic}
-                onExit={playMainMusic}
-              />
+              <CanvasLayer id="screen-JukeboxScreen" z={10}>
+                <JukeboxScreen
+                  catalogue={musicCatalogue}
+                  onBack={navigation.goToWelcome}
+                  accentColor={accentHex}
+                  // The jukebox owns the speakers while it is open: the menu loop
+                  // playing under a track the player chose is just two songs.
+                  onEnter={stopMusic}
+                  onExit={playMainMusic}
+                />
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'achievements' && (
-              <AchievementsScreen
-                achievements={session.achievements}
-                completedIds={session.completedAchievementIds}
-                activatedIds={session.activatedAchievementIds}
-                metaStats={session.metaStats}
-                onActivate={session.activateAchievement}
-                onBack={navigation.goToWelcome}
-                accentColor={accentHex}
-              />
+              <CanvasLayer id="screen-AchievementsScreen" z={10}>
+                <AchievementsScreen
+                  achievements={session.achievements}
+                  completedIds={session.completedAchievementIds}
+                  activatedIds={session.activatedAchievementIds}
+                  metaStats={session.metaStats}
+                  onActivate={session.activateAchievement}
+                  onBack={navigation.goToWelcome}
+                  accentColor={accentHex}
+                />
+              </CanvasLayer>
             )}
 
             {adminUnlocked && navigation.currentScreen === 'admin' && (
@@ -752,25 +791,29 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               </Suspense>
             )}
             {navigation.currentScreen === 'pairLobby' && pair.phase === 'idle' && (
-              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
-                <PairLobby
-                  onBack={navigation.goToWelcome}
-                  onPaired={setPaired}
-                />
-              </Suspense>
+              <CanvasLayer id="screen-PairLobby" z={10}>
+                <Suspense fallback={null}>
+                  <PairLobby
+                    onBack={navigation.goToWelcome}
+                    onPaired={setPaired}
+                  />
+                </Suspense>
+              </CanvasLayer>
             )}
             {navigation.currentScreen === 'pairLobby' && pair.phase === 'deciding' && (
-              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
-                <PairDecision
-                  isHost={pair.isHost}
-                  remoteName={pair.remoteName}
-                  mine={pair.offeredSave?.mine ?? null}
-                  theirs={pair.offeredSave?.theirs ?? null}
-                  onContinue={pair.chooseContinue}
-                  onNew={pair.chooseNew}
-                  onLeave={leavePair}
-                />
-              </Suspense>
+              <CanvasLayer id="screen-PairDecision" z={10}>
+                <Suspense fallback={null}>
+                  <PairDecision
+                    isHost={pair.isHost}
+                    remoteName={pair.remoteName}
+                    mine={pair.offeredSave?.mine ?? null}
+                    theirs={pair.offeredSave?.theirs ?? null}
+                    onContinue={pair.chooseContinue}
+                    onNew={pair.chooseNew}
+                    onLeave={leavePair}
+                  />
+                </Suspense>
+              </CanvasLayer>
             )}
             {adminUnlocked && navigation.currentScreen === 'nearbyDiagnostics' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
@@ -786,47 +829,52 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
         </AnimatePresence>
       </div>
 
-      {session.showLevelComplete && session.pendingLevelScore && (
-        <LevelCompleteOverlay
-          scoreData={session.pendingLevelScore}
-          totalScore={session.totalScore}
-          onContinue={session.handleContinueFromOverlay}
-          accentColor={accentHex}
-          newlyUnlockedCerts={session.pendingCertUnlocks}
-          pace={session.levelPace}
-        />
-      )}
+      {/* The shared backdrop for every canvas screen (OWN_BACKGROUND_SCREENS
+          draw their own). Under the interface canvas, over nothing. */}
+      {!OWN_BACKGROUND_SCREENS.includes(navigation.currentScreen) && <CRTBackground accentColor={accentHex} />}
 
-      {pair.modifierMismatch && (
-        <Suspense fallback={null}>
-          <PairMismatchNotice remoteName={pair.remoteName} onLeave={leavePair} />
-        </Suspense>
-      )}
+      {/* App-wide overlays, over whichever screen is up. None of them locks the
+          page itself: the screen beneath does, except in the admin Playground,
+          whose DOM controls must keep scrolling. */}
+      <CanvasLayer id="level-complete" z={30} lock={false}>
+        {session.showLevelComplete && session.pendingLevelScore && (
+          <LevelCompleteOverlay
+            scoreData={session.pendingLevelScore}
+            totalScore={session.totalScore}
+            onContinue={session.handleContinueFromOverlay}
+            accentColor={accentHex}
+            newlyUnlockedCerts={session.pendingCertUnlocks}
+            pace={session.levelPace}
+          />
+        )}
+      </CanvasLayer>
 
-      {guestGate && (
-        <Suspense fallback={null}>
-          <PairGuestGate what={guestGate} remoteName={pair.remoteName} />
-        </Suspense>
-      )}
-
-      <AnimatePresence>
+      <CanvasLayer id="continue-prompt" z={40} lock={false}>
         {session.pendingDeathResult && (
           <ContinuePrompt
-            key="continue-prompt"
             continuesRemaining={session.continuesRemaining}
             onSpend={session.handleSpendContinue}
             onDecline={session.handleDeclineContinue}
             accentColor={accentHex}
           />
         )}
-      </AnimatePresence>
+      </CanvasLayer>
 
-      <FeatureUnlockedModal
-        feature={session.unlockedFeature}
-        onDismiss={session.handleDismissFeatureUnlocked}
-      />
+      <CanvasLayer id="pair-overlays" z={50} lock={false}>
+        {guestGate && <PairGuestGate what={guestGate} remoteName={pair.remoteName} />}
+        {pair.modifierMismatch && <PairMismatchNotice remoteName={pair.remoteName} onLeave={leavePair} />}
+      </CanvasLayer>
 
-      <TapToStartGate accentColor={accentHex} />
+      <CanvasLayer id="feature-unlocked" z={60} lock={false}>
+        <FeatureUnlockedModal
+          feature={session.unlockedFeature}
+          onDismiss={session.handleDismissFeatureUnlocked}
+        />
+      </CanvasLayer>
+
+      <CanvasLayer id="tap-to-start" z={100} lock={false}>
+        <TapToStartGate accentColor={accentHex} />
+      </CanvasLayer>
 
       {/* The interface canvas (CANVAS_UI_PLAN.md): one for every screen but
           the DOM admin tools. Screens draw on it through <CanvasLayer>. */}

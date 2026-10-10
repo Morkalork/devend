@@ -17,12 +17,12 @@ import { STANDARD_FENCE_ID } from "@/lib/fences";
  *   - level init src/lib/initGame.ts (board, obstacles, balls, regions)
  *   - rendering: src/lib/rendering/sleek/SleekRenderer.ts
  */
-import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { pendingLauncher, fireLauncher, type LauncherState } from "@/lib/physics/launcher";
 import { launchAim, type LaunchAim } from "@/lib/launcher";
-import { LaunchOverlay } from "@/components/game/LaunchOverlay";
+import { LaunchOverlay } from "@/ui/game/LaunchOverlay";
 import type { MapFailure } from "@/lib/mapFailure";
 import { LevelConfig } from "@/types/level";
 
@@ -38,10 +38,10 @@ import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs } from "@/l
 import { authoredBugCarriers } from "@/lib/bugs";
 import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
-import { RubberBandOverlay, type BandTarget } from "@/components/game/RubberBandOverlay";
+import { RubberBandOverlay, type BandTarget } from "@/ui/game/RubberBandOverlay";
 import type { BandShape } from "@/lib/rubberBand";
 import { drawPerfOverlay, recordSurface, isPerfHudEnabled, recordLoopHealth } from "@/lib/rendering/perfStats";
-import { PerfOverlay } from "./PerfOverlay";
+import { PerfOverlay } from "@/ui/game/PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent, DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 import { raiseMessage, type GameMessage, type GameMessageId } from "@/lib/gameMessages";
@@ -52,14 +52,17 @@ import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/b
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
-import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
-import { BoardPlaceholder, type BoardFrameCss } from "./BoardPlaceholder";
-import { DeadlineFrame } from "./DeadlineFrame";
-import { PairGuestGate } from "./PairGuestGate";
+import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
+import { BoardPlaceholder, type BoardFrameCss } from "@/ui/game/BoardPlaceholder";
+import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
+import { PairGuestGate } from "@/ui/game/PairGuestGate";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
-import { LockExplainerModal } from "./LockExplainerModal";
-import { AbilityIcon } from "./AbilityIcon";
-import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
+import { LockExplainerModal } from "@/ui/game/LockExplainerModal";
+import { BoardToasts } from "@/ui/game/BoardToasts";
+import { CanvasLayer } from "@/ui/CanvasLayer";
+import { UiFrame } from "@/ui/UiFrame";
+import { PlayFrameContext, useScreenBox, windowBox } from "@/ui/screenBox";
+import { InteractiveTutorialOverlay } from "@/ui/game/InteractiveTutorialOverlay";
 import { circuitHintTarget, circuitHintGesture, type HintTerminal } from "@/lib/circuitHint";
 import { TutorialStep } from "@/types/game";
 import {
@@ -900,7 +903,9 @@ export function GameCanvas({
    * covers the whole screen, so they are positioned from here rather than
    * inside this container.
    */
-  const [containerBox, setContainerBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const containerBox = useScreenBox(containerRef);
+  // The play pane (GameScreen), which frames the prompts that halt the map.
+  const playFrame = useContext(PlayFrameContext);
   const [canvasCssHeight, setCanvasCssHeight] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0, boardTopPct: 5 });
@@ -2530,8 +2535,6 @@ export function GameCanvas({
       const container = containerRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
-      setContainerBox(prev => (prev.x === rect.left && prev.y === rect.top && prev.width === rect.width && prev.height === rect.height)
-        ? prev : { x: rect.left, y: rect.top, width: rect.width, height: rect.height });
       // The tutorial overlay renders `absolute inset-0` INSIDE this container, so
       // it shares the container's coordinate space (and any page-transition
       // transform). Give it the ACTUAL board box relative to the container's
@@ -2560,11 +2563,32 @@ export function GameCanvas({
     // Re-read a few times while the board settles (it is computed after mount,
     // and its size/offset only stabilises once the container has its final box).
     const timeouts = [100, 300, 600, 1000].map(ms => setTimeout(updateCanvasPosition, ms));
+    // The container also changes size without a window resize (the bottom
+    // stack grows when an ability is banked), and the overlays on the
+    // interface canvas are placed from its box, so they follow it.
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateCanvasPosition) : null;
+    if (observer && containerRef.current) observer.observe(containerRef.current);
     return () => {
       window.removeEventListener("resize", updateCanvasPosition);
       timeouts.forEach(clearTimeout);
+      observer?.disconnect();
     };
   }, []);
+
+  // The board overlays' frame of reference on the interface canvas.
+  const origin = { x: containerBox.x, y: containerBox.y };
+  const size = { width: containerBox.width, height: containerBox.height };
+  // What the armed ability is waiting for. Keyed on the KIND, not left as the
+  // magnet's line: three abilities arm this way and telling a descope player
+  // to attract balls is worse than saying nothing. The rubber band is left out
+  // on purpose - its own overlay carries a header, and two prompts collide.
+  const armedDef = armedAbility ? getAbility(armedAbility) : undefined;
+  const armedPrompt = armedDef && armedDef.kind !== 'rubberBand'
+    ? {
+      text: t(`abilityInfo.armed.${armedDef.kind}`, { defaultValue: t('abilityInfo.armed.fallback') }),
+      color: armedDef.color ?? '#b98cff',
+    }
+    : null;
 
   return (
     // `touch-none` on the whole play region, not only on the canvas inside it.
@@ -2580,123 +2604,53 @@ export function GameCanvas({
     // rest of the screen with a handler, since `touch-action` intersects down
     // the tree and could not make the one exception the slot bar needs.
     <div className={`flex flex-col w-full h-full touch-none ${isShaking ? "animate-shake" : ""}`}>
-      {screenFlash === "red" && <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />}
-
       {process.env.NODE_ENV === "development" && (
-        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 font-mono z-10">
+        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 font-mono z-10 pointer-events-none">
           {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
         </div>
       )}
 
+      {/* Only the board's own canvases are DOM. Everything drawn over or around
+          the board is on the interface canvas (CANVAS_UI_PLAN.md), positioned
+          from this container's box on screen. */}
       <div ref={containerRef} className="flex-1 min-h-0 relative overflow-visible" style={{ height: "70%" }}>
-        <BoardPlaceholder visible={showBoardPlaceholder} accentColor={accentColor} frame={boardFrameCss} />
-        {/* The map clock, on the board's own frame where the eyes already are. */}
-        <DeadlineFrame
-          frame={showBoardPlaceholder ? null : boardFrameCss}
-          secondsLeft={deadlineSecondsLeft}
-          limit={deadlineLimit}
-        />
-        {bonusPulseKey > 0 && (
-          <div
-            key={bonusPulseKey}
-            className="absolute inset-0 pointer-events-none animate-bonus-fence-pulse"
-            style={{
-              zIndex: 0,
-              background: `radial-gradient(circle, rgba(0,255,136,0.75) 0%, rgba(0,255,136,0.45) 35%, rgba(0,255,136,0.15) 65%, transparent 80%)`,
-              margin: '-25%',
-              borderRadius: '50%',
-            }}
-          />
-        )}
         <canvas key={useFallback2d ? '2d' : glKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 3, opacity: 1 }}
         />
-        {/* Frame-timing HUD. Absolute INSIDE this positioned container (the root
-            div is unpositioned, and page transforms break `fixed`), and outside
-            the canvas so it costs the renderer nothing and can never land inside
-            the render time it reports. */}
-        <PerfOverlay visible={showPerfOverlay || perfHudPersisted} />
-        {chestToast && (
-          <div
-            key={chestToast.key}
-            className="absolute left-1/2 top-[18%] z-40 pointer-events-none animate-chest-toast whitespace-nowrap font-mono font-bold text-sm sm:text-base px-3 py-1.5 rounded-md"
-            style={{
-              color: chestToast.color,
-              background: 'rgba(10,14,20,0.72)',
-              border: `1px solid ${chestToast.color}`,
-              boxShadow: `0 0 14px ${chestToast.color}66`,
-            }}
-          >
-            {chestToast.label}
-          </div>
-        )}
-        {beatBanner && (
-          <div
-            key={beatBanner.key}
-            // Anchored just ABOVE the board's top edge (translateY(-100%)) so the
-            // toast sits in the gutter over the HUD, never covering the map. Kept
-            // compact (chest-toast sizing) so it fits the thin band above the board.
-            className="absolute left-1/2 z-40 pointer-events-none animate-pulse whitespace-nowrap font-mono font-bold text-sm sm:text-base px-3 py-1.5 rounded-md flex items-center gap-2"
-            style={{
-              top: `${debugInfo.boardTopPct}%`,
-              transform: 'translate(-50%, calc(-100% - 4px))',
-              color: '#ffcf7a',
-              background: 'rgba(30,10,4,0.82)',
-              border: '1px solid #ffb45499',
-              boxShadow: '0 0 18px #ff8a5b55',
-            }}
-          >
-            <span aria-hidden>⚠</span>
-            {t(beatBanner.announce)}
-            {/* What the beat is about to DO. The flavour name alone telegraphs
-                that something is coming but not what, which is how an extra
-                ball still arrived unexplained. Kept on the same line so the
-                toast stays inside the thin band above the board. */}
-            {beatBanner.effects?.map(effect => (
-              <span key={effect.key} className="font-normal opacity-90">
-                · {t(effect.key, effect.values)}
-              </span>
-            ))}
-          </div>
-        )}
-        {abilityIconFx && (
-          <div
-            key={abilityIconFx.key}
-            className="absolute z-40 pointer-events-none animate-ability-icon"
-            style={{
-              left: `${abilityIconFx.xPct}%`,
-              top: `${abilityIconFx.yPct}%`,
-              color: abilityIconFx.color,
-              filter: `drop-shadow(0 0 10px ${abilityIconFx.color})`,
-            }}
-          >
-            <AbilityIcon kind={abilityIconFx.kind} className="w-16 h-16 sm:w-20 sm:h-20" />
-          </div>
-        )}
-        {/* What the armed ability is waiting for. Keyed on the KIND, not left
-            as the magnet's line: three abilities arm this way and telling a
-            descope player to attract balls is worse than saying nothing. The
-            rubber band is left out on purpose - its own overlay carries a
-            header, and two prompts at once collide. */}
-        {armedAbility && getAbility(armedAbility)?.kind !== 'rubberBand' && (() => {
-          const kind = getAbility(armedAbility)?.kind;
-          const colour = getAbility(armedAbility)?.color ?? '#b98cff';
-          return (
-            <div
-              className="absolute left-1/2 top-[12%] -translate-x-1/2 z-40 pointer-events-none whitespace-nowrap font-mono font-bold text-xs sm:text-sm px-3 py-1.5 rounded-md animate-pulse"
-              style={{
-                color: colour,
-                background: 'rgba(10,14,20,0.8)',
-                border: `1px solid ${colour}`,
-              }}
-            >
-              {t(`abilityInfo.armed.${kind}`, { defaultValue: t('abilityInfo.armed.fallback') })}
-            </div>
-          );
-        })()}
+      </div>
+
+      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />
+
+      {/* Under the play screen's HUD (z 10), as the DOM's board overlays sat
+          under its bars. The page lock is the play layer's to set. */}
+      <CanvasLayer id="board" z={5} lock={false}>
+        <BoardPlaceholder visible={showBoardPlaceholder} accentColor={accentColor} frame={boardFrameCss} origin={origin} />
+        {/* The map clock, on the board's own frame where the eyes already are. */}
+        <DeadlineFrame
+          frame={showBoardPlaceholder ? null : boardFrameCss}
+          secondsLeft={deadlineSecondsLeft}
+          limit={deadlineLimit}
+          origin={origin}
+        />
+        {/* Frame-timing HUD, off the board's canvas so it costs the renderer
+            nothing and can never land inside the render time it reports. */}
+        <PerfOverlay visible={showPerfOverlay || perfHudPersisted} origin={origin} />
+        <BoardToasts
+          origin={origin}
+          width={containerBox.width}
+          height={containerBox.height}
+          boardTopPct={debugInfo.boardTopPct}
+          chestToast={chestToast}
+          beatBanner={beatBanner}
+          abilityIconFx={abilityIconFx}
+          armedPrompt={armedPrompt}
+          bonusPulseKey={bonusPulseKey}
+          screenFlash={screenFlash}
+          boardFrame={boardFrameCss}
+        />
         {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && boardMaterialized && (
           <InteractiveTutorialOverlay
             tutorialStep={tutorialStep}
@@ -2705,17 +2659,17 @@ export function GameCanvas({
             canvasHeight={canvasCssHeight}
             canvasOffsetTop={canvasOffsetTop}
             canvasOffsetLeft={canvasOffsetLeft}
+            origin={origin}
           />
         )}
-        {/* The Rubber Band, mounted only while it is armed. Nothing is paused:
-            unlike the launcher, this is aimed at a board that is still moving,
-            which is most of the skill in it. */}
         {armedAbility === 'rubberBand' && boardMaterialized && (
           <RubberBandOverlay
             canvasWidth={canvasCssWidth}
             canvasHeight={canvasCssHeight}
             canvasOffsetTop={canvasOffsetTop}
             canvasOffsetLeft={canvasOffsetLeft}
+            origin={origin}
+            size={size}
             targets={(() => {
               const g = gameRef.current;
               const out: BandTarget[] = [];
@@ -2758,6 +2712,8 @@ export function GameCanvas({
               canvasHeight={canvasCssHeight}
               canvasOffsetTop={canvasOffsetTop}
               canvasOffsetLeft={canvasOffsetLeft}
+              origin={origin}
+              size={size}
               ballPosition={ball.position}
               loadedCount={loaded.length}
               inner={pendingLaunch.inner}
@@ -2784,10 +2740,7 @@ export function GameCanvas({
             />
           );
         })()}
-        {/* The same hand, aimed. Board-aligned, so it lives in the container's
-            coordinate space with the rest of the overlays rather than in the
-            viewport's - a `fixed` element here would be thrown off by the page
-            transition's transform. */}
+        {/* The same hand, aimed at a circuit's terminals. */}
         {circuitHint && boardMaterialized && !tutorialMode && (
           <InteractiveTutorialOverlay
             tutorialStep="showingHint"
@@ -2796,6 +2749,7 @@ export function GameCanvas({
             canvasHeight={canvasCssHeight}
             canvasOffsetTop={canvasOffsetTop}
             canvasOffsetLeft={canvasOffsetLeft}
+            origin={origin}
             gesture={(() => {
               const g = circuitHintGesture(circuitHint, BOARD_WIDTH);
               const sx = (wx: number) => canvasOffsetLeft + (wx / BOARD_WIDTH) * canvasCssWidth;
@@ -2804,38 +2758,40 @@ export function GameCanvas({
             })()}
           />
         )}
-      </div>
+      </CanvasLayer>
 
-      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />
+      {/* Over the HUD: these halt the map and ask for a decision. */}
+      <CanvasLayer id="board-modal" z={20} lock={false}>
+        <UiFrame box={playFrame ?? windowBox()}>
+          {/* The push prompt halts the world on BOTH devices, so both see it; only
+              the host may answer it. A guest that could also answer would settle a
+              question about one run twice, and the two answers can differ. */}
+          {pushMode === "prompt" && clearedPercent !== null && !isPairGuest && (
+            <PushYourLuckOverlay
+              remainingPercent={clearedPercent}
+              thresholdPercent={level.sizeThreshold}
+              basePoints={level.points}
+              onBank={handleBankAndContinue}
+              onPush={handlePushYourLuck}
+            />
+          )}
+          {/* ...and the guest is told who is deciding, rather than left looking at
+              a stopped board with nothing to say why. */}
+          {pushMode === "prompt" && clearedPercent !== null && isPairGuest && (
+            <PairGuestGate what="pushing" remoteName={pairPartnerName ?? t("pair.partner")} />
+          )}
 
-      {/* The push prompt halts the world on BOTH devices, so both see it; only
-          the host may answer it. A guest that could also answer would settle a
-          question about one run twice, and the two answers can differ. */}
-      {pushMode === "prompt" && clearedPercent !== null && !isPairGuest && (
-        <PushYourLuckOverlay
-          remainingPercent={clearedPercent}
-          thresholdPercent={level.sizeThreshold}
-          basePoints={level.points}
-          onBank={handleBankAndContinue}
-          onPush={handlePushYourLuck}
-        />
-      )}
-      {/* ...and the guest is told who is deciding, rather than left looking at
-          a stopped board with nothing to say why. */}
-      {pushMode === "prompt" && clearedPercent !== null && isPairGuest && (
-        <PairGuestGate what="pushing" remoteName={pairPartnerName ?? t("pair.partner")} />
-      )}
-
-      {/* One-time lock explainer, over the push prompt, on the first zero-lock finish. */}
-      {lockExplainerOpen && (
-        <LockExplainerModal
-          onClose={() => {
-            try { localStorage.setItem("devend_lock_tutorial_seen", "1"); } catch { /* private mode */ }
-            setLockExplainerOpen(false);
-          }}
-        />
-      )}
-
+          {/* One-time lock explainer, over the push prompt, on the first zero-lock finish. */}
+          {lockExplainerOpen && (
+            <LockExplainerModal
+              onClose={() => {
+                try { localStorage.setItem("devend_lock_tutorial_seen", "1"); } catch { /* private mode */ }
+                setLockExplainerOpen(false);
+              }}
+            />
+          )}
+        </UiFrame>
+      </CanvasLayer>
     </div>
   );
 }

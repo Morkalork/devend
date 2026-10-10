@@ -128,6 +128,6 @@ describe("the claims that remain are true", () => {
     }
     const canvas = read("src/components/game/GameCanvas.tsx");
     expect(canvas, "the band lost its exemption and now shows two prompts at once")
-      .toMatch(/getAbility\(armedAbility\)\?\.kind !== 'rubberBand'/);
+      .toMatch(/armedDef\.kind !== 'rubberBand'/);
   });
 });

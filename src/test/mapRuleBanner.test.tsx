@@ -94,14 +94,16 @@ describe('where it sits', () => {
   it('is placed from the board top edge, not pinned under the bar', () => {
     // Centred in the GUTTER: the board is square in a taller frame, so how much
     // space sits above it depends on the surface and only GameCanvas can
-    // measure it. Half the board's top offset, pulled back by half its own
-    // height, is the middle of that gap.
+    // measure it. The banner is given the gap above the board as its box and
+    // centres itself in it, which is the middle of that gap.
     const src = read('src/components/game/GameScreen.tsx');
     const i = src.indexOf('<MapRuleBanner');
     expect(i, 'the banner is never rendered').toBeGreaterThan(-1);
-    const block = src.slice(Math.max(0, i - 700), i + 200);
-    expect(block, 'the banner does not use the measured gutter').toContain('boardTopPct / 2');
-    expect(block, 'the banner is not centred on that point').toContain('translateY(-50%)');
+    const block = src.slice(i, i + 500);
+    expect(block, 'the banner does not use the measured gutter').toContain('(r.height * boardTopPct) / 100');
+    const banner = read('src/ui/game/MapRuleBanner.tsx');
+    expect(banner, 'the banner is not centred in the box it is given')
+      .toContain('<View layout={{ alignItems: "center", justifyContent: "center", ...(layout ?? {}) }}>');
   });
 
   it('is measured, not guessed', () => {
@@ -114,13 +116,12 @@ describe('where it sits', () => {
   });
 
   it('cannot swallow a cut aimed near the top of the board', () => {
-    // It floats over the play surface, so the wrapper must be inert; only the
-    // banner itself takes a press.
-    const src = read('src/components/game/GameScreen.tsx');
-    const i = src.indexOf('<MapRuleBanner');
-    const block = src.slice(Math.max(0, i - 700), i + 200);
-    expect(block, 'the floating wrapper eats pointer events').toContain('pointer-events-none');
-    expect(block, 'the banner itself cannot be pressed').toContain('pointer-events-auto');
+    // It floats over the play surface, so the box it fills must be inert (a
+    // plain View takes no touches, ui/kit); only the banner itself is pressed.
+    const banner = read('src/ui/game/MapRuleBanner.tsx');
+    const body = banner.slice(banner.indexOf('\n  return (\n'));
+    expect(body.trimStart().startsWith('return (\n    <View'), 'the floating box eats pointer events').toBe(true);
+    expect(body, 'the banner itself cannot be pressed').toContain('<Pressable onTap={onExplain}');
   });
 
   it('is given the map mutator to state', () => {
@@ -134,7 +135,7 @@ describe('where it sits', () => {
   it('no longer duplicates itself as a chip in the stats row', () => {
     // Two weak indicators for one thing is worse than one clear one, and the
     // chip was the one that did not work.
-    const bar = read('src/components/game/GameTopBar.tsx');
+    const bar = read('src/ui/game/GameTopBar.tsx');
     expect(bar, 'the top bar still renders a mutator chip').not.toContain('mapMutator');
   });
 });

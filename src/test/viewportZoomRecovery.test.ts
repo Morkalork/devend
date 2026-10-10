@@ -341,7 +341,9 @@ describe("the recovery is wired to the page and to the game", () => {
   it("pauses the map on it, and says why", () => {
     const screen = read("src/components/game/GameScreen.tsx");
     expect(screen).toContain("shouldPauseForZoom({");
-    expect(screen, "a pause nobody asked for with nothing to explain it")
+    // The pause sheet is drawn on the canvas; GameScreen hands it the reason.
+    expect(screen, "the pause sheet is not told why it is up").toContain("zoomStuck={viewportZoomStuck}");
+    expect(read("src/ui/game/PauseOverlay.tsx"), "a pause nobody asked for with nothing to explain it")
       .toContain("game.pausedZoom");
     for (const lang of ["en", "es", "sv"]) {
       const locale = JSON.parse(read(`src/i18n/locales/${lang}.json`));

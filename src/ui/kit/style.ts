@@ -33,7 +33,9 @@ export function textStyle(p: TextLook): TextStyle {
     breakWords: !!p.wrap,
     letterSpacing: p.letterSpacing ?? 0,
     lineHeight: p.lineHeight ?? Math.round(size * 1.35),
-    ...(p.glow ? { dropShadow: { color: p.color ?? COLOR.foreground, blur: p.glow, distance: 0, alpha: 0.6 } } : {}),
+    // The glow is drawn into the text's own texture, which Pixi sizes to the
+    // glyphs: without padding to match the blur it is cut off in a hard box.
+    ...(p.glow ? { dropShadow: { color: p.color ?? COLOR.foreground, blur: p.glow, distance: 0, alpha: 0.6 }, padding: Math.ceil(p.glow * 1.5) } : {}),
   });
 }
 

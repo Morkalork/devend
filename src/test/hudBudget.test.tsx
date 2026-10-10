@@ -35,18 +35,23 @@ import { AbilityBar } from "@/components/game/AbilityBar";
 afterEach(cleanup);
 
 const GAME = resolve(process.cwd(), "src/components/game");
+/** The HUD is drawn on the interface canvas now (CANVAS_UI_PLAN.md). */
+const UI = resolve(process.cwd(), "src/ui/game");
 const read = (f: string) => readFileSync(resolve(GAME, f), "utf8");
+const readUi = (f: string) => readFileSync(resolve(UI, f), "utf8");
 
 describe("every control a player has to hit mid-map", () => {
   it("declares at least a 44px target", () => {
     // The concrete failure behind the report. A 32px control is not merely
     // fiddly on a phone, it is a control you miss while something is moving.
-    const src = read("GameScreen.tsx");
-    // Buttons in the control row and the menu sheet. w-8 h-8 was the old size.
-    expect(src, "a 32px control is back in the game screen").not.toMatch(/w-8 h-8/);
     // 44px is Apple's Human Interface Guidelines minimum tappable target.
-    const targets = src.match(/min-h-\[44px\]/g) ?? [];
-    expect(targets.length, "the control row lost its 44px floor").toBeGreaterThan(4);
+    expect(readUi("ControlsRowModel.ts"), "the control floor moved off 44px")
+      .toMatch(/CONTROL_TARGET = 44\b/);
+    const row = readUi("ControlsRow.tsx");
+    // The row's buttons and the menu sheet's rows both hold the floor.
+    expect((row.match(/minHeight: CONTROL_TARGET/g) ?? []).length, "the control row lost its 44px floor")
+      .toBeGreaterThanOrEqual(2);
+    expect(row, "a control is narrower than the floor").toContain("minWidth: CONTROL_TARGET");
   });
 
   it("gives the ability buttons a real target too", () => {
@@ -81,17 +86,16 @@ describe("where the controls live", () => {
   it("opens the menu sheet upward, away from the screen edge", () => {
     // It lives at the bottom now. A sheet that still dropped downward would
     // open off the end of the screen.
-    const src = read("GameScreen.tsx");
-    expect(src).toContain("bottom-full");
-    expect(src, "the sheet still drops downward from a bottom-anchored button")
-      .not.toContain('absolute top-full left-0 mt-1');
+    const row = readUi("ControlsRow.tsx");
+    expect(row, "the sheet is no longer anchored above the row")
+      .toContain("bottom: HUD.controlsRow + MENU_GAP");
   });
 
   it("puts how-to-win in the bar rather than only inside the sheet", () => {
     // It is the question players actually ask mid-map, and it was three taps
     // deep. Two references now: the bar button and the sheet row.
-    const src = read("GameScreen.tsx");
-    expect((src.match(/winConditions\.menuItem/g) ?? []).length).toBeGreaterThan(1);
+    const model = readUi("ControlsRowModel.ts");
+    expect((model.match(/winConditions\.menuItem/g) ?? []).length).toBeGreaterThan(1);
   });
 });
 
@@ -99,8 +103,8 @@ describe("how much the HUD is allowed to say at once", () => {
   /** Surfaces that persist during play, as opposed to modals and overlays. */
   function bottomStackSurfaces(): string[] {
     const src = read("GameScreen.tsx");
-    const start = src.indexOf("fixed bottom-0");
-    const stack = src.slice(start, start + 6000);
+    // The canvas stack: PlayLayout's `bottom`, up to the full-screen layers.
+    const stack = src.slice(src.indexOf("bottom={"), src.indexOf("over={"));
     return [...stack.matchAll(/<([A-Z][A-Za-z]+)\b/g)]
       .map(m => m[1])
       .filter(n => /Bar$/.test(n));
@@ -180,7 +184,7 @@ describe("what the status bar is allowed to carry", () => {
     // Row 1 was padded 88px on the left to clear the floating menu and pause
     // buttons. Those moved to the thumb zone in phase 1, so the padding became
     // dead width on the narrowest screen the game supports.
-    expect(read("GameTopBar.tsx"), "the bar still reserves room for the old floating cluster")
+    expect(readUi("GameTopBar.tsx"), "the bar still reserves room for the old floating cluster")
       .not.toContain("pl-[88px]");
   });
 
@@ -188,7 +192,7 @@ describe("what the status bar is allowed to carry", () => {
     // Certificate hours are earned across runs and spent in a store. They are
     // not map state, and the Specs panel already renders them in full, so the
     // permanent bar is the one place they do not need to be.
-    const bar = read("GameTopBar.tsx");
+    const bar = readUi("GameTopBar.tsx");
     const rowOne = bar.slice(bar.indexOf("Row 1"), bar.indexOf("Row 2"));
     expect(rowOne, "certificate hours are back on the permanent bar")
       .not.toMatch(/<Hexagon/);
@@ -198,13 +202,13 @@ describe("what the status bar is allowed to carry", () => {
     // The relocation is only legitimate because the destination exists. A
     // budget met by dropping information is not a tidier HUD, it is a smaller
     // game.
-    expect(read("TopBarDetailsPanel.tsx")).toContain("certificateProgress");
+    expect(readUi("TopBarDetailsPanel.tsx")).toContain("certificateProgress");
   });
 
   it("leaves the map's own numbers alone", () => {
     // Cuts, space and locks are what the map is about. They stay on the bar
     // whatever else moves.
-    const bar = read("GameTopBar.tsx");
+    const bar = readUi("GameTopBar.tsx");
     for (const kept of ["cutsUsed", "spaceRemaining", "lockedBalls"]) {
       expect(bar, `${kept} was moved off the status bar`).toContain(kept);
     }
@@ -217,7 +221,7 @@ describe("controls do not leak back into the status band", () => {
     // affordances that already existed: swipe down, tap either row, and the
     // chevron. It was also a control living in the status band, which is the
     // one thing the band is not for.
-    const bar = read("GameTopBar.tsx");
+    const bar = readUi("GameTopBar.tsx");
     expect(bar, "the Specs button is back in the status band")
       .not.toMatch(/aria-label=\{t\('topBar\.specs'\)\}/);
   });
@@ -225,18 +229,19 @@ describe("controls do not leak back into the status band", () => {
   it("puts it in the control row instead, not nowhere", () => {
     // Removing a button is not the same as moving one. The panel it opens is
     // the game's whole reference surface.
-    const screen = read("GameScreen.tsx");
-    expect(screen, "Specs was deleted rather than relocated")
-      .toMatch(/aria-label=\{t\('topBar\.specs'\)\}/);
-    expect(screen, "the unread badge did not come with it").toContain("manualUnread");
+    const model = readUi("ControlsRowModel.ts");
+    expect(model, "Specs was deleted rather than relocated").toMatch(/id: "specs"/);
+    expect(model, "Specs lost its words").toContain('label: { key: "topBar.specs" }');
+    expect(model, "the unread badge did not come with it").toContain("manualUnread");
   });
 
   it("leaves the shortcuts that cost no space", () => {
     // Tapping either row and swiping down still open Specs. They were never the
     // problem: they take no room at all. Only the button that claimed a row did.
-    const bar = read("GameTopBar.tsx");
-    expect((bar.match(/onClick=\{onExpand\}/g) ?? []).length,
-      "the row taps went with the button").toBeGreaterThanOrEqual(2);
+    const bar = readUi("GameTopBar.tsx");
+    // Both rows sit in one gesture surface, which taps and swipes to Specs.
+    expect(bar, "the row taps went with the button").toContain("useTapOrSwipeDown(onExpand)");
+    expect(bar, "the rows left the gesture surface").toMatch(/Rows 1 and 2 share one gesture surface/);
     expect(bar, "the there-is-more-here hint went too").toContain("ChevronDown");
   });
 });
