@@ -6,3 +6,5 @@ export * from "./press";
 export * from "./motion";
 export * from "./arcade";
 export * from "./arcadeStyle";
+export * from "./pipeline";
+export * from "./pipelineStyle";

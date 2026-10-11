@@ -1,5 +1,5 @@
 /**
- * The game's loud button (index.css `.arcade-button-*`): Michroma, upper case,
+ * The game's loud button (index.css `.arcade-button-*`): the display face, upper case,
  * wide tracking, a 2px border and a soft glow. The kit's Button is the plain
  * app button; this is the one the menus, the between-map screens and the
  * in-game modals are built around, kept in one place so they cannot drift
@@ -18,7 +18,7 @@ import { ARCADE, GOLD, GREY, arcadeInk, fitTextWidth, type ArcadeVariant } from 
 // ── Arcade button ──────────────────────────────────────────────────────────
 
 export interface ArcadeButtonProps {
-  /** The label (Michroma, upper-case, wide tracking); omit to pass children. */
+  /** The label (display face, upper-case, wide tracking); omit to pass children. */
   text?: string;
   /** An icon before the label. */
   icon?: IconSource;
@@ -59,7 +59,7 @@ export interface ArcadeButtonProps {
 }
 
 /**
- * `.arcade-button-*` (index.css): the menu screens' Michroma, upper-case,
+ * `.arcade-button-*` (index.css): the menu screens' display face, upper-case,
  * 2px-bordered button. A `text` label too long for the button wraps onto a
  * second line, centred, as the DOM's did; it is measured against the button's
  * laid-out width, because a wrapping label in a centred row has no width of
@@ -226,7 +226,7 @@ function Shimmer() {
   );
 }
 
-/** The arcade buttons' type, for custom button content: Michroma, upper case, tracking-widest (0.1em). */
+/** The arcade buttons' type, for custom button content: the display face, upper case, tracking-widest (0.1em). */
 export function ArcadeText({ text, color, size = 15 }: { text: string; color: number; size?: number }) {
   return <Label text={text} size={size} font="display" weight="600" upper letterSpacing={size * 0.1} color={color} />;
 }

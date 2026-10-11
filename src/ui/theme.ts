@@ -42,9 +42,46 @@ export const COLOR = {
   black: 0x000000,
 } as const;
 
+/**
+ * The pipeline look's colour roles (UI_REDO direction B): the between-map
+ * screen and every screen restyled after it take colour from here, by what
+ * the colour MEANS rather than by hue. The band's accent (green, blue, pink,
+ * ...) is passed in per screen and is the only other colour.
+ *
+ *   surface  the screen behind everything
+ *   raised   a panel on it (the ledger, a ticket)
+ *   edge     a 1px outline, a rail, a divider
+ *   ink      text you read
+ *   muted    text you may skip
+ *   hours    anything counted in hours: overtime, prices, certificate hours
+ *   cost     a loss, a failed condition, something taken away
+ *
+ * Gold and red mean hours and cost everywhere; nothing else may use them.
+ */
+export const ROLE = {
+  surface: 0x0d1012,
+  raised: 0x151a1d,
+  edge: 0x253036,
+  ink: 0xe6ebe8,
+  muted: 0x8b968f,
+  hours: 0xf2bc55,
+  cost: 0xff6b6b,
+} as const;
+
 export const FONT = {
-  /** Headings and the HUD's numbers. */
-  display: "Michroma, sans-serif",
+  /**
+   * The game's logo, and nothing else. Michroma is the face players know the
+   * game by, but it is very wide: on buttons, card titles and headline numbers
+   * it wrapped ("+7h Certificate Hours" took two lines on a phone) and slowed
+   * reading in upper case. Those moved to `display`.
+   */
+  logo: "Michroma, sans-serif",
+  /**
+   * Headings, buttons, card titles, headline numbers and the HUD: Oxanium, a
+   * squared technical face like Michroma at ordinary width. Bundled at 500,
+   * 600 and 700 (public/assets/fonts); textStyle defaults it to 600.
+   */
+  display: "Oxanium, Michroma, sans-serif",
   /** Body text. */
   body: "'Space Grotesk', sans-serif",
   /** Code and figures. */

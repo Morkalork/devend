@@ -1,11 +1,14 @@
 /**
  * Canvas text is rasterised once, with whatever font is loaded at that moment,
  * and is not redrawn when a web font arrives later. So the interface waits for
- * its three faces before its first frame. The tap-to-start gate is in front of
+ * its four faces before its first frame. The tap-to-start gate is in front of
  * it anyway, so this costs nothing a player sees.
  */
 const FACES = [
   "400 16px Michroma",
+  "500 16px Oxanium",
+  "600 16px Oxanium",
+  "700 16px Oxanium",
   "400 16px 'Space Grotesk'",
   "500 16px 'Space Grotesk'",
   "600 16px 'Space Grotesk'",

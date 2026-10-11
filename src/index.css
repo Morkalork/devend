@@ -12,6 +12,31 @@
   font-display: swap;
 }
 
+/* The interface's display face (src/ui/theme.ts FONT.display); Michroma is the logo only. */
+@font-face {
+  font-family: 'Oxanium';
+  src: url('/assets/fonts/Oxanium-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oxanium';
+  src: url('/assets/fonts/Oxanium-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oxanium';
+  src: url('/assets/fonts/Oxanium-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /*
  * CRT Background Styles
  * 

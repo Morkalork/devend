@@ -93,8 +93,8 @@ export function OptionsScreen({
       <Label text={text} size={TEXT.sm} font="display" letterSpacing={0.35} color={COLOR.mutedForeground} />
     </View>
   );
-  // The DOM's w-9 fits "100%" in tabular digits; Michroma's are wider, so the
-  // column is as wide as "100%" itself and never runs into the slider.
+  // The DOM's w-9 fits "100%" in tabular digits; the display face's may be
+  // wider, so the column is as wide as "100%" itself and never runs into the slider.
   const percentWidth = useMemo(() => Math.max(36, fitTextWidth(volumePercent(1), { size: TEXT.xs, font: "display" })), []);
   const volumeRow = (
     icon: typeof Languages, name: string, value: number, onChange: (v: number) => void, onRelease?: () => void,
