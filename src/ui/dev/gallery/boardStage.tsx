@@ -11,6 +11,7 @@ import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { BOARD_FRAME_THICKNESS, BOARD_WIDTH } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 import { COLOR, tint, useUiScreen, View } from "../../kit/ui";
+import { BoardBoot } from "../../game/BoardBoot";
 
 /** The stand-in board, in screen CSS px. */
 export interface FakeBoard {
@@ -79,4 +80,20 @@ export function Replay({ everyMs, children }: { everyMs: number; children: (key:
     return () => window.clearInterval(id);
   }, [everyMs]);
   return <>{children(key)}</>;
+}
+
+/**
+ * A map opening: the boot stand-in for `waitMs` (the renderer loading), then
+ * its reveal over the stand-in board. Wrap it in a Replay to see it again.
+ */
+export function BootDemo({ b, runStart, waitMs }: { b: FakeBoard; runStart: boolean; waitMs: number }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setReady(true), waitMs);
+    return () => window.clearTimeout(id);
+  }, [waitMs]);
+  return (
+    <BoardBoot ready={ready} runStart={runStart} accentColor={ACCENT} frame={b.frame} origin={b.origin}
+      levelNumber={runStart ? 1 : 7} onRevealed={() => {}} />
+  );
 }

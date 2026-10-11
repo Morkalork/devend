@@ -338,7 +338,12 @@
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
     "bossIntroTitle": "Combate de jefe: {{name}}",
-    "timeAlarm": "Tiempo"
+    "timeAlarm": "Tiempo",
+    "boot": {
+      "level": "Nivel {{n}}",
+      "compiling": "compilando mapa",
+      "newRun": "iniciando nueva partida"
+    }
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",

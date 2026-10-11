@@ -8,9 +8,9 @@ import { BOARD_WIDTH } from "@/lib/boardConstants";
 import type { LaunchAim } from "@/lib/launcher";
 import type { Vector2 } from "@/types/game";
 import type { GalleryEntry } from "../galleryTypes";
-import { ACCENT, PARTNER, Replay, Stage, type FakeBoard } from "./boardStage";
+import { ACCENT, BootDemo, PARTNER, Replay, Stage, type FakeBoard } from "./boardStage";
 import { BoardAlert } from "../../game/BoardAlert";
-import { BoardPlaceholder } from "../../game/BoardPlaceholder";
+import { BoardBoot } from "../../game/BoardBoot";
 import { BoardToasts } from "../../game/BoardToasts";
 import { DeadlineFrame } from "../../game/DeadlineFrame";
 import { InteractiveTutorialOverlay } from "../../game/InteractiveTutorialOverlay";
@@ -95,8 +95,16 @@ export const entries: GalleryEntry[] = [
       <Replay everyMs={2000}>{k => <DeadlineFrame frame={b.frame} secondsLeft={k % 2 ? 30 : 20} limit={60} origin={b.origin} />}</Replay>
     )}</Stage>
   ) },
-  { id: "BoardPlaceholder", group: "board", render: () => (
-    <Stage>{b => <BoardPlaceholder visible accentColor={ACCENT} frame={b.frame} origin={b.origin} />}</Stage>
+  // A map opening: the stand-in while the board loads, then the reveal.
+  { id: "BoardBoot-waiting", group: "board", render: () => (
+    <Stage>{b => <BoardBoot ready={false} runStart={false} accentColor={ACCENT} frame={b.frame} origin={b.origin}
+      levelNumber={7} onRevealed={() => {}} />}</Stage>
+  ) },
+  { id: "BoardBoot", group: "board", render: () => (
+    <Stage>{b => <Replay everyMs={4000}>{k => <BootDemo key={k} b={b} runStart={false} waitMs={1500} />}</Replay>}</Stage>
+  ) },
+  { id: "BoardBoot-runStart", group: "board", render: () => (
+    <Stage>{b => <Replay everyMs={5000}>{k => <BootDemo key={k} b={b} runStart waitMs={1500} />}</Replay>}</Stage>
   ) },
   { id: "PerfOverlay", group: "board", render: () => (
     <Stage>{b => <PerfOverlay visible origin={b.origin} />}</Stage>

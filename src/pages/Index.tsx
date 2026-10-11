@@ -576,7 +576,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 scalingReadouts={session.scalingReadouts}
                 everyMapMutated={session.ascensionRules.everyMapMutated}
                 pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
-                introAssemble={session.introAssemblePending}
+                runStartIntro={session.runStartIntroPending}
               />
               </GameErrorBoundary>
             )}

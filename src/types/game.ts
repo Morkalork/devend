@@ -365,9 +365,6 @@ export interface DissolveState {
   tiles: DissolveTile[];
   startTime: number;
   onComplete: () => void;
-  /** True runs the tile animation backwards: the board ASSEMBLES from
-   *  scattered tiles instead of shattering (run-start intro). */
-  reverse?: boolean;
 }
 
 // ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────

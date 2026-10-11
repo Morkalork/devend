@@ -13,7 +13,7 @@
  * sized to the world rectangle, so it was larger than the board; and the world
  * rectangle was what got 95% of the screen, so the board itself got about 88%.
  *
- * The outline itself is checked in canvas/BoardPlaceholder.test.ts.
+ * The outline became the board's boot stand-in, checked in canvas/BoardBoot.test.ts.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";

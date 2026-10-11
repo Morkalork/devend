@@ -338,7 +338,12 @@
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",
     "bossIntroTitle": "Bosstrid: {{name}}",
-    "timeAlarm": "Tiden"
+    "timeAlarm": "Tiden",
+    "boot": {
+      "level": "Nivå {{n}}",
+      "compiling": "kompilerar karta",
+      "newRun": "startar ny runda"
+    }
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",

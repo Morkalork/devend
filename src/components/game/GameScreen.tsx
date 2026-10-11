@@ -198,9 +198,9 @@ interface GameScreenProps {
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
   onMapComplete?: () => void;
-  /** Run-start intro: the board assembles from shatter tiles (reverse of the
-   *  level-clear dissolve). Only true for the first map of a run. */
-  introAssemble?: boolean;
+  /** The first map of a run: its board opens with the longer boot reveal
+   *  (BoardBoot), with the grid compiling cell by cell before the sweep. */
+  runStartIntro?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
   /**
@@ -274,7 +274,7 @@ export function GameScreen({
   onGameStateChange,
   freezeOnClear = false,
   onMapComplete,
-  introAssemble = false,
+  runStartIntro = false,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
   canvasPageLock = true,
 }: GameScreenProps) {
@@ -424,10 +424,9 @@ export function GameScreen({
     gameMessage: null,
   });
 
-  // The board placeholder's cue: the board takes a moment (renderer chunk,
-  // WebGL init, and on the run intro the assemble's slide-in delay) before it
-  // first presents. GameCanvas fires onCanvasReady the instant it does, and the
-  // placeholder fades out to reveal it.
+  // The board's boot cue: the board takes a moment (renderer chunk, WebGL
+  // init) before it first presents. GameCanvas fires onCanvasReady the instant
+  // it does, and its boot reveal (BoardBoot) starts once nothing covers it.
   const [canvasReady, setCanvasReady] = useState(false);
   const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
 
@@ -846,10 +845,9 @@ export function GameScreen({
     || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro
     || showCircuitOverlay || fenceSwitchIntro;
 
-  // Whether the board has been on screen yet. Ready is not enough: on a run's
-  // first map the board's fly-in waits for the opening explainer to be
-  // dismissed, so "ready" behind a card still meant an empty screen. The
-  // placeholder stays until the board is ready with no card over it, once;
+  // Whether the board may be revealed yet. Ready is not enough: a reveal played
+  // behind the opening explainer would be over before anyone saw it, so the
+  // boot stand-in stays until the board is ready with no card over it, once;
   // a card reopened mid-map does not bring it back.
   const [boardShown, setBoardShown] = useState(false);
   useEffect(() => {
@@ -988,9 +986,9 @@ export function GameScreen({
               onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
               onCanvasReady={handleCanvasReady}
               onBoardTopPct={handleBoardTopPct}
-              showBoardPlaceholder={!boardShown}
+              revealReady={boardShown}
               bottomInsetPx={bottomBarsPx}
-              introAssemble={introAssemble}
+              runStartIntro={runStartIntro}
               freezeOnComplete={freezeOnClear}
               onGameStateChange={handleGameStateChange}
               paused={isPaused || modalOverlayActive}
