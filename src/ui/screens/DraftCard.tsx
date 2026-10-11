@@ -53,26 +53,31 @@ export function DraftCard({ index, accentColor, selected, onClick, name, headerE
           backgroundColor: look.background, borderWidth: 2, borderColor: look.border,
         }}
       >
-        {/* Three rules, each earned by a way this broke:
+        {/* The identity block: glyph, then the name with the extra under it.
             paddingRight 32 - the Info glyph is pinned top-right and the
               header must clear it;
-            wrap + a min width on the name - so a long single word never paints
-              over the tag chip; the chip drops to its own line instead;
-            the extra does not shrink - wrap the name and keep the tag whole. */}
-        <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", columnGap: 12, rowGap: 6, paddingRight: 32 }}>
+            the name wraps in its own column - a long single word never paints
+              over the tag chip;
+            the extra keeps its own line under the name and never shrinks -
+              wrap the name and keep the tag whole. (The DOM let the chip ride
+              beside a short name and wrap below a long one; a wrapping flex
+              row whose height depends on wrapped text mis-placed the chip on
+              the canvas, so it always takes the line below.) */}
+        <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingRight: 32 }}>
           {icon}
-          <Label
-            text={name}
-            size={TEXT.xl}
-            font="display"
-            weight="700"
-            color={accent}
-            glow={look.glow || undefined}
-            lineHeight={Math.round(TEXT.xl * 1.25)}
-            wrap
-            layout={{ flex: 1, minWidth: 112 }}
-          />
-          {headerExtra && <View layout={{ flexShrink: 0 }}>{headerExtra}</View>}
+          <View layout={{ flex: 1, alignItems: "flex-start", gap: 6 }}>
+            <Label
+              text={name}
+              size={TEXT.xl}
+              font="display"
+              weight="700"
+              color={accent}
+              glow={look.glow || undefined}
+              lineHeight={Math.round(TEXT.xl * 1.25)}
+              wrap
+            />
+            {headerExtra}
+          </View>
         </View>
         {children}
         {draftCardShowsHoldHint(onLongPress) && (

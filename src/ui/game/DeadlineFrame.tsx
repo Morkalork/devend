@@ -18,8 +18,8 @@ import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
 import { useReducedMotion } from "framer-motion";
 import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
+import { useTween } from "../kit/ui";
 import { FlashNumeral, Inert } from "./boardParts";
-import { useLinearSlide } from "./fxClock";
 import { clockRectPoints, deadlineGeometry } from "./overlayModel";
 import { cssHex } from "./fxModel";
 import { deadlineColor } from "@/lib/deadlineDisplay";
@@ -40,7 +40,7 @@ export function DeadlineFrame({ frame, secondsLeft, limit, origin }: DeadlineFra
   const geo = deadlineGeometry(frame, secondsLeft, limit);
   // Ticks arrive once a second; a one-second linear slide keeps the drain a
   // sweep (and the colour slides with it, since it is read from the slid share).
-  const shown = useLinearSlide(geo?.remaining ?? 1, reduceMotion ? 0 : 1);
+  const shown = useTween(geo?.remaining ?? 1, reduceMotion ? 0 : 1, "linear");
   const color = cssHex(deadlineColor(shown));
 
   const has = geo != null;

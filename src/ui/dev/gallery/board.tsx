@@ -32,6 +32,9 @@ const BAND_TARGETS: BandTarget[] = [
   { x: 560, y: 380, radius: 14, kind: "ball" },
   { x: 450, y: 600, radius: 14, kind: "ball" },
   { x: 650, y: 650, radius: 22, kind: "object" },
+  // Two just ahead of a band pulled down from mid-board, so a drag shows a ring.
+  { x: 430, y: 700, radius: 14, kind: "ball" },
+  { x: 520, y: 690, radius: 22, kind: "object" },
 ];
 
 /** A launcher barrel at the bottom of the arena, firing up. */

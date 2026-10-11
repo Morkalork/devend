@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { glowFalloff } from "@/ui/game/boardDraw";
 import { OUTSTANDING } from "@/ui/game/overlayModel";
 
 const raw = readFileSync("src/ui/game/WinGateFrame.tsx", "utf8");
@@ -39,5 +40,21 @@ describe("the frame stays one state", () => {
     for (const kind of ["superiorLocks", "area", "lockType", "speedClear"]) {
       expect(code, `the frame started branching on ${kind}`).not.toContain(kind);
     }
+  });
+});
+
+describe("the frames' glow", () => {
+  // CSS defines a blur radius as a gaussian with sigma = blur / 2; the glow
+  // must reach about as far, or it reads as a thin hard band (it did).
+  it("is half strength at the spread's edge and fades over the blur", () => {
+    expect(glowFalloff(10, 10, 20)).toBeCloseTo(0.5, 3);
+    expect(glowFalloff(0, 10, 20)).toBeGreaterThan(0.8);
+    expect(glowFalloff(10 + 10, 10, 20)).toBeCloseTo(0.159, 2); // one sigma out
+    expect(glowFalloff(10 + 25, 10, 20)).toBeLessThan(0.01);
+  });
+
+  it("is a hard edge with no blur", () => {
+    expect(glowFalloff(3, 4, 0)).toBe(1);
+    expect(glowFalloff(5, 4, 0)).toBe(0);
   });
 });

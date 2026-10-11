@@ -129,9 +129,10 @@ function TurnSplash({ text, color, width, height }: { text: string; color: numbe
   return (
     <Inert layout={{ position: "absolute", left: 0, top: 0, width, height, justifyContent: "center", alignItems: "center" }}>
       {/* Capped at the board's width: a long partner name shrinks to fit
-          rather than running off both edges. */}
+          rather than running off both edges (a row, so the cap squeezes the
+          label along its length, which is what scales it down). */}
       <layoutContainer layout={{
-        maxWidth: width - 16, paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.xl,
+        maxWidth: width - 16, flexDirection: "row", paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.xl,
         backgroundColor: tint(COLOR.background, 0.8),
       }} alpha={k.alpha} scale={k.scale}>
         <Label text={text} size={TEXT["3xl"]} font="display" weight="700" color={color} glow={12} layout={{ flexShrink: 1 }} />

@@ -43,7 +43,8 @@ const PLATE = 0x0a0e14;
 /**
  * The toasts are one line (the DOM's whitespace-nowrap), and the DOM let a long
  * one run off both sides of a phone. Capped at the container less this, a
- * long line scales down to fit instead.
+ * long line scales down to fit instead (each plate is a row, so the cap
+ * squeezes its labels along their length, which is what scales them).
  */
 const PLATE_INSET = 16;
 const SHRINK = { flexShrink: 1 };
@@ -102,7 +103,7 @@ function ChestToast({ label, color, top, width, wide }: { label: string; color: 
   return (
     <Inert layout={{ position: "absolute", left: 0, top, width, flexDirection: "row", justifyContent: "center" }}>
       <layoutContainer layout={{
-        maxWidth: width - PLATE_INSET, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
+        maxWidth: width - PLATE_INSET, flexDirection: "row", paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
         backgroundColor: tint(PLATE, 0.72), borderWidth: 1, borderColor: color,
       }} alpha={k.alpha} y={k.y} scale={k.scale}>
         <Label text={label} size={wide ? TEXT.base : TEXT.sm} font="mono" weight="700" color={color} layout={SHRINK} />
@@ -157,7 +158,7 @@ function ArmedPrompt({ text, color, top, width, wide }: { text: string; color: n
     <Inert layout={{ position: "absolute", left: 0, top, width, flexDirection: "row", justifyContent: "center" }}
       alpha={0.6 + 0.4 * pulse}>
       <Inert layout={{
-        maxWidth: width - PLATE_INSET, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
+        maxWidth: width - PLATE_INSET, flexDirection: "row", paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
         backgroundColor: tint(PLATE, 0.8), borderWidth: 1, borderColor: color,
       }}>
         <Label text={text} size={wide ? TEXT.sm : TEXT.xs} font="mono" weight="700" color={color} layout={SHRINK} />

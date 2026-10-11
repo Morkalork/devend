@@ -3,6 +3,7 @@
  * and the barrel's line are drawn.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { LAUNCH_DEAD_PULL, LAUNCH_FULL_PULL, LAUNCH_MAX_POWER, LAUNCH_MIN_POWER } from "@/lib/launcher";
 import { launchGeometry, launchPowerT, readLaunchAim } from "@/ui/game/launchModel";
@@ -63,5 +64,16 @@ describe("what the plunger draws", () => {
     expect(full.bandMid.y).toBeCloseTo(760 + LAUNCH_FULL_PULL * 0.5);
     const weakest = launchGeometry({ ...base, aim: { direction: { x: 0, y: -1 }, power: LAUNCH_MIN_POWER } });
     expect(weakest.bandMid.y).toBeCloseTo(760);
+  });
+});
+
+describe("a drag the system takes away", () => {
+  // Pixi never listens for pointercancel, so without this a cancelled touch
+  // left the drag open and the surface refused every later one.
+  it("ends the band's and the plunger's drag where the finger was last seen", () => {
+    for (const file of ["src/ui/game/LaunchOverlay.tsx", "src/ui/game/RubberBandOverlay.tsx"]) {
+      const src = readFileSync(file, "utf8");
+      expect(src, file).toMatch(/usePointerCancel\(id => \{\s*const s = startRef\.current;\s*if \(s\?\.pointer === id\) finish\(s\.last\);/);
+    }
   });
 });
