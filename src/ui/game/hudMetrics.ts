@@ -15,7 +15,7 @@ export const HUD = {
   topRow2: 34,
   /** The projected-score bar under the chips, when a highscore is in reach. */
   highscoreRow: 22,
-  /** The five fence slots. */
+  /** The five fence slots, once a special fence type is owned. */
   fenceRow: 52,
   /** The ability buttons, one row (it scrolls sideways rather than wrapping). */
   abilityRow: 52,
@@ -34,13 +34,19 @@ export function topBarHeight(showHighscoreBar: boolean): number {
 export interface BottomStackShape {
   /** The fence slot and ability rows go when the map is won. */
   mapComplete: boolean;
+  /**
+   * A special fence type is slotted. With only Standard there is nothing to
+   * choose, so the slot row is not drawn and the board gets its height. Owning
+   * one is decided between maps (the shop), so it never moves a board in play.
+   */
+  hasFenceTypes: boolean;
   /** Any ability owned (the row is empty, and takes no space, otherwise). */
   hasAbilities: boolean;
   pushExit: boolean;
 }
 
 export function bottomStackHeight(s: BottomStackShape): number {
-  return (s.mapComplete ? 0 : HUD.fenceRow)
+  return (!s.mapComplete && s.hasFenceTypes ? HUD.fenceRow : 0)
     + (!s.mapComplete && s.hasAbilities ? HUD.abilityRow : 0)
     + HUD.contextLane
     + (s.pushExit ? HUD.pushExitRow : 0)

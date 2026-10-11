@@ -126,9 +126,10 @@ describe("how much the HUD is allowed to say at once", () => {
     // FenceSlotBar was that decision (FENCE_TYPES_PLAN.md step 2), taken
     // deliberately and with the ceiling raised to say so. It earns a permanent
     // row because it is not a readout: it is what the next cut will be, and it
-    // has to be reachable in the same reach as the cut itself. It also draws
-    // its empty slots rather than hiding them, so acquiring a fence type never
-    // moves the board - which is the failure this whole budget exists to stop.
+    // has to be reachable in the same reach as the cut itself. It draws its
+    // empty slots rather than hiding them, and appears only once a special type
+    // is owned, which is decided between maps: neither moves a board in play,
+    // which is the failure this whole budget exists to stop.
     const bars = bottomStackSurfaces();
     expect(bars.length, `bottom stack: ${bars.join(", ")}`).toBeLessThanOrEqual(6);
   });
@@ -230,5 +231,19 @@ describe("controls do not leak back into the status band", () => {
     expect(bar, "the row taps went with the button").toContain("useTapOrSwipeDown(onExpand)");
     expect(bar, "the rows left the gesture surface").toMatch(/Rows 1 and 2 share one gesture surface/);
     expect(bar, "the there-is-more-here hint went too").toContain("ChevronDown");
+  });
+});
+
+describe("the fence slot row", () => {
+  it("is drawn and counted only once a special fence type is owned", async () => {
+    const { bottomStackHeight, HUD } = await import("@/ui/game/hudMetrics");
+    const base = { mapComplete: false, hasAbilities: false, pushExit: false };
+    expect(bottomStackHeight({ ...base, hasFenceTypes: true }) - bottomStackHeight({ ...base, hasFenceTypes: false }))
+      .toBe(HUD.fenceRow);
+    expect(bottomStackHeight({ ...base, mapComplete: true, hasFenceTypes: true }))
+      .toBe(bottomStackHeight({ ...base, mapComplete: true, hasFenceTypes: false }));
+    const src = read("GameScreen.tsx");
+    expect(src).toContain("{!mapComplete && ownsSpecialFence && (\n                  <FenceSlotBar");
+    expect(src).toContain("hasFenceTypes: ownsSpecialFence");
   });
 });

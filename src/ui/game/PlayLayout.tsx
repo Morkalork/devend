@@ -11,6 +11,9 @@
  *            play-region wrapper
  *   top      the top bar, at the top edge
  *   bottom   the bars and controls, at the bottom edge
+ *   edge     frames round the play region's edge (the win gate, the alarm):
+ *            over the bars, whose backdrop would otherwise cut the frame in
+ *            two where it crosses them; they never take a touch
  *   over     full-screen layers: modals, panels, the pause sheet
  */
 import type { ReactNode } from "react";
@@ -23,11 +26,12 @@ export interface PlayRegion {
   height: number;
 }
 
-export function PlayLayout({ topHeight, top, bottom, region, over }: {
+export function PlayLayout({ topHeight, top, bottom, region, edge, over }: {
   topHeight: number;
   top: ReactNode;
   bottom: ReactNode;
   region: (r: PlayRegion) => ReactNode;
+  edge?: (r: PlayRegion) => ReactNode;
   over?: ReactNode;
 }) {
   const screen = useUiScreen();
@@ -37,6 +41,7 @@ export function PlayLayout({ topHeight, top, bottom, region, over }: {
       {region(r)}
       <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width }}>{top}</View>
       <View layout={{ position: "absolute", left: 0, bottom: 0, width: screen.width }}>{bottom}</View>
+      {edge?.(r)}
       {over}
     </View>
   );

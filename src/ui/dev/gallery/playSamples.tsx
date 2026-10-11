@@ -177,7 +177,7 @@ export function AbilitySample({ charges, armed }: { charges: Record<string, numb
 export function WholeHud({ abilities, pushExit }: { abilities: boolean; pushExit: boolean }) {
   const screen = useUiScreen();
   const top = topBarHeight(false);
-  const bottom = bottomStackHeight({ mapComplete: false, hasAbilities: abilities, pushExit });
+  const bottom = bottomStackHeight({ mapComplete: false, hasFenceTypes: true, hasAbilities: abilities, pushExit });
   return (
     <PlayLayout
       topHeight={top}
