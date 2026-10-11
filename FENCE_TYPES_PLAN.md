@@ -152,6 +152,14 @@ through growth, completion, segment splitting and a save/reload.**
 reserves height for exactly this reason, and a second bar is the thing most
 likely to break it.
 
+**[CHANGED]** The bar is drawn only once a special type is slotted. With only
+`standard` it offered one choice and took a 52px row from the board on every
+map of a run that never bought a type. Ownership changes in the shop, between
+maps, so hiding it still never moves a board in play; `bottomStackHeight`
+counts the row only when `hasFenceTypes`, and the first map that has it opens
+with the "this bar is a chooser" intro as before. The Playground slots every
+type, so the bar is always there to test.
+
 ### Step 3 - Ice, and the speed step
 
 - `fenceSpeedStep(ball, wall, now)` in a new `src/lib/physics/fenceTouch.ts`,

@@ -58,3 +58,20 @@ describe("the frames' glow", () => {
     expect(glowFalloff(5, 4, 0)).toBe(0);
   });
 });
+
+describe("the frame is whole where it crosses the bars", () => {
+  // On a phone the amber frame vanished between the fence slots and the Ship
+  // Early bar: it was drawn with the region's overlays, under the bottom bars,
+  // and their dark backdrop covered its edge.
+  it("is drawn in PlayLayout's edge layer, after the bars", () => {
+    const layout = readFileSync("src/ui/game/PlayLayout.tsx", "utf8");
+    expect(layout.indexOf("{edge?.(r)}")).toBeGreaterThan(layout.indexOf("{bottom}</View>"));
+    expect(layout.indexOf("{edge?.(r)}")).toBeLessThan(layout.indexOf("{over}"));
+    const screen = readFileSync("src/components/game/GameScreen.tsx", "utf8");
+    const edge = screen.slice(screen.indexOf("edge={r => ("), screen.indexOf("bottom={"));
+    expect(edge).toContain("<WinGateFrame");
+    expect(edge).toContain("<BoardAlert");
+    const region = screen.slice(screen.indexOf("region={r => ("), screen.indexOf("edge={r => ("));
+    expect(region).not.toContain("<WinGateFrame");
+  });
+});

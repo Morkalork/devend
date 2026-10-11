@@ -13,9 +13,10 @@
  *  - The explainer also auto-opens ONCE the first time a type is acquired.
  *
  * Always at least five, and exactly HUD.fenceRow tall. Empty slots are DRAWN,
- * not hidden: a bar that grew as types were acquired would move the board every
- * time the player bought one, and it tells a new player the system exists
- * before they own any of it.
+ * not hidden, so the bar never changes size as types are added. The bar as a
+ * whole is only drawn once a special type is owned (GameScreen): Standard alone
+ * is no choice, and the row is better spent on the board. Ownership changes
+ * between maps, so it never moves a board in play.
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";

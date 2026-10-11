@@ -49,7 +49,7 @@ import { deadlineMilestone } from '@/lib/deadlineDisplay';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator, getMapMutators, mutatorById } from '@/lib/mapMutators';
-import { debugMutatorId } from '@/lib/devFlags';
+import { debugMutatorId, devFenceSlots } from '@/lib/devFlags';
 import type { MapMutator } from '@/types/mapMutator';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
@@ -462,8 +462,13 @@ export function GameScreen({
    * what is being learned: here is the row, then here is the thing you just put
    * in it.
    */
-  const ownsSpecialFence =
-    (gameState.fenceSlotIds ?? []).some(id => id !== STANDARD_FENCE_ID);
+  // Resolved here, the way GameCanvas resolves it (the run's slots, else the
+  // admin's dev slots), so the first render already knows whether the slot
+  // row is drawn and the board is laid out once around it.
+  const ownsSpecialFence = useMemo(
+    () => (fenceSlotIds && fenceSlotIds.length > 0 ? fenceSlotIds : devFenceSlots()).some(id => id !== STANDARD_FENCE_ID),
+    [fenceSlotIds],
+  );
   const [fenceSwitchIntro, setFenceSwitchIntro] = useState(false);
   useEffect(() => {
     if (!ownsSpecialFence || hasSeenFenceSwitching()) return;
@@ -947,7 +952,7 @@ export function GameScreen({
     hasHandler: gameState.onBankAndContinue != null,
   });
   const hasAbilities = getAllAbilities().some(a => ((abilityCharges ?? {})[a.id] ?? 0) > 0);
-  const stackHeight = bottomStackHeight({ mapComplete, hasAbilities, pushExit: pushExitShown });
+  const stackHeight = bottomStackHeight({ mapComplete, hasFenceTypes: ownsSpecialFence, hasAbilities, pushExit: pushExitShown });
   const chip = (left: number, total: number) => ({ left, total: Math.round(total) });
 
   return (
@@ -1077,15 +1082,6 @@ export function GameScreen({
             }
             region={r => (
               <>
-                {/* Out of time: over the board, red and pulsing, never takes a tap. */}
-                <BoardAlert urgent={deadlineUrgent && !mapComplete} seconds={deadlineRemaining}
-                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height} />
-                {/* The UNUSUAL part of a map, so the extras rather than every goal. */}
-                <WinGateFrame
-                  present={extraGoals(gameState.goals).length > 0 && !mapComplete}
-                  outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
-                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height}
-                />
                 <PairTurnOverlay
                   turn={mapComplete ? null : gameState.pairTurn}
                   partnerName={pairPartnerName ?? t("pair.partner")}
@@ -1136,10 +1132,24 @@ export function GameScreen({
                   ? cloneElement(pairBanner, { region: r }) : pairBanner}
               </>
             )}
+            edge={r => (
+              <>
+                {/* Out of time: round the region, red and pulsing, never takes a tap. */}
+                <BoardAlert urgent={deadlineUrgent && !mapComplete} seconds={deadlineRemaining}
+                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height} />
+                {/* The UNUSUAL part of a map, so the extras rather than every goal. */}
+                <WinGateFrame
+                  present={extraGoals(gameState.goals).length > 0 && !mapComplete}
+                  outstanding={outstandingGoals(extraGoals(gameState.goals)).length > 0}
+                  origin={{ x: r.x, y: r.y }} width={r.width} height={r.height}
+                />
+              </>
+            )}
             bottom={
               // Gone the instant the map is won: the bars must never outlive the board.
               <View visible={!mapComplete} layout={{ alignSelf: "stretch" }}>
-                {!mapComplete && (
+                {/* Only once there is something to choose: Standard alone is no choice. */}
+                {!mapComplete && ownsSpecialFence && (
                   <FenceSlotBar
                     slotIds={gameState.fenceSlotIds ?? []}
                     selectedId={gameState.selectedFenceTypeId ?? STANDARD_FENCE_ID}
