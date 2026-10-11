@@ -61,8 +61,10 @@ describe("the blast reaches further", () => {
     expect(read("public/game-config.yml")).toMatch(/\n\s+blast_radius: 100\n/);
   });
 
-  it("and every shard bomb carves as it goes up", () => {
-    expect(read("src/lib/physics/destructibles.ts")).toContain("opened += carveBlast(game, polygonCentroid(poly), game.shardBombBlast.radius).opened;");
+  it("and every bomb carves as it goes up, a shard's or a slab's", () => {
+    const src = read("src/lib/physics/destructibles.ts");
+    expect(src).toContain("const blast = d.shardBomb ? game.shardBombBlast : d.bomb ? game.boxBombBlast : null;");
+    expect(src).toContain("opened += carveBlast(game, c, blast.radius).opened;");
   });
 });
 
@@ -226,7 +228,7 @@ describe("the claimed area stays claimed when the hole does not open", () => {
       const g = game as unknown as Record<string, unknown>;
       for (const k of ["fallingObjects"]) g[k] ??= [];
       g.assimilations = new Map(); g.breakBonus = 0; g.breakMultiplier = 1; g.objectivesBroken = 0;
-      game.shardBombBlast = { radius: 100, damage: 1.5 };
+      game.shardBombBlast = { radius: 100, damage: 1.5, ballBoost: 1.5 };
       for (const b of game.balls) b.position = { x: 120, y: 820 };
       const bomb = game.destructibles.find(d => d.id === "tooth-r2b")!;
       bomb.shardBomb = true;

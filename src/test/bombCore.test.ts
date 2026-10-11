@@ -123,7 +123,7 @@ describe("through registerObjectHit", () => {
 describe("going up", () => {
   it("throws a second, hotter burst and tells the game, which booms and jolts", () => {
     const src = read("src/lib/physics/destructibles.ts");
-    expect(src).toMatch(/if \(d\.bomb \|\| d\.shardBomb\) \{\n\s+game\.objectDebris\.push\(spawnDebris\(poly, BOMB_BLAST_COLOR/);
+    expect(src).toContain("const fire = spawnDebris(poly, BOMB_BLAST_COLOR");
     expect(src).toContain("callbacks.onBombDetonated?.(d);");
     const canvas = read("src/components/game/GameCanvas.tsx");
     expect(canvas).toMatch(/onBombDetonated: \(\) => \{\n\s+playBossLandSound\(\);/);
@@ -218,7 +218,7 @@ function buildLevel(n: number): CanvasGameState {
   g.assimilations = new Map();
   g.activePlaySeconds = 0; g.ballSpeedScale = 1; g.creepFactor = 1;
   g.breakBonus ??= 0; g.breakMultiplier ??= 1; g.objectivesBroken ??= 0;
-  game.shardBombBlast = { radius: DEFAULT_SHARD_BOMB_CONFIG.blastRadius, damage: DEFAULT_SHARD_BOMB_CONFIG.blastDamage };
+  game.shardBombBlast = { radius: DEFAULT_SHARD_BOMB_CONFIG.blastRadius, damage: DEFAULT_SHARD_BOMB_CONFIG.blastDamage, ballBoost: DEFAULT_SHARD_BOMB_CONFIG.ballBoost };
   return game;
 }
 

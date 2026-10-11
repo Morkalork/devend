@@ -629,8 +629,12 @@ export interface CanvasGameState {
   obstacleVersion?: number;
   /** Ids for the pieces a blast leaves of a carved wall. Per map. */
   blastPieceSeq?: number;
-  /** A shard bomb's blast (lib/bombCore.ts): its reach and the blow it deals; null = shard bombs off. */
-  shardBombBlast?: { radius: number; damage: number } | null;
+  /** A shard bomb's blast (lib/bombCore.ts); null = bomb blasts off (tests, the headless bot). */
+  shardBombBlast?: import("@/lib/bombCore").BombBlast | null;
+  /** A slab or chest bomb's blast: the same effect, bigger. */
+  boxBombBlast?: import("@/lib/bombCore").BombBlast | null;
+  /** How long a ball a blast threw takes to ease back to its own speed, seconds. */
+  bombBoostSeconds?: number;
   /** The end-of-map debrief, built when the map is won; null until then. */
   debrief?: import("@/types/debrief").ScoreDebrief | null;
   /**

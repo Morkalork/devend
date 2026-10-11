@@ -180,7 +180,8 @@ export class Explosions3D {
       // unless the emitter says outright how big a blast this is (a shard's
       // break throws a few pieces and must stay small: lib/bombCore.ts).
       const power = d.blast ?? Math.min(1, d.particles.length / 28);
-      if (d.blast != null) this.blast(cx, cy, now, 60 + 340 * d.blast, 0.15 + 0.85 * d.blast, color);
+      if (d.reach != null) this.blast(cx, cy, now, d.reach, 1, color);
+      else if (d.blast != null) this.blast(cx, cy, now, 60 + 340 * d.blast, 0.15 + 0.85 * d.blast, color);
       else this.blast(cx, cy, now, 90 + spread * 2.2 + power * 120, 0.25 + power * 0.75, color);
       d.particles.forEach((p, i) => {
         const r = hash01(i + d.particles.length * 7);

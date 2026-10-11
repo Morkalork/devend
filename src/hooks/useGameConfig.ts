@@ -75,14 +75,30 @@ interface RawShardBombConfig {
   chance?: number;
   blast_radius?: number;
   blast_damage?: number;
+  ball_boost?: number;
+  boost_seconds?: number;
 }
 
-function parseShardBombConfig(raw: RawShardBombConfig | undefined): ShardBombConfig {
+/** Raw `box_bombs:` block: the slab and chest bombs' blast. */
+interface RawBoxBombConfig {
+  blast_radius?: number;
+  blast_damage?: number;
+  ball_boost?: number;
+}
+
+function parseShardBombConfig(raw: RawShardBombConfig | undefined, box: RawBoxBombConfig | undefined): ShardBombConfig {
   const d = DEFAULT_SHARD_BOMB_CONFIG;
   return {
     chance: raw?.chance ?? d.chance,
     blastRadius: raw?.blast_radius ?? d.blastRadius,
     blastDamage: raw?.blast_damage ?? d.blastDamage,
+    ballBoost: raw?.ball_boost ?? d.ballBoost,
+    boostSeconds: raw?.boost_seconds ?? d.boostSeconds,
+    box: {
+      radius: box?.blast_radius ?? d.box.radius,
+      damage: box?.blast_damage ?? d.box.damage,
+      ballBoost: box?.ball_boost ?? d.box.ballBoost,
+    },
   };
 }
 
@@ -203,7 +219,7 @@ export function useGameConfig() {
     fetch('/game-config.yml')
       .then((res) => res.text())
       .then((text) => {
-        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig; shard_bombs?: RawShardBombConfig };
+        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig; shard_bombs?: RawShardBombConfig; box_bombs?: RawBoxBombConfig };
         setConfig({
           ...defaultConfig,
           ...parsed,
@@ -217,7 +233,7 @@ export function useGameConfig() {
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
           pickups: parsePickupConfig(parsed?.pickups),
           bugs: parseBugConfig(parsed?.bugs),
-          shardBombs: parseShardBombConfig(parsed?.shard_bombs),
+          shardBombs: parseShardBombConfig(parsed?.shard_bombs, parsed?.box_bombs),
         });
       })
       .catch((err) => {

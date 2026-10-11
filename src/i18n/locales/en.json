@@ -1157,15 +1157,15 @@
     },
     "bombBox": {
       "title": "Bomb block",
-      "body": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb blows the whole block apart and reopens the space under it."
+      "body": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb blows up the block and blasts a hole in everything close by: bricks, fences, walls and claimed ground. Balls nearby are thrown clear, faster."
     },
     "bombChest": {
       "title": "Treasure chest",
-      "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open. Every smash also raises this map payout."
+      "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open and blasts a hole in everything close by. Balls nearby are thrown clear, faster. Every smash also raises this map payout."
     },
     "bombShard": {
       "title": "Bomb brick",
-      "body": "Break it and it blows up: every brick close by goes with it, and a block in reach takes a heavy hit. Another bomb in the blast goes up too."
+      "body": "Break it and it blows up: every brick close by goes with it, a block in reach takes a heavy hit, and it blasts a hole in fences, walls and claimed ground. Balls nearby are thrown clear, faster. Another bomb in the blast goes up too."
     },
     "objective": {
       "title": "Objective crate",

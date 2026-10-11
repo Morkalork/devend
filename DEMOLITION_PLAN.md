@@ -488,4 +488,17 @@ everything solid in reach, not only the breakables:
 - Deterministic (array order, `generateWallId`), so both phones of a pair
   carve the same board. Renderer caches keyed on the obstacle list read
   `game.obstacleVersion`, which a carve bumps.
-- The slab and chest bombs do not carve: their bomb has no reach.
+
+### Every bomb, and the balls
+
+- **The slab and chest bombs** get the same blast as a shard bomb once their
+  bomb goes up (strike, carve, throw), bigger: `box_bombs` in game-config.yml,
+  reach 150 against the shard's 100, a blow of 2, and a bigger fire whose 3D
+  light reaches as far as the blast (`ObjectDebrisState.reach`).
+- **The balls.** Every active ball in reach is thrown straight out from the
+  blast, faster: `ball_boost` (1.5 shard, 1.8 slab or chest) at the centre,
+  half the extra at the edge of the reach. It eases back to the speed it had
+  before over `shard_bombs.boost_seconds` (2.5), eased out so most of the kick
+  is spent early and reads as a shove (`blastEaseSpeed`, run in updateBall). A
+  second blast kicks it again from that same speed, so a chain never winds a
+  ball up for good. A ball dead on the centre gets a seeded direction.

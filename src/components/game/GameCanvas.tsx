@@ -1093,6 +1093,7 @@ export function GameCanvas({
     lockPayouts: {},
     debrief: null,
     shardBombBlast: null,
+    boxBombBlast: null,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
     lockedByType: {},
@@ -1504,7 +1505,9 @@ export function GameCanvas({
       // reason: a bomb shard is drawn as one.
       {
         const cfg = shardBombConfigRef.current;
-        game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage } : null;
+        game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
+        game.boxBombBlast = cfg ? { ...cfg.box } : null;
+        game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
         const chance = cfg ? Math.min(1, cfg.chance + (activeModifiers.shardBombChanceBonus ?? 0)) : 0;
         assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
       }

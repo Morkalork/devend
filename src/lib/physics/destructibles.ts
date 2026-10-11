@@ -11,7 +11,7 @@
  * regions, too heavy to do per step). Removed obstacles RE-OPEN their footprint
  * as capturable space.
  */
-import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, bombHitDamage, shardBombTargets } from "@/lib/bombCore";
+import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, blastBalls, bombHitDamage, shardBombTargets } from "@/lib/bombCore";
 import { carveBlast } from "@/lib/physics/blastCarve";
 import { CanvasGameState } from "@/types/gameState";
 import { isPlayerFence } from "@/lib/wallGeometry";
@@ -28,7 +28,7 @@ import {
 import { getBallType } from "@/lib/ballTypes";
 import { resumeDrillThrough } from "@/lib/physics/drill";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
-import { getRunRng } from "@/lib/runRng";
+import { getRunRng, runStream } from "@/lib/runRng";
 import { spawnRubble } from "@/lib/physics/rubble";
 import { makeChestLoot } from "@/lib/chests";
 import { rollCappedAbilityReward } from "@/lib/abilities";
@@ -68,6 +68,8 @@ const BREAKABLE_DEBRIS_COLOR = "#ffb454";
 const BOMB_BLAST_PARTICLES = 44;
 /** An ordinary shard's break: a handful of light pieces, not a slab's full burst. */
 const SHARD_BREAK_PARTICLES = 10;
+/** A slab or chest bomb's own burst: bigger than a shard bomb's. */
+const BOX_BLAST_PARTICLES = 64;
 const OBSTACLE_FALL_COLOR = "#9aa3ad";
 // Bonus overtime hours for smashing a breakable (objective targets are worth
 // more). Hours, and so quartered with the rest of the economy
@@ -1000,26 +1002,38 @@ export function processDestroysFn(
     // second, hotter and faster burst from the bomb itself, which both
     // renderers draw as a bigger blast (the 3D one sizes its flash by the
     // particle count).
+    // A bomb goes up: a shard's, or the one inside a slab or chest. Both get the
+    // same blast, the slab and chest bomb a bigger one (game-config.yml
+    // shard_bombs / box_bombs). Null blasts (tests, the headless bot) still
+    // throw the fire, but strike, carve and throw nothing.
+    const blast = d.shardBomb ? game.shardBombBlast : d.bomb ? game.boxBombBlast : null;
     if (d.bomb || d.shardBomb) {
-      game.objectDebris.push(spawnDebris(poly, BOMB_BLAST_COLOR, now, BOMB_BLAST_PARTICLES, 1.8));
+      const c = polygonCentroid(poly);
+      // A second, hotter and faster burst from the bomb itself; its light in 3D
+      // reaches as far as the blast does, so the bigger bomb reads bigger.
+      const fire = spawnDebris(poly, BOMB_BLAST_COLOR, now, d.bomb ? BOX_BLAST_PARTICLES : BOMB_BLAST_PARTICLES, d.bomb ? 2.3 : 1.8);
+      if (blast) fire.reach = blast.radius * 2.4;
+      game.objectDebris.push(fire);
       if (game.objectDebris.length > MAX_OBJECT_DEBRIS) game.objectDebris.shift();
       callbacks.onBombDetonated?.(d);
-    }
-    // A shard bomb strikes everything in reach. Struck through registerObjectHit,
-    // so each takes the blow exactly as it would from a ball: a shard goes (and
-    // a bomb among them goes up next frame, in turn), a slab chips, a bomb box's
-    // hull opens or its bomb goes. The debounce is cleared first: a neighbour a
-    // ball grazed a moment ago must not shrug off the blast.
-    if (d.shardBomb && game.shardBombBlast) {
-      // And it blows a hole in whatever stands in reach: fences, the map's own
-      // walls, and the claimed ground, which counts as one big wall
-      // (physics/blastCarve.ts). The ground it opens is settled with the rest
-      // below, so a chunk no ball can reach closes straight back up.
-      opened += carveBlast(game, polygonCentroid(poly), game.shardBombBlast.radius).opened;
-      const by = d.destroyedBy ?? `bomb:${d.id}`;
-      for (const hit of shardBombTargets(game.destructibles, d, game.shardBombBlast.radius)) {
-        hit.d.lastHitAt = 0;
-        registerObjectHit(game, hit.d, by, now, game.shardBombBlast.damage, hit.at);
+      if (blast) {
+        // It blows a hole in whatever stands in reach: fences, the map's own
+        // walls, and the claimed ground, which counts as one big wall
+        // (physics/blastCarve.ts). The ground it opens is settled with the rest
+        // below, so a chunk no ball can reach closes straight back up.
+        opened += carveBlast(game, c, blast.radius).opened;
+        // It strikes everything in reach, through registerObjectHit, so each
+        // takes the blow exactly as it would from a ball: a shard goes (and a
+        // bomb among them goes up next frame, in turn), a slab chips, a bomb
+        // box's hull opens or its bomb goes. The debounce is cleared first: a
+        // neighbour a ball grazed a moment ago must not shrug off the blast.
+        const by = d.destroyedBy ?? `bomb:${d.id}`;
+        for (const hit of shardBombTargets(game.destructibles, d, blast.radius)) {
+          hit.d.lastHitAt = 0;
+          registerObjectHit(game, hit.d, by, now, blast.damage, hit.at);
+        }
+        // And it throws the balls in reach outward, faster for a moment.
+        blastBalls(game.balls, c, blast, now, game.bombBoostSeconds ?? 2.5, runStream("bombBlast"));
       }
     }
     opened += detachObstacle(game, d.id, poly);
