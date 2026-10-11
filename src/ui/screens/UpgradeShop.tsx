@@ -35,6 +35,7 @@ import { AbilityIcon } from "../game/AbilityIcon";
 import { TutorialOverlay } from "../game/TutorialOverlay";
 import { Carousel } from "./Carousel";
 import { ArcadeButton, ArcadeText } from "./betweenArcadeButton";
+import { RichParagraph } from "./draftParts";
 import {
   CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, ShopCard, UpgradeDetailModal, WaypointBanner,
 } from "./shopParts";
@@ -461,19 +462,17 @@ export function UpgradeShop({
                   {/* The ability slot, closed: a fact about the run worth
                       reading once, not a dead card to swipe past every visit. */}
                   {abilitySlotClosed && !closed && (
-                    <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8, maxWidth: inset }}>
-                      <Icon icon={Lock} size={14} color={COLOR.mutedForeground} />
-                      <Label text={t("upgradeShop.abilitySlotClosed")} size={TEXT.xs} upper letterSpacing={0.3} color={COLOR.mutedForeground} />
+                    <View layout={{ width: inset, marginBottom: 8 }}>
+                      <RichParagraph runs={[{ text: t("upgradeShop.abilitySlotClosed") }]} size={TEXT.xs} upper letterSpacing={0.3} color={COLOR.mutedForeground}
+                        lead={<Icon icon={Lock} size={14} color={COLOR.mutedForeground} />} leadGap={8} />
                     </View>
                   )}
                   {/* Open Source Contribution: say what turned up, or the new button is a mystery. */}
                   {freeAbilityGrant && (
-                    <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8, maxWidth: inset }}>
-                      <AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />
-                      <Label
-                        text={t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant })}
+                    <View layout={{ width: inset, marginBottom: 8 }}>
+                      <RichParagraph runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
                         size={TEXT.xs} upper letterSpacing={0.3} color={freeGrantColor}
-                      />
+                        lead={<AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />} leadGap={8} />
                     </View>
                   )}
                   <Carousel

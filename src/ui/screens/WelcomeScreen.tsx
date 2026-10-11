@@ -190,10 +190,10 @@ export function WelcomeScreen({
 
   const renderButton = (spec: WelcomeButtonSpec) => {
     const ink = arcadeInk(spec.variant, spec.locked);
-    const text = (s: string, size = textSize, color = ink) => (
+    const label = spec.label ? t(spec.label.key, spec.label.vars) : undefined;
+    const small = (s: string, size: number, color: number) => (
       <Label text={s} size={size} font="display" weight="600" upper letterSpacing={size * 0.1} color={color} />
     );
-    const icon = BUTTON_ICON[spec.id];
     return (
       <ArcadeButton
         key={spec.id}
@@ -209,26 +209,28 @@ export function WelcomeScreen({
         column={spec.id === "continue" && !spec.loading}
         // Admin is a dev door, not a menu item: it sits dimmed (opacity-70).
         alpha={spec.id === "admin" ? 0.7 : 1}
-        label={spec.label ? t(spec.label.key, spec.label.vars) : t("welcome.loading")}
+        label={label ?? t("welcome.loading")}
         layout={{ alignSelf: "stretch" }}
+        // The label wraps if the row runs out of room (a long translation on
+        // a narrow phone), so the chips after it never run off the button.
+        text={spec.loading ? undefined : label}
+        icon={spec.loading ? undefined : BUTTON_ICON[spec.id]}
       >
         {spec.loading ? (
           <>
             <Spinner size={20} color={ink} />
-            {text(t("welcome.loading"))}
+            {small(t("welcome.loading"), textSize, ink)}
           </>
-        ) : (
+        ) : (spec.sub || spec.badge || spec.chip || spec.check) ? (
           <>
-            {icon && <Icon icon={icon} size={20} color={ink} />}
-            {spec.label && text(t(spec.label.key, spec.label.vars))}
-            {spec.sub && text(t(spec.sub.key, spec.sub.vars), 10, ASCENSION_INK)}
+            {spec.sub && small(t(spec.sub.key, spec.sub.vars), 10, ASCENSION_INK)}
             {spec.badge && <NewBadge />}
             {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={ASCENSION_INK} />}
             {spec.chip?.kind === "hours" && <MenuChip text={t("welcome.hoursSuffix", { hours: spec.chip.value })} icon={Hexagon} />}
             {spec.chip?.kind === "count" && <MenuChip text={String(spec.chip.value)} />}
             {spec.check && <Icon icon={Check} size={16} color={COLOR.primary} />}
           </>
-        )}
+        ) : undefined}
       </ArcadeButton>
     );
   };

@@ -95,7 +95,7 @@ function topBarSample(focus: "mapRule" | null = null) {
       microManagerPerLock={4} ascensionDepth={2} ascensionRungs={RUNGS}
       scalingReadouts={[{ upgradeId: "runtime_optimisation_junior", upgradeName: "Runtime Optimisation", tag: "safety", key: "ballSpeedMultiplier", count: 3, effective: 3, steps: 3, amount: -0.06 }]}
       activeLoadouts={[LOADOUT]}
-      tagCounts={new Map([["safety", 3], ["speed", 1]])} tagSetThreshold={3}
+      tagCounts={new Map([["safety", 3], ["tempo", 1], ["lock", 2]])} tagSetThreshold={3}
       activeModifiers={MODIFIERS} modifierSources={SOURCES}
       capstone={CAPSTONE} mapMutator={MUTATOR} objective={OBJECTIVE}
       objectiveProgress={{ kind: "lockCount", mode: "accumulate", current: 1, target: 3, met: false }}

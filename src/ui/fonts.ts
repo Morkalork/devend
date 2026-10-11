@@ -12,6 +12,7 @@ const FACES = [
   "700 16px 'Space Grotesk'",
   "400 16px 'JetBrains Mono'",
   "500 16px 'JetBrains Mono'",
+  "700 16px 'JetBrains Mono'",
 ];
 
 let ready: Promise<void> | null = null;

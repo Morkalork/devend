@@ -37,8 +37,9 @@ const BAR_H = 6;
 export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBall = 0, bonusMultiplier = 1, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();
   const view = visible ? shipEarlyView({ seconds, ballCount, timeLimit, extraSecondsPerBall, bonusMultiplier }) : null;
-  // The DOM's 1s linear width transition.
-  const fill = useTween(view?.remaining ?? 0, 1);
+  // Linear, like the DOM's `width 1s linear`: the clock ticks once a second
+  // and the bar drains steadily between ticks instead of stepping.
+  const fill = useTween(view?.remaining ?? 0, 1, "linear");
   const color = view?.color ?? COLOR.primary;
   if (!view) return <View layout={{ height: HUD.contextLane, alignSelf: "stretch" }} />;
   const chip = shipEarlyChip(view);

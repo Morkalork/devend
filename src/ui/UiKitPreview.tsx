@@ -2,12 +2,13 @@
  * Every toolkit piece at phone size, reachable from Admin (CANVAS_UI_PLAN.md
  * stage 1): the place to look at a change to the kit before any screen does.
  */
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Snowflake, Zap, Shield, ArrowLeft, LayoutGrid } from "lucide-react";
 import { UiHost } from "./UiHost";
 import { useViewportSize } from "./viewport";
 import { UiScreenContext } from "./screen";
 import { Gallery } from "./dev/Gallery";
+import { useUiLayers } from "./layerStore";
 import { COLOR, RADIUS, TEXT } from "./theme";
 import {
   Appear, Button, HoldHint, Icon, Label, Modal, Pressable, ProgressBar, ScrollView, TextField, View, tint,
@@ -73,6 +74,18 @@ function Preview({ onClose, onGallery }: { onClose: () => void; onGallery: () =>
   );
 }
 
+/**
+ * The layers filed while the preview is open: what the pieces on show put up
+ * through <CanvasLayer> (an explainer, a detail sheet). Admin has no
+ * CanvasUiRoot of its own, and the layers the game keeps filed from Index (the
+ * tap-to-start gate and the rest) were there before it opened and stay out.
+ */
+function PreviewLayers() {
+  const layers = useUiLayers();
+  const [before] = useState(() => new Set(layers.map(l => l.id)));
+  return <>{layers.filter(l => !before.has(l.id)).map(l => <Fragment key={l.id}>{l.node}</Fragment>)}</>;
+}
+
 /** Admin's look at the canvas interface: the kit's pieces, and every screen in the gallery. */
 export function UiKitPreview({ onClose }: { onClose: () => void }) {
   const screen = useViewportSize();
@@ -83,6 +96,7 @@ export function UiKitPreview({ onClose }: { onClose: () => void }) {
         {gallery
           ? <Gallery onBack={() => setGallery(false)} />
           : <Preview onClose={onClose} onGallery={() => setGallery(true)} />}
+        <PreviewLayers />
       </UiScreenContext.Provider>
     </UiHost>
   );

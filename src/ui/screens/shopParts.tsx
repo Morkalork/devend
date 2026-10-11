@@ -191,15 +191,15 @@ export function WaypointBanner({ level }: { level: number }) {
           alignItems: "center", gap: 4, borderRadius: RADIUS.xl, paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 16,
           backgroundColor: tint(CHECKPOINT, 0x18 / 255), borderWidth: 2, borderColor: CHECKPOINT,
         }}>
-          <Label
-            text={`⚑  ${t("upgradeShop.checkpointReached")}  ⚑`}
-            size={TEXT.xs} weight="700" upper letterSpacing={3.6} font="display" color={CHECKPOINT}
-            alpha={1 - 0.3 * pulse}
-          />
+          {/* Word by word, so a long translation wraps inside the banner. */}
+          <View layout={{ alignSelf: "stretch" }} alpha={1 - 0.3 * pulse}>
+            <RichParagraph runs={[{ text: `⚑ ${t("upgradeShop.checkpointReached")} ⚑` }]}
+              size={TEXT.xs} weight="700" upper letterSpacing={3.6} font="display" color={CHECKPOINT} />
+          </View>
           {/* The DOM pulsed this text-shadow too; held steady here, because a
               changing glow re-rasterises the text on every frame. */}
           <Label text={t("upgradeShop.levelBanner", { level })} size={TEXT["4xl"]} weight="900" letterSpacing={3.6} font="display" color={CHECKPOINT} glow={16} />
-          <Label text={t("upgradeShop.progressSavedHere")} size={TEXT.xs} upper letterSpacing={1.2} font="mono" color={DRAFT_HINT} />
+          <Label text={t("upgradeShop.progressSavedHere")} size={TEXT.xs} upper letterSpacing={1.2} font="mono" color={DRAFT_HINT} wrap align="center" />
         </View>
       </Glow>
     </Appear>

@@ -63,17 +63,22 @@ export function MenuHeading({ icon, iconColor, text, size, maxWidth, letterSpaci
   icon: IconSource; iconColor: number; text: string; size: number; maxWidth: number;
   letterSpacing?: number; weight?: TextStyleFontWeight; iconSize?: number;
 }) {
-  const width = useMemo(
-    () => fitTextWidth(text, { size, font: "display", weight, letterSpacing }, Math.max(0, maxWidth - iconSize - 12)),
-    [text, size, weight, letterSpacing, maxWidth, iconSize]);
+  const room = Math.max(0, maxWidth - iconSize - 12);
+  const natural = useMemo(() => fitTextWidth(text, { size, font: "display", weight, letterSpacing }), [text, size, weight, letterSpacing]);
+  const fits = natural <= room;
+  // One word cannot wrap (it would break mid-word), so it is set smaller.
+  const oneWord = !/\s/.test(text.trim());
+  const k = fits || !oneWord ? 1 : room / natural;
   return (
     <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}>
       <Icon icon={icon} size={iconSize} color={iconColor} />
-      <View layout={{ width }}>
-        {/* One word cannot wrap (it would break mid-word), so it shrinks to
-            the room instead: a single-line label scales down into its box. */}
-        <Label text={text} size={size} font="display" weight={weight} letterSpacing={letterSpacing} align="center" wrap={/\s/.test(text.trim())} />
-      </View>
+      {fits || oneWord ? (
+        <Label text={text} size={size * k} font="display" weight={weight} letterSpacing={letterSpacing * k} />
+      ) : (
+        <View layout={{ width: room }}>
+          <Label text={text} size={size} font="display" weight={weight} letterSpacing={letterSpacing} align="center" wrap />
+        </View>
+      )}
     </View>
   );
 }
@@ -164,13 +169,26 @@ export function ArcadeButton({
     return () => { node.off("layout", onLayout); };
   }, []);
   const outerWidth = outer.width;
+  // What follows the label in a row (a badge, a chip, a check) takes room too.
+  const tailRef = useRef<LayoutContainer | null>(null);
+  const [tailWidth, setTailWidth] = useState(0);
+  const hasTail = !column && children !== undefined && children !== null && children !== false;
+  useEffect(() => {
+    const node = tailRef.current;
+    if (!node) { setTailWidth(0); return; }
+    const onLayout = (l: { computedLayout: { width: number } }) => setTailWidth(Math.round(l.computedLayout.width));
+    node.on("layout", onLayout);
+    const done = node.layout?.computedLayout;
+    if (done) onLayout({ computedLayout: done });
+    return () => { node.off("layout", onLayout); };
+  }, [hasTail]);
   const textWidth = useMemo(() => (text === undefined ? 0
     : fitTextWidth(text.toUpperCase(), { size: fontSize, font: "display", weight: "600", letterSpacing: fontSize * 0.1 })),
   [text, fontSize]);
   const pad = (n: unknown, fallback: number) => (typeof n === "number" ? n : fallback);
   const gap = pad(box.gap, 8);
   const room = outerWidth - 4 - pad(box.paddingLeft, m.px) - pad(box.paddingRight, m.px)
-    - (icon ? iconSize + gap : 0) - (iconAfter ? iconSize + gap : 0);
+    - (icon ? iconSize + gap : 0) - (iconAfter ? iconSize + gap : 0) - (hasTail && tailWidth > 0 ? tailWidth + gap : 0);
   // A couple of px of slack: a button sized by its own label measures the same
   // label, and rounding must not tip it into wrapping.
   const wraps = text !== undefined && outerWidth > 0 && textWidth > room + 2;
@@ -198,7 +216,11 @@ export function ArcadeButton({
           <Label text={text} size={fontSize} font="display" weight="600" upper letterSpacing={fontSize * 0.1} color={ink} />
         ))}
         {iconAfter && <Icon icon={iconAfter} size={iconSize} color={ink} />}
-        {children}
+        {hasTail ? (
+          <layoutContainer ref={tailRef} layout={{ flexDirection: "row", alignItems: "center", gap }} eventMode="passive">
+            {children}
+          </layoutContainer>
+        ) : children}
       </Pressable>
     </layoutContainer>
   );

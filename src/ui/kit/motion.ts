@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { animate } from "motion";
 
+/** How a tween moves: eased out (the default, framer-motion's), or at a constant rate (CSS `linear`). */
+export type TweenEase = "easeOut" | "linear" | "easeInOut";
+
 /** A value that eases toward its target: framer-motion's animated number. */
-export function useTween(target: number, duration = 0.3): number {
+export function useTween(target: number, duration = 0.3, ease: TweenEase = "easeOut"): number {
   const [value, setValue] = useState(target);
   const from = useRef(target);
   useEffect(() => {
     const controls = animate(from.current, target, {
-      duration, ease: "easeOut",
+      duration, ease,
       onUpdate: (v: number) => { from.current = v; setValue(v); },
     });
     return () => controls.stop();
-  }, [target, duration]);
+  }, [target, duration, ease]);
   return value;
 }
 
