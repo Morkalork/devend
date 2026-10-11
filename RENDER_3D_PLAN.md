@@ -564,6 +564,20 @@ old key is dropped on sight. The three-quarter view above was built while the
 cause was unknown. Admin's "3D on this device" card (`rendererDiag.ts`)
 records whether each 3D start worked and why not.
 
+## 11. Light through the floor (built after the plan)
+
+The floor is a sheet nine-tenths opaque over the page's scrolling code, so
+that code was only ever a faint texture under play. Every ball's light now
+also falls DOWN through it (`codeUnderlay.ts`): inside each pool the sheet
+thins its own paint and goes opaque, and the code beneath shows, lit in the
+ball's colour and brightest under the ball. The code is the page's own text
+(`lib/crtCode.ts`) drawn once into a repeating texture the floor samples,
+scrolling the same way, rather than the page's DOM lit every frame. It takes
+every light the 2D pass measures (each ball's pool, and what mirrors and
+portals pass on), the brightest twelve when there are more, and caps a pool's
+spread so a lamp lights a patch rather than the whole listing. Two Playground
+dials: "Light through the floor" (0 is the solid sheet) and its reach.
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the

@@ -29,6 +29,9 @@ import {
 } from "three";
 import type { QualityTier } from "@/lib/rendering/render3dSettings";
 import { PREVIEW_DARK, type PreviewUniforms } from "./cutPreview3d";
+import {
+  UNDER_FRAG_EMISSIVE, UNDER_FRAG_MAP, UNDER_FRAG_PARS, UNDER_VERT_MAIN, UNDER_VERT_PARS, type UnderlayUniforms,
+} from "./codeUnderlay";
 
 /** Uniforms every surface material shares, updated once per frame. */
 export interface SurfaceShared {
@@ -72,6 +75,8 @@ export interface SurfaceMaterialOptions {
   roughness?: number;
   /** The cut preview's darkness mask (cutPreview3d.ts): the floor only. */
   preview?: PreviewUniforms;
+  /** The code under the board, lit by the balls from below (codeUnderlay.ts): the floor only. */
+  underlay?: UnderlayUniforms;
 }
 
 const VERT_PARS = /* glsl */`
@@ -85,6 +90,9 @@ varying vec2 vPrevXZ;
 #endif
 #ifdef SURF_INSET
 attribute vec2 aSampleInset;
+#endif
+#ifdef SURF_UNDERGLOW
+${UNDER_VERT_PARS}
 #endif
 `;
 
@@ -111,6 +119,9 @@ const VERT_MAIN = /* glsl */`
   // position is the world point the grid is laid out in.
   vPrevXZ = transformed.xz;
   #endif
+  #ifdef SURF_UNDERGLOW
+  ${UNDER_VERT_MAIN}
+  #endif
 }
 `;
 
@@ -128,6 +139,9 @@ uniform sampler2D uPreviewMask;
 uniform vec4 uPreviewRect;
 uniform float uPreviewStrength;
 varying vec2 vPrevXZ;
+#endif
+#ifdef SURF_UNDERGLOW
+${UNDER_FRAG_PARS}
 #endif
 vec3 surfDecode(vec3 c) {
   // Display colour to linear, the exact sRGB curve.
@@ -154,11 +168,17 @@ diffuseColor.rgb *= surfColor.rgb * surfShade;
 #ifdef SURF_TRANSLUCENT
 diffuseColor.a *= surfColor.a;
 #endif
+#ifdef SURF_UNDERGLOW
+${UNDER_FRAG_MAP}
+#endif
 `;
 
 const FRAG_EMISSIVE = /* glsl */`
 #include <emissivemap_fragment>
 totalEmissiveRadiance += surfColor.rgb * surfShade * uSelfLit;
+#ifdef SURF_UNDERGLOW
+${UNDER_FRAG_EMISSIVE}
+#endif
 `;
 
 /**
@@ -231,11 +251,13 @@ export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterial
     shader.uniforms.uPoolWrap = shared.uPoolWrap;
     shader.uniforms.uLampSlot = shared.uLampSlot;
     if (opts.preview) Object.assign(shader.uniforms, opts.preview);
+    if (opts.underlay) Object.assign(shader.uniforms, opts.underlay);
     shader.uniforms.uSampleSquash = { value: squash };
     shader.uniforms.uSideShade = { value: sideShade };
     const defines = (opts.inset ? "#define SURF_INSET\n" : "")
       + (opts.translucent ? "#define SURF_TRANSLUCENT\n" : "")
-      + (opts.preview ? "#define SURF_PREVIEW\n" : "");
+      + (opts.preview ? "#define SURF_PREVIEW\n" : "")
+      + (opts.underlay ? "#define SURF_UNDERGLOW\n" : "");
     shader.vertexShader = defines + VERT_PARS + shader.vertexShader
       .replace("#include <begin_vertex>", VERT_MAIN);
     shader.fragmentShader = defines + FRAG_PARS + shader.fragmentShader
@@ -245,6 +267,6 @@ export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterial
   };
   // One program per variant, not one per material instance.
   base.customProgramCacheKey = () =>
-    `surface:${opts.tier}:${opts.inset ? 1 : 0}:${opts.translucent ? 1 : 0}:${opts.preview ? 1 : 0}:${squash.toArray().join(",")}:${sideShade}`;
+    `surface:${opts.tier}:${opts.inset ? 1 : 0}:${opts.translucent ? 1 : 0}:${opts.preview ? 1 : 0}:${opts.underlay ? 1 : 0}:${squash.toArray().join(",")}:${sideShade}`;
   return base;
 }

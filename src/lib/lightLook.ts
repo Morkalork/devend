@@ -113,6 +113,17 @@ export interface LightLook {
    * 0 is off, the board without it.
    */
   circuitSpark: number;
+  /**
+   * Every ball's light also falls DOWN through the floor: inside its pool the
+   * floor thins and the code beneath shows, lit in the ball's colour
+   * (codeUnderlay.ts, 3D board). 0 is the solid sheet it was.
+   */
+  underglow: number;
+  /**
+   * How far that light spreads under the floor, against the ball's own pool:
+   * 0 is three quarters of its reach, 1 three times it (underReach).
+   */
+  underglowReach: number;
 }
 
 const KEY = "devend.lightLook";
@@ -120,7 +131,17 @@ export const DEFAULT_LIGHT_LOOK: LightLook = {
   bounce: 0.8, reflected: 1, caustic: 0.9, flash: 1, tell: 1, ballShadows: 1, reaction: 1,
   energy: 0.85, exposure: 1, facing: 0.9, softShadows: 0.9, motes: 0.8,
   cutPreview: 1, pocketGlow: 1, chargeTell: 1, phaseTell: 1, powerDrain: 1, circuitSpark: 1,
+  underglow: 0.8, underglowReach: 0.5,
 };
+
+/**
+ * The reach multiplier the underglowReach dial means: 0.75x to 3x the ball's
+ * own pool, 1.875x at the default half (the pool is tight; the light under
+ * the floor reads best a few lines of code wider).
+ */
+export function underReach(dial: number): number {
+  return 0.75 + 2.25 * Math.max(0, Math.min(1, dial));
+}
 
 let current: LightLook | null = null;
 
@@ -148,6 +169,8 @@ function sanitise(l: LightLook): LightLook {
     phaseTell: unit(l.phaseTell, DEFAULT_LIGHT_LOOK.phaseTell),
     powerDrain: unit(l.powerDrain, DEFAULT_LIGHT_LOOK.powerDrain),
     circuitSpark: unit(l.circuitSpark, DEFAULT_LIGHT_LOOK.circuitSpark),
+    underglow: unit(l.underglow, DEFAULT_LIGHT_LOOK.underglow),
+    underglowReach: unit(l.underglowReach, DEFAULT_LIGHT_LOOK.underglowReach),
   };
 }
 

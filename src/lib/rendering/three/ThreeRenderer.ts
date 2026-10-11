@@ -41,6 +41,7 @@ import {
 import { boardTiltElements, eyeDistance, floorCamera, leanProjection } from "./floorCamera";
 import { QUALITY_PRESETS, QualityGovernor, stepDown, type QualityPreset } from "./quality";
 import { createSurfaceShared, makeSurfaceMaterial } from "./surfaceMaterial";
+import { createCodeTexture, createUnderlayUniforms, syncUnderlay } from "./codeUnderlay";
 import { pixiGlTexture, releasePixiWrap, threeViewOf, wrapForPixi } from "./textureBridge";
 import { Floor3D } from "./floor3d";
 import { Walls3D } from "./walls3d";
@@ -88,6 +89,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private board = new Group();
   private shared = createSurfaceShared();
   private previewUniforms = createPreviewUniforms();
+  /** The code under the floor, lit from below by the balls (codeUnderlay.ts). */
+  private underlay = createUnderlayUniforms();
   private rig: Rig | null = null;
   private tier: QualityTier = "medium";
   private auto = true;
@@ -190,7 +193,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const preset = QUALITY_PRESETS[tier];
     this.tier = tier;
     const floorMat = makeSurfaceMaterial(this.shared, {
-      tier, translucent: true, roughness: 0.9, preview: this.previewUniforms,
+      tier, translucent: true, roughness: 0.9, preview: this.previewUniforms, underlay: this.underlay,
     });
     const wallMat = makeSurfaceMaterial(this.shared, { tier, sampleSquash: [1, 1, 0.42], roughness: 0.7 });
     const solidMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75 });
@@ -346,6 +349,9 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
         tones.set(id, { gain: 1 + 1.3 * t.heat * look.pocketGlow, tint: POCKET_GOLD, mix: 0.85 * t.gold * look.pocketGlow });
       }
     }
+    // The balls' light falling down through the floor onto the code beneath.
+    if (!this.underlay.uCode.value) this.underlay.uCode.value = createCodeTexture();
+    syncUnderlay(this.underlay, frame.lights, look.underglow, look.underglowReach, now);
     const limit = frame.deadlineLimit;
     const power = limit ? powerLevel(limit - game.activePlaySeconds, limit, look.powerDrain) : 1;
 
@@ -442,6 +448,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.outRT?.dispose();
     this.sceneRT = this.outRT = null;
     this.output.dispose();
+    this.underlay.uCode.value?.dispose();
+    this.underlay.uCode.value = null;
     this.canvas?.removeEventListener("webglcontextlost", this.onLost);
     this.canvas?.removeEventListener("webglcontextrestored", this.onRestored);
     // Not renderer.dispose(): it would lose the context Pixi is about to tear

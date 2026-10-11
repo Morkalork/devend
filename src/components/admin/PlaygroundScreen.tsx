@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ModifierInput } from '@/components/admin/ModifierInput';
 import { getBallLook, setBallLook, type BallLook } from '@/lib/ballLook';
-import { getLightLook, setLightLook } from '@/lib/lightLook';
+import { getLightLook, setLightLook, underReach } from '@/lib/lightLook';
 import { motion, AnimatePresence } from 'framer-motion';
 import { stepLevelIndex } from '@/lib/levelStep';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronLeft, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
@@ -1903,6 +1903,46 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   step={5}
                   value={Math.round(lightLook.circuitSpark * 100)}
                   onChange={e => setLightLookState(setLightLook({ circuitSpark: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-underglow" style={{ color: lightLook.underglow > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Light through the floor: {Math.round(lightLook.underglow * 100)}%
+                  <span className="block text-[10px] font-normal opacity-60">
+                    Each ball lights the code under the board in its own colour. 0 is the solid floor. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-underglow"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.underglow * 100)}
+                  onChange={e => setLightLookState(setLightLook({ underglow: Number(e.target.value) / 100 }))}
+                  className="w-full"
+                  style={{ accentColor: accent }}
+                />
+              </div>
+
+              <div className="px-5 pt-3 flex-shrink-0">
+                <label className="block text-xs font-semibold mb-1" htmlFor="light-underglow-reach" style={{ color: lightLook.underglow > 0 ? accent : 'hsl(var(--foreground))' }}>
+                  Light through the floor, reach: {underReach(lightLook.underglowReach).toFixed(2)}x the ball's pool
+                  <span className="block text-[10px] font-normal opacity-60">
+                    How far it spreads under the floor. 3D board.
+                  </span>
+                </label>
+                <input
+                  id="light-underglow-reach"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(lightLook.underglowReach * 100)}
+                  onChange={e => setLightLookState(setLightLook({ underglowReach: Number(e.target.value) / 100 }))}
                   className="w-full"
                   style={{ accentColor: accent }}
                 />
