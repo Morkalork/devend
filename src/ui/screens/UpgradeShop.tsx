@@ -29,7 +29,7 @@ import { inflationForLevel } from "@/lib/upgradePricing";
 import { getRunRng } from "@/lib/runRng";
 import { rollAbilityOffers, abilitySlotClosed as abilityCapReached } from "@/lib/abilityOffer";
 import { MAX_ABILITY_SLOTS, getAbility } from "@/lib/abilities";
-import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { TutorialOverlay } from "../game/TutorialOverlay";
@@ -37,7 +37,7 @@ import { Carousel } from "./Carousel";
 import { ArcadeButton, ArcadeText, arcadeInk } from "../kit/ui";
 import { RichParagraph } from "./draftParts";
 import {
-  CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, ShopCard, UpgradeDetailModal, WaypointBanner,
+  CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, SprintPanel, TicketCard, UpgradeDetailModal, WaypointBanner, type SprintLine,
 } from "./shopParts";
 import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
@@ -172,9 +172,10 @@ export function UpgradeShop({
   const { t } = useTranslation();
   const screen = useUiScreen();
   const accent = accentColor ? hex(accentColor) : COLOR.border;
+  // The board's accent: a committed ticket wears it, so it must never be the edge grey.
+  const boardAccent = accentColor ? hex(accentColor) : COLOR.primary;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
-  const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
   const [shakingId, setShakingId] = useState<string | null>(null);
   // Upgrade whose detail card (track relationships) is open via press-and-hold.
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -326,19 +327,18 @@ export function UpgradeShop({
       effectiveOvertime, remainingBudget, certChaseByKey,
     });
     return (
-      <ShopCard
+      <TicketCard
         key={upgrade.id}
         upgrade={upgrade}
         model={model}
         upgrades={upgrades}
         index={index}
         shaking={shakingId === upgrade.id}
-        lockedInfoOpen={lockedInfoId === upgrade.id}
+        accent={boardAccent}
         hasDiscount={hasDiscount}
         mapsRemaining={mapsRemaining}
         runContext={runContext}
         onHold={() => setDetailId(upgrade.id)}
-        onLockTap={() => setLockedInfoId(prev => (prev === upgrade.id ? null : upgrade.id))}
         onTap={() => {
           // A choice card opens its chooser; a normal card toggles select.
           if (model.isChoice) {
@@ -351,6 +351,19 @@ export function UpgradeShop({
       />
     );
   });
+
+  // The sprint: one line per committed pick, in the order it was picked. A
+  // choice's line names the chosen variant, which is what the id is.
+  const sprintLines: SprintLine[] = selectedIds.flatMap(id => {
+    const u = shelfItems.find(o => o.id === id) ?? upgrades.find(o => o.id === id);
+    return u ? [{ id, upgrade: u, price: priceFor(u), ability: !!u.grantsAbility }] : [];
+  });
+  const removeFromSprint = (id: string) => {
+    const u = shelfItems.find(o => o.id === id) ?? upgrades.find(o => o.id === id);
+    if (u) {
+      handleItemClick(u, true);
+    }
+  };
 
   const detailUpgrade = detailId ? upgrades.find(x => x.id === detailId) : undefined;
   const chooserOptions = chooserGroup ? upgrades.filter(u => u.choiceGroup === chooserGroup) : [];
@@ -381,18 +394,26 @@ export function UpgradeShop({
                   reading once, not a dead card to swipe past every visit. */}
               {abilitySlotClosed && !closed && (
                 <View layout={{ width: column, marginBottom: 8 }}>
-                  <RichParagraph runs={[{ text: t("upgradeShop.abilitySlotClosed") }]} size={TEXT.xs} upper letterSpacing={0.3} color={COLOR.mutedForeground}
+                  <RichParagraph align="left" runs={[{ text: t("upgradeShop.abilitySlotClosed") }]} size={TEXT.sm} color={ROLE.muted}
                     lead={<Icon icon={Lock} size={14} color={COLOR.mutedForeground} />} leadGap={8} />
                 </View>
               )}
               {/* Open Source Contribution: say what turned up, or the new button is a mystery. */}
               {freeAbilityGrant && (
                 <View layout={{ width: column, marginBottom: 8 }}>
-                  <RichParagraph runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
-                    size={TEXT.xs} upper letterSpacing={0.3} color={freeGrantColor}
+                  <RichParagraph align="left" runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
+                    size={TEXT.sm} color={freeGrantColor}
                     lead={<AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />} leadGap={8} />
                 </View>
               )}
+              {/* The backlog's heading: what the strip below is, and how much is in it. */}
+              <View layout={{ width: column, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <Label text={t("upgradeShop.backlog")} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted} />
+                <View layout={{ borderRadius: RADIUS.full, paddingLeft: 6, paddingRight: 6, backgroundColor: ROLE.edge }}>
+                  <Label text={String(shelfItems.length)} size={TEXT.xs} weight="700" color={ROLE.ink} />
+                </View>
+                <View layout={{ flex: 1, height: 1, backgroundColor: ROLE.edge }} />
+              </View>
               <Carousel
                 label={t("upgradeShop.carouselLabel")}
                 prevLabel={t("upgradeShop.prevOffer")}
@@ -556,6 +577,21 @@ export function UpgradeShop({
               <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
             ))}
           </View>
+        </Appear>
+      )}
+
+      {/* The sprint the backlog's tickets are pulled into. Not on a closed
+          store: nothing can be committed there. */}
+      {!closed && (
+        <Appear fromY={-8} delay={0.14}>
+          <SprintPanel
+            level={completedLevel + 1}
+            lines={sprintLines}
+            committed={selectedTotalCost}
+            capacity={effectiveOvertime}
+            accent={boardAccent}
+            onRemove={removeFromSprint}
+          />
         </Appear>
       )}
     </PipelineFrame>

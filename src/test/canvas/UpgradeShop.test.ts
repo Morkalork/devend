@@ -17,9 +17,10 @@ import { ABILITY_HOURS_PER_MAP, abilitySlotClosed, rollAbilityOffers } from "@/l
 import { inflationForLevel } from "@/lib/upgradePricing";
 import { mulberry32 } from "@/lib/runRng";
 import {
-  cardLook, cardModel, cardStateKey, certChaseIndex, chooseVariantOutcome, deselectWithDependents, itemClickOutcome,
+  cardModel, certChaseIndex, chooseVariantOutcome, deselectWithDependents, itemClickOutcome,
   lockedFor, priceOf, purchasesFor, restockCandidates, rollShelf, selectionCost, shelfMarks, type PriceRules,
 } from "@/ui/screens/shopModel";
+import { ticketStatus } from "@/ui/screens/storeBoardModel";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const SHOP = read("src/ui/screens/UpgradeShop.tsx");
@@ -112,11 +113,9 @@ describe("the ability slot (upgradeShopAbilitySlot)", () => {
     expect(PARTS).toMatch(/upgradeShop\.abilityEveryMap", \{ count: mapsRemaining \}/);
   });
 
-  it("is drawn inverted: a light ground carrying dark ink, unlike an upgrade card", () => {
-    const inverted = cardLook({ purchasable: true }, true, "#fff");
-    const ordinary = cardLook({ purchasable: true }, false, "#fff");
-    expect(inverted.background).not.toEqual(ordinary.background);
-    expect(PARTS).toMatch(/const ink = inv \? COLOR\.background : COLOR\.foreground/);
+  it("is a ticket of its own type, coloured by the ability, never a fourth upgrade", () => {
+    expect(PARTS).toMatch(/const typeColor = inv \? \(upgrade\.abilityColor \? hex\(upgrade\.abilityColor\) : COLOR\.primary\) : tier\.text;/);
+    expect(PARTS).toMatch(/inv \? t\("upgradeShop\.abilityKicker"\)/);
   });
 
   it("buys down its own channel at the flat rate, never as an upgrade", () => {
@@ -236,33 +235,31 @@ describe("certificate chase note (upgradeShopCertChase)", () => {
   });
 });
 
-describe("a selected card looks selected (shopSelectionVisible)", () => {
-  const tier = "#ffffffb3";
-  const selected = cardLook({ selected: true }, false, tier);
-  const plain = cardLook({ selected: false, purchasable: true }, false, tier);
-
-  it("changes the ground, not just the edge, and carries a ring", () => {
-    expect(selected.background).not.toEqual(plain.background);
-    expect(selected.border).not.toEqual(plain.border);
-    expect(selected.ring).not.toBeNull();
-    expect(plain.ring).toBeNull();
+describe("a selected ticket looks selected (shopSelectionVisible)", () => {
+  // The store is a sprint board now (storeBoardModel.ts): a ticket's state is
+  // its status lozenge plus, when committed, the accent edge and ground.
+  it("changes the ground and the edge, not just the lozenge", () => {
+    expect(PARTS).toMatch(/backgroundColor: selected \? tint\(accent, 0\.07\) : ROLE\.raised/);
+    expect(PARTS).toMatch(/borderWidth: 2, borderColor: selected \? accent : ROLE\.edge/);
   });
 
-  it("never draws a selected card as unaffordable", () => {
-    expect(cardStateKey({ selected: true, cantAfford: true }, false)).toBe("selected");
-    expect(cardLook({ selected: true, cantAfford: true }, false, tier).dashed).toBe(false);
+  it("never draws a selected ticket as over capacity", () => {
+    expect(ticketStatus({ selected: true, owned: false, locked: false, cantAfford: true })).toBe("inSprint");
   });
 
-  it("is visibly different from the OWNED state", () => {
-    const owned = cardLook({ owned: true }, false, tier);
-    expect(owned).not.toEqual(selected);
+  it("is a different status from DONE (owned)", () => {
+    expect(ticketStatus({ selected: false, owned: true, locked: false, cantAfford: false })).toBe("done");
   });
 
-  it("gives every card state a distinct look", () => {
+  it("gives every state its own status, checked in the old order", () => {
     const states = [
-      { selected: true }, { owned: true }, { locked: true }, { purchasable: true }, { cantAfford: true }, {},
-    ].map(s => JSON.stringify(cardLook(s, false, tier)));
-    expect(new Set(states).size).toBe(states.length);
+      { selected: true, owned: true, locked: true, cantAfford: true },
+      { selected: false, owned: true, locked: true, cantAfford: true },
+      { selected: false, owned: false, locked: true, cantAfford: true },
+      { selected: false, owned: false, locked: false, cantAfford: true },
+      { selected: false, owned: false, locked: false, cantAfford: false },
+    ].map(ticketStatus);
+    expect(states).toEqual(["inSprint", "done", "blocked", "overCapacity", "todo"]);
   });
 });
 

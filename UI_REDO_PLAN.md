@@ -106,3 +106,24 @@ Tests: src/test/canvas/pipelineModel.test.ts (the plan, the labels, the frame,
 the motion), plus the existing screen tests. Gallery: `LevelCompleteOverlay-
 storeOnly` and `LevelCompleteOverlay-last` show the strip without a Promotion
 and on the last map.
+
+**The store as a sprint board** (asked for after phase 5: "more like a ticket
+management system like Jira or Azure DevOps, but better looking"). Each offer
+is a ticket (`TicketCard`, shopParts.tsx): a stripe in the tier's colour down
+the left edge, a type square with the upgrade's icon, a stable key hashed
+from the upgrade id (`DEV-214`, storeBoardModel.ts), the tier as a priority
+glyph, the title, the description, the tags as labels, a status lozenge (To
+do, In sprint, Done, Blocked, Over capacity) and the price as the estimate in
+gold. A blocked ticket names its blockers outright instead of behind its lock.
+The ability slot is a ticket of its own type, coloured by the ability, where
+it used to be an inverted card.
+
+Above the backlog sits the `SprintPanel`: the overtime as the sprint's
+capacity bar, committed hours filling it, and one line per committed ticket
+that a tap takes back out. Selecting a ticket changes it in place (lozenge,
+accent edge and ground), so nothing moves under the finger.
+
+The backlog stays the one-ticket-at-a-time strip rather than a board of
+columns. Testers asked for that strip when the shop showed five cards at once
+(contentCopyBudget.test.ts), and a column board on a phone would bring the
+wall of text back. Tests: src/test/canvas/storeBoard.test.ts.
