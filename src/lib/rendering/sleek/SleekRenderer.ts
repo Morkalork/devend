@@ -839,7 +839,15 @@ export class SleekRenderer {
     this.ballLights.destroy();
     this.chrome.destroy();
     try {
-      this.app.destroy(true, { children: true });
+      // Not `destroy(true)`: in Pixi 8 a bare `true` also means
+      // releaseGlobalResources, which empties the process-wide pools
+      // (TexturePool, CanvasPool, batchers). The game interface is a SECOND
+      // Pixi app on its own canvas (src/ui), and its text still holds pooled
+      // textures; the next GC pass there returned one to the wiped pool,
+      // threw, and stopped the interface drawing. That was "it crashes after
+      // the first map, just a black background": the board is torn down as
+      // the results screen goes up.
+      this.app.destroy({ removeView: true, releaseGlobalResources: false }, { children: true });
     } catch {
       /* half-initialised app */
     }
