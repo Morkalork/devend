@@ -156,6 +156,8 @@ interface RichParagraphProps {
   lead?: ReactNode;
   /** Space between the lead and the first word. */
   leadGap?: number;
+  /** Extra space between wrapped lines (the label's own line height is already there; leading-relaxed wants more). */
+  lineGap?: number;
 }
 
 /**
@@ -165,12 +167,13 @@ interface RichParagraphProps {
  * themselves, so a centred icon-and-text line can wrap beside its icon.
  */
 export function RichParagraph({
-  runs, size, color, align = "center", font, weight = "400", upper, letterSpacing, glow, lead, leadGap,
+  runs, size, color, align = "center", font, weight = "400", upper, letterSpacing, glow, lead, leadGap, lineGap = Math.round(size * 0.1),
 }: RichParagraphProps) {
-  const space = Math.round(size * 0.28);
+  // One space of the face (Michroma's is wide), plus the tracking it carries.
+  const space = Math.round(size * (font === "display" ? 0.4 : 0.28) + (letterSpacing ?? 0));
   return (
     <View layout={{
-      alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space, rowGap: Math.round(size * 0.35),
+      alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space, rowGap: lineGap,
       justifyContent: align === "center" ? "center" : "flex-start",
     }}>
       {lead !== undefined && <View layout={{ marginRight: Math.max(0, (leadGap ?? space) - space) }}>{lead}</View>}

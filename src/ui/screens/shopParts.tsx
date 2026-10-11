@@ -191,9 +191,10 @@ export function WaypointBanner({ level }: { level: number }) {
           alignItems: "center", gap: 4, borderRadius: RADIUS.xl, paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 16,
           backgroundColor: tint(CHECKPOINT, 0x18 / 255), borderWidth: 2, borderColor: CHECKPOINT,
         }}>
-          {/* Word by word, so a long translation wraps inside the banner. */}
+          {/* Word by word, so a long translation wraps inside the banner; the
+              no-break spaces keep each flag on its word's line. */}
           <View layout={{ alignSelf: "stretch" }} alpha={1 - 0.3 * pulse}>
-            <RichParagraph runs={[{ text: `⚑ ${t("upgradeShop.checkpointReached")} ⚑` }]}
+            <RichParagraph runs={[{ text: `⚑\u00A0${t("upgradeShop.checkpointReached")}\u00A0⚑` }]}
               size={TEXT.xs} weight="700" upper letterSpacing={3.6} font="display" color={CHECKPOINT} />
           </View>
           {/* The DOM pulsed this text-shadow too; held steady here, because a

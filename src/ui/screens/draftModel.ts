@@ -99,10 +99,11 @@ export function richWords(runs: RichRun[]): RichRun[][] {
   const groups: RichRun[][] = [];
   let joinNext = false;
   for (const run of runs) {
-    const pieces = run.text.split(/(\s+)/);
+    // Breakable whitespace only: a no-break space (U+00A0) keeps its words in one group.
+    const pieces = run.text.split(/([ \t\n]+)/);
     for (const piece of pieces) {
       if (piece === "") continue;
-      if (/^\s+$/.test(piece)) { joinNext = false; continue; }
+      if (/^[ \t\n]+$/.test(piece)) { joinNext = false; continue; }
       const word = { ...run, text: piece };
       if (joinNext && groups.length > 0) groups[groups.length - 1].push(word);
       else groups.push([word]);

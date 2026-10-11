@@ -96,6 +96,7 @@ export function AscensionDraftScreen({
             <View layout={{ alignSelf: "stretch", marginBottom: 16 }}>
               <RichParagraph
                 size={TEXT.sm}
+                lineGap={Math.round(TEXT.sm * 0.35)}
                 color={DRAFT_TEXT}
                 runs={[
                   { text: t("ascension.tutorialIntro1") },

@@ -183,7 +183,7 @@ export function ResultScreen({
   // the recap must not show through them.
   const drawFade = useCallback((g: Graphics) => {
     g.clear();
-    const steps = 16;
+    const steps = BAR_FADE; // 1px bands: coarser ones stripe the text they fade
     for (let i = 0; i < steps; i++) {
       g.rect(0, -BAR_FADE + (BAR_FADE * i) / steps, screen.width, BAR_FADE / steps + 0.5).fill({ color: COLOR.background, alpha: (i + 0.5) / steps });
     }
