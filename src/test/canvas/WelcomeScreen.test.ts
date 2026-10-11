@@ -44,6 +44,14 @@ describe("Continue / New Game", () => {
     expect(byId({}, "newGame")?.glow).toBe(true);
     expect(byId({}, "newGame")?.pulse).toBe(true);
   });
+
+  // UI redo: the recommended action is always the filled button, so the
+  // first-time gold ring goes round the fill instead of replacing it.
+  it("keeps Start Game filled while its first-time ring shows", () => {
+    const b = byId({ highlights: { newGame: true } }, "newGame");
+    expect(b?.ring).toBe(true);
+    expect(b?.glow).toBe(true);
+  });
 });
 
 describe("the screen feeds the menu and wires its buttons", () => {

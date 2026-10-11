@@ -54,7 +54,7 @@ export function JukeboxScreen({
           <Appear fromY={20} duration={0.5} layout={{ width, alignItems: "center", gap: 24, paddingBottom: 96 }}>
             {/* Header */}
             <MenuHeading icon={Music} iconColor={accent} text={t("music.title")} size={TEXT["2xl"]} maxWidth={width} />
-            <Label text={t("music.subtitle")} size={TEXT.sm} color={COLOR.mutedForeground} align="center" wrap layout={{ marginTop: -12 }} />
+            <Label text={t("music.subtitle")} size={TEXT.sm} color={COLOR.mutedForeground} wrap layout={{ marginTop: -12, alignSelf: "stretch" }} />
 
             {/* Playlist */}
             <View layout={{ alignSelf: "stretch", gap: 8 }}>

@@ -34,7 +34,7 @@ import { TagChip } from "../game/TagChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { TutorialOverlay } from "../game/TutorialOverlay";
 import { Carousel } from "./Carousel";
-import { ArcadeButton, ArcadeText } from "../kit/ui";
+import { ArcadeButton, ArcadeText, arcadeInk } from "../kit/ui";
 import { RichParagraph } from "./draftParts";
 import {
   CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, ShopCard, UpgradeDetailModal, WaypointBanner,
@@ -43,6 +43,8 @@ import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
   priceOf, purchasesFor, restockCandidates, rollShelf, selectionCost, shelfMarks,
 } from "./shopModel";
+import { PipelineFrame } from "./PipelineFrame";
+import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 
 interface UpgradeShopProps {
   /**
@@ -118,6 +120,8 @@ interface UpgradeShopProps {
    *  grant already happened in the session; the shop only announces it, so the
    *  player is not left wondering where the new button came from. */
   freeAbilityGrant?: string | null;
+  /** The stages between the map just won and the next; a sample one in the gallery. */
+  pipeline?: BetweenMapPlan;
 }
 
 const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
@@ -163,6 +167,7 @@ export function UpgradeShop({
   abilityOfferCount = 1,
   onPurchaseAbility,
   freeAbilityGrant = null,
+  pipeline,
 }: UpgradeShopProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
@@ -310,7 +315,9 @@ export function UpgradeShop({
     onContinue();
   };
 
-  const inset = screen.width - 48;
+  const column = pipelineColumnWidth(screen.width);
+  const plan = pipeline ?? samplePlan(completedLevel);
+  const hasChips = inflationPercent > 0 || (!closed && (shopRestockCount > 0 || hasBudgetCycle));
   const cyan = COLOR.cyan;
 
   const cards = shelfItems.map((upgrade, index) => {
@@ -351,211 +358,206 @@ export function UpgradeShop({
   const freeGrantColor = freeGrant?.color ? hex(freeGrant.color) : COLOR.foreground;
 
   return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>
-      {/* bg-background/95 over the global CRT background, which shows through faintly. */}
-      <Appear layout={{ width: screen.width, height: screen.height }}>
-        <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, 0.95) }}>
-          <ScrollView layout={{ width: screen.width, height: screen.height }}>
-            <View layout={{ width: screen.width, minHeight: screen.height, alignItems: "center", justifyContent: "center", gap: 16, paddingTop: 24, paddingBottom: 24 }}>
-
-              {/* Store title and the level just cleared, on ONE line: two
-                  stacked rows to say six words was the header's whole problem. */}
-              <Appear fromY={-20} delay={0.1}>
-                <View layout={{ maxWidth: inset, flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", justifyContent: "center", columnGap: 12, rowGap: 4 }}>
-                  <Label text={t("upgradeShop.storeLabel")} size={TEXT["2xl"]} weight="700" upper letterSpacing={2.4} color={COLOR.foreground} alpha={0.3} />
-                  <Label text={t("upgradeShop.levelComplete", { level: completedLevel })} size={TEXT.sm} color={COLOR.mutedForeground} />
+    <PipelineFrame
+      plan={plan}
+      at="store"
+      accent={accent}
+      headline={{
+        value: remainingBudget,
+        unit: "h",
+        caption: plan.last ? t("pipeline.toSpendLast") : t("pipeline.toSpend", { level: completedLevel + 1 }),
+      }}
+      shelf={
+        <>
+          {/* The shelf, as a strip rather than a grid: one card gets most of
+              the width and its description a size people actually read.
+              See Carousel.tsx for what that trade costs. It runs edge to
+              edge, because the peek IS the strip's margin. Closed: dimmed,
+              greyed, and nothing in it takes a touch. */}
+          <Appear fromY={20} delay={0.2}>
+            <layoutContainer layout={{ alignItems: "center" }} alpha={closed ? 0.4 : 1} eventMode={closed ? "none" : "passive"}
+              filters={closedFilters}>
+              {/* The ability slot, closed: a fact about the run worth
+                  reading once, not a dead card to swipe past every visit. */}
+              {abilitySlotClosed && !closed && (
+                <View layout={{ width: column, marginBottom: 8 }}>
+                  <RichParagraph runs={[{ text: t("upgradeShop.abilitySlotClosed") }]} size={TEXT.xs} upper letterSpacing={0.3} color={COLOR.mutedForeground}
+                    lead={<Icon icon={Lock} size={14} color={COLOR.mutedForeground} />} leadGap={8} />
                 </View>
-              </Appear>
-
-              {closed && <ClosedBanner locksHave={locksHave} locksNeed={locksNeed} onHold={() => setShowClosedInfo(true)} />}
-
-              {completedLevel % 5 === 0 && <WaypointBanner level={completedLevel} />}
-
-              {/* Budget, and the modifiers that change what it buys. Three of
-                  them are a name and a number, which is a chip, not a sentence. */}
-              <Appear fromY={-20} delay={0.1}>
-                <View layout={{ maxWidth: inset, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", columnGap: 12, rowGap: 8 }}>
-                  <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Icon icon={Clock} size={24} color={YELLOW_500} />
-                    <Label text={t("upgradeShop.hoursValue", { hours: effectiveOvertime })} size={TEXT.xl} weight="600" color={COLOR.foreground} />
-                    <Label text={t("upgradeShop.overtime")} size={TEXT.xl} color={COLOR.mutedForeground} />
-                  </View>
-
-                  {/* Market rates: prices rise each assignment block. */}
-                  {inflationPercent > 0 && (
-                    <Pill
-                      text={t("upgradeShop.marketRatesChip", { percent: inflationPercent })}
-                      color={MARKET} border={tint(MARKET, 0x55 / 255)} background={tint(MARKET, 0x0f / 255)}
-                      onHold={() => setChipInfo({ text: t("upgradeShop.marketRates", { percent: inflationPercent }), color: MARKET })}
-                    />
-                  )}
-
-                  {/* Restocks: buying an item adds a fresh offer to the strip. */}
-                  {!closed && shopRestockCount > 0 && (
-                    <Pill
-                      icon={RefreshCw}
-                      text={t("upgradeShop.restockChip", { count: restocksLeft })}
-                      color={restocksLeft > 0 ? cyan : COLOR.mutedForeground}
-                      border={restocksLeft > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
-                      background={restocksLeft > 0 ? tint(cyan, 0.05) : undefined}
-                      onHold={() => setChipInfo({
-                        text: restocksLeft > 0 ? t("upgradeShop.restocksLeft", { count: restocksLeft }) : t("upgradeShop.noRestocksLeft"),
-                        color: cyan,
-                      })}
-                    />
-                  )}
-
-                  {/* Budget Cycle: spending charges a boon for the next map. */}
-                  {!closed && hasBudgetCycle && (
-                    <Pill
-                      icon={ShoppingCart}
-                      text={budgetChunks > 0
-                        ? t("upgradeShop.budgetCycleChipCharged", { count: budgetChunks })
-                        : t("upgradeShop.budgetCycleChip", { spent: selectedTotalCost, next: chunkHours })}
-                      color={budgetChunks > 0 ? cyan : COLOR.mutedForeground}
-                      border={budgetChunks > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
-                      background={budgetChunks > 0 ? tint(cyan, 0.05) : undefined}
-                      onHold={() => setChipInfo({
-                        text: budgetChunks > 0
-                          ? t("upgradeShop.budgetCycleCharged", { count: budgetChunks, spent: selectedTotalCost })
-                          : t("upgradeShop.budgetCycleProgress", { spent: selectedTotalCost, next: chunkHours }),
-                        color: cyan,
-                      })}
-                    />
-                  )}
+              )}
+              {/* Open Source Contribution: say what turned up, or the new button is a mystery. */}
+              {freeAbilityGrant && (
+                <View layout={{ width: column, marginBottom: 8 }}>
+                  <RichParagraph runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
+                    size={TEXT.xs} upper letterSpacing={0.3} color={freeGrantColor}
+                    lead={<AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />} leadGap={8} />
                 </View>
-              </Appear>
-
-              {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
-                  wrapping row: the player reads them as one status line. */}
-              {!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0) && (
-                <Appear delay={0.12}>
-                  <View layout={{ maxWidth: Math.min(672, inset), flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
-                    {runwayPerks.map(p => (
-                      <Pill
-                        key={p.perk}
-                        icon={Vault}
-                        size={10}
-                        text={t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours }) + (p.met ? " ✓" : "")}
-                        color={p.met ? RUNWAY : RUNWAY_OFF}
-                        border={p.met ? tint(RUNWAY, 0x66 / 255) : tint(RUNWAY_OFF, 0x33 / 255)}
-                        background={p.met ? tint(RUNWAY, 0x14 / 255) : undefined}
-                        alpha={p.met ? 1 : 0.8}
-                        onHold={() => setChipInfo({ text: t("upgradeShop.runwayTitle"), color: RUNWAY })}
-                      />
-                    ))}
-                    {buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
-                      <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
-                    ))}
-                  </View>
-                </Appear>
               )}
+              <Carousel
+                label={t("upgradeShop.carouselLabel")}
+                prevLabel={t("upgradeShop.prevOffer")}
+                nextLabel={t("upgradeShop.nextOffer")}
+                positionLabel={(index, total) => t("upgradeShop.offerPosition", { index, total })}
+                cardWidth="min(76vw, 340px)"
+                marks={shelfMarks(shelfItems, upgrades, selectedIds, allOwnedIds)}
+                items={cards}
+              />
+            </layoutContainer>
+          </Appear>
+        </>
+      }
+      footer={
+        <>
+          {/* Certificate unlock banner */}
+          {newlyUnlockedCerts.length > 0 && (
+            <Appear fromY={-8}>
+              <View layout={{ gap: 8, alignSelf: "stretch" }}>
+                {newlyUnlockedCerts.map(cert => <CertUnlockedRow key={cert.id} cert={cert} />)}
+              </View>
+            </Appear>
+          )}
 
-              {/* The shelf, as a strip rather than a grid: one card gets most of
-                  the width and its description a size people actually read.
-                  See Carousel.tsx for what that trade costs. It runs edge to
-                  edge, because the peek IS the strip's margin. Closed: dimmed,
-                  greyed, and nothing in it takes a touch. */}
-              <Appear fromY={20} delay={0.2}>
-                <layoutContainer layout={{ alignItems: "center" }} alpha={closed ? 0.4 : 1} eventMode={closed ? "none" : "passive"}
-                  filters={closedFilters}>
-                  {/* The ability slot, closed: a fact about the run worth
-                      reading once, not a dead card to swipe past every visit. */}
-                  {abilitySlotClosed && !closed && (
-                    <View layout={{ width: inset, marginBottom: 8 }}>
-                      <RichParagraph runs={[{ text: t("upgradeShop.abilitySlotClosed") }]} size={TEXT.xs} upper letterSpacing={0.3} color={COLOR.mutedForeground}
-                        lead={<Icon icon={Lock} size={14} color={COLOR.mutedForeground} />} leadGap={8} />
-                    </View>
-                  )}
-                  {/* Open Source Contribution: say what turned up, or the new button is a mystery. */}
-                  {freeAbilityGrant && (
-                    <View layout={{ width: inset, marginBottom: 8 }}>
-                      <RichParagraph runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
-                        size={TEXT.xs} upper letterSpacing={0.3} color={freeGrantColor}
-                        lead={<AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />} leadGap={8} />
-                    </View>
-                  )}
-                  <Carousel
-                    label={t("upgradeShop.carouselLabel")}
-                    prevLabel={t("upgradeShop.prevOffer")}
-                    nextLabel={t("upgradeShop.nextOffer")}
-                    positionLabel={(index, total) => t("upgradeShop.offerPosition", { index, total })}
-                    cardWidth="min(76vw, 340px)"
-                    marks={shelfMarks(shelfItems, upgrades, selectedIds, allOwnedIds)}
-                    items={cards}
-                  />
-                </layoutContainer>
-              </Appear>
-
-              {/* Certificate unlock banner */}
-              {newlyUnlockedCerts.length > 0 && (
-                <Appear fromY={-8}>
-                  <View layout={{ gap: 8, width: Math.min(inset, 384) }}>
-                    {newlyUnlockedCerts.map(cert => <CertUnlockedRow key={cert.id} cert={cert} />)}
+          {/* Continue */}
+          <Appear fromY={20} delay={0.4}>
+            <ArcadeButton onTap={handleContinue} iconAfter={ArrowRight}>
+              {selectedIds.length > 0 ? (
+                <>
+                  <ArcadeText text={t("upgradeShop.buyAndContinue", { count: selectedIds.length })} color={arcadeInk("primary")} size={TEXT.sm} />
+                  {/* Cost as an icon chip: the display font's parentheses look broken. */}
+                  <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Icon icon={Clock} size={16} color={arcadeInk("primary")} />
+                    <ArcadeText text={t("upgradeShop.hoursValue", { hours: selectedTotalCost })} color={arcadeInk("primary")} size={TEXT.sm} />
                   </View>
-                </Appear>
+                </>
+              ) : (
+                <ArcadeText text={continueLabel(plan, "store", t)} color={arcadeInk("primary")} size={TEXT.sm} />
               )}
+            </ArcadeButton>
+          </Appear>
+        </>
+      }
+      overlay={
+        <>
+          {detailUpgrade && (
+            <UpgradeDetailModal
+              upgrade={detailUpgrade}
+              upgrades={upgrades}
+              dependents={dependentsById.get(detailUpgrade.id) ?? []}
+              has={id => allOwnedIds.includes(id) || selectedIds.includes(id)}
+              cert={certChaseByKey.get(detailUpgrade.choiceGroup ?? detailUpgrade.id)}
+              runContext={runContext}
+              accent={accent}
+              onClose={() => setDetailId(null)}
+            />
+          )}
 
-              {/* Continue */}
-              <Appear fromY={20} delay={0.4}>
-                <ArcadeButton onTap={handleContinue} iconAfter={ArrowRight} layout={{ maxWidth: inset }}>
-                  {selectedIds.length > 0 ? (
-                    <>
-                      <ArcadeText text={t("upgradeShop.buyAndContinue", { count: selectedIds.length })} color={COLOR.primary} size={TEXT.sm} />
-                      {/* Cost as an icon chip: the display font's parentheses look broken. */}
-                      <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Icon icon={Clock} size={16} color={COLOR.primary} />
-                        <ArcadeText text={t("upgradeShop.hoursValue", { hours: selectedTotalCost })} color={COLOR.primary} size={TEXT.sm} />
-                      </View>
-                    </>
-                  ) : (
-                    <ArcadeText text={t("upgradeShop.continue")} color={COLOR.primary} size={TEXT.sm} />
-                  )}
-                </ArcadeButton>
-              </Appear>
-            </View>
-          </ScrollView>
-        </View>
-      </Appear>
+          {showClosedInfo && <ClosedInfoModal onClose={() => setShowClosedInfo(false)} />}
 
-      {detailUpgrade && (
-        <UpgradeDetailModal
-          upgrade={detailUpgrade}
-          upgrades={upgrades}
-          dependents={dependentsById.get(detailUpgrade.id) ?? []}
-          has={id => allOwnedIds.includes(id) || selectedIds.includes(id)}
-          cert={certChaseByKey.get(detailUpgrade.choiceGroup ?? detailUpgrade.id)}
-          runContext={runContext}
-          accent={accent}
-          onClose={() => setDetailId(null)}
-        />
+          {chooserOptions.length > 0 && (
+            <ChoiceChooserModal
+              options={chooserOptions}
+              selectedIds={selectedIds}
+              price={priceFor}
+              budget={effectiveOvertime}
+              accent={accent}
+              onChoose={chooseVariant}
+              onClose={() => setChooserGroup(null)}
+            />
+          )}
+
+          {chipInfo && <ChipInfoModal text={chipInfo.text} accent={chipInfo.color} onClose={() => setChipInfo(null)} />}
+
+          {showTutorial && !closed && (
+            <TutorialOverlay
+              visible
+              title={t("upgradeShop.tutorialTitle")}
+              body={t("upgradeShop.tutorialBody")}
+              arrowDirection="none"
+              onDismiss={() => onTutorialDismiss?.()}
+            />
+          )}
+        </>
+      }
+    >
+      {closed && <ClosedBanner locksHave={locksHave} locksNeed={locksNeed} onHold={() => setShowClosedInfo(true)} />}
+
+      {completedLevel % 5 === 0 && <WaypointBanner level={completedLevel} />}
+
+      {/* The modifiers that change what the budget buys. Three of them are a
+          name and a number, which is a chip, not a sentence. */}
+      {hasChips && (
+        <Appear fromY={-8} delay={0.1}>
+          <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 8 }}>
+            {/* Market rates: prices rise each assignment block. */}
+            {inflationPercent > 0 && (
+              <Pill
+                text={t("upgradeShop.marketRatesChip", { percent: inflationPercent })}
+                color={MARKET} border={tint(MARKET, 0x55 / 255)} background={tint(MARKET, 0x0f / 255)}
+                onHold={() => setChipInfo({ text: t("upgradeShop.marketRates", { percent: inflationPercent }), color: MARKET })}
+              />
+            )}
+
+            {/* Restocks: buying an item adds a fresh offer to the strip. */}
+            {!closed && shopRestockCount > 0 && (
+              <Pill
+                icon={RefreshCw}
+                text={t("upgradeShop.restockChip", { count: restocksLeft })}
+                color={restocksLeft > 0 ? cyan : COLOR.mutedForeground}
+                border={restocksLeft > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
+                background={restocksLeft > 0 ? tint(cyan, 0.05) : undefined}
+                onHold={() => setChipInfo({
+                  text: restocksLeft > 0 ? t("upgradeShop.restocksLeft", { count: restocksLeft }) : t("upgradeShop.noRestocksLeft"),
+                  color: cyan,
+                })}
+              />
+            )}
+
+            {/* Budget Cycle: spending charges a boon for the next map. */}
+            {!closed && hasBudgetCycle && (
+              <Pill
+                icon={ShoppingCart}
+                text={budgetChunks > 0
+                  ? t("upgradeShop.budgetCycleChipCharged", { count: budgetChunks })
+                  : t("upgradeShop.budgetCycleChip", { spent: selectedTotalCost, next: chunkHours })}
+                color={budgetChunks > 0 ? cyan : COLOR.mutedForeground}
+                border={budgetChunks > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
+                background={budgetChunks > 0 ? tint(cyan, 0.05) : undefined}
+                onHold={() => setChipInfo({
+                  text: budgetChunks > 0
+                    ? t("upgradeShop.budgetCycleCharged", { count: budgetChunks, spent: selectedTotalCost })
+                    : t("upgradeShop.budgetCycleProgress", { spent: selectedTotalCost, next: chunkHours }),
+                  color: cyan,
+                })}
+              />
+            )}
+          </View>
+        </Appear>
       )}
 
-      {showClosedInfo && <ClosedInfoModal onClose={() => setShowClosedInfo(false)} />}
-
-      {chooserOptions.length > 0 && (
-        <ChoiceChooserModal
-          options={chooserOptions}
-          selectedIds={selectedIds}
-          price={priceFor}
-          budget={effectiveOvertime}
-          accent={accent}
-          onChoose={chooseVariant}
-          onClose={() => setChooserGroup(null)}
-        />
+      {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
+          wrapping row: the player reads them as one status line. */}
+      {!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0) && (
+        <Appear delay={0.12}>
+          <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {runwayPerks.map(p => (
+              <Pill
+                key={p.perk}
+                icon={Vault}
+                size={10}
+                text={t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours }) + (p.met ? " ✓" : "")}
+                color={p.met ? RUNWAY : RUNWAY_OFF}
+                border={p.met ? tint(RUNWAY, 0x66 / 255) : tint(RUNWAY_OFF, 0x33 / 255)}
+                background={p.met ? tint(RUNWAY, 0x14 / 255) : undefined}
+                alpha={p.met ? 1 : 0.8}
+                onHold={() => setChipInfo({ text: t("upgradeShop.runwayTitle"), color: RUNWAY })}
+              />
+            ))}
+            {buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
+              <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
+            ))}
+          </View>
+        </Appear>
       )}
-
-      {chipInfo && <ChipInfoModal text={chipInfo.text} accent={chipInfo.color} onClose={() => setChipInfo(null)} />}
-
-      {showTutorial && !closed && (
-        <TutorialOverlay
-          visible
-          title={t("upgradeShop.tutorialTitle")}
-          body={t("upgradeShop.tutorialBody")}
-          arrowDirection="none"
-          onDismiss={() => onTutorialDismiss?.()}
-        />
-      )}
-    </View>
+    </PipelineFrame>
   );
 }

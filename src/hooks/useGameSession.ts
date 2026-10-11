@@ -42,6 +42,7 @@ import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
 import { UpgradeConfig } from '@/types/upgrade';
 import { loadCapstones, getCapstones, capstoneDueAfter, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
+import type { BetweenMapPlan } from '@/ui/screens/pipelineModel';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
@@ -1697,6 +1698,30 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     return true;
   }, [ascRules.noCapstone, capstone, currentLevelIndex, goToCapstoneDraft]);
 
+  /**
+   * What stands between the map just won and the next (UI_REDO_PLAN.md, the
+   * between-map pipeline): whether a Promotion is due, whether the store
+   * opens, whether this was the last map. Debrief, Promotion and Store each
+   * draw every stage in one strip, so all three must agree.
+   *
+   * Live while the debrief is up, then frozen: picking the Promotion sets
+   * `capstone`, and a live plan would drop the Promotion stage from the strip
+   * on the very next screen, which is the store the player reached through it.
+   */
+  const liveBetweenMapPlan = useMemo<BetweenMapPlan>(() => ({
+    clearedLevel: currentLevelIndex + 1,
+    promotion: !ascRules.noCapstone && !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
+    store: shopOpensAfter(currentLevelIndex + 1, ascRules),
+    last: isLastLevel,
+  }), [currentLevelIndex, ascRules, capstone, isLastLevel]);
+  const [frozenBetweenMapPlan, setFrozenBetweenMapPlan] = useState<BetweenMapPlan | null>(null);
+  useEffect(() => {
+    if (showLevelComplete) {
+      setFrozenBetweenMapPlan(liveBetweenMapPlan);
+    }
+  }, [showLevelComplete, liveBetweenMapPlan]);
+  const betweenMapPlan = showLevelComplete ? liveBetweenMapPlan : (frozenBetweenMapPlan ?? liveBetweenMapPlan);
+
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
@@ -2058,6 +2083,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     ownedUpgradeIds,
     fenceSlotIds,
     showLevelComplete,
+    betweenMapPlan,
     pendingLevelScore,
     cumulativeLockedBalls,
     // Upgrades

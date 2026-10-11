@@ -219,7 +219,7 @@
     "unlockHoursSpent": "Gasta {{required}} horas de certificado en esta tienda (en cualquier certificado).",
     "progressLabelHoursSpent": "horas gastadas",
     "unlockKeepPlaying": "Sigue jugando para desbloquear.",
-    "title": "CERTIFICADOS",
+    "title": "Certificados",
     "certificateHours": "Horas de certificado",
     "earnRate": "Gana 1h por cada 5 niveles completados",
     "sectionAvailable": "Disponibles",
@@ -599,7 +599,7 @@
     "returnHome": "Volver al inicio"
   },
   "options": {
-    "title": "OPCIONES",
+    "title": "Opciones",
     "language": "Idioma",
     "sound": "Sonido",
     "music": "Música",
@@ -1966,5 +1966,22 @@
     "objective": "Objetivo",
     "hazardPay": "Plus de riesgo",
     "push": "Bono de presión"
+  },
+  "pipeline": {
+    "afterLevel": "Tras el nivel {{level}}",
+    "debrief": "Resumen",
+    "promotion": "Ascenso",
+    "store": "Tienda",
+    "level": "Nivel {{level}}",
+    "ascension": "Ascensión",
+    "toPromotion": "Elige tu ascenso",
+    "toStore": "Abrir la tienda",
+    "toLevel": "Empezar el nivel {{level}}",
+    "toAscension": "Terminar la partida",
+    "ofPossible": "de {{hours}} h que podía pagar este mapa",
+    "fullPay": "Todo lo que podía pagar este mapa",
+    "toSpend": "para gastar antes del nivel {{level}}",
+    "toSpendLast": "para gastar",
+    "pickOne": "Elige 1 de {{count}}"
   }
 }

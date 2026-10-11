@@ -1,7 +1,7 @@
 # UI_REDO_PLAN.md
 
 The redo of the menus and the between-map screens, on the canvas kit
-(CANVAS_UI_PLAN.md). Status: **phase 1 built**; phases 2 to 5 to do.
+(CANVAS_UI_PLAN.md). Status: **built** (phases 1 to 5).
 
 ## Why
 
@@ -39,10 +39,10 @@ own idea of where Continue sits.
 | Phase | What | Status |
 |---|---|---|
 | 1 | Display face, colour roles (`ROLE` in theme.ts), kit pieces: `StageRail`, `Headline`, `Ledger`, `Ticket` (src/ui/kit/pipeline.tsx). Gallery samples `Pipeline-debrief`, `Pipeline-store`. | built |
-| 2 | The between-map screen: one pipeline replacing LevelCompleteOverlay, UpgradeShop, CapstoneDraftScreen and ContinuePrompt as separate layouts. | to do |
-| 3 | Main menu, run result (win and loss), tap-to-start gate. | to do |
-| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure, Ascension. | to do |
-| 5 | Motion: the headline counts up, the rail slides between stages, nothing else moves on its own. | to do |
+| 2 | The between-map screen: one pipeline replacing LevelCompleteOverlay, UpgradeShop, CapstoneDraftScreen and ContinuePrompt as separate layouts. | built |
+| 3 | Main menu, run result (win and loss), tap-to-start gate. | built |
+| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure, Ascension. | built |
+| 5 | Motion: the headline counts up, the rail slides between stages, nothing else moves on its own. | built |
 
 ## Build record
 
@@ -52,3 +52,57 @@ keeps Michroma for the game title. The draft cards' word spacing is measured
 instead of a fixed share tuned for Michroma's wide space. `ROLE` holds the
 pipeline's colour roles. The four pieces draw with no glow and take the band's
 accent as a prop. Tests: src/test/canvas/pipeline.test.ts.
+
+**Phase 2.** The kit went flat first: `ArcadeButton` lost its glow, ping
+ring and shimmer, takes a small radius and fills only when it is the screen's
+recommended action (`glow` or `shimmer` promotes a secondary button to
+primary), and labels are sentence case. `COLOR`'s neutrals were remapped onto
+the `ROLE` greys, so every screen moved with it.
+
+The three stages stay three screens in the session's state machine (that logic
+is tested and did not change), but each now draws inside `PipelineFrame`
+(src/ui/screens/PipelineFrame.tsx): a "After level N" line, a horizontal
+`StageStrip`, the stage's `Headline`, then its content, in a column capped at
+560px. The strip is horizontal rather than the phase 1 rail because the store's
+shelf is a full-width carousel; the frame has a `shelf` slot that runs edge to
+edge for it. Which stages a map has is `BetweenMapPlan` (pipelineModel.ts),
+built in useGameSession and frozen once the Debrief closes: picking the
+Promotion sets the capstone, and a live plan would drop the Promotion from the
+store's strip. Every Continue button names where it goes ("Choose your
+promotion", "Open the store", "Start level 11", "Finish the run").
+
+- Debrief (LevelCompleteOverlay): the map's hours are the headline, captioned
+  with what the map could pay; the fold, the hold-to-explain rows, the totals
+  and the certificates are unchanged in content. The totals are gold, because
+  they are hours.
+- Promotion (CapstoneDraftScreen): "Pick 1 of 3" over the perk cards.
+- Store (UpgradeShop): the budget left after the current picks is the
+  headline (it counts down as items are picked); the STORE title row is gone,
+  the chips are left-aligned, the checkpoint banner is a flat panel.
+- ContinuePrompt: a flat panel, the heart beside the title.
+
+**Phase 3.** The main menu is left-aligned: the logo and tagline with the ball
+beside them, the way into a run (Continue, New Game) as buttons with the
+recommended one filled, and everything else as a list of rows with a chevron.
+A first-time ring now goes round the filled Start Game instead of replacing
+the fill. The run result leads with the outcome in its tone, then the banked
+overtime as the headline, then the run's facts as a `Ledger`; the glow disc is
+gone. The tap gate is the flat surface with a sentence-case prompt.
+
+**Phase 4.** The meta screens share two headings, both rewritten in place:
+`MenuHeading` (Certificates, Records, Loadouts, Options, Music) and
+`DraftHeader` with `DraftFrame` (Sprint Planning, Tenure, Ascension). Both are
+left-aligned, 700 weight, ink, with the screen's colour on the icon only.
+Achievements, Tutorial and the pair lobby set their own titles and were moved
+onto the same roles. "Re-enable all tutorials" is a secondary button.
+
+**Phase 5.** `Headline` counts a numeric value (`useCountTo`: up from 0 when
+the stage opens, then to each new value); the Debrief keeps its own count-up,
+timed with the total's. Under the strip, which stays put, each stage's content
+slides in from the right (`Appear` gained `fromX`). Nothing else on these
+screens moves on its own: the checkpoint banner stopped breathing.
+
+Tests: src/test/canvas/pipelineModel.test.ts (the plan, the labels, the frame,
+the motion), plus the existing screen tests. Gallery: `LevelCompleteOverlay-
+storeOnly` and `LevelCompleteOverlay-last` show the strip without a Promotion
+and on the last map.

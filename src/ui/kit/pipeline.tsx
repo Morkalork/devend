@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { ROLE, RADIUS, TEXT } from "../theme";
 import { Label, Pressable, View } from "./core";
 import { tint } from "./style";
+import { useCountTo } from "./motion";
 import { formatHours, ledgerLook, splitLedger, stageMark, type LedgerRow, type Stage } from "./pipelineStyle";
 
 // ── Stage rail ─────────────────────────────────────────────────────────────
@@ -63,11 +64,47 @@ export function StageRail({ stages, accent, children }: StageRailProps) {
   );
 }
 
+// ── Stage strip ────────────────────────────────────────────────────────────
+
+/**
+ * The same stages as the rail, on one line: what the real between-map
+ * screens use. The store's shelf is a full-width carousel and the debrief a
+ * column of rows, and both need the width a rail's gutter would take, so the
+ * stages sit across the top instead. Wraps onto a second line when the names
+ * do not fit (Swedish runs long).
+ */
+export function StageStrip({ stages, accent }: { stages: readonly Stage[]; accent: number }) {
+  return (
+    <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 6, rowGap: 6, alignSelf: "stretch" }}>
+      {stages.map((s, i) => {
+        const mark = stageMark(s.state, accent);
+        return (
+          <View key={s.id} label={`stage-${s.id}`} layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            {i > 0 && <View layout={{ width: 10, height: 2, backgroundColor: ROLE.edge }} />}
+            <View layout={{
+              width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: mark.ring,
+              backgroundColor: mark.filled ? mark.ring : ROLE.surface,
+            }} />
+            <Label text={s.title} font="display" size={TEXT.xs} weight={s.state === "now" ? "700" : "500"}
+              color={s.state === "now" ? ROLE.hours : mark.title} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ── Headline ───────────────────────────────────────────────────────────────
 
 export interface HeadlineProps {
-  /** The figure, already formatted without its unit ("96", "+96"). */
-  value: string;
+  /**
+   * The figure without its unit. A number counts to itself (up from 0 when
+   * the stage opens, then to each new value); a string is drawn as given,
+   * for a figure the caller already animates or one that is not a count.
+   */
+  value: string | number;
+  /** A number drawn with its sign ("+96"). */
+  signed?: boolean;
   /** Set apart in gold after the figure ("h"); omit for a bare number. */
   unit?: string;
   /** One line under it ("of 110h possible"). */
@@ -77,11 +114,13 @@ export interface HeadlineProps {
 }
 
 /** The one big figure a stage is about, left-aligned, its unit in gold. */
-export function Headline({ value, unit, caption, size = 44, color = ROLE.ink }: HeadlineProps) {
+export function Headline({ value, signed, unit, caption, size = 44, color = ROLE.ink }: HeadlineProps) {
+  const counted = useCountTo(typeof value === "number" ? value : 0);
+  const text = typeof value === "number" ? `${signed && counted >= 0 ? "+" : ""}${counted}` : value;
   return (
     <View layout={{ gap: 2 }}>
       <View layout={{ flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
-        <Label text={value} font="display" weight="700" size={size} color={color} lineHeight={Math.round(size * 1.05)} />
+        <Label text={text} font="display" weight="700" size={size} color={color} lineHeight={Math.round(size * 1.05)} />
         {unit && (
           <Label text={unit} font="display" weight="700" size={Math.round(size * 0.42)} color={ROLE.hours}
             layout={{ marginBottom: Math.round(size * 0.14) }} />

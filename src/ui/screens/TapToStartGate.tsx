@@ -20,7 +20,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isAudioUnlocked, isAwaitingUserGesture, startMenuMusic } from "@/lib/gameMusic";
-import { Appear, Label, Pressable, TEXT, View, hex, tint, usePulse, useUiScreen } from "../kit/ui";
+import { Appear, Label, Pressable, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { GameTitle } from "./welcomeParts";
 
 /**
@@ -84,21 +84,21 @@ export function TapToStartGate({ accentColor }: { accentColor?: string }) {
           label={t("welcome.tapToStart")}
           layout={{
             width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center", gap: 40,
-            backgroundColor: tint(0x000804, 0.97),
+            backgroundColor: ROLE.surface,
           }}
         >
           <Appear fromScale={0.92} duration={0.5}>
             <GameTitle text="Dev/End" />
           </Appear>
+          {/* Sentence case in the display face, like every label in the redo;
+              the breathing is what says "tap", not shouting. */}
           <Label
             text={t("welcome.tapToStart")}
             font="display"
-            size={TEXT["2xl"]}
-            weight="700"
-            upper
-            letterSpacing={TEXT["2xl"] * 0.35}
+            size={TEXT.lg}
+            weight="600"
+            letterSpacing={1}
             color={accent}
-            glow={18}
             alpha={1 - 0.65 * pulse}
           />
         </Pressable>

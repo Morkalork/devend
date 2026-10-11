@@ -16,7 +16,7 @@ import { type Achievement, ACHIEVEMENT_STAT_LABELS } from "@/types/achievement";
 import type { MetaProgressionStats } from "@/types/metaProgression";
 import { contentText } from "@/i18n/content";
 import {
-  Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, usePulse, useTween, useUiScreen,
+  Appear, COLOR, Icon, Label, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, usePulse, useTween, useUiScreen,
 } from "../kit/ui";
 import { achievementProgress, splitAchievements } from "./achievementsModel";
 
@@ -59,13 +59,13 @@ export function AchievementsScreen({
   const listWidth = Math.min(576, screen.width - 32);
 
   return (
-    <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.92) }}>
+    <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(ROLE.surface, 0.96) }}>
       {/* Header. It wraps: on a phone the title leaves no room beside it for
           the count, which then drops to its own line, right-aligned, instead
           of being squeezed into a column of single letters. */}
       <View layout={{
         flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 4,
-        paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: tint(0x000a05, 0.95),
+        paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: ROLE.raised,
       }}>
         <Pressable onTap={onBack} label={t("achievements.back")} layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Icon icon={ChevronLeft} size={20} color={accent} />
@@ -73,7 +73,7 @@ export function AchievementsScreen({
         </Pressable>
         <View layout={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 8 }}>
           <Icon icon={Trophy} size={20} color={accent} />
-          <Label text={t("achievements.title")} size={TEXT.lg} weight="900" font="display" upper letterSpacing={1.8} color={accent} />
+          <Label text={t("achievements.title")} size={TEXT.lg} weight="700" font="display" color={ROLE.ink} />
         </View>
         <View layout={{ flexGrow: 1, alignItems: "flex-end" }}>
           <Label
@@ -82,12 +82,12 @@ export function AchievementsScreen({
           />
         </View>
       </View>
-      <View layout={{ height: 1, backgroundColor: tint(accent, 0x44 / 255) }} />
+      <View layout={{ height: 1, backgroundColor: ROLE.edge }} />
 
       {/* Current stats */}
       <View layout={{
         flexDirection: "row", flexWrap: "wrap", columnGap: 24, rowGap: 4,
-        paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, backgroundColor: tint(0x000804, 0.9),
+        paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, backgroundColor: ROLE.surface,
       }}>
         {Object.entries(statLabels).map(([key, label]) => (
           <View key={key} layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>

@@ -6,16 +6,21 @@
  * The pick is mandatory (it's a pure gift) and permanent for the rest of the
  * run; the two passed-over capstones are gone for good, which is what makes
  * the choice a run-defining moment.
+ *
+ * It is the Promotion stage of the between-map pipeline (UI_REDO_PLAN.md), so
+ * it draws in the PipelineFrame between the Debrief and the Store.
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Award, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Award, Sparkles } from "lucide-react";
 import type { CapstoneConfig } from "@/types/capstone";
 import { contentText } from "@/i18n/content";
-import { Appear, Icon, Label, Modal, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
+import { Appear, Icon, Label, Modal, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { DraftCard } from "./DraftCard";
-import { DraftFrame, DraftGrid, DraftHeader, IconRow, TopRule } from "./draftParts";
+import { DraftGrid, IconRow, TopRule } from "./draftParts";
+import { PipelineFrame } from "./PipelineFrame";
+import { samplePlan, type BetweenMapPlan } from "./pipelineModel";
 import { ArcadeButton } from "../kit/ui";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
@@ -23,16 +28,20 @@ interface CapstoneDraftScreenProps {
   offers: CapstoneConfig[];
   onSelect: (capstone: CapstoneConfig) => void;
   accentColor?: string;
+  /** The stages between the map just won and the next; a sample one in the gallery. */
+  pipeline?: BetweenMapPlan;
 }
 
 export function CapstoneDraftScreen({
   offers,
   onSelect,
   accentColor = "#00ff88",
+  pipeline,
 }: CapstoneDraftScreenProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   const accent = hex(accentColor);
+  const plan = pipeline ?? samplePlan();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Capstone whose press-and-hold detail overlay is open.
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -79,16 +88,14 @@ export function CapstoneDraftScreen({
   })();
 
   return (
-    <DraftFrame overlay={detail}>
-      <DraftHeader
-        icon={Award}
-        accent={accent}
-        title={t("capstoneDraft.title")}
-        lines={[
-          { text: t("capstoneDraft.subtitle"), alpha: 0.75 },
-          { text: t("capstoneDraft.exclusiveHint"), size: TEXT.xs, color: DRAFT_HINT },
-        ]}
-      />
+    <PipelineFrame
+      plan={plan}
+      at="promotion"
+      accent={accent}
+      headline={{ value: t("pipeline.pickOne", { count: offers.length }), caption: t("capstoneDraft.subtitle") }}
+      overlay={detail}
+    >
+      <Label text={t("capstoneDraft.exclusiveHint")} size={TEXT.xs} color={ROLE.muted} wrap />
 
       <DraftGrid count={offers.length}>
         {offers.map((cap, i) => (
@@ -109,17 +116,17 @@ export function CapstoneDraftScreen({
       </DraftGrid>
 
       {/* Press-and-hold discovery hint */}
-      <Label text={t("capstoneDraft.holdHint")} size={11} color={DRAFT_HINT} wrap align="center" />
+      <Label text={t("capstoneDraft.holdHint")} size={11} color={ROLE.muted} wrap />
 
       {/* Confirm. No skip: a capstone is a pure gift, but an exclusive one. */}
       <Appear fromY={10} delay={0.5}>
         <ArcadeButton
-          icon={Play}
+          iconAfter={ArrowRight}
           text={selectedId ? t("capstoneDraft.confirmButton") : t("capstoneDraft.pickHint")}
           disabled={!selectedId}
           onTap={confirm}
         />
       </Appear>
-    </DraftFrame>
+    </PipelineFrame>
   );
 }

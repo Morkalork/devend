@@ -18,6 +18,24 @@ export function useTween(target: number, duration = 0.3, ease: TweenEase = "ease
   return value;
 }
 
+/**
+ * A figure that counts: up from 0 on mount, then from wherever it is to each
+ * new target (the store's budget counting down as items are picked). Whole
+ * numbers only, since every figure it is used for is hours.
+ */
+export function useCountTo(target: number, duration = 0.6): number {
+  const [value, setValue] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const controls = animate(from.current, target, {
+      duration, ease: "easeOut",
+      onUpdate: (v: number) => { from.current = v; setValue(v); },
+    });
+    return () => controls.stop();
+  }, [target, duration]);
+  return Math.round(value);
+}
+
 /** 0..1 back and forth forever, for a pulse or a breath. */
 export function usePulse(periodMs = 1600, enabled = true): number {
   const [t, setT] = useState(0);

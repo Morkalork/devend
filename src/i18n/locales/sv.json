@@ -219,7 +219,7 @@
     "unlockHoursSpent": "Spendera {{required}} certifikattimmar i denna butik (på valfria certifikat).",
     "progressLabelHoursSpent": "spenderade timmar",
     "unlockKeepPlaying": "Fortsätt spela för att låsa upp.",
-    "title": "CERTIFIKAT",
+    "title": "Certifikat",
     "certificateHours": "Certifikattimmar",
     "earnRate": "Tjäna 1h för var 5:e avklarad nivå",
     "sectionAvailable": "Tillgängliga",
@@ -599,7 +599,7 @@
     "returnHome": "Tillbaka till start"
   },
   "options": {
-    "title": "ALTERNATIV",
+    "title": "Alternativ",
     "language": "Språk",
     "sound": "Ljud",
     "music": "Musik",
@@ -1966,5 +1966,22 @@
     "objective": "Mål",
     "hazardPay": "Risktillägg",
     "push": "Pressbonus"
+  },
+  "pipeline": {
+    "afterLevel": "Efter nivå {{level}}",
+    "debrief": "Genomgång",
+    "promotion": "Befordran",
+    "store": "Butik",
+    "level": "Nivå {{level}}",
+    "ascension": "Ascension",
+    "toPromotion": "Välj din befordran",
+    "toStore": "Öppna butiken",
+    "toLevel": "Starta nivå {{level}}",
+    "toAscension": "Avsluta omgången",
+    "ofPossible": "av {{hours}} h som banan kunde ge",
+    "fullPay": "Allt som banan kunde ge",
+    "toSpend": "att spendera före nivå {{level}}",
+    "toSpendLast": "att spendera",
+    "pickOne": "Välj 1 av {{count}}"
   }
 }

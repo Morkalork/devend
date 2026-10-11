@@ -46,13 +46,15 @@ export interface AppearProps {
   layout?: Layout;
   /** Start offset in px (slides in from below when positive). */
   fromY?: number;
+  /** Start offset in px (slides in from the right when positive). */
+  fromX?: number;
   fromScale?: number;
   duration?: number;
   delay?: number;
 }
 
 /** Fades (and optionally slides or scales) its content in on mount: framer-motion's `initial` -> `animate`. */
-export function Appear({ children, layout, fromY = 0, fromScale = 1, duration = 0.25, delay = 0 }: AppearProps) {
+export function Appear({ children, layout, fromY = 0, fromX = 0, fromScale = 1, duration = 0.25, delay = 0 }: AppearProps) {
   const ref = useRef<LayoutContainer | null>(null);
   useEffect(() => {
     const node = ref.current;
@@ -66,12 +68,13 @@ export function Appear({ children, layout, fromY = 0, fromScale = 1, duration = 
         // `y`, not pivot: @pixi/layout builds the transform from the layout
         // position plus `position`, and ignores pivot.
         node.y = fromY * (1 - t);
+        node.x = fromX * (1 - t);
         const s = fromScale + (1 - fromScale) * t;
         node.scale.set(s);
       },
     });
     return () => controls.stop();
-  }, [duration, delay, fromY, fromScale]);
+  }, [duration, delay, fromY, fromX, fromScale]);
   return (
     <layoutContainer ref={ref} layout={layout ?? {}}>
       {children}

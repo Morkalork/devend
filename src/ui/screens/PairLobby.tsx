@@ -523,7 +523,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
             layout={{ padding: 8, borderRadius: RADIUS.lg, backgroundColor: COLOR.muted }}>
             <Icon icon={ArrowLeft} size={20} />
           </Pressable>
-          <Label text={t("pair.title")} size={TEXT["2xl"]} weight="700" color={COLOR.primary} />
+          <Label text={t("pair.title")} size={TEXT["2xl"]} font="display" weight="700" color={COLOR.foreground} />
         </View>
 
         <ScrollView layout={{ flex: 1 }}>

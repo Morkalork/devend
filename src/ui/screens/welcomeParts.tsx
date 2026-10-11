@@ -9,7 +9,7 @@ import { useCallback, useMemo } from "react";
 import { FillGradient, TextStyle, type Graphics, type TextStyleFontWeight } from "pixi.js";
 import { Sparkles } from "lucide-react";
 import {
-  COLOR, FONT, GOLD, Icon, Label, Pressable, RADIUS, RESOLUTION, View, fitTextWidth, hsl, tint, useClock, usePulse,
+  COLOR, FONT, GOLD, Icon, Label, Pressable, RADIUS, RESOLUTION, ROLE, View, fitTextWidth, hsl, tint, useClock, usePulse,
   type IconSource,
 } from "../kit/ui";
 
@@ -50,12 +50,17 @@ export function GameTitle({ text, size = 48 }: { text: string; size?: number }) 
 // ── Screen heading ─────────────────────────────────────────────────────────
 
 /**
- * A menu screen's heading: an icon and a display-face title side by side, centred.
+ * A menu screen's heading (UI_REDO_PLAN.md, phase 4): the icon and the title
+ * side by side, left-aligned across the column, the title in the display face
+ * at 700 in ink and the icon carrying the screen's colour. It used to be
+ * centred in a 900 weight; one left edge for every screen is what makes the
+ * menus read as one interface.
+ *
  * A title too long for `maxWidth` (a long translation, a narrow phone) wraps
- * under itself instead of running off the screen, as the DOM's h1 did; a
- * single word that does not fit is scaled down to the room.
+ * under itself instead of running off the screen; a single word that does
+ * not fit is scaled down to the room.
  */
-export function MenuHeading({ icon, iconColor, text, size, maxWidth, letterSpacing = size * 0.05, weight = "900", iconSize = 32 }: {
+export function MenuHeading({ icon, iconColor, text, size, maxWidth, letterSpacing = size * 0.02, weight = "700", iconSize = 26 }: {
   icon: IconSource; iconColor: number; text: string; size: number; maxWidth: number;
   letterSpacing?: number; weight?: TextStyleFontWeight; iconSize?: number;
 }) {
@@ -66,13 +71,13 @@ export function MenuHeading({ icon, iconColor, text, size, maxWidth, letterSpaci
   const oneWord = !/\s/.test(text.trim());
   const k = fits || !oneWord ? 1 : room / natural;
   return (
-    <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}>
+    <View layout={{ flexDirection: "row", alignItems: "center", alignSelf: "stretch", gap: 12 }}>
       <Icon icon={icon} size={iconSize} color={iconColor} />
       {fits || oneWord ? (
-        <Label text={text} size={size * k} font="display" weight={weight} letterSpacing={letterSpacing * k} />
+        <Label text={text} size={size * k} font="display" weight={weight} letterSpacing={letterSpacing * k} color={ROLE.ink} />
       ) : (
         <View layout={{ width: room }}>
-          <Label text={text} size={size} font="display" weight={weight} letterSpacing={letterSpacing} align="center" wrap />
+          <Label text={text} size={size} font="display" weight={weight} letterSpacing={letterSpacing} color={ROLE.ink} wrap />
         </View>
       )}
     </View>
@@ -91,16 +96,16 @@ export function NewBadge() {
   );
 }
 
-/** The `bg-white/20 rounded-full` pill after a menu label (streak, hours, count). */
+/** The pill after a menu label (streak, hours, count): a flat edge-coloured lozenge. */
 export function MenuChip({ text, icon, iconColor }: { text: string; icon?: Parameters<typeof Icon>[0]["icon"]; iconColor?: number }) {
   return (
     <View layout={{
       flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 4,
       paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2,
-      borderRadius: RADIUS.full, backgroundColor: tint(COLOR.white, 0.2),
+      borderRadius: RADIUS.full, backgroundColor: ROLE.edge,
     }}>
-      {icon && <Icon icon={icon} size={12} color={iconColor ?? COLOR.white} />}
-      <Label text={text} size={12} font="display" upper color={COLOR.white} />
+      {icon && <Icon icon={icon} size={12} color={iconColor ?? ROLE.ink} />}
+      <Label text={text} size={12} font="display" color={ROLE.ink} />
     </View>
   );
 }

@@ -614,6 +614,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onPurchase={session.handlePurchaseUpgrade}
                   onContinue={session.handleContinueFromShop}
                   accentColor={accentHex}
+                  pipeline={session.betweenMapPlan}
                   extraShopItems={session.activeModifiers.extraShopItems}
                   shopRestockCount={session.activeModifiers.shopRestockCount}
                   shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}
@@ -653,6 +654,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   offers={session.capstoneOffers}
                   onSelect={session.handleSelectCapstone}
                   accentColor={accentHex}
+                  pipeline={session.betweenMapPlan}
                 />
               </CanvasLayer>
             )}
@@ -845,6 +847,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             accentColor={accentHex}
             newlyUnlockedCerts={session.pendingCertUnlocks}
             pace={session.levelPace}
+            pipeline={session.betweenMapPlan}
           />
         )}
       </CanvasLayer>

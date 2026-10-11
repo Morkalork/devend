@@ -9,9 +9,9 @@
  * the deeper it was buried. The middle row owns the overflow; the bar below it
  * never moves.
  *
- * The CRT backdrop the DOM screen drew behind itself is rendered once,
- * globally, under the interface canvas; this screen keeps the DOM's 90% wash
- * over it.
+ * Drawn in the redo's style (UI_REDO_PLAN.md, phase 3): left-aligned on the
+ * flat surface, the outcome in its tone, then one big figure (the overtime
+ * banked, or the level reached), then the run's facts as a ledger.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,10 @@ import { failHeadline, failLines } from "@/lib/mapFailure";
 import type { RunRecap } from "@/lib/buildRecap";
 import type { RunRankInfo } from "@/lib/runLedger";
 import { shareRunCard } from "@/lib/shareCard";
-import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, RADIUS, iconNodeOf, tint, useUiScreen, type IconNode, type IconSource, type Layout } from "../kit/ui";
+import {
+  Appear, COLOR, Headline, Icon, Label, Ledger, ROLE, ScrollView, TEXT, View, RADIUS, iconNodeOf, tint, useUiScreen,
+  type IconNode, type IconSource, type Layout, type LedgerRow,
+} from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { ArcadeButton } from "../kit/ui";
 import { RichParagraph, TopRule } from "./draftParts";
@@ -68,7 +71,7 @@ const DAILY = 0x4ade80;
 const BAR_FADE = 40;
 
 /**
- * A centred icon + text line (`flex items-center justify-center gap-*`) that
+ * An icon + text line, left-aligned like the rest of the redo, that
  * wraps: a phone's column is narrower than several of these lines in the
  * display face, and the words then flow onto a second line under the first
  * instead of running off the screen.
@@ -79,7 +82,7 @@ function IconLine({ icon, iconColor, iconSize = 16, gap = 6, layout, text, ...lo
 }) {
   return (
     <View layout={{ alignSelf: "stretch", ...(layout ?? {}) }}>
-      <RichParagraph {...look} color={look.color ?? COLOR.foreground} runs={[{ text }]}
+      <RichParagraph {...look} align="left" color={look.color ?? ROLE.ink} runs={[{ text }]}
         lead={<Icon icon={icon} size={iconSize} color={iconColor} />} leadGap={gap} />
     </View>
   );
@@ -111,7 +114,7 @@ export function ResultScreen({
   const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (shareTimer.current) clearTimeout(shareTimer.current); }, []);
   const tone = isWin ? SUCCESS : DANGER;
-  const columnWidth = Math.min(448, screen.width - 48);
+  const columnWidth = Math.min(448, screen.width - 32);
 
   const { buildName, buildTitle } = buildIdentity(runRecap, t);
   const ladder = ladderBlock(result, runRank, t);
@@ -163,16 +166,6 @@ export function ResultScreen({
     return <ArcadeButton key={kind} variant="secondary" icon={Home} text={t("result.mainMenu")} onTap={onMainMenu} />;
   };
 
-  // The soft glow behind the outcome (a 600px blurred disc in the DOM): rings
-  // of the tone that thicken toward the middle stand in for the blur.
-  const drawGlow = useCallback((g: Graphics) => {
-    g.clear();
-    const steps = 14;
-    for (let i = 0; i < steps; i++) {
-      g.circle(300, 300, 330 - i * 10).fill({ color: tone, alpha: 0.1 / steps });
-    }
-  }, [tone]);
-
   // The pinned bar's own height (padding + buttons + gaps): the recap scrolls
   // under it, so it also pads the recap's end clear of the buttons.
   const barHeight = pinned.length > 0 ? 16 + 24 + pinned.length * 52 + (pinned.length - 1) * 12 : 0;
@@ -185,83 +178,72 @@ export function ResultScreen({
     g.clear();
     const steps = BAR_FADE; // 1px bands: coarser ones stripe the text they fade
     for (let i = 0; i < steps; i++) {
-      g.rect(0, -BAR_FADE + (BAR_FADE * i) / steps, screen.width, BAR_FADE / steps + 0.5).fill({ color: COLOR.background, alpha: (i + 0.5) / steps });
+      g.rect(0, -BAR_FADE + (BAR_FADE * i) / steps, screen.width, BAR_FADE / steps + 0.5).fill({ color: ROLE.surface, alpha: (i + 0.5) / steps });
     }
-    g.rect(0, 0, screen.width, barHeight + 200).fill({ color: COLOR.background, alpha: 1 });
+    g.rect(0, 0, screen.width, barHeight + 200).fill({ color: ROLE.surface, alpha: 1 });
   }, [barHeight, screen.width]);
 
-  return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, 0.9) }}>
-      {/* Background effect */}
-      <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, overflow: "hidden" }}>
-        <Appear fromScale={0} duration={1}
-          layout={{ position: "absolute", left: screen.width / 2 - 300, top: screen.height / 2 - 300, width: 600, height: 600 }}>
-          <pixiGraphics draw={drawGlow} />
-        </Appear>
-      </View>
+  // The run's facts as one ledger: where it ended, how much board was left,
+  // how many maps it cleared. Arena remaining is only meaningful on a win; on
+  // a loss the number says nothing about the run, so the row is dropped.
+  const facts: LedgerRow[] = [
+    { label: isWin ? t("result.completedLevel") : t("result.failedAtLevel"), value: String(levelNumber), tone: "note" },
+    { label: levelId, tone: "note" },
+    ...(isWin ? [{ label: t("result.arenaRemaining"), value: `${remainingPercent}%`, tone: "note" as const }] : []),
+    ...(runLevelsCompleted > 0 ? [{ label: t("result.levelsCompleted"), value: String(runLevelsCompleted), tone: "note" as const }] : []),
+  ];
 
+  return (
+    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: ROLE.surface }}>
       {/* The recap. Centred with auto margins rather than justify-center: a
           centred column that overflows puts its own top out of reach, and the
-          top of this one is the word GAME OVER. */}
-      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 24, paddingBottom: 12 + barHeight + (barHeight > 0 ? BAR_FADE : 0) }}>
-        <Appear fromScale={0.9} duration={0.5}
-          layout={{ width: columnWidth, alignItems: "center", gap: 20, marginTop: "auto", marginBottom: "auto" }}>
-          {/* Icon */}
-          <Appear fromScale={0} delay={0.2} duration={0.5}
-            layout={{ width: 80, height: 80, borderRadius: RADIUS.full, alignItems: "center", justifyContent: "center", backgroundColor: tint(tone, 0.2), borderWidth: 2, borderColor: tone }}>
-            <Icon icon={isWin ? Trophy : Skull} size={40} color={tone} />
-          </Appear>
-
-          {/* Title */}
-          <Appear fromY={20} delay={0.3} layout={{ alignSelf: "stretch" }}>
-            <Label text={isWin ? t("result.youWin") : t("result.gameOver")} size={screen.width >= 768 ? TEXT["4xl"] : TEXT["3xl"]}
-              font="display" weight="900" letterSpacing={screen.width >= 768 ? 1.8 : 1.5} color={tone} glow={30} wrap align="center" />
-          </Appear>
-
-          {/* Completed all levels message */}
-          {completedAllLevels && (
-            <Appear fromY={10} delay={0.35} layout={{ alignSelf: "stretch" }}>
-              <Label text={t("result.completedAllLevels")} size={TEXT["2xl"]} font="display" color={COLOR.primary} align="center" wrap />
-            </Appear>
-          )}
+          top of this one is the outcome. */}
+      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 16, paddingRight: 16, paddingTop: 24, paddingBottom: 12 + barHeight + (barHeight > 0 ? BAR_FADE : 0) }}>
+        <Appear fromY={8} duration={0.3}
+          layout={{ width: columnWidth, gap: 20, marginTop: "auto", marginBottom: "auto" }}>
+          {/* The outcome, then the one big figure: the overtime the run banked
+              when it banked any, otherwise the level it reached. */}
+          <View layout={{ gap: 12 }}>
+            <IconLine icon={isWin ? Trophy : Skull} iconColor={tone} iconSize={20} gap={8}
+              text={isWin ? t("result.youWin") : t("result.gameOver")} size={TEXT.lg} font="display" weight="700" color={tone} />
+            {ladder
+              ? <Headline value={result.totalScore ?? 0} unit="h" caption={t("result.bankedOvertime")} />
+              : <Headline value={String(levelNumber)} caption={isWin ? t("result.completedLevel") : t("result.failedAtLevel")} />}
+            {completedAllLevels && (
+              <Label text={t("result.completedAllLevels")} size={TEXT.base} font="display" color={COLOR.primary} wrap />
+            )}
+          </View>
 
           {/* Ascension summary */}
           {!!ascensionDepth && ascensionDepth > 0 && (
-            <Appear fromY={10} delay={0.4} layout={{ alignSelf: "stretch", alignItems: "center" }}>
-              <IconLine icon={ArrowUpCircle} iconColor={TW.peer} iconSize={24} gap={8} layout={{ marginBottom: 4 }}
-                text={t("result.ascensionDepth", { depth: ascensionDepth })} size={TEXT.xl} font="display" weight="700" color={TW.peer} glow={16} />
+            <Appear fromY={10} delay={0.1} layout={{ alignSelf: "stretch", gap: 4 }}>
+              <IconLine icon={ArrowUpCircle} iconColor={TW.peer} iconSize={20} gap={8}
+                text={t("result.ascensionDepth", { depth: ascensionDepth })} size={TEXT.base} font="display" weight="700" color={TW.peer} />
               {loadoutNames && loadoutNames.length > 0 && (
-                <Label text={t("result.loadoutsBraved", { loadouts: loadoutNames.join(" · ") })} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />
+                <Label text={t("result.loadoutsBraved", { loadouts: loadoutNames.join(" · ") })} size={TEXT.xs} color={ROLE.muted} wrap />
               )}
             </Appear>
           )}
 
           {/* New loadout unlocks */}
           {newlyUnlockedLoadouts.length > 0 && (
-            <Appear fromY={10} delay={0.45} layout={{ alignSelf: "stretch", alignItems: "center", gap: 4 }}>
-              <IconLine icon={Backpack} iconColor={COLOR.primary} iconSize={20} gap={8}
-                text={t("result.newLoadoutsUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} upper letterSpacing={0.7} />
-              <Label text={newlyUnlockedLoadouts.join(" · ")} size={TEXT.sm} align="center" wrap />
+            <Appear fromY={10} delay={0.15} layout={{ alignSelf: "stretch", gap: 4 }}>
+              <IconLine icon={Backpack} iconColor={COLOR.primary} iconSize={18} gap={8}
+                text={t("result.newLoadoutsUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} />
+              <Label text={newlyUnlockedLoadouts.join(" · ")} size={TEXT.sm} color={ROLE.ink} wrap />
             </Appear>
           )}
 
           {/* Stats */}
-          <Appear fromY={20} delay={0.4} layout={{ alignSelf: "stretch", alignItems: "center", gap: 16 }}>
-            <View layout={{ alignItems: "center" }}>
-              <Label text={isWin ? t("result.completedLevel") : t("result.failedAtLevel")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7}
-                layout={{ marginBottom: 4 }} />
-              <Label text={String(levelNumber)} size={TEXT["3xl"]} font="display" weight="700" />
-              <Label text={levelId} size={TEXT.xs} color={COLOR.mutedForeground} layout={{ marginTop: 4 }} />
-            </View>
-
+          <Appear fromY={10} delay={0.2} layout={{ alignSelf: "stretch", gap: 12 }}>
             {/* Why. A run that ends on a win condition the player never saw stated
                 is the same silent loss the in-map overlay exists to prevent. */}
             {!isWin && failure && (
-              <View layout={{ alignSelf: "stretch", borderRadius: RADIUS.lg, paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: tint(DANGER, 0.1), borderWidth: 1, borderColor: tint(DANGER, 0.3) }}>
+              <View layout={{ alignSelf: "stretch", borderRadius: RADIUS.sm, paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: tint(DANGER, 0.1), borderWidth: 1, borderColor: tint(DANGER, 0.3) }}>
                 <Label text={failHeadline(t, failure)} size={TEXT.sm} weight="600" color={DANGER} wrap layout={{ marginBottom: 4 }} />
                 {lines.length > 0 && (
                   <>
-                    <Label text={t("mapFailure.stillNeeded")} size={TEXT.xs} color={COLOR.mutedForeground} upper letterSpacing={0.6} layout={{ marginTop: 8, marginBottom: 4 }} />
+                    <Label text={t("mapFailure.stillNeeded")} size={TEXT.xs} color={ROLE.muted} upper letterSpacing={0.6} layout={{ marginTop: 8, marginBottom: 4 }} />
                     <View layout={{ gap: 2 }}>
                       {lines.map((line, i) => <Label key={i} text={line} size={TEXT.sm} wrap />)}
                     </View>
@@ -270,26 +252,12 @@ export function ResultScreen({
               </View>
             )}
 
-            {/* Arena remaining is only meaningful on a win; on a loss the number
-                says nothing about the run, so the row is dropped. */}
-            {isWin && (
-              <View layout={{ alignItems: "center" }}>
-                <Label text={t("result.arenaRemaining")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} layout={{ marginBottom: 4 }} />
-                <Label text={`${remainingPercent}%`} size={48} font="display" weight="700" />
-              </View>
-            )}
+            <Ledger accent={tone} rows={facts} />
 
             {/* Certificate hours earned */}
-            {runLevelsCompleted > 0 && (
-              <Appear fromScale={0.9} delay={0.45} layout={{ alignSelf: "stretch", alignItems: "center", marginTop: 16, paddingTop: 16 }}>
-                <TopRule />
-                <Label text={t("result.levelsCompleted")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} layout={{ marginBottom: 4 }} />
-                <Label text={String(runLevelsCompleted)} size={TEXT["3xl"]} font="display" weight="700" layout={{ marginBottom: 8 }} />
-                {runHoursAwarded > 0 && (
-                  <IconLine icon={HEXAGON_FILLED} iconColor={COLOR.white} iconSize={24} gap={8}
-                    text={t("result.certificateHours", { count: runHoursAwarded })} size={TEXT["2xl"]} font="display" weight="700" color={COLOR.white} />
-                )}
-              </Appear>
+            {runHoursAwarded > 0 && (
+              <IconLine icon={HEXAGON_FILLED} iconColor={ROLE.hours} iconSize={20} gap={8}
+                text={t("result.certificateHours", { count: runHoursAwarded })} size={TEXT.lg} font="display" weight="700" color={ROLE.hours} />
             )}
           </Appear>
 
@@ -297,42 +265,40 @@ export function ResultScreen({
               it landed on the all-time Top 10, with the near-miss gap printed as
               the next target. */}
           {ladder && (
-            <Appear fromY={10} delay={0.45} layout={{ alignSelf: "stretch", alignItems: "center", gap: 4, paddingTop: 16 }}>
+            <Appear fromY={10} delay={0.45} layout={{ alignSelf: "stretch", gap: 4, paddingTop: 16 }}>
               <TopRule />
-              <Label text={t("result.bankedOvertime")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} />
-              <Label text={ladder.bankedText} size={TEXT["4xl"]} font="display" weight="700" />
               {ladder.newBestText && (
-                <IconLine icon={Medal} iconColor={TW.gold} text={ladder.newBestText} size={TEXT.sm} weight="700" color={TW.gold} glow={12} />
+                <IconLine icon={Medal} iconColor={TW.gold} text={ladder.newBestText} size={TEXT.sm} weight="700" color={TW.gold} />
               )}
-              {ladder.rankText && <Label text={ladder.rankText} size={TEXT.sm} weight="700" color={TW.gold} align="center" wrap />}
-              {ladder.gapToNextText && <Label text={ladder.gapToNextText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
-              {ladder.gapToTop10Text && <Label text={ladder.gapToTop10Text} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
+              {ladder.rankText && <Label text={ladder.rankText} size={TEXT.sm} weight="700" color={TW.gold} wrap />}
+              {ladder.gapToNextText && <Label text={ladder.gapToNextText} size={TEXT.xs} color={ROLE.muted} wrap />}
+              {ladder.gapToTop10Text && <Label text={ladder.gapToTop10Text} size={TEXT.xs} color={ROLE.muted} wrap />}
               {/* Employee of the Month: the monthly crown can be won even when the
                   all-time Top 10 is out of reach (the comeback ladder). */}
               {ladder.monthBestText && (
-                <IconLine icon={Award} iconColor={TW.peer} text={ladder.monthBestText} size={TEXT.sm} weight="700" color={TW.peer} glow={12} />
+                <IconLine icon={Award} iconColor={TW.peer} text={ladder.monthBestText} size={TEXT.sm} weight="700" color={TW.peer} />
               )}
               {/* Daily Stand-up: today's best + the attendance streak. */}
               {ladder.dayBestText && (
-                <IconLine icon={CalendarDays} iconColor={DAILY} text={ladder.dayBestText} size={TEXT.sm} weight="700" color={DAILY} glow={12} />
+                <IconLine icon={CalendarDays} iconColor={DAILY} text={ladder.dayBestText} size={TEXT.sm} weight="700" color={DAILY} />
               )}
               {ladder.streakText && (
                 <IconLine icon={Flame} iconColor={TW.peer} iconSize={14} gap={4}
-                  text={ladder.streakText} size={TEXT.xs} color={COLOR.mutedForeground} />
+                  text={ladder.streakText} size={TEXT.xs} color={ROLE.muted} />
               )}
-              {ladder.epitaphText && <Label text={ladder.epitaphText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
+              {ladder.epitaphText && <Label text={ladder.epitaphText} size={TEXT.xs} color={ROLE.muted} wrap />}
             </Appear>
           )}
 
           {/* Build recap: what this run WAS. Name the build from its archetype
               lean, credit the capstone, and celebrate a per-archetype best. */}
           {recap && (
-            <Appear fromY={10} delay={0.5} layout={{ alignSelf: "stretch", alignItems: "center", gap: 8, paddingTop: 16 }}>
+            <Appear fromY={10} delay={0.5} layout={{ alignSelf: "stretch", gap: 8, paddingTop: 16 }}>
               <TopRule />
-              <Label text={t("buildRecap.heading")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} />
-              <Label text={recap.buildLine} size={TEXT["2xl"]} font="display" weight="700" align="center" wrap />
+              <Label text={t("buildRecap.heading")} size={TEXT.xs} color={ROLE.muted} />
+              <Label text={recap.buildLine} size={TEXT.xl} font="display" weight="700" color={ROLE.ink} wrap />
               {recap.chips.length > 0 && (
-                <View layout={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, alignSelf: "stretch" }}>
+                <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignSelf: "stretch" }}>
                   {recap.chips.map(({ tag, count }) => (
                     <TagChip key={tag} tag={tag} pill sizeClass="text-[10px]" suffix={String(count)} />
                   ))}
@@ -344,7 +310,7 @@ export function ResultScreen({
               {recap.recordText && (
                 <IconLine icon={Medal} iconColor={TW.yellow400} text={recap.recordText} size={TEXT.sm} weight="700" color={TW.yellow400} />
               )}
-              {recap.bestSoFarText && <Label text={recap.bestSoFarText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
+              {recap.bestSoFarText && <Label text={recap.bestSoFarText} size={TEXT.xs} color={ROLE.muted} wrap />}
             </Appear>
           )}
 
@@ -363,7 +329,7 @@ export function ResultScreen({
           at all when there is no way to play on. */}
       {pinned.length > 0 && (
         <Appear fromY={20} delay={0.55}
-          layout={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingBottom: 24, paddingTop: 16 }}>
+          layout={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingLeft: 16, paddingRight: 16, paddingBottom: 24, paddingTop: 16 }}>
           <View layout={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}>
             <pixiGraphics draw={drawFade} />
           </View>

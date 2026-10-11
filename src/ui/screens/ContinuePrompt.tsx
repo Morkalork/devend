@@ -5,11 +5,14 @@
  * Rendered over the game screen when the player runs out of lives but still
  * has a Continue banked. Spending one refills lives and retries the current
  * level with score + upgrades intact; declining ends the run.
+ *
+ * Drawn in the redo's flat style (UI_REDO_PLAN.md): a raised panel with a 1px
+ * edge, left-aligned, the heart beside the title instead of in a glowing ring.
  */
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RotateCcw, Flag, Heart } from "lucide-react";
-import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, hex, iconNodeOf, tint, useUiScreen, type IconNode } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ROLE, TEXT, View, hex, iconNodeOf, tint, useUiScreen, type IconNode } from "../kit/ui";
 import { ArcadeButton } from "../kit/ui";
 
 interface ContinuePromptProps {
@@ -18,10 +21,6 @@ interface ContinuePromptProps {
   onDecline: () => void;
   accentColor?: string;
 }
-
-/** The card's own near-black green, and the body text's mint. */
-const CARD = 0x0a0f0a;
-const MINT = 0xc8ffd8;
 
 /** The heart filled with the accent, as the DOM drew it (`fill: accentColor`). */
 function filledHeart(color: number): IconNode {
@@ -53,20 +52,18 @@ export function ContinuePrompt({
 
       <Appear fromScale={0.9} fromY={12} duration={0.35}>
         <View layout={{
-          width: cardWidth, alignItems: "center", gap: 20, padding: 24, borderRadius: RADIUS.xl,
-          backgroundColor: CARD, borderWidth: 2, borderColor: accent,
+          width: cardWidth, gap: 16, padding: 20, borderRadius: RADIUS.sm,
+          backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge,
         }}>
-          <View layout={{ width: 64, height: 64, borderRadius: RADIUS.full, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: accent, backgroundColor: tint(accent, 0x22 / 255) }}>
-            <Icon icon={heart} size={36} color={accent} />
+          <View layout={{ alignSelf: "stretch", gap: 6 }}>
+            <View layout={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon icon={heart} size={24} color={accent} />
+              <Label text={t("continue.title")} size={TEXT["2xl"]} font="display" weight="700" color={ROLE.ink} />
+            </View>
+            <Label text={t("continue.body", { count: continuesRemaining })} size={TEXT.sm} color={ROLE.muted} wrap />
           </View>
 
-          <View layout={{ alignSelf: "stretch", alignItems: "center" }}>
-            <Label text={t("continue.title")} size={TEXT["2xl"]} font="display" weight="900" upper letterSpacing={1.2} color={accent} glow={24} />
-            <Label text={t("continue.body", { count: continuesRemaining })} size={TEXT.sm} color={MINT} alpha={0.8} align="center" wrap
-              layout={{ marginTop: 8 }} />
-          </View>
-
-          <View layout={{ alignSelf: "stretch", flexDirection: wide ? "row" : "column", alignItems: "center", gap: 12 }}>
+          <View layout={{ alignSelf: "stretch", flexDirection: wide ? "row" : "column", gap: 12 }}>
             <ArcadeButton variant="primary" icon={RotateCcw} text={t("continue.spendButton")} onTap={onSpend}
               layout={wide ? { flex: 1 } : { alignSelf: "stretch" }} />
             <ArcadeButton variant="secondary" icon={Flag} text={t("continue.declineButton")} onTap={onDecline}

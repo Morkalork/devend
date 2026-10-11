@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import type { TextStyleFontWeight } from "pixi.js";
 import type { LucideIcon } from "lucide-react";
-import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, RADIUS, ROLE, ScrollView, TEXT, View, tint, useUiScreen } from "../kit/ui";
 import { fitTextWidth } from "../kit/arcadeStyle";
 import type { FontRole } from "../theme";
 import { DRAFT_HINT, DRAFT_TEXT, SM_BREAKPOINT, draftColumns, gridRows, richWords, type RichRun } from "./draftModel";
@@ -16,21 +16,20 @@ import { DRAFT_HINT, DRAFT_TEXT, SM_BREAKPOINT, draftColumns, gridRows, richWord
 // ── Screen frame ───────────────────────────────────────────────────────────
 
 /**
- * Full screen, the DOM's `min-h-screen bg-background/90 overflow-y-auto` with
- * its content centred vertically while it fits and scrolling once it does not.
- * The CRT background is drawn globally underneath, so the ground here stays
- * translucent, exactly as the DOM's was over it.
+ * Full screen on the redo's flat surface (UI_REDO_PLAN.md), its content one
+ * left-aligned column capped at the pipeline's width, centred vertically
+ * while it fits and scrolling once it does not.
  */
-export function DraftFrame({ children, overlay, groundAlpha = 0.9 }: { children?: ReactNode; overlay?: ReactNode; groundAlpha?: number }) {
+export function DraftFrame({ children, overlay, groundAlpha = 0.96 }: { children?: ReactNode; overlay?: ReactNode; groundAlpha?: number }) {
   const screen = useUiScreen();
   const pad = screen.width >= SM_BREAKPOINT ? 24 : 16;
-  const contentW = Math.min(screen.width - pad * 2, 768);
+  const contentW = Math.min(screen.width - pad * 2, 720);
   return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, groundAlpha) }}>
+    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(ROLE.surface, groundAlpha) }}>
       <ScrollView layout={{ width: screen.width, height: screen.height }}>
         <View layout={{ minHeight: screen.height, width: screen.width, alignItems: "center", justifyContent: "center", padding: pad }}>
-          <Appear fromScale={0.95} duration={0.4}>
-            <View layout={{ width: contentW, alignItems: "center", gap: 24, paddingTop: 24, paddingBottom: 24 }}>
+          <Appear fromY={8} duration={0.3}>
+            <View layout={{ width: contentW, gap: 20, paddingTop: 16, paddingBottom: 16 }}>
               {children}
             </View>
           </Appear>
@@ -51,35 +50,35 @@ interface DraftHeaderProps {
   lines: { text: string; color?: number; size?: number; alpha?: number; weight?: "400" | "600" }[];
 }
 
-/** The round glowing badge, the big display title and the lines under it. */
+/**
+ * The icon in the screen's accent beside the title, then the lines under it,
+ * all on the column's left edge. (It was a round glowing badge over a centred
+ * 900-weight title.)
+ */
 export function DraftHeader({ icon, accent, title, lines }: DraftHeaderProps) {
   const screen = useUiScreen();
   return (
-    <View layout={{ alignSelf: "stretch", alignItems: "center" }}>
-      <Appear fromScale={0} duration={0.35} delay={0.1}>
-        <View layout={{
-          width: 64, height: 64, marginBottom: 12, borderRadius: RADIUS.full, alignItems: "center", justifyContent: "center",
-          borderWidth: 2, borderColor: accent, backgroundColor: tint(accent, 0x22 / 255),
-        }}>
-          <Icon icon={icon} size={36} color={accent} />
+    <View layout={{ alignSelf: "stretch", gap: 4 }}>
+      <View layout={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
+        <Icon icon={icon} size={28} color={accent} />
+        <View layout={{ flex: 1 }}>
+          <Label
+            text={title}
+            size={screen.width >= SM_BREAKPOINT ? TEXT["3xl"] : TEXT["2xl"]}
+            font="display" weight="700" color={ROLE.ink}
+            wrap
+          />
         </View>
-      </Appear>
-      <Label
-        text={title}
-        size={screen.width >= SM_BREAKPOINT ? TEXT["4xl"] : TEXT["3xl"]}
-        font="display" weight="900" upper letterSpacing={1.5} color={accent} glow={16}
-        wrap align="center"
-      />
+      </View>
       {lines.map((l, i) => (
         <Label
           key={i}
           text={l.text}
           size={l.size ?? TEXT.sm}
-          color={l.color ?? DRAFT_TEXT}
-          alpha={l.alpha}
+          color={l.color ?? ROLE.muted}
+          alpha={l.alpha === undefined ? undefined : Math.max(l.alpha, 0.9)}
           weight={l.weight}
-          wrap align="center"
-          layout={{ marginTop: i === 0 ? 8 : 4 }}
+          wrap
         />
       ))}
     </View>
@@ -152,6 +151,7 @@ interface RichParagraphProps {
   weight?: TextStyleFontWeight;
   upper?: boolean;
   letterSpacing?: number;
+  /** Accepted from older callers; the redo draws no text glow. */
   glow?: number;
   /** Laid out before the first word, on its line (an icon leading a heading). */
   lead?: ReactNode;
@@ -168,7 +168,7 @@ interface RichParagraphProps {
  * themselves, so a centred icon-and-text line can wrap beside its icon.
  */
 export function RichParagraph({
-  runs, size, color, align = "center", font, weight, upper, letterSpacing, glow, lead, leadGap, lineGap = Math.round(size * 0.1),
+  runs, size, color, align = "center", font, weight, upper, letterSpacing, lead, leadGap, lineGap = Math.round(size * 0.1),
 }: RichParagraphProps) {
   // One space of the face as it actually measures, plus the tracking it
   // carries. It was a fixed share of the size tuned for Michroma, whose space
@@ -184,7 +184,7 @@ export function RichParagraph({
         <View key={i} layout={{ flexDirection: "row" }}>
           {group.map((w, j) => (
             <Label key={j} text={w.text} size={size} font={font} color={w.color ?? color} alpha={w.alpha}
-              weight={w.bold ? (w.weight ?? "700") : weight} upper={upper} letterSpacing={letterSpacing} glow={glow} />
+              weight={w.bold ? (w.weight ?? "700") : weight} upper={upper} letterSpacing={letterSpacing} />
           ))}
         </View>
       ))}
