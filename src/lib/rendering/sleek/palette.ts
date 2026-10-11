@@ -88,11 +88,29 @@ export const PALETTE = {
    * silhouette against the territory they stood on and simply vanished. The job
    * here is value separation from the substrate, not chroma: these are furniture
    * and must never compete with the accent for attention.
+   *
+   * Lifted again (0x51705f -> 0x7c9d8e) for low vision: "some of the game
+   * board is too dark ... even people with slightly bad eyesight [must be
+   * able to] differ between a wall and a destructable wall". Under the 3D
+   * board's lighting the old value landed at 1.4-1.65:1 against the floor,
+   * under the 3:1 a shape needs to be seen; this, with the solids' self-lit
+   * share (ThreeRenderer SOLID_SELF_LIT), measures 3.4-3.8:1 on screen.
    */
-  obstacle: 0x51705f,
+  obstacle: 0x7c9d8e,
   /** Lit obstacle edge: bright enough to draw the silhouette on its own. */
   /**
-   * Breakable slabs: the obstacle colour shifted warm at the SAME brightness.
+   * Breakable slabs: gold, and a clear step BRIGHTER than the wall.
+   *
+   * Everything from here to the gold paragraph is the history of why this
+   * used to sit at the wall's brightness. That rule was reversed for low
+   * vision (see `obstacle`): brightness is the cue that survives weak eyesight
+   * and colour-blindness, where a hue shift alone does not, so a destructible
+   * now stands 1.5:1 or more above the wall (measured 1.5-1.65:1 on the 3D
+   * board) while keeping its gold hue, its dark seams and its broken rim. The
+   * "sticker" worry below was a 2D-board effect; on the lit 3D board a
+   * brighter slab still reads as a lit block. objectLighting.test.ts pins it.
+   *
+   * The original note:
    *
    * It used to be `mix(obstacle, amber, 0.18)`, which shifted the hue and took
    * the luma up 20% with it. That made a breakable the brightest thing on the
@@ -114,7 +132,7 @@ export const PALETTE = {
    * chest and the shatter debris (#ffb454) already use, so the board says
    * "this comes apart" in one language instead of three.
    */
-  breakable: 0x8a6a24,
+  breakable: 0xf2bc55,
   /**
    * The rim on a breakable, and the change that actually does the work.
    *
@@ -130,9 +148,10 @@ export const PALETTE = {
    * because the thing it has to say is "one touch", and a player who has
    * learned that gold takes three good hits must never mistake this for gold.
    * Kept apart from the mirror's saturated cyan (a mirror bends fences; this
-   * just breaks) by being nearly white.
+   * just breaks) by being nearly white. Lifted with the wall (0x8fb8c4 ->
+   * 0xbfe4ee) so it keeps its step above it: 7.6-8:1 against the floor.
    */
-  brittle: 0x8fb8c4,
+  brittle: 0xbfe4ee,
   brittleEdge: 0xe8f8ff,
   /**
    * Deformable slabs: the obstacle colour pulled cool and grey at the SAME
@@ -143,9 +162,10 @@ export const PALETTE = {
    * "lit differently" rather than "made of something else" - the mistake the
    * breakable comment above records. Cool and desaturated because the thing it
    * has to read as is dense and soft, a lead-lined pad rather than the warm
-   * brittle stuff that chips.
+   * brittle stuff that chips. Lifted with the wall (0x5f6b7a -> 0x8c99aa)
+   * so it stays at the wall's value, which is the point of this entry.
    */
-  deformable: 0x5f6b7a,
+  deformable: 0x8c99aa,
   /** The same material once it has drunk a lot of speed: duller still. */
   deformableWorn: 0x8ea0b4,
   obstacleEdge: 0x9fd0b6,

@@ -72,6 +72,12 @@ export interface SurfaceMaterialOptions {
   inset?: boolean;
   /** Multiplier on side faces' colour, as a material. */
   sideShade?: number;
+  /**
+   * Extra unlit share of this material's own colour, on top of the shared
+   * `uSelfLit`. For the board's furniture (SOLID_SELF_LIT in ThreeRenderer):
+   * the room's lights alone left a wall at about 1.5:1 against the floor.
+   */
+  selfLitExtra?: number;
   roughness?: number;
   /** The cut preview's darkness mask (cutPreview3d.ts): the floor only. */
   preview?: PreviewUniforms;
@@ -131,6 +137,7 @@ uniform float uPoolWrap;
 uniform float uLampSlot;
 uniform sampler2D uSurface;
 uniform float uSelfLit;
+uniform float uSelfLitExtra;
 uniform float uSideShade;
 varying vec2 vSurfUv;
 varying float vSurfSide;
@@ -175,7 +182,7 @@ ${UNDER_FRAG_MAP}
 
 const FRAG_EMISSIVE = /* glsl */`
 #include <emissivemap_fragment>
-totalEmissiveRadiance += surfColor.rgb * surfShade * uSelfLit;
+totalEmissiveRadiance += surfColor.rgb * surfShade * (uSelfLit + uSelfLitExtra);
 #ifdef SURF_UNDERGLOW
 ${UNDER_FRAG_EMISSIVE}
 #endif
@@ -235,6 +242,7 @@ export function poolLightsChunk(): string {
 export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterialOptions): Material {
   const squash = new Vector3(...(opts.sampleSquash ?? [1, 1, 1]));
   const sideShade = opts.sideShade ?? 0.78;
+  const selfLitExtra = opts.selfLitExtra ?? 0;
   const base = opts.tier === "low"
     ? new MeshLambertMaterial({ color: 0xffffff })
     : new MeshStandardMaterial({ color: 0xffffff, roughness: opts.roughness ?? 0.82, metalness: 0 });
@@ -254,6 +262,7 @@ export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterial
     if (opts.underlay) Object.assign(shader.uniforms, opts.underlay);
     shader.uniforms.uSampleSquash = { value: squash };
     shader.uniforms.uSideShade = { value: sideShade };
+    shader.uniforms.uSelfLitExtra = { value: selfLitExtra };
     const defines = (opts.inset ? "#define SURF_INSET\n" : "")
       + (opts.translucent ? "#define SURF_TRANSLUCENT\n" : "")
       + (opts.preview ? "#define SURF_PREVIEW\n" : "")
@@ -267,6 +276,6 @@ export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterial
   };
   // One program per variant, not one per material instance.
   base.customProgramCacheKey = () =>
-    `surface:${opts.tier}:${opts.inset ? 1 : 0}:${opts.translucent ? 1 : 0}:${opts.preview ? 1 : 0}:${opts.underlay ? 1 : 0}:${squash.toArray().join(",")}:${sideShade}`;
+    `surface:${opts.tier}:${opts.inset ? 1 : 0}:${opts.translucent ? 1 : 0}:${opts.preview ? 1 : 0}:${opts.underlay ? 1 : 0}:${squash.toArray().join(",")}:${sideShade}:${selfLitExtra}`;
   return base;
 }

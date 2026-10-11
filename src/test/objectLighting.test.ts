@@ -23,15 +23,52 @@ const luma = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 const RECT = { left: 0, top: 0, width: 900, height: 900, scale: 1 };
 
 describe("a breakable is the same material as a wall", () => {
-  it("stands at the same brightness as a solid obstacle", () => {
-    // Brightness here means "how much light is falling on this". A breakable is
-    // made of the same stuff standing in the same room, so it cannot be the
-    // brightest thing on the board just for being breakable.
-    const solid = luma(rgb(PALETTE.obstacle));
-    const breakable = luma(rgb(PALETTE.breakable));
-    expect(breakable / solid, "a breakable outshines the wall beside it")
-      .toBeGreaterThan(0.95);
-    expect(breakable / solid).toBeLessThan(1.05);
+  /**
+   * Brightness used to be held level here (breakable within 5% of the wall),
+   * so that a breakable read as the same stuff in the same light rather than as
+   * a sticker. That was reversed on request: "some of the game board is too
+   * dark ... even people with slightly bad eyesight [must be able to] differ
+   * between a wall and a destructable wall". Brightness is the cue that
+   * survives low vision and colour-blindness, where hue alone does not, so a
+   * destructible now stands a clear step brighter than the wall, and the wall a
+   * clear step above the floor. See palette.ts and walls3d/SOLID_SELF_LIT.
+   */
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const rel = (h: number) => {
+    const [r, g, b] = rgb(h);
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  };
+  const contrast = (a: number, b: number) => {
+    const [hi, lo] = [rel(a), rel(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it("a wall stands well clear of the floor it is on", () => {
+    // 3:1 is the floor for a shape that has to be seen (WCAG non-text
+    // contrast). Measured on screen after the 3D lighting: 3.4-3.8:1.
+    expect(contrast(PALETTE.obstacle, PALETTE.active), "walls are sinking into the floor again")
+      .toBeGreaterThan(4);
+  });
+
+  it("the 3D board lights its solids enough to keep those steps", async () => {
+    // The palette alone was not enough: the 3D room lights cut a solid's colour
+    // roughly in half on screen. The solids' extra self-lit share is what puts
+    // a wall at 3.4:1+ against the floor there.
+    const { SOLID_SELF_LIT } = await import("@/lib/rendering/three/ThreeRenderer");
+    expect(SOLID_SELF_LIT).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it("every destructible is a clear step brighter than the wall beside it", () => {
+    for (const [name, colour] of [
+      ["breakable", PALETTE.breakable], ["brittle", PALETTE.brittle],
+    ] as const) {
+      expect(contrast(colour, PALETTE.obstacle), `${name} is too close to the wall's brightness`)
+        .toBeGreaterThan(1.5);
+      expect(rel(colour), `${name} is darker than the wall`).toBeGreaterThan(rel(PALETTE.obstacle));
+    }
   });
 
   const share = (c: number[]) => [c[0] / (c[0] + c[1] + c[2]), c[2] / (c[0] + c[1] + c[2])];

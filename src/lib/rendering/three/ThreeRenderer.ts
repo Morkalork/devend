@@ -59,6 +59,21 @@ import {
 import { getLightLook } from "@/lib/lightLook";
 import { recordShaderError } from "@/lib/rendering/rendererDiag";
 
+/**
+ * How much of a solid's own colour shows unlit, on top of the board-wide
+ * share every surface gets (surfaceMaterial.ts, SELF).
+ *
+ * The board's furniture - walls, breakables, glass, movers - is lit by the
+ * same room lights as the floor, and those cut a slab's colour roughly in
+ * half on screen: an ordinary wall measured 1.4-1.65:1 against the floor and
+ * a breakable 2:1, under the 3:1 a shape needs to be seen at all. Reported as
+ * "some of the game board is too dark ... people with slightly bad eyesight
+ * [must be able to] differ between a wall and a destructable wall". Raising
+ * the solids' self-lit share lifts every object together and leaves the
+ * floor, its pools of light and the shadows exactly as they were.
+ */
+export const SOLID_SELF_LIT = 0.42;
+
 /** The live scene for one quality tier. Rebuilt whole when the tier changes. */
 interface Rig {
   preset: QualityPreset;
@@ -196,7 +211,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       tier, translucent: true, roughness: 0.9, preview: this.previewUniforms, underlay: this.underlay,
     });
     const wallMat = makeSurfaceMaterial(this.shared, { tier, sampleSquash: [1, 1, 0.42], roughness: 0.7 });
-    const solidMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75 });
+    const solidMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75, selfLitExtra: SOLID_SELF_LIT });
     // Plates lie on the floor, so they darken with it under the cut preview.
     const plateMat = makeSurfaceMaterial(this.shared, {
       tier, inset: true, roughness: 0.9, preview: this.previewUniforms,

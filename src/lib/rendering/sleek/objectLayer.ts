@@ -380,7 +380,7 @@ export class ObjectLayer {
       : d.brittle ? PALETTE.brittle
       // The objective breakable keeps a step of separation from the ordinary
       // one now that both are gold: a little more saturated, same luma.
-      : d.objective ? 0xa06610
+      : d.objective ? 0xfab446
       : PALETTE.breakable;
     // A slow, shallow breath, and ONLY on a carrier. Without it a coloured
     // brick reads as another material - this board already has gold, glass and
