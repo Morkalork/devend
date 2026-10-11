@@ -5,19 +5,22 @@
  * locked" explainer and the secret admin unlock on the spinning ball.
  *
  * Which buttons show and how each looks is decided in welcomeModel.ts; this
- * file only draws it. The CRT backdrop and the memory parallax are not drawn
+ * file only draws it. In the redo (UI_REDO_PLAN.md, phase 3) it is left-
+ * aligned: the logo, the way into a run as a filled button, and the rest of
+ * the menu as a plain list of rows. The CRT backdrop and the memory parallax are not drawn
  * here: they are rendered once, globally, underneath the interface canvas.
  */
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, Music, Users,
+  ChevronRight, GraduationCap, Lock, Settings, Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { version } from "@/lib/version";
 import type { MenuHighlightFlags, MenuHighlightKey } from "@/hooks/useMenuHighlights";
 import {
-  Appear, COLOR, Icon, Label, Modal, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
+  Appear, COLOR, GOLD, Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
 import {
   certificatesTapAction, createSecretTapCounter, dailyTapAction, highlightToAck, welcomeButtons,
@@ -82,6 +85,9 @@ interface WelcomeScreenProps {
 
 /** The leading icon of each menu button that has one. */
 const BUTTON_ICON: Partial<Record<WelcomeButtonId, LucideIcon>> = {
+  tutorial: GraduationCap,
+  options: Settings,
+  admin: Wrench,
   daily: CalendarDays,
   twoPlayer: Users,
   certificates: Sparkles,
@@ -90,6 +96,9 @@ const BUTTON_ICON: Partial<Record<WelcomeButtonId, LucideIcon>> = {
   achievements: Trophy,
   jukebox: Music,
 };
+
+/** The buttons that start or resume a run; the rest of the menu is a list. */
+const PLAY_IDS: readonly WelcomeButtonId[] = ["continue", "newGame"];
 
 /** The ascension line under Continue (#ffb347, the ladder's amber). */
 const ASCENSION_INK = 0xffb347;
@@ -185,9 +194,13 @@ export function WelcomeScreen({
     }
   };
 
-  const columnWidth = Math.min(320, screen.width - 48);
+  const columnWidth = Math.min(420, screen.width - 32);
   const accent = accentColor ? hex(accentColor) : COLOR.primary;
-  const textSize = arcadeTextSize("sm");
+  const textSize = arcadeTextSize("md");
+
+  // The two ways into a run are buttons; everything else is a row in the list.
+  const playButtons = buttons.filter(b => PLAY_IDS.includes(b.id));
+  const menuRows = buttons.filter(b => !PLAY_IDS.includes(b.id));
 
   const renderButton = (spec: WelcomeButtonSpec) => {
     const ink = arcadeInk(spec.variant, spec.locked);
@@ -198,7 +211,7 @@ export function WelcomeScreen({
     return (
       <ArcadeButton
         key={spec.id}
-        size="sm"
+        size="md"
         variant={spec.variant}
         onTap={() => press(spec)}
         disabled={spec.disabled}
@@ -236,51 +249,83 @@ export function WelcomeScreen({
     );
   };
 
-  return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, 0.85) }}>
-      {/* The two drifting blurred blobs behind the menu (bg-primary/5 blur-3xl)
-          are dropped: at 5% opacity under a blur they were all but invisible. */}
-      <ScrollView layout={{ flex: 1 }}>
-        <View layout={{ minHeight: screen.height, padding: 24, alignItems: "center", justifyContent: "center" }}>
-          <Appear fromY={20} duration={0.6} layout={{ alignItems: "center", gap: 48 }}>
-            {/* Title */}
-            <Appear fromScale={0.9} duration={0.5} delay={0.2} layout={{ alignItems: "center" }}>
-              <GameTitle text="Dev/End" />
-              <Appear delay={0.5} layout={{ marginTop: 16 }}>
-                <Label text={t("welcome.tagline")} size={TEXT.lg} color={COLOR.mutedForeground} letterSpacing={0.45} />
-              </Appear>
-            </Appear>
+  // One row of the menu list: icon, label, whatever the button carried
+  // (streak, hours, count, check, NEW), and a chevron. No box: the rule
+  // between rows is the only edge, so the filled play button stays the one
+  // thing on the screen that reads as "press me".
+  const renderRow = (spec: WelcomeButtonSpec, i: number) => {
+    const label = spec.label ? t(spec.label.key, spec.label.vars) : t("welcome.loading");
+    const ink = spec.locked ? ROLE.muted : ROLE.ink;
+    const icon = BUTTON_ICON[spec.id];
+    return (
+      <Pressable
+        key={spec.id}
+        label={label}
+        onTap={() => press(spec)}
+        disabled={spec.disabled}
+        // Admin is a dev door, not a menu item: it sits dimmed.
+        alpha={(spec.id === "admin" ? 0.7 : 1) * (spec.locked ? 0.6 : 1)}
+        layout={{ flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch", paddingTop: 14, paddingBottom: 14 }}
+      >
+        {i > 0 && <View layout={{ position: "absolute", left: 0, right: 0, top: 0, height: 1, backgroundColor: ROLE.edge }} />}
+        {icon && <Icon icon={icon} size={18} color={spec.ring ? GOLD : ROLE.muted} />}
+        <View layout={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 6, rowGap: 4 }}>
+          <Label text={label} size={TEXT.base} font="display" weight="600" color={spec.ring ? GOLD : ink} />
+          {spec.badge && <NewBadge />}
+        </View>
+        {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={ASCENSION_INK} />}
+        {spec.chip?.kind === "hours" && <MenuChip text={t("welcome.hoursSuffix", { hours: spec.chip.value })} icon={Hexagon} iconColor={ROLE.hours} />}
+        {spec.chip?.kind === "count" && <MenuChip text={String(spec.chip.value)} />}
+        {spec.check && <Icon icon={Check} size={16} color={COLOR.primary} />}
+        <Icon icon={spec.locked ? Lock : ChevronRight} size={16} color={ROLE.muted} />
+      </Pressable>
+    );
+  };
 
-            {/* Animated spinning ball preview. Doubles as a secret admin
-                unlock: 10 quick taps (deployed dev only). */}
-            <MenuBall onTap={() => secretRef.current?.tap()} />
+  return (
+    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(ROLE.surface, 0.9) }}>
+      <ScrollView layout={{ flex: 1 }}>
+        <View layout={{ minHeight: screen.height, paddingTop: 40, paddingBottom: 40, alignItems: "center", justifyContent: "center" }}>
+          <Appear fromY={12} duration={0.4} layout={{ width: columnWidth, gap: 28 }}>
+            {/* The logo and the tagline, left-aligned, with the spinning ball
+                beside them (it wraps under them on a narrow phone). The ball
+                doubles as a secret admin unlock: 10 quick taps (deployed dev only). */}
+            <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", rowGap: 12 }}>
+              <View layout={{ alignItems: "flex-start", gap: 8 }}>
+                <GameTitle text="Dev/End" size={40} />
+                <Label text={t("welcome.tagline")} size={TEXT.base} color={ROLE.muted} />
+              </View>
+              <MenuBall onTap={() => secretRef.current?.tap()} />
+            </View>
 
             {/* Error state */}
             {error && (
-              <Appear fromY={10}>
-                <View layout={{
-                  width: columnWidth, flexDirection: "row", alignItems: "center", gap: 8, padding: 16,
-                  borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.destructive, 0.1),
-                  borderWidth: 1, borderColor: tint(COLOR.destructive, 0.2),
-                }}>
-                  <Icon icon={AlertCircle} size={20} color={COLOR.destructive} />
-                  <View layout={{ flex: 1 }}>
-                    <Label text={error} size={TEXT.sm} color={COLOR.destructive} wrap />
-                  </View>
+              <View layout={{
+                alignSelf: "stretch", flexDirection: "row", alignItems: "center", gap: 8, padding: 12,
+                borderRadius: RADIUS.sm, backgroundColor: tint(ROLE.cost, 0.1), borderWidth: 1, borderColor: tint(ROLE.cost, 0.4),
+              }}>
+                <Icon icon={AlertCircle} size={18} color={ROLE.cost} />
+                <View layout={{ flex: 1 }}>
+                  <Label text={error} size={TEXT.sm} color={ROLE.cost} wrap />
                 </View>
-              </Appear>
+              </View>
             )}
 
-            {/* Buttons */}
-            <Appear fromY={20} delay={0.4} layout={{ width: columnWidth, gap: 20 }}>
-              {buttons.map(renderButton)}
+            {/* Into a run: the recommended one is the screen's only filled button. */}
+            <Appear fromY={10} delay={0.1} layout={{ gap: 12 }}>
+              {playButtons.map(renderButton)}
+            </Appear>
+
+            {/* Everything else, as a list. */}
+            <Appear fromY={10} delay={0.2}>
+              {menuRows.map(renderRow)}
             </Appear>
           </Appear>
         </View>
       </ScrollView>
 
       <View layout={{ position: "absolute", right: 16, bottom: 12 }} alpha={0.3}>
-        <Label text={`v${version}`} size={TEXT.xs} font="mono" color={0x00ff88} />
+        <Label text={`v${version}`} size={TEXT.xs} font="mono" color={ROLE.muted} />
       </View>
 
       {/* Explainer shown when certificates aren't unlocked yet. Tapping the

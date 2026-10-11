@@ -10,7 +10,7 @@ import { ArrowLeft } from "lucide-react";
 import { getImplementedBallTypes } from "@/lib/ballTypes";
 import { getAllBugs } from "@/lib/bugs";
 import {
-  Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
+  Appear, COLOR, Icon, Label, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
 import { ArcadeButton } from "../kit/ui";
 import { BallSwatch, BugSwatch } from "./tutorialScreenParts";
@@ -32,17 +32,17 @@ const RELAXED = Math.round(TEXT.sm * 1.625);
 export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: TutorialScreenProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
-  const width = Math.min(672, screen.width - 48);
+  const width = Math.min(672, screen.width - 32);
 
-  const card = { flexDirection: "row", gap: 16, padding: 16, borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.card, 0.5), borderWidth: 1, borderColor: COLOR.border } as const;
+  const card = { flexDirection: "row", gap: 16, padding: 16, borderRadius: RADIUS.sm, backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge } as const;
   const heading = (text: string, marginBottom: number, delay: number) => (
     <Appear fromY={-10} delay={delay} layout={{ alignSelf: "stretch", marginTop: 40, marginBottom }}>
-      <Label text={text} size={TEXT.xl} font="display" weight="700" color={COLOR.primary} align="center" wrap />
+      <Label text={text} size={TEXT.xl} font="display" weight="700" color={ROLE.ink} wrap />
     </Appear>
   );
   const intro = (text: string) => (
-    <View layout={{ alignSelf: "center", width: Math.min(576, width), marginBottom: 24 }}>
-      <Label text={text} size={TEXT.sm} color={COLOR.mutedForeground} align="center" wrap />
+    <View layout={{ alignSelf: "stretch", marginBottom: 24 }}>
+      <Label text={text} size={TEXT.sm} color={ROLE.muted} wrap />
     </View>
   );
   const stepCard = (step: TutorialStep, delay: number) => (
@@ -69,23 +69,23 @@ export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: Tutorial
       <Label text={text} size={TEXT.xs} color={COLOR.mutedForeground} />
     </View>
   );
-  const noteBox = { marginTop: 32, padding: 16, gap: 8, borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.secondary, 0.3), borderWidth: 1, borderColor: COLOR.border } as const;
+  const noteBox = { marginTop: 32, padding: 16, gap: 8, borderRadius: RADIUS.sm, backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge } as const;
 
   return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, 0.9) }}>
+    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(ROLE.surface, 0.96) }}>
       <ScrollView layout={{ flex: 1 }}>
-        <View layout={{ padding: 24 }}>
+        <View layout={{ padding: 16, paddingTop: 24 }}>
           {/* Header */}
           <Appear layout={{ marginBottom: 32, alignItems: "flex-start" }}>
             <Pressable onTap={onBack} label={t("tutorial.back")} layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icon icon={ArrowLeft} size={20} color={COLOR.mutedForeground} />
-              <Label text={t("tutorial.back")} size={TEXT.sm} font="display" upper letterSpacing={TEXT.sm * 0.05} color={COLOR.mutedForeground} />
+              <Label text={t("tutorial.back")} size={TEXT.sm} font="display" color={ROLE.muted} />
             </Pressable>
           </Appear>
 
           {/* Title */}
-          <Appear fromY={-20} delay={0.1} layout={{ marginBottom: 48 }}>
-            <Label text={t("tutorial.howToPlay")} size={TEXT["3xl"]} font="display" weight="700" color={COLOR.primary} align="center" wrap />
+          <Appear fromY={-20} delay={0.1} layout={{ marginBottom: 32, width, alignSelf: "center" }}>
+            <Label text={t("tutorial.howToPlay")} size={TEXT["3xl"]} font="display" weight="700" color={ROLE.ink} wrap />
           </Appear>
 
           <View layout={{ width, alignSelf: "center" }}>

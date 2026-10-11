@@ -4,7 +4,7 @@
  * components (lint: react-refresh/only-export-components).
  */
 import { CanvasTextMetrics } from "pixi.js";
-import { COLOR, hsl } from "../theme";
+import { COLOR, ROLE, hsl } from "../theme";
 import { textStyle, type TextLook } from "./style";
 
 /** The highlight gold, hsl(45 100% 62%) in index.css `.menu-highlight`. */
@@ -21,10 +21,17 @@ export const ARCADE = {
   md: { text: 15, py: 13.6, px: 27.2 },
 } as const;
 
-/** The ink an arcade button's label and icons use. */
+/** The arcade button's letter spacing, as a share of its text size: a little air, not the old 0.1em. */
+export const ARCADE_TRACKING = 0.02;
+
+/**
+ * The ink an arcade button's label and icons use. The primary button is a
+ * solid fill now, so its ink is the dark surface colour; custom content
+ * inside one (WelcomeScreen's chips) must take its colour from here too.
+ */
 export function arcadeInk(variant: ArcadeVariant, locked = false): number {
-  if (locked) return GREY;
-  return variant === "primary" ? COLOR.primary : variant === "danger" ? COLOR.destructive : COLOR.mutedForeground;
+  if (locked) return ROLE.muted;
+  return variant === "primary" ? ROLE.surface : variant === "danger" ? ROLE.cost : ROLE.ink;
 }
 
 /** The label size an arcade button of this size uses, for custom content. */

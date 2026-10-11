@@ -9,7 +9,7 @@ import type { LayoutContainer } from "@pixi/layout/components";
 import type { Graphics } from "pixi.js";
 import { animate } from "motion";
 // Info directly, not the kit's HoldHint: that is fixed at 0.8 alpha and the card's hint is fainter (opacity-30).
-import { Check, Clock, Info as HoldInfoIcon, Lock, Medal, RefreshCw } from "lucide-react";
+import { Check, Clock, Flag, Info as HoldInfoIcon, Lock, Medal, RefreshCw } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
 import { conditionMet, type RunContext } from "@/lib/upgradeConditions";
@@ -17,7 +17,7 @@ import { unlockRequirements } from "@/lib/upgradeUnlock";
 import { contentText } from "@/i18n/content";
 import { getUpgradeIcon } from "@/components/game/upgradeIcons";
 import {
-  Appear, COLOR, HoldHint, Icon, Label, Modal, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, usePulse, useUiScreen,
+  Appear, COLOR, HoldHint, Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, usePulse, useUiScreen,
   type Layout,
 } from "../kit/ui";
 import type { IconSource } from "../kit/icons";
@@ -114,16 +114,16 @@ export function ClosedBanner({ locksHave, locksNeed, onHold }: { locksHave?: num
         pressedAlpha={1}
         label={t("upgradeShop.closedNotEnoughLocks")}
         layout={{
-          maxWidth: screen.width - 48,
-          flexDirection: "row", alignItems: "center", gap: 8, borderRadius: RADIUS.lg,
-          paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8,
-          borderWidth: 2, borderColor: tint(RED, 0x66 / 255), backgroundColor: tint(RED, 0x12 / 255),
+          alignSelf: "stretch",
+          flexDirection: "row", alignItems: "center", gap: 8, borderRadius: RADIUS.sm,
+          paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 10,
+          borderWidth: 1, borderColor: tint(RED, 0x66 / 255), backgroundColor: tint(RED, 0x12 / 255),
         }}
       >
         <Icon icon={Lock} size={16} color={RED} />
         {/* Word by word, so on a narrow phone it wraps instead of pushing the count off the banner. */}
         <View layout={{ flexShrink: 1 }}>
-          <RichParagraph align="left" runs={[{ text: t("upgradeShop.closedNotEnoughLocks") }]} size={TEXT.sm} weight="700" upper letterSpacing={0.35} color={RED} />
+          <RichParagraph align="left" runs={[{ text: t("upgradeShop.closedNotEnoughLocks") }]} size={TEXT.sm} weight="700" color={RED} />
         </View>
         {typeof locksNeed === "number" && (
           <View layout={{ borderRadius: RADIUS.base, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(RED, 0x26 / 255) }}>
@@ -137,72 +137,26 @@ export function ClosedBanner({ locksHave, locksNeed, onHold }: { locksHave?: num
 }
 
 /**
- * A soft glow around its content (the DOM's coloured box-shadow): rounded
- * outlines stepping outward, each fainter, so the edge fades instead of
- * stopping at a hard border. It measures its own box, since the height
- * follows the content.
+ * Waypoint banner, shown only on multiples of 5: a flat panel edged in the
+ * checkpoint green, left-aligned like the rest of the pipeline. It used to
+ * glow and breathe; in the redo nothing moves on its own but the headline.
  */
-function Glow({ color, alpha, spread, radius, children, layout }: {
-  color: number; alpha: number; spread: number; radius: number; children?: ReactNode; layout?: Layout;
-}) {
-  const ref = useRef<LayoutContainer | null>(null);
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    const box = ref.current;
-    if (!box) return;
-    const onLayout = (l: { computedLayout: { width: number; height: number } }) => {
-      const { width: w, height: h } = l.computedLayout;
-      setSize(prev => (Math.abs(prev.w - w) >= 1 || Math.abs(prev.h - h) >= 1 ? { w, h } : prev));
-    };
-    box.on("layout", onLayout);
-    const done = box.layout?.computedLayout;
-    if (done && done.width > 0) onLayout({ computedLayout: done });
-    return () => { box.off("layout", onLayout); };
-  }, []);
-  const draw = useCallback((g: Graphics) => {
-    g.clear();
-    if (size.w <= 0 || alpha <= 0) return;
-    for (let i = 1; i <= spread; i += 2) {
-      const falloff = (1 - i / (spread + 1)) ** 2;
-      g.roundRect(-i, -i, size.w + i * 2, size.h + i * 2, radius + i).stroke({ color, width: 2, alpha: alpha * falloff });
-    }
-  }, [size, color, alpha, spread, radius]);
-  return (
-    <layoutContainer ref={ref} layout={layout ?? {}}>
-      <pixiGraphics draw={draw} layout={false} />
-      {children}
-    </layoutContainer>
-  );
-}
-
-/** Waypoint banner, shown only on multiples of 5. Its own component so its pulse re-renders only itself. */
 export function WaypointBanner({ level }: { level: number }) {
   const { t } = useTranslation();
-  const screen = useUiScreen();
-  // The banner breathes: its glow swells and the kicker dims, on one 2s cycle.
-  const pulse = usePulse(2000);
+  const kicker = t("upgradeShop.checkpointReached");
   return (
-    <Appear fromScale={0.75} delay={0.08}>
-      {/* A steady glow (box-shadow 24px #00ff8866, 48px #00ff8833) plus the
-          pulsing ring that swells to 32px #00ff8888 and back. */}
-      <Glow color={CHECKPOINT} alpha={0.12 + 0.18 * pulse} spread={24} radius={RADIUS.xl}
-        layout={{ width: Math.min(384, screen.width - 48) }}>
-        <View layout={{
-          alignItems: "center", gap: 4, borderRadius: RADIUS.xl, paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 16,
-          backgroundColor: tint(CHECKPOINT, 0x18 / 255), borderWidth: 2, borderColor: CHECKPOINT,
-        }}>
-          {/* Word by word, so a long translation wraps inside the banner; the
-              no-break spaces keep each flag on its word's line. */}
-          <View layout={{ alignSelf: "stretch" }} alpha={1 - 0.3 * pulse}>
-            <RichParagraph runs={[{ text: `⚑\u00A0${t("upgradeShop.checkpointReached")}\u00A0⚑` }]}
-              size={TEXT.xs} weight="700" upper letterSpacing={3.6} font="display" color={CHECKPOINT} />
-          </View>
-          {/* The DOM pulsed this text-shadow too; held steady here, because a
-              changing glow re-rasterises the text on every frame. */}
-          <Label text={t("upgradeShop.levelBanner", { level })} size={TEXT["4xl"]} weight="900" letterSpacing={3.6} font="display" color={CHECKPOINT} glow={16} />
-          <Label text={t("upgradeShop.progressSavedHere")} size={TEXT.xs} upper letterSpacing={1.2} font="mono" color={DRAFT_HINT} wrap align="center" />
+    <Appear fromY={-6} delay={0.08}>
+      <View layout={{
+        flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch", padding: 12, borderRadius: RADIUS.sm,
+        backgroundColor: ROLE.raised, borderWidth: 1, borderColor: CHECKPOINT,
+      }}>
+        <Icon icon={Flag} size={20} color={CHECKPOINT} />
+        <View layout={{ flex: 1, gap: 2 }}>
+          <Label text={`${kicker.charAt(0).toUpperCase()}${kicker.slice(1)}: ${t("pipeline.level", { level })}`}
+            size={TEXT.base} weight="600" font="display" color={CHECKPOINT} wrap />
+          <Label text={t("upgradeShop.progressSavedHere")} size={TEXT.xs} color={ROLE.muted} wrap />
         </View>
-      </Glow>
+      </View>
     </Appear>
   );
 }

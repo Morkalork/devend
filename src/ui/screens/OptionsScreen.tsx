@@ -188,7 +188,7 @@ export function OptionsScreen({
               </View>
 
               {/* Re-enable All Tutorials */}
-              <ArcadeButton icon={RefreshCw} text={t("options.reEnableTutorials")} onTap={onReEnableTutorials} />
+              <ArcadeButton variant="secondary" icon={RefreshCw} text={t("options.reEnableTutorials")} onTap={onReEnableTutorials} />
 
               {/* Total Reset: complete deletion of all game state */}
               <ArcadeButton variant="danger" icon={Trash2} text={t("options.totalReset")} onTap={handleResetClick} />

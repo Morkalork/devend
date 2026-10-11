@@ -219,7 +219,7 @@
     "unlockHoursSpent": "Spend {{required}} Certificate Hours in this store (on any certificates).",
     "progressLabelHoursSpent": "hours spent",
     "unlockKeepPlaying": "Keep playing to unlock.",
-    "title": "CERTIFICATES",
+    "title": "Certificates",
     "certificateHours": "Certificate Hours",
     "earnRate": "Earn 1h every 5 levels completed",
     "sectionAvailable": "Available",
@@ -599,7 +599,7 @@
     "returnHome": "Return to Home"
   },
   "options": {
-    "title": "OPTIONS",
+    "title": "Options",
     "language": "Language",
     "sound": "Sound",
     "music": "Music",
@@ -1414,5 +1414,22 @@
     "objective": "Objective",
     "hazardPay": "Hazard pay",
     "push": "Push bonus"
+  },
+  "pipeline": {
+    "afterLevel": "After level {{level}}",
+    "debrief": "Debrief",
+    "promotion": "Promotion",
+    "store": "Store",
+    "level": "Level {{level}}",
+    "ascension": "Ascension",
+    "toPromotion": "Choose your promotion",
+    "toStore": "Open the store",
+    "toLevel": "Start level {{level}}",
+    "toAscension": "Finish the run",
+    "ofPossible": "of {{hours}}h this map could pay",
+    "fullPay": "Everything this map could pay",
+    "toSpend": "to spend before level {{level}}",
+    "toSpendLast": "to spend",
+    "pickOne": "Pick 1 of {{count}}"
   }
 }

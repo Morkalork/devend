@@ -19,18 +19,22 @@ export function hex(s: string): number {
   return Number.parseInt(s.replace("#", ""), 16);
 }
 
+// The neutral half of COLOR follows ROLE (below), so every screen built on
+// the old names took the redo's surfaces at once: a cool, faintly green-tinted
+// dark instead of the DOM theme's violet-grey. The DOM values are kept in the
+// comments for reference.
 export const COLOR = {
-  background: hsl(240, 10, 4),
-  foreground: hsl(0, 0, 98),
-  card: hsl(240, 10, 6),
+  background: 0x0d1012, // ROLE.surface (was hsl(240 10% 4%))
+  foreground: 0xe6ebe8, // ROLE.ink (was hsl(0 0% 98%))
+  card: 0x151a1d, // ROLE.raised (was hsl(240 10% 6%))
   primary: hsl(145, 100, 53),
   primaryDeep: hsl(145, 80, 40),
   primaryForeground: hsl(240, 10, 4),
-  secondary: hsl(240, 10, 12),
-  muted: hsl(240, 10, 15),
-  mutedForeground: hsl(240, 5, 55),
-  destructive: hsl(0, 85, 60),
-  border: hsl(240, 10, 18),
+  secondary: 0x1b2226, // a step above raised (was hsl(240 10% 12%))
+  muted: 0x1f272c, // (was hsl(240 10% 15%))
+  mutedForeground: 0x8b968f, // ROLE.muted (was hsl(240 5% 55%))
+  destructive: 0xff6b6b, // ROLE.cost (was hsl(0 85% 60%))
+  border: 0x253036, // ROLE.edge (was hsl(240 10% 18%))
   amber: 0xfbbf24,
   amberSoft: 0xffb347,
   sky: 0x38bdf8,

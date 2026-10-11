@@ -72,7 +72,7 @@ export function DraftCard({ index, accentColor, selected, onClick, name, headerE
               font="display"
               weight="700"
               color={accent}
-              glow={look.glow || undefined}
+             
               lineHeight={Math.round(TEXT.xl * 1.25)}
               wrap
             />

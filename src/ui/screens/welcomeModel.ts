@@ -69,10 +69,17 @@ export interface WelcomeMenuInput {
 
 const base = (id: WelcomeButtonId, isLoading: boolean): WelcomeButtonSpec => ({
   id, loading: false, disabled: isLoading, ring: false, badge: false, glow: false,
-  pulse: false, shimmer: false, locked: false, check: false, variant: "primary",
+  pulse: false, shimmer: false, locked: false, check: false, variant: "secondary",
 });
 
-/** The menu's buttons, top to bottom. */
+/**
+ * The menu's buttons, top to bottom.
+ *
+ * Every button is secondary (a dark panel) except the recommended one: the
+ * button marked `glow` or `shimmer` is drawn as the one solid fill
+ * (ArcadeButton promotes it). UI redo: the next action is the only filled
+ * thing on a screen, where it used to be one glowing button among six.
+ */
 export function welcomeButtons(p: WelcomeMenuInput): WelcomeButtonSpec[] {
   const loading = !!p.isLoading;
   const hl = p.highlights ?? {};
@@ -92,15 +99,16 @@ export function welcomeButtons(p: WelcomeMenuInput): WelcomeButtonSpec[] {
     });
   }
 
-  // Without a save, Start Game is the one thing to press, so it glows; a
-  // highlight ring replaces the glow while it is new.
+  // Without a save, Start Game is the one thing to press, so it is the filled
+  // button; while it is new the gold ring goes round the fill rather than
+  // replacing it (UI redo: the recommended action is always the filled one).
   out.push({
     ...base("newGame", loading),
     loading,
     label: loading ? undefined : { key: p.hasContinue ? "welcome.newGame" : "welcome.startGame" },
     ring: !!hl.newGame,
     badge: !loading && !!hl.newGame,
-    glow: !p.hasContinue && !hl.newGame,
+    glow: !p.hasContinue,
     pulse: !p.hasContinue && !hl.newGame,
     highlightKey: "newGame",
   });

@@ -144,7 +144,7 @@ const ladder: AscensionRung[] = [
 ];
 
 export const entries: GalleryEntry[] = [
-  // The UI redo's pipeline pieces, assembled (pipelineSample.tsx). Not yet the game's screen.
+  // The UI redo's kit pieces (rail, ledger, tickets), assembled with sample figures (pipelineSample.tsx).
   { id: "Pipeline-debrief", group: "screen", render: () => <PipelineDebriefSample /> },
   { id: "Pipeline-store", group: "screen", render: () => <PipelineStoreSample /> },
   {
@@ -155,6 +155,18 @@ export const entries: GalleryEntry[] = [
   {
     id: "LevelCompleteOverlay-rough", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={roughScore} totalScore={402} onContinue={noop} accentColor={ACCENT} />,
+  },
+  {
+    // A map with no Promotion due: the strip skips that stage and Continue says "Open the store".
+    id: "LevelCompleteOverlay-storeOnly", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      pipeline={{ clearedLevel: 10, promotion: false, store: true, last: false }} />,
+  },
+  {
+    // The last map: no store, and the strip ends in Ascension.
+    id: "LevelCompleteOverlay-last", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={4120} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      pipeline={{ clearedLevel: 35, promotion: false, store: false, last: true }} />,
   },
   {
     id: "ResultScreen-win", group: "screen",

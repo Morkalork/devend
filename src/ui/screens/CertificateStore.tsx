@@ -126,8 +126,8 @@ export function CertificateStore({
             <View layout={{ alignItems: "center", gap: 4 }}>
               <MenuHeading icon={Medal} iconColor={COLOR.primary} text={t("certificateStore.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]}
                 letterSpacing={1.2} maxWidth={contentWidth} />
-              <View layout={{ width: Math.min(384, contentWidth) }}>
-                <Label text={t("certificateStore.subtitle")} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />
+              <View layout={{ alignSelf: "stretch" }}>
+                <Label text={t("certificateStore.subtitle")} size={TEXT.xs} color={COLOR.mutedForeground} wrap />
               </View>
             </View>
 
