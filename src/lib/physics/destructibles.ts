@@ -12,7 +12,9 @@
  * as capturable space.
  */
 import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, bombHitDamage, shardBombTargets } from "@/lib/bombCore";
+import { carveBlast } from "@/lib/physics/blastCarve";
 import { CanvasGameState } from "@/types/gameState";
+import { isPlayerFence } from "@/lib/wallGeometry";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import {
   DestructibleState,
@@ -530,7 +532,7 @@ function makeFalling(poly: Polygon, color: string, now: number): FallingObject {
  * it - detachObstacle drops the obstacle's own edge walls before asking, which
  * is what stops the obstacle from counting as its own blocker.
  */
-function heldByOther(
+export function heldByOther(
   game: CanvasGameState, grid: NonNullable<CanvasGameState["spaceGrid"]>,
 ): (p: Vector2) => boolean {
   return (p: Vector2): boolean => {
@@ -599,6 +601,15 @@ export function floodSealedShadow(
   return out;
 }
 
+/** Is this cell in the grid band of a fence (a player fence, a put-back span, a crater wall)? */
+function inFenceBand(game: CanvasGameState, grid: NonNullable<CanvasGameState["spaceGrid"]>, p: Vector2): boolean {
+  for (const w of game.walls) {
+    if (!isPlayerFence(w) || w.isObstacleBoundary || w.isMirror) continue;
+    if (pointToSegmentDistance(p, w.start, w.end) <= (w.thickness ?? 6) / 2 + grid.cellSize / 2) return true;
+  }
+  return false;
+}
+
 /** Indices of grid cells REMOVED by `poly`: under it, or in its edge-seal ring. */
 export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   const grid = game.spaceGrid;
@@ -640,7 +651,11 @@ export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[
       const wx = grid.originX + col * grid.cellSize + grid.cellSize / 2;
       const wy = grid.originY + row * grid.cellSize + grid.cellSize / 2;
       const p = { x: wx, y: wy };
-      let inside = pointInPolygon(p, poly);
+      // Not the band of a fence that runs across it. A fence the player drew
+      // stops at an obstacle, but a blast puts fences back and walls its
+      // crater straight across whatever stands there (physics/blastCarve.ts),
+      // and reopening that band would punch a hole through the wall.
+      let inside = pointInPolygon(p, poly) && !inFenceBand(game, grid, p);
       if (!inside) {
         // Edge-seal ring: within the seal margin of some polygon edge.
         let nearEdge = false;
@@ -996,6 +1011,11 @@ export function processDestroysFn(
     // hull opens or its bomb goes. The debounce is cleared first: a neighbour a
     // ball grazed a moment ago must not shrug off the blast.
     if (d.shardBomb && game.shardBombBlast) {
+      // And it blows a hole in whatever stands in reach: fences, the map's own
+      // walls, and the claimed ground, which counts as one big wall
+      // (physics/blastCarve.ts). The ground it opens is settled with the rest
+      // below, so a chunk no ball can reach closes straight back up.
+      opened += carveBlast(game, polygonCentroid(poly), game.shardBombBlast.radius).opened;
       const by = d.destroyedBy ?? `bomb:${d.id}`;
       for (const hit of shardBombTargets(game.destructibles, d, game.shardBombBlast.radius)) {
         hit.d.lastHitAt = 0;

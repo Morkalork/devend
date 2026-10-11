@@ -456,3 +456,36 @@ waiting in the wall rather than a last hit to aim for.
   and a small flash (`ObjectDebrisState.blast`, which the 3D renderer sizes its
   light from). It used to throw a slab's full burst, so every brick in a wall
   went off like a bomb.
+
+### The blast blows holes (physics/blastCarve.ts)
+
+A shard bomb's blast reaches 100 now, and takes a circular bite out of
+everything solid in reach, not only the breakables:
+
+- **Fences** crossing it are cut, leaving the pieces outside the circle.
+- **The map's own walls** crossing it lose the part inside the circle
+  (`blastGeometry.ts`: polygon minus circle, Greiner-Hormann against the
+  convex blast). Nothing on the board supports holes, so a blast wholly inside
+  a wall splits it in two through the blast's centre first. The pieces keep the
+  wall's height and get edge walls of their own (`<id>~b<n>`). Mirrors,
+  portals, phasing walls, bumpers, deformables, ruled membranes,
+  box/cage/launcher shells and the board's edge are never carved.
+- **Claimed ground is one big wall.** The captured cells inside the circle
+  reopen. Then the board settles as after a cut: ground no ball can reach is
+  captured straight back, and ground a ball can reach through the hole is live
+  again and counts against the cleared %. Ground that was under a carved map
+  wall is new ground and does not.
+- **Seams.** Wherever live ground now meets claimed ground there has to be a
+  wall, or the next breakable to break hands back the whole claimed area (the
+  "shadow" flood in `floodSealedShadow` runs through claimed cells no wall
+  holds). So every line the blast removed is walked after the settle: the
+  crater's edge is walled where claimed ground goes on beyond it (a breakable
+  sitting across the edge counts, since it is a gap once it breaks), a cut
+  fence stays cut only where open ground lies on both sides and is put back
+  everywhere else, and a carved wall's old outline is walled where live meets
+  claimed. A breakable's footprint no longer reopens a fence band that runs
+  across it.
+- Deterministic (array order, `generateWallId`), so both phones of a pair
+  carve the same board. Renderer caches keyed on the obstacle list read
+  `game.obstacleVersion`, which a carve bumps.
+- The slab and chest bombs do not carve: their bomb has no reach.
