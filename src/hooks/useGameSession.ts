@@ -235,10 +235,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Guard against a duplicated completion delivery for the same map (see
   // handleLevelComplete); holds the last level number that was scored.
   const lastDeliveredCompletionRef = useRef<number | null>(null);
-  // Run-start intro: the first map of a run assembles from shatter tiles
-  // (GameCanvas introAssemble). Armed by every fresh-run path, disarmed by the
-  // first completed level so mid-run maps just appear as usual.
-  const [introAssemblePending, setIntroAssemblePending] = useState(false);
+  // Run-start intro: the first map of a run opens with the longer boot reveal
+  // (GameCanvas runStartIntro). Armed by every fresh-run path, disarmed by the
+  // first completed level so mid-run maps get the short one.
+  const [runStartIntroPending, setRunStartIntroPending] = useState(false);
   // When a round is left without the locks the store requires, we still open the
   // store but show it "closed" (see UpgradeShop `closed`) rather than skipping it.
   const [storeClosed, setStoreClosed] = useState(false);
@@ -800,7 +800,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCapstone(null);
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
-    setIntroAssemblePending(true);
+    setRunStartIntroPending(true);
     setStoreClosed(false);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -1173,8 +1173,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setDraftedLoadoutIds(save.draftedLoadoutIds);
     setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
 
-    // Resuming mid-run: no intro assemble, no leftover overlays/offers.
-    setIntroAssemblePending(false);
+    // Resuming mid-run: the short boot, no leftover overlays/offers.
+    setRunStartIntroPending(false);
     setStoreClosed(false);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
@@ -1434,7 +1434,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // a second Promotion draft. The ref resets with each new run.
     if (lastDeliveredCompletionRef.current === currentLevelNum) return;
     lastDeliveredCompletionRef.current = currentLevelNum;
-    setIntroAssemblePending(false); // the run is underway: later maps appear as usual
+    setRunStartIntroPending(false); // the run is underway: later maps get the short boot
     // The onboarding map (first run only) has served its purpose the moment it
     // is cleared: every later run opens on the real level-1 map instead.
     if (isOnboardingMap(currentLevel)) markOnboardingSeen();
@@ -2130,7 +2130,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Continue (per-run revive)
     continuesRemaining,
     gameInstanceKey,
-    introAssemblePending,
+    runStartIntroPending,
     storeClosed,
     storeLockProgress,
     carryFreeShopItems,

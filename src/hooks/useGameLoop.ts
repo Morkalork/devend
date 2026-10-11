@@ -238,9 +238,7 @@ export function createGameLoop(
       const d       = game.dissolve;
       const elapsed = (simNow() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
-      // Reverse (run-intro assemble): play the same kinematics backwards, so
-      // the tiles fly IN from their scattered end-state and settle in place.
-      const anim    = d.reverse ? Math.max(0, dur - elapsed) : elapsed;
+      const anim    = elapsed;
 
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -249,14 +247,8 @@ export function createGameLoop(
           const t        = Math.max(0, anim - tile.delay);
           const tMax     = dur - tile.delay;
           const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-          // Forward: shards fade out as they scatter. Reverse: they must stay
-          // SOLID while flying together (the mirrored curve leaves them nearly
-          // invisible for most of the flight and the assemble reads as a soft
-          // fade instead of shards) - only a short global fade-in at the very
-          // start stops the scattered cloud from popping in.
-          const alpha    = d.reverse
-            ? Math.max(0, Math.min(1, elapsed / 0.2))
-            : Math.max(0, 1 - progress * 1.15);
+          // Shards fade out as they scatter.
+          const alpha    = Math.max(0, 1 - progress * 1.15);
           const x        = tile.cx + tile.vx * t;
           const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
           const angle    = tile.rotSpeed * t;
@@ -277,11 +269,7 @@ export function createGameLoop(
 
       if (elapsed >= dur) {
         game.dissolve = null;
-        if (d.reverse) {
-          // Assemble finished: the tiles sit exactly where the live scene
-          // draws them, so hand straight over to a normal frame (no blank).
-          callbacks.render();
-        } else if (ctx) {
+        if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         } else {
           // Pixi: present an EMPTY frame (the board has shattered away; a normal
@@ -298,9 +286,8 @@ export function createGameLoop(
 
     // A modal/menu is up (game.paused mirrors the React `paused` prop): hold
     // physics here so nothing advances behind it. This is the self-halt that
-    // catches the board finishing its intro assemble behind a still-open modal
-    // (e.g. the "how to win" card), where the loop was (re)started after the
-    // pause effect had already run. The pause effect reschedules on close.
+    // catches a loop (re)started after the pause effect had already run. The
+    // pause effect reschedules on close.
     // Level-complete/game-over keep their own end-of-map animations below.
     if (game.paused && !game.levelComplete && !game.gameOver) {
       // A LAUNCHER hold is not a modal. Nothing covers the board and the player
@@ -311,7 +298,9 @@ export function createGameLoop(
       //
       // Physics is still held: this returns before the step either way, so the
       // balls do not move and the clock does not run while the wager is open.
-      if (launchPending(game)) {
+      //
+      // The boot hold is the same: the board is being revealed, not covered.
+      if (launchPending(game) || game.bootHold) {
         callbacks.render();
         schedule();
       }

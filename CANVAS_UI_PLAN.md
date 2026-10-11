@@ -310,6 +310,18 @@ kit). The DOM originals were then deleted (62 components); their behavioural
 tests live on in `src/test/canvas`, and the assertions that were only about
 DOM structure went with them.
 
+### The board's opening
+
+Once the interface was canvas, the map's opening could be one piece instead
+of three that never lined up (a translucent "Loading" outline, a shard
+assemble cut from a flat 2D snapshot even under the 3D renderer, and the
+board popping in between). BoardBoot draws an opaque stand-in exactly on the
+board's frame while the renderer warms up, then traces the frame in light and
+sweeps a scan line down that leaves the real board behind it, and flashes the
+frame as the map goes live; the first map of a run gets a longer cut with the
+grid compiling first. The map is held still (drawing, not stepping) until the
+reveal ends. Admin > Canvas UI kit > Screens has it waiting and replaying.
+
 ### Still open
 
 - The real-phone checkpoint of stage 2: whether the zoom reports stop. The

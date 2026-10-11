@@ -338,7 +338,12 @@
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",
     "bossIntroTitle": "Boss Fight: {{name}}",
-    "timeAlarm": "Time"
+    "timeAlarm": "Time",
+    "boot": {
+      "level": "Level {{n}}",
+      "compiling": "compiling map",
+      "newRun": "booting new run"
+    }
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",

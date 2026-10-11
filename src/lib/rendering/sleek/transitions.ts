@@ -136,8 +136,7 @@ export class SweepTransition {
 }
 
 /**
- * Shatter: the frame breaks into tiles that fly apart (or, reversed, fly IN and
- * settle — the run-start assemble).
+ * Shatter: the frame breaks into tiles that fly apart.
  *
  * Tile kinematics mirror the ones the game loop already uses, so the physics
  * hold and the animation agree on when it is finished.
@@ -171,9 +170,7 @@ export class ShatterTransition {
 
     const elapsed = (now - dissolve.startTime) / 1000;
     const dur = DISSOLVE_DURATION / 1000;
-    // Reverse (the run-start assemble) plays the same kinematics backwards, so
-    // the tiles fly in from the scattered end-state and settle into place.
-    const anim = dissolve.reverse ? Math.max(0, dur - elapsed) : elapsed;
+    const anim = elapsed;
 
     for (let i = 0; i < dissolve.tiles.length; i++) {
       const tile = dissolve.tiles[i];
@@ -182,13 +179,8 @@ export class ShatterTransition {
       const t = Math.max(0, anim - tile.delay);
       const tMax = dur - tile.delay;
       const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-      // Forward: shards fade as they scatter. Reverse: they must stay SOLID
-      // while flying together - mirroring the fade leaves them nearly invisible
-      // for most of the flight and the assemble reads as a soft blur instead of
-      // shards. Only a short fade-in stops the scattered cloud popping in.
-      s.alpha = dissolve.reverse
-        ? Math.max(0, Math.min(1, elapsed / 0.2))
-        : Math.max(0, 1 - progress * 1.15);
+      // Shards fade as they scatter.
+      s.alpha = Math.max(0, 1 - progress * 1.15);
       s.position.set(tile.cx + tile.vx * t, tile.cy + tile.vy * t + 400 * t * t);
       s.rotation = tile.rotSpeed * t;
     }

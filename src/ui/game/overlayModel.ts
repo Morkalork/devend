@@ -110,36 +110,6 @@ export function deadlineGeometry(frame: BoardFrameCss | null, secondsLeft: numbe
   };
 }
 
-// ── BoardPlaceholder ───────────────────────────────────────────────────────
-
-/** Grid spacing as a share of the arena, so it reads the same on any screen. */
-export const PLACEHOLDER_GRID_CELLS = 12;
-
-export interface PlaceholderGeometry {
-  /** The arena inside the frame band, relative to the frame's outer edge. */
-  inner: { x: number; y: number; width: number; height: number };
-  /** Grid spacing. */
-  cell: number;
-  /** The scan line's height and its sweep (from, to) in the arena's own y. */
-  scanHeight: number;
-  scanFrom: number;
-  scanTo: number;
-}
-
-export function placeholderGeometry(frame: BoardFrameCss): PlaceholderGeometry {
-  const arena = frame.width - frame.frame * 2;
-  return {
-    inner: { x: frame.frame, y: frame.frame, width: arena, height: frame.height - frame.frame * 2 },
-    cell: arena / PLACEHOLDER_GRID_CELLS,
-    scanHeight: Math.max(24, arena * 0.12),
-    scanFrom: -arena * 0.12,
-    scanTo: arena,
-  };
-}
-
-/** How long the placeholder fades before it leaves the tree. */
-export const PLACEHOLDER_FADE_MS = 500;
-
 // ── LockDebugOverlay ───────────────────────────────────────────────────────
 
 export const OUTCOME_COLOR: Record<LockDecision["outcome"], number> = {

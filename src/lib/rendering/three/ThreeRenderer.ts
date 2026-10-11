@@ -427,10 +427,6 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.sleek.captureForDissolve(tint);
   }
 
-  captureSceneCanvas(game: CanvasGameState, rctx: RenderContext): HTMLCanvasElement | null {
-    return this.sleek.captureSceneCanvas(game, rctx);
-  }
-
   destroy(): void {
     this.sleek.destroy();
   }

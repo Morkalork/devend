@@ -257,12 +257,17 @@ export interface CanvasGameState {
   failure?: import("@/lib/mapFailure").MapFailure;
   levelComplete: boolean;
   /**
-   * Mirror of the React `paused` prop (a modal/menu is up). The loop self-halts
-   * on the next frame while set, so physics never advances behind a modal even
-   * when the loop was (re)started by the intro assemble AFTER the pause effect
-   * already ran. The pause effect restarts the loop when this clears.
+   * Mirror of the React `paused` prop (a modal/menu is up), plus the launcher
+   * and boot holds. The loop self-halts on the next frame while set, so physics
+   * never advances behind a modal even when the loop was (re)started after the
+   * pause effect already ran. The pause effect restarts the loop when this clears.
    */
   paused: boolean;
+  /**
+   * The board is still behind its boot reveal (BoardBoot): physics is held, as
+   * for any pause, but frames keep drawing, because the reveal uncovers them.
+   */
+  bootHold?: boolean;
 
   // ── Input / swipe ──────────────────────────────────────────────────────
   /**

@@ -53,7 +53,8 @@ import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
-import { BoardPlaceholder, type BoardFrameCss } from "@/ui/game/BoardPlaceholder";
+import { BoardBoot } from "@/ui/game/BoardBoot";
+import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
 import { PairGuestGate } from "@/ui/game/PairGuestGate";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
@@ -296,10 +297,8 @@ interface GameCanvasProps {
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
   onMapComplete?: () => void;
-  /** Run-start intro: the board ASSEMBLES from shatter tiles (the reverse of
-   *  the level-clear dissolve) instead of popping in over the background code.
-   *  Passed true only for the first map of a run. */
-  introAssemble?: boolean;
+  /** The first map of a run: the boot reveal plays its longer cut (BoardBoot). */
+  runStartIntro?: boolean;
   onGameStateChange?: (state: GameStateInfo) => void;
   /**
    * The lockstep session, when a pair is playing this map
@@ -340,8 +339,12 @@ interface GameCanvasProps {
   bugConfig?: BugConfig;
   regionColor?: string;
   accentColor?: string;
-  /** Show the board's loading outline (BoardPlaceholder) over the canvas. */
-  showBoardPlaceholder?: boolean;
+  /**
+   * The board may be revealed: nothing covers it (GameScreen holds this back
+   * while an explainer card is up). Until it is true, and until the reveal it
+   * starts has finished, the board stays behind its boot stand-in, held still.
+   */
+  revealReady?: boolean;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
   /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
@@ -464,7 +467,7 @@ export function GameCanvas({
   onMapTimedOut,
   onLevelComplete,
   onMapComplete,
-  introAssemble = false,
+  runStartIntro = false,
   onGameStateChange,
   tutorialMode = false,
   tutorialStep = "completed",
@@ -485,7 +488,7 @@ export function GameCanvas({
   bugConfig = DEFAULT_BUG_CONFIG,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
-  showBoardPlaceholder = false,
+  revealReady = true,
   activeModifiers,
   cumulativeLockedBalls = 0,
   fenceDurability = null,
@@ -528,9 +531,6 @@ export function GameCanvas({
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onMapCompleteRef = useRef(onMapComplete);
   useEffect(() => { onMapCompleteRef.current = onMapComplete; }, [onMapComplete]);
-  // Run-intro assemble plays at most once per mount: consumed on first use so
-  // the per-level effect re-runs (and mid-run maps) never replay it.
-  const introPendingRef = useRef(introAssemble);
   const freezeOnCompleteRef = useRef(freezeOnComplete);
   useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
   const onGameEndRef = useRef(onGameEnd);
@@ -661,15 +661,23 @@ export function GameCanvas({
    */
   const [pendingLaunch, setPendingLaunch] = useState<LauncherState | null>(null);
 
+  // False until the board's boot reveal has finished (BoardBoot): the map is
+  // held still until then, and the overlays that point at the board (the
+  // tutorial hand, the launcher, the rubber band, the circuit hint) wait for it.
+  const [revealed, setRevealed] = useState(false);
+  const handleRevealed = useCallback(() => setRevealed(true), []);
+
   useEffect(() => {
     const game = gameRef.current;
     // Mirror onto the ref FIRST (before any early return): the loop body reads
-    // game.paused to self-halt, which covers the case where the intro assemble
-    // starts the loop after this effect has already run for the initial mount.
+    // game.paused to self-halt, which covers a loop started after this effect
+    // has already run for the initial mount.
     // A loaded cup holds the board exactly as a modal does. Folded in here
     // rather than bolted on at the call site so there is ONE expression that
-    // decides whether the map is running.
-    game.paused = paused || !!pendingLaunch;
+    // decides whether the map is running. The boot reveal holds it too, until
+    // the scan line has left the board live (BoardBoot).
+    game.bootHold = !revealed;
+    game.paused = paused || !!pendingLaunch || !revealed;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
     if (game.paused) {
       // A LAUNCHER hold keeps the loop turning; a modal stops it dead.
@@ -681,7 +689,9 @@ export function GameCanvas({
       // stopped it before the map's first paint, leaving the band, the aim cone
       // and the loaded balls hanging over the page background with no board
       // underneath them.
-      if (pendingLaunch && !paused) startGameLoop(game);
+      // The boot hold keeps drawing too: the reveal uncovers the board's
+      // first frame, which has to have been drawn.
+      if ((pendingLaunch || !revealed) && !paused) startGameLoop(game);
       else stopGameLoop(game);
       // Drop any in-progress swipe so a drag can't resume mid-gesture
       game.swipeStart = null;
@@ -693,17 +703,9 @@ export function GameCanvas({
       game.slingDrag = null;
     } else {
       game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
-      // A run-intro assemble armed while paused (e.g. behind the "How to win"
-      // modal) has a wall-clock startTime that elapsed during the pause, so it
-      // would snap instead of flying in. Rebase a still-pending assemble
-      // (game.dissolve is nulled on completion) to now, so it dissolves in fresh
-      // when the modal is dismissed.
-      if (game.dissolve && game.dissolve.reverse) {
-        game.dissolve.startTime = simNow();
-      }
       startGameLoop(game);
     }
-  }, [paused, pendingLaunch]);
+  }, [paused, pendingLaunch, revealed]);
 
   /**
    * Watchdog: the loop is not allowed to stay dead.
@@ -827,17 +829,6 @@ export function GameCanvas({
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
-  // False while the run-intro assemble is still flying the board in; flipped
-  // true when the board has fully materialized (so the tutorial overlay waits
-  // for it). A normal start has no assemble, so it's materialized immediately.
-  const [boardMaterialized, setBoardMaterialized] = useState(!introAssemble);
-  // Safety net: never leave the tutorial hidden if the assemble's onComplete
-  // doesn't fire (e.g. a renderer hiccup). The assemble lands well under 3s.
-  useEffect(() => {
-    if (boardMaterialized) return;
-    const id = window.setTimeout(() => setBoardMaterialized(true), 3000);
-    return () => window.clearTimeout(id);
-  }, [boardMaterialized]);
   // Boss ball HUD mirror (issue #56): updated on init and on every boss hit/defeat.
   const [bossHud, setBossHud] = useState({ active: false, hp: 0, maxHp: 0, defeated: false });
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
@@ -1685,18 +1676,8 @@ export function GameCanvas({
         rainbowConvert: t('game.pickupRainbow'),
       },
     };
-    // Run-intro hold (Pixi): between the renderer becoming ready and
-    // startAssemble installing the reverse dissolve, the game loop would
-    // present normal full-scene frames — the complete board flashed for a
-    // frame or two before collapsing in. While this is set, render() presents
-    // nothing; startAssemble clears it, making the assemble the renderer's
-    // first visible frame. (The 2D path starts its assemble synchronously
-    // before any frame, so it never needs the hold.)
-    let introHold = false;
-
-    // One-shot "board is now visible" signal, so the shell can fade its
-    // "Loading..." overlay out exactly as the canvas starts presenting.
-    let readyTimer: number | undefined;
+    // One-shot "board is now visible" signal: the boot reveal starts on it
+    // (BoardBoot, through GameScreen).
     let readySignaled = false;
     const signalCanvasReady = () => {
       if (readySignaled) return;
@@ -1709,7 +1690,6 @@ export function GameCanvas({
       rctx.showPerfOverlay = showPerfOverlayRef.current;
       rctx.deadlineLimit = deadlineSecondsLeftRef.current != null ? deadlineLimitRef.current : null;
       if (!ctx) {
-        if (introHold && !game.dissolve) return;
         // Pixi path — a no-op until the async init lands (a few skipped frames).
         pixiRef.current?.render(game, rctx);
         return;
@@ -1761,45 +1741,6 @@ export function GameCanvas({
       startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
-
-    // Run-start intro: the exact reverse of startDissolve. The map's first
-    // frame is painted OFF-SCREEN (never presented), cut into the same
-    // shatter tiles, and flown IN — the board assembles over the scrolling
-    // background code instead of popping into place. Physics is held while
-    // game.dissolve is set, so play begins when the last tile lands.
-    // The capture always uses the 2D renderer (a parity port of the Pixi
-    // scene): under Pixi the tiles then ride the DissolveLayer's CanvasSource
-    // fallback, keeping the GPU snapshot machinery out of the very first
-    // frames of a fresh WebGL context.
-    const startAssemble = () => {
-      // Lift the pre-assemble hold: from here on game.dissolve carries the
-      // intro, and after it completes normal frames should present again.
-      introHold = false;
-      const W = canvas.width, H = canvas.height;
-      const captured = document.createElement('canvas');
-      captured.width = W; captured.height = H;
-      // Snapshot the map's first frame from the renderer that will actually
-      // draw it. Under the emergency 2D board there is no renderer to extract
-      // from, so the assemble is simply skipped (the board appears directly).
-      const snap = pixiRef.current?.captureSceneCanvas?.(game, rctx) ?? null;
-      const cctx = captured.getContext('2d');
-      if (cctx && snap) cctx.drawImage(snap, 0, 0);
-      game.dissolve = {
-        captured, tiles: buildDissolveTiles(W, H),
-        // Start a beat in the FUTURE: the game screen slides in for ~280ms
-        // (Index's framer-motion transition), and shards that fly during the
-        // slide are never seen. The negative-elapsed window renders nothing
-        // (tiles at full scatter, alpha clamped to 0), then the assemble
-        // plays in full view.
-        startTime: simNow() + 450,
-        // The board has finished flying in: reveal the tutorial overlay now.
-        reverse: true, onComplete: () => { setBoardMaterialized(true); startGameLoop(game); },
-      };
-      startGameLoop(game);
-      // Fade the shell's "Loading..." overlay out just as the first tiles fly
-      // in (at dissolve.startTime), so the wait is covered end to end.
-      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - simNow()));
-    };
 
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
@@ -2038,44 +1979,21 @@ export function GameCanvas({
       layoutGuard.observe(container);
     }
     let disposed = false;
-    if (introPendingRef.current) {
-      introPendingRef.current = false;
-      if (useFallback2d) {
-        startAssemble(); // captures off-screen and starts the loop itself
-      } else {
-        // Pixi inits async: keep the loop (and the parallax background)
-        // running while it loads — render() no-ops until ready — then let the
-        // assemble be the renderer's first ever presented frame. The hold
-        // covers the frames between init landing and startAssemble below (the
-        // loop runs first in each rAF batch and would flash the full board).
-        introHold = true;
-        startGameLoop(game);
-        const waitForRenderer = () => {
-          if (disposed || game.dissolve) return;
-          if (pixiRef.current?.isReady) { startAssemble(); return; }
-          // A WebGL init failure re-runs this effect as canvas2d (no intro).
-          requestAnimationFrame(waitForRenderer);
-        };
-        requestAnimationFrame(waitForRenderer);
+    // The loop draws under the boot hold from the start (physics is held until
+    // the reveal ends). The board is visible on the renderer's first frame,
+    // which on a fresh mount is not this one - the WebGL chunk and its init
+    // are still landing - so ready waits for the renderer. The 2D path draws
+    // synchronously, so it is ready at once.
+    startGameLoop(game);
+    const signalWhenDrawn = () => {
+      if (disposed) return;
+      if (ctx || pixiRef.current?.isReady) {
+        signalCanvasReady();
+        return;
       }
-    } else {
-      startGameLoop(game);
-      // Normal start: the board is visible on the renderer's first frame, which
-      // on a fresh mount is not this one - the WebGL chunk and its init are
-      // still landing. Signalling now faded the board placeholder out over an
-      // empty frame. The 2D path draws synchronously, so it is ready at once.
-      const signalWhenDrawn = () => {
-        if (disposed) {
-          return;
-        }
-        if (ctx || pixiRef.current?.isReady) {
-          signalCanvasReady();
-          return;
-        }
-        requestAnimationFrame(signalWhenDrawn);
-      };
-      signalWhenDrawn();
-    }
+      requestAnimationFrame(signalWhenDrawn);
+    };
+    signalWhenDrawn();
 
     // Once the level has run long enough for the perf window to fill, try (once)
     // to ramp the render resolution up if the device has frame-time headroom.
@@ -2099,7 +2017,6 @@ export function GameCanvas({
       window.removeEventListener("resize", onWindowResize);
       layoutGuard?.disconnect();
       if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
-      if (readyTimer !== undefined) window.clearTimeout(readyTimer);
       stopGameLoop(game);
       // Cancel any pending flash/shake/game-over timeouts so they can't fire a
       // React setter (or onGameEnd, via the 1s game-over timeout) after unmount
@@ -2627,10 +2544,15 @@ export function GameCanvas({
       {/* Under the play screen's HUD (z 10), as the DOM's board overlays sat
           under its bars. The page lock is the play layer's to set. */}
       <CanvasLayer id="board" z={5} lock={false}>
-        <BoardPlaceholder visible={showBoardPlaceholder} accentColor={accentColor} frame={boardFrameCss} origin={origin} />
+        {/* Every map opens behind this: the board's stand-in while it loads,
+            then the scan-line reveal; the map is held still until it ends. */}
+        {!revealed && (
+          <BoardBoot ready={revealReady} runStart={runStartIntro} accentColor={accentColor}
+            frame={boardFrameCss} origin={origin} levelNumber={levelNumber} onRevealed={handleRevealed} />
+        )}
         {/* The map clock, on the board's own frame where the eyes already are. */}
         <DeadlineFrame
-          frame={showBoardPlaceholder ? null : boardFrameCss}
+          frame={revealed ? boardFrameCss : null}
           secondsLeft={deadlineSecondsLeft}
           limit={deadlineLimit}
           origin={origin}
@@ -2651,7 +2573,7 @@ export function GameCanvas({
           screenFlash={screenFlash}
           boardFrame={boardFrameCss}
         />
-        {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && boardMaterialized && (
+        {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && revealed && (
           <InteractiveTutorialOverlay
             tutorialStep={tutorialStep}
             isPlayerDragging={isPlayerDragging}
@@ -2662,7 +2584,7 @@ export function GameCanvas({
             origin={origin}
           />
         )}
-        {armedAbility === 'rubberBand' && boardMaterialized && (
+        {armedAbility === 'rubberBand' && revealed && (
           <RubberBandOverlay
             canvasWidth={canvasCssWidth}
             canvasHeight={canvasCssHeight}
@@ -2696,7 +2618,7 @@ export function GameCanvas({
 
         {/* The plunger. Board-aligned and mounted only while a cup is loaded,
             which is also exactly while the board is held. */}
-        {pendingLaunch && boardMaterialized && (() => {
+        {pendingLaunch && revealed && (() => {
           const game = gameRef.current;
           const loaded = pendingLaunch.ballIds
             .map(id => game.balls.find(b => b.id === id))
@@ -2741,7 +2663,7 @@ export function GameCanvas({
           );
         })()}
         {/* The same hand, aimed at a circuit's terminals. */}
-        {circuitHint && boardMaterialized && !tutorialMode && (
+        {circuitHint && revealed && !tutorialMode && (
           <InteractiveTutorialOverlay
             tutorialStep="showingHint"
             isPlayerDragging={isPlayerDragging}

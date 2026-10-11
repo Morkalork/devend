@@ -11,7 +11,7 @@
  * alarm is not silent.
  *
  * Positioned from the frame GameCanvas already computes for the board (see
- * BoardPlaceholder), so it sits exactly on the drawn frame band. Inert: it
+ * BoardBoot), so it sits exactly on the drawn frame band. Inert: it
  * never takes a tap.
  */
 import { useCallback } from "react";
