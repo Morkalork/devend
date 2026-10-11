@@ -15,7 +15,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
 import { creepFactor } from "@/lib/scopeCreep";
 import { mutatorSpeedFactor } from "@/lib/mapMutators";
-import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { updateBallEffects } from "@/lib/ballEffects";
 import { advanceLamp } from "@/lib/lampBall";
@@ -273,7 +273,7 @@ export function createGameLoop(
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         } else {
           // Pixi: present an EMPTY frame (the board has shattered away; a normal
-          // render would repaint the drained sweep since shimmerStart is still set).
+          // render would repaint the won board).
           callbacks.renderEmpty?.();
         }
         d.onComplete();
@@ -338,11 +338,13 @@ export function createGameLoop(
           }
         }
       }
+      // The end-of-map debrief is up (lib/scoreDebrief.ts): keep drawing the
+      // board under its boxes until it ends.
       const shimmerActive =
         game.shimmerStart > 0 &&
-        simNow() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
-      // Freeze mode (dev/playground): render every frame through the sweep, then a
-      // final clamped full-drain frame, and stop scheduling so the board holds.
+        simNow() < game.shimmerStart + (game.debrief?.durationMs ?? 0);
+      // Freeze mode (dev/playground): render through the debrief, then stop
+      // scheduling so the board holds.
       if (game.shimmerFrozen) {
         callbacks.render();
         if (shimmerActive) schedule();

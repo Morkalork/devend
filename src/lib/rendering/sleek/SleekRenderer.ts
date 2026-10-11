@@ -35,7 +35,7 @@
  *
  * DELIBERATELY NOT YET PORTED (this is the vertical slice): breakables, mirrors,
  * debris, pickups, chests, circuits, charges, data streams, phasing objects,
- * chains, lock-flash assimilations, the level-clear sweep, the shatter dissolve,
+ * chains, lock-flash assimilations, the shatter dissolve,
  * ambient rain and the perf HUD. `missingFeatures()` reports what a given board
  * would have needed, so finishing the tail is a checklist rather than a hunt.
  */
@@ -60,7 +60,7 @@ import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
 import { ChromeLayer } from "./chromeLayer";
-import { SweepTransition, ShatterTransition } from "./transitions";
+import { ShatterTransition } from "./transitions";
 import { lightScope, lampScope, type LightScope } from "./light";
 import { handoverProgress, lampSample, lampLevel, type LampState } from "@/lib/lampBall";
 import type { Ball } from "@/types/game";
@@ -89,7 +89,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
  *   OVER   everything that sits on top of a lit scene - coronas, rings, marks,
  *     labels, motes, effects, the rim and danger frame - composited over the
  *     host's frame, which arrives here as an ordinary sprite. That is what
- *     keeps the sweep, the shatter and the first-frame capture working
+ *     keeps the shatter and the first-frame capture working
  *     unchanged: they snapshot a container, and the 3D frame is in it.
  *
  * Without a host nothing here changes; the plain 2D board is exactly what it
@@ -173,7 +173,6 @@ export class SleekRenderer {
   private balls = new SleekBallLayer();
   private chrome = new ChromeLayer();
 
-  private sweep = new SweepTransition();
   private shatter = new ShatterTransition();
   /** GPU snapshot for the shatter, taken by captureForDissolve. */
   private shatterRT: RenderTexture | null = null;
@@ -412,9 +411,6 @@ export class SleekRenderer {
 
     // ── Shatter owns the whole frame ────────────────────────────────────────
     if (game.dissolve) {
-      // A sweep in flight becomes the shatter's source: its drained slices are
-      // what the tiles are cut from.
-      if (this.sweep.active) this.teardownSweep();
       this.root.visible = false;
       this.board.underlay.visible = false;
       this.chrome.outer.visible = false;
@@ -428,16 +424,6 @@ export class SleekRenderer {
     this.root.visible = true;
     this.board.underlay.visible = true;
     this.chrome.outer.visible = true;
-
-    // ── Level-clear sweep ───────────────────────────────────────────────────
-    // shimmerStart can sit in the FUTURE (it waits for lock flashes to finish),
-    // so keep rendering live until the sweep actually begins.
-    if (game.shimmerStart > 0 && now >= game.shimmerStart) {
-      this.sweep.render(this.app, this.root, game, now);
-      this.app.render();
-      return;
-    }
-    if (this.sweep.active) this.teardownSweep();
 
     if (this.host) {
       this.renderHybrid(game, rctx, now);
@@ -769,12 +755,6 @@ export class SleekRenderer {
     }
   }
 
-  /** Restore the live scene after a sweep and drop its baked textures. */
-  private teardownSweep(): void {
-    this.sweep.teardown();
-    this.root.visible = true;
-  }
-
   private clearShatterRT(): void {
     this.shatterRT?.destroy(true);
     this.shatterRT = null;
@@ -783,7 +763,6 @@ export class SleekRenderer {
   /** Blank frame (used between levels), so the canvas is never a stale image. */
   presentEmpty(): void {
     if (!this.ready) return;
-    this.teardownSweep();
     this.shatter.clear();
     this.clearShatterRT();
     this.root.visible = false;
@@ -792,9 +771,9 @@ export class SleekRenderer {
   }
 
   /**
-   * GPU snapshot of whatever is currently presented - the drained sweep after a
-   * level clear, or the live scene on game over - for the shatter tiles to be
-   * cut from.
+   * GPU snapshot of whatever is currently presented - the finished board after
+   * a level clear, or the live scene on game over - for the shatter tiles to
+   * be cut from.
    *
    * Snapshotting on the GPU rather than reading the canvas back matters: a
    * drawImage(webglCanvas) readback stalls the pipeline, and it stalls it at
@@ -822,7 +801,6 @@ export class SleekRenderer {
     clearBounceTextures();
     clearFaceLightTexture();
     clearMoteTexture();
-    this.sweep.teardown();
     this.shatter.clear();
     this.clearShatterRT();
     this.board.destroy();

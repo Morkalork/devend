@@ -7,8 +7,10 @@ import i18n from "@/i18n";
 import { BOARD_WIDTH } from "@/lib/boardConstants";
 import type { LaunchAim } from "@/lib/launcher";
 import type { Vector2 } from "@/types/game";
+import type { ScoreDebrief as Debrief } from "@/types/debrief";
+import { DEBRIEF_COLORS, debriefDurationMs } from "@/lib/scoreDebrief";
 import type { GalleryEntry } from "../galleryTypes";
-import { ACCENT, BootDemo, PARTNER, Replay, Stage, type FakeBoard } from "./boardStage";
+import { ACCENT, BootDemo, DebriefDemo, PARTNER, Replay, Stage, type FakeBoard } from "./boardStage";
 import { BoardAlert } from "../../game/BoardAlert";
 import { BoardBoot } from "../../game/BoardBoot";
 import { BoardToasts } from "../../game/BoardToasts";
@@ -44,6 +46,32 @@ const predictUp = (aim: LaunchAim): Vector2[] => [
   BARREL_BALL,
   { x: BARREL_BALL.x + aim.direction.x * 500, y: BARREL_BALL.y + aim.direction.y * 500 },
 ];
+
+/** A won map's debrief: what scored, in world units, as applyCut would build it. */
+const debriefOf = (items: Debrief["items"], notes: Debrief["notes"]): Debrief =>
+  ({ items, notes, durationMs: debriefDurationMs(items.length, notes.length) });
+const DEBRIEF = debriefOf([
+  { kind: "space", box: { x: 560, y: 520, w: 210, h: 180 }, title: { key: "debrief.space" },
+    detail: { key: "debrief.spaceDetail", values: { left: 8, target: 15 } }, hours: 6, color: null },
+  { kind: "fences", box: { x: 150, y: 140, w: 600, h: 560 }, title: { key: "debrief.fences" },
+    detail: { key: "debrief.fencesDetail", values: { used: 4, par: 6 } }, hours: 10, color: DEBRIEF_COLORS.fences },
+  { kind: "smash", box: { x: 600, y: 200, w: 70, h: 70 }, title: { key: "debrief.smash" },
+    detail: { key: "debrief.smashDetail" }, hours: null, color: DEBRIEF_COLORS.smash },
+  { kind: "lock", box: { x: 170, y: 520, w: 150, h: 120 }, title: { key: "debrief.lock" },
+    detail: { key: "debrief.lockDetail" }, hours: 12, color: null },
+  { kind: "superior", box: { x: 380, y: 260, w: 90, h: 80 }, title: { key: "debrief.superior" },
+    detail: { key: "debrief.superiorDetail" }, hours: 24, color: DEBRIEF_COLORS.superior },
+], [
+  { title: { key: "debrief.shipEarly" }, hours: 9 },
+  { title: { key: "debrief.winBonus" }, hours: 5 },
+]);
+/** A multi-lock: two balls sealed by one cut, one inside a zone; nothing else scored. */
+const DEBRIEF_LOCKS = debriefOf([
+  { kind: "zone", box: { x: 200, y: 200, w: 220, h: 200 }, title: { key: "debrief.zone" },
+    detail: { key: "debrief.multiDetail", values: { n: 2 } }, hours: 31, color: "#b16cff" },
+  { kind: "lock", box: { x: 470, y: 210, w: 230, h: 190 }, title: { key: "debrief.lock" },
+    detail: { key: "debrief.multiDetail", values: { n: 2 } }, hours: 18, color: null },
+], []);
 
 const region = (b: FakeBoard) => ({ origin: b.origin, width: b.region.width, height: b.region.height });
 
@@ -105,6 +133,16 @@ export const entries: GalleryEntry[] = [
   ) },
   { id: "BoardBoot-runStart", group: "board", render: () => (
     <Stage>{b => <Replay everyMs={5000}>{k => <BootDemo key={k} b={b} runStart waitMs={1500} />}</Replay>}</Stage>
+  ) },
+  // The map is won: what scored, boxed and tagged, before the board shatters.
+  { id: "ScoreDebrief", group: "board", render: () => (
+    <Stage>{b => <Replay everyMs={debriefDurationMs(5, 2) + 1500}>{k => <DebriefDemo key={k} b={b} debrief={DEBRIEF} />}</Replay>}</Stage>
+  ) },
+  { id: "ScoreDebrief-held", group: "board", render: () => (
+    <Stage>{b => <DebriefDemo b={b} debrief={DEBRIEF} hold />}</Stage>
+  ) },
+  { id: "ScoreDebrief-locks", group: "board", render: () => (
+    <Stage>{b => <Replay everyMs={debriefDurationMs(2, 0) + 1500}>{k => <DebriefDemo key={k} b={b} debrief={DEBRIEF_LOCKS} />}</Replay>}</Stage>
   ) },
   { id: "PerfOverlay", group: "board", render: () => (
     <Stage>{b => <PerfOverlay visible origin={b.origin} />}</Stage>

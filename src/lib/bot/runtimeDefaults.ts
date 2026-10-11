@@ -101,6 +101,8 @@ export function runtimeDefaults() {
     lockedBallsCount: 0,
     mapBasePoints: DEFAULT_MAP_BASE_POINTS,
     lockBonus: 0,
+    lockPayouts: {},
+    debrief: null,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
     lockedByType: {},

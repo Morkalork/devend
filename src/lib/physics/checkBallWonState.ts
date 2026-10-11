@@ -810,6 +810,8 @@ export function checkAndUpdateBallWonStates(
     // simultaneous multipliers, so it has no standalone "bonus" to add up.
     let standardBase = 0;
     let superiorBase = 0;
+    // Each ball's own points, so the debrief can say what its lock paid.
+    const perBall: { id: string; points: number; superior: boolean; zone: boolean }[] = [];
     for (const b of wonThisPass) {
       const selfGreen = b.ability === 'moneyBall' ? 1 : 0;
       const mult = game.moneyMultiplier * Math.pow(3, greensThisPass - selfGreen);
@@ -873,6 +875,7 @@ export function checkAndUpdateBallWonStates(
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
       else { standardPoints += ballPoints; standardBase += basePoints; }
+      perBall.push({ id: b.id, points: ballPoints, superior: superiorIds.has(b.id), zone: !!lockArea });
     }
     // Each lock-multiplier point is worth lockValue overtime hours (the
     // economy's main income; scoring-config.yml), and a SUPERIOR lock's points
@@ -957,6 +960,22 @@ export function checkAndUpdateBallWonStates(
       const superiorExtra = superiorCountThisPass * activeModifiers.overtimePerSuperiorLock;
       game.lockBonus += superiorExtra;
       game.superiorLockBonus += superiorExtra;
+    }
+
+    // What each of these locks paid, priced the way the totals above were, for
+    // the end-of-map debrief (lib/scoreDebrief.ts). Rounded per ball, so the
+    // tags can differ from the totals by an hour of rounding; never by more.
+    const payouts = (game.lockPayouts ??= {});
+    for (const p of perBall) {
+      const quality = p.superior ? lockQuality.superiorMultiplier : 1;
+      payouts[p.id] = {
+        hours: Math.round(p.points * simultaneousMultiplier * lockValue * quality)
+          + activeModifiers.overtimePerLock
+          + (p.superior ? activeModifiers.overtimePerSuperiorLock : 0),
+        superior: p.superior,
+        zone: p.zone,
+        together: newlyLocked,
+      };
     }
 
     if (greensThisPass > 0) game.moneyMultiplier *= Math.pow(3, greensThisPass);

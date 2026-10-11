@@ -54,6 +54,9 @@ import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
 import { BoardBoot } from "@/ui/game/BoardBoot";
+import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
+import { buildScoreDebrief } from "@/lib/scoreDebrief";
+import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
 import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
 import { PairGuestGate } from "@/ui/game/PairGuestGate";
@@ -79,7 +82,6 @@ import {
 import {
   LOCK_TOTAL_DURATION,
   BALL_WON_REGION_THRESHOLD,
-  LEVEL_CLEAR_SHIMMER_MS,
   LEVEL_CLEAR_HOLD_MS,
   ARENA_MARGIN,
 } from "@/lib/gameConstants";
@@ -533,6 +535,14 @@ export function GameCanvas({
   useEffect(() => { onMapCompleteRef.current = onMapComplete; }, [onMapComplete]);
   const freezeOnCompleteRef = useRef(freezeOnComplete);
   useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
+  // The end-of-map debrief on screen (ScoreDebrief): set when the map is won,
+  // cleared as the board shatters or the map restarts.
+  const [debriefView, setDebriefView] = useState<{ debrief: ScoreDebriefData; delayMs: number; hold: boolean } | null>(null);
+  const showDebriefRef = useRef(() => {
+    const game = gameRef.current;
+    if (!game.debrief) return;
+    setDebriefView({ debrief: game.debrief, delayMs: Math.max(0, game.shimmerStart - simNow()), hold: game.shimmerFrozen });
+  });
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
   const onMapTimedOutRef = useRef(onMapTimedOut);
@@ -1073,6 +1083,8 @@ export function GameCanvas({
     lockedBallsCount: 0,
     mapBasePoints: DEFAULT_MAP_BASE_POINTS,
     lockBonus: 0,
+    lockPayouts: {},
+    debrief: null,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
     lockedByType: {},
@@ -1548,6 +1560,9 @@ export function GameCanvas({
       game.loopFrameAt = 0;
       game.shimmerStart = 0;
       game.shimmerFrozen = false;
+      game.debrief = null;
+      game.lockPayouts = {};
+      setDebriefView(null);
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
@@ -1738,6 +1753,7 @@ export function GameCanvas({
         if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
       }
       game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: simNow(), onComplete };
+      setDebriefView(null);
       startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
@@ -1759,7 +1775,7 @@ export function GameCanvas({
       setCompletedCuts,
       setDisplayLives,
       onLevelComplete: d => onLevelCompleteRef.current(d),
-      onMapComplete: () => onMapCompleteRef.current?.(),
+      onMapComplete: () => { showDebriefRef.current(); onMapCompleteRef.current?.(); },
       freezeOnComplete: () => freezeOnCompleteRef.current,
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
@@ -2059,10 +2075,6 @@ export function GameCanvas({
     // rescheduling), so restart it here or the shimmer window renders no frames.
     game.shimmerStart = simNow();
     game.shimmerFrozen = freezeOnCompleteRef.current;
-    onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
-    startGameLoop(game);
-    // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
-    if (freezeOnCompleteRef.current) return;
     // Pays on the BEST remaining reached, not the current: space creeping back
     // after a good cut must not take an already-earned hour away.
     const pushBonus = pushBonusEarned(
@@ -2116,8 +2128,26 @@ export function GameCanvas({
       },
     );
 
-    // Same post-sweep beat as applyCut: hold the drained board, shatter it,
-    // then mount the completion overlay.
+    // The same debrief as applyCut's (lib/scoreDebrief.ts), then the beat,
+    // the shatter, and the completion overlay.
+    game.debrief = buildScoreDebrief(game, {
+      underParBonus: breakdown.underParBonus,
+      fencesUsed: game.wallCount,
+      par: level.expectedCuts,
+      spaceBonus: breakdown.spaceBonus,
+      remainingPercent: game.bestRemainingPercent,
+      thresholdPercent: level.sizeThreshold,
+      shipEarlyBonus,
+      winBonus: 0,
+      objectiveBonus: 0,
+      hazardPay: 0,
+      pushBonus,
+    });
+    showDebriefRef.current();
+    onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
+    startGameLoop(game);
+    // Dev/playground freeze: hold the debriefed board, no overlay.
+    if (game.shimmerFrozen) return;
     setTimeout(() => {
       startDissolveRef.current?.(() => {
         onLevelCompleteRef.current({
@@ -2157,7 +2187,7 @@ export function GameCanvas({
           freeShopItemsEarned: game.freeShopItems || undefined,
         });
       });
-    }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
+    }, 150 + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
   /**
@@ -2557,6 +2587,19 @@ export function GameCanvas({
           limit={deadlineLimit}
           origin={origin}
         />
+        {/* The end-of-map debrief: what scored, boxed and tagged, until the board shatters. */}
+        {debriefView && (() => {
+          const f = boardFrameCss;
+          const bounds = f
+            ? { x: f.left + f.frame, y: f.top + f.frame, w: f.width - f.frame * 2, h: f.height - f.frame * 2 }
+            : { x: canvasOffsetLeft, y: canvasOffsetTop, w: canvasCssWidth, h: canvasCssHeight };
+          return (
+            <ScoreDebrief debrief={debriefView.debrief} delayMs={debriefView.delayMs} hold={debriefView.hold}
+              accentColor={accentColor} origin={origin} bounds={bounds}
+              canvasWidth={canvasCssWidth} canvasHeight={canvasCssHeight}
+              canvasOffsetLeft={canvasOffsetLeft} canvasOffsetTop={canvasOffsetTop} />
+          );
+        })()}
         {/* Frame-timing HUD, off the board's canvas so it costs the renderer
             nothing and can never land inside the render time it reports. */}
         <PerfOverlay visible={showPerfOverlay || perfHudPersisted} origin={origin} />

@@ -581,10 +581,11 @@ export interface CanvasGameState {
   /** performance.now() at which levelComplete was set — anchors the space
    *  bar's fade-out (unlike shimmerStart it is never scheduled in the future). */
   levelCompleteTime?: number;
-  /** performance.now() at which the level-clear shimmer begins (0 = inactive). */
+  /** performance.now() at which the end-of-map debrief begins, after any lock
+   *  flashes (0 = inactive); the loop keeps drawing the board until it ends. */
   shimmerStart: number;
-  /** Dev/playground: hold the fully-drained frame after the shimmer instead of
-   *  completing (loop stops, renderFrame clamps the drain to its end-state). */
+  /** Dev/playground: hold the won board, debrief and all, instead of
+   *  completing (the loop stops on its last frame). */
   shimmerFrozen: boolean;
 
   // ── Recovery state ─────────────────────────────────────────────────────
@@ -618,6 +619,10 @@ export interface CanvasGameState {
   /** Number of balls locked this level (for lock-bonus multiplier). */
   lockedBallsCount: number;
   lockBonus: number;
+  /** What each lock paid, by ball id, for the end-of-map debrief (lib/scoreDebrief.ts). */
+  lockPayouts?: Record<string, import("@/types/debrief").LockPayout>;
+  /** The end-of-map debrief, built when the map is won; null until then. */
+  debrief?: import("@/types/debrief").ScoreDebrief | null;
   /**
    * The DELIVERY share of lockBonus: raw lockMultiplier x lockValue with every
    * quality multiplier stripped off. lockBonus minus this is what the CRAFT

@@ -1932,5 +1932,27 @@
   "areaKind": {
     "light": "ljusa",
     "dark": "mörka"
+  },
+  "debrief": {
+    "notes": "Betalade också",
+    "lock": "Trådlås",
+    "lockDetail": "inlåst i sin ficka",
+    "superior": "Överlägset lås",
+    "superiorDetail": "trång ficka, extra",
+    "zone": "Zonlås",
+    "zoneDetail": "inlåst i en zon",
+    "multiDetail": "{{n}} med ett snitt",
+    "smash": "Krossad",
+    "smashDetail": "höjde kartans pott",
+    "smashObjectiveDetail": "målet förstört",
+    "fences": "Under par",
+    "fencesDetail": "{{used}} staket, par {{par}}",
+    "space": "Utrymmesbonus",
+    "spaceDetail": "{{left}}% kvar, mål {{target}}%",
+    "shipEarly": "Tidig leverans",
+    "winBonus": "Vinstbonus",
+    "objective": "Mål",
+    "hazardPay": "Risktillägg",
+    "push": "Pressbonus"
   }
 }

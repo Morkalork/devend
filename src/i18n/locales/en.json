@@ -1380,5 +1380,27 @@
   "areaKind": {
     "light": "light syntax",
     "dark": "dark syntax"
+  },
+  "debrief": {
+    "notes": "Also paid",
+    "lock": "Thread Lock",
+    "lockDetail": "sealed in its pocket",
+    "superior": "Superior Lock",
+    "superiorDetail": "tight pocket bonus",
+    "zone": "Zone Lock",
+    "zoneDetail": "sealed inside a zone",
+    "multiDetail": "{{n}} sealed by one cut",
+    "smash": "Smashed",
+    "smashDetail": "raised map payout",
+    "smashObjectiveDetail": "objective destroyed",
+    "fences": "Under Par",
+    "fencesDetail": "{{used}} fences, par {{par}}",
+    "space": "Space Bonus",
+    "spaceDetail": "{{left}}% left, target {{target}}%",
+    "shipEarly": "Ship Early",
+    "winBonus": "Win bonus",
+    "objective": "Objective",
+    "hazardPay": "Hazard pay",
+    "push": "Push bonus"
   }
 }

@@ -12,6 +12,8 @@ import { BOARD_FRAME_THICKNESS, BOARD_WIDTH } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 import { COLOR, tint, useUiScreen, View } from "../../kit/ui";
 import { BoardBoot } from "../../game/BoardBoot";
+import { ScoreDebrief } from "../../game/ScoreDebrief";
+import type { ScoreDebrief as Debrief } from "@/types/debrief";
 
 /** The stand-in board, in screen CSS px. */
 export interface FakeBoard {
@@ -95,5 +97,14 @@ export function BootDemo({ b, runStart, waitMs }: { b: FakeBoard; runStart: bool
   return (
     <BoardBoot ready={ready} runStart={runStart} accentColor={ACCENT} frame={b.frame} origin={b.origin}
       levelNumber={runStart ? 1 : 7} onRevealed={() => {}} />
+  );
+}
+
+/** A won map's debrief over the stand-in board, inside its frame as GameCanvas bounds it. */
+export function DebriefDemo({ b, debrief, hold = false }: { b: FakeBoard; debrief: Debrief; hold?: boolean }) {
+  const f = b.frame;
+  return (
+    <ScoreDebrief debrief={debrief} delayMs={300} hold={hold} accentColor={ACCENT} origin={b.origin} {...b.canvas}
+      bounds={{ x: f.left + f.frame, y: f.top + f.frame, w: f.width - f.frame * 2, h: f.height - f.frame * 2 }} />
   );
 }

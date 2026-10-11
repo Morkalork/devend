@@ -1932,5 +1932,27 @@
   "areaKind": {
     "light": "de sintaxis clara",
     "dark": "de sintaxis oscura"
+  },
+  "debrief": {
+    "notes": "También pagó",
+    "lock": "Bloqueo de hilo",
+    "lockDetail": "sellada en su hueco",
+    "superior": "Bloqueo superior",
+    "superiorDetail": "hueco ajustado",
+    "zone": "Bloqueo de zona",
+    "zoneDetail": "sellada en una zona",
+    "multiDetail": "{{n}} con un solo corte",
+    "smash": "Destruido",
+    "smashDetail": "más pago del mapa",
+    "smashObjectiveDetail": "objetivo destruido",
+    "fences": "Bajo par",
+    "fencesDetail": "{{used}} vallas, par {{par}}",
+    "space": "Bono de espacio",
+    "spaceDetail": "{{left}}% restante, meta {{target}}%",
+    "shipEarly": "Entrega temprana",
+    "winBonus": "Bono de victoria",
+    "objective": "Objetivo",
+    "hazardPay": "Plus de riesgo",
+    "push": "Bono de presión"
   }
 }

@@ -322,6 +322,26 @@ frame as the map goes live; the first map of a run gets a longer cut with the
 grid compiling first. The map is held still (drawing, not stepping) until the
 reveal ends. Admin > Canvas UI kit > Screens has it waiting and replaying.
 
+### The board's close: the score debrief
+
+The grey wave that swept down a won board is gone. That beat, after the lock
+flashes and before the shatter, now names what scored, the way a strategy game
+marks its units: corner brackets slam in round each locked pocket (gold for a
+superior lock, the zone's colour for a zone lock), each smashed object, the
+player's fences when they came in under par, and the space left when it was
+under target, and each gets a tag plate that types out what it paid and why.
+What paid without a place on the board (Ship Early, the win bonus, an
+objective, hazard pay, a banked push) is listed in a corner panel.
+`lib/scoreDebrief.ts` builds it from the game state at the win, using the same
+scoring terms, so the tags match the results card; `checkBallWonState` records
+what each lock paid as it seals (`game.lockPayouts`). `ui/game/ScoreDebrief.tsx`
+draws it, and `scoreDebriefModel.ts` places the tags: above the box first,
+flipped below, beside or inside when the board's edge or another tag or box is
+in the way. The beat lasts 1.8 to 3.4 s depending on how much there is to read,
+on both routes to a win (a cut, and banking a push); the Playground's
+freeze-on-complete holds it on screen, and Admin > Canvas UI kit > Screens has
+it replaying and held.
+
 ### Still open
 
 - The real-phone checkpoint of stage 2: whether the zoom reports stop. The

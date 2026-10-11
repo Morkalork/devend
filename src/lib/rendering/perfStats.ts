@@ -146,7 +146,7 @@ let _loopRestarts = 0;
  * A hold this long is not a hold any more.
  *
  * Every legitimate one is an animation with an end: the longest is the level
- * clear (lock flashes, then a shimmer, then a held beat, then the shatter),
+ * clear (lock flashes, then the score debrief, then a held beat, then the shatter),
  * and all of it together is a few seconds. Fifteen is far past any of them and
  * far short of a player's patience, so a hold still in force at that point is
  * the thing to photograph.

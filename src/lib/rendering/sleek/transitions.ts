@@ -1,139 +1,25 @@
 /**
- * The two whole-scene transitions: the level-clear sweep and the shatter.
+ * The whole-scene transition: the shatter.
  *
- * Both work by SNAPSHOTTING the scene rather than continuing to draw it, which
- * is what keeps them cheap and — more importantly — what makes them look like
+ * It works by SNAPSHOTTING the scene rather than continuing to draw it, which
+ * is what keeps it cheap and — more importantly — what makes it look like
  * something happening TO the board rather than the board carrying on underneath
- * an overlay. Once a transition owns the frame, the live scene stops rendering
- * entirely.
+ * an overlay. Once it owns the frame, the live scene stops rendering entirely.
  *
- * They are also the two places the light model deliberately stops applying: a
- * board being drained of colour, or flying apart in pieces, is no longer a lit
- * surface with objects on it.
+ * It is also a place the light model deliberately stops applying: a board
+ * flying apart in pieces is no longer a lit surface with objects on it.
  */
 
 import {
-  Application,
-  ColorMatrixFilter,
   Container,
-  Graphics,
   Rectangle,
-  RenderTexture,
   Sprite,
   Texture,
   TextureSource,
   CanvasSource,
 } from "pixi.js";
-import type { CanvasGameState } from "@/types/gameState";
 import type { DissolveState } from "@/types/game";
-import { LEVEL_CLEAR_SHIMMER_MS, DISSOLVE_DURATION } from "@/lib/gameConstants";
-import { PALETTE } from "./palette";
-
-/**
- * Level-clear sweep: a luminous wave crosses the board, draining everything
- * behind it to grey.
- *
- * Both looks are baked ONCE when the sweep starts - the live scene, and a
- * desaturated copy of it - so every frame after that is two textured quads with
- * the drained one cropped at the wave line. No filters or re-tessellation per
- * frame, which matters because this fires at the exact moment the player is
- * being congratulated and a hitch would be very visible.
- */
-export class SweepTransition {
-  private live: RenderTexture | null = null;
-  private drained: RenderTexture | null = null;
-  private below: Sprite | null = null;
-  private above: Sprite | null = null;
-  private aboveMask: Graphics | null = null;
-  private wave: Graphics | null = null;
-  private key = 0;
-
-  get active(): boolean {
-    return this.live !== null;
-  }
-
-  /**
-   * Build (once) and advance the sweep. `scene` is the container holding the
-   * live board, hidden for the duration.
-   */
-  render(
-    app: Application,
-    scene: Container,
-    game: CanvasGameState,
-    now: number,
-  ): void {
-    const { left: bl, top: bt, width: bw, height: bh, scale } = game.boardRect;
-    const W = app.renderer.width;
-    const H = app.renderer.height;
-
-    if (!this.live || this.key !== game.shimmerStart) {
-      this.teardown();
-      this.key = game.shimmerStart;
-
-      this.live = RenderTexture.create({ width: W, height: H });
-      app.renderer.render({ container: scene, target: this.live });
-
-      // Desaturated + lifted: the wake reads as colour drained out, not as a
-      // shadow falling over it.
-      this.drained = RenderTexture.create({ width: W, height: H });
-      const tmp = new Sprite(this.live);
-      const grey = new ColorMatrixFilter();
-      grey.desaturate();
-      grey.brightness(1.25, true);
-      tmp.filters = [grey];
-      app.renderer.render({ container: tmp, target: this.drained });
-      tmp.destroy();
-      // Pixi does not free a display object's filters on destroy().
-      grey.destroy();
-
-      this.below = new Sprite(this.live);
-      this.above = new Sprite(this.drained);
-      this.aboveMask = new Graphics();
-      this.above.mask = this.aboveMask;
-      this.wave = new Graphics();
-      this.wave.blendMode = "add";
-      app.stage.addChild(this.below, this.above, this.aboveMask, this.wave);
-      scene.visible = false;
-    }
-
-    const elapsed = Math.min(now - game.shimmerStart, LEVEL_CLEAR_SHIMMER_MS);
-    const progress = Math.max(0, Math.min(1, elapsed / LEVEL_CLEAR_SHIMMER_MS));
-    const waveY = bt + bh * progress;
-
-    // Crop by MASK, not by mutating texture.frame: a sprite keeps scaling by
-    // its texture's original size, so a cropped frame stretches the slice.
-    const split = Math.max(0, Math.min(H, Math.round(waveY)));
-    if (this.above && this.aboveMask) {
-      this.above.visible = split > 0;
-      if (split > 0) this.aboveMask.clear().rect(0, 0, W, split).fill({ color: 0xffffff });
-    }
-
-    const w = this.wave;
-    if (!w) return;
-    w.clear();
-    if (progress >= 1) return;
-    const bandH = 46 * scale;
-    const peak = Math.sin(progress * Math.PI);
-    w.rect(bl, Math.max(bt, waveY - bandH), bw, Math.min(bandH, waveY - bt))
-      .fill({ color: PALETTE.accent, alpha: 0.25 * (0.4 + peak * 0.6) })
-      .moveTo(bl, waveY).lineTo(bl + bw, waveY)
-      .stroke({ width: 3 * scale, color: 0xffffff, alpha: 0.85 })
-      .moveTo(bl, waveY).lineTo(bl + bw, waveY)
-      .stroke({ width: 9 * scale, color: PALETTE.accent, alpha: 0.35 });
-  }
-
-  teardown(): void {
-    this.below?.destroy();
-    this.above?.destroy();
-    this.aboveMask?.destroy();
-    this.wave?.destroy();
-    this.live?.destroy(true);
-    this.drained?.destroy(true);
-    this.below = this.above = null;
-    this.aboveMask = this.wave = null;
-    this.live = this.drained = null;
-  }
-}
+import { DISSOLVE_DURATION } from "@/lib/gameConstants";
 
 /**
  * Shatter: the frame breaks into tiles that fly apart.

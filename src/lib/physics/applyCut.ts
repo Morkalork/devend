@@ -53,7 +53,8 @@ import { wasteCapturedPickups } from "@/lib/pickups";
 import { tickCircuitOnCut } from "@/lib/physics/circuit";
 import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
-import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
+import { buildScoreDebrief } from "@/lib/scoreDebrief";
 import { anyLockFlashActive } from "@/lib/lockFlash";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 import {
@@ -1051,17 +1052,31 @@ export function triggerLevelComplete(
     },
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
-  // Celebratory beat: after any lock animations settle, sweep a shimmer down the
-  // whole board (fences, obstacles and all) before the completion overlay mounts.
+  // The debrief: once any lock animations settle, each thing on the board that
+  // scored is boxed and tagged with what it paid (lib/scoreDebrief.ts), before
+  // the board shatters into the completion overlay.
+  game.debrief = buildScoreDebrief(game, {
+    underParBonus: breakdown.underParBonus,
+    fencesUsed: game.wallCount,
+    par: effectivePar(level.expectedCuts, activeModifiers),
+    spaceBonus: breakdown.spaceBonus,
+    remainingPercent: percent,
+    thresholdPercent: level.sizeThreshold,
+    shipEarlyBonus,
+    winBonus,
+    objectiveBonus,
+    hazardPay: mutatorOvertimePremium(game.mapMutator),
+    pushBonus,
+  });
   game.shimmerStart = simNow() + lockDelay;
   game.shimmerFrozen = callbacks.freezeOnComplete?.() ?? false;
   callbacks.onMapComplete?.(); // freeze the background code for the "dead" beat
-  // Dev/playground freeze: play the shimmer, then hold the drained frame instead
-  // of advancing to the completion overlay / dissolve.
+  // Dev/playground freeze: hold the debriefed board instead of advancing to
+  // the completion overlay / dissolve.
   if (game.shimmerFrozen) return;
-  // Post-sweep beat: hold the drained board for a moment, shatter it away,
-  // and only then mount the completion overlay (mounting it at the exact
-  // sweep end read as a jerky cut, and hid the shatter behind the card).
+  // After the debrief, a short beat, then shatter the board away and only then
+  // mount the completion overlay (mounting it at the exact end read as a jerky
+  // cut, and hid the shatter behind the card).
   setTimeout(() => {
     callbacks.startDissolve(() => {
       callbacks.onLevelComplete({
@@ -1102,5 +1117,5 @@ export function triggerLevelComplete(
         wonByAllLocked: reason === 'allLocked',
       });
     });
-  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
+  }, lockDelay + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
 }
