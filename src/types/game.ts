@@ -423,6 +423,18 @@ export interface DestructibleState {
   objective?: boolean;         // breakable: smashing it awards more bonus
   brittle?: boolean;           // breakable: the first debounced contact breaks it, whatever the damage
   /**
+   * A hull round a bomb (lib/bombCore.ts). Hits wear the hull up to
+   * `bombExposeAt`, which exposes the bomb; the next counted hit detonates it
+   * and spends the rest of the box at once.
+   */
+  bomb?: boolean;
+  bombExposeAt?: number;
+  bombExposed?: boolean;
+  /** simNow() when the bomb came into view, for its reveal flash. */
+  bombExposedAt?: number;
+  /** The box went up by its bomb (rather than a scripted or charge break). */
+  bombDetonated?: boolean;
+  /**
    * World-space wear, rendered as inward bites and cracks.
    *
    * PERMANENT and monotonic: one is cut each time the slab loses another

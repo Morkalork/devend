@@ -8,6 +8,7 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
+import { bombExposeAt, entityHasBomb } from "@/lib/bombCore";
 import { normalizeAreaKind } from "@/lib/coloredAreas";
 import { entityRise } from "@/lib/objectRise";
 import { BendShapeFields, LevelConfig, LevelEntity, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity, type GravityWell, type ColoredArea } from "@/types/level";
@@ -823,11 +824,13 @@ export function createInitialGameData(
             brittle: (entity as WallEntity).brittle === true,
           });
           if (isBreakable) {
+            const maxHits = integrity(entity.hitsToBreak ?? 3);
+            const bomb = entityHasBomb(entity as WallEntity);
             const dest: DestructibleState = {
               id: entity.id,
               kind: 'breakable',
               hits: 0,
-              maxHits: integrity(entity.hitsToBreak ?? 3),
+              maxHits,
               lastHitAt: 0,
               destroyed: false,
               obstaclePolygon,
@@ -836,6 +839,9 @@ export function createInitialGameData(
               fenceStyle: !!entity.fence,
               chest: !!entity.chest,
               chestRewards: entity.chestRewards,
+              // The hull round the bomb (lib/bombCore.ts). A one-hit box has no
+              // hull to chip: its bomb shows from the start.
+              ...(bomb ? { bomb: true, bombExposeAt: bombExposeAt(maxHits), bombExposed: bombExposeAt(maxHits) <= 0 } : {}),
             };
             destructibles.push(dest);
             if (entity.objective) objectivesTotal++;

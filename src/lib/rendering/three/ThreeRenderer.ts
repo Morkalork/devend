@@ -24,6 +24,7 @@
  * nothing back. The few things it remembers between frames (a ball's roll, a
  * shard in flight) live in this object, so two-player lockstep cannot see them.
  */
+import { simNow } from "@/lib/simClock";
 import {
   Group, HalfFloatType, Matrix4, PCFShadowMap, Vector3, PerspectiveCamera, Scene, UnsignedByteType,
   WebGLRenderTarget, WebGLRenderer, type ExternalTexture, type Material,
@@ -54,7 +55,7 @@ import { Zones3D } from "./zones3d";
 import { OutputPass } from "./outputPass";
 import { CutPreview3D, createPreviewUniforms, shadowOnlyMaterial } from "./cutPreview3d";
 import {
-  CircuitSparks, POCKET_GOLD, chargeLights, phaseCasters, pocketHeat, powerLevel,
+  CircuitSparks, POCKET_GOLD, bombLights, chargeLights, phaseCasters, pocketHeat, powerLevel,
 } from "./lightMechanics";
 import { getLightLook } from "@/lib/lightLook";
 import { recordShaderError } from "@/lib/rendering/rendererDiag";
@@ -357,7 +358,10 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const look = getLightLook();
     rig.preview.sync(game, now, look.cutPreview, this.heightScale);
     rig.phaseShadows.syncSolids(phaseCasters(game, look.phaseTell, this.heightScale));
-    const extras = [...chargeLights(game, look.chargeTell), ...rig.sparks.sync(game, now, look.circuitSpark)];
+    const extras = [
+      ...chargeLights(game, look.chargeTell), ...bombLights(game, look.chargeTell, simNow()),
+      ...rig.sparks.sync(game, now, look.circuitSpark),
+    ];
     const tones = new Map<string, BallTone>();
     if (look.pocketGlow > 0.001) {
       for (const [id, t] of pocketHeat(game)) {

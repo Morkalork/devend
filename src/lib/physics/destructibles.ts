@@ -11,6 +11,7 @@
  * regions, too heavy to do per step). Removed obstacles RE-OPEN their footprint
  * as capturable space.
  */
+import { BOMB_BLAST_COLOR, bombHitDamage } from "@/lib/bombCore";
 import { CanvasGameState } from "@/types/gameState";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import {
@@ -61,6 +62,8 @@ const FALL_SPEED = 180;          // initial downward speed of toppling objects
 const MIRROR_DEBRIS_COLOR = "#88ddff";
 const MOVER_DEBRIS_COLOR = "#ff8800";
 const BREAKABLE_DEBRIS_COLOR = "#ffb454";
+/** The bomb's own burst when a box goes up (lib/bombCore.ts). */
+const BOMB_BLAST_PARTICLES = 44;
 const OBSTACLE_FALL_COLOR = "#9aa3ad";
 // Bonus overtime hours for smashing a breakable (objective targets are worth
 // more). Hours, and so quartered with the rest of the economy
@@ -247,6 +250,8 @@ export interface DestroyCallbacks {
    * at some later collection: breaking the chest IS the interaction.
    */
   onChestReward?: (rewardId: string) => void;
+  /** A box went up by its bomb (lib/bombCore.ts): the loud version of a break. */
+  onBombDetonated?: (d: DestructibleState) => void;
 }
 
 // ── Lookups ─────────────────────────────────────────────────────────────────
@@ -325,6 +330,11 @@ export function registerObjectHit(
   // directly so the dent, the chip burst and the destroy queue below all run
   // exactly as they do for a slab that took its last hit.
   if (d.brittle) amount = d.maxHits;
+  // A box with a bomb in it (lib/bombCore.ts): the hull wears only as far as
+  // exposing the bomb, and a hit on the exposed bomb spends the whole box. The
+  // debounce above keeps the two apart: the contact that opens the hull can
+  // never also be the one that sets the bomb off.
+  if (d.bomb) amount = bombHitDamage(d, amount, now);
   // `amount` is now physics damage (a float), not a whole hit; the object
   // breaks once accumulated damage reaches its integrity budget (maxHits).
   d.hits = Math.min(d.maxHits, d.hits + amount);
@@ -959,6 +969,14 @@ export function processDestroysFn(
     // Breakables throw a bigger, chunkier burst than mirrors on the final hit.
     const isBreak = d.kind === 'breakable';
     game.objectDebris.push(spawnDebris(poly, color, now, isBreak ? 30 : 16, isBreak ? 1.15 : 1));
+    // A box with a bomb in it goes up rather than apart: a second, hotter and
+    // faster burst from the bomb itself, which both renderers draw as a bigger
+    // blast (the 3D one sizes its flash by the particle count).
+    if (d.bomb) {
+      game.objectDebris.push(spawnDebris(poly, BOMB_BLAST_COLOR, now, BOMB_BLAST_PARTICLES, 1.8));
+      if (game.objectDebris.length > MAX_OBJECT_DEBRIS) game.objectDebris.shift();
+      callbacks.onBombDetonated?.(d);
+    }
     opened += detachObstacle(game, d.id, poly);
 
     if (d.kind === 'mirror') {

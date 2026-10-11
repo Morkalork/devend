@@ -1155,6 +1155,14 @@
       "title": "Treasure chest",
       "body": "Smash it with a ball for loot. Every smash also raises this map payout."
     },
+    "bombBox": {
+      "title": "Bomb block",
+      "body": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb blows the whole block apart and reopens the space under it."
+    },
+    "bombChest": {
+      "title": "Treasure chest",
+      "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open. Every smash also raises this map payout."
+    },
     "objective": {
       "title": "Objective crate",
       "body": "This map asks you to break it. Send a ball into it."

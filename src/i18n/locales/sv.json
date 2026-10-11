@@ -1707,6 +1707,14 @@
       "title": "Skattkista",
       "body": "Krossa den med en boll för byte. Varje krossning höjer också banans utbetalning."
     },
+    "bombBox": {
+      "title": "Bombblock",
+      "body": "Det sitter en bomb inuti. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger hela blocket och öppnar ytan under igen."
+    },
+    "bombChest": {
+      "title": "Skattkista",
+      "body": "Byte, och en bomb. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger upp den. Varje krossning höjer också banans utbetalning."
+    },
     "objective": {
       "title": "Uppdragslåda",
       "body": "Banan ber dig krossa den. Skicka en boll in i den."
