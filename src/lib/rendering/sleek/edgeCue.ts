@@ -150,3 +150,70 @@ export function edgeWake(
   }
   return Math.max(0, Math.min(1, best));
 }
+
+/**
+ * One edge of the play area's outline, for the standard rim: its two ends,
+ * the unit vector pointing into the play area, and which board side it lies
+ * on when it lies along one (so a live wall there can take it over).
+ */
+export interface RimEdge {
+  start: Vec;
+  end: Vec;
+  inward: Vec;
+  side: BoardSide | null;
+}
+
+/** How close (world units) an edge must sit to a bounds side to count as on it. */
+const ON_SIDE = 0.5;
+
+/**
+ * The play area's outline as rim edges.
+ *
+ * Every map gets the rim the live-wall cue used to be the only owner of: a
+ * coloured rail on the play area's own edge with a soft glow falling inward.
+ * It is drawn on the OUTLINE rather than the board rect for the reason
+ * edgeGeometry gives, and per polygon edge so a bent or many-sided board is
+ * traced exactly. Inward comes from the outline's winding, not from the
+ * centroid, which points the wrong way along the inside of an L.
+ */
+export function rimEdges(vertices: readonly Vec[]): RimEdge[] {
+  const n = vertices.length;
+  if (n < 3) {
+    return [];
+  }
+  // Shoelace sign in y-down screen space: positive is clockwise on screen.
+  let area2 = 0;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i], b = vertices[(i + 1) % n];
+    area2 += a.x * b.y - b.x * a.y;
+  }
+  const cw = area2 > 0;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of vertices) {
+    minX = Math.min(minX, v.x); minY = Math.min(minY, v.y);
+    maxX = Math.max(maxX, v.x); maxY = Math.max(maxY, v.y);
+  }
+  const edges: RimEdge[] = [];
+  for (let i = 0; i < n; i++) {
+    const start = vertices[i], end = vertices[(i + 1) % n];
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-6) {
+      continue;
+    }
+    // Right-hand normal (-dy, dx) points inward for a clockwise outline.
+    const inward = cw ? { x: -dy / len, y: dx / len } : { x: dy / len, y: -dx / len };
+    let side: BoardSide | null = null;
+    if (Math.abs(dy) < ON_SIDE && Math.abs(start.y - minY) < ON_SIDE) {
+      side = "top";
+    } else if (Math.abs(dy) < ON_SIDE && Math.abs(start.y - maxY) < ON_SIDE) {
+      side = "bottom";
+    } else if (Math.abs(dx) < ON_SIDE && Math.abs(start.x - minX) < ON_SIDE) {
+      side = "left";
+    } else if (Math.abs(dx) < ON_SIDE && Math.abs(start.x - maxX) < ON_SIDE) {
+      side = "right";
+    }
+    edges.push({ start, end, inward, side });
+  }
+  return edges;
+}
