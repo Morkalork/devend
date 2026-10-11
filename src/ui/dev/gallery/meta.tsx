@@ -3,7 +3,6 @@
  * YAML (baked in with `?raw`, like lib/bugs.ts), so what is looked at here is
  * the copy the player sees; the player's own progress is hand-written.
  */
-import { useEffect, useState } from "react";
 import yaml from "js-yaml";
 import type { GalleryEntry } from "../galleryTypes";
 import musicYamlRaw from "../../../../public/music.yml?raw";
@@ -73,20 +72,6 @@ const welcome = {
   onStartGame: noop, onTutorial: noop, onOptions: noop, accentColor: ACCENT,
 };
 
-/** The menu as a first launch meets a failed load: the error arrives after the
- *  menu is up, so the page grows under a scroll view that is already laid out. */
-function WelcomeLateError() {
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    const id = window.setTimeout(() => setError("Failed to fetch"), 1500);
-    return () => window.clearTimeout(id);
-  }, []);
-  return (
-    <WelcomeScreen {...welcome} onContinue={noop} onDaily={noop} onTwoPlayer={noop} onLoadouts={noop}
-      onHallOfFame={noop} onJukebox={noop} error={error} />
-  );
-}
-
 export const entries: GalleryEntry[] = [
   {
     id: "WelcomeScreen", group: "screen", render: () => (
@@ -108,7 +93,6 @@ export const entries: GalleryEntry[] = [
         error="Failed to fetch" />
     ),
   },
-  { id: "WelcomeScreen-lateError", group: "screen", render: () => <WelcomeLateError /> },
   {
     id: "WelcomeScreen-daily", group: "screen", render: () => (
       <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop} onHallOfFame={noop}

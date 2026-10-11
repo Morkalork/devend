@@ -64,6 +64,8 @@ interface ResultScreenProps {
 /** `text-danger`: the destructive red. */
 const DANGER = COLOR.destructive;
 const DAILY = 0x4ade80;
+/** How far above the pinned bar the recap fades out. */
+const BAR_FADE = 40;
 
 /** A border-t rule across the top of a block. */
 function TopRule() {
@@ -180,16 +182,17 @@ export function ResultScreen({
   // under it, so it also pads the recap's end clear of the buttons.
   const barHeight = pinned.length > 0 ? 16 + 24 + pinned.length * 52 + (pinned.length - 1) * 12 : 0;
   // The gradient is doing work, not decoration: the bar sits OVER the end of
-  // the scrolling recap and fades it out, so a screen with more below reads as
-  // scrollable rather than finished. Clear for its top 45%, solid below.
+  // the scrolling recap and fades it out just above the buttons, so a screen
+  // with more below reads as scrollable rather than finished. Under the
+  // buttons themselves the ground is solid: their faces are translucent, and
+  // the recap must not show through them.
   const drawFade = useCallback((g: Graphics) => {
     g.clear();
-    const fadeTo = barHeight * 0.45;
     const steps = 16;
     for (let i = 0; i < steps; i++) {
-      g.rect(0, (fadeTo * i) / steps, screen.width, fadeTo / steps + 0.5).fill({ color: COLOR.background, alpha: (i + 0.5) / steps });
+      g.rect(0, -BAR_FADE + (BAR_FADE * i) / steps, screen.width, BAR_FADE / steps + 0.5).fill({ color: COLOR.background, alpha: (i + 0.5) / steps });
     }
-    g.rect(0, fadeTo, screen.width, barHeight - fadeTo + 200).fill({ color: COLOR.background, alpha: 1 });
+    g.rect(0, 0, screen.width, barHeight + 200).fill({ color: COLOR.background, alpha: 1 });
   }, [barHeight, screen.width]);
 
   return (
@@ -205,7 +208,7 @@ export function ResultScreen({
       {/* The recap. Centred with auto margins rather than justify-center: a
           centred column that overflows puts its own top out of reach, and the
           top of this one is the word GAME OVER. */}
-      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 24, paddingBottom: 12 + barHeight }}>
+      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 24, paddingBottom: 12 + barHeight + (barHeight > 0 ? BAR_FADE : 0) }}>
         <Appear fromScale={0.9} duration={0.5}
           layout={{ width: columnWidth, alignItems: "center", gap: 20, marginTop: "auto", marginBottom: "auto" }}>
           {/* Icon */}
