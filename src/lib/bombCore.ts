@@ -24,7 +24,7 @@
  * in reach takes a heavy blow. An ordinary shard, by contrast, now breaks with
  * a small burst: the big blast is the bomb's.
  */
-import type { DestructibleState } from "@/types/game";
+import type { Ball, DestructibleState } from "@/types/game";
 import type { LevelConfig, WallEntity } from "@/types/level";
 import type { Polygon } from "@/lib/polygon";
 import { polygonCentroid } from "@/lib/polygon";
@@ -81,17 +81,91 @@ export const BOMB_BLINK_MS = 520;
 
 // ── Shard bombs ─────────────────────────────────────────────────────────────
 
-/** public/game-config.yml `shard_bombs:`. */
+/** One kind of bomb's blast. */
+export interface BombBlast {
+  /** How far it reaches, world units: what it strikes, the hole it blows, the balls it throws. */
+  radius: number;
+  /** The blow a slab or chest in reach takes (a ball head-on at base speed does about 1). */
+  damage: number;
+  /** The kick a ball at the blast's centre gets, as a speed multiple; less towards the edge. */
+  ballBoost: number;
+}
+
+/** public/game-config.yml `shard_bombs:` and `box_bombs:`. */
 export interface ShardBombConfig {
   /** Chance an eligible shard carries one, rolled once per shard when the map is dealt. */
   chance: number;
-  /** How far the blast reaches, world units, from the shard's centre to the nearest edge of a neighbour. */
+  /** A shard bomb's blast. */
   blastRadius: number;
-  /** The blow a slab or chest in reach takes (a ball head-on at base speed does about 1). */
   blastDamage: number;
+  ballBoost: number;
+  /** A slab or chest bomb's blast: the same effect, bigger. */
+  box: BombBlast;
+  /** How long a thrown ball takes to ease back to its own speed, seconds. */
+  boostSeconds: number;
 }
 
-export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = { chance: 0.1, blastRadius: 100, blastDamage: 1.5 };
+export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = {
+  chance: 0.1, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
+  box: { radius: 150, damage: 2, ballBoost: 1.8 },
+  boostSeconds: 2.5,
+};
+
+/** The kick at distance `d` from a blast of `radius`: full at the centre, half of it at the edge. */
+export function blastKick(d: number, radius: number, boost: number): number {
+  if (d > radius) return 1;
+  const near = 1 - Math.max(0, d) / radius;
+  return 1 + (boost - 1) * (0.5 + 0.5 * near);
+}
+
+/**
+ * Throw every active ball in reach outward from the blast, faster. Each one
+ * eases back to the speed it had before (see Ball.blastRestSpeed), so a chain
+ * of blasts kicks a ball again rather than winding it up for good. A ball on
+ * the exact centre gets a seeded direction, so both phones of a pair agree.
+ */
+export function blastBalls(
+  balls: Ball[], centre: { x: number; y: number }, blast: BombBlast, now: number, boostSeconds: number,
+  roll: () => number,
+): number {
+  let thrown = 0;
+  for (const b of balls) {
+    if (b.state !== "active") continue;
+    let dx = b.position.x - centre.x, dy = b.position.y - centre.y;
+    let d = Math.hypot(dx, dy);
+    if (d > blast.radius) continue;
+    const current = Math.hypot(b.velocity.x, b.velocity.y) || b.speed || b.baseSpeed || 100;
+    const rest = b.blastRestSpeed ?? current;
+    const sp = rest * blastKick(d, blast.radius, blast.ballBoost);
+    if (d < 1) { dx = roll() - 0.5; dy = roll() - 0.5; d = Math.hypot(dx, dy) || 1; }
+    dx /= d; dy /= d;
+    b.velocity = { x: dx * sp, y: dy * sp };
+    b.speed = sp;
+    b.blastRestSpeed = rest;
+    b.blastBoostFrom = sp;
+    b.blastBoostAt = now;
+    b.blastBoostUntil = now + boostSeconds * 1000;
+    thrown++;
+  }
+  return thrown;
+}
+
+/**
+ * Ease a thrown ball back towards its own speed. Called every physics step;
+ * a no-op on a ball no blast has touched. Returns the speed to hold, or null.
+ */
+export function blastEaseSpeed(b: Ball, now: number): number | null {
+  if (b.blastBoostUntil == null || b.blastRestSpeed == null || b.blastBoostFrom == null || b.blastBoostAt == null) return null;
+  if (now >= b.blastBoostUntil) {
+    const rest = b.blastRestSpeed;
+    b.blastRestSpeed = b.blastBoostFrom = b.blastBoostAt = b.blastBoostUntil = undefined;
+    return rest;
+  }
+  const t = (now - b.blastBoostAt) / Math.max(1, b.blastBoostUntil - b.blastBoostAt);
+  // Eased out: most of the kick is spent early, so it reads as a shove.
+  const k = 1 - (1 - t) * (1 - t);
+  return b.blastBoostFrom + (b.blastRestSpeed - b.blastBoostFrom) * k;
+}
 
 /** Which shards a map pins (`bomb: true`) or keeps clear (`bomb: false`). */
 export function authoredShardBombs(level: Pick<LevelConfig, "entities">): Map<string, boolean> {

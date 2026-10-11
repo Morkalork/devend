@@ -1718,15 +1718,15 @@
     },
     "bombBox": {
       "title": "Bloque bomba",
-      "body": "Hay una bomba dentro. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba revienta todo el bloque y reabre el espacio de debajo."
+      "body": "Hay una bomba dentro. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba revienta el bloque y abre un agujero en todo lo cercano: ladrillos, vallas, muros y zona ganada. Las bolas cercanas salen despedidas, más rápido."
     },
     "bombChest": {
       "title": "Cofre del tesoro",
-      "body": "Botín y una bomba. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba lo revienta. Cada rotura también aumenta el pago del mapa."
+      "body": "Botín y una bomba. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba lo revienta y abre un agujero en todo lo cercano. Las bolas cercanas salen despedidas, más rápido. Cada rotura también aumenta el pago del mapa."
     },
     "bombShard": {
       "title": "Ladrillo bomba",
-      "body": "Rómpelo y explota: todos los ladrillos cercanos caen con él y un bloque al alcance recibe un golpe fuerte. Otra bomba en la explosión también estalla."
+      "body": "Rómpelo y explota: todos los ladrillos cercanos caen con él, un bloque al alcance recibe un golpe fuerte y abre un agujero en vallas, muros y zona ganada. Las bolas cercanas salen despedidas, más rápido. Otra bomba en la explosión también estalla."
     },
     "objective": {
       "title": "Caja objetivo",

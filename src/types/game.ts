@@ -86,6 +86,15 @@ export interface Ball {
   lockMultiplier: number;    // lock-bonus multiplier when this ball is locked away
   spawnTime: number;         // performance.now() at map start — used by the grey "slow down" ability
   minimumSpeed: number;      // scaled speed floor; slow-down/slow-others/range never go below this
+  /**
+   * A bomb's blast threw this ball (lib/bombCore.ts): it eases from the kick
+   * back down to `blastRestSpeed`, the speed it had before the first blast, by
+   * `blastBoostUntil` (sim ms). Further blasts restart the kick, never stack it.
+   */
+  blastRestSpeed?: number;
+  blastBoostFrom?: number;
+  blastBoostAt?: number;
+  blastBoostUntil?: number;
   speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
   speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
   lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
@@ -510,6 +519,8 @@ export interface ObjectDebrisState {
   durationMs: number;
   color: string;               // hex with #
   particles: ObjectDebrisParticle[];
+  /** How far the blast's light reaches, world units, when the emitter knows (a bomb's reach). */
+  reach?: number;
   /**
    * How big a blast this is, 0..1, when the emitter knows better than the
    * particle count: a shard's break is small however many pieces it throws.

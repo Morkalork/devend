@@ -5,6 +5,7 @@
  * server-side simulation without dragging in React.
  */
 
+import { blastEaseSpeed } from "@/lib/bombCore";
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, BOUNCER_HOURS_PER_BUMP, type BouncerSpec } from "@/lib/physics/bouncer";
@@ -1061,6 +1062,19 @@ export function updateBall(
       ball.velocity.y *= r;
     }
     ball.speed = target;
+  }
+
+  // Thrown by a bomb's blast (lib/bombCore.ts): ease back towards the speed it
+  // had before, so the kick is a shove and not a permanent wind-up.
+  const eased = blastEaseSpeed(ball, now);
+  if (eased != null) {
+    const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+    if (cur > 1e-6) {
+      const r = eased / cur;
+      ball.velocity.x *= r;
+      ball.velocity.y *= r;
+    }
+    ball.speed = eased;
   }
 
   // Universal minimum-speed floor: no active ball may move below its

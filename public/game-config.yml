@@ -243,3 +243,18 @@ shard_bombs:
   # The blow a slab or chest in reach takes. A ball head-on at base speed does
   # about 1, so this is a hard hit: it chips a slab and opens a bomb box's hull.
   blast_damage: 1.5
+  # Every active ball in reach is thrown outward from the blast, this many
+  # times faster at the centre (half the extra at the edge of the reach)...
+  ball_boost: 1.5
+  # ...and eases back to the speed it had before over this many seconds. A
+  # second blast kicks it again from that speed; it never winds up for good.
+  boost_seconds: 2.5
+
+# The bomb inside a slab or chest (lib/bombCore.ts), once it goes up: the same
+# blast as a shard bomb's (it strikes everything in reach, blows a hole in
+# fences, the map's walls and the claimed ground, and throws the balls), only
+# bigger. The thrown balls ease back over shard_bombs.boost_seconds.
+box_bombs:
+  blast_radius: 150
+  blast_damage: 2
+  ball_boost: 1.8
