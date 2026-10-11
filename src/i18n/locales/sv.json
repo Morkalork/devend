@@ -1715,6 +1715,10 @@
       "title": "Skattkista",
       "body": "Byte, och en bomb. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger upp den. Varje krossning höjer också banans utbetalning."
     },
+    "bombShard": {
+      "title": "Bombtegel",
+      "body": "Krossa den så exploderar den: alla tegel nära intill går med, och ett block inom räckhåll tar en hård träff. En annan bomb i smällen exploderar också."
+    },
     "objective": {
       "title": "Uppdragslåda",
       "body": "Banan ber dig krossa den. Skicka en boll in i den."

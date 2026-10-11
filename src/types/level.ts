@@ -166,7 +166,10 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
    * A slab or chest is a hull round a bomb (lib/bombCore.ts): hits chip the
    * hull open until the bomb shows, and the first hit on the bomb destroys the
    * box. On by default for every breakable box; `false` keeps this one a
-   * plain slab. Brittle shards and fence-style curtains never carry one.
+   * plain slab. Fence-style curtains never carry one.
+   *
+   * On a BRITTLE shard it pins the shard bomb roll instead: `true` makes this
+   * shard a bomb whatever the chance, `false` keeps it clear of the roll.
    */
   bomb?: boolean;
   /**

@@ -621,6 +621,8 @@ export interface CanvasGameState {
   lockBonus: number;
   /** What each lock paid, by ball id, for the end-of-map debrief (lib/scoreDebrief.ts). */
   lockPayouts?: Record<string, import("@/types/debrief").LockPayout>;
+  /** A shard bomb's blast (lib/bombCore.ts): its reach and the blow it deals; null = shard bombs off. */
+  shardBombBlast?: { radius: number; damage: number } | null;
   /** The end-of-map debrief, built when the map is won; null until then. */
   debrief?: import("@/types/debrief").ScoreDebrief | null;
   /**

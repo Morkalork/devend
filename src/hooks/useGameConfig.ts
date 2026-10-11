@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import yaml from 'js-yaml';
 import { PickupConfig, PickupEffect, DEFAULT_PICKUP_CONFIG } from '@/types/pickups';
 import { BugConfig, DEFAULT_BUG_CONFIG } from '@/types/bugs';
+import { DEFAULT_SHARD_BOMB_CONFIG, type ShardBombConfig } from '@/lib/bombCore';
 
 /** Raw `pickups:` block shape as written in the YAML (snake_case, keyed effects). */
 interface RawPickupConfig {
@@ -69,6 +70,22 @@ function parseBugConfig(raw: RawBugConfig | undefined): BugConfig {
   };
 }
 
+/** Raw `shard_bombs:` block (snake_case). */
+interface RawShardBombConfig {
+  chance?: number;
+  blast_radius?: number;
+  blast_damage?: number;
+}
+
+function parseShardBombConfig(raw: RawShardBombConfig | undefined): ShardBombConfig {
+  const d = DEFAULT_SHARD_BOMB_CONFIG;
+  return {
+    chance: raw?.chance ?? d.chance,
+    blastRadius: raw?.blast_radius ?? d.blastRadius,
+    blastDamage: raw?.blast_damage ?? d.blastDamage,
+  };
+}
+
 export interface GameConfig {
   visuals: {
     canvas_opacity: number;
@@ -110,6 +127,8 @@ export interface GameConfig {
   pickups: PickupConfig;
   /** Parsed bug spawn/flight tuning; the pool itself is public/bugs.yml. */
   bugs: BugConfig;
+  /** Parsed shard bomb tuning (lib/bombCore.ts). */
+  shardBombs: ShardBombConfig;
   crt_word_highlight: {
     interval_min_seconds: number; // min delay between highlights appearing
     interval_max_seconds: number; // max delay between highlights appearing
@@ -162,6 +181,7 @@ const defaultConfig: GameConfig = {
   },
   pickups: DEFAULT_PICKUP_CONFIG,
   bugs: DEFAULT_BUG_CONFIG,
+  shardBombs: DEFAULT_SHARD_BOMB_CONFIG,
   crt_word_highlight: {
     interval_min_seconds: 8,
     interval_max_seconds: 14,
@@ -183,7 +203,7 @@ export function useGameConfig() {
     fetch('/game-config.yml')
       .then((res) => res.text())
       .then((text) => {
-        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig };
+        const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig; shard_bombs?: RawShardBombConfig };
         setConfig({
           ...defaultConfig,
           ...parsed,
@@ -197,6 +217,7 @@ export function useGameConfig() {
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
           pickups: parsePickupConfig(parsed?.pickups),
           bugs: parseBugConfig(parsed?.bugs),
+          shardBombs: parseShardBombConfig(parsed?.shard_bombs),
         });
       })
       .catch((err) => {

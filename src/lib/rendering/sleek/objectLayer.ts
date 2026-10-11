@@ -433,6 +433,9 @@ export class ObjectLayer {
     this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
 
     if (d.bomb) this.drawBomb(d, pts, cx, cy, scale);
+    // A shard bomb has no hull to chip: it shows as a bomb from the start,
+    // fuse blinking, so a wall's bombs can be read and a chain planned.
+    else if (d.shardBomb) this.drawBomb(d, pts, cx, cy, scale, true);
   }
 
   /**
@@ -443,6 +446,7 @@ export class ObjectLayer {
    */
   private drawBomb(
     d: CanvasGameState["destructibles"][number], pts: Pt[], cx: number, cy: number, scale: number,
+    alwaysShown = false,
   ): void {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of pts) {
@@ -451,7 +455,9 @@ export class ObjectLayer {
     }
     const half = Math.min(maxX - minX, maxY - minY) / 2;
     const now = simNow();
-    const look = bombLook(bombReveal(d), !!d.bombExposed, half, now, d.bombExposedAt);
+    const look = alwaysShown
+      ? bombLook(1, true, half, now, undefined)
+      : bombLook(bombReveal(d), !!d.bombExposed, half, now, d.bombExposedAt);
     if (look.holeR <= 0) return;
     const hole = bombHoleOutline(cx, cy, look.holeR, bombSeed(d.id));
     // The hole: the dark inside of the box, and a pale broken lip round it.

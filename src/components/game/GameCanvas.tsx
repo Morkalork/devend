@@ -56,6 +56,7 @@ import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
 import { BoardBoot } from "@/ui/game/BoardBoot";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
+import { assignShardBombs, authoredShardBombs, type ShardBombConfig } from "@/lib/bombCore";
 import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
 import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
@@ -339,6 +340,8 @@ interface GameCanvasProps {
   pickupConfig?: PickupConfig;
   /** Bug spawn/flight tuning (from game-config.yml `bugs:`). */
   bugConfig?: BugConfig;
+  /** Shard bomb tuning from game-config.yml (lib/bombCore.ts); omitted = shard bombs off. */
+  shardBombConfig?: ShardBombConfig;
   regionColor?: string;
   accentColor?: string;
   /**
@@ -488,6 +491,7 @@ export function GameCanvas({
   objective = null,
   pickupConfig = DEFAULT_PICKUP_CONFIG,
   bugConfig = DEFAULT_BUG_CONFIG,
+  shardBombConfig,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   revealReady = true,
@@ -643,6 +647,9 @@ export function GameCanvas({
    */
   const bugConfigRef = useRef(bugConfig);
   useEffect(() => { bugConfigRef.current = bugConfig; }, [bugConfig]);
+  // Read when a map is dealt, like the bug config, never as an init dep.
+  const shardBombConfigRef = useRef(shardBombConfig);
+  useEffect(() => { shardBombConfigRef.current = shardBombConfig; }, [shardBombConfig]);
 
   // Bug tuning arrives on the same async config fetch, and is reseeded the same
   // way and for the same reason: putting it in the init effect's deps would
@@ -1085,6 +1092,7 @@ export function GameCanvas({
     lockBonus: 0,
     lockPayouts: {},
     debrief: null,
+    shardBombBlast: null,
     lockDeliveryBonus: 0,
     coloredAreaTargets: 0,
     lockedByType: {},
@@ -1490,6 +1498,15 @@ export function GameCanvas({
           bugConfigRef.current.maxPerMap,
           authoredBugCarriers(level),
         );
+      }
+      // Which shards carry a bomb (lib/bombCore.ts), after the bugs: a shard
+      // already holding a bug is skipped. Before the first frame for the same
+      // reason: a bomb shard is drawn as one.
+      {
+        const cfg = shardBombConfigRef.current;
+        game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage } : null;
+        const chance = cfg ? Math.min(1, cfg.chance + (activeModifiers.shardBombChanceBonus ?? 0)) : 0;
+        assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
       }
       game.stackObjects       = data.stackObjects;
       // What the win actually needs, for the map-open announcement. Computed

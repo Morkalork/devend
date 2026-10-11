@@ -1163,6 +1163,10 @@
       "title": "Treasure chest",
       "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open. Every smash also raises this map payout."
     },
+    "bombShard": {
+      "title": "Bomb brick",
+      "body": "Break it and it blows up: every brick close by goes with it, and a block in reach takes a heavy hit. Another bomb in the blast goes up too."
+    },
     "objective": {
       "title": "Objective crate",
       "body": "This map asks you to break it. Send a ball into it."

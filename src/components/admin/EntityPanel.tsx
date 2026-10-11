@@ -689,6 +689,31 @@ export function EntityPanel({
             );
           })()}
 
+          {/* A brittle shard's bomb (lib/bombCore.ts) is ROLLED when the map is
+              dealt (game-config.yml shard_bombs.chance, forced to 100% by the
+              Playground's Shard Bomb Chance knob). Here an author pins one
+              shard either way: always a bomb, or never. */}
+          {!isMoverEntity(selectedEntity) && (selectedEntity as { brittle?: boolean }).brittle && (
+          <label className="space-y-1 block text-xs">
+            <span className="text-rose-300">Shard bomb</span>
+            <select
+              value={(() => { const b = (selectedEntity as { bomb?: boolean }).bomb; return b === true ? "always" : b === false ? "never" : ""; })()}
+              onChange={(e) => {
+                const v = e.target.value;
+                onUpdateEntity(selectedEntity.id, { bomb: v === "always" ? true : v === "never" ? false : undefined } as Partial<LevelEntity>);
+              }}
+              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-200"
+            >
+              <option value="">(leave to the roll)</option>
+              <option value="always">Always a bomb</option>
+              <option value="never">Never a bomb</option>
+            </select>
+            <span className="block text-muted-foreground">
+              Breaking a bomb shard blows up everything close by.
+            </span>
+          </label>
+          )}
+
           {/* Which bug this shard is carrying, from the catalogue, so a new bug
               is offered here the moment it is authored with nothing to
               remember. Three states and all three are meant:

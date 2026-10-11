@@ -431,3 +431,28 @@ in one blast, with a second, hotter debris burst, a boom and a screen jolt.
 - **Not built:** the blast does not reach anything else. A bomb that damages
   its neighbours or flings balls would make chain reactions a thing to plan
   for; it is the obvious next step if the single blast feels too contained.
+
+### Shard bombs, and small breaks
+
+A brittle shard has nothing to chip, so its bomb is a different idea: a charge
+waiting in the wall rather than a last hit to aim for.
+
+- **Which.** Each shard rolls once, when the map is dealt, against
+  `shard_bombs.chance` in game-config.yml (0.1). Seeded per shard, so a seeded
+  run (a Daily, both phones of a pair) carries the same bombs. A shard already
+  carrying a bug is skipped. A map pins a shard with `bomb: true` or keeps it
+  clear with `bomb: false`; Admin's map editor has a "Shard bomb" select on
+  every brittle shard, and the Playground's Shard Bomb Chance knob forces every
+  shard to be one.
+- **How it reads.** Drawn as a bomb from the start, fuse blinking, so a wall's
+  bombs can be seen and a chain planned. Holding one explains it.
+- **Going up.** It gets the blast the bomb boxes have (the hot second burst,
+  the boom, the jolt) and strikes every breakable whose nearest edge is within
+  `blast_radius` (70) of its centre, through `registerObjectHit`, so each takes
+  the blow as it would from a ball: shards go, a bomb shard among them goes up
+  next frame in turn, a slab takes `blast_damage` (1.5), a bomb box's hull
+  opens or its bomb goes. Mirrors and movers are not struck.
+- **Small breaks.** An ordinary shard now breaks with a handful of light pieces
+  and a small flash (`ObjectDebrisState.blast`, which the 3D renderer sizes its
+  light from). It used to throw a slab's full burst, so every brick in a wall
+  went off like a bomb.

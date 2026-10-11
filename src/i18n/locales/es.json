@@ -1715,6 +1715,10 @@
       "title": "Cofre del tesoro",
       "body": "Botín y una bomba. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba lo revienta. Cada rotura también aumenta el pago del mapa."
     },
+    "bombShard": {
+      "title": "Ladrillo bomba",
+      "body": "Rómpelo y explota: todos los ladrillos cercanos caen con él y un bloque al alcance recibe un golpe fuerte. Otra bomba en la explosión también estalla."
+    },
     "objective": {
       "title": "Caja objetivo",
       "body": "Este mapa te pide romperla. Lanza una bola contra ella."

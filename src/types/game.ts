@@ -435,6 +435,11 @@ export interface DestructibleState {
   /** The box went up by its bomb (rather than a scripted or charge break). */
   bombDetonated?: boolean;
   /**
+   * A brittle shard carrying a bomb (lib/bombCore.ts): when it breaks it goes
+   * up with the full blast and strikes every breakable within reach.
+   */
+  shardBomb?: boolean;
+  /**
    * World-space wear, rendered as inward bites and cracks.
    *
    * PERMANENT and monotonic: one is cut each time the slab loses another
@@ -505,6 +510,12 @@ export interface ObjectDebrisState {
   durationMs: number;
   color: string;               // hex with #
   particles: ObjectDebrisParticle[];
+  /**
+   * How big a blast this is, 0..1, when the emitter knows better than the
+   * particle count: a shard's break is small however many pieces it throws.
+   * The 3D renderer sizes its flash from this when set.
+   */
+  blast?: number;
 }
 
 /** One tile of a dematerializing shell section: a small rect that flies off. */

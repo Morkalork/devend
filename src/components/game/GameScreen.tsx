@@ -1028,6 +1028,7 @@ export function GameScreen({
                 // that squeezes the window squeezes the harder of the two.
                 lifetimeSeconds: Math.max(1, Math.round(config.bugs.lifetimeSeconds * pickupLifetimeFactor)),
               }}
+              shardBombConfig={config.shardBombs}
               regionColor={getRegionColor()}
               accentColor={accentColor}
               activeModifiers={activeModifiers}

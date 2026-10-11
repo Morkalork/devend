@@ -27,6 +27,7 @@ export type BoardEntityKind =
   | "chest"
   | "bombChest"
   | "bombBox"
+  | "bombShard"
   | "objective"
   | "bugShard"
   | "breakable"
@@ -95,6 +96,7 @@ export function boardEntityAt(game: CanvasGameState, x: number, y: number): Boar
     // moving at 95 units a second cannot be pressed and held; a brick holds
     // still, so the same 450ms lands every time.
     if (d.bug) return { kind: "bugShard", detail: d.bug };
+    if (d.shardBomb) return { kind: "bombShard" };
     // A box with a bomb in it (lib/bombCore.ts) says so: how to finish it
     // off is the thing worth knowing about it.
     if (d.chest) return { kind: d.bomb ? "bombChest" : "chest" };

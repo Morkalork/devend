@@ -11,7 +11,7 @@
  * regions, too heavy to do per step). Removed obstacles RE-OPEN their footprint
  * as capturable space.
  */
-import { BOMB_BLAST_COLOR, bombHitDamage } from "@/lib/bombCore";
+import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, bombHitDamage, shardBombTargets } from "@/lib/bombCore";
 import { CanvasGameState } from "@/types/gameState";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import {
@@ -64,6 +64,8 @@ const MOVER_DEBRIS_COLOR = "#ff8800";
 const BREAKABLE_DEBRIS_COLOR = "#ffb454";
 /** The bomb's own burst when a box goes up (lib/bombCore.ts). */
 const BOMB_BLAST_PARTICLES = 44;
+/** An ordinary shard's break: a handful of light pieces, not a slab's full burst. */
+const SHARD_BREAK_PARTICLES = 10;
 const OBSTACLE_FALL_COLOR = "#9aa3ad";
 // Bonus overtime hours for smashing a breakable (objective targets are worth
 // more). Hours, and so quartered with the rest of the economy
@@ -968,14 +970,37 @@ export function processDestroysFn(
     const color = d.kind === 'mirror' ? MIRROR_DEBRIS_COLOR : BREAKABLE_DEBRIS_COLOR;
     // Breakables throw a bigger, chunkier burst than mirrors on the final hit.
     const isBreak = d.kind === 'breakable';
-    game.objectDebris.push(spawnDebris(poly, color, now, isBreak ? 30 : 16, isBreak ? 1.15 : 1));
-    // A box with a bomb in it goes up rather than apart: a second, hotter and
-    // faster burst from the bomb itself, which both renderers draw as a bigger
-    // blast (the 3D one sizes its flash by the particle count).
-    if (d.bomb) {
+    // A shard is small, and breaks small: a handful of light pieces and a
+    // flash to match. It used to throw the slab's full burst, so every brick
+    // in a wall went off like a bomb - the big blast is the bomb's now.
+    const smallBreak = isBreak && d.brittle && !d.shardBomb;
+    if (smallBreak) {
+      const bits = spawnDebris(poly, color, now, SHARD_BREAK_PARTICLES, 0.55);
+      bits.blast = SHARD_BREAK_BLAST;
+      game.objectDebris.push(bits);
+    } else {
+      game.objectDebris.push(spawnDebris(poly, color, now, isBreak ? 30 : 16, isBreak ? 1.15 : 1));
+    }
+    // A box with a bomb in it, or a shard bomb, goes up rather than apart: a
+    // second, hotter and faster burst from the bomb itself, which both
+    // renderers draw as a bigger blast (the 3D one sizes its flash by the
+    // particle count).
+    if (d.bomb || d.shardBomb) {
       game.objectDebris.push(spawnDebris(poly, BOMB_BLAST_COLOR, now, BOMB_BLAST_PARTICLES, 1.8));
       if (game.objectDebris.length > MAX_OBJECT_DEBRIS) game.objectDebris.shift();
       callbacks.onBombDetonated?.(d);
+    }
+    // A shard bomb strikes everything in reach. Struck through registerObjectHit,
+    // so each takes the blow exactly as it would from a ball: a shard goes (and
+    // a bomb among them goes up next frame, in turn), a slab chips, a bomb box's
+    // hull opens or its bomb goes. The debounce is cleared first: a neighbour a
+    // ball grazed a moment ago must not shrug off the blast.
+    if (d.shardBomb && game.shardBombBlast) {
+      const by = d.destroyedBy ?? `bomb:${d.id}`;
+      for (const hit of shardBombTargets(game.destructibles, d, game.shardBombBlast.radius)) {
+        hit.d.lastHitAt = 0;
+        registerObjectHit(game, hit.d, by, now, game.shardBombBlast.damage, hit.at);
+      }
     }
     opened += detachObstacle(game, d.id, poly);
 

@@ -222,3 +222,23 @@ bugs:
   # moved at ball speed could not be waited for, and waiting is the mechanic.
   # It darts and crawls around this figure rather than holding it.
   speed: 95
+
+# Shard bombs (lib/bombCore.ts). A brittle shard carrying a bomb, drawn on the
+# brick so it can be planned around. When it breaks it goes up with the full
+# bomb blast and strikes every breakable within reach: neighbouring shards go
+# with it (a bomb among them goes up in turn), and a slab or chest in reach
+# takes a heavy blow. Rolled once per shard when the map is dealt, seeded, so
+# both phones of a pair carry the same bricks. A shard already carrying a bug
+# is skipped. A map pins a shard with `bomb: true` on it, or keeps one clear
+# with `bomb: false`. Admin forces it with the Playground's Shard Bomb Chance
+# knob.
+shard_bombs:
+  # Chance an eligible shard carries one.
+  chance: 0.1
+  # How far the blast reaches, world units, from the shard's centre to the
+  # nearest edge of a neighbour. Level 17's bricks are 60x22: this takes the
+  # bricks touching it on every side, and the diagonals.
+  blast_radius: 70
+  # The blow a slab or chest in reach takes. A ball head-on at base speed does
+  # about 1, so this is a hard hit: it chips a slab and opens a bomb box's hull.
+  blast_damage: 1.5

@@ -176,6 +176,10 @@ export interface GameModifiers {
   // roll (0.03 = +3 percentage points). Deliberately vague in all player-facing
   // copy ("slightly more often"); only applies where pickups are enabled.
   pickupChanceBonus: number;
+  // Additive (sum) - extra chance a brittle shard carries a bomb (lib/bombCore.ts),
+  // on top of game-config.yml's shard_bombs.chance. No upgrade grants it yet;
+  // it is how Admin forces shard bombs to 100% (the Playground knob).
+  shardBombChanceBonus: number;
   // Additive (sum) — Total Compensation: each level enhances every pickup
   // payout (+1h on overtime/cap tokens, +1s on freeze charges, split balls
   // 5% slower per level; at level 3 the Fork splits a ball into THREE).
@@ -406,6 +410,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   bugSquashChance: 0,
   bugSquashSeconds: 0,
   pickupChanceBonus: 0,
+  shardBombChanceBonus: 0,
   pickupPayoutLevel: 0,
   destructibleHitsReduction: 0,
   startingOvertime: 0,
