@@ -15,7 +15,7 @@ import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, Modal, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { DraftCard } from "./DraftCard";
-import { DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { DraftFrame, DraftGrid, DraftHeader, IconRow, TopRule } from "./draftParts";
 import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
@@ -69,7 +69,8 @@ export function CapstoneDraftScreen({
             <Label text={clarify} size={TEXT.sm} lineHeight={23} color={DRAFT_TEXT} alpha={0.9} wrap layout={{ marginBottom: 12 }} />
           )}
           {/* Scope note */}
-          <View layout={{ paddingTop: 10, borderColor: tint(accent, 0x22 / 255), borderTopWidth: 1 }}>
+          <View layout={{ paddingTop: 10 }}>
+            <TopRule color={tint(accent, 0x22 / 255)} />
             <Label text={t("capstoneDraft.scopeNote")} size={11} lineHeight={18} color={DRAFT_HINT} wrap />
           </View>
         </ScrollView>

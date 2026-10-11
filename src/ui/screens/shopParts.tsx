@@ -26,7 +26,7 @@ import { ConditionChip } from "../game/ConditionChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { cardLook, lockedReasonParts, tierPalette, type CardModel, type CertChase } from "./shopModel";
 import { DRAFT_HINT } from "./draftModel";
-import { RichParagraph } from "./draftParts";
+import { RichParagraph, TopRule } from "./draftParts";
 
 const RED = hex("#ff6b6b");
 const CHECKPOINT = hex("#00ff88");
@@ -491,7 +491,8 @@ export function UpgradeDetailModal({ upgrade: u, upgrades, dependents, has, cert
         {/* The card note only has room for a fraction; this is where the rule
             behind it is stated, including that the runs must be SEPARATE. */}
         {cert && (
-          <View layout={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderColor: COLOR.border }}>
+          <View layout={{ marginTop: 12, paddingTop: 12 }}>
+            <TopRule />
             <View layout={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <Icon icon={Medal} size={14} color={YELLOW_400} />
               <Label text={t("upgradeShop.detailCertificate")} size={11} weight="600" upper letterSpacing={0.6} color={YELLOW_400} />

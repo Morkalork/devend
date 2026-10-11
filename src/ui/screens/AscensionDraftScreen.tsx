@@ -26,7 +26,7 @@ import { draftableAtAscension } from "@/lib/loadoutUnlock";
 import { contentText } from "@/i18n/content";
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
-import { DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow, RichParagraph } from "./draftParts";
+import { DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow, RichParagraph, TopRule } from "./draftParts";
 import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_RED, DRAFT_TEXT, SM_BREAKPOINT, ascensionBriefing, toggleSelection } from "./draftModel";
 
@@ -151,7 +151,8 @@ export function AscensionDraftScreen({
           />
         )}
         {/* The cost, stated where the choice is made: ascending wipes the run. */}
-        <View layout={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderColor: tint(accent, 0x33 / 255) }}>
+        <View layout={{ marginTop: 12, paddingTop: 12 }}>
+          <TopRule color={tint(accent, 0x33 / 255)} />
           <Label text={t("ascension.resetWarning")} size={TEXT.xs} lineHeight={20} color={RESET_PINK} wrap />
         </View>
       </View>

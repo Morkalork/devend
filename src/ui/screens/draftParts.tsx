@@ -112,6 +112,15 @@ export function DraftGrid({ count, children, alwaysThree = false }: { count: num
   );
 }
 
+/**
+ * A `border-t` rule across the top of its parent (put it first in a box with
+ * paddingTop). A View draws one border width on every side, so a single side
+ * is a 1px box laid over the edge.
+ */
+export function TopRule({ color = COLOR.border }: { color?: number | string }) {
+  return <View layout={{ position: "absolute", left: 0, right: 0, top: 0, height: 1, backgroundColor: color }} />;
+}
+
 /** The dashed "nothing to draft" box (an empty pool). */
 export function DraftEmpty({ text, accent }: { text: string; accent: number }) {
   return (

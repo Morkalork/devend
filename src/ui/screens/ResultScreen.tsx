@@ -25,7 +25,7 @@ import { shareRunCard } from "@/lib/shareCard";
 import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, RADIUS, iconNodeOf, tint, useUiScreen, type IconNode, type IconSource, type Layout } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { ArcadeButton } from "./betweenArcadeButton";
-import { RichParagraph } from "./draftParts";
+import { RichParagraph, TopRule } from "./draftParts";
 import type { FontRole } from "../theme";
 import { buildIdentity, detourActions, ladderBlock, pinnedActions, recapBlock, type DetourKind } from "./resultScreenModel";
 import { SUCCESS, TW } from "./levelCompleteModel";
@@ -66,11 +66,6 @@ const DANGER = COLOR.destructive;
 const DAILY = 0x4ade80;
 /** How far above the pinned bar the recap fades out. */
 const BAR_FADE = 40;
-
-/** A border-t rule across the top of a block. */
-function TopRule() {
-  return <View layout={{ position: "absolute", left: 0, right: 0, top: 0, height: 1, backgroundColor: COLOR.border }} />;
-}
 
 /**
  * A centred icon + text line (`flex items-center justify-center gap-*`) that
