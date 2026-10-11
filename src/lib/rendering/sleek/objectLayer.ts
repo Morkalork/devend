@@ -26,6 +26,8 @@ import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffec
 import type { ImpactDent } from "@/types/game";
 import { getBug } from "@/lib/bugs";
 import { simNow } from "@/lib/simClock";
+import { BOMB_CASING, BOMB_LIGHT, bombReveal } from "@/lib/bombCore";
+import { bombHoleOutline, bombLook, bombSeed } from "./bombLook";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -430,6 +432,49 @@ export class ObjectLayer {
     // crawl and read as noise.
     this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
 
+    if (d.bomb) this.drawBomb(d, pts, cx, cy, scale);
+  }
+
+  /**
+   * The bomb in the box (lib/bombCore.ts, bombLook.ts): a ragged hole in the
+   * hull that widens with each hit, the iron casing showing through it, and
+   * once it is all showing a fuse light blinking red. Drawn last, over the
+   * cracks, because it is the one thing on the box that says where to hit next.
+   */
+  private drawBomb(
+    d: CanvasGameState["destructibles"][number], pts: Pt[], cx: number, cy: number, scale: number,
+  ): void {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const half = Math.min(maxX - minX, maxY - minY) / 2;
+    const now = simNow();
+    const look = bombLook(bombReveal(d), !!d.bombExposed, half, now, d.bombExposedAt);
+    if (look.holeR <= 0) return;
+    const hole = bombHoleOutline(cx, cy, look.holeR, bombSeed(d.id));
+    // The hole: the dark inside of the box, and a pale broken lip round it.
+    this.bodies.poly(hole).fill({ color: 0x07080a, alpha: 0.92 });
+    this.rims.poly(hole).stroke({ width: Math.max(hairline(), scale * 1.1), color: PALETTE.breakableEdge, alpha: 0.6 });
+    // The glow under an exposed bomb, then the casing and its highlight.
+    if (look.glow > 0) {
+      this.bodies.circle(cx, cy, look.casingR * 1.55).fill({ color: BOMB_LIGHT, alpha: 0.18 * look.glow });
+    }
+    const r = look.casingR;
+    this.bodies.circle(cx, cy, r).fill({ color: BOMB_CASING, alpha: 1 });
+    this.bodies.circle(cx - r * 0.32, cy - r * 0.34, r * 0.32).fill({ color: 0xffffff, alpha: 0.16 });
+    // The fuse: a short stub off the top right, its tip the light.
+    const fx = cx + r * 0.62, fy = cy - r * 0.62;
+    this.rims.moveTo(cx + r * 0.42, cy - r * 0.42).lineTo(fx, fy)
+      .stroke({ width: Math.max(1, r * 0.16), color: 0x9a8a6a, alpha: 1 });
+    if (look.light > 0) {
+      this.rims.circle(fx, fy, Math.max(1.5, r * 0.36)).fill({ color: BOMB_LIGHT, alpha: 0.35 * look.light });
+      this.rims.circle(fx, fy, Math.max(1, r * 0.17)).fill({ color: 0xffd0c8, alpha: look.light });
+    }
+    if (look.flash > 0) {
+      this.rims.circle(cx, cy, look.holeR * (1 + 0.5 * (1 - look.flash))).fill({ color: 0xffffff, alpha: 0.5 * look.flash });
+    }
   }
 
   /**

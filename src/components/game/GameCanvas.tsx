@@ -114,7 +114,7 @@ import {
 } from "@/lib/spaceGrid";
 import { traceActiveContours, traceContours, snapContoursToWalls, ContourPoint } from "@/lib/rendering/regionContour";
 import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
-import { playFenceBreakSound, playDeathSound, playBallLockSound, playPickupClaimedSound } from "@/lib/gameAudio";
+import { playFenceBreakSound, playDeathSound, playBallLockSound, playPickupClaimedSound, playBossLandSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
 
 import {
@@ -1900,6 +1900,14 @@ export function GameCanvas({
           // Smashing the chest IS the interaction, so the reward lands here. The
           // gem it drops is a receipt showing what came out of it.
           onChestReward: (rewardId) => handleLootCollectRef.current?.(rewardId),
+          // A box going up by its bomb (lib/bombCore.ts): a boom and a jolt, so
+          // it lands as an explosion rather than one more break.
+          onBombDetonated: () => {
+            playBossLandSound();
+            if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
+            setIsShaking(true);
+            shakeTimeoutRef.current = setTimeout(() => { setIsShaking(false); shakeTimeoutRef.current = null; }, 260);
+          },
         }, levelNumber, activeModifiers);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same

@@ -163,6 +163,13 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   /** Render this breakable as a barrier/fence line rather than a solid block. */
   fence?: boolean;
   /**
+   * A slab or chest is a hull round a bomb (lib/bombCore.ts): hits chip the
+   * hull open until the bomb shows, and the first hit on the bomb destroys the
+   * box. On by default for every breakable box; `false` keeps this one a
+   * plain slab. Brittle shards and fence-style curtains never carry one.
+   */
+  bomb?: boolean;
+  /**
    * A sealed-off area this breakable gates. Those cells start removed (locked /
    * uncuttable) and are re-opened as capturable space when the breakable breaks.
    */

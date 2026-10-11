@@ -405,3 +405,29 @@ clause are the later beats and are not in this plan.
 Drops, ball buffs, two-core `objectives` maps, and the protect inversion are
 the Use, Fight and Break beats in section 11 of the guidelines. Each is its own
 plan once this map has been played.
+
+## 10. The bomb in the box (built)
+
+Every breakable slab and chest is now a hull round a bomb (`lib/bombCore.ts`).
+Each hit chips the hull, and the wear opens a ragged hole in its middle through
+which the bomb's casing shows, wider with each hit. The hull's share of the
+box is all but the last hit (`bombExposeAt = maxHits - 1`), so at that point
+the whole bomb shows, with a fuse light blinking red (and, in 3D, lighting the
+floor round it). The next counted contact is a hit on the bomb: the box goes up
+in one blast, with a second, hotter debris burst, a boom and a screen jolt.
+
+- **What it changes.** A box still takes the hits it always did (a three-hit
+  slab: two to open it, the third on the bomb), but no single blow can take it
+  any more: a hull hit only exposes, however hard, and the per-object debounce
+  keeps the opening contact and the detonating one apart. Punch-through still
+  happens, on the detonating contact. A one-hit box (Breaking Change stacked
+  down to 1) shows its bomb from the start.
+- **What it is not in.** Brittle shards (one touch, nothing to chip),
+  fence-style curtains (a line, not a box), mirrors and movers. A map opts a
+  box out with `bomb: false`; Admin's map editor has a "Bomb inside" box on
+  every breakable slab and chest.
+- **Scripted breaks** (a map beat, a charge, the rubber band) still take the
+  box outright, and still go up as a bomb.
+- **Not built:** the blast does not reach anything else. A bomb that damages
+  its neighbours or flings balls would make chain reactions a thing to plan
+  for; it is the obvious next step if the single blast feels too contained.

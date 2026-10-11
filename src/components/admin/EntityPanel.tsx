@@ -668,6 +668,27 @@ export function EntityPanel({
           </label>
           )}
 
+          {/* The bomb in a box (lib/bombCore.ts): on by default for every
+              breakable slab and chest, so the box here only turns it OFF.
+              Shown only on a box that can carry one; a brittle shard or a
+              fence-style curtain never does. */}
+          {!isMoverEntity(selectedEntity) && (() => {
+            const w = selectedEntity as { breakable?: boolean; chest?: boolean; brittle?: boolean; fence?: boolean; bomb?: boolean };
+            if (!(w.breakable || w.chest) || w.brittle || w.fence) return null;
+            return (
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={w.bomb !== false}
+                  onChange={(e) => onUpdateEntity(selectedEntity.id, { bomb: e.target.checked ? undefined : false } as Partial<LevelEntity>)}
+                  className="rounded"
+                />
+                <span className="text-rose-300">Bomb inside</span>
+                <span className="text-muted-foreground">(hits chip the hull open; one hit on the bomb destroys it)</span>
+              </label>
+            );
+          })()}
+
           {/* Which bug this shard is carrying, from the catalogue, so a new bug
               is offered here the moment it is authored with nothing to
               remember. Three states and all three are meant:

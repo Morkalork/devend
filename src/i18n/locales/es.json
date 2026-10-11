@@ -1707,6 +1707,14 @@
       "title": "Cofre del tesoro",
       "body": "Rómpelo con una bola para obtener botín. Cada rotura también aumenta el pago del mapa."
     },
+    "bombBox": {
+      "title": "Bloque bomba",
+      "body": "Hay una bomba dentro. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba revienta todo el bloque y reabre el espacio de debajo."
+    },
+    "bombChest": {
+      "title": "Cofre del tesoro",
+      "body": "Botín y una bomba. Cada golpe desgasta el casco hasta que la bomba asoma; el siguiente golpe en la bomba lo revienta. Cada rotura también aumenta el pago del mapa."
+    },
     "objective": {
       "title": "Caja objetivo",
       "body": "Este mapa te pide romperla. Lanza una bola contra ella."

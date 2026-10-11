@@ -22,6 +22,7 @@
  *
  * The cut preview is the sixth and has its own module (cutPreview3d.ts).
  */
+import { BOMB_BLINK_MS, BOMB_LIGHT } from "@/lib/bombCore";
 import type { CanvasGameState, CircuitRuntimeTerminal } from "@/types/gameState";
 import { obstacleRiseOf, roleRises, type Solid } from "./solids3d";
 import type { WantedLight } from "./lights3d";
@@ -129,6 +130,27 @@ export function chargeLights(game: CanvasGameState, gain: number): WantedLight[]
       x: at.x, y: at.y, height: 24, reach: c.blastRadius,
       intensity: gain * (0.35 + 1.1 * pulse) * (0.6 + 0.4 * progress),
       color: CHARGE_RED, rank: 1, cutoff: true,
+    });
+  }
+  return out;
+}
+
+/**
+ * A red light on every exposed bomb (lib/bombCore.ts), blinking with the fuse
+ * light the box's top face shows, so a box one hit from going up lights the
+ * floor round it. On the charge-tell dial: both are a red light warning of a
+ * blast.
+ */
+export function bombLights(game: CanvasGameState, gain: number, now: number): WantedLight[] {
+  const out: WantedLight[] = [];
+  if (gain <= 0.001) return out;
+  for (const d of game.destructibles ?? []) {
+    if (!d.bomb || !d.bombExposed || d.destroyed || !d.obstaclePolygon) continue;
+    const at = polygonCentroid(d.obstaclePolygon);
+    const on = (now % BOMB_BLINK_MS) / BOMB_BLINK_MS < 0.5;
+    out.push({
+      x: at.x, y: at.y, height: 40, reach: 75,
+      intensity: gain * (on ? 0.7 : 0.2), color: BOMB_LIGHT, rank: 2,
     });
   }
   return out;
