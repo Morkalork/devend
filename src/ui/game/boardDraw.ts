@@ -64,11 +64,10 @@ export function dashedCircle(g: Graphics, c: Pt, r: number, dash: number, gap: n
 /**
  * A soft glow hugging the inside of a rectangle: CSS
  * `box-shadow: inset 0 0 <blur> <spread> <color>`. Drawn as thin nested
- * strokes whose alpha falls from `alpha` at the edge to nothing `spread + blur/2`
- * in, roughly the gaussian the browser draws.
+ * strokes whose alpha follows the browser's gaussian (glowFalloff).
  */
 export function insetGlow(g: Graphics, w: number, h: number, color: number, alpha: number, blur: number, spread = 0): void {
-  const reach = Math.min(spread + blur / 2 + blur / 4, Math.min(w, h) / 2);
+  const reach = Math.min(glowReach(spread, blur), Math.min(w, h) / 2);
   const step = 2;
   for (let d = 0; d < reach; d += step) {
     const a = alpha * glowFalloff(d, spread, blur);
@@ -83,7 +82,7 @@ export function insetGlow(g: Graphics, w: number, h: number, color: number, alph
  * `x, y, w, h` is the box the glow surrounds.
  */
 export function outerGlow(g: Graphics, x: number, y: number, w: number, h: number, color: number, alpha: number, blur: number, spread = 0): void {
-  const reach = spread + blur / 2 + blur / 4;
+  const reach = glowReach(spread, blur);
   const step = 2;
   for (let d = 0; d < reach; d += step) {
     const a = alpha * glowFalloff(d, spread, blur);
@@ -93,11 +92,26 @@ export function outerGlow(g: Graphics, x: number, y: number, w: number, h: numbe
   }
 }
 
-/** Shadow strength at `d` px from the box edge: full inside the spread, then a smooth fall over the blur. */
+/**
+ * Shadow strength at `d` px from the box edge. A CSS blur radius is a
+ * gaussian with sigma = blur / 2 (the spec's definition), so the strength is
+ * half at the spread's edge and fades over about a blur radius either side:
+ * the edge of a step blurred by that gaussian.
+ */
 export function glowFalloff(d: number, spread: number, blur: number): number {
   if (blur <= 0) return d < spread ? 1 : 0;
-  const t = (d - spread + blur / 2) / blur; // 0 at the start of the fall, 1 at its end
-  if (t <= 0) return 1;
-  if (t >= 1) return 0;
-  return 1 - t * t * (3 - 2 * t);
+  return 0.5 * erfc((d - spread) / ((blur / 2) * Math.SQRT2));
+}
+
+/** How far a glow is worth drawing: 2.5 sigma past the spread, where it is under 1%. */
+function glowReach(spread: number, blur: number): number {
+  return spread + blur * 1.25;
+}
+
+/** The complementary error function (Abramowitz and Stegun 7.1.26, error under 1.5e-7). */
+function erfc(x: number): number {
+  const z = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * z);
+  const y = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z);
+  return x >= 0 ? y : 2 - y;
 }

@@ -207,6 +207,8 @@ export function WelcomeScreen({
         shimmer={spec.shimmer}
         locked={spec.locked}
         column={spec.id === "continue" && !spec.loading}
+        // Admin is a dev door, not a menu item: it sits dimmed (opacity-70).
+        alpha={spec.id === "admin" ? 0.7 : 1}
         label={spec.label ? t(spec.label.key, spec.label.vars) : t("welcome.loading")}
         layout={{ alignSelf: "stretch" }}
       >

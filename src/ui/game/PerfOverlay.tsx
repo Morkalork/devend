@@ -46,6 +46,9 @@ export function PerfOverlay({ visible, origin }: {
       pressedAlpha={0.85}
       layout={{
         position: "absolute", left: origin.x + 4, top: origin.y + 4,
+        // Lines flush left, as the DOM's block rows were: stretched, a shorter
+        // line is placed in the middle of its row and the columns stop lining up.
+        alignItems: "flex-start",
         paddingTop: 4, paddingBottom: 4, paddingLeft: 6, paddingRight: 6,
         borderRadius: RADIUS.base, borderWidth: 1, borderColor: c, backgroundColor: tint(0x000000, 0.72),
       }}

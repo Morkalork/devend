@@ -28,6 +28,7 @@ import { COLOR, Icon, Label, ProgressBar, RADIUS, TEXT, tint, View } from "../ki
 import { Inert } from "./boardParts";
 import { dashedCircle, dashedLine } from "./boardDraw";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
+import { usePointerCancel } from "./boardDrag";
 import { WrapText } from "./modalParts";
 import {
   bandCatches, bandColour, bandPowerLabel, bandRelease, bandTutorialSeen, boardScale, containerToWorld,
@@ -66,7 +67,9 @@ export function RubberBandOverlay({
   // Read once, on mount: the flag is written on the first band that actually
   // fires, so re-reading it mid-drag would pull the hand away a frame early.
   const [showTutorial, setShowTutorial] = useState(() => !bandTutorialSeen());
-  const startRef = useRef<{ at: Vector2; pointer: number } | null>(null);
+  // The drag in progress: where it began, which finger, and where that finger
+  // was last seen (a cancelled touch ends there).
+  const startRef = useRef<{ at: Vector2; pointer: number; last: Vector2 } | null>(null);
 
   const box: BoardBox = { canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft };
   const scale = boardScale(box);
@@ -79,19 +82,22 @@ export function RubberBandOverlay({
 
   const onDown = (e: FederatedPointerEvent) => {
     if (startRef.current) return;
-    startRef.current = { at: world(e), pointer: e.pointerId };
+    const at = world(e);
+    startRef.current = { at, pointer: e.pointerId, last: at };
     setDragging(true);
   };
   // Global, so the band follows a finger that leaves the surface: the DOM
   // captured the pointer for the same reason.
   const onMove = (e: FederatedPointerEvent) => {
     const s = startRef.current;
-    if (s && e.pointerId === s.pointer) setShape(bandShape(s.at, world(e)));
-  };
-  const onUp = (e: FederatedPointerEvent) => {
-    const s = startRef.current;
     if (!s || e.pointerId !== s.pointer) return;
-    const outcome = bandRelease(s.at, world(e));
+    s.last = world(e);
+    setShape(bandShape(s.at, s.last));
+  };
+  const finish = (end: Vector2) => {
+    const s = startRef.current;
+    if (!s) return;
+    const outcome = bandRelease(s.at, end);
     startRef.current = null;
     setShape(null);
     setDragging(false);
@@ -108,6 +114,15 @@ export function RubberBandOverlay({
       onCancel();
     }
   };
+  const onUp = (e: FederatedPointerEvent) => {
+    if (startRef.current?.pointer === e.pointerId) finish(world(e));
+  };
+  // A cancelled touch is a release where the finger was last seen, as the DOM
+  // overlay's onPointerCancel was.
+  usePointerCancel(id => {
+    const s = startRef.current;
+    if (s?.pointer === id) finish(s.last);
+  });
 
   const caught = bandCatches(shape, targets);
   const powerT = shape?.powerT ?? 0;

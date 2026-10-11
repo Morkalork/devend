@@ -17,7 +17,7 @@
 import { useTranslation } from "react-i18next";
 import { Loader2, Users } from "lucide-react";
 import { COLOR, Icon, Label, TEXT, View, tint, useUiScreen } from "../kit/ui";
-import { SpinIcon, TouchBlocker, WrapText } from "./modalParts";
+import { SpinIcon, TouchBlocker } from "./modalParts";
 
 interface PairGuestGateProps {
   /** What the host is deciding, as a translation key under `pair.`. */
@@ -38,8 +38,8 @@ export function PairGuestGate({ what, remoteName }: PairGuestGateProps) {
         layout={{ alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}
       >
         <Icon icon={Users} size={40} color={COLOR.primary} />
-        <WrapText text={t(`pair.host.${what}`, { name: remoteName })} size={TEXT.base} weight="600"
-          color={COLOR.foreground} align="center" />
+        <Label text={t(`pair.host.${what}`, { name: remoteName })} size={TEXT.base} weight="600"
+          color={COLOR.foreground} align="center" wrap />
         <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <SpinIcon icon={Loader2} size={16} color={COLOR.mutedForeground} />
           <Label text={t("pair.waitingFor", { name: remoteName })} size={TEXT.sm} color={COLOR.mutedForeground} />

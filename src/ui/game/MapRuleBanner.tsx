@@ -43,7 +43,7 @@ import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 import { MAP_RULE_VIOLET } from "@/components/game/mapRuleTheme";
 import type { ActiveMapMutator } from "@/types/mapMutator";
-import { Appear, Icon, Label, Pressable, RADIUS, View, hex, tint, type Layout } from "../kit/ui";
+import { Appear, Icon, Label, Pressable, RADIUS, View, hex, tint, useUiScreen, type Layout } from "../kit/ui";
 import { ANNOUNCE_MS, mapRuleText } from "./mapRuleModel";
 
 interface MapRuleBannerProps {
@@ -60,10 +60,13 @@ const VIOLET = hex(MAP_RULE_VIOLET);
 const DETAIL = 0xd9c9ff;
 /** framer-motion `layout` transition between the two states. */
 const MORPH_S = 0.35;
+/** Tailwind's `sm` breakpoint: the announcement steps up a size from here. */
+const SM = 640;
 
 export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps) {
   const { t } = useTranslation();
   const [announcing, setAnnouncing] = useState(true);
+  const wide = useUiScreen().width >= SM;
 
   // Keyed on the mutator, so a new map announces its rule again rather than
   // inheriting the previous map's collapsed chip.
@@ -80,8 +83,9 @@ export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps
   return (
     <View layout={{ alignItems: "center", justifyContent: "center", ...(layout ?? {}) }}>
       {/* Remounted per state, so each one fades in where the DOM morphed the
-          box between sizes. A fade rather than a scale: Appear scales from the
-          top-left, which would slide a centred chip sideways. */}
+          box between sizes (a layout animation the canvas has no equivalent
+          of). Both are centred in the same box, so the chip appears exactly
+          where the block was. */}
       <Appear
         key={announcing ? "announce" : "remind"}
         duration={MORPH_S}
@@ -96,12 +100,12 @@ export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps
             <View layout={{ alignItems: "center", gap: 4, paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10 }}>
               <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Icon icon={TriangleAlert} size={20} color={VIOLET} />
-                <Label text={text.name} font="display" size={16} weight="900" upper letterSpacing={1.6} color={VIOLET} glow={14} />
+                <Label text={text.name} font="display" size={wide ? 18 : 16} weight="900" upper letterSpacing={wide ? 1.8 : 1.6} color={VIOLET} glow={14} />
               </View>
               {/* WRAPPING rather than truncating: what it does is the clause
                   that stops bent trajectories reading as a bug. */}
               {text.detail && (
-                <Label text={text.detail} wrap align="center" size={12} weight="600" lineHeight={17} color={DETAIL} alpha={0.9} />
+                <Label text={text.detail} wrap align="center" size={wide ? 14 : 12} weight="600" lineHeight={wide ? 19 : 17} color={DETAIL} alpha={0.9} />
               )}
             </View>
             <View layout={{ height: 1, backgroundColor: tint(VIOLET, 0x55 / 255) }} />

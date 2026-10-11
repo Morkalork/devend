@@ -31,8 +31,8 @@ describe("the card", () => {
     expect(SRC).toMatch(/t\(FENCE_INFO_FOOTER_KEY\)/);
   });
 
-  it("is the kit's Modal, full screen", () => {
-    expect(SRC).toMatch(/<Modal screen=\{screen\}/);
+  it("is the shared explainer card, full screen", () => {
+    expect(SRC).toMatch(/<InfoCardModal screen=\{screen\}/);
     expect(SRC).toMatch(/useUiScreen\(\)/);
   });
 

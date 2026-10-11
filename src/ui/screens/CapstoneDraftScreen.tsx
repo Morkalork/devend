@@ -15,7 +15,8 @@ import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, Modal, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { DraftCard } from "./DraftCard";
-import { ArcadeButton, DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
 interface CapstoneDraftScreenProps {
@@ -46,7 +47,7 @@ export function CapstoneDraftScreen({
   const detail = detailCap && (() => {
     const clarify = contentText.capstoneClarify(t, detailCap);
     return (
-      <Modal screen={screen} onClose={() => setDetailId(null)} accent={accent}>
+      <Modal screen={screen} maxWidth={384} onClose={() => setDetailId(null)} accent={accent}>
         {/* Bounded and scrollable, so a long entry is never clipped out of
             both ends of a centred card. */}
         <ScrollView layout={{ maxHeight: screen.height - 160 }}>

@@ -14,10 +14,9 @@
  *     the player.
  *
  * Index hands this to GameScreen as an element, so its props are the DOM
- * one's; `region` is optional for that reason. GameScreen drew it inside the
- * play region, so a dropped link covers the board rather than the whole app:
- * pass that region (clone the element with it) to keep that. Without one it
- * covers the whole screen.
+ * one's plus an optional `region`: GameScreen clones the element with its play
+ * region, so a dropped link covers the board rather than the whole app, as
+ * the DOM banner did inside that region. Without one it covers the screen.
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -67,13 +66,13 @@ export function PairLinkBanner({
           <WrapText text={t("pair.partnerLeft")} size={TEXT.base} weight="600" align="center" />
         </View>
         <View layout={{ width: buttons, gap: 12 }}>
-          <Pressable onTap={onRepair} layout={{
+          <Pressable onTap={onRepair} label="pair-try-again" layout={{
             padding: 12, borderRadius: RADIUS.lg, backgroundColor: COLOR.card, borderWidth: 1, borderColor: COLOR.border,
             alignItems: "center",
           }}>
             <Label text={t("pair.tryAgain")} size={TEXT.base} weight="600" />
           </Pressable>
-          <Pressable onTap={onContinueSolo} layout={{
+          <Pressable onTap={onContinueSolo} label="pair-continue-solo" layout={{
             padding: 12, borderRadius: RADIUS.lg, backgroundColor: COLOR.muted, alignItems: "center",
           }}>
             <Label text={t("pair.continueSolo")} size={TEXT.base} weight="600" />

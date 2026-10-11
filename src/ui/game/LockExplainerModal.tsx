@@ -6,13 +6,14 @@
  * with the button or a backdrop tap.
  */
 import { useTranslation } from 'react-i18next';
-import { Appear, COLOR, Label, Pressable, RADIUS, TEXT, View, tint, useUiScreen } from "../kit/ui";
 import type { Graphics } from "pixi.js";
-import { WrapText } from "./modalParts";
+import { Appear, COLOR, Label, Pressable, RADIUS, TEXT, View, tint, useUiScreen } from "../kit/ui";
+import { CardShield } from "./modalParts";
 import { ART_ACCENT, LOCKED_BALL_H, LOCKED_BALL_W, drawLockedBallArt } from "./TutorialArtDraw";
 
 const ACCENT = ART_ACCENT;
 
+/** Module-level, so the Graphics sees the same callback on every render. */
 const drawArt = (g: Graphics) => drawLockedBallArt(g);
 
 /**
@@ -43,11 +44,11 @@ export function LockExplainerModal({ onClose }: LockExplainerModalProps) {
       <Pressable
         onTap={onClose}
         pressedAlpha={1}
+        label="backdrop"
         layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.72) }}
       />
-      {/* A sibling over the backdrop, not a child of it, so a tap on the card stays on the card. */}
       <Appear fromScale={0.96} duration={0.18}>
-        <View layout={{
+        <CardShield layout={{
           width: Math.min(288, screen.width - 32), borderRadius: RADIUS.xl, overflow: "hidden",
           backgroundColor: 0x0b0f14, borderColor: ACCENT, borderWidth: 1,
         }}>
@@ -55,8 +56,8 @@ export function LockExplainerModal({ onClose }: LockExplainerModalProps) {
             <LockedBallArt />
           </View>
           <View layout={{ paddingLeft: 24, paddingRight: 24, paddingTop: 4, paddingBottom: 16 }}>
-            <WrapText text={t('game.lockExplainer.line')} size={TEXT.sm} lineHeight={Math.round(TEXT.sm * 1.375)}
-              color={COLOR.foreground} align="center" />
+            <Label text={t('game.lockExplainer.line')} size={TEXT.sm} lineHeight={Math.round(TEXT.sm * 1.375)}
+              color={COLOR.foreground} align="center" wrap />
           </View>
           <View layout={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16 }}>
             <Pressable
@@ -70,7 +71,7 @@ export function LockExplainerModal({ onClose }: LockExplainerModalProps) {
               <Label text={t('game.lockExplainer.dismiss')} size={TEXT.sm} weight="700" font="display" color={ACCENT} />
             </Pressable>
           </View>
-        </View>
+        </CardShield>
       </Appear>
     </View>
   );

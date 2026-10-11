@@ -82,22 +82,31 @@ export function Carousel({
   // The strip's current translation, so an animation starts from wherever a drag left it.
   const pos = useRef(stripOffset(0, cardW, viewW));
   const drag = useRef<{ x: number; y: number; live: boolean; horizontal: boolean; from: number } | null>(null);
+  // The one running slide, so a new one (or unmounting) stops it rather than two fighting over the strip.
+  const slide = useRef<{ stop: () => void } | null>(null);
 
   const place = useCallback((x: number) => {
     pos.current = x;
     const row = rowRef.current;
-    // pivot moves the drawn strip without a Yoga relayout per frame.
-    if (row && !row.destroyed) row.pivot.x = -x;
+    // `x`, an offset @pixi/layout adds to the laid-out position, moves the
+    // drawn strip without a Yoga relayout per frame. (Not pivot: the layout
+    // transform ignores it, which left the strip pinned to the left edge.)
+    if (row && !row.destroyed) row.x = x;
   }, []);
+
+  const slideTo = useCallback((target: number, duration: number) => {
+    slide.current?.stop();
+    slide.current = null;
+    // Already there (first mount): place it outright, an animation from x to x may never update.
+    if (Math.abs(pos.current - target) < 0.5) { place(target); return; }
+    slide.current = animate(pos.current, target, { duration, ease: "easeOut", onUpdate: place });
+  }, [place]);
+  useEffect(() => () => slide.current?.stop(), []);
 
   // Settle on the active card whenever it (or the geometry) changes.
   useEffect(() => {
-    const target = stripOffset(active, cardW, viewW);
-    // Already there (first mount): place it outright, an animation from x to x may never update.
-    if (Math.abs(pos.current - target) < 0.5) { place(target); return; }
-    const controls = animate(pos.current, target, { duration: 0.3, ease: "easeOut", onUpdate: place });
-    return () => controls.stop();
-  }, [active, cardW, viewW, place]);
+    slideTo(stripOffset(active, cardW, viewW), 0.3);
+  }, [active, cardW, viewW, slideTo]);
 
   const step = useCallback((delta: -1 | 1) => {
     setActive(a => clampIndex(clampIndex(a, count) + delta, count));
@@ -131,6 +140,11 @@ export function Carousel({
       if (Math.hypot(dx, dy) < DRAG_START_PX) return;
       if (Math.abs(dy) > Math.abs(dx)) { d.live = false; return; }
       d.horizontal = true;
+      // The finger owns the strip now: stop a slide still settling from the last swipe.
+      slide.current?.stop();
+      slide.current = null;
+      // Follow from where the strip is now, not where it was at touch-down.
+      d.from = pos.current - dx;
     }
     place(d.from + dx);
   }, [place]);
@@ -141,11 +155,9 @@ export function Carousel({
     const dx = e ? e.global.x - d.x : 0;
     const next = releaseIndex(active, dx, cardW, count);
     if (next !== active) setActive(next);
-    else {
-      // Same card: spring back to it.
-      animate(pos.current, stripOffset(active, cardW, viewW), { duration: 0.25, ease: "easeOut", onUpdate: place });
-    }
-  }, [active, cardW, viewW, count, place]);
+    // Same card: spring back to it.
+    else slideTo(stripOffset(active, cardW, viewW), 0.25);
+  }, [active, cardW, viewW, count, slideTo]);
 
   const pips = useMemo(() => pipsFor(count, active, marks), [count, active, marks]);
   const showArrows = screen.width >= ARROWS_MIN_SCREEN;

@@ -17,7 +17,8 @@ import { isContinuation, type TenureOffer } from "@/lib/tenure";
 import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, TEXT, View, hex } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
-import { ArcadeButton, DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
 interface TenureDraftScreenProps {

@@ -8,8 +8,9 @@
 import { useCallback, type ReactNode } from "react";
 import type { Graphics } from "pixi.js";
 import { useTranslation } from "react-i18next";
-import { Appear, Label, Pressable, RADIUS, TEXT, View, hex, tint, usePulse, useUiScreen } from "../kit/ui";
-import { WrapText } from "./modalParts";
+import { Appear, Label, Pressable, RADIUS, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
+import { GlowFrame } from "./modalParts";
+
 import {
   arrowBob, arrowShape, scrimBands, spotlightHole, spotlightSeparator, tutorialCardWidth, tutorialSpotlight,
 } from "./TutorialOverlayModel";
@@ -84,9 +85,12 @@ export function TutorialOverlay({
   const drawArrow = useCallback((g: Graphics) => {
     const { shaft, head } = arrowShape(isArrowUp);
     g.clear();
-    // drop-shadow 0 0 8px accent: a slightly fatter faint copy underneath.
-    g.rect(shaft.x - 3, shaft.y, shaft.w + 6, shaft.h).fill({ color: accent, alpha: 0.25 });
-    g.poly(head).stroke({ width: 6, color: accent, alpha: 0.25, join: "round" });
+    // drop-shadow 0 0 8px accent: widening strokes of falling alpha under the
+    // fill, so the glow fades out rather than reading as a dark outline.
+    for (const [width, alpha] of [[16, 0.06], [11, 0.1], [6, 0.16]] as const) {
+      g.rect(shaft.x, shaft.y, shaft.w, shaft.h).stroke({ width, color: accent, alpha, join: "round" });
+      g.poly(head).stroke({ width, color: accent, alpha, join: "round" });
+    }
     g.rect(shaft.x, shaft.y, shaft.w, shaft.h).fill(accent);
     g.poly(head).fill(accent);
   }, [isArrowUp, accent]);
@@ -106,34 +110,30 @@ export function TutorialOverlay({
   // tap on it reaches the overlay's own dismiss (nothing on it to protect).
   const card = (
     <Appear fromScale={0.92} fromY={16} duration={0.25} layout={{ alignSelf: "center" }}>
-      {/* The breathing outer glow (the DOM's animated box-shadow) as a halo border. */}
       <View layout={{
-        width: tutorialCardWidth(screen.width) + 8, padding: 2, borderRadius: RADIUS.xl + 4,
-        borderWidth: 2, borderColor: tint(GLOW, 0.1 + 0.3 * glowPulse),
+        width: tutorialCardWidth(screen.width), padding: 24, gap: 12, borderRadius: RADIUS.xl,
+        backgroundColor: 0x0a0f0a, borderColor: accent, borderWidth: 2,
       }}>
-        <View layout={{
-          padding: 24, gap: 12, borderRadius: RADIUS.xl,
-          backgroundColor: 0x0a0f0a, borderColor: accent, borderWidth: 2,
-        }}>
-          <WrapText text={title} size={wide ? TEXT.xl : TEXT.lg} weight="900" font="display" color={accent}
-            upper letterSpacing={(wide ? TEXT.xl : TEXT.lg) * 0.1} align="center" />
+        {/* The breathing glow: box-shadow 0 0 18px..38px rgba(0,255,136,0.14..0.42). */}
+        <GlowFrame color={GLOW} radius={RADIUS.xl} spread={28} strength={0.42} alpha={0.33 + 0.67 * glowPulse} />
+        <Label text={title} size={wide ? TEXT.xl : TEXT.lg} weight="900" font="display" color={accent}
+          upper letterSpacing={(wide ? TEXT.xl : TEXT.lg) * 0.1} align="center" wrap />
 
-          {graphic && <View layout={{ alignItems: "center" }}>{graphic}</View>}
+        {graphic && <View layout={{ alignItems: "center" }}>{graphic}</View>}
 
-          <WrapText text={body} size={wide ? TEXT.base : TEXT.sm} font="mono" color={0xc8ffd8}
-            lineHeight={Math.round((wide ? TEXT.base : TEXT.sm) * 1.625)} align={align === "left" ? "left" : "center"} />
+        <Label text={body} size={wide ? TEXT.base : TEXT.sm} font="mono" color={0xc8ffd8}
+          lineHeight={Math.round((wide ? TEXT.base : TEXT.sm) * 1.625)} align={align === "left" ? "left" : "center"} wrap />
 
-          {showTapHint && (
-            <View layout={{ alignItems: "center", marginTop: 4 }}>
-              <Label text={t('tutorialOverlay.tapToContinue')} size={TEXT.xs} font="display" color={accent}
-                alpha={0.7} upper letterSpacing={TEXT.xs * 0.1} />
-            </View>
-          )}
-
+        {showTapHint && (
           <View layout={{ alignItems: "center", marginTop: 4 }}>
-            <WrapText text={t('tutorialOverlay.replayFromOptions')} size={10} font="mono" color={0x4a7a5a}
-              upper letterSpacing={0.25} align="center" />
+            <Label text={t('tutorialOverlay.tapToContinue')} size={TEXT.xs} font="display" color={accent}
+              alpha={0.7} upper letterSpacing={TEXT.xs * 0.1} align="center" wrap />
           </View>
+        )}
+
+        <View layout={{ alignItems: "center", marginTop: 4 }}>
+          <Label text={t('tutorialOverlay.replayFromOptions')} size={10} font="mono" color={0x4a7a5a}
+            upper letterSpacing={0.25} align="center" wrap />
         </View>
       </View>
     </Appear>
@@ -151,7 +151,7 @@ export function TutorialOverlay({
   return (
     <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }} zIndex={60}>
       <Appear duration={0.25} layout={{ width: screen.width, height: screen.height }}>
-        <Pressable onTap={onDismiss} pressedAlpha={1} layout={{ width: screen.width, height: screen.height }}>
+        <Pressable onTap={onDismiss} pressedAlpha={1} label="tutorial-dismiss" layout={{ width: screen.width, height: screen.height }}>
           <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>
             <pixiGraphics draw={drawScrim} />
           </View>

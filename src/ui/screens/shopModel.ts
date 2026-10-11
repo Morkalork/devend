@@ -440,7 +440,7 @@ const GREEN_500 = 0x22c55e;
 const GREEN_600 = 0x16a34a;
 
 /** Tailwind's tier palette as numbers (types/upgrade.ts TIER_COLORS). */
-export const TIER_PALETTE: Record<UpgradeTier, { text: number; border: string }> = {
+const TIER_PALETTE: Record<UpgradeTier, { text: number; border: string }> = {
   Junior: { text: 0xcbd5e1, border: tint(COLOR.white, 0.7) },
   Senior: { text: 0x60a5fa, border: tint(0x3b82f6, 0.5) },
   Principal: { text: 0xc084fc, border: tint(0xa855f7, 0.5) },

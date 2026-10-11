@@ -5,8 +5,8 @@
  * between a standard lock and a superior lock. Dismiss on backdrop tap or the X.
  */
 import { useTranslation } from 'react-i18next';
-import { COLOR, Label, Modal, TEXT, View, useUiScreen } from "../kit/ui";
-import { FilledStar, WrapText } from "./modalParts";
+import { COLOR, Label, TEXT, View, useUiScreen } from "../kit/ui";
+import { FilledStar, InfoCardModal } from "./modalParts";
 
 const GOLD = 0xffd54a;
 
@@ -17,24 +17,22 @@ interface SuperiorLockInfoModalProps {
 export function SuperiorLockInfoModal({ onClose }: SuperiorLockInfoModalProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
+  // `leading-snug`
   const bodyLine = Math.round(TEXT.sm * 1.375);
   return (
-    <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }} zIndex={80}>
-      <Modal screen={screen} onClose={onClose} accent={GOLD} title={t('game.lockInfo.title')} maxWidth={384}>
-        <View layout={{ gap: 16 }}>
-          <View layout={{ gap: 4 }}>
-            <Label text={t('game.lockInfo.normalTitle')} size={10} weight="700" letterSpacing={0.5} color={COLOR.mutedForeground} />
-            <WrapText text={t('game.lockInfo.normalBody')} size={TEXT.sm} lineHeight={bodyLine} color={COLOR.foreground} />
-          </View>
-          <View layout={{ gap: 4 }}>
-            <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <FilledStar size={12} color={GOLD} />
-              <Label text={t('game.lockInfo.superiorTitle')} size={10} weight="700" letterSpacing={0.5} color={GOLD} />
-            </View>
-            <WrapText text={t('game.lockInfo.superiorBody')} size={TEXT.sm} lineHeight={bodyLine} color={COLOR.foreground} />
-          </View>
+    <InfoCardModal screen={screen} onClose={onClose} color={GOLD} title={t('game.lockInfo.title')}
+      titleIcon={<FilledStar size={16} color={GOLD} />} gap={16}>
+      <View layout={{ gap: 4 }}>
+        <Label text={t('game.lockInfo.normalTitle')} size={10} weight="700" letterSpacing={0.5} color={COLOR.mutedForeground} />
+        <Label text={t('game.lockInfo.normalBody')} size={TEXT.sm} lineHeight={bodyLine} color={COLOR.foreground} wrap />
+      </View>
+      <View layout={{ gap: 4 }}>
+        <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <FilledStar size={12} color={GOLD} />
+          <Label text={t('game.lockInfo.superiorTitle')} size={10} weight="700" letterSpacing={0.5} color={GOLD} />
         </View>
-      </Modal>
-    </View>
+        <Label text={t('game.lockInfo.superiorBody')} size={TEXT.sm} lineHeight={bodyLine} color={COLOR.foreground} wrap />
+      </View>
+    </InfoCardModal>
   );
 }

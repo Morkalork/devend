@@ -10,8 +10,7 @@
  */
 import { useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Award, Wind } from 'lucide-react';
-import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
+import { X, Award, Wind, Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
 import type { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
 import type { LoadoutConfig, AscensionRung } from '@/types/loadout';
@@ -24,8 +23,7 @@ import type { PanelFocus } from '@/components/game/TopBarDetailsPanel';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { getUpgradeIcon } from '@/components/game/upgradeIcons';
 import { contentText } from '@/i18n/content';
-import { hex } from '../theme';
-import { COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, tint, useUiScreen } from '../kit/ui';
+import { COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from '../kit/ui';
 import { TagChip } from './TagChip';
 import { ModifierBreakdown } from './ModifierBreakdown';
 import {
@@ -34,6 +32,7 @@ import {
 } from './specsModel';
 import { SPECS, cardHighLayout, cardLayout, filledIcon } from './specsStyle';
 import { SpecsPara, SpecsSection as Section, SpecsText, StatHead } from './specsParts';
+import { GlowFrame } from './modalParts';
 
 export type { PanelFocus };
 
@@ -456,6 +455,8 @@ export function TopBarDetailsPanel({
             backgroundColor: tint(accent, 0x22 / 255), borderColor: tint(accent, 0x99 / 255), borderWidth: 2,
           }}
         >
+          {/* box-shadow 0 0 12px accent44 */}
+          <GlowFrame color={accent} radius={RADIUS.lg} spread={10} strength={0x44 / 255} />
           <Icon icon={X} size={24} color={accent} />
         </Pressable>
       </View>

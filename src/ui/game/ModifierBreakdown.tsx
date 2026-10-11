@@ -7,8 +7,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import type { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
-import { hex } from '../theme';
-import { Label, RADIUS, TEXT, View, tint } from '../kit/ui';
+import { Label, RADIUS, TEXT, View, hex, tint } from '../kit/ui';
 import { modifierRows, rowContributors, shipEarlyTopPercent, sourceName, splitRows } from './specsModel';
 import { SPECS } from './specsStyle';
 import { SpecsPara, SpecsSection, SpecsText, StatHead } from './specsParts';

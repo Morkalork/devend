@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Zap, Coins } from 'lucide-react';
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, tint, useUiScreen } from "../kit/ui";
-import { TouchBlocker, WrapText } from "./modalParts";
+import { GlowFrame, TouchBlocker } from "./modalParts";
 import { pushChunkPercent, pushLuckBox } from "./PushYourLuckOverlayModel";
 
 interface PushYourLuckOverlayProps {
@@ -73,7 +73,7 @@ export function PushYourLuckOverlay({
                 <Label text={t('pushYourLuck.bonusPerRemoved', { percent: chunk })} size={TEXT.xs} weight="500" color={COLOR.primary} />
                 <Label text="." size={TEXT.xs} color={COLOR.mutedForeground} />
               </View>
-              <WrapText text={t('pushYourLuck.noRisk')} size={TEXT.xs} color={SUCCESS} align="center" />
+              <Label text={t('pushYourLuck.noRisk')} size={TEXT.xs} color={SUCCESS} align="center" wrap />
             </View>
 
             {/* Buttons */}
@@ -98,10 +98,11 @@ export function PushYourLuckOverlay({
                 layout={{
                   flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
                   paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, borderRadius: RADIUS.lg,
-                  // The orange glow (box-shadow 0 0 20px) as a brighter rim.
-                  backgroundColor: 0xf97316, borderColor: 0xfdba74, borderWidth: 1,
+                  backgroundColor: 0xf97316,
                 }}
               >
+                {/* box-shadow 0 0 20px rgba(249,115,22,0.6) */}
+                <GlowFrame color={0xf97316} radius={RADIUS.lg} spread={16} strength={0.6} />
                 <Icon icon={Zap} size={16} color={COLOR.black} />
                 <Label text={t('pushYourLuck.pushYourLuck')} size={TEXT.base} weight="700" color={COLOR.black} layout={{ flexShrink: 1 }} />
               </Pressable>

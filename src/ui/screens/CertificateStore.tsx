@@ -24,7 +24,7 @@ import {
   Appear, COLOR, Icon, Label, Pressable, ProgressBar, RADIUS, ScrollView, TEXT, View, tint, useUiScreen,
 } from "../kit/ui";
 import { TutorialOverlay } from "../game/TutorialOverlay";
-import { ArcadeButton } from "./hallArcadeButton";
+import { ArcadeButton, MenuHeading } from "./welcomeParts";
 import {
   buyingText, certSections, clearSelection, getUnlockInfo, levelRowState, nextLevelCost, pendingPurchase,
   projectedBalance as projectBalance, toggleExpanded, toggleLevelSelection, type UnlockContext,
@@ -123,10 +123,8 @@ export function CertificateStore({
                 the upgrade shop, and it used to be said only in the first-visit
                 tutorial - which a returning player has long since dismissed. */}
             <View layout={{ alignItems: "center", gap: 4 }}>
-              <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Icon icon={Medal} size={32} color={COLOR.primary} />
-                <Label text={t("certificateStore.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]} font="display" weight="900" letterSpacing={1.2} />
-              </View>
+              <MenuHeading icon={Medal} iconColor={COLOR.primary} text={t("certificateStore.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]}
+                letterSpacing={1.2} maxWidth={contentWidth} />
               <View layout={{ width: Math.min(384, contentWidth) }}>
                 <Label text={t("certificateStore.subtitle")} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />
               </View>
@@ -209,7 +207,7 @@ export function CertificateStore({
 
             {/* Back */}
             <Appear fromY={20} delay={0.4} layout={{ marginTop: -12 }}>
-              <ArcadeButton text={t("certificateStore.continue")} icon={ArrowLeft} onTap={onBack} />
+              <ArcadeButton variant="secondary" text={t("certificateStore.continue")} icon={ArrowLeft} onTap={onBack} />
             </Appear>
           </View>
         </Appear>
@@ -261,7 +259,7 @@ function CertAvailableCard({
       // A pending selection lights the card up (the DOM's stronger glow).
       borderColor: tint(COLOR.primary, selectedTarget != null ? 0.85 : 0.4),
     }}>
-      <Pressable onTap={onToggle} pressedAlpha={0.85} layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16 }}>
+      <Pressable onTap={onToggle} pressedAlpha={0.85} label={contentText.certName(t, cert)} layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16 }}>
         <View layout={{ flex: 1 }}>
           <Label text={contentText.certName(t, cert)} size={TEXT.base} font="display" weight="700" wrap />
           <Label text={contentText.certDesc(t, cert)} size={TEXT.xs} color={COLOR.mutedForeground} wrap layout={{ marginTop: 2 }} />
@@ -326,7 +324,7 @@ function CertAvailableCard({
                   text={t("certificateStore.buyUpToLevel", { level: selectedTarget })}
                   iconAfter={ChevronRight} iconSize={16} variant="primary" textSize={TEXT.sm}
                   disabled={!canAfford} onTap={onBuy}
-                  layout={{ paddingLeft: 16, paddingRight: 16, paddingTop: 6, paddingBottom: 6, gap: 6 }}
+                  contentLayout={{ paddingLeft: 16, paddingRight: 16, paddingTop: 6, paddingBottom: 6, gap: 6 }}
                 />
               </View>
             </View>
@@ -365,7 +363,7 @@ function CertLevelRow({ levelNum, state, effect, cost, onTap }: {
   );
   // An owned level is a record, not a button: it takes no tap.
   if (owned) return <View layout={layout}>{content}</View>;
-  return <Pressable onTap={onTap} layout={layout}>{content}</Pressable>;
+  return <Pressable onTap={onTap} label={t("certificateStore.levelLabel", { level: levelNum })} layout={layout}>{content}</Pressable>;
 }
 
 function CertLockedCard({ cert, ctx, expanded, onToggle }: { cert: Certificate; ctx: UnlockContext; expanded: boolean; onToggle: () => void }) {
@@ -374,7 +372,7 @@ function CertLockedCard({ cert, ctx, expanded, onToggle }: { cert: Certificate; 
   const value = unlock.current / unlock.required;
   return (
     // Nothing in a locked card is interactive, so the whole card is the toggle.
-    <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 0.85 : 0.6} layout={{
+    <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 0.85 : 0.6} label={contentText.certName(t, cert)} layout={{
       padding: 16, borderRadius: RADIUS.lg, borderWidth: 1,
       borderColor: tint(COLOR.muted, 0.3), backgroundColor: tint(COLOR.muted, 0.05),
     }}>
@@ -423,7 +421,7 @@ function CertLockedCard({ cert, ctx, expanded, onToggle }: { cert: Certificate; 
 function CertMaxedCard({ cert, expanded, onToggle }: { cert: Certificate; expanded: boolean; onToggle: () => void }) {
   const { t } = useTranslation();
   return (
-    <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 1 : 0.85} layout={{
+    <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 1 : 0.85} label={contentText.certName(t, cert)} layout={{
       padding: 16, borderRadius: RADIUS.lg, borderWidth: 1,
       borderColor: tint(COLOR.primary, 0.3), backgroundColor: tint(COLOR.primary, 0.05),
     }}>

@@ -24,9 +24,10 @@ import { drawOffers } from "@/lib/loadoutDraft";
 import { getRunRng } from "@/lib/runRng";
 import { draftableAtAscension } from "@/lib/loadoutUnlock";
 import { contentText } from "@/i18n/content";
-import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
-import { ArcadeButton, ArcadeText, DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow, RichParagraph } from "./draftParts";
+import { DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow, RichParagraph } from "./draftParts";
+import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_RED, DRAFT_TEXT, SM_BREAKPOINT, ascensionBriefing, toggleSelection } from "./draftModel";
 
 interface AscensionDraftScreenProps {
@@ -46,6 +47,7 @@ interface AscensionDraftScreenProps {
 
 const RUNG_GOLD = hex("#ffd76b");
 const RESET_PINK = hex("#ffb4b4");
+const TUTORIAL_CARD = hex("#0a0f0a");
 
 export function AscensionDraftScreen({
   loadouts,
@@ -82,26 +84,29 @@ export function AscensionDraftScreen({
     }} zIndex={1000}>
       <Pressable pressedAlpha={1} layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.8) }} />
       <Appear fromScale={0.9}>
-        <View layout={{
-          width: Math.min(448, screen.width - 48), padding: 24, borderRadius: RADIUS.sm, alignItems: "center",
-          backgroundColor: hex("#0a0f0a"), borderWidth: 2, borderColor: accent,
+        {/* Bounded and scrollable: a centred card taller than the screen would
+            otherwise lose both ends, with no way to reach either. A Pressable
+            so a tap on the card does not reach the backdrop below it. */}
+        <Pressable pressedAlpha={1} layout={{
+          width: Math.min(448, screen.width - 48), maxHeight: screen.height - 48, borderRadius: RADIUS.lg,
+          backgroundColor: TUTORIAL_CARD, borderWidth: 2, borderColor: accent,
         }}>
-          <Label text={t("ascension.ascensionUnlocked")} size={TEXT.xl} font="display" weight="900" upper letterSpacing={1.5} color={accent} wrap align="center" layout={{ marginBottom: 12 }} />
-          <View layout={{ alignSelf: "stretch", marginBottom: 16 }}>
-            <RichParagraph
-              size={TEXT.sm}
-              color={DRAFT_TEXT}
-              runs={[
-                { text: t("ascension.tutorialIntro1") },
-                { text: t("ascension.tutorialLoadoutWord"), bold: true },
-                { text: t("ascension.tutorialIntro2") },
-              ]}
-            />
-          </View>
-          <ArcadeButton onTap={onTutorialDismiss}>
-            <ArcadeText text={t("ascension.gotIt")} color={COLOR.primary} />
-          </ArcadeButton>
-        </View>
+          <ScrollView layout={{ flexShrink: 1, padding: 24, alignItems: "center" }}>
+            <Label text={t("ascension.ascensionUnlocked")} size={TEXT.xl} font="display" weight="900" upper letterSpacing={1} color={accent} wrap align="center" layout={{ marginBottom: 12 }} />
+            <View layout={{ alignSelf: "stretch", marginBottom: 16 }}>
+              <RichParagraph
+                size={TEXT.sm}
+                color={DRAFT_TEXT}
+                runs={[
+                  { text: t("ascension.tutorialIntro1") },
+                  { text: t("ascension.tutorialLoadoutWord"), bold: true },
+                  { text: t("ascension.tutorialIntro2") },
+                ]}
+              />
+            </View>
+            <ArcadeButton text={t("ascension.gotIt")} onTap={onTutorialDismiss} />
+          </ScrollView>
+        </Pressable>
       </Appear>
     </View>
   );
@@ -127,7 +132,7 @@ export function AscensionDraftScreen({
 
       {/* What ascending would actually switch on. Beside the choice, not after it. */}
       <View layout={{
-        alignSelf: "stretch", borderRadius: RADIUS.sm, padding: 16,
+        alignSelf: "stretch", borderRadius: RADIUS.lg, padding: 16,
         borderWidth: 1, borderColor: tint(accent, 0x55 / 255), backgroundColor: tint(accent, 0x0d / 255),
       }}>
         <Label text={t("ascension.whatDepthAdds", { depth: nextDepth })} size={TEXT.xs} upper letterSpacing={1.2} color={accent} wrap layout={{ marginBottom: 8 }} />

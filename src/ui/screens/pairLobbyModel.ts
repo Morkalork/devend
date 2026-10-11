@@ -1,7 +1,7 @@
 /**
  * The 2-Player screen's non-drawing half (canvas port of
  * components/game/PairLobby): the QR code as a module matrix, the server-nap
- * readout's rules, and the small hooks the screen uses. Kept out of the .tsx
+ * readout's rules, and the server-nap hook the screen uses. Kept out of the .tsx
  * so it can be tested without a canvas, and so the component file exports
  * only components.
  */
@@ -136,21 +136,3 @@ export const COPIED_RESET_MS = 2000;
  */
 export const copyOutcome = (ok: boolean): { state: CopyState; resets: boolean } =>
   ({ state: ok ? "copied" : "failed", resets: ok });
-
-// ── Spinner ────────────────────────────────────────────────────────────────
-
-/** A turning angle in radians (Tailwind's `animate-spin`: one turn a second). */
-export function useSpin(periodMs = 1000): number {
-  const [angle, setAngle] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      setAngle((((now - start) / periodMs) % 1) * Math.PI * 2);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [periodMs]);
-  return angle;
-}

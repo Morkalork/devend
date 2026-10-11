@@ -19,8 +19,7 @@ import type { MusicCatalogue } from "@/types/music";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton, Spinner } from "./welcomeParts";
-import { arcadeInk } from "./welcomeStyle";
+import { ArcadeButton, MenuHeading, Spinner } from "./welcomeParts";
 import { SeekBar } from "./jukeboxParts";
 import { openExternal, trackCredit, trackReadout, useJukeboxPlayer } from "./jukeboxPlayer";
 
@@ -53,10 +52,7 @@ export function JukeboxScreen({
         <View layout={{ padding: 16, alignItems: "center" }}>
           <Appear fromY={20} duration={0.5} layout={{ width, alignItems: "center", gap: 24, paddingBottom: 96 }}>
             {/* Header */}
-            <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Icon icon={Music} size={32} color={accent} />
-              <Label text={t("music.title")} size={TEXT["2xl"]} font="display" weight="900" letterSpacing={TEXT["2xl"] * 0.05} />
-            </View>
+            <MenuHeading icon={Music} iconColor={accent} text={t("music.title")} size={TEXT["2xl"]} maxWidth={width} />
             <Label text={t("music.subtitle")} size={TEXT.sm} color={COLOR.mutedForeground} align="center" wrap layout={{ marginTop: -12 }} />
 
             {/* Playlist */}
@@ -86,8 +82,8 @@ export function JukeboxScreen({
                             : <Icon icon={Play} size={20} color={accent} layout={{ marginLeft: 2 }} />}
                         </Pressable>
                         <View layout={{ flex: 1, gap: 2 }}>
-                          <Label text={track.title} size={TEXT.base} font="display" weight="700" />
-                          <Label text={trackCredit(track, t)} size={TEXT.xs} color={COLOR.mutedForeground} />
+                          <Label text={track.title} size={TEXT.base} font="display" weight="700" truncate />
+                          <Label text={trackCredit(track, t)} size={TEXT.xs} color={COLOR.mutedForeground} truncate />
                         </View>
                         <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                           <Label text={trackReadout(track, isPlaying, position, duration, t)} size={11} color={COLOR.mutedForeground} />
@@ -109,17 +105,14 @@ export function JukeboxScreen({
             {/* Licence: the note, then its link (the DOM ran them inline). */}
             <View layout={{ alignSelf: "stretch", alignItems: "center", gap: 2 }}>
               <Label text={t("music.licenseNote", { license: catalogue.license.name })} size={11} color={COLOR.mutedForeground} align="center" wrap />
-              <Pressable onTap={() => openExternal(catalogue.license.url)} alpha={0.8} layout={{ alignItems: "stretch" }}>
+              <Pressable onTap={() => openExternal(catalogue.license.url)} label={t("music.licenseLink")} alpha={0.8} layout={{ alignItems: "stretch" }}>
                 <Label text={t("music.licenseLink")} size={11} color={COLOR.mutedForeground} />
                 <View layout={{ height: 1, backgroundColor: COLOR.mutedForeground }} />
               </Pressable>
             </View>
 
             {/* Back */}
-            <ArcadeButton size="sm" variant="secondary" onTap={onBack} label={t("music.back")} layout={{ marginTop: 8, minWidth: 200 }}>
-              <Icon icon={ArrowLeft} size={20} color={arcadeInk("secondary")} />
-              <Label text={t("music.back")} size={11.5} font="display" weight="600" upper letterSpacing={1.15} color={arcadeInk("secondary")} />
-            </ArcadeButton>
+            <ArcadeButton size="sm" variant="secondary" icon={ArrowLeft} text={t("music.back")} onTap={onBack} layout={{ marginTop: 8, minWidth: 200 }} />
           </Appear>
         </View>
       </ScrollView>

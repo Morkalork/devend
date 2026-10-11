@@ -1,46 +1,43 @@
 /**
- * A box that scales about its own centre, and flashes when its key bumps: the
- * DOM's `animate-stat-flash` (a stat that just changed punches up and glows)
- * and `animate-pulse-heart` (the lives heart breathing). The kit has no
- * scale-in-place; Appear scales once on mount, from the top-left.
+ * A box that flashes when its key bumps, and can breathe: the DOM's
+ * `animate-stat-flash` (a stat that just changed punches up and glows) and
+ * `animate-pulse-heart` (the lives heart breathing). Both scale about the box's
+ * centre, which is @pixi/layout's default transform origin (50%), so the
+ * neighbours never move.
  *
- * Scale and brightness are applied straight to the Pixi node, the way Appear
- * does, so a 60fps pulse does not re-render React.
+ * Scale, alpha and brightness are applied straight to the Pixi node, the way
+ * Appear does, so neither the flash nor the breath re-renders React.
  */
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { animate } from "motion";
 import { ColorMatrixFilter } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { RESOLUTION, type Layout } from "../kit/ui";
-import { FLASH_REST, STAT_FLASH_MS, statFlashAt, type FlashFrame } from "./topBarModel";
+import { FLASH_REST, STAT_FLASH_MS, heartPulse, statFlashAt, type FlashFrame } from "./topBarModel";
 
 interface Props {
   /** Each increment past 0 replays the flash (the DOM remounted on a new key). */
   flashKey?: number;
-  /** A standing scale on top of the flash (the heart's breath). */
-  scale?: number;
-  alpha?: number;
+  /**
+   * Breathe forever with this period in ms, under any flash: the lives
+   * heart's `animate-pulse-heart` (heartPulse).
+   */
+  breatheMs?: number;
   layout?: Layout;
   children?: ReactNode;
 }
 
-export function StatFlash({ flashKey = 0, scale = 1, alpha = 1, layout, children }: Props) {
+export function StatFlash({ flashKey = 0, breatheMs, layout, children }: Props) {
   const ref = useRef<LayoutContainer | null>(null);
   const frame = useRef<FlashFrame>(FLASH_REST);
-  const base = useRef(scale);
-  base.current = scale;
+  // The breath's current scale; alpha goes straight onto the node.
+  const breath = useRef(1);
   const filter = useRef<ColorMatrixFilter | null>(null);
 
   const apply = useCallback(() => {
     const node = ref.current;
     if (!node || node.destroyed) return;
-    const s = base.current * frame.current.scale;
-    const box = node.layout?.computedLayout;
-    // Keep the centre where layout put it: a point p lands at
-    // position + s * (p - pivot), so the centre c stays put at pivot = c(1 - 1/s).
-    const k = 1 - 1 / s;
-    node.scale.set(s);
-    node.pivot.set(((box?.width ?? 0) / 2) * k, ((box?.height ?? 0) / 2) * k);
+    node.scale.set(breath.current * frame.current.scale);
     const b = frame.current.brightness;
     if (b > 1.001) {
       if (!filter.current) filter.current = new ColorMatrixFilter({ resolution: RESOLUTION });
@@ -51,7 +48,27 @@ export function StatFlash({ flashKey = 0, scale = 1, alpha = 1, layout, children
     }
   }, []);
 
-  useEffect(() => { apply(); }, [scale, apply]);
+  useEffect(() => {
+    const node = ref.current;
+    if (!breatheMs || !node) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      // 0..1 and back, like usePulse, without a React render per frame.
+      const p = heartPulse(0.5 - 0.5 * Math.cos(((now - start) / breatheMs) * Math.PI * 2));
+      breath.current = p.scale;
+      if (!node.destroyed) node.alpha = p.alpha;
+      apply();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      breath.current = 1;
+      if (!node.destroyed) node.alpha = 1;
+      apply();
+    };
+  }, [breatheMs, apply]);
 
   useEffect(() => {
     if (flashKey <= 0) return;
@@ -63,7 +80,8 @@ export function StatFlash({ flashKey = 0, scale = 1, alpha = 1, layout, children
   }, [flashKey, apply]);
 
   return (
-    <layoutContainer ref={ref} layout={layout ?? {}} alpha={alpha}>
+    // Passive: only a wrapper, never a touch target of its own.
+    <layoutContainer ref={ref} layout={layout ?? {}} eventMode="passive">
       {children}
     </layoutContainer>
   );

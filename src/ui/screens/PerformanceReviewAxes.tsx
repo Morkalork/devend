@@ -61,8 +61,8 @@ function AxisBar({ row, handlers }: { row: AxisRow; handlers?: PressHandlers }) 
     <Pressable {...handlers} pressedAlpha={1} layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <View layout={{ width: 88, flexDirection: "row", alignItems: "center", gap: 4 }}>
         <Icon icon={row.icon} size={12} color={labelColor} />
-        <View layout={{ flex: 1, flexShrink: 1, flexDirection: "row" }}>
-          <Label text={row.label} size={TEXT.xs} color={labelColor} />
+        <View layout={{ flex: 1 }}>
+          <Label text={row.label} size={TEXT.xs} color={labelColor} truncate />
         </View>
       </View>
       <ProgressBar value={fill} color={row.color} track={tint(COLOR.muted, 0.4)} height={6} layout={{ flex: 1 }} />

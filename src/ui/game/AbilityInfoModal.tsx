@@ -12,7 +12,8 @@
  */
 import { useTranslation } from "react-i18next";
 import type { AbilityDef } from "@/lib/abilities";
-import { COLOR, Label, Modal, TEXT, View, useUiScreen } from "../kit/ui";
+import { COLOR, Label, TEXT, View, useUiScreen } from "../kit/ui";
+import { InfoCardModal } from "./modalParts";
 import { abilityInfoLines, cssColor, HOW_TO_USE_KEY } from "./bottomModel";
 
 interface AbilityInfoModalProps {
@@ -20,20 +21,23 @@ interface AbilityInfoModalProps {
   onClose: () => void;
 }
 
+/** `leading-snug` on the card's text-sm copy. */
+const SNUG = Math.round(TEXT.sm * 1.375);
+
 export function AbilityInfoModal({ ability, onClose }: AbilityInfoModalProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   const color = cssColor(ability.color, 0xffffff);
   const { description, howTo } = abilityInfoLines(ability);
   return (
-    <Modal screen={screen} onClose={onClose} title={ability.name} accent={color} maxWidth={384}>
-      {description && <Label text={description} size={TEXT.sm} color={COLOR.foreground} wrap />}
+    <InfoCardModal screen={screen} onClose={onClose} title={ability.name} color={color}>
+      {description && <Label text={description} size={TEXT.sm} lineHeight={SNUG} color={COLOR.foreground} wrap />}
       {howTo && (
         <View layout={{ gap: 4 }}>
           <Label text={t(HOW_TO_USE_KEY)} size={10} weight="700" letterSpacing={0.5} color={color} alpha={0.8} />
-          <Label text={howTo} size={TEXT.sm} color={COLOR.mutedForeground} wrap />
+          <Label text={howTo} size={TEXT.sm} lineHeight={SNUG} color={COLOR.mutedForeground} wrap />
         </View>
       )}
-    </Modal>
+    </InfoCardModal>
   );
 }

@@ -1,12 +1,12 @@
 /**
  * Containers for what is drawn over the board, by how they treat a touch.
  *
- * Every @pixi/layout box is created `eventMode: "static"` with an invisible
- * background filling it, so a plain View is a hit target over its whole box.
- * Over the board that is exactly wrong: the board asks the interface whether
- * anything interactive is under a finger before starting a fence (hitGate), and
- * a decorative frame covering the play area would answer yes everywhere. So an
- * overlay says what it is, explicitly:
+ * The board asks the interface whether anything interactive is under a finger
+ * before starting a fence (hitGate), so whatever is drawn over it must answer
+ * no unless it really is a control. A plain box is passive (ui/setup.ts), but
+ * passive only means "not a target itself": its children are still hit-tested,
+ * so one static descendant anywhere under a decorative frame would make the
+ * board refuse the cut there. So an overlay says what it is, explicitly:
  *
  *  - Inert: decoration (the DOM's `pointer-events-none`). It and everything in
  *    it is skipped by the hit test, so the board gets the touch.

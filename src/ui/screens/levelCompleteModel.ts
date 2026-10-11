@@ -59,8 +59,9 @@ export const STAT_INFO: Record<string, { icon: LucideIcon; color: number }> = {
   newHighscore: { icon: TrendingUp, color: TW.yellow400 },
   totalBonus: { icon: Sparkles, color: SUCCESS },
   overtimeEarned: { icon: Clock, color: COLOR.primary },
-  // text-accent-foreground, as the DOM had it (near-black in this theme).
-  totalOvertime: { icon: Clock, color: COLOR.primaryForeground },
+  // The DOM said text-accent-foreground, which is near-black in this theme and
+  // vanished on the card (the row itself was moved off it for the same reason).
+  totalOvertime: { icon: Clock, color: COLOR.primary },
   // The Performance Review lanes. Holding a bar explains what that lane
   // pays for and, more usefully, what it costs you on the others.
   axis_delivery: { icon: Lock, color: TW.cyan400 },

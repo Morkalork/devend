@@ -17,7 +17,8 @@ import { getRunRng } from "@/lib/runRng";
 import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
-import { ArcadeButton, DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
+import { ArcadeButton } from "./betweenArcadeButton";
 import { DRAFT_HINT, DRAFT_RED, DRAFT_TEXT, SM_BREAKPOINT, toggleSelection } from "./draftModel";
 
 interface RunDraftScreenProps {

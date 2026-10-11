@@ -62,7 +62,10 @@ function TimerCell({ tmr }: { tmr: LiveTimer }) {
   return (
     <View layout={{ flex: 1, gap: 3 }}>
       <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-        <Label text={tmr.name} font="display" size={9} weight="700" color={tmr.color} layout={{ flexShrink: 1 }} />
+        {/* Cut short rather than shrunk: three cells share a phone's width. */}
+        <View layout={{ flex: 1 }}>
+          <Label text={tmr.name} font="display" size={9} weight="700" color={tmr.color} truncate />
+        </View>
         <Label text={`${tmr.secsLeft}s`} font="display" size={10} weight="700" color={tmr.color} />
       </View>
       <ProgressBar value={tmr.frac} color={tmr.color} track={TRACK} height={4} />

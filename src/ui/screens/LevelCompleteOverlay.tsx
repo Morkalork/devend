@@ -18,8 +18,9 @@ import { contentText } from "@/i18n/content";
 import type { PressHandlers } from "../kit/ui";
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { PerformanceReviewAxes } from "./PerformanceReviewAxes";
-import { ArcadeButton } from "./resultParts";
+import { ArcadeButton } from "./betweenArcadeButton";
 import { Between, StatInfoModal, StatRow } from "./levelCompleteParts";
+import { RichParagraph } from "./draftParts";
 import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
 import { useCountUp } from "./resultMotion";
 
@@ -32,10 +33,6 @@ interface LevelCompleteOverlayProps {
   buttonDelay?: number;
   /** Certs newly unlocked this level — shown before the Continue button */
   newlyUnlockedCerts?: Certificate[];
-  /**
-   * Record Pace (HIGHSCORES.md): cumulative-overtime delta vs the best run at
-   * the same maps-completed point, plus the once-per-run PB banner flag.
-   */
   /** The one-time personal-best banner. Record Pace used to ride in here
    *  too; see useGameSession for why it was taken out. */
   pace?: { newPersonalBest: boolean } | null;
@@ -102,10 +99,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                       the Push Your Luck prompt, so without this its coming and
                       going reads as random. */}
                   {m.winReason && (
-                    <View layout={{ flexDirection: "row", gap: 4, marginTop: 2 }}>
-                      <Label text={`${m.winReason.label}:`} size={sm ? TEXT.xs : 11} color={SUCCESS} alpha={0.9} />
-                      <Label text={m.winReason.reason} size={sm ? TEXT.xs : 11} color={SUCCESS} alpha={0.9} weight="600" />
-                      {m.winReason.also && <Label text={m.winReason.also} size={sm ? TEXT.xs : 11} color={COLOR.mutedForeground} />}
+                    <View layout={{ marginTop: 2 }}>
+                      <RichParagraph align="left" size={sm ? TEXT.xs : 11} color={SUCCESS} runs={[
+                        { text: `${m.winReason.label}: `, alpha: 0.9 },
+                        { text: m.winReason.reason, bold: true, weight: "600", alpha: 0.9 },
+                        ...(m.winReason.also ? [{ text: ` ${m.winReason.also}`, color: COLOR.mutedForeground }] : []),
+                      ]} />
                     </View>
                   )}
                 </View>
@@ -157,7 +156,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                         you left nothing behind in the one lane with no trade-off. */}
                     {m.flawless && (
                       <Appear delay={0.35} fromScale={0.9} duration={0.3}
-                        layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8, marginBottom: 8, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x14 / 255) }}>
+                        layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", columnGap: 8, rowGap: 2, marginTop: 8, marginBottom: 8, padding: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x14 / 255) }}>
                         <Icon icon={Sparkles} size={16} color={gold} />
                         <Label text={t("levelComplete.flawless")} size={TEXT.sm} font="display" weight="900" upper letterSpacing={1.4} color={gold} glow={12} />
                         <Label text={t("levelComplete.flawlessDetail", { count: lockedBallsCount })} size={TEXT.xs} color={gold} alpha={0.75} />
@@ -353,9 +352,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 {/* Once per run: the moment the total passes the all-time best. */}
                 {pace?.newPersonalBest && (
                   <Appear delay={0.35} fromScale={0.92} duration={0.3}
-                    layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 10, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x1a / 255) }}>
-                    <Icon icon={Medal} size={16} color={gold} />
-                    <Label text={t("levelComplete.newPersonalBest")} size={TEXT.sm} weight="700" color={gold} glow={12} />
+                    layout={{ paddingTop: 10, paddingBottom: 10, paddingLeft: 8, paddingRight: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x1a / 255) }}>
+                    <RichParagraph runs={[{ text: t("levelComplete.newPersonalBest") }]} size={TEXT.sm} weight="700" color={gold} glow={12}
+                      lead={<Icon icon={Medal} size={16} color={gold} />} leadGap={8} />
                   </Appear>
                 )}
 
@@ -384,8 +383,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <Appear fromY={10} delay={0.38} duration={0.22}>
                 <ArcadeButton
                   text={t("levelComplete.nextLevel")}
-                  icon={ArrowRight}
-                  iconAfter
+                  trailingIcon={ArrowRight}
                   iconSize={sm ? 20 : 16}
                   size={sm ? TEXT.base : TEXT.sm}
                   paddingY={sm ? 12 : 8}

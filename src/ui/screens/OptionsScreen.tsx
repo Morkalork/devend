@@ -5,7 +5,7 @@
  * the language dropdown is drawn here. The CRT backdrop is not drawn here: it
  * is rendered once, globally, underneath the interface canvas.
  */
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FederatedPointerEvent, Container } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
@@ -21,8 +21,8 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton } from "./welcomeParts";
-import { arcadeInk } from "./welcomeStyle";
+import { ArcadeButton, MenuHeading } from "./welcomeParts";
+import { fitTextWidth } from "./welcomeStyle";
 import { ConfirmDialog, VolumeSlider } from "./optionsParts";
 import { activeLanguageOf, volumePercent } from "./optionsModel";
 
@@ -92,12 +92,9 @@ export function OptionsScreen({
       <Label text={text} size={TEXT.sm} font="display" letterSpacing={0.35} color={COLOR.mutedForeground} />
     </View>
   );
-  const buttonContent = (icon: typeof Languages, text: string, variant: "primary" | "secondary" | "danger") => (
-    <>
-      <Icon icon={icon} size={20} color={arcadeInk(variant)} />
-      <Label text={text} size={15} font="display" weight="600" upper letterSpacing={1.5} color={arcadeInk(variant)} />
-    </>
-  );
+  // The DOM's w-9 fits "100%" in tabular digits; Michroma's are wider, so the
+  // column is as wide as "100%" itself and never runs into the slider.
+  const percentWidth = useMemo(() => Math.max(36, fitTextWidth(volumePercent(1), { size: TEXT.xs, font: "display" })), []);
   const volumeRow = (
     icon: typeof Languages, name: string, value: number, onChange: (v: number) => void, onRelease?: () => void,
   ) => (
@@ -107,7 +104,7 @@ export function OptionsScreen({
         <Label text={name} size={TEXT.xs} font="display" letterSpacing={0.3} />
       </View>
       <VolumeSlider value={value} onChange={onChange} onRelease={onRelease} color={accent} layout={{ flex: 1 }} />
-      <View layout={{ width: 36, alignItems: "flex-end" }}>
+      <View layout={{ width: percentWidth, alignItems: "flex-end" }}>
         <Label text={volumePercent(value)} size={TEXT.xs} font="display" color={COLOR.mutedForeground} />
       </View>
     </View>
@@ -125,10 +122,7 @@ export function OptionsScreen({
         <View layout={{ minHeight: screen.height, padding: 24, alignItems: "center", justifyContent: "center" }}>
           <Appear fromY={20} duration={0.5} layout={{ width, alignItems: "center", gap: 32 }}>
             {/* Header */}
-            <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Icon icon={Settings} size={32} color={COLOR.primary} />
-              <Label text={t("options.title")} size={TEXT["3xl"]} font="display" weight="900" letterSpacing={TEXT["3xl"] * 0.05} />
-            </View>
+            <MenuHeading icon={Settings} iconColor={COLOR.primary} text={t("options.title")} size={TEXT["3xl"]} maxWidth={width} />
 
             {/* Options list */}
             <Appear fromY={20} delay={0.2} layout={{ alignSelf: "stretch", gap: 16 }}>
@@ -140,6 +134,7 @@ export function OptionsScreen({
                   <Pressable
                     onTap={() => setLangOpen(o => !o)}
                     pressedAlpha={0.85}
+                    label={t("options.language")}
                     layout={{
                       flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12,
                       paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, borderRadius: RADIUS.lg,
@@ -164,6 +159,7 @@ export function OptionsScreen({
                               key={lang}
                               onTap={() => handleSelectLanguage(lang)}
                               pressedAlpha={0.8}
+                              label={languageNames[lang]}
                               layout={{
                                 flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12,
                                 paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12,
@@ -191,19 +187,13 @@ export function OptionsScreen({
               </View>
 
               {/* Re-enable All Tutorials */}
-              <ArcadeButton onTap={onReEnableTutorials} label={t("options.reEnableTutorials")}>
-                {buttonContent(RefreshCw, t("options.reEnableTutorials"), "primary")}
-              </ArcadeButton>
+              <ArcadeButton icon={RefreshCw} text={t("options.reEnableTutorials")} onTap={onReEnableTutorials} />
 
               {/* Total Reset: complete deletion of all game state */}
-              <ArcadeButton variant="danger" onTap={handleResetClick} label={t("options.totalReset")}>
-                {buttonContent(Trash2, t("options.totalReset"), "danger")}
-              </ArcadeButton>
+              <ArcadeButton variant="danger" icon={Trash2} text={t("options.totalReset")} onTap={handleResetClick} />
 
               {/* Back Button */}
-              <ArcadeButton variant="secondary" onTap={onBack} label={t("options.back")} layout={{ marginTop: 16 }}>
-                {buttonContent(ArrowLeft, t("options.back"), "secondary")}
-              </ArcadeButton>
+              <ArcadeButton variant="secondary" icon={ArrowLeft} text={t("options.back")} onTap={onBack} layout={{ marginTop: 16 }} />
             </Appear>
           </Appear>
         </View>

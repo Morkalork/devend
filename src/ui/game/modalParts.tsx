@@ -2,74 +2,25 @@
  * Small pieces shared by the play screen's overlays and modals that the kit
  * does not have (yet). Each is a candidate for the kit.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Graphics, Texture, TextStyleFontWeight } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
-import type { FontRole } from "../theme";
+import { X } from "lucide-react";
 import {
-  COLOR, Icon, Label, Pressable, RADIUS, RESOLUTION, View, iconTexture, textStyle, tint,
-  type IconSource, type Layout,
+  COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, iconTexture, tint,
+  type IconSource, type LabelProps, type Layout,
 } from "../kit/ui";
-import { useSpin } from "./modalMotion";
+import { useBoxSize, useSpin } from "./modalMotion";
 
 // ── WrapText ───────────────────────────────────────────────────────────────
 
-export interface WrapTextProps {
-  text: string;
-  size?: number;
-  color?: number;
-  font?: FontRole;
-  weight?: TextStyleFontWeight;
-  align?: "left" | "center" | "right";
-  letterSpacing?: number;
-  lineHeight?: number;
-  upper?: boolean;
-  glow?: number;
-  alpha?: number;
-  layout?: Layout;
-}
-
 /**
- * A wrapping paragraph that honours `align` inside its box.
- *
- * The kit's `<Label wrap align="center">` centres lines against the longest
- * line and then pins the whole block to the box's top-left, so a short title
- * meant to be centred sits flush left. This is the same two-step measure
- * (lay the box out, read its width back, wrap to it) with the block placed
- * at the top-left, top-centre or top-right of the box to match `align`.
+ * A wrapping paragraph: now exactly the kit's `<Label wrap />`, which places
+ * the wrapped block to match `align` itself. Kept so the files outside the
+ * modals that still import it keep working; new code uses `Label wrap`.
  */
-export function WrapText(p: WrapTextProps) {
-  const [wrapWidth, setWrapWidth] = useState(0);
-  const align = p.align ?? "left";
-  const style = useMemo(() => {
-    const st = textStyle({ ...p, wrap: true, align });
-    st.wordWrapWidth = wrapWidth > 0 ? wrapWidth : 4000;
-    return st;
-  },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [p.size, p.color, p.font, p.weight, align, p.letterSpacing, p.lineHeight, p.glow, wrapWidth]);
-  const boxRef = useRef<LayoutContainer | null>(null);
-  useEffect(() => {
-    const box = boxRef.current;
-    if (!box) return;
-    const onLayout = (l: { computedLayout: { width: number } }) => {
-      const w = Math.floor(l.computedLayout.width);
-      setWrapWidth(prev => (Math.abs(prev - w) >= 1 ? w : prev));
-    };
-    box.on("layout", onLayout);
-    const done = box.layout?.computedLayout;
-    if (done && done.width > 0) onLayout({ computedLayout: done });
-    return () => { box.off("layout", onLayout); };
-  }, []);
-  const text = p.upper ? p.text.toUpperCase() : p.text;
-  return (
-    <layoutContainer ref={boxRef} layout={{ alignSelf: "stretch", ...(p.layout ?? {}) }} alpha={p.alpha ?? 1}>
-      {wrapWidth > 0 && (
-        <uiText text={text} style={style} resolution={RESOLUTION}
-          layout={{ width: wrapWidth, objectFit: "none", objectPosition: `top ${align}` }} />
-      )}
-    </layoutContainer>
-  );
+export function WrapText(p: Omit<LabelProps, "wrap">) {
+  return <Label {...p} wrap />;
 }
 
 // ── SpinIcon ───────────────────────────────────────────────────────────────
@@ -109,8 +60,7 @@ export interface ArcadeButtonProps {
 
 /**
  * The `arcade-button-primary` look: a faint primary fill, a 2px primary
- * border, primary Michroma caps with wide tracking. Its glow box-shadow is
- * carried by a slightly brighter fill.
+ * border, primary Michroma caps with wide tracking, and its soft primary glow.
  */
 export function ArcadeButton({ text, onTap, icon, size = 15, weight = "600", paddingX = 27, paddingY = 14, layout }: ArcadeButtonProps) {
   return (
@@ -121,10 +71,12 @@ export function ArcadeButton({ text, onTap, icon, size = 15, weight = "600", pad
         flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
         paddingLeft: paddingX, paddingRight: paddingX, paddingTop: paddingY, paddingBottom: paddingY,
         borderRadius: RADIUS.lg, borderWidth: 2, borderColor: COLOR.primary,
-        backgroundColor: tint(COLOR.primary, 0.14),
+        backgroundColor: tint(COLOR.primary, 0.1),
         ...(layout ?? {}),
       }}
     >
+      {/* box-shadow 0 0 20px primary/0.3 */}
+      <GlowFrame color={COLOR.primary} radius={RADIUS.lg} spread={16} strength={0.3} />
       {icon && <Icon icon={icon} size={size + 4} color={COLOR.primary} />}
       <Label text={text} size={size} weight={weight} font="display" color={COLOR.primary} upper letterSpacing={size * 0.1} />
     </Pressable>
@@ -175,6 +127,121 @@ export function FilledStar({ size = 16, color }: { size?: number; color: number 
   return (
     <View layout={{ width: size, height: size }}>
       <pixiGraphics draw={draw} />
+    </View>
+  );
+}
+
+// ── GlowFrame ──────────────────────────────────────────────────────────────
+
+/**
+ * A soft glow around the box it is put in: the DOM's coloured `box-shadow`,
+ * as rings whose alpha falls off with distance, so it fades out instead of
+ * ending in a hard-edged band. Absolutely positioned against its parent and
+ * sized from the parent's laid-out box, so it never moves or resizes anything;
+ * make it the parent's first child so it draws underneath. The parent must not
+ * clip (`overflow: "hidden"`), or the glow is cut off at its edge.
+ */
+export function GlowFrame({ color, radius, spread = 20, strength = 0.35, alpha = 1 }: {
+  color: number;
+  /** The parent's corner radius. */
+  radius: number;
+  /** How far out the glow reaches, in px (the shadow's blur). */
+  spread?: number;
+  /** The glow's alpha at the box's edge. */
+  strength?: number;
+  /** Multiplies the whole glow: a breathing glow animates this, not a redraw. */
+  alpha?: number;
+}) {
+  const ref = useRef<LayoutContainer | null>(null);
+  const { w, h } = useBoxSize(ref);
+  const draw = useCallback((g: Graphics) => {
+    g.clear();
+    if (w <= 0 || h <= 0) return;
+    // 2px rings from the box's edge outward; the alpha falls off
+    // quadratically, close to how a blurred shadow thins out.
+    const steps = Math.max(1, Math.round(spread / 2));
+    for (let i = 0; i < steps; i++) {
+      const d = i * 2 + 1;
+      const a = strength * (1 - i / steps) ** 2;
+      g.roundRect(spread - d, spread - d, w - 2 * (spread - d), h - 2 * (spread - d), radius + d)
+        .stroke({ width: 2, color, alpha: a });
+    }
+  }, [w, h, spread, strength, radius, color]);
+  return (
+    <layoutContainer ref={ref} eventMode="none" alpha={alpha}
+      layout={{ position: "absolute", left: -spread, top: -spread, right: -spread, bottom: -spread }}>
+      <pixiGraphics draw={draw} />
+    </layoutContainer>
+  );
+}
+
+// ── CardShield ─────────────────────────────────────────────────────────────
+
+/**
+ * A modal's card that keeps its taps: the DOM card's `stopPropagation`. A
+ * plain View takes no touches, so a tap on a card's text or padding would land
+ * on the backdrop behind it and close the modal; this is a Pressable with no
+ * handlers, so the tap stops here. It does not dim when pressed.
+ */
+export function CardShield({ layout, children }: { layout?: Layout; children?: ReactNode }) {
+  return <Pressable pressedAlpha={1} layout={layout}>{children}</Pressable>;
+}
+
+// ── InfoCardModal ──────────────────────────────────────────────────────────
+
+export interface InfoCardModalProps {
+  /** The full screen the backdrop covers, in CSS px (`useUiScreen()`). */
+  screen: { width: number; height: number };
+  onClose: () => void;
+  /** The thing's own colour: border, title, X. */
+  color: number;
+  title: string;
+  /** Drawn before the title, e.g. the superior lock's filled star. */
+  titleIcon?: ReactNode;
+  /** Space between the body's blocks (`space-y-3` by default). */
+  gap?: number;
+  children?: ReactNode;
+}
+
+/**
+ * The explainer card the hold-to-explain modals share (superior lock, fence
+ * type, ability): a dim backdrop that closes on a tap, a near-black card
+ * bordered in the thing's colour, a header with the glowing title and an X
+ * over a faint rule, and the body below. Tall content scrolls inside the card.
+ */
+export function InfoCardModal({ screen, onClose, color, title, titleIcon, gap = 12, children }: InfoCardModalProps) {
+  return (
+    <View layout={{
+      position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height,
+      justifyContent: "center", alignItems: "center", padding: 16,
+    }} zIndex={80}>
+      <Pressable
+        onTap={onClose}
+        pressedAlpha={1}
+        label="backdrop"
+        layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.6) }}
+      />
+      <CardShield layout={{
+        width: Math.min(384, screen.width - 32), maxHeight: screen.height - 32, borderRadius: RADIUS.xl, overflow: "hidden",
+        backgroundColor: 0x0b0f14, borderColor: color, borderWidth: 1,
+      }}>
+        <View layout={{
+          flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 16, paddingRight: 12, paddingTop: 12, paddingBottom: 12,
+        }}>
+          {titleIcon}
+          <View layout={{ flex: 1 }}>
+            <Label text={title} size={TEXT.sm} weight="700" font="display" color={color} glow={8} wrap />
+          </View>
+          <Pressable onTap={onClose} label="close" layout={{ padding: 4, borderRadius: RADIUS.base }}>
+            <Icon icon={X} size={16} color={color} />
+          </Pressable>
+        </View>
+        {/* The header's bottom border at the colour's 0x44. */}
+        <View layout={{ height: 1, backgroundColor: tint(color, 0x44 / 255) }} />
+        <ScrollView layout={{ flexShrink: 1 }}>
+          <View layout={{ padding: 16, gap }}>{children}</View>
+        </ScrollView>
+      </CardShield>
     </View>
   );
 }

@@ -60,12 +60,14 @@ export function AchievementsScreen({
 
   return (
     <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.92) }}>
-      {/* Header */}
+      {/* Header. It wraps: on a phone the title leaves no room beside it for
+          the count, which then drops to its own line, right-aligned, instead
+          of being squeezed into a column of single letters. */}
       <View layout={{
-        flexDirection: "row", alignItems: "center", gap: 12,
+        flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 4,
         paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: tint(0x000a05, 0.95),
       }}>
-        <Pressable onTap={onBack} layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Pressable onTap={onBack} label={t("achievements.back")} layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Icon icon={ChevronLeft} size={20} color={accent} />
           <Label text={t("achievements.back")} size={TEXT.sm} weight="600" color={accent} />
         </Pressable>
@@ -73,7 +75,7 @@ export function AchievementsScreen({
           <Icon icon={Trophy} size={20} color={accent} />
           <Label text={t("achievements.title")} size={TEXT.lg} weight="900" font="display" upper letterSpacing={1.8} color={accent} />
         </View>
-        <View layout={{ flex: 1, alignItems: "flex-end" }}>
+        <View layout={{ flexGrow: 1, alignItems: "flex-end" }}>
           <Label
             text={t("achievements.activeUnlocked", { active: activatedIds.length, unlocked: completedIds.length })}
             size={TEXT.xs} font="mono" color={accent} alpha={0x99 / 255}
@@ -193,7 +195,7 @@ function AchActivateButton({ onTap }: { onTap: () => void }) {
   const { t } = useTranslation();
   const pulse = usePulse(1400);
   return (
-    <Pressable onTap={onTap} layout={{
+    <Pressable onTap={onTap} label={t("achievements.activate")} layout={{
       flexDirection: "row", alignItems: "center", gap: 6,
       paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
       backgroundColor: tint(AMBER, 0x22 / 255 + 0.18 * pulse), borderWidth: 1, borderColor: AMBER,

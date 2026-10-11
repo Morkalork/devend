@@ -16,14 +16,15 @@ import { Heart, Target, ChevronDown, RotateCcw, TrendingUp, Gauge } from "lucide
 import { everyRequirementMet, goalAtRisk, type Goal } from "@/lib/goalTracker";
 import {
   COLOR, Icon, Label, Modal, ProgressBar, RADIUS, ScrollView, TEXT, View,
-  hex, tint, usePulse, useTween, useUiScreen,
+  HOLD_MS, hex, tint, useTween, useUiScreen,
 } from "../kit/ui";
 import { HUD, topBarHeight } from "./hudMetrics";
 import { GoalChip } from "./GoalChip";
+import { ScreenOverlay } from "./bottomOverlay";
 import { StatFlash } from "./TopBarFlash";
 import { useTapOrSwipeDown } from "./topBarGestures";
 import { filledIcon } from "./topBarIcons";
-import { HEART_PULSE_MS, heartPulse, highscoreBar, spaceDetail as spaceDetailOf } from "./topBarModel";
+import { HEART_PULSE_MS, highscoreBar, spaceDetail as spaceDetailOf } from "./topBarModel";
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -110,7 +111,7 @@ export function GameTopBar({
   };
   const startSpaceHold = () => {
     cancelSpaceHold();
-    spaceHoldTimer.current = setTimeout(() => setSpaceDetail(true), 450);
+    spaceHoldTimer.current = setTimeout(() => setSpaceDetail(true), HOLD_MS);
   };
   useEffect(() => cancelSpaceHold, []);
 
@@ -257,24 +258,27 @@ export function GameTopBar({
 
       {/* Hold-detail for the Space readout: exact remaining/cleared numbers.
           Reads live, so during Push Your Luck you can watch the board shrink.
-          Over the whole screen (the bar sits at its top-left). */}
+          Its own layer over the whole screen: drawn inside the bar, the bottom
+          stack (drawn after the bar) would cover its backdrop and stay
+          tappable through it. */}
       {spaceDetail && (
-        <SpaceDetailModal
-          accent={accent}
-          spaceRemaining={spaceRemaining}
-          spaceRequired={spaceRequired}
-          onClose={() => setSpaceDetail(false)}
-        />
+        <ScreenOverlay>
+          <SpaceDetailModal
+            accent={accent}
+            spaceRemaining={spaceRemaining}
+            spaceRequired={spaceRequired}
+            onClose={() => setSpaceDetail(false)}
+          />
+        </ScreenOverlay>
       )}
     </View>
   );
 }
 
-/** The lives heart, filled and breathing (`animate-pulse-heart`). Its own component so the pulse re-renders only it. */
+/** The lives heart, filled and breathing (`animate-pulse-heart`). */
 function PulsingHeart({ color }: { color: number }) {
-  const p = heartPulse(usePulse(HEART_PULSE_MS));
   return (
-    <StatFlash scale={p.scale} alpha={p.alpha}>
+    <StatFlash breatheMs={HEART_PULSE_MS}>
       <Icon icon={filledIcon(Heart, color)} size={20} color={color} />
     </StatFlash>
   );
@@ -300,7 +304,7 @@ function HighscoreRow({ accent, spaceRemaining, spaceRequired, current, target }
   const hs = useTween(bar?.hsFraction ?? 0, 0.3);
   const track = tint(COLOR.white, 0.12);
   return (
-    <View layout={{ height: HUD.highscoreRow, paddingTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+    <View layout={{ height: HUD.highscoreRow, paddingTop: 6, paddingLeft: 12, paddingRight: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
       {bar && (
         <>
           <Icon icon={TrendingUp} size={14} color={bar.beat ? RECORD : CHASING} />

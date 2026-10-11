@@ -58,11 +58,14 @@ export function VolumeSlider({ value, onChange, onRelease, color, layout }: Volu
       <View layout={{ height: 6, borderRadius: 3, backgroundColor: tint(COLOR.foreground, 0.15), flexDirection: "row" }}>
         <View layout={{ width: `${v * 100}%`, height: 6, borderRadius: 3, backgroundColor: color }} />
       </View>
-      {/* The thumb. */}
-      <View layout={{
-        position: "absolute", left: `${v * 100}%`, top: 6, marginLeft: -8,
-        width: 16, height: 16, borderRadius: 8, backgroundColor: color,
-      }} />
+      {/* The thumb, kept inside the track like a native range thumb: its
+          centre runs over the track inset by its own radius. */}
+      <View layout={{ position: "absolute", left: 8, right: 8, top: 6, height: 16 }}>
+        <View layout={{
+          position: "absolute", left: `${v * 100}%`, top: 0, marginLeft: -8,
+          width: 16, height: 16, borderRadius: 8, backgroundColor: color,
+        }} />
+      </View>
     </layoutContainer>
   );
 }
@@ -101,8 +104,9 @@ export function ConfirmDialog({ title, body, cancelText, confirmText, onCancel, 
         <Label text={title} size={TEXT.xl} font="display" weight="700" wrap layout={{ marginBottom: 16 }} />
         <Label text={body} size={TEXT.base} color={COLOR.mutedForeground} wrap layout={{ marginBottom: 24 }} />
         <View layout={{ flexDirection: "row", gap: 12 }}>
-          <ArcadeButton text={cancelText} variant="secondary" onTap={onCancel} layout={{ flex: 1 }} />
-          <ArcadeButton text={confirmText} variant="danger" onTap={onConfirm} layout={{ flex: 1 }} />
+          {/* py-2: the dialog's buttons are slimmer than the screen's. */}
+          <ArcadeButton text={cancelText} variant="secondary" onTap={onCancel} layout={{ flex: 1 }} contentLayout={{ paddingTop: 8, paddingBottom: 8 }} />
+          <ArcadeButton text={confirmText} variant="danger" onTap={onConfirm} layout={{ flex: 1 }} contentLayout={{ paddingTop: 8, paddingBottom: 8 }} />
         </View>
       </View>
     </View>

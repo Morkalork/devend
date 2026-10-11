@@ -49,4 +49,13 @@ describe("a paragraph with a bold word", () => {
     const groups = richWords([{ text: "one " }, { text: "loadout", bold: true }, { text: " per" }]);
     expect(groups).toHaveLength(3);
   });
+
+  it("keeps each run's own colour and weight on its words", () => {
+    // The post-map "Won by: <reason> (also cleared)" line: three inks in one paragraph.
+    const groups = richWords([{ text: "Won by: ", alpha: 0.9 }, { text: "All locked", bold: true, weight: "600" }, { text: " (also)", color: 0x777777 }]);
+    expect(groups.map(g => g.map(w => w.text).join(""))).toEqual(["Won", "by:", "All", "locked", "(also)"]);
+    expect(groups[1][0].alpha).toBe(0.9);
+    expect(groups[2][0]).toMatchObject({ bold: true, weight: "600" });
+    expect(groups[4][0].color).toBe(0x777777);
+  });
 });

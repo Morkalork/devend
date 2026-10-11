@@ -13,7 +13,7 @@
  * this exist", which is exactly the class of gap that kept opening.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { DEFAULT_LIGHT_LOOK } from "@/lib/lightLook";
@@ -349,4 +349,35 @@ describe("a win clause's class picker", () => {
         .toContain(`case '${kind}':`);
     }
   });
+});
+
+describe("every canvas screen, bar and modal is in the Admin screen gallery", () => {
+  // The canvas interface (CANVAS_UI_PLAN.md) has the same failure mode the
+  // rest of this file guards against, in a visual form: a modal that only
+  // appears on the first zero-lock finish, or a draft screen reached after
+  // twenty maps, cannot be looked at unless something draws it on demand. The
+  // gallery (Admin > Canvas UI kit > Screens) is that something.
+  const GALLERY = readdirSync(resolve(process.cwd(), "src/ui/dev/gallery"))
+    .filter(f => /\.tsx?$/.test(f)).map(f => read(`src/ui/dev/gallery/${f}`)).join("\n");
+  const users = ["src/components/game/GameScreen.tsx", "src/components/game/GameCanvas.tsx", "src/pages/Index.tsx"];
+  const rendered = new Set<string>();
+  for (const file of users) {
+    const src = read(file);
+    // `import { A, B } from '@/ui/game/A'` and the lazy `import('@/ui/screens/A')`.
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]@\/ui\/(?:game|screens)\/[^'"]+['"]/g)) {
+      for (const name of m[1].split(",").map(n => n.trim()).filter(n => /^[A-Z]/.test(n) && !n.startsWith("type "))) rendered.add(name);
+    }
+    for (const m of src.matchAll(/import\(['"]@\/ui\/screens\/([A-Za-z]+)['"]\)/g)) rendered.add(m[1]);
+  }
+  // Layout plumbing, a constant, and art passed into another piece.
+  const NOT_PIECES = new Set(["PlayLayout", "FenceArt", "HUD"]);
+  it("finds the pieces it is checking", () => {
+    expect(rendered.size, "the import scan found nothing; did the imports move?").toBeGreaterThan(30);
+  });
+  for (const name of [...rendered].filter(n => !NOT_PIECES.has(n)).sort()) {
+    it(`${name} has a gallery entry`, () => {
+      expect(GALLERY, `${name} is rendered by the game but missing from src/ui/dev/gallery`)
+        .toMatch(new RegExp(`<${name}\\b`));
+    });
+  }
 });

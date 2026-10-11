@@ -52,8 +52,9 @@ import {
 } from "../kit/ui";
 import {
   COPIED_RESET_MS, NAP_ICON, PAIR_AMBER, copyOutcome, napTextKey, napTipKey, napTone, napWorthShowing,
-  permissionKey, qrGeometry, qrMatrix, qrRuns, routeKey, useServerNap, useSpin, type CopyState,
+  permissionKey, qrGeometry, qrMatrix, qrRuns, routeKey, useServerNap, type CopyState,
 } from "./pairLobbyModel";
+import { Spinner } from "./welcomeParts";
 
 export type { PairedSession, PairPhase };
 
@@ -82,21 +83,6 @@ function PairQr({ text, size }: { text: string; size: number }) {
       <View layout={{ width: inner, height: inner }}>
         <pixiGraphics draw={draw} />
       </View>
-    </View>
-  );
-}
-
-/** Lucide's Loader2 turning (`animate-spin`), drawn as the same open arc. */
-function PairSpinner({ size, color }: { size: number; color: number }) {
-  const angle = useSpin();
-  const draw = useCallback((g: Graphics) => {
-    g.clear();
-    const r = size * 0.375;
-    g.arc(size / 2, size / 2, r, angle, angle + Math.PI * 1.65).stroke({ width: Math.max(1.5, size / 12), color, cap: "round" });
-  }, [angle, size, color]);
-  return (
-    <View layout={{ width: size, height: size }}>
-      <pixiGraphics draw={draw} />
     </View>
   );
 }
@@ -144,7 +130,7 @@ function PairNapExplainer({ state, onClose }: { state: NapState; onClose: () => 
 /** A full-width card button with a big icon, a title and a hint (Nearby, Show the code). */
 function PairOption({ icon, title, hint, onTap }: { icon: IconSource; title: string; hint: string; onTap: () => void }) {
   return (
-    <Pressable onTap={onTap} layout={{
+    <Pressable onTap={onTap} label={title} layout={{
       alignSelf: "stretch", flexDirection: "row", alignItems: "center", gap: 16, padding: 16,
       borderRadius: RADIUS.lg, backgroundColor: COLOR.card, borderWidth: 1, borderColor: COLOR.border,
     }}>
@@ -160,11 +146,11 @@ function PairOption({ icon, title, hint, onTap }: { icon: IconSource; title: str
 }
 
 /** A plain full-width button: Cancel (muted) or Try again / Join (card). */
-function PairWideButton({ text, onTap, look = "muted", disabled, padding = 12, children }: {
-  text?: string; onTap: () => void; look?: "muted" | "card" | "accent"; disabled?: boolean; padding?: number; children?: ReactNode;
+function PairWideButton({ text, label, onTap, look = "muted", disabled, padding = 12, children }: {
+  text?: string; label?: string; onTap: () => void; look?: "muted" | "card" | "accent"; disabled?: boolean; padding?: number; children?: ReactNode;
 }) {
   return (
-    <Pressable onTap={onTap} disabled={disabled} layout={{
+    <Pressable onTap={onTap} disabled={disabled} label={label ?? text} layout={{
       alignSelf: "stretch", flexDirection: "row", alignItems: "center", justifyContent: look === "card" && children ? "flex-start" : "center",
       padding, borderRadius: RADIUS.lg,
       backgroundColor: look === "muted" ? COLOR.muted : COLOR.card,
@@ -571,7 +557,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
                   </>
                 ) : (
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <PairSpinner size={20} color={COLOR.mutedForeground} />
+                    <Spinner size={20} color={COLOR.mutedForeground} />
                     <Label text={t("pair.preparing")} size={TEXT.base} color={COLOR.mutedForeground} />
                   </View>
                 )}
@@ -585,7 +571,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
 
             {phase === "joining" && (
               <View layout={{ alignItems: "center", gap: 16 }}>
-                <PairSpinner size={32} color={COLOR.primary} />
+                <Spinner size={32} color={COLOR.primary} />
                 <PairCentered text={t("pair.joining")} />
                 {napWorthShowing(nap) && napChip(nap)}
                 {slow && <PairSlowHint />}
@@ -616,11 +602,11 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
                 ) : (
                   <>
                     <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      <PairSpinner size={20} color={COLOR.mutedForeground} />
+                      <Spinner size={20} color={COLOR.mutedForeground} />
                       <Label text={t("pair.looking")} size={TEXT.base} color={COLOR.mutedForeground} />
                     </View>
                     {found.map(e => (
-                      <PairWideButton key={e.endpointId} look="card"
+                      <PairWideButton key={e.endpointId} look="card" label={e.name}
                         disabled={accepting}
                         onTap={() => {
                           // One request at a time. Tapping two partners, or the

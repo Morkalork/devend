@@ -89,9 +89,10 @@ export function ControlsRow(p: ControlsRowProps) {
         </Pressable>
       ))}
 
+      {/* The popup opens upward, in from the screen edge by the row's gutter. */}
       {p.menuOpen && (
         <View layout={{
-          position: "absolute", left: 0, bottom: HUD.controlsRow + MENU_GAP, minWidth: 180,
+          position: "absolute", left: 12, bottom: HUD.controlsRow + MENU_GAP, minWidth: 180,
           borderRadius: RADIUS.lg, overflow: "hidden",
           backgroundColor: tint(0x000f08, 0.95), borderWidth: 1, borderColor: tint(accent, 0x55 / 255),
         }}>

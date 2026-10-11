@@ -1,66 +1,16 @@
 /**
- * Pieces the between-map screens share on the canvas: the arcade buttons
- * (index.css .arcade-button-*), the full-screen scrolling frame, the round
- * header badge and the card grid. Each DOM draft screen wrote these out
- * inline; here they are written once so the four screens cannot drift apart
- * the way their DOM markup did.
+ * Pieces the draft screens share on the canvas: the full-screen scrolling
+ * frame, the round header badge, the card grid and the wrapping rich text.
+ * Each DOM draft screen wrote these out inline; here they are written once so
+ * the four screens cannot drift apart the way their DOM markup did. (The
+ * arcade button is in betweenArcadeButton.tsx.)
  */
 import type { ReactNode } from "react";
+import type { TextStyleFontWeight } from "pixi.js";
 import type { LucideIcon } from "lucide-react";
-import {
-  Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, tint, useUiScreen, type Layout,
-} from "../kit/ui";
+import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen } from "../kit/ui";
+import type { FontRole } from "../theme";
 import { DRAFT_HINT, DRAFT_TEXT, SM_BREAKPOINT, draftColumns, gridRows, richWords, type RichRun } from "./draftModel";
-
-// ── Arcade buttons ─────────────────────────────────────────────────────────
-
-interface ArcadeButtonProps {
-  variant?: "primary" | "secondary";
-  icon?: LucideIcon;
-  /** Shown after the text (the shop's trailing arrow). */
-  trailingIcon?: LucideIcon;
-  text?: string;
-  onTap?: () => void;
-  disabled?: boolean;
-  children?: ReactNode;
-  layout?: Layout;
-}
-
-/**
- * `.arcade-button-primary` / `-secondary`: Michroma, uppercase, wide
- * tracking, a 2px border. The primary is a primary-tinted ground with primary
- * ink; the secondary is a muted one. Disabled dims (the kit's Pressable does).
- */
-export function ArcadeButton({ variant = "primary", icon, trailingIcon, text, onTap, disabled, children, layout }: ArcadeButtonProps) {
-  const primary = variant === "primary";
-  const ink = primary ? COLOR.primary : COLOR.mutedForeground;
-  return (
-    <Pressable
-      onTap={onTap}
-      disabled={disabled}
-      label={text}
-      pressedAlpha={0.8}
-      layout={{
-        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-        paddingTop: 13.6, paddingBottom: 13.6, paddingLeft: 27.2, paddingRight: 27.2,
-        borderRadius: RADIUS.lg, borderWidth: 2,
-        borderColor: primary ? COLOR.primary : tint(COLOR.mutedForeground, 0.3),
-        backgroundColor: primary ? tint(COLOR.primary, 0.1) : tint(COLOR.secondary, 0.5),
-        ...(layout ?? {}),
-      }}
-    >
-      {icon && <Icon icon={icon} size={20} color={ink} />}
-      {text !== undefined && <ArcadeText text={text} color={ink} />}
-      {children}
-      {trailingIcon && <Icon icon={trailingIcon} size={20} color={ink} />}
-    </Pressable>
-  );
-}
-
-/** The arcade buttons' type: 15px Michroma, uppercase, tracking-widest. */
-export function ArcadeText({ text, color, size = 15 }: { text: string; color: number; size?: number }) {
-  return <Label text={text} size={size} font="display" weight="600" upper letterSpacing={size * 0.1} color={color} />;
-}
 
 // ── Screen frame ───────────────────────────────────────────────────────────
 
@@ -165,7 +115,7 @@ export function DraftGrid({ count, children, alwaysThree = false }: { count: num
 /** The dashed "nothing to draft" box (an empty pool). */
 export function DraftEmpty({ text, accent }: { text: string; accent: number }) {
   return (
-    <View layout={{ alignSelf: "stretch", borderRadius: RADIUS.sm, padding: 16, borderWidth: 1, borderColor: tint(accent, 0x44 / 255) }}>
+    <View layout={{ alignSelf: "stretch", borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: tint(accent, 0x44 / 255) }}>
       <Label text={text} size={TEXT.xs} color={DRAFT_HINT} wrap align="center" />
     </View>
   );
@@ -181,16 +131,46 @@ export function IconRow({ icon, color, size = 20, children }: { icon: LucideIcon
   );
 }
 
-/** A wrapping paragraph whose runs may be bold (see richWords). */
-export function RichParagraph({ runs, size, color, align = "center" }: { runs: RichRun[]; size: number; color: number; align?: "center" | "left" }) {
+interface RichParagraphProps {
+  runs: RichRun[];
+  size: number;
+  /** The default ink; a run can override it. */
+  color: number;
+  align?: "center" | "left";
+  font?: FontRole;
+  /** The weight of the runs that are not bold. */
+  weight?: TextStyleFontWeight;
+  upper?: boolean;
+  letterSpacing?: number;
+  glow?: number;
+  /** Laid out before the first word, on its line (an icon leading a heading). */
+  lead?: ReactNode;
+  /** Space between the lead and the first word. */
+  leadGap?: number;
+}
+
+/**
+ * A wrapping paragraph whose runs may be bold or coloured (see richWords).
+ * Each word is its own label in a wrapping row, which is also why it is the
+ * way to wrap text that has no definite width to wrap to: the words size
+ * themselves, so a centred icon-and-text line can wrap beside its icon.
+ */
+export function RichParagraph({
+  runs, size, color, align = "center", font, weight = "400", upper, letterSpacing, glow, lead, leadGap,
+}: RichParagraphProps) {
+  const space = Math.round(size * 0.28);
   return (
     <View layout={{
-      alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", columnGap: Math.round(size * 0.28), rowGap: Math.round(size * 0.35),
+      alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space, rowGap: Math.round(size * 0.35),
       justifyContent: align === "center" ? "center" : "flex-start",
     }}>
+      {lead !== undefined && <View layout={{ marginRight: Math.max(0, (leadGap ?? space) - space) }}>{lead}</View>}
       {richWords(runs).map((group, i) => (
         <View key={i} layout={{ flexDirection: "row" }}>
-          {group.map((w, j) => <Label key={j} text={w.text} size={size} color={color} weight={w.bold ? "700" : "400"} />)}
+          {group.map((w, j) => (
+            <Label key={j} text={w.text} size={size} font={font} color={w.color ?? color} alpha={w.alpha}
+              weight={w.bold ? (w.weight ?? "700") : weight} upper={upper} letterSpacing={letterSpacing} glow={glow} />
+          ))}
         </View>
       ))}
     </View>

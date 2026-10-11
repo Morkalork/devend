@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
-import { WrapText } from "./modalParts";
+import { CardShield } from "./modalParts";
 import { boardEntityCopy } from "./BoardEntityInfoModalModel";
 
 export function BoardEntityInfoModal({
@@ -42,10 +42,11 @@ export function BoardEntityInfoModal({
         <Pressable
           onTap={onClose}
           pressedAlpha={1}
+          label="backdrop"
           layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.7) }}
         />
         <Appear fromScale={0.92} fromY={8} duration={0.2}>
-          <View layout={{
+          <CardShield layout={{
             width: Math.min(320, screen.width - 48), maxHeight: screen.height - 48,
             borderRadius: RADIUS.xl, borderWidth: 2, borderColor: tint(hex(accent), 0x66 / 255),
             backgroundColor: COLOR.card,
@@ -54,41 +55,41 @@ export function BoardEntityInfoModal({
                 would be clipped at BOTH ends with neither reachable. The close
                 button stays outside the scroller. */}
             <ScrollView layout={{ flexShrink: 1, padding: 20 }}>
-              <WrapText text={copy.title} size={TEXT.base} weight="700" font="display" color={hex(copy.titleColor)}
-                layout={{ marginBottom: 6, paddingRight: 24 }} />
+              <Label text={copy.title} size={TEXT.base} weight="700" font="display" color={hex(copy.titleColor)}
+                layout={{ marginBottom: 6, marginRight: 24 }} wrap />
 
               {copy.bug ? (
                 <View layout={{ gap: 12 }}>
-                  <WrapText text={copy.body} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} />
+                  <Label text={copy.body} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} wrap />
                   <View>
                     <Label text={copy.bug.givesLabel} size={11} weight="600" upper letterSpacing={0.3}
                       color={COLOR.mutedForeground} alpha={0.7} />
-                    <WrapText text={copy.bug.gives} size={TEXT.sm} lineHeight={relaxed} color={COLOR.foreground} />
+                    <Label text={copy.bug.gives} size={TEXT.sm} lineHeight={relaxed} color={COLOR.foreground} wrap />
                   </View>
                   <View>
                     <Label text={copy.bug.costsLabel} size={11} weight="600" upper letterSpacing={0.3}
                       color={COLOR.mutedForeground} alpha={0.7} />
-                    <WrapText text={copy.bug.costs} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} />
+                    <Label text={copy.bug.costs} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} wrap />
                   </View>
                   {copy.bug.danger && (
                     <View layout={{
                       borderRadius: RADIUS.lg, paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
                       backgroundColor: tint(hex(copy.bug.color), 0x1a / 255),
                     }}>
-                      <WrapText text={copy.bug.danger} size={TEXT.sm} weight="600" lineHeight={relaxed} color={hex(copy.bug.color)} />
+                      <Label text={copy.bug.danger} size={TEXT.sm} weight="600" lineHeight={relaxed} color={hex(copy.bug.color)} wrap />
                     </View>
                   )}
                 </View>
               ) : (
-                <WrapText text={copy.body} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} />
+                <Label text={copy.body} size={TEXT.sm} lineHeight={relaxed} color={COLOR.mutedForeground} wrap />
               )}
 
-              <WrapText text={copy.hint} size={11} color={COLOR.mutedForeground} alpha={0.6} layout={{ marginTop: 12 }} />
+              <Label text={copy.hint} size={11} color={COLOR.mutedForeground} alpha={0.6} layout={{ marginTop: 12 }} wrap />
             </ScrollView>
             <Pressable onTap={onClose} label="close" layout={{ position: "absolute", top: 8, right: 8, padding: 2 }}>
               <Icon icon={X} size={16} color={COLOR.mutedForeground} />
             </Pressable>
-          </View>
+          </CardShield>
         </Appear>
       </Appear>
     </View>

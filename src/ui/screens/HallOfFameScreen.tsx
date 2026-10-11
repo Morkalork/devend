@@ -18,7 +18,7 @@ import type { MetaProgressionStats } from "@/types/metaProgression";
 import { TAG_ORDER } from "@/lib/buildRecap";
 import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen, type IconSource } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
-import { ArcadeButton } from "./hallArcadeButton";
+import { ArcadeButton, MenuHeading } from "./welcomeParts";
 import {
   RANK_COLORS, SM_BREAKPOINT, archetypeBestText, buildName, capitalizeWords, dayLabel, fmtDate, gridRows,
   hoursText, lifetimeStats, monthLabel, recentDailies, showDaily, sortMapRecords, sortPlaques,
@@ -71,10 +71,8 @@ export function HallOfFameScreen({
         <Appear fromY={20} duration={0.5} layout={{ width: contentWidth, alignSelf: "center" }}>
           <View layout={{ alignItems: "center", gap: 24, paddingBottom: 96 }}>
             {/* Header */}
-            <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Icon icon={Medal} size={32} color={GOLD} />
-              <Label text={t("hallOfFame.title")} size={wide ? TEXT["4xl"] : TEXT["2xl"]} font="display" weight="900" letterSpacing={1.2} />
-            </View>
+            <MenuHeading icon={Medal} iconColor={GOLD} text={t("hallOfFame.title")} size={wide ? TEXT["4xl"] : TEXT["2xl"]}
+              letterSpacing={1.2} maxWidth={contentWidth} />
 
             {/* All-time Top 10 */}
             <HallSection title={t("hallOfFame.topRuns")}>
@@ -187,7 +185,7 @@ export function HallOfFameScreen({
             )}
 
             {/* Back */}
-            <ArcadeButton text={t("hallOfFame.back")} icon={ArrowLeft} small onTap={onBack} layout={{ marginTop: 8, minWidth: 200 }} />
+            <ArcadeButton variant="secondary" size="sm" text={t("hallOfFame.back")} icon={ArrowLeft} onTap={onBack} layout={{ marginTop: 8, minWidth: 200 }} />
           </View>
         </Appear>
       </ScrollView>

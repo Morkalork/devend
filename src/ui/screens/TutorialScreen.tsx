@@ -77,7 +77,7 @@ export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: Tutorial
         <View layout={{ padding: 24 }}>
           {/* Header */}
           <Appear layout={{ marginBottom: 32, alignItems: "flex-start" }}>
-            <Pressable onTap={onBack} layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable onTap={onBack} label={t("tutorial.back")} layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icon icon={ArrowLeft} size={20} color={COLOR.mutedForeground} />
               <Label text={t("tutorial.back")} size={TEXT.sm} font="display" upper letterSpacing={TEXT.sm * 0.05} color={COLOR.mutedForeground} />
             </Pressable>

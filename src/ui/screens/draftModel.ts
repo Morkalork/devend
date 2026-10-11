@@ -79,12 +79,20 @@ export function ascensionBriefing(ascensionDepth: number, ladder: AscensionRung[
   };
 }
 
-export interface RichRun { text: string; bold?: boolean }
+export interface RichRun {
+  text: string;
+  bold?: boolean;
+  /** The bold weight, when not 700 (font-semibold is 600). */
+  weight?: "600" | "700";
+  /** Overrides the paragraph's ink for this run. */
+  color?: number;
+  alpha?: number;
+}
 
 /**
- * A paragraph with a bold word in it (the DOM's `<b>` inside a `<p>`), as the
- * words a wrapping row lays out. A canvas text run has one weight, so each
- * word is its own run; pieces of a word that touch across a weight change
+ * A paragraph with a bold or coloured word in it (the DOM's `<b>` or `<span>`
+ * inside a `<p>`), as the words a wrapping row lays out. A canvas text run has
+ * one weight and one colour, so each word is its own run; pieces of a word that touch across a weight change
  * (`loadout` + `,`) stay glued in one group so no space opens between them.
  */
 export function richWords(runs: RichRun[]): RichRun[][] {
@@ -95,7 +103,7 @@ export function richWords(runs: RichRun[]): RichRun[][] {
     for (const piece of pieces) {
       if (piece === "") continue;
       if (/^\s+$/.test(piece)) { joinNext = false; continue; }
-      const word = { text: piece, bold: run.bold };
+      const word = { ...run, text: piece };
       if (joinNext && groups.length > 0) groups[groups.length - 1].push(word);
       else groups.push([word]);
       joinNext = true;

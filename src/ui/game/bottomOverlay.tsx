@@ -2,11 +2,11 @@
  * Draws its children at the screen's top-left, above every other layer.
  *
  * The kit's Modal is absolutely positioned against its PARENT, so one opened
- * from a bar at the bottom of the screen would be laid out from the bar's
- * corner, and the rows drawn after the bar would cover its backdrop and stay
- * tappable through it. The DOM explainers were `fixed z-[80]` for exactly this.
- * So the bar files the modal as its own layer (layerStore's portal), which the
- * root draws full-screen and on top.
+ * from a bar (the fence and ability explainers, the top bar's space detail)
+ * would be laid out from the bar's corner, and the pieces drawn after the bar
+ * would cover its backdrop and stay tappable through it. The DOM explainers
+ * were `fixed z-[80]` for exactly this. So the bar files the modal as its own
+ * layer (layerStore's portal), which the root draws full-screen and on top.
  */
 import { useId, type ReactNode } from "react";
 import { CanvasLayer } from "../CanvasLayer";

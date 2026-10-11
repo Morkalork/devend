@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { HUD, topBarHeight } from "@/ui/game/hudMetrics";
 import {
-  FLASH_REST, heartPulse, highscoreBar, spaceDetail, statFlashAt, topBarRows,
+  FLASH_REST, heartPulse, highscoreBar, spaceDetail, statFlashAt,
 } from "@/ui/game/topBarModel";
 import { IDLE, SWIPE_EXPAND_PX, swipeDown, swipeMove, swipeUp } from "@/ui/game/topBarGestures";
 
@@ -18,10 +18,8 @@ const bar = read("src/ui/game/GameTopBar.tsx");
 
 describe("the bar's height", () => {
   it("is the HUD's reserved height, row by row", () => {
-    for (const show of [false, true]) {
-      expect(topBarRows(show).reduce((a, b) => a + b, 0)).toBe(topBarHeight(show));
-    }
-    expect(topBarRows(false)).toEqual([HUD.topRow1, HUD.topRow2]);
+    expect(topBarHeight(false)).toBe(HUD.topRow1 + HUD.topRow2);
+    expect(topBarHeight(true)).toBe(HUD.topRow1 + HUD.topRow2 + HUD.highscoreRow);
   });
 
   it("gives the goal row its filled height from the first frame", () => {

@@ -11,8 +11,9 @@
 import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
 import { useTranslation } from "react-i18next";
+import { AlertTriangle } from "lucide-react";
 import type { BeatEffectLine } from "@/lib/physics/mapBeats";
-import { Label, RADIUS, TEXT, tint, usePulse, useUiScreen } from "../kit/ui";
+import { Icon, Label, RADIUS, TEXT, tint, usePulse, useUiScreen } from "../kit/ui";
 import { AbilityIcon } from "./AbilityIcon";
 import { Inert } from "./boardParts";
 import { outerGlow } from "./boardDraw";
@@ -39,6 +40,13 @@ interface Props {
 
 /** The toasts' dark plate. */
 const PLATE = 0x0a0e14;
+/**
+ * The toasts are one line (the DOM's whitespace-nowrap), and the DOM let a long
+ * one run off both sides of a phone. Capped at the container less this, a
+ * long line scales down to fit instead.
+ */
+const PLATE_INSET = 16;
+const SHRINK = { flexShrink: 1 };
 
 export function BoardToasts({
   origin, width, height, boardTopPct, chestToast, beatBanner, abilityIconFx, armedPrompt,
@@ -94,10 +102,10 @@ function ChestToast({ label, color, top, width, wide }: { label: string; color: 
   return (
     <Inert layout={{ position: "absolute", left: 0, top, width, flexDirection: "row", justifyContent: "center" }}>
       <layoutContainer layout={{
-        paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
+        maxWidth: width - PLATE_INSET, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
         backgroundColor: tint(PLATE, 0.72), borderWidth: 1, borderColor: color,
       }} alpha={k.alpha} y={k.y} scale={k.scale}>
-        <Label text={label} size={wide ? TEXT.base : TEXT.sm} font="mono" weight="700" color={color} />
+        <Label text={label} size={wide ? TEXT.base : TEXT.sm} font="mono" weight="700" color={color} layout={SHRINK} />
       </layoutContainer>
     </Inert>
   );
@@ -114,17 +122,18 @@ function BeatBanner({ announce, effects, bottom, width, wide }: {
     <Inert layout={{ position: "absolute", left: 0, bottom, width, flexDirection: "row", justifyContent: "center" }}
       alpha={0.6 + 0.4 * pulse}>
       <Inert layout={{
-        flexDirection: "row", alignItems: "center", gap: 8,
+        maxWidth: width - PLATE_INSET, flexDirection: "row", alignItems: "center", gap: 8,
         paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
         backgroundColor: tint(0x1e0a04, 0.82), borderWidth: 1, borderColor: tint(0xffb454, 0x99 / 255),
       }}>
-        <Label text={"⚠"} size={size} font="mono" weight="700" color={ink} />
-        <Label text={t(announce)} size={size} font="mono" weight="700" color={ink} />
+        {/* The DOM's warning glyph, as the icon set's own triangle. */}
+        <Icon icon={AlertTriangle} size={size} color={ink} />
+        <Label text={t(announce)} size={size} font="mono" weight="700" color={ink} layout={SHRINK} />
         {/* What the beat is about to DO. The flavour name alone telegraphs
             that something is coming but not what, which is how an extra ball
             still arrived unexplained. Same line, to stay in the thin band. */}
         {effects?.map(effect => (
-          <Label key={effect.key} text={`· ${t(effect.key, effect.values)}`} size={size} font="mono" color={ink} alpha={0.9} />
+          <Label key={effect.key} text={`· ${t(effect.key, effect.values)}`} size={size} font="mono" color={ink} alpha={0.9} layout={SHRINK} />
         ))}
       </Inert>
     </Inert>
@@ -148,10 +157,10 @@ function ArmedPrompt({ text, color, top, width, wide }: { text: string; color: n
     <Inert layout={{ position: "absolute", left: 0, top, width, flexDirection: "row", justifyContent: "center" }}
       alpha={0.6 + 0.4 * pulse}>
       <Inert layout={{
-        paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
+        maxWidth: width - PLATE_INSET, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, borderRadius: RADIUS.md,
         backgroundColor: tint(PLATE, 0.8), borderWidth: 1, borderColor: color,
       }}>
-        <Label text={text} size={wide ? TEXT.sm : TEXT.xs} font="mono" weight="700" color={color} />
+        <Label text={text} size={wide ? TEXT.sm : TEXT.xs} font="mono" weight="700" color={color} layout={SHRINK} />
       </Inert>
     </Inert>
   );

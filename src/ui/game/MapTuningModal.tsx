@@ -10,7 +10,7 @@
  * Dev tooling, so the copy is plain English rather than i18n keys, matching the
  * Admin panel and the Playground.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, RotateCcw, Copy, Check, SlidersHorizontal } from 'lucide-react';
 import {
   authoredBaseline, clearMapTuning, isMapTuned, setMapTuning, tuningAsYaml,
@@ -19,7 +19,8 @@ import type { LevelConfig } from '@/types/level';
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, TextField, View, tint, useUiScreen,
 } from "../kit/ui";
-import { WrapText } from "./modalParts";
+
+import { CardShield } from "./modalParts";
 import { TUNING_FIELDS, parseTuningInput, tuningStep, type TuningFieldSpec } from "./MapTuningModalModel";
 
 interface MapTuningModalProps {
@@ -95,7 +96,7 @@ function TuningField({ spec, inputId, value, authored, onChange }: FieldProps) {
         )}
         <StepButton text="+" label={`Increase ${label}`} disabled={!step.canUp} onTap={() => onChange(step.up)} />
       </View>
-      <WrapText text={hint} size={TEXT.xs} color={COLOR.mutedForeground} />
+      <Label text={hint} size={TEXT.xs} color={COLOR.mutedForeground} wrap />
     </View>
   );
 }
@@ -110,6 +111,9 @@ export function MapTuningModal({ level, onClose }: MapTuningModalProps) {
   // level the game plays, so the board and this panel never disagree.
   const [, bump] = useState(0);
   const [copied, setCopied] = useState(false);
+  // The "Copied" tick's timer, cleared if the modal closes first.
+  const copiedTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current); }, []);
   const tuned = isMapTuned(level.id);
 
   const update = (patch: Parameters<typeof setMapTuning>[1]) => {
@@ -128,7 +132,8 @@ export function MapTuningModal({ level, onClose }: MapTuningModalProps) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
+      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 1400);
     } catch {
       /* clipboard blocked (webview/insecure origin): the YAML is shown below anyway */
     }
@@ -147,10 +152,11 @@ export function MapTuningModal({ level, onClose }: MapTuningModalProps) {
       <Pressable
         onTap={onClose}
         pressedAlpha={1}
+        label="backdrop"
         layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, backgroundColor: tint(COLOR.black, 0.7) }}
       />
       <Appear fromScale={0.95} duration={0.2}>
-        <View layout={{
+        <CardShield layout={{
           width: Math.min(384, screen.width - 32), maxHeight: screen.height * 0.85,
           borderRadius: RADIUS.xl, backgroundColor: COLOR.card, borderColor: COLOR.border, borderWidth: 1,
         }}>
@@ -185,10 +191,9 @@ export function MapTuningModal({ level, onClose }: MapTuningModalProps) {
               />
             ))}
 
-            <WrapText
+            <Label
               text="Both land on the map in progress: neither is read when the board is built, so nothing restarts and you keep your cuts. Ball roster and speeds are not tunable yet."
-              size={TEXT.xs} color={COLOR.mutedForeground}
-            />
+              size={TEXT.xs} color={COLOR.mutedForeground} wrap />
 
             {tuned && (
               <View layout={{ gap: 8 }}>
@@ -208,14 +213,13 @@ export function MapTuningModal({ level, onClose }: MapTuningModalProps) {
                     <Label text="Reset" size={TEXT.sm} color={COLOR.foreground} />
                   </Pressable>
                 </View>
-                <WrapText
+                <Label
                   text="Overrides are saved per map and survive a reload, so a tuned run never files on the highscore ledger. Paste the lines above into public/map.yml to make them real."
-                  size={TEXT.xs} color={COLOR.mutedForeground}
-                />
+                  size={TEXT.xs} color={COLOR.mutedForeground} wrap />
               </View>
             )}
           </ScrollView>
-        </View>
+        </CardShield>
       </Appear>
     </View>
   );

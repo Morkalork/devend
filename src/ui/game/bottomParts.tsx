@@ -41,7 +41,8 @@ export function BlinkRing({ color }: { color: number }) {
     return () => controls.stop();
   }, []);
   return (
-    <layoutContainer ref={ref} layout={{
+    // Inert: a decoration over the button, never a touch target of its own.
+    <layoutContainer ref={ref} eventMode="none" layout={{
       position: "absolute", left: -1, top: -1, right: -1, bottom: -1,
       borderRadius: RADIUS.md, borderWidth: 3, borderColor: color, backgroundColor: tint(color, 0.3),
     }} />

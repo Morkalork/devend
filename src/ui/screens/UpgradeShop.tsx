@@ -15,8 +15,9 @@
  * to deselect anything that depended on it. Deselecting does not remove
  * restocked offers or refund the restock.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ColorMatrixFilter } from "pixi.js";
 import { ArrowRight, Clock, Lock, RefreshCw, ShoppingCart, Vault } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
@@ -33,7 +34,7 @@ import { TagChip } from "../game/TagChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { TutorialOverlay } from "../game/TutorialOverlay";
 import { Carousel } from "./Carousel";
-import { ArcadeButton, ArcadeText } from "./draftParts";
+import { ArcadeButton, ArcadeText } from "./betweenArcadeButton";
 import {
   CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, ShopCard, UpgradeDetailModal, WaypointBanner,
 } from "./shopParts";
@@ -178,6 +179,14 @@ export function UpgradeShop({
   // A status pill's explanation (the DOM's hover title), opened by holding it.
   const [chipInfo, setChipInfo] = useState<{ text: string; color: number } | null>(null);
 
+  // `grayscale` on the closed shelf: what you missed, drained of colour.
+  const closedFilters = useMemo(() => {
+    if (!closed) return undefined;
+    const gray = new ColorMatrixFilter();
+    gray.desaturate();
+    return [gray];
+  }, [closed]);
+
   const shopSlots = 3 + extraShopItems;
   const dependentsById = useMemo(() => dependentsIndex(upgrades), [upgrades]);
 
@@ -248,9 +257,13 @@ export function UpgradeShop({
   const chunkHours = Math.round(SPEND_CHUNK_HOURS * priceInflation);
   const budgetChunks = spendChunks(selectedTotalCost, chunkHours, activeModifiers ? spendChunkCap(activeModifiers) : undefined);
 
+  // The "can't afford" no: the card shakes, then settles.
+  const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (shakeTimer.current) clearTimeout(shakeTimer.current); }, []);
   const shake = useCallback((id: string) => {
     setShakingId(id);
-    setTimeout(() => setShakingId(null), 600);
+    if (shakeTimer.current) clearTimeout(shakeTimer.current);
+    shakeTimer.current = setTimeout(() => setShakingId(null), 600);
   }, []);
 
   const handleItemClick = (upgrade: UpgradeConfig, alreadySelected: boolean) => {
@@ -363,7 +376,7 @@ export function UpgradeShop({
                 <View layout={{ maxWidth: inset, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", columnGap: 12, rowGap: 8 }}>
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Icon icon={Clock} size={24} color={YELLOW_500} />
-                    <Label text={t("upgradeShop.hoursValue", { hours: effectiveOvertime })} size={TEXT.xl} weight="600" font="mono" color={COLOR.foreground} />
+                    <Label text={t("upgradeShop.hoursValue", { hours: effectiveOvertime })} size={TEXT.xl} weight="600" color={COLOR.foreground} />
                     <Label text={t("upgradeShop.overtime")} size={TEXT.xl} color={COLOR.mutedForeground} />
                   </View>
 
@@ -441,9 +454,10 @@ export function UpgradeShop({
                   the width and its description a size people actually read.
                   See Carousel.tsx for what that trade costs. It runs edge to
                   edge, because the peek IS the strip's margin. Closed: dimmed,
-                  and nothing in it takes a touch. */}
+                  greyed, and nothing in it takes a touch. */}
               <Appear fromY={20} delay={0.2}>
-                <layoutContainer layout={{ alignItems: "center" }} alpha={closed ? 0.4 : 1} eventMode={closed ? "none" : "passive"}>
+                <layoutContainer layout={{ alignItems: "center" }} alpha={closed ? 0.4 : 1} eventMode={closed ? "none" : "passive"}
+                  filters={closedFilters}>
                   {/* The ability slot, closed: a fact about the run worth
                       reading once, not a dead card to swipe past every visit. */}
                   {abilitySlotClosed && !closed && (
@@ -477,7 +491,7 @@ export function UpgradeShop({
               {/* Certificate unlock banner */}
               {newlyUnlockedCerts.length > 0 && (
                 <Appear fromY={-8}>
-                  <View layout={{ gap: 8, maxWidth: inset }}>
+                  <View layout={{ gap: 8, width: Math.min(inset, 384) }}>
                     {newlyUnlockedCerts.map(cert => <CertUnlockedRow key={cert.id} cert={cert} />)}
                   </View>
                 </Appear>

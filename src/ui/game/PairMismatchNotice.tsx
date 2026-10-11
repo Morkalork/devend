@@ -37,7 +37,7 @@ export function PairMismatchNotice({ remoteName, onLeave }: {
       <View layout={{ width: column }}>
         <WrapText text={t("pair.mismatchBody", { name: remoteName })} size={TEXT.sm} color={COLOR.mutedForeground} align="center" />
       </View>
-      <Pressable onTap={onLeave} layout={{
+      <Pressable onTap={onLeave} label="pair-mismatch-back" layout={{
         width: column, padding: 12, borderRadius: RADIUS.lg, backgroundColor: COLOR.card,
         borderWidth: 1, borderColor: COLOR.border, alignItems: "center",
       }}>

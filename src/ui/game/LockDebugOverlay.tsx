@@ -14,9 +14,11 @@ import { Label, Pressable, RADIUS, tint, View } from "../kit/ui";
 import { Blocker, Region } from "./boardParts";
 import { OUTCOME_COLOR, lockDecisionLine } from "./overlayModel";
 
-const GREEN = 0x6bffbc;
-const AMBER = 0xffd54a;
-const GREY = 0x8899aa;
+// The panel's own colours are the outcomes' (a lock's green, a refusal's
+// amber, the boring case's grey), as in the DOM overlay.
+const GREEN = OUTCOME_COLOR.locked;
+const AMBER = OUTCOME_COLOR["rejected-unsealed"];
+const GREY = OUTCOME_COLOR["below-gate"];
 
 export function LockDebugOverlay({ visible, origin, width, height }: {
   visible: boolean;
@@ -50,13 +52,16 @@ export function LockDebugOverlay({ visible, origin, width, height }: {
       }}>
         <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
           <Label text="LOCK DECISIONS (newest first)" size={10} lineHeight={14} font="mono" color={GREEN} />
-          <Pressable onTap={() => { clearLockDecisions(); setRows([]); }} layout={{ paddingLeft: 4, paddingRight: 4 }}>
+          <Pressable label="lock-debug-clear" onTap={() => { clearLockDecisions(); setRows([]); }} layout={{ paddingLeft: 4, paddingRight: 4 }}>
             <Label text="clear" size={10} lineHeight={14} font="mono" color={AMBER} />
           </Pressable>
         </View>
         {rows.length === 0 && <Label text="no candidates yet" size={10} lineHeight={14} font="mono" color={GREY} />}
+        {/* Wrapped, as the DOM's rows were: a long verdict (sliver, area, boss)
+            runs past a phone's width, and shrinking it would defeat reading
+            it back off a screenshot. */}
         {rows.map((d, i) => (
-          <Label key={i} text={lockDecisionLine(d)} size={10} lineHeight={14} font="mono" color={OUTCOME_COLOR[d.outcome]} />
+          <Label key={i} text={lockDecisionLine(d)} size={10} lineHeight={14} font="mono" color={OUTCOME_COLOR[d.outcome]} wrap />
         ))}
       </Blocker>
     </Region>

@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Heart, HeartCrack } from 'lucide-react';
 import type { MapFailure } from '@/lib/mapFailure';
 import { Appear, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
-import { WrapText } from "./modalParts";
+
 import { mapFailedCopy, mapFailedDelay } from "./MapFailedOverlayModel";
 
 interface Props {
@@ -74,27 +74,27 @@ export function MapFailedOverlay({
             <View layout={{ width: Math.min(448, screen.width - 64), alignItems: "center", gap: 16 }}>
               <Icon icon={AlertTriangle} size={40} color={accent} />
 
-              <WrapText text={copy.headline} size={TEXT["2xl"]} weight="900" font="display" upper
-                letterSpacing={TEXT["2xl"] * 0.1} color={accent} glow={22} align="center" />
+              <Label text={copy.headline} size={TEXT["2xl"]} weight="900" font="display" upper
+                letterSpacing={TEXT["2xl"] * 0.1} color={accent} glow={22} align="center" wrap />
 
               {lines.length > 0 && (
                 <View layout={{
                   alignSelf: "stretch", borderRadius: RADIUS.lg, paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12,
                   borderWidth: 1, borderColor: tint(accent, 0x44 / 255), backgroundColor: tint(accent, 0x0f / 255),
                 }}>
-                  <WrapText text={t('mapFailure.stillNeeded')} size={TEXT.xs} font="mono" upper letterSpacing={TEXT.xs * 0.1}
-                    color={accent} alpha={0xcc / 255} layout={{ marginBottom: 8 }} />
+                  <Label text={t('mapFailure.stillNeeded')} size={TEXT.xs} font="mono" upper letterSpacing={TEXT.xs * 0.1}
+                    color={accent} alpha={0xcc / 255} layout={{ marginBottom: 8 }} wrap />
                   <View layout={{ gap: 4 }}>
                     {lines.map((line, i) => (
-                      <WrapText key={i} text={line} size={TEXT.sm} font="mono" color={0xe8fff0} />
+                      <Label key={i} text={line} size={TEXT.sm} font="mono" color={0xe8fff0} wrap />
                     ))}
                   </View>
                 </View>
               )}
 
-              <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }} alpha={0.85}>
                 <Icon icon={runOver ? HeartCrack : Heart} size={16} color={accent} />
-                <Label text={copy.stakes} size={TEXT.sm} font="mono" color={ink} alpha={0.85} />
+                <Label text={copy.stakes} size={TEXT.sm} font="mono" color={ink} />
               </View>
 
               <Label text={copy.tapLine} size={TEXT.xs} font="mono" color={ink} alpha={0.5} layout={{ marginTop: 8 }} />

@@ -28,6 +28,9 @@ export function ScreenFx({ deadlineUrgent, bossPhaseLabel, bossDefeated, shipped
   const pulse = usePulse(2000, deadlineUrgent || !!bossPhaseLabel || shippedIt);
   const breath = 0.6 + 0.4 * pulse;
   const { width, height } = screen;
+  // One line each, capped short of the screen's edges so a long phase name or
+  // a narrow phone scales the words down instead of cutting them off.
+  const fit = { maxWidth: width - 32 };
 
   // Deadline tension: a red vignette pressing in from the edges.
   const drawVignette = useCallback((g: Graphics) => {
@@ -65,7 +68,7 @@ export function ScreenFx({ deadlineUrgent, bossPhaseLabel, bossDefeated, shipped
       {bossPhaseLabel && !bossDefeated && (
         <Inert layout={{ position: "absolute", left: 0, top: height / 3, width, height: 0, alignItems: "center", justifyContent: "center" }}>
           <Label text={bossPhaseLabel} size={TEXT["2xl"]} font="display" weight="700" upper letterSpacing={TEXT["2xl"] * 0.1}
-            color={BOSS_RED} glow={12} alpha={breath} />
+            color={BOSS_RED} glow={12} alpha={breath} layout={fit} />
         </Inert>
       )}
 
@@ -74,7 +77,7 @@ export function ScreenFx({ deadlineUrgent, bossPhaseLabel, bossDefeated, shipped
         <Inert layout={{ position: "absolute", left: 0, top: 0, width, height, alignItems: "center", justifyContent: "center" }}>
           <pixiGraphics draw={drawBloom} />
           <Label text={t("boss.shippedIt")} size={width >= SM_BREAKPOINT ? 48 : TEXT["4xl"]} font="display" weight="700" upper
-            letterSpacing={(width >= SM_BREAKPOINT ? 48 : TEXT["4xl"]) * 0.1} color={SHIPPED_GREEN} glow={16} alpha={breath} />
+            letterSpacing={(width >= SM_BREAKPOINT ? 48 : TEXT["4xl"]) * 0.1} color={SHIPPED_GREEN} glow={16} alpha={breath} layout={fit} />
         </Inert>
       )}
     </Inert>

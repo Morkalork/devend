@@ -41,6 +41,7 @@ export function PairDecision({
     <Pressable
       onTap={onTap}
       disabled={!isHost}
+      label={text}
       layout={{
         flexDirection: "row", alignItems: "center", gap: 12, padding: 16,
         justifyContent: center ? "center" : "flex-start",
@@ -81,7 +82,7 @@ export function PairDecision({
               </View>
             )}
 
-            <Pressable onTap={onLeave} layout={{ padding: 12, borderRadius: RADIUS.lg, backgroundColor: COLOR.muted, alignItems: "center" }}>
+            <Pressable onTap={onLeave} label={t("common.cancel")} layout={{ padding: 12, borderRadius: RADIUS.lg, backgroundColor: COLOR.muted, alignItems: "center" }}>
               <Label text={t("common.cancel")} size={TEXT.sm} />
             </Pressable>
           </View>

@@ -45,7 +45,6 @@ export function PairTurnOverlay({ turn, partnerName, myColor, partnerColor, onPa
   const mine = turn ? turn.view !== "theirs" : true;
   // Spectating: the board steps back. Starts at its target (framer's initial={false}).
   const dim = useTween(mine ? 0 : 1, 0.35);
-  const pulse = usePulse(1800, turn?.view === "yours");
   if (!turn) return null;
   const color = turnColor(turn.view, myColor, partnerColor);
   const c = cssHex(color);
@@ -57,7 +56,7 @@ export function PairTurnOverlay({ turn, partnerName, myColor, partnerColor, onPa
 
       {/* Your turn: the board lights up in your colour and breathes while the
           fence is still yours to draw; it holds steady once it is drawn. */}
-      {mine && <TurnGlow view={turn.view} pulse={pulse} color={cssHex(myColor)} width={width} height={height} />}
+      {mine && <TurnGlow view={turn.view} color={cssHex(myColor)} width={width} height={height} />}
 
       {/* The tag. */}
       <Region layout={{ position: "absolute", left: 0, bottom: 8, width, flexDirection: "row", justifyContent: "center" }}>
@@ -72,7 +71,7 @@ export function PairTurnOverlay({ turn, partnerName, myColor, partnerColor, onPa
               <Label text={t("pair.turn.yours")} size={TEXT.sm} weight="700" color={c} />
               <Label text={t("pair.turn.yoursHint")} size={TEXT.sm} color={COLOR.mutedForeground} />
               {onPass && (
-                <Pressable onTap={onPass} label="pass" layout={{
+                <Pressable onTap={onPass} label="pair-pass" layout={{
                   marginLeft: 4, flexDirection: "row", alignItems: "center", gap: 4, borderRadius: RADIUS.full,
                   backgroundColor: COLOR.muted, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2,
                 }}>
@@ -109,7 +108,9 @@ export function PairTurnOverlay({ turn, partnerName, myColor, partnerColor, onPa
   );
 }
 
-function TurnGlow({ view, pulse, color, width, height }: { view: TurnView; pulse: number; color: number; width: number; height: number }) {
+function TurnGlow({ view, color, width, height }: { view: TurnView; color: number; width: number; height: number }) {
+  // The breath lives here, so only the glow re-renders each frame, not the tag.
+  const pulse = usePulse(1800, view === "yours");
   // Fades in from nothing on the hand-over (framer's initial opacity 0).
   const enter = useElapsed(0.3);
   return (
@@ -127,11 +128,13 @@ function TurnSplash({ text, color, width, height }: { text: string; color: numbe
   if (t >= PAIR_SPLASH.duration) return null;
   return (
     <Inert layout={{ position: "absolute", left: 0, top: 0, width, height, justifyContent: "center", alignItems: "center" }}>
+      {/* Capped at the board's width: a long partner name shrinks to fit
+          rather than running off both edges. */}
       <layoutContainer layout={{
-        paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.xl,
+        maxWidth: width - 16, paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.xl,
         backgroundColor: tint(COLOR.background, 0.8),
       }} alpha={k.alpha} scale={k.scale}>
-        <Label text={text} size={TEXT["3xl"]} font="display" weight="700" color={color} glow={12} />
+        <Label text={text} size={TEXT["3xl"]} font="display" weight="700" color={color} glow={12} layout={{ flexShrink: 1 }} />
       </layoutContainer>
     </Inert>
   );

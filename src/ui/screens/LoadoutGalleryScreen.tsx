@@ -20,7 +20,7 @@ import { contentText } from "@/i18n/content";
 import {
   Appear, COLOR, Icon, Label, ProgressBar, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton } from "./hallArcadeButton";
+import { ArcadeButton, MenuHeading } from "./welcomeParts";
 import { lockedLoadoutProgress, loadoutGallery } from "./loadoutModel";
 
 interface LoadoutGalleryScreenProps {
@@ -57,10 +57,8 @@ export function LoadoutGalleryScreen({
       <Appear fromY={20} duration={0.5} layout={{ flex: 1, width: contentWidth, alignSelf: "center" }}>
         <View layout={{ flex: 1, alignItems: "center", gap: 24 }}>
           {/* Header */}
-          <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Icon icon={Backpack} size={32} color={accent} />
-            <Label text={t("loadouts.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]} font="display" weight="900" letterSpacing={1.2} />
-          </View>
+          <MenuHeading icon={Backpack} iconColor={accent} text={t("loadouts.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]}
+            letterSpacing={1.2} maxWidth={contentWidth} />
 
           {/* Unique-win counter */}
           <View layout={{
@@ -124,7 +122,7 @@ export function LoadoutGalleryScreen({
 
           {/* Back */}
           <Appear fromY={20} delay={0.4}>
-            <ArcadeButton text={t("loadouts.back")} icon={ArrowLeft} onTap={onBack} />
+            <ArcadeButton variant="secondary" text={t("loadouts.back")} icon={ArrowLeft} onTap={onBack} />
           </Appear>
         </View>
       </Appear>

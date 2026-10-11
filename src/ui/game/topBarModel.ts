@@ -2,21 +2,6 @@
  * The arithmetic behind the canvas GameTopBar, kept out of the component so it
  * can be tested without a renderer.
  */
-import { HUD } from "./hudMetrics";
-
-/**
- * The bar's rows, top to bottom, in px. Fixed, never measured: the goals
- * arrive a commit after the screen mounts, and a goal row sized by its content
- * painted empty and then grew, pushing the board down after it had been placed
- * (e414b10). The highscore row is reserved whenever the bar is told it shows,
- * even before there is a target to draw, for the same reason.
- */
-export function topBarRows(showHighscoreBar: boolean): number[] {
-  return showHighscoreBar
-    ? [HUD.topRow1, HUD.topRow2, HUD.highscoreRow]
-    : [HUD.topRow1, HUD.topRow2];
-}
-
 export interface HighscoreBar {
   /** Capture progress toward clearing the map, 0..1. */
   captureFraction: number;

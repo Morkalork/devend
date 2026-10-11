@@ -34,7 +34,7 @@ export function StatRow({ handlers, children, paddingY, layout, rule = true }: {
 export function Between({ left, right, layout }: { left: ReactNode; right: ReactNode; layout?: Layout }) {
   return (
     <View layout={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, ...(layout ?? {}) }}>
-      <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 }}>{left}</View>
+      <View layout={{ flexDirection: "row", alignItems: "center", columnGap: 4, rowGap: 2, flexWrap: "wrap", flexShrink: 1 }}>{left}</View>
       <View layout={{ flexDirection: "row", alignItems: "flex-end" }}>{right}</View>
     </View>
   );

@@ -25,6 +25,7 @@ import type { Vector2 } from "@/types/game";
 import { COLOR, Icon, Label, ProgressBar, TEXT, tint, View } from "../kit/ui";
 import { Inert } from "./boardParts";
 import { dashedLine } from "./boardDraw";
+import { usePointerCancel } from "./boardDrag";
 import { LAUNCH_AMBER, launchGeometry, launchPowerT, readLaunchAim } from "./launchModel";
 import { worldToContainer, type BoardBox } from "./rubberBandModel";
 
@@ -59,7 +60,9 @@ export function LaunchOverlay({
 }: Props) {
   const { t } = useTranslation();
   const [aim, setAim] = useState<LaunchAim | null>(null);
-  const startRef = useRef<{ at: Vector2; pointer: number } | null>(null);
+  // The pull in progress: where it began, which finger, and where that finger
+  // was last seen (a cancelled touch ends there).
+  const startRef = useRef<{ at: Vector2; pointer: number; last: Vector2 } | null>(null);
 
   const box: BoardBox = { canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft };
   const width = size?.width ?? Math.max(0, 2 * canvasOffsetLeft + canvasWidth);
@@ -70,24 +73,36 @@ export function LaunchOverlay({
 
   const onDown = (e: FederatedPointerEvent) => {
     if (startRef.current) return;
-    startRef.current = { at: local(e), pointer: e.pointerId };
+    const at = local(e);
+    startRef.current = { at, pointer: e.pointerId, last: at };
   };
   // Global, so the pull follows a finger that leaves the surface (the DOM
   // captured the pointer for the same reason).
   const onMove = (e: FederatedPointerEvent) => {
     const s = startRef.current;
-    if (s && e.pointerId === s.pointer) setAim(readLaunchAim(box, s.at, local(e), facing, angle));
-  };
-  const onUp = (e: FederatedPointerEvent) => {
-    const s = startRef.current;
     if (!s || e.pointerId !== s.pointer) return;
-    const finalAim = readLaunchAim(box, s.at, local(e), facing, angle);
+    s.last = local(e);
+    setAim(readLaunchAim(box, s.at, s.last, facing, angle));
+  };
+  const finish = (end: Vector2) => {
+    const s = startRef.current;
+    if (!s) return;
+    const finalAim = readLaunchAim(box, s.at, end, facing, angle);
     startRef.current = null;
     setAim(null);
     // A pull too short to register is not a weak launch, it is no launch: the
     // shot cannot be taken back, so a stray tap must not spend it.
     if (finalAim) onFire(finalAim);
   };
+  const onUp = (e: FederatedPointerEvent) => {
+    if (startRef.current?.pointer === e.pointerId) finish(local(e));
+  };
+  // A cancelled touch is a release where the finger was last seen, as the DOM
+  // overlay's onPointerCancel was.
+  usePointerCancel(id => {
+    const s = startRef.current;
+    if (s?.pointer === id) finish(s.last);
+  });
 
   const geo = launchGeometry({ ...box, ballPosition, inner, angle, facing, aim });
   const path = useMemo(() => (aim ? predict(aim) : []), [aim, predict]);

@@ -13,18 +13,20 @@
  * globally, under the interface canvas; this screen keeps the DOM's 90% wash
  * over it.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Graphics } from "pixi.js";
+import type { Graphics, TextStyleFontWeight } from "pixi.js";
 import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame, Share2, Check } from "lucide-react";
 import type { GameResult } from "@/types/game";
 import { failHeadline, failLines } from "@/lib/mapFailure";
 import type { RunRecap } from "@/lib/buildRecap";
 import type { RunRankInfo } from "@/lib/runLedger";
 import { shareRunCard } from "@/lib/shareCard";
-import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, RADIUS, tint, useUiScreen } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, RADIUS, iconNodeOf, tint, useUiScreen, type IconNode, type IconSource, type Layout } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
-import { ArcadeButton } from "./resultParts";
+import { ArcadeButton } from "./betweenArcadeButton";
+import { RichParagraph } from "./draftParts";
+import type { FontRole } from "../theme";
 import { buildIdentity, detourActions, ladderBlock, pinnedActions, recapBlock, type DetourKind } from "./resultScreenModel";
 import { SUCCESS, TW } from "./levelCompleteModel";
 
@@ -68,6 +70,27 @@ function TopRule() {
   return <View layout={{ position: "absolute", left: 0, right: 0, top: 0, height: 1, backgroundColor: COLOR.border }} />;
 }
 
+/**
+ * A centred icon + text line (`flex items-center justify-center gap-*`) that
+ * wraps: a phone's column is narrower than several of these lines in the
+ * display face, and the words then flow onto a second line under the first
+ * instead of running off the screen.
+ */
+function IconLine({ icon, iconColor, iconSize = 16, gap = 6, layout, text, ...look }: {
+  icon: IconSource; iconColor: number; iconSize?: number; gap?: number; layout?: Layout;
+  text: string; size: number; color?: number; font?: FontRole; weight?: TextStyleFontWeight; upper?: boolean; letterSpacing?: number; glow?: number;
+}) {
+  return (
+    <View layout={{ alignSelf: "stretch", ...(layout ?? {}) }}>
+      <RichParagraph {...look} color={look.color ?? COLOR.foreground} runs={[{ text }]}
+        lead={<Icon icon={icon} size={iconSize} color={iconColor} />} leadGap={gap} />
+    </View>
+  );
+}
+
+/** `fill-white/20`: the hexagon of certificate hours, outlined and faintly filled. */
+const HEXAGON_FILLED: IconNode = iconNodeOf(Hexagon).map(([tag, attrs]) => [tag, { ...attrs, fill: "#ffffff", "fill-opacity": 0.2 }]);
+
 export function ResultScreen({
   result,
   onMainMenu,
@@ -87,6 +110,9 @@ export function ResultScreen({
   const screen = useUiScreen();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames, failure } = result;
   const [shareState, setShareState] = useState<"idle" | "done">("idle");
+  // The tick goes back to the share glyph after a moment; not after unmount.
+  const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (shareTimer.current) clearTimeout(shareTimer.current); }, []);
   const tone = isWin ? SUCCESS : DANGER;
   const columnWidth = Math.min(448, screen.width - 48);
 
@@ -124,7 +150,8 @@ export function ResultScreen({
     );
     if (outcome !== "unavailable") {
       setShareState("done");
-      setTimeout(() => setShareState("idle"), 2500);
+      if (shareTimer.current) clearTimeout(shareTimer.current);
+      shareTimer.current = setTimeout(() => setShareState("idle"), 2500);
     }
   };
 
@@ -149,10 +176,12 @@ export function ResultScreen({
     }
   }, [tone]);
 
-  // The pinned bar's own height, for its fade (padding + buttons + gaps).
-  const barHeight = 16 + 24 + pinned.length * 52 + Math.max(0, pinned.length - 1) * 12;
-  // The gradient is doing work, not decoration: it fades the recap out under
-  // the bar so a screen with more above it reads as scrollable rather than finished.
+  // The pinned bar's own height (padding + buttons + gaps): the recap scrolls
+  // under it, so it also pads the recap's end clear of the buttons.
+  const barHeight = pinned.length > 0 ? 16 + 24 + pinned.length * 52 + (pinned.length - 1) * 12 : 0;
+  // The gradient is doing work, not decoration: the bar sits OVER the end of
+  // the scrolling recap and fades it out, so a screen with more below reads as
+  // scrollable rather than finished. Clear for its top 45%, solid below.
   const drawFade = useCallback((g: Graphics) => {
     g.clear();
     const fadeTo = barHeight * 0.45;
@@ -176,7 +205,7 @@ export function ResultScreen({
       {/* The recap. Centred with auto margins rather than justify-center: a
           centred column that overflows puts its own top out of reach, and the
           top of this one is the word GAME OVER. */}
-      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 24, paddingBottom: 12 }}>
+      <ScrollView layout={{ flex: 1, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 24, paddingBottom: 12 + barHeight }}>
         <Appear fromScale={0.9} duration={0.5}
           layout={{ width: columnWidth, alignItems: "center", gap: 20, marginTop: "auto", marginBottom: "auto" }}>
           {/* Icon */}
@@ -186,9 +215,9 @@ export function ResultScreen({
           </Appear>
 
           {/* Title */}
-          <Appear fromY={20} delay={0.3}>
+          <Appear fromY={20} delay={0.3} layout={{ alignSelf: "stretch" }}>
             <Label text={isWin ? t("result.youWin") : t("result.gameOver")} size={screen.width >= 768 ? TEXT["4xl"] : TEXT["3xl"]}
-              font="display" weight="900" letterSpacing={2} color={tone} glow={30} />
+              font="display" weight="900" letterSpacing={screen.width >= 768 ? 1.8 : 1.5} color={tone} glow={30} wrap align="center" />
           </Appear>
 
           {/* Completed all levels message */}
@@ -201,10 +230,8 @@ export function ResultScreen({
           {/* Ascension summary */}
           {!!ascensionDepth && ascensionDepth > 0 && (
             <Appear fromY={10} delay={0.4} layout={{ alignSelf: "stretch", alignItems: "center" }}>
-              <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
-                <Icon icon={ArrowUpCircle} size={24} color={TW.peer} />
-                <Label text={t("result.ascensionDepth", { depth: ascensionDepth })} size={TEXT.xl} font="display" weight="700" color={TW.peer} glow={16} />
-              </View>
+              <IconLine icon={ArrowUpCircle} iconColor={TW.peer} iconSize={24} gap={8} layout={{ marginBottom: 4 }}
+                text={t("result.ascensionDepth", { depth: ascensionDepth })} size={TEXT.xl} font="display" weight="700" color={TW.peer} glow={16} />
               {loadoutNames && loadoutNames.length > 0 && (
                 <Label text={t("result.loadoutsBraved", { loadouts: loadoutNames.join(" · ") })} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />
               )}
@@ -214,10 +241,8 @@ export function ResultScreen({
           {/* New loadout unlocks */}
           {newlyUnlockedLoadouts.length > 0 && (
             <Appear fromY={10} delay={0.45} layout={{ alignSelf: "stretch", alignItems: "center", gap: 4 }}>
-              <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <Icon icon={Backpack} size={20} color={COLOR.primary} />
-                <Label text={t("result.newLoadoutsUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} upper letterSpacing={0.7} />
-              </View>
+              <IconLine icon={Backpack} iconColor={COLOR.primary} iconSize={20} gap={8}
+                text={t("result.newLoadoutsUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} upper letterSpacing={0.7} />
               <Label text={newlyUnlockedLoadouts.join(" · ")} size={TEXT.sm} align="center" wrap />
             </Appear>
           )}
@@ -258,15 +283,13 @@ export function ResultScreen({
 
             {/* Certificate hours earned */}
             {runLevelsCompleted > 0 && (
-              <Appear fromScale={0.9} delay={0.45} layout={{ alignItems: "center", marginTop: 16, paddingTop: 16 }}>
+              <Appear fromScale={0.9} delay={0.45} layout={{ alignSelf: "stretch", alignItems: "center", marginTop: 16, paddingTop: 16 }}>
                 <TopRule />
                 <Label text={t("result.levelsCompleted")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} layout={{ marginBottom: 4 }} />
                 <Label text={String(runLevelsCompleted)} size={TEXT["3xl"]} font="display" weight="700" layout={{ marginBottom: 8 }} />
                 {runHoursAwarded > 0 && (
-                  <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    <Icon icon={Hexagon} size={24} color={COLOR.white} />
-                    <Label text={t("result.certificateHours", { count: runHoursAwarded })} size={TEXT["2xl"]} font="display" weight="700" color={COLOR.white} />
-                  </View>
+                  <IconLine icon={HEXAGON_FILLED} iconColor={COLOR.white} iconSize={24} gap={8}
+                    text={t("result.certificateHours", { count: runHoursAwarded })} size={TEXT["2xl"]} font="display" weight="700" color={COLOR.white} />
                 )}
               </Appear>
             )}
@@ -281,34 +304,23 @@ export function ResultScreen({
               <Label text={t("result.bankedOvertime")} size={TEXT.sm} color={COLOR.mutedForeground} upper letterSpacing={0.7} />
               <Label text={ladder.bankedText} size={TEXT["4xl"]} font="display" weight="700" />
               {ladder.newBestText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Icon icon={Medal} size={16} color={TW.gold} />
-                  <Label text={ladder.newBestText} size={TEXT.sm} weight="700" color={TW.gold} glow={12} />
-                </View>
+                <IconLine icon={Medal} iconColor={TW.gold} text={ladder.newBestText} size={TEXT.sm} weight="700" color={TW.gold} glow={12} />
               )}
-              {ladder.rankText && <Label text={ladder.rankText} size={TEXT.sm} weight="700" color={TW.gold} />}
+              {ladder.rankText && <Label text={ladder.rankText} size={TEXT.sm} weight="700" color={TW.gold} align="center" wrap />}
               {ladder.gapToNextText && <Label text={ladder.gapToNextText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
               {ladder.gapToTop10Text && <Label text={ladder.gapToTop10Text} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
               {/* Employee of the Month: the monthly crown can be won even when the
                   all-time Top 10 is out of reach (the comeback ladder). */}
               {ladder.monthBestText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Icon icon={Award} size={16} color={TW.peer} />
-                  <Label text={ladder.monthBestText} size={TEXT.sm} weight="700" color={TW.peer} glow={12} />
-                </View>
+                <IconLine icon={Award} iconColor={TW.peer} text={ladder.monthBestText} size={TEXT.sm} weight="700" color={TW.peer} glow={12} />
               )}
               {/* Daily Stand-up: today's best + the attendance streak. */}
               {ladder.dayBestText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Icon icon={CalendarDays} size={16} color={DAILY} />
-                  <Label text={ladder.dayBestText} size={TEXT.sm} weight="700" color={DAILY} glow={12} />
-                </View>
+                <IconLine icon={CalendarDays} iconColor={DAILY} text={ladder.dayBestText} size={TEXT.sm} weight="700" color={DAILY} glow={12} />
               )}
               {ladder.streakText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Icon icon={Flame} size={14} color={TW.peer} />
-                  <Label text={ladder.streakText} size={TEXT.xs} color={COLOR.mutedForeground} />
-                </View>
+                <IconLine icon={Flame} iconColor={TW.peer} iconSize={14} gap={4}
+                  text={ladder.streakText} size={TEXT.xs} color={COLOR.mutedForeground} />
               )}
               {ladder.epitaphText && <Label text={ladder.epitaphText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
             </Appear>
@@ -329,18 +341,10 @@ export function ResultScreen({
                 </View>
               )}
               {recap.capstoneText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Icon icon={Award} size={16} color={COLOR.primary} />
-                  <Label text={recap.capstoneText} size={TEXT.sm} />
-                </View>
+                <IconLine icon={Award} iconColor={COLOR.primary} text={recap.capstoneText} size={TEXT.sm} />
               )}
               {recap.recordText && (
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "stretch", justifyContent: "center" }}>
-                  <Icon icon={Medal} size={16} color={TW.yellow400} />
-                  <View layout={{ flexShrink: 1 }}>
-                    <Label text={recap.recordText} size={TEXT.sm} weight="700" color={TW.yellow400} />
-                  </View>
-                </View>
+                <IconLine icon={Medal} iconColor={TW.yellow400} text={recap.recordText} size={TEXT.sm} weight="700" color={TW.yellow400} />
               )}
               {recap.bestSoFarText && <Label text={recap.bestSoFarText} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap />}
             </Appear>
@@ -361,7 +365,7 @@ export function ResultScreen({
           at all when there is no way to play on. */}
       {pinned.length > 0 && (
         <Appear fromY={20} delay={0.55}
-          layout={{ alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingBottom: 24, paddingTop: 16 }}>
+          layout={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingBottom: 24, paddingTop: 16 }}>
           <View layout={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}>
             <pixiGraphics draw={drawFade} />
           </View>

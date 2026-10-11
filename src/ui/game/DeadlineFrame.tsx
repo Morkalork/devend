@@ -18,8 +18,8 @@ import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
 import { useReducedMotion } from "framer-motion";
 import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
-import { useTween } from "../kit/ui";
 import { FlashNumeral, Inert } from "./boardParts";
+import { useLinearSlide } from "./fxClock";
 import { clockRectPoints, deadlineGeometry } from "./overlayModel";
 import { cssHex } from "./fxModel";
 import { deadlineColor } from "@/lib/deadlineDisplay";
@@ -38,9 +38,9 @@ interface DeadlineFrameProps {
 export function DeadlineFrame({ frame, secondsLeft, limit, origin }: DeadlineFrameProps) {
   const reduceMotion = useReducedMotion();
   const geo = deadlineGeometry(frame, secondsLeft, limit);
-  // Ticks arrive once a second; a one-second slide keeps the drain a sweep
-  // (and the colour slides with it, since it is read from the slid share).
-  const shown = useTween(geo?.remaining ?? 1, reduceMotion ? 0 : 1);
+  // Ticks arrive once a second; a one-second linear slide keeps the drain a
+  // sweep (and the colour slides with it, since it is read from the slid share).
+  const shown = useLinearSlide(geo?.remaining ?? 1, reduceMotion ? 0 : 1);
   const color = cssHex(deadlineColor(shown));
 
   const has = geo != null;
@@ -58,9 +58,13 @@ export function DeadlineFrame({ frame, secondsLeft, limit, origin }: DeadlineFra
       g.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
     };
-    // A soft halo under the band for the DOM's drop-shadow glow.
-    path();
-    g.stroke({ width: band + 8, color, alpha: 0.22, cap: "butt", join: "miter" });
+    // A soft halo under the band for the DOM's `drop-shadow(0 0 6px)`: three
+    // widening faint strokes, stacked, so it fades outward instead of ending
+    // in a hard-edged box.
+    for (const spread of [12, 8, 4]) {
+      path();
+      g.stroke({ width: band + spread, color, alpha: 0.09, cap: "butt", join: "miter" });
+    }
     path();
     g.stroke({ width: band, color, cap: "butt", join: "miter" });
   }, [has, x, y, w, h, band, shown, color]);
