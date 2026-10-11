@@ -65,7 +65,8 @@ import { Snowflake } from "lucide-react";     // the same import as the DOM file
 
 1. Children stack in a **column** by default and **do not shrink** (`flexShrink: 0`). A row must say `flexDirection: "row"`. Something that should give way says `flex: 1` or `flexShrink: 1`.
 2. **Wrapping text** (`<Label wrap />`) fills its parent's width. Its parent must have a definite width: a column (stretch gives it the width) or a `flex: 1` box inside a row. Never give a wrapped label `width: "100%"`.
-3. Single-line text scales down to fit if its box is too small; give rows enough room or let text wrap.
+3. A plain `Label` keeps its natural width. Squeezed along a row's main axis it may scale down; anywhere else (a column, a capped
+   cross axis) it simply overflows onto its neighbours. Text whose length you do not control gets `wrap` or `truncate`.
 4. `position: "absolute"` boxes are laid out against their parent's box; put them in a parent with a size.
 5. Custom drawing: `<pixiGraphics draw={g => { g.clear(); g.circle(0, 0, 10).fill(color); }} />` inside a sized `View`. It does not take part in layout; it draws in the View's local coordinates from its top-left. Wrap the callback in `useCallback`.
 
@@ -74,6 +75,8 @@ import { Snowflake } from "lucide-react";     // the same import as the DOM file
 - `onClick` -> `Pressable onTap`. A hold-to-explain (`onPointerDown` timers in the DOM) -> `onHold`; add a `HoldHint` (small Info icon) where the DOM had one.
 - Hover handlers: drop them.
 - Anything that sat over the board with `pointer-events-none` is a plain `View` (not a Pressable): it takes no touches and the board below gets them.
+  A View is passive, which still hit-tests its children; when a subtree might hold an interactive child that must not take
+  touches either, wrap it in `Inert` (`src/ui/game/boardParts.tsx`, eventMode `none`).
 - The board ignores a touch that lands on any Pressable (ui/hitGate.ts), so an interactive overlay on the board is simply a Pressable.
 
 ## Board-space overlays

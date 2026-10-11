@@ -26,7 +26,7 @@ import { PushYourLuckOverlay } from "../../game/PushYourLuckOverlay";
 import { PairGuestGate } from "../../game/PairGuestGate";
 import { FeatureUnlockedModal } from "../../game/FeatureUnlockedModal";
 import { TopBarDetailsPanel } from "../../game/TopBarDetailsPanel";
-import { MapTuningModal } from "../../game/MapTuningModal";
+import { MapTuningSample } from "./modalSamples";
 import { FenceTypeInfoModal } from "../../game/FenceTypeInfoModal";
 import { AbilityInfoModal } from "../../game/AbilityInfoModal";
 
@@ -156,7 +156,7 @@ export const entries: GalleryEntry[] = [
   { id: "TopBarDetailsPanel", group: "modal", render: () => topBarSample() },
   { id: "TopBarDetailsPanel-mapRule", group: "modal", render: () => topBarSample("mapRule") },
 
-  { id: "MapTuningModal", group: "modal", render: () => <MapTuningModal level={LEVEL} onClose={noop} /> },
+  { id: "MapTuningModal", group: "modal", render: () => <MapTuningSample level={LEVEL} /> },
 
   ...getAllFenceTypes().filter(f => f.id !== STANDARD_FENCE_ID).map((f): GalleryEntry => ({
     id: `FenceTypeInfoModal-${f.id}`, group: "modal",
