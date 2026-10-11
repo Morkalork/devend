@@ -59,8 +59,9 @@ for public Wi-Fi, where client isolation keeps the phones apart), and
 three.js scene seen from above in a three-quarter view (a sheared projection, so the floor and touch never move) that is now the default renderer (built; it
 shares one WebGL context with the sleek 2D renderer, which still draws the
 board's flat marks into it and its effects over it, and is the fallback), and
-**CANVAS_UI_PLAN.md** for the plan to move the whole game interface except
-Admin from React DOM onto the canvas (plan, not started), and
+**CANVAS_UI_PLAN.md** for the design and build record of the canvas
+interface: the whole game interface except Admin, moved from React DOM onto
+one full-screen Pixi canvas over the board (built), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions

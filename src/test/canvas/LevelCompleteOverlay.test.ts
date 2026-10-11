@@ -43,16 +43,17 @@ describe("post-map score breakdown collapses", () => {
     expect(SRC).toContain('t("levelComplete.breakdownTitle")');
     // The itemised rows are inside the fold; the totals come after it closes.
     const open = SRC.indexOf("{breakdownOpen && (");
-    const earned = SRC.indexOf('hold("overtimeEarned")');
+    const earned = SRC.indexOf('<StatRow handlers={hold("overtimeEarned")}');
     const fold = SRC.slice(open, earned);
     expect(open).toBeGreaterThan(0);
+    expect(earned, "the Overtime row is gone or sits above the fold").toBeGreaterThan(open);
     expect(fold).toContain('hold("fencesUsed")');
     expect(fold.trimEnd(), "a total moved inside the fold").toMatch(/\)\}$/);
     expect(SRC.indexOf('hold("totalOvertime")')).toBeGreaterThan(earned);
   });
 
   it("shows the Overtime row's ceiling without opening the breakdown (overtimeOutOf)", () => {
-    const earned = SRC.indexOf('hold("overtimeEarned")');
+    const earned = SRC.indexOf('<StatRow handlers={hold("overtimeEarned")}');
     const suffix = SRC.indexOf("{m.overtimeSuffix && (");
     expect(suffix, "the ceiling is not drawn on the Overtime row").toBeGreaterThan(earned);
     expect(suffix).toBeLessThan(SRC.indexOf('hold("totalOvertime")'));

@@ -5,16 +5,20 @@ canvas (CANVAS_UI_PLAN.md). React stays: components keep their props, hooks,
 state and `useTranslation`. What changes is what they render: Pixi objects laid
 out with Yoga flexbox instead of `<div>`s styled with Tailwind.
 
-`src/ui/game/PushExitBar.tsx` is a complete small example; read it next to
-`src/components/game/PushExitBar.tsx`.
+`src/ui/game/PushExitBar.tsx` is a complete small example (its test is
+`src/test/canvas/PushExitBar.test.ts`). The game's DOM originals have been
+deleted now that every one is ported; to read one beside its port, use
+`git log --diff-filter=D -- src/components/game/PushExitBar.tsx` and
+`git show <commit>^:src/components/game/PushExitBar.tsx`.
 
 ## The contract
 
 - A DOM component `src/components/game/Foo.tsx` becomes `src/ui/<area>/Foo.tsx`
-  exporting the same name with the **same props** (import the props type from
-  the DOM file if it is exported; otherwise copy the interface verbatim, keeping
-  its comments). Behaviour must not change: same i18n keys, same conditions,
-  same callbacks at the same moments.
+  exporting the same name with the **same props** (copy the interface
+  verbatim, keeping its comments; a type other files share lives on the canvas
+  side, in the model file or `src/types`, never imported from a DOM file).
+  Behaviour must not change: same i18n keys, same conditions, same callbacks
+  at the same moments.
 - Keep the DOM file's explanatory comments that still apply (shortened where
   they described DOM/CSS mechanics). The codebase is heavily commented on
   purpose; a port that drops the reasoning is a worse file.

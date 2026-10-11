@@ -295,10 +295,29 @@ the go-ahead: every screen moved.
 - **A glow is drawn into the text's texture**, which Pixi sizes to the glyphs:
   without padding for the blur it is cut off in a hard box.
 
+### The review, and the DOM's departure
+
+After the wiring, every canvas piece got an entry in the Admin screen gallery
+and was reviewed against its DOM original at 390 and 360 wide, area by area.
+What it found, beyond many single-line labels running into their neighbours:
+the shop's card strip never moved (it was shifted with `pivot`, which layout
+ignores); per-side borders are silently dropped, which had erased dividers; a
+tap on several modal cards fell through to the backdrop and closed them; a
+touch the system cancelled left the rubber band and the launcher deaf until
+remounted; glows were hard-edged boxes; and three copies of the arcade button
+had each drifted to a different subset of the look (one now lives in the
+kit). The DOM originals were then deleted (62 components); their behavioural
+tests live on in `src/test/canvas`, and the assertions that were only about
+DOM structure went with them.
+
 ### Still open
 
 - The real-phone checkpoint of stage 2: whether the zoom reports stop. The
   recorder in Admin is how to tell.
 - The interface canvas renders every frame, on top of the board. Cheap on a
   desktop GPU; to be measured on a low-end phone with the perf overlay.
+- Swiping the shop's card strip, and a drag that starts on a card and must
+  not count as a hold, could not be exercised headless (it runs at about two
+  frames a second); check them on a phone.
+- Accessibility: the canvas has no screen-reader layer (decision 3 above).
 
