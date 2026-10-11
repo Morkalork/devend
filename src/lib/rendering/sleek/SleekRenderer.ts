@@ -483,7 +483,7 @@ export class SleekRenderer {
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
     this.balls.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.bounce.sync(game, w2s, scale);
-    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold, rctx.accentColor);
+    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 
     // Composed after the layers so it sees this frame's walls, and committed
@@ -548,7 +548,7 @@ export class SleekRenderer {
     this.walls.sync(game, flat, sink, w2s, scale);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
     this.balls.sync(game, flat, sink, w2s, scale, now);
-    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold, rctx.accentColor);
+    this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);
     sink.clear();
     this.staticDirty = false;
 

@@ -17,7 +17,7 @@ import { Container, Graphics } from "pixi.js";
 import { ChromeLayer } from "@/lib/rendering/sleek/chromeLayer";
 import { lightScope } from "@/lib/rendering/sleek/light";
 import {
-  edgeGeometry, edgeLook, edgeWake, EDGE_WAKE_REACH, rimEdges,
+  edgeGeometry, edgeLook, edgeWake, EDGE_WAKE_REACH,
 } from "@/lib/rendering/sleek/edgeCue";
 import { PALETTE } from "@/lib/rendering/sleek/palette";
 import { BOARD_SIDES, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
@@ -25,8 +25,6 @@ import { createRectPolygon } from "@/lib/polygon";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { LADDER } from "./fixtures/maps";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 const BOUNDS = { minX: 45, minY: 45, maxX: 855, maxY: 855 };
 
@@ -254,72 +252,5 @@ describe("level 14 is legible", () => {
     expect(looks[1]!.direction).toEqual({ x: 0, y: -1 });
     expect(looks[2]!.direction).toEqual({ x: 1, y: 0 });
     expect(looks[3]!.direction).toEqual({ x: -1, y: 0 });
-  });
-});
-
-/**
- * The standard rim: the live-wall look, on every map.
- *
- * Reported as "level 17 looks amazing, but level 1 and the other early ones
- * still look bad. I want this to be the standard look for the whole game". The
- * difference was this cue: a coloured rail on the play area's edge with a glow
- * falling inward. Ordinary maps only had a rim round the board rect, which the
- * 3D board's outer wall covers. Every map now gets the rail, in the band's
- * accent, and a live side keeps its own colour and chevrons on top.
- */
-describe("rimEdges", () => {
-  // Clockwise on screen (y down), the order the arena is built in.
-  const square = [{ x: 45, y: 45 }, { x: 855, y: 45 }, { x: 855, y: 855 }, { x: 45, y: 855 }];
-
-  it("traces every side of a square play area, pointing into it", () => {
-    const edges = rimEdges(square);
-    expect(edges.map(e => e.side)).toEqual(["top", "right", "bottom", "left"]);
-    const rounded = edges.map(e => ({ x: Math.round(e.inward.x) + 0, y: Math.round(e.inward.y) + 0 }));
-    expect(rounded).toEqual([{ x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }, { x: 1, y: 0 }]);
-  });
-
-  it("points inward whichever way the outline is wound", () => {
-    const ccw = [...square].reverse();
-    for (const e of rimEdges(ccw)) {
-      const mid = { x: (e.start.x + e.end.x) / 2 + e.inward.x * 10, y: (e.start.y + e.end.y) / 2 + e.inward.y * 10 };
-      expect(mid.x).toBeGreaterThan(45);
-      expect(mid.x).toBeLessThan(855);
-      expect(mid.y).toBeGreaterThan(45);
-      expect(mid.y).toBeLessThan(855);
-    }
-  });
-
-  it("traces a bent board exactly, and only names the edges that lie on a side", () => {
-    // An L: the inner corner's two edges are not on any board side, and their
-    // inward normals must point into the L, not towards its centroid.
-    const l = [
-      { x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 200 },
-      { x: 200, y: 200 }, { x: 200, y: 400 }, { x: 0, y: 400 },
-    ];
-    const edges = rimEdges(l);
-    expect(edges).toHaveLength(6);
-    expect(edges.map(e => e.side)).toEqual(["top", "right", null, null, "bottom", "left"]);
-    // The inner horizontal edge (400,200)->(200,200) faces up, into the arm.
-    expect(edges[2].inward.y).toBeCloseTo(-1);
-    // The inner vertical edge (200,200)->(200,400) faces left, into the stem.
-    expect(edges[3].inward.x).toBeCloseTo(-1);
-  });
-
-  it("draws nothing for a degenerate outline", () => {
-    expect(rimEdges([])).toEqual([]);
-    expect(rimEdges([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toEqual([]);
-  });
-});
-
-describe("the rim and the live walls", () => {
-  const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
-
-  it("draws the rim on the play area in the band's accent, and leaves live sides to their own cue", () => {
-    const chrome = read("src/lib/rendering/sleek/chromeLayer.ts");
-    expect(chrome).toContain("rimEdges(outline.vertices)");
-    expect(chrome).toMatch(/edge\.side && specs && edgeLook\(edge\.side, specs\[edge\.side\]\)/);
-    // The renderer hands the chrome the band's accent, in both of its passes.
-    const sleek = read("src/lib/rendering/sleek/SleekRenderer.ts");
-    expect(sleek.match(/rctx\.spaceThreshold, rctx\.accentColor\)/g)?.length).toBe(2);
   });
 });

@@ -24,8 +24,7 @@ import { boardAngleFor } from "@/lib/boardTilt";
 import { polygonBounds } from "@/lib/polygon";
 import { BOARD_SIDES } from "@/lib/physics/boardEdges";
 import { gravityCue, pullEdge, URGENT_SECONDS } from "./gravityCue";
-import { edgeGeometry, edgeLook, edgeWake, rimEdges, type Vec } from "./edgeCue";
-import { visibleOutline } from "@/lib/headStartStrip";
+import { edgeGeometry, edgeLook, edgeWake, type Vec } from "./edgeCue";
 
 /** Ball speed (as a fraction of the danger threshold) before the frame shows. */
 const DANGER_FLOOR = 0.55;
@@ -55,9 +54,9 @@ function screenDir(w2s: (x: number, y: number) => Vec, at: Vec, d: Vec): Vec {
  * same rule the rest of this renderer follows for diagonals.
  */
 function bandQuad(g: Graphics, a: Vec, c: Vec, inward: Vec, t: number, colour: number, alpha: number): void {
-if (alpha <= 0.005 || t <= 0) {
-  return;
-}
+  if (alpha <= 0.005 || t <= 0) {
+    return;
+  }
   const pts: Vec[] = [
     a, c,
     { x: c.x + inward.x * t, y: c.y + inward.y * t },
@@ -105,10 +104,8 @@ export class ChromeLayer {
     scale: number,
     now: number,
     spaceThreshold: number,
-    accentColor = "#00ff88",
   ): void {
-    const accent = Number.parseInt(accentColor.replace("#", ""), 16);
-    this.drawRim(game, light, w2s, scale, now, Number.isFinite(accent) ? accent : PALETTE.accent);
+    this.drawRim(game, light, scale, now);
     this.drawEdges(game, w2s, scale, now);
     this.drawDanger(game, scale, now);
     this.drawGravity(game, scale, now);
@@ -116,55 +113,35 @@ export class ChromeLayer {
   }
 
   /**
-   * The perimeter: a coloured rail on the play area's own edge, with a soft
-   * glow falling inward onto the floor.
-   *
-   * This is the live-wall look (drawEdges) made standard. The rim used to be
-   * three strokes round the BOARD RECT, which sits a margin outside the play
-   * area; under the 3D board that line is beneath the outer wall, so an
-   * ordinary map showed only the wall block, and the only maps with a crisp,
-   * lit edge were the ones whose walls were live. Reported as "level 17 looks
-   * amazing, level 1 and the other early ones still look bad".
-   *
-   * It speaks in the band's accent, the colour of the HUD and the fences,
-   * never in a live wall's colours: orange, grey and cyan each SAY something
-   * a side does to a ball, and an ordinary wall that wore one would teach a
-   * rule the map does not have. A live side is left to drawEdges, which adds
-   * its own colour, chevrons and the flare as a ball arrives - the two
-   * channels that keep it separable from this rail.
+   * The perimeter. Three concentric strokes stand in for a baked glow: a wide
+   * faint halo, a mid band, then one crisp hairline exactly on the boundary.
+   * Only the hairline is pixel-snapped - snapping the halos would make them
+   * jump a pixel as the board resizes, and nobody can see a halo's exact edge
+   * anyway.
    */
-  private drawRim(
-    game: CanvasGameState,
-    light: LightScope,
-    w2s: (x: number, y: number) => Vec,
-    scale: number,
-    now: number,
-    accent: number,
-  ): void {
+  private drawRim(game: CanvasGameState, light: LightScope, scale: number, now: number): void {
+    const { left, top, width, height } = game.boardRect;
     const g = this.rim;
     g.clear();
 
-    const outline = visibleOutline(game);
-    if (!outline) {
-      return;
-    }
-    const specs = game.boardEdges;
-    const breathe = 0.85 + 0.15 * Math.sin(now * 0.0014);
+    const breathe = 0.8 + 0.2 * Math.sin(now * 0.0014);
     const level = breathe * light.level;
-    const band = Math.max(3, 9 * scale);
-    const rail = snapWidth(Math.max(2, 3 * scale));
 
-    for (const edge of rimEdges(outline.vertices)) {
-      // A live side says more than this rail does, so it owns that side.
-      if (edge.side && specs && edgeLook(edge.side, specs[edge.side])) {
-        continue;
-      }
-      const a = w2s(edge.start.x, edge.start.y);
-      const c = w2s(edge.end.x, edge.end.y);
-      const inward = screenDir(w2s, edge.start, edge.inward);
-      bandQuad(g, a, c, inward, band * 2.4, accent, 0.05 * level);
-      bandQuad(g, a, c, inward, band, accent, 0.12 * level);
-      bandQuad(g, a, c, inward, rail, accent, 0.75 * level);
+    g.rect(left, top, width, height).stroke({ width: 10 * scale, color: PALETTE.accent, alpha: 0.08 * level });
+    g.rect(left, top, width, height).stroke({ width: 4 * scale, color: PALETTE.accent, alpha: 0.22 * level });
+
+    const r = snapRect(left, top, width, height);
+    g.rect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
+      .stroke({ width: hairline(), color: PALETTE.accent, alpha: 0.85 * level });
+
+    // Corner ticks: a console bezel cue, and they make the board feel mounted
+    // rather than floating.
+    const size = snapWidth(6 * scale);
+    for (const [cx, cy] of [
+      [r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height],
+    ] as [number, number][]) {
+      const q = snapRect(cx - size / 2, cy - size / 2, size, size);
+      g.rect(q.x, q.y, q.width, q.height).fill({ color: PALETTE.accent, alpha: 0.9 * level });
     }
   }
 
