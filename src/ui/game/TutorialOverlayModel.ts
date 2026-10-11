@@ -72,6 +72,18 @@ export function arrowBob(pulse: number, up: boolean): number {
   return (up ? -14 : 14) * pulse;
 }
 
+/** The arrow's full size. */
+export const ARROW_W = 60;
+export const ARROW_H = 220;
+
+/**
+ * How far the arrow is scaled down to fit a box `boxHeight` tall (never up).
+ * 1 until the box has been laid out.
+ */
+export function arrowScale(boxHeight: number): number {
+  return boxHeight > 0 ? Math.min(1, boxHeight / ARROW_H) : 1;
+}
+
 /** The arrow (60x220): a shaft and a head pointing up or down, as fill polygons. */
 export function arrowShape(up: boolean): { shaft: Rect; head: number[] } {
   return up

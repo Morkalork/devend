@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  SCRIM_ALPHA, arrowBob, arrowShape, scrimBands, spotlightHole, spotlightSeparator, tutorialCardWidth, tutorialSpotlight,
+  ARROW_H, SCRIM_ALPHA, arrowBob, arrowScale, arrowShape, scrimBands, spotlightHole, spotlightSeparator, tutorialCardWidth, tutorialSpotlight,
 } from "@/ui/game/TutorialOverlayModel";
 
 const SCREEN = { width: 400, height: 800 };
@@ -66,5 +66,17 @@ describe("the tutorial spotlight", () => {
   it("caps the card at max-w-md inside the side padding", () => {
     expect(tutorialCardWidth(1000)).toBe(448);
     expect(tutorialCardWidth(360)).toBe(312);
+  });
+});
+
+describe("the arrow on a short screen", () => {
+  it("keeps its full size when there is room, and before layout", () => {
+    expect(arrowScale(0)).toBe(1);
+    expect(arrowScale(ARROW_H)).toBe(1);
+    expect(arrowScale(ARROW_H * 2)).toBe(1);
+  });
+
+  it("shrinks to the room it is given rather than running into the strip", () => {
+    expect(arrowScale(ARROW_H / 2)).toBeCloseTo(0.5);
   });
 });

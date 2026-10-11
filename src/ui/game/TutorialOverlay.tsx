@@ -5,14 +5,16 @@
  * spotlight the scrim leaves the top or bottom strip clear, frames it in the
  * accent and points a bobbing arrow at it.
  */
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
+import type { LayoutContainer } from "@pixi/layout/components";
 import type { Graphics } from "pixi.js";
 import { useTranslation } from "react-i18next";
 import { Appear, Label, Pressable, RADIUS, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { GlowFrame } from "./modalParts";
+import { useBoxSize } from "./modalMotion";
 
 import {
-  arrowBob, arrowShape, scrimBands, spotlightHole, spotlightSeparator, tutorialCardWidth, tutorialSpotlight,
+  ARROW_H, ARROW_W, arrowBob, arrowScale, arrowShape, scrimBands, spotlightHole, spotlightSeparator, tutorialCardWidth, tutorialSpotlight,
 } from "./TutorialOverlayModel";
 
 interface TutorialOverlayProps {
@@ -62,6 +64,12 @@ export function TutorialOverlay({
   // The arrow bobs on a 1.3s ease; the card's glow breathes every 2.4s.
   const bobPulse = usePulse(1300, visible && hasSpotlight);
   const glowPulse = usePulse(2400, visible);
+  // The arrow gives way when the card and the strip leave it less than its
+  // full height (a short phone with a tall bottom strip): it shrinks rather
+  // than running into the strip it points at.
+  const arrowBox = useRef<LayoutContainer | null>(null);
+  const arrowSize = useBoxSize(arrowBox);
+  const arrowK = arrowScale(arrowSize.h);
 
   // The scrim, and with a spotlight, the glowing frame around the clear strip
   // and the glowing separator at its edge.
@@ -99,10 +107,10 @@ export function TutorialOverlay({
 
   const wide = screen.width >= 640;
   const arrow = (
-    <View layout={{ alignItems: "center" }}>
-      <View layout={{ width: 60, height: 220 }}>
-        <pixiGraphics draw={drawArrow} y={arrowBob(bobPulse, isArrowUp)} />
-      </View>
+    <View layout={{ alignItems: "center", flexShrink: 1, minHeight: ARROW_H * 0.4 }}>
+      <layoutContainer ref={arrowBox} eventMode="passive" layout={{ width: ARROW_W, height: ARROW_H, flexShrink: 1 }}>
+        <pixiGraphics draw={drawArrow} scale={arrowK} x={(ARROW_W * (1 - arrowK)) / 2} y={arrowBob(bobPulse, isArrowUp)} />
+      </layoutContainer>
     </View>
   );
 
