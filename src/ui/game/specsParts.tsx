@@ -18,7 +18,7 @@ export function SpecsPara({ text, color, alpha, layout, relaxed = true }: {
   return <SpecsText text={text} size={TEXT.xs} color={color} alpha={alpha} wrap lineHeight={relaxed ? 20 : undefined} layout={layout} />;
 }
 
-/** A section heading: Michroma, upper-case, wide-tracked, the accent at 0x88. */
+/** A section heading: the display face, upper-case, wide-tracked, the accent at 0x88. */
 export function SpecsHeading({ text, accent }: { text: string; accent: number }) {
   return (
     <Label text={text} font="display" upper size={11} weight="700" letterSpacing={1.7}

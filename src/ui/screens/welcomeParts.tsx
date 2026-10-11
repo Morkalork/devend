@@ -16,7 +16,7 @@ import {
 // ── Title ──────────────────────────────────────────────────────────────────
 
 /**
- * `.game-title animate-pulse-glow`: Michroma, a primary-to-deep-green gradient,
+ * `.game-title animate-pulse-glow`: Michroma (FONT.logo), a primary-to-deep-green gradient,
  * and a glow that breathes between 15px and 30px. The breathing is a second,
  * blurrier copy behind the title whose opacity pulses, so the text itself is
  * not re-rasterised every frame.
@@ -24,7 +24,7 @@ import {
 export function GameTitle({ text, size = 48 }: { text: string; size?: number }) {
   const pulse = usePulse(2000);
   const front = useMemo(() => new TextStyle({
-    fontFamily: FONT.display, fontSize: size, fontWeight: "900", letterSpacing: size * 0.05,
+    fontFamily: FONT.logo, fontSize: size, fontWeight: "900", letterSpacing: size * 0.05,
     fill: new FillGradient({
       type: "linear", start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, textureSpace: "local",
       colorStops: [{ offset: 0, color: COLOR.primary }, { offset: 1, color: COLOR.primaryDeep }],
@@ -33,7 +33,7 @@ export function GameTitle({ text, size = 48 }: { text: string; size?: number }) 
     padding: 32,
   }), [size]);
   const back = useMemo(() => new TextStyle({
-    fontFamily: FONT.display, fontSize: size, fontWeight: "900", letterSpacing: size * 0.05,
+    fontFamily: FONT.logo, fontSize: size, fontWeight: "900", letterSpacing: size * 0.05,
     fill: COLOR.primary,
     dropShadow: { color: COLOR.primary, blur: 30, distance: 0, alpha: 0.7 },
     padding: 32,
@@ -50,7 +50,7 @@ export function GameTitle({ text, size = 48 }: { text: string; size?: number }) 
 // ── Screen heading ─────────────────────────────────────────────────────────
 
 /**
- * A menu screen's heading: an icon and a Michroma title side by side, centred.
+ * A menu screen's heading: an icon and a display-face title side by side, centred.
  * A title too long for `maxWidth` (a long translation, a narrow phone) wraps
  * under itself instead of running off the screen, as the DOM's h1 did; a
  * single word that does not fit is scaled down to the room.

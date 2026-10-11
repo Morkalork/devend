@@ -18,6 +18,13 @@ export interface TextLook {
   glow?: number;
 }
 
+/**
+ * Oxanium's default weight. Michroma came in one weight, so most display
+ * labels never set one; Oxanium at its lightest bundled weight (500) reads
+ * thin at the sizes buttons use, so an unset weight means semibold.
+ */
+export const DISPLAY_WEIGHT: TextStyleFontWeight = "600";
+
 export const RESOLUTION = typeof window !== "undefined" ? Math.min(3, window.devicePixelRatio || 1) : 1;
 
 export function textStyle(p: TextLook): TextStyle {
@@ -25,7 +32,7 @@ export function textStyle(p: TextLook): TextStyle {
   return new TextStyle({
     fontFamily: FONT[p.font ?? "body"],
     fontSize: size,
-    fontWeight: p.weight ?? "400",
+    fontWeight: p.weight ?? (p.font === "display" ? DISPLAY_WEIGHT : "400"),
     fill: p.color ?? COLOR.foreground,
     align: p.align ?? "left",
     wordWrap: !!p.wrap,

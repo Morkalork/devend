@@ -62,6 +62,9 @@ board's flat marks into it and its effects over it, and is the fallback), and
 **CANVAS_UI_PLAN.md** for the design and build record of the canvas
 interface: the whole game interface except Admin, moved from React DOM onto
 one full-screen Pixi canvas over the board (built), and
+**UI_REDO_PLAN.md** for the redo of the menus and between-map screens
+(direction B, "Pipeline": one between-map screen of stages on a rail; Oxanium
+for display, Michroma for the logo only; phase 1 built), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions

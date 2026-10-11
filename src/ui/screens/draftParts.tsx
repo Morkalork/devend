@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import type { TextStyleFontWeight } from "pixi.js";
 import type { LucideIcon } from "lucide-react";
 import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen } from "../kit/ui";
+import { fitTextWidth } from "../kit/arcadeStyle";
 import type { FontRole } from "../theme";
 import { DRAFT_HINT, DRAFT_TEXT, SM_BREAKPOINT, draftColumns, gridRows, richWords, type RichRun } from "./draftModel";
 
@@ -167,10 +168,12 @@ interface RichParagraphProps {
  * themselves, so a centred icon-and-text line can wrap beside its icon.
  */
 export function RichParagraph({
-  runs, size, color, align = "center", font, weight = "400", upper, letterSpacing, glow, lead, leadGap, lineGap = Math.round(size * 0.1),
+  runs, size, color, align = "center", font, weight, upper, letterSpacing, glow, lead, leadGap, lineGap = Math.round(size * 0.1),
 }: RichParagraphProps) {
-  // One space of the face (Michroma's is wide), plus the tracking it carries.
-  const space = Math.round(size * (font === "display" ? 0.4 : 0.28) + (letterSpacing ?? 0));
+  // One space of the face as it actually measures, plus the tracking it
+  // carries. It was a fixed share of the size tuned for Michroma, whose space
+  // is far wider than Oxanium's.
+  const space = Math.round(fitTextWidth(" ", { size, font, weight }) + (letterSpacing ?? 0));
   return (
     <View layout={{
       alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space, rowGap: lineGap,

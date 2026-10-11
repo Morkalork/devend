@@ -31,7 +31,8 @@ function Preview({ onClose, onGallery }: { onClose: () => void; onGallery: () =>
         <Appear fromY={12}>
           <View layout={{ padding: 16, gap: 8, borderRadius: RADIUS.lg, backgroundColor: COLOR.card, borderColor: COLOR.border, borderWidth: 1 }}>
             <Label text="Type" size={TEXT.xs} color={COLOR.mutedForeground} upper letterSpacing={1.5} />
-            <Label text="Michroma display" font="display" size={TEXT.lg} />
+            <Label text="Dev/End" font="logo" size={TEXT.lg} />
+            <Label text="Oxanium display" font="display" size={TEXT.lg} />
             <Label text="Space Grotesk body text that wraps across the card width when it is long enough to need more than one line." wrap />
             <Label text="JetBrains Mono 0123456789" font="mono" color={COLOR.primary} />
             <View layout={{ flexDirection: "row", gap: 8, alignItems: "center" }}>

@@ -16,6 +16,7 @@ import { TenureDraftScreen } from "../../screens/TenureDraftScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
 import { AscensionDraftScreen } from "../../screens/AscensionDraftScreen";
+import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
 
 const ACCENT = "#00ff88";
 const noop = () => {};
@@ -143,6 +144,9 @@ const ladder: AscensionRung[] = [
 ];
 
 export const entries: GalleryEntry[] = [
+  // The UI redo's pipeline pieces, assembled (pipelineSample.tsx). Not yet the game's screen.
+  { id: "Pipeline-debrief", group: "screen", render: () => <PipelineDebriefSample /> },
+  { id: "Pipeline-store", group: "screen", render: () => <PipelineStoreSample /> },
   {
     id: "LevelCompleteOverlay", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT}
