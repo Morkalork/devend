@@ -621,6 +621,14 @@ export interface CanvasGameState {
   lockBonus: number;
   /** What each lock paid, by ball id, for the end-of-map debrief (lib/scoreDebrief.ts). */
   lockPayouts?: Record<string, import("@/types/debrief").LockPayout>;
+  /**
+   * Bumped whenever a blast carves the map's walls (physics/blastCarve.ts), so
+   * renderer caches keyed on the obstacle list rebuild even when the count of
+   * obstacles did not change.
+   */
+  obstacleVersion?: number;
+  /** Ids for the pieces a blast leaves of a carved wall. Per map. */
+  blastPieceSeq?: number;
   /** A shard bomb's blast (lib/bombCore.ts): its reach and the blow it deals; null = shard bombs off. */
   shardBombBlast?: { radius: number; damage: number } | null;
   /** The end-of-map debrief, built when the map is won; null until then. */

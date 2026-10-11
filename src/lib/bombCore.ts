@@ -91,7 +91,7 @@ export interface ShardBombConfig {
   blastDamage: number;
 }
 
-export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = { chance: 0.1, blastRadius: 70, blastDamage: 1.5 };
+export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = { chance: 0.1, blastRadius: 100, blastDamage: 1.5 };
 
 /** Which shards a map pins (`bomb: true`) or keeps clear (`bomb: false`). */
 export function authoredShardBombs(level: Pick<LevelConfig, "entities">): Map<string, boolean> {

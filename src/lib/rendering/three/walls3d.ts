@@ -124,7 +124,7 @@ export class Walls3D {
   private geometry: BoxGeometry;
   private runs: WallRun[] = [];
   private cache: ClipCache = new WeakMap();
-  private cacheKey = -1;
+  private cacheKey = "";
   private m = new Matrix4();
   private q = new Quaternion();
   private p = new Vector3();
@@ -150,10 +150,12 @@ export class Walls3D {
 
   /** Rebuild the instance list. Returns the mesh, which may be a new one. */
   sync(game: CanvasGameState, heightScale: number): InstancedMesh {
-    // Destructibles leaving changes the clip of every fence through them.
-    if (this.cacheKey !== game.obstaclePolygons.length) {
+    // Destructibles leaving changes the clip of every fence through them, and
+    // so does a blast carving a wall (which can leave the count unchanged).
+    const key = `${game.obstaclePolygons.length}:${game.obstacleVersion ?? 0}`;
+    if (this.cacheKey !== key) {
       this.cache = new WeakMap();
-      this.cacheKey = game.obstaclePolygons.length;
+      this.cacheKey = key;
     }
     return this.syncRuns(collectWallRuns(game, heightScale, this.runs, this.cache));
   }

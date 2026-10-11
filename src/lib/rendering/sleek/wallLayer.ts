@@ -187,7 +187,7 @@ export class WallLayer {
     // fence against a board outline and a set of obstacle holes that have since
     // rotated away, which plays exactly like an invisible object breaking fence
     // generation. See transformKey.
-    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}_${intangible.size}`
+    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}_${game.obstacleVersion ?? 0}_${intangible.size}`
       + `_${transformKey(w2s)}`;
     if (key === this.fenceMaskKey) return;
     this.fenceMaskKey = key;

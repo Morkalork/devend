@@ -235,10 +235,11 @@ bugs:
 shard_bombs:
   # Chance an eligible shard carries one.
   chance: 0.1
-  # How far the blast reaches, world units, from the shard's centre to the
-  # nearest edge of a neighbour. Level 17's bricks are 60x22: this takes the
-  # bricks touching it on every side, and the diagonals.
-  blast_radius: 70
+  # How far the blast reaches, world units, from the shard's centre: to the
+  # nearest edge of a neighbour it strikes, and the radius of the hole it blows
+  # in fences, the map's walls and the claimed ground (physics/blastCarve.ts).
+  # Level 17's bricks are 60x22: this takes the bricks round it, more than one deep.
+  blast_radius: 100
   # The blow a slab or chest in reach takes. A ball head-on at base speed does
   # about 1, so this is a hard hit: it chips a slab and opens a bomb box's hull.
   blast_damage: 1.5
