@@ -22,13 +22,12 @@
  *
  * The rest of these check the claims that remain, against the code that makes
  * them true. A card is the only place most of these numbers are ever stated.
+ * What the card itself draws is checked in canvas/AbilityInfoModal.test.ts.
  */
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import "@/i18n";
-import { AbilityInfoModal } from "@/components/game/AbilityInfoModal";
 import { getAllAbilities, getAbility } from "@/lib/abilities";
 import { LOOT_TTL_SECONDS } from "@/lib/chests";
 
@@ -36,16 +35,7 @@ const LOCALES = ["en", "es", "sv"] as const;
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const locale = (loc: string) => JSON.parse(read(`src/i18n/locales/${loc}.json`));
 
-afterEach(cleanup);
-
 describe("the acquisition footer", () => {
-  it("is gone from the card", () => {
-    render(<AbilityInfoModal ability={getAbility("slowAll")!} onClose={() => {}} />);
-    expect(screen.queryByText(/smash a box/i), "the stale hint is still drawn").toBeNull();
-    expect(screen.queryByText(/gem/i)).toBeNull();
-    expect(screen.queryByText(/2 seconds/i)).toBeNull();
-  });
-
   it("is gone from every locale, not just the one that was read", () => {
     for (const loc of LOCALES) {
       expect(
@@ -61,14 +51,6 @@ describe("the acquisition footer", () => {
     const src = read("src/lib/chests.ts");
     expect(src).toMatch(/reward is banked the moment the chest breaks/);
     expect(LOOT_TTL_SECONDS).toBeGreaterThan(0);   // still a fade, no longer a race
-  });
-
-  it("leaves the card saying what it does and how to use it", () => {
-    // Deleting the footer must not leave an empty box: those two are the card.
-    render(<AbilityInfoModal ability={getAbility("slowAll")!} onClose={() => {}} />);
-    expect(screen.getByText(/Slows every ball/i)).toBeTruthy();
-    expect(screen.getByText(/HOW TO USE/i)).toBeTruthy();
-    expect(screen.getByText(/line up your cuts/i)).toBeTruthy();
   });
 });
 

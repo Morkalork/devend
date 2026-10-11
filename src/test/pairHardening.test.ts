@@ -53,7 +53,7 @@ describe("the host election", () => {
   });
 
   it("is decided after the hello, not before it", () => {
-    const src = read("src/components/game/PairLobby.tsx");
+    const src = read("src/ui/screens/PairLobby.tsx");
     const handshake = src.slice(src.indexOf("const completeHandshake"), src.indexOf("const startNearby"));
     // The anchor is the AWAIT, not the first mention of the id: the election
     // names that id itself, so "first mention" is the election. The guest may
@@ -230,7 +230,7 @@ describe("a pair run does not take over the solo ladder", () => {
 
 describe("Nearby cannot be raced into two connections", () => {
   it("keeps the first offer and guards the accept", () => {
-    const src = read("src/components/game/PairLobby.tsx");
+    const src = read("src/ui/screens/PairLobby.tsx");
     expect(src, "a second offer replaces the first").toMatch(/setToken\(prev => prev \?\? e\)/);
     expect(src, "the accept can be tapped twice").toMatch(/disabled=\{accepting\}/);
   });

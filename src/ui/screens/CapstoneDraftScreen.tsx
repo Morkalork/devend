@@ -16,7 +16,7 @@ import { Appear, Icon, Label, Modal, ScrollView, TEXT, View, hex, tint, useUiScr
 import { TagChip } from "../game/TagChip";
 import { DraftCard } from "./DraftCard";
 import { DraftFrame, DraftGrid, DraftHeader, IconRow, TopRule } from "./draftParts";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
 interface CapstoneDraftScreenProps {

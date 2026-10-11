@@ -2,12 +2,22 @@
  * What the board overlays decide, as pure functions: the canvas components
  * draw these, and the tests read them without a canvas.
  */
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
 import { deadlineColor, deadlineMilestone } from "@/lib/deadlineDisplay";
 import type { LockDecision } from "@/lib/lockDiagnostics";
 import type { TurnView } from "@/lib/net/pairTurn";
 import { cssHex } from "./fxModel";
 import type { Pt } from "./boardDraw";
+
+/** The drawn board in CSS pixels, relative to the canvas container (GameCanvas's boardFrameCss). */
+export interface BoardFrameCss {
+  /** Outer edge of the frame. */
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  /** How thick the frame band is, so the arena sits exactly inside it. */
+  frame: number;
+}
 
 // ── BoardAlert / WinGateFrame ──────────────────────────────────────────────
 

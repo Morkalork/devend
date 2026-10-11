@@ -8,20 +8,13 @@
  *
  * The summary is derived from the save rather than tracked beside it, so the
  * tests here are mostly about it staying in step: written on save, gone on
- * clear, and read back from storage on a fresh boot.
+ * clear, and read back from storage on a fresh boot. What the menu does with
+ * it is checked in canvas/WelcomeScreen.test.ts.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useRunSave } from "@/hooks/useRunSave";
-import { WelcomeScreen } from "@/components/game/WelcomeScreen";
 import type { RunSaveInput } from "@/hooks/useRunSave";
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, vars?: Record<string, unknown>) =>
-      vars ? `${key}:${Object.values(vars).join(",")}` : key,
-  }),
-}));
 
 /** A save the loader will accept: it validates the level sequence and index. */
 const baseSave = (over: Partial<RunSaveInput> = {}): RunSaveInput => ({
@@ -99,32 +92,5 @@ describe("the saved run summary", () => {
     delete (legacy as Record<string, unknown>).ascensionDepth;
     act(() => { result.current.saveRun(legacy); });
     expect(result.current.savedRun?.ascensionDepth).toBe(0);
-  });
-});
-
-describe("what the menu shows", () => {
-  const menu = (props: Record<string, unknown> = {}) =>
-    render(
-      <WelcomeScreen
-        onStartGame={() => {}}
-        onTutorial={() => {}}
-        onOptions={() => {}}
-        {...props}
-      />,
-    );
-
-  it("says nothing about ascension on an unascended save", () => {
-    menu({ onContinue: () => {}, savedRunAscension: 0 });
-    expect(screen.queryByText(/ascension\.ladderTitle/)).toBeNull();
-  });
-
-  it("names the depth waiting behind Continue", () => {
-    menu({ onContinue: () => {}, savedRunAscension: 4 });
-    expect(screen.getByText("ascension.ladderTitle:4")).toBeTruthy();
-  });
-
-  it("says nothing when there is no save to continue", () => {
-    menu({ savedRunAscension: 4 });
-    expect(screen.queryByText(/ascension\.ladderTitle/)).toBeNull();
   });
 });

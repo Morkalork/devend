@@ -19,7 +19,8 @@ import type { MusicCatalogue } from "@/types/music";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton, MenuHeading, Spinner } from "./welcomeParts";
+import { MenuHeading, Spinner } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import { SeekBar } from "./jukeboxParts";
 import { openExternal, trackCredit, trackReadout, useJukeboxPlayer } from "./jukeboxPlayer";
 

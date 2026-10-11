@@ -46,13 +46,13 @@ import { PROTOCOL_VERSION } from "@/lib/net/lockstep";
 import { BUILD_SHA } from "@/lib/buildInfo";
 import type { NetMessage, Transport } from "@/lib/net/transport";
 import type { PlayerId } from "@/lib/net/commands";
-import type { PairedSession, PairPhase } from "@/components/game/PairLobby";
+import type { PairedSession } from "@/lib/net/transport";
 import {
   COLOR, Icon, Label, Modal, Pressable, RADIUS, ScrollView, TEXT, View, tint, usePulse, useUiScreen, type IconSource,
 } from "../kit/ui";
 import {
   COPIED_RESET_MS, NAP_ICON, PAIR_AMBER, copyOutcome, napTextKey, napTipKey, napTone, napWorthShowing,
-  permissionKey, qrGeometry, qrMatrix, qrRuns, routeKey, useServerNap, type CopyState,
+  permissionKey, qrGeometry, qrMatrix, qrRuns, routeKey, useServerNap, type CopyState, type PairPhase,
 } from "./pairLobbyModel";
 import { Spinner } from "./welcomeParts";
 

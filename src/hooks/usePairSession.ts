@@ -25,7 +25,7 @@ import { modifierHash } from "@/lib/net/stateHash";
 import { setCommandSink, setLocalPlayer, type GameCommand, type PlayerId } from "@/lib/net/commands";
 import { setRunSeedText } from "@/lib/runRng";
 import type { NetMessage, Transport } from "@/lib/net/transport";
-import type { PairedSession } from "@/components/game/PairLobby";
+import type { PairedSession } from "@/lib/net/transport";
 import { getDeviceId, pairIdFor } from "@/lib/net/deviceId";
 import { chooseSave, usePairRunSave, type PairRunSave, type PairSaveOffer } from "@/hooks/usePairRunSave";
 import type { RunSave } from "@/hooks/useRunSave";

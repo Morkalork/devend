@@ -12,7 +12,7 @@ import { getAllBugs } from "@/lib/bugs";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import { BallSwatch, BugSwatch } from "./tutorialScreenParts";
 import { ballRoster, bugRoster, controlRows, lifeCycleSteps, tutorialSteps, type TutorialStep } from "./tutorialScreenModel";
 

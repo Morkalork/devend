@@ -14,6 +14,15 @@ import { getSimulatedNap, type SimulatedNap } from "@/lib/devFlags";
 import type { PairRoute } from "@/lib/net/relay";
 import { COLOR } from "../theme";
 
+/** Where the 2-Player screen is in a pairing. */
+export type PairPhase =
+  | "choose"        // host, or find nearby
+  | "hosting"       // showing the code, waiting
+  | "joining"       // answering an offer we arrived with
+  | "nearby"        // the radios are looking
+  | "connected"
+  | "failed";
+
 // ── QR code ────────────────────────────────────────────────────────────────
 
 /** Quiet zone around the code, in modules (the DOM's `margin: 2`). */

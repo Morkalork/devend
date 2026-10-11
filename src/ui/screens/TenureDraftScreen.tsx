@@ -18,7 +18,7 @@ import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, TEXT, View, hex } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
 import { DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 import { DRAFT_HINT, DRAFT_TEXT, toggleSelection } from "./draftModel";
 
 interface TenureDraftScreenProps {

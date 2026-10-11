@@ -81,8 +81,9 @@ describe("both readers ask the same question", () => {
     // The shelf's unlocked/locked split had its own `prerequisites.every(...)`.
     // A gate added to isLocked and not to that split offers a card the buy
     // button refuses, which reads as a broken shop.
+    // The canvas shop keeps its shelf rules in shopModel.ts.
     const src = readFileSync(
-      resolve(process.cwd(), "src/components/game/UpgradeShop.tsx"), "utf8");
+      resolve(process.cwd(), "src/ui/screens/shopModel.ts"), "utf8");
     expect(src).toMatch(/prerequisitesMet\(u, ownedUpgradeIds, byId\)/);
     expect(src, "the shelf reads prerequisites itself again")
       .not.toMatch(/u\.prerequisites\.every\(/);
@@ -211,7 +212,7 @@ describe("a locked card says WHY it is locked", () => {
   });
 
   for (const [file, path] of [
-    ["the shop", "src/components/game/UpgradeShop.tsx"],
+    ["the shop", "src/ui/screens/shopModel.ts"],
     ["the Atlas", "src/components/admin/UpgradeAtlasScreen.tsx"],
   ] as const) {
     it(`${file} asks about both gates, not just prerequisites`, () => {
@@ -257,7 +258,7 @@ describe("the shelf knows the fence bar can be full", () => {
     // Not "the module is imported": the guard was importable and dead for the
     // whole of its life, which is the bug this section is about.
     const src = readFileSync(
-      resolve(process.cwd(), "src/components/game/UpgradeShop.tsx"), "utf8");
+      resolve(process.cwd(), "src/ui/screens/shopModel.ts"), "utf8");
     expect(src).toMatch(/!fenceOfferIsEmpty\(u\.grantsFenceType, heldFenceTypeIds\)/);
     // Against the list the BAR is drawn from, not a second derivation: the held
     // set comes from three economies and two readings of it would be free to

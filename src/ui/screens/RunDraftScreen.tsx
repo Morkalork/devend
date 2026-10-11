@@ -18,7 +18,7 @@ import { contentText } from "@/i18n/content";
 import { Appear, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { DraftCard } from "./DraftCard";
 import { DraftEmpty, DraftFrame, DraftGrid, DraftHeader, IconRow } from "./draftParts";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 import { DRAFT_HINT, DRAFT_RED, DRAFT_TEXT, SM_BREAKPOINT, toggleSelection } from "./draftModel";
 
 interface RunDraftScreenProps {

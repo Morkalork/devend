@@ -7,7 +7,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import i18n from "@/i18n";
 import type { ActiveMapMutator } from "@/types/mapMutator";
-import { ANNOUNCE_MS as DOM_ANNOUNCE_MS } from "@/components/game/MapRuleBanner";
 import { ANNOUNCE_MS, mapRuleText } from "@/ui/game/mapRuleModel";
 
 const t = i18n.t.bind(i18n);
@@ -58,8 +57,9 @@ describe("the map rule banner", () => {
     expect(r.detail, "the prose never collapsed").toBeNull();
   });
 
-  it("announces for as long as the DOM banner did", () => {
-    expect(ANNOUNCE_MS).toBe(DOM_ANNOUNCE_MS);
+  it("announces for as long as the DOM banner did (5s)", () => {
+    // The DOM original is gone; its value is pinned here instead.
+    expect(ANNOUNCE_MS).toBe(5000);
   });
 });
 

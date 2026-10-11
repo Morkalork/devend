@@ -18,7 +18,7 @@ import { contentText } from "@/i18n/content";
 import type { PressHandlers } from "../kit/ui";
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { PerformanceReviewAxes } from "./PerformanceReviewAxes";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 import { Between, StatInfoModal, StatRow } from "./levelCompleteParts";
 import { RichParagraph } from "./draftParts";
 import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
@@ -383,10 +383,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <Appear fromY={10} delay={0.38} duration={0.22}>
                 <ArcadeButton
                   text={t("levelComplete.nextLevel")}
-                  trailingIcon={ArrowRight}
+                  iconAfter={ArrowRight}
                   iconSize={sm ? 20 : 16}
-                  size={sm ? TEXT.base : TEXT.sm}
-                  paddingY={sm ? 12 : 8}
+                  textSize={sm ? TEXT.base : TEXT.sm}
+                  contentLayout={{ paddingTop: sm ? 12 : 8, paddingBottom: sm ? 12 : 8 }}
                   disabled={chosen || !buttonReady}
                   onTap={() => { setChosen(true); onContinue(); }}
                 />

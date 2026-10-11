@@ -3,7 +3,7 @@
  * frame, the round header badge, the card grid and the wrapping rich text.
  * Each DOM draft screen wrote these out inline; here they are written once so
  * the four screens cannot drift apart the way their DOM markup did. (The
- * arcade button is in betweenArcadeButton.tsx.)
+ * arcade button is the kit's.)
  */
 import type { ReactNode } from "react";
 import type { TextStyleFontWeight } from "pixi.js";

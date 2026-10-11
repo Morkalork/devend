@@ -20,7 +20,8 @@ import { contentText } from "@/i18n/content";
 import {
   Appear, COLOR, Icon, Label, ProgressBar, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton, MenuHeading } from "./welcomeParts";
+import { MenuHeading } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import { lockedLoadoutProgress, loadoutGallery } from "./loadoutModel";
 
 interface LoadoutGalleryScreenProps {

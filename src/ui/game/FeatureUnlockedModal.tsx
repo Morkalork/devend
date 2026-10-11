@@ -7,9 +7,9 @@
  * Dismiss with a tap or the button. No exit animation: it simply goes.
  */
 import { useTranslation } from 'react-i18next';
-import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
+import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen, ArcadeButton } from "../kit/ui";
 import type { GameFeature } from '@/lib/features';
-import { ArcadeButton, CardShield, GlowFrame } from "./modalParts";
+import { CardShield, GlowFrame } from "./modalParts";
 import { featureAccent, featureIcon } from "./FeatureUnlockedModalModel";
 
 interface FeatureUnlockedModalProps {

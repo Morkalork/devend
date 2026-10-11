@@ -5,45 +5,19 @@
  *   - the map after every 5th is an ordinary one, so its shop opens like any
  *     other (the draft used to REPLACE the shop there);
  *   - the Specs panel's run section still shows the Promotion, the one
- *     run-defining pick that shared it with the contract.
+ *     run-defining pick that shared it with the contract (checked against the
+ *     canvas panel in canvas/TopBarDetailsPanel.test.ts).
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import fs from "fs";
 import path from "path";
 import "@/i18n";
-import { TopBarDetailsPanel } from "@/components/game/TopBarDetailsPanel";
-import { CapstoneConfig } from "@/types/capstone";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
 import { LADDER_END } from "./fixtures/maps";
 
 afterEach(cleanup);
-
-const capstone: CapstoneConfig = {
-  id: "stock_options", name: "Stock Options",
-  description: "The per-map overtime cap rises by 20h.", tag: "risk",
-  clarify: "", modifiers: {},
-} as CapstoneConfig;
-
-describe("Specs panel run section", () => {
-  const panelProps = {
-    visible: true, onClose: () => {},
-    levelNumber: 7, cutsUsed: 1, parCuts: 10, lives: 3,
-    spaceRemaining: 80, spaceRequired: 60, lockedBalls: 0,
-    ownedUpgrades: [],
-  };
-
-  it("shows the Promotion's description", () => {
-    render(<TopBarDetailsPanel {...panelProps} capstone={capstone} />);
-    expect(screen.getByText("The per-map overtime cap rises by 20h.")).toBeTruthy();
-  });
-
-  it("shows nothing from the Promotion before one is taken", () => {
-    render(<TopBarDetailsPanel {...panelProps} />);
-    expect(screen.queryByText("The per-map overtime cap rises by 20h.")).toBeNull();
-  });
-});
 
 describe("the map after every 5th (session integration)", () => {
   const PUBLIC = path.resolve(__dirname, "../../public");

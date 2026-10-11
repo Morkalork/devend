@@ -23,8 +23,9 @@ import {
   certificatesTapAction, createSecretTapCounter, dailyTapAction, highlightToAck, welcomeButtons,
   type WelcomeButtonId, type WelcomeButtonSpec,
 } from "./welcomeModel";
-import { ArcadeButton, GameTitle, MenuBall, MenuChip, NewBadge, Spinner } from "./welcomeParts";
-import { arcadeInk, arcadeTextSize } from "./welcomeStyle";
+import { GameTitle, MenuBall, MenuChip, NewBadge, Spinner } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
+import { arcadeInk, arcadeTextSize } from "../kit/ui";
 
 interface WelcomeScreenProps {
   onStartGame: () => void;

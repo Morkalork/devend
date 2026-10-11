@@ -5,6 +5,8 @@
  * rule is in those files; the short version is repeated here.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import i18n from "@/i18n";
 import type { TFunction } from "i18next";
 import type { LevelScoreData } from "@/types/game";
@@ -32,6 +34,36 @@ const scoreData: LevelScoreData = {
 const model = (over: Partial<LevelScoreData> = {}) => levelCompleteModel({ ...scoreData, ...over }, t);
 
 describe("post-map score breakdown collapses", () => {
+  const SRC = readFileSync(resolve(process.cwd(), "src/ui/screens/LevelCompleteOverlay.tsx"), "utf8");
+
+  it("hides the itemised rows by default but keeps the totals visible", () => {
+    // The fold starts closed and its header toggles it.
+    expect(SRC).toContain("const [breakdownOpen, setBreakdownOpen] = useState(false);");
+    expect(SRC).toContain("onTap={() => setBreakdownOpen(open => !open)}");
+    expect(SRC).toContain('t("levelComplete.breakdownTitle")');
+    // The itemised rows are inside the fold; the totals come after it closes.
+    const open = SRC.indexOf("{breakdownOpen && (");
+    const earned = SRC.indexOf('hold("overtimeEarned")');
+    const fold = SRC.slice(open, earned);
+    expect(open).toBeGreaterThan(0);
+    expect(fold).toContain('hold("fencesUsed")');
+    expect(fold.trimEnd(), "a total moved inside the fold").toMatch(/\)\}$/);
+    expect(SRC.indexOf('hold("totalOvertime")')).toBeGreaterThan(earned);
+  });
+
+  it("shows the Overtime row's ceiling without opening the breakdown (overtimeOutOf)", () => {
+    const earned = SRC.indexOf('hold("overtimeEarned")');
+    const suffix = SRC.indexOf("{m.overtimeSuffix && (");
+    expect(suffix, "the ceiling is not drawn on the Overtime row").toBeGreaterThan(earned);
+    expect(suffix).toBeLessThan(SRC.indexOf('hold("totalOvertime")'));
+  });
+
+  it("no longer itemises the hours the axes already reported", () => {
+    for (const row of ["threadLocks", "superiorLocks", "zoneLocks"]) {
+      expect(SRC, `the ${row} row is back`).not.toContain(`hold("${row}")`);
+    }
+  });
+
   // Closing by default would otherwise bury the good news, so the collapsed
   // header carries the bonus subtotal.
   it("shows the bonus subtotal on the collapsed header", () => {

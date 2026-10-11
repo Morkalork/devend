@@ -78,7 +78,7 @@ describe("the ascension draft is untouched", () => {
 
 describe("it can be switched back on", () => {
   it("keeps the screen it would switch back on", () => {
-    expect(existsSync(resolve(__dirname, "../components/game/RunDraftScreen.tsx"))).toBe(true);
+    expect(existsSync(resolve(__dirname, "../ui/screens/RunDraftScreen.tsx"))).toBe(true);
     expect(read("../pages/Index.tsx")).toMatch(/currentScreen === 'runDraft'/);
   });
 

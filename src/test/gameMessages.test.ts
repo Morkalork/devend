@@ -185,11 +185,10 @@ describe("the refusals actually raise one", () => {
 
 /**
  * Placement. The bar explains a failed cut, so hiding the board it failed on
- * would defeat the point.
+ * would defeat the point. (That it never takes a tap is checked against the
+ * canvas bar in canvas/GameMessageBar.test.ts.)
  */
 describe("it sits below the board", () => {
-  const BAR = readFileSync(
-    resolve(__dirname, "../components/game/GameMessageBar.tsx"), "utf8");
   const SCREEN = readFileSync(
     resolve(__dirname, "../components/game/GameScreen.tsx"), "utf8");
 
@@ -216,9 +215,5 @@ describe("it sits below the board", () => {
     expect(pickContext({
       mapComplete: false, hasMessage: true, shipEarlyVisible: false, timerCount: 0,
     })).toBe("message");
-  });
-
-  it("never eats a tap meant for the board", () => {
-    expect(BAR).toMatch(/pointer-events-none/);
   });
 });

@@ -10,17 +10,13 @@
  *
  * And the deadline, which is the most urgent state in the game, had its only
  * visual signal at the very bottom edge: the furthest point on a phone from
- * where the player is actually looking.
+ * where the player is actually looking. (The alarm over the board that fixed
+ * that is checked in canvas/BoardAlert.test.ts.)
  */
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import "@/i18n";
 import { pickContext, type ContextState } from "@/lib/hudContext";
-import { BoardAlert } from "@/components/game/BoardAlert";
-
-afterEach(cleanup);
 
 const state = (over: Partial<ContextState> = {}): ContextState => ({
   mapComplete: false, hasMessage: false, shipEarlyVisible: false, timerCount: 0, ...over,
@@ -97,55 +93,5 @@ describe("the slot's height", () => {
     expect(pushAt, "the push exit is gone").toBeGreaterThan(-1);
     expect(pushAt, "the push exit was folded into the shared slot")
       .toBeGreaterThan(slotEnd);
-  });
-});
-
-describe("the out-of-time alarm", () => {
-  it("shows nothing while there is time", () => {
-    const { container } = render(<BoardAlert urgent={false} seconds={30} />);
-    expect(container.innerHTML).toBe("");
-  });
-
-  it("appears over the board when the deadline is close", () => {
-    const { container } = render(<BoardAlert urgent seconds={7} />);
-    expect(container.firstElementChild).toBeTruthy();
-  });
-
-  it("never takes a tap", () => {
-    // The one absolute rule for anything drawn over the play area. An alert
-    // that swallows the cut which would have saved the run is worse than no
-    // alert at all.
-    const { container } = render(<BoardAlert urgent seconds={3} />);
-    expect((container.firstElementChild as HTMLElement).className)
-      .toContain("pointer-events-none");
-  });
-
-  it("is red, not the win frame's amber", () => {
-    // Both live on the board edge and a map can be unusual AND nearly out of
-    // time. Two things in one place have to differ on two channels or they read
-    // as one thing: this differs in hue and in motion.
-    const { container } = render(<BoardAlert urgent seconds={5} />);
-    const html = container.innerHTML.toLowerCase();
-    expect(html).toContain("ff6b6b");
-    expect(html, "the alarm took the win frame's colour").not.toContain("ffb347");
-  });
-
-  it("says the word through i18n rather than hardcoding it", () => {
-    render(<BoardAlert urgent seconds={5} />);
-    // Resolved through the locale files, so it is not the literal key.
-    const label = screen.getByRole("status").textContent ?? "";
-    expect(label.trim().length).toBeGreaterThan(0);
-    expect(label).not.toContain("game.timeAlarm");
-  });
-
-  it("shows the count as a flash and drops it when there is none", () => {
-    const withCount = render(<BoardAlert urgent seconds={4} />);
-    expect(withCount.container.textContent).toContain("4");
-    cleanup();
-    // Null seconds leaves the edge and the word, and no numeral: the edge is
-    // the signal, the numeral is only the moment of change.
-    const without = render(<BoardAlert urgent seconds={null} />);
-    expect(without.container.firstElementChild).toBeTruthy();
-    expect(without.container.textContent).not.toMatch(/\d/);
   });
 });

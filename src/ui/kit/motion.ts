@@ -35,3 +35,25 @@ export function usePulse(periodMs = 1600, enabled = true): number {
   return t;
 }
 
+/** Seconds since mount, ticking every animation frame while `enabled`. */
+export function useClock(enabled = true): number {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      setT((now - start) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [enabled]);
+  return t;
+}
+
+/** 0..1 sawtooth over `periodMs`: a CSS animation's progress, restarted forever. */
+export function useLoop(periodMs: number, enabled = true): number {
+  const t = useClock(enabled);
+  return ((t * 1000) % periodMs) / periodMs;
+}

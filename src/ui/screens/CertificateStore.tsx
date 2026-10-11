@@ -24,7 +24,8 @@ import {
   Appear, COLOR, Icon, Label, Pressable, ProgressBar, RADIUS, ScrollView, TEXT, View, tint, useUiScreen,
 } from "../kit/ui";
 import { TutorialOverlay } from "../game/TutorialOverlay";
-import { ArcadeButton, MenuHeading } from "./welcomeParts";
+import { MenuHeading } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import {
   buyingText, certSections, clearSelection, getUnlockInfo, levelRowState, nextLevelCost, pendingPurchase,
   projectedBalance as projectBalance, toggleExpanded, toggleLevelSelection, type UnlockContext,

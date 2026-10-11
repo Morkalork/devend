@@ -21,6 +21,7 @@ describe("the server nap readout", () => {
     // The hold's explainer.
     expect(i18n.t("pair.nap.whyTitle")).toMatch(/Why would a server sleep/);
     expect(i18n.t(napTipKey("waking"))).toBeTruthy();
+    expect(i18n.t("pair.nap.whyNap")).toMatch(/find its slippers/);
   });
 
   it("says plainly when the server cannot be reached", () => {
@@ -80,6 +81,10 @@ describe("the invitation as a link", () => {
   it("copied fades back; a failed copy stays to show the link", () => {
     expect(copyOutcome(true)).toEqual({ state: "copied", resets: true });
     expect(copyOutcome(false)).toEqual({ state: "failed", resets: false });
+    // ...and the failed state prints the link in full, to copy by hand.
+    const src = readFileSync("src/ui/screens/PairLobby.tsx", "utf8");
+    const failed = src.slice(src.indexOf('{copied === "failed" && ('));
+    expect(failed.slice(0, 600)).toContain("<Label text={url}");
   });
 
   it("the QR, the copy and the share all carry the one pair URL", () => {

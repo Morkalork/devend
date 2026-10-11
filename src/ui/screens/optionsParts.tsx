@@ -6,7 +6,7 @@ import { useRef } from "react";
 import type { FederatedPointerEvent } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { COLOR, Label, RADIUS, TEXT, View, tint, useUiScreen, type Layout } from "../kit/ui";
-import { ArcadeButton } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import { sliderValueAt } from "./optionsModel";
 
 export interface VolumeSliderProps {

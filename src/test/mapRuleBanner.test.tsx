@@ -25,68 +25,13 @@
  * few seconds in the empty band above the board, then collapses to a compact
  * hazard chip that persists. Noticing and remembering are different jobs and
  * they get different sizes.
+ *
+ * What the banner says, and its two states, are checked in
+ * canvas/MapRuleBanner.test.ts; this file keeps where it sits and what feeds it.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import '@/i18n';
-import { MapRuleBanner, ANNOUNCE_MS } from '@/components/game/MapRuleBanner';
-import type { ActiveMapMutator } from '@/types/mapMutator';
-
-const GRAVITY: ActiveMapMutator = {
-  id: 'gravity_well',
-  name: 'Technical Gravity',
-  description: 'Everything is pulled one way, and the way keeps changing.',
-  behavior: 'gravity',
-};
-
-const CRUNCH: ActiveMapMutator = {
-  id: 'crunch', name: 'Crunch', description: 'The board speeds up per lock.', behavior: 'crunch',
-};
-
-afterEach(cleanup);
-
-describe('the map rule banner', () => {
-  it('names the rule', () => {
-    render(<MapRuleBanner mutator={GRAVITY} />);
-    expect(screen.getByText('Technical Gravity')).toBeTruthy();
-  });
-
-  it('says what the rule DOES, not just what it is called', () => {
-    // The name alone is a label. "Everything is pulled one way" is the sentence
-    // that stops bent trajectories reading as a bug, which is the whole point.
-    render(<MapRuleBanner mutator={GRAVITY} />);
-    expect(screen.getByText(/pulled one way/i)).toBeTruthy();
-  });
-
-  it('renders nothing at all on an ordinary map', () => {
-    // Most maps have no mutator, and a strip that is always there stops meaning
-    // anything - and would eat board height for nothing.
-    const { container } = render(<MapRuleBanner mutator={null} />);
-    expect(container.firstChild, 'the banner takes space with no rule to state').toBeNull();
-  });
-
-  it('is a control that leads to the explanation', () => {
-    // Naming a thing the player cannot then ask about is half a fix: the
-    // hold-to-clarify text lives in the Specs panel.
-    const onExplain = vi.fn();
-    render(<MapRuleBanner mutator={GRAVITY} onExplain={onExplain} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(onExplain).toHaveBeenCalledTimes(1);
-  });
-
-  it('is named for a reader who cannot see the colour', () => {
-    render(<MapRuleBanner mutator={GRAVITY} />);
-    expect(screen.getByRole('button', { name: /map rule/i })).toBeTruthy();
-  });
-
-  it('works for any mutator, not just the one that caused the report', () => {
-    render(<MapRuleBanner mutator={CRUNCH} />);
-    expect(screen.getByText('Crunch')).toBeTruthy();
-    expect(screen.getByText(/speeds up per lock/i)).toBeTruthy();
-  });
-});
 
 describe('where it sits', () => {
   const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
@@ -137,70 +82,5 @@ describe('where it sits', () => {
     // chip was the one that did not work.
     const bar = read('src/ui/game/GameTopBar.tsx');
     expect(bar, 'the top bar still renders a mutator chip').not.toContain('mapMutator');
-  });
-});
-
-describe('announcing, then reminding', () => {
-  it('opens with the rule stated in full', () => {
-    // The half that has to be NOTICED. It can afford to be big because it is
-    // temporary, and it is in band that was empty anyway.
-    render(<MapRuleBanner mutator={GRAVITY} />);
-    expect(screen.getByText(GRAVITY.name)).toBeTruthy();
-    expect(screen.getByText(GRAVITY.description!)).toBeTruthy();
-  });
-
-  it('never truncates the sentence it exists to deliver', () => {
-    // THE reported defect. A description ending in an ellipsis is worse than no
-    // description: it says there was an explanation and then withholds it.
-    render(<MapRuleBanner mutator={GRAVITY} />);
-    const detail = screen.getByText(GRAVITY.description!);
-    expect(detail.className, 'the rule is truncated again').not.toContain('truncate');
-    expect(detail.textContent).not.toMatch(/…|\.\.\.$/);
-  });
-
-  it('collapses to a chip once it has been read', () => {
-    // The half that has to PERSIST. Small is fine here precisely because it is
-    // no longer the only signal, which is what the first attempt got wrong.
-    vi.useFakeTimers();
-    try {
-      render(<MapRuleBanner mutator={GRAVITY} />);
-      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
-      expect(screen.getByText(GRAVITY.name), 'the rule stopped being stated at all').toBeTruthy();
-      expect(screen.queryByText(GRAVITY.description!), 'the prose never collapsed').toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('still leads to the explanation once collapsed', () => {
-    // Losing the sentence is only acceptable because the full text stays one
-    // tap away. A chip that explained nothing and led nowhere would be the
-    // first failed attempt again.
-    vi.useFakeTimers();
-    try {
-      const onExplain = vi.fn();
-      render(<MapRuleBanner mutator={GRAVITY} onExplain={onExplain} />);
-      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
-      fireEvent.click(screen.getByRole('button'));
-      expect(onExplain).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('announces again on the next map rather than starting collapsed', () => {
-    // A player meeting a NEW rule has not read it yet. Inheriting the previous
-    // map's collapsed state would silently skip the announcement exactly when
-    // it matters most.
-    vi.useFakeTimers();
-    try {
-      const view = render(<MapRuleBanner mutator={GRAVITY} />);
-      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
-      expect(screen.queryByText(GRAVITY.description!)).toBeNull();
-      view.rerender(<MapRuleBanner mutator={CRUNCH} />);
-      expect(screen.getByText(CRUNCH.description!), 'the new rule never announced').toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });

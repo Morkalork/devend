@@ -3,7 +3,7 @@
  * does not have (yet). Each is a candidate for the kit.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import type { Graphics, Texture, TextStyleFontWeight } from "pixi.js";
+import type { Graphics, Texture } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { X } from "lucide-react";
 import {
@@ -41,45 +41,6 @@ export function SpinIcon({ icon, size = 16, color = COLOR.foreground }: { icon: 
           width={size} height={size} rotation={angle} layout={false} />
       )}
     </View>
-  );
-}
-
-// ── ArcadeButton ───────────────────────────────────────────────────────────
-
-export interface ArcadeButtonProps {
-  text: string;
-  onTap: () => void;
-  icon?: IconSource;
-  /** Overrides for the `arcade-button` defaults (padding, size, weight). */
-  size?: number;
-  weight?: TextStyleFontWeight;
-  paddingX?: number;
-  paddingY?: number;
-  layout?: Layout;
-}
-
-/**
- * The `arcade-button-primary` look: a faint primary fill, a 2px primary
- * border, primary Michroma caps with wide tracking, and its soft primary glow.
- */
-export function ArcadeButton({ text, onTap, icon, size = 15, weight = "600", paddingX = 27, paddingY = 14, layout }: ArcadeButtonProps) {
-  return (
-    <Pressable
-      onTap={onTap}
-      label={text}
-      layout={{
-        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-        paddingLeft: paddingX, paddingRight: paddingX, paddingTop: paddingY, paddingBottom: paddingY,
-        borderRadius: RADIUS.lg, borderWidth: 2, borderColor: COLOR.primary,
-        backgroundColor: tint(COLOR.primary, 0.1),
-        ...(layout ?? {}),
-      }}
-    >
-      {/* box-shadow 0 0 20px primary/0.3 */}
-      <GlowFrame color={COLOR.primary} radius={RADIUS.lg} spread={16} strength={0.3} />
-      {icon && <Icon icon={icon} size={size + 4} color={COLOR.primary} />}
-      <Label text={text} size={size} weight={weight} font="display" color={COLOR.primary} upper letterSpacing={size * 0.1} />
-    </Pressable>
   );
 }
 

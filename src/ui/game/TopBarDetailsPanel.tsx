@@ -19,7 +19,7 @@ import type { CapstoneConfig } from '@/types/capstone';
 import type { ActiveMapMutator } from '@/types/mapMutator';
 import type { ActiveMapObjective, ObjectiveProgress } from '@/types/objective';
 import type { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
-import type { PanelFocus } from '@/components/game/TopBarDetailsPanel';
+import type { PanelFocus } from './specsModel';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { getUpgradeIcon } from '@/components/game/upgradeIcons';
 import { contentText } from '@/i18n/content';

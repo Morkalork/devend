@@ -21,8 +21,9 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
-import { ArcadeButton, MenuHeading } from "./welcomeParts";
-import { fitTextWidth } from "./welcomeStyle";
+import { MenuHeading } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
+import { fitTextWidth } from "../kit/ui";
 import { ConfirmDialog, VolumeSlider } from "./optionsParts";
 import { activeLanguageOf, volumePercent } from "./optionsModel";
 

@@ -25,14 +25,10 @@
  * came out near 24px - and those are the controls a player reaches for while a
  * ball is bouncing toward the gap they just opened.
  */
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import "@/i18n";
-import { AbilityBar } from "@/components/game/AbilityBar";
-
-afterEach(cleanup);
+import { TOUCH_TARGET } from "@/ui/game/bottomModel";
 
 const GAME = resolve(process.cwd(), "src/components/game");
 /** The HUD is drawn on the interface canvas now (CANVAS_UI_PLAN.md). */
@@ -57,18 +53,9 @@ describe("every control a player has to hit mid-map", () => {
   it("gives the ability buttons a real target too", () => {
     // These were px-2.5 py-1 around a 16px icon: about 24px tall, and they are
     // the most time-critical controls in the game.
-    render(
-      <AbilityBar
-        charges={{ freezeAll: 2 }}
-        accentColor="#00ff88"
-        onUse={() => {}}
-        armedAbilityId={null}
-        onInfoOpenChange={() => {}}
-      />,
-    );
-    const button = screen.getAllByRole("button")[0];
-    expect(button.className, "ability buttons are back under the touch floor")
-      .toMatch(/min-h-\[44px\]/);
+    expect(TOUCH_TARGET, "ability buttons are back under the touch floor").toBeGreaterThanOrEqual(44);
+    expect(readUi("AbilityBar.tsx"), "the ability button no longer takes the floor's height")
+      .toMatch(/height: TOUCH_TARGET/);
   });
 });
 

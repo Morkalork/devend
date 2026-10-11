@@ -24,7 +24,7 @@ import type { RunRankInfo } from "@/lib/runLedger";
 import { shareRunCard } from "@/lib/shareCard";
 import { Appear, COLOR, Icon, Label, ScrollView, TEXT, View, RADIUS, iconNodeOf, tint, useUiScreen, type IconNode, type IconSource, type Layout } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 import { RichParagraph, TopRule } from "./draftParts";
 import type { FontRole } from "../theme";
 import { buildIdentity, detourActions, ladderBlock, pinnedActions, recapBlock, type DetourKind } from "./resultScreenModel";

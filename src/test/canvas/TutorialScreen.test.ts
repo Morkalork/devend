@@ -52,6 +52,9 @@ describe("the tutorial's bug roster", () => {
 
   it("teaches the tap, which is the only thing a player can DO to a bug", () => {
     expect(String(locale("en").tutorial.bugs.intro).toLowerCase()).toMatch(/tap/);
+    // ...and the screen shows that intro over the roster.
+    expect(readFileSync(resolve(process.cwd(), "src/ui/screens/TutorialScreen.tsx"), "utf8"))
+      .toContain('t("tutorial.bugs.intro")');
   });
 });
 

@@ -331,7 +331,7 @@ describe("the preview is the shot", () => {
    * and nothing else would notice them parting company.
    */
   const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
-  const overlay = read("src/components/game/LaunchOverlay.tsx");
+  const overlay = read("src/ui/game/LaunchOverlay.tsx");
 
   it("draws the barrel's line rather than a cone of maybes", () => {
     expect(overlay, "the aim cone is back").not.toContain("LAUNCH_SPREAD");

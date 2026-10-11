@@ -11,7 +11,9 @@ import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 import { getShipEarlyThresholds } from '@/lib/scoring';
 import { contentText } from '@/i18n/content';
 import type { ObjectiveProgress } from '@/types/objective';
-import type { PanelFocus } from '@/components/game/TopBarDetailsPanel';
+
+/** Which card the Specs panel was opened to answer for (the map-rule banner opens it on the rule). */
+export type PanelFocus = 'mapRule' | null;
 
 // ── Attributes (ModifierBreakdown) ─────────────────────────────────────────
 

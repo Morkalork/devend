@@ -147,14 +147,14 @@ describe("drawing it", () => {
  * start a run you did not want.
  */
 describe("Sprint Planning can be left", () => {
-  const SCREEN = read("../components/game/RunDraftScreen.tsx");
+  const SCREEN = read("../ui/screens/RunDraftScreen.tsx");
   const BACK = read("../lib/screenBack.ts");
   const INDEX = read("../pages/Index.tsx");
   const LOCALES = ["en", "es", "sv"] as const;
 
   it("offers a back button", () => {
     expect(SCREEN).toMatch(/onBack\?: \(\) => void;/);
-    expect(SCREEN).toMatch(/onClick=\{onBack\}/);
+    expect(SCREEN).toMatch(/onTap=\{onBack\}/);
   });
 
   it("routes the back GESTURE to the menu too", () => {

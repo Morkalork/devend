@@ -15,7 +15,8 @@
  *
  * Pinned here: the layout rule (a stack change alone moves the board only when
  * the stack would cover it), the inset the board lays out against, and the
- * wiring that keeps each of the causes above fixed.
+ * wiring that keeps each of the causes above fixed (cause 1, the goal row's
+ * fixed height, is pinned in canvas/GameTopBar.test.ts).
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
@@ -135,12 +136,6 @@ describe("the wiring", () => {
 
   it("keeps the dev guard that names a container that moved", () => {
     expect(canvas).toMatch(/\[board\] the board's container went from/);
-  });
-
-  it("gives the goal row its filled height from the first frame", () => {
-    const bar = read("src/components/game/GameTopBar.tsx");
-    const row = bar.slice(bar.indexOf("data-goal-row"));
-    expect(row.slice(0, 200)).toMatch(/className=\{`h-\[34px\] flex-shrink-0 /);
   });
 
   it("mounts the ability row with the stack, not when the game reports a handler", () => {

@@ -17,10 +17,9 @@
 import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
 import { useReducedMotion } from "framer-motion";
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
 import { useTween } from "../kit/ui";
 import { FlashNumeral, Inert } from "./boardParts";
-import { clockRectPoints, deadlineGeometry } from "./overlayModel";
+import { clockRectPoints, deadlineGeometry, type BoardFrameCss } from "./overlayModel";
 import { cssHex } from "./fxModel";
 import { deadlineColor } from "@/lib/deadlineDisplay";
 

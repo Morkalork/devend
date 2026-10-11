@@ -22,7 +22,6 @@
  *     is now decided inside updateBall, and the harness is the proof.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
@@ -50,9 +49,8 @@ import {
 } from "@/lib/bot/headlessGame";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
-import { computeGameModifiers, DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import { computeGameModifiers } from "@/hooks/useActiveModifiers";
 import { getUpgradeIcon } from "@/components/game/upgradeIcons";
-import { ModifierBreakdown } from "@/components/game/ModifierBreakdown";
 import type { LevelConfig } from "@/types/level";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -65,7 +63,7 @@ const lookup = new Map(UPGRADES.map(u => [u.id, u]));
 const FAMILY = ["bug_squash_junior", "bug_squash_senior", "bug_squash_principal_a"];
 const FORK_B = "bug_squash_principal_b";
 
-afterEach(() => { cleanup(); setRunSeedText(null); releaseClock(); });
+afterEach(() => { setRunSeedText(null); releaseClock(); });
 
 // ── 1. The squash ───────────────────────────────────────────────────────────
 
@@ -457,19 +455,5 @@ describe("the Bug Squash family", () => {
         expect(d.bottomBarDetails[k]).not.toContain("—");
       }
     }
-  });
-});
-
-describe("the Specs panel confirms it", () => {
-  it("lists the odds and the hold when owned", () => {
-    render(<ModifierBreakdown activeModifiers={{ ...DEFAULT_MODIFIERS, bugSquashChance: 8, bugSquashSeconds: 3 }} />);
-    expect(screen.getByText("Bug Squash")).toBeTruthy();
-    expect(screen.getByText("8%")).toBeTruthy();
-    expect(screen.getByText(/squash the ball flat for 3s/)).toBeTruthy();
-  });
-
-  it("reads as inactive when not owned", () => {
-    render(<ModifierBreakdown activeModifiers={DEFAULT_MODIFIERS} />);
-    expect(screen.getByText(/No Bug Squash owned/)).toBeTruthy();
   });
 });

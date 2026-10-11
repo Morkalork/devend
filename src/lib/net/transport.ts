@@ -12,6 +12,8 @@
  * transport only has to promise that a message that arrives, arrives whole.
  */
 
+import type { PlayerId } from "./commands";
+
 /** The messages a pair exchange. Small, and none of them is game state. */
 export type NetMessage =
   /** The first thing either side sends: who this is, and what it is running. */
@@ -190,4 +192,20 @@ export class MemoryTransport implements Transport {
     this.peer = null;
     if (peer && peer.open) peer.close("peer closed");
   }
+}
+
+/**
+ * A finished pairing, as the 2-Player screen hands it to the game: the live
+ * link plus who is who. The link is the interface rather than whichever
+ * implementation produced it (Nearby on Android, WebRTC on the web, the relay
+ * on public Wi-Fi), and the lockstep above cannot tell which.
+ */
+export interface PairedSession {
+  transport: Transport;
+  localPlayer: PlayerId;
+  isHost: boolean;
+  /** The other phone's device id, for the pair identity (step 6b). */
+  remoteDeviceId: string;
+  /** What the other player is called. */
+  remoteName: string;
 }

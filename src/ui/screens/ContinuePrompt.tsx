@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RotateCcw, Flag, Heart } from "lucide-react";
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, TEXT, View, hex, iconNodeOf, tint, useUiScreen, type IconNode } from "../kit/ui";
-import { ArcadeButton } from "./betweenArcadeButton";
+import { ArcadeButton } from "../kit/ui";
 
 interface ContinuePromptProps {
   continuesRemaining: number;

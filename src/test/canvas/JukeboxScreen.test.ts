@@ -4,6 +4,8 @@
  * HTMLMediaElement.play is stubbed; everything below the stub is real.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderHook, act, cleanup } from "@testing-library/react";
 import type { TFunction } from "i18next";
 import i18n from "@/i18n";
@@ -118,5 +120,12 @@ describe("playback", () => {
     // Unmount, not the Back button: a back GESTURE has to restore it too.
     view.unmount();
     expect(onExit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the way out", () => {
+  it("goes back on the Back button", () => {
+    const src = readFileSync(resolve(process.cwd(), "src/ui/screens/JukeboxScreen.tsx"), "utf8");
+    expect(src).toMatch(/text=\{t\("music\.back"\)\} onTap=\{onBack\}/);
   });
 });

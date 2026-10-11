@@ -1,10 +1,11 @@
 /**
- * The menu screens' shared look as values (index.css `.arcade-button-*`,
- * `.menu-highlight`), split from welcomeParts.tsx so that file exports only
+ * The arcade button's look as values (index.css `.arcade-button-*`,
+ * `.menu-highlight`), split from arcade.tsx so that file exports only
  * components (lint: react-refresh/only-export-components).
  */
 import { CanvasTextMetrics } from "pixi.js";
-import { COLOR, hsl, textStyle, type TextLook } from "../kit/ui";
+import { COLOR, hsl } from "../theme";
+import { textStyle, type TextLook } from "./style";
 
 /** The highlight gold, hsl(45 100% 62%) in index.css `.menu-highlight`. */
 export const GOLD = hsl(45, 100, 62);

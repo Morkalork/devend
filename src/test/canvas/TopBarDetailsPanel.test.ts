@@ -6,6 +6,8 @@
  * with the map rule (once), and the run section appears only with something in it.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { TFunction } from "i18next";
 import i18n from "@/i18n";
 import { contentText } from "@/i18n/content";
@@ -165,5 +167,32 @@ describe("section order and contents", () => {
   it("caps Micro Manager's readout at 50%", () => {
     expect(microManagerPercent(2, 0.1)).toBe(20);
     expect(microManagerPercent(20, 0.1)).toBe(50);
+  });
+});
+
+describe("the panel puts each number under its own label", () => {
+  // hudObjectiveReadouts.test.tsx asserted this on rendered output: the maths
+  // was never wrong, the bug was which prop went into which card.
+  const SRC = readFileSync(resolve(process.cwd(), "src/ui/game/TopBarDetailsPanel.tsx"), "utf8");
+
+  it("feeds the cards the per-map numbers it was handed", () => {
+    expect(SRC).toContain("territoryCard(t, spaceRemaining, spaceRequired)");
+    expect(SRC).toContain("locksCard(t, lockedBalls, threadLockRequired ?? 0)");
+    expect(SRC).toContain("cutsCard(t, cutsUsed, parCuts)");
+  });
+
+  it("states the map rule's name, what it does and its clarification (mapRuleFocus)", () => {
+    expect(SRC).toContain("title={contentText.mutatorName(t, mapMutator)}");
+    expect(SRC).toContain("text={contentText.mutatorDesc(t, mapMutator)}");
+    expect(SRC).toMatch(/mapMutator\.clarify && \(\s*<SpecsPara text=\{contentText\.mutatorClarify\(t, mapMutator\)\}/);
+  });
+
+  it("defaults to a browse when no focus is given", () => {
+    expect(SRC).toMatch(/focus = null,/);
+    expect(SRC).toContain("mutatorPlacement(focus, !!mapMutator)");
+  });
+
+  it("shows the Promotion through the content accessor", () => {
+    expect(SRC).toContain("contentText.capstoneDesc(t, capstone)");
   });
 });

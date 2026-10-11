@@ -99,16 +99,3 @@ describe("the fence catalogue is actually reloaded at runtime", () => {
     expect(src).toMatch(/Keeping the build-time catalogue/);
   });
 });
-
-describe("every slot stays reachable when there are more than five", () => {
-  it("lets the row scroll sideways instead of clipping it", () => {
-    // Six slots do not fit across a phone. Reported from one: the row was cut
-    // off at both edges, so Standard and Drill could not be tapped at all.
-    const src = read("src/components/game/FenceSlotBar.tsx");
-    expect(src, "the row is clipped rather than scrollable").toMatch(/overflow-x-auto/);
-    // Centred while it fits, left-aligned once it does not. A centred flex row
-    // that overflows puts its FIRST item off-screen with no way back to it.
-    expect(src).toMatch(/w-max mx-auto/);
-    expect(src, "a slot still swallows the sideways pan").not.toMatch(/touchAction: 'none'/);
-  });
-});

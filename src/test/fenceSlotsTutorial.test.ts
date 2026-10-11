@@ -94,17 +94,17 @@ describe("the manual entry", () => {
   it("is also filed on acquiring one, for a run that started past level 3", () => {
     // A Head Start certificate begins a run above level 3, so the level-3
     // filing above never happens for that player.
-    const src = read("src/components/game/FenceSlotBar.tsx");
-    expect(src).toMatch(/fileManualEntry\('fenceSlots'\)/);
-    expect(src, "filed for a bar holding nothing but the standard fence")
-      .toMatch(/owned\.length > 1/);
+    const src = read("src/ui/game/FenceSlotBar.tsx");
+    expect(src).toMatch(/if \(shouldFileFenceManual\(owned\.length\)\) fileManualEntry\("fenceSlots"\)/);
+    expect(read("src/ui/game/bottomModel.ts"), "filed for a bar holding nothing but the standard fence")
+      .toMatch(/return ownedCount > 1;/);
   });
 });
 
 describe("the How to Play screen", () => {
   it("has a fence-types step", () => {
-    const src = read("src/components/game/TutorialScreen.tsx");
-    expect(src).toMatch(/key: 'fenceTypes'/);
+    const src = read("src/ui/screens/tutorialScreenModel.ts");
+    expect(src).toMatch(/key: "fenceTypes"/);
   });
 
   it("has its copy in every locale", () => {

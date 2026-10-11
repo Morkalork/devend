@@ -17,16 +17,16 @@
  * spinner stopped, the button went back to looking idle, and the navigation
  * carried on waiting for the other nine. That is the pause, and it is on the
  * menu, where a sign behind the board could never have reached it.
+ *
+ * How the menu shows the flag is checked in canvas/WelcomeScreen.test.ts.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { render, screen, cleanup } from "@testing-library/react";
+import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import fs from "fs";
 import path from "path";
 import "@/i18n";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
-import { WelcomeScreen } from "@/components/game/WelcomeScreen";
 
 const PUBLIC = path.resolve(__dirname, "../../public");
 
@@ -117,35 +117,5 @@ describe("the menu says it is working for the whole boot", () => {
         expect(result.current.session.isLoading, "the menu is stuck loading").toBe(false),
       );
     });
-  });
-});
-
-describe("the menu shows it", () => {
-  it("puts the button in a loading state while the run boots", () => {
-    render(
-      <WelcomeScreen
-        onStartGame={vi.fn()}
-        onTutorial={vi.fn()}
-        onOptions={vi.fn()}
-        isLoading
-      />,
-    );
-    // Whatever it says, the play control must not be pressable while booting:
-    // a second press would start the whole load again.
-    const disabled = screen.getAllByRole("button").filter(b => (b as HTMLButtonElement).disabled);
-    expect(disabled.length, "nothing is disabled while loading").toBeGreaterThan(0);
-  });
-
-  it("leaves it pressable when nothing is loading", () => {
-    render(
-      <WelcomeScreen
-        onStartGame={vi.fn()}
-        onTutorial={vi.fn()}
-        onOptions={vi.fn()}
-        isLoading={false}
-      />,
-    );
-    const disabled = screen.getAllByRole("button").filter(b => (b as HTMLButtonElement).disabled);
-    expect(disabled.length, "the menu is disabled when it should be idle").toBe(0);
   });
 });

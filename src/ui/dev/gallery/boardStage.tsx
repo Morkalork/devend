@@ -7,7 +7,7 @@
  * canvas box).
  */
 import { useEffect, useState, type ReactNode } from "react";
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
+import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { BOARD_FRAME_THICKNESS, BOARD_WIDTH } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 import { COLOR, tint, useUiScreen, View } from "../../kit/ui";

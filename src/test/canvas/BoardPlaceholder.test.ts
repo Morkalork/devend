@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import i18n from "@/i18n";
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
+import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { PLACEHOLDER_FADE_MS, PLACEHOLDER_GRID_CELLS, placeholderGeometry } from "@/ui/game/overlayModel";
 
 const FRAME: BoardFrameCss = { left: 6, top: 40, width: 388, height: 388, frame: 6 };

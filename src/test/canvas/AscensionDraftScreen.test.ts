@@ -30,6 +30,8 @@ describe("it says what ascending would do, before the choice", () => {
     expect(b.nextDepth).toBe(1);
     expect(b.incoming?.name).toBe("Hiring Freeze");
     expect(SRC).toMatch(/contentText\.rungDesc\(t, incoming\)/);
+    // Headed with the depth it is about to enter.
+    expect(SRC).toMatch(/t\("ascension\.whatDepthAdds", \{ depth: nextDepth \}\)/);
   });
 
   it("moves on to the next rung at the next depth", () => {

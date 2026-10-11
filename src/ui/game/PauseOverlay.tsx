@@ -6,8 +6,8 @@
  */
 import { useTranslation } from "react-i18next";
 import { Play } from "lucide-react";
-import { COLOR, Label, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
-import { ArcadeButton, TouchBlocker } from "./modalParts";
+import { COLOR, Label, TEXT, View, hex, tint, useUiScreen, ArcadeButton } from "../kit/ui";
+import { TouchBlocker } from "./modalParts";
 
 interface PauseOverlayProps {
   accentColor: string;
@@ -39,7 +39,8 @@ export function PauseOverlay({ accentColor, zoomStuck, onResume }: PauseOverlayP
           </View>
         )}
         <ArcadeButton text={t('game.resume')} icon={Play} onTap={onResume}
-          size={TEXT.base} weight="700" paddingX={32} paddingY={12} />
+          textSize={TEXT.base} weight="700"
+          contentLayout={{ paddingLeft: 32, paddingRight: 32, paddingTop: 12, paddingBottom: 12 }} />
       </TouchBlocker>
     </View>
   );

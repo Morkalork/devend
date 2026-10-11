@@ -347,13 +347,13 @@ describe("the chip actually asks", () => {
     readFileSync(resolve(__dirname, rel), "utf8");
 
   it("gates CLEAR on the whole map being won", () => {
-    const chip = read("../components/game/GoalChip.tsx");
+    const chip = read("../ui/game/goalChipModel.ts");
     expect(chip, "the space chip prints CLEAR off its own goal again")
       .toContain("goal.done && goal.kind === 'space' && winMet");
   });
 
   it("is told by the bar, which computes it once for the row", () => {
-    const bar = read("../components/game/GameTopBar.tsx");
+    const bar = read("../ui/game/GameTopBar.tsx");
     expect(bar).toContain("everyRequirementMet(goals ?? [])");
     expect(bar, "the chip is left to guess").toContain("winMet={winMet}");
   });

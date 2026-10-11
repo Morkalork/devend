@@ -7,9 +7,8 @@
  * That runs two full simulations through the real lockstep, as the other
  * pair tests do.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@/i18n";
 import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock,
@@ -26,13 +25,12 @@ import { findRegionContainingPoint } from "@/lib/gameUtils";
 import {
   commandAllowed, firstTurnPlayer, settlePairTurn, startPairTurns, turnViewFor,
 } from "@/lib/net/pairTurn";
-import { PairTurnOverlay } from "@/components/game/PairTurnOverlay";
 import type { CanvasGameState } from "@/types/gameState";
 import { LADDER } from "./fixtures/maps";
 
 const board = LADDER.find(l => l.level === 3)!;
 
-afterEach(() => { releaseClock(); setRunSeedText(null); cleanup(); });
+afterEach(() => { releaseClock(); setRunSeedText(null); });
 
 // ── the rule ────────────────────────────────────────────────────────────────
 
@@ -205,31 +203,8 @@ describe("a repair puts the turn back too", () => {
 
 // ── what the players see ────────────────────────────────────────────────────
 
-describe("the board says whose turn it is", () => {
-  it("lights up and offers Pass on your turn", () => {
-    const onPass = vi.fn();
-    render(<PairTurnOverlay turn={{ view: "yours", seq: 0 }} partnerName="Ada" myColor="#00ff88" partnerColor="#ffb347" onPass={onPass} />);
-    expect(screen.getByTestId("pair-turn-glow")).toBeTruthy();
-    expect(screen.getByTestId("pair-turn-tag").textContent).toMatch(/Your turn/);
-    fireEvent.click(screen.getByText("Pass"));
-    expect(onPass).toHaveBeenCalledOnce();
-  });
-
-  it("dims the board and says you are spectating on theirs", () => {
-    render(<PairTurnOverlay turn={{ view: "theirs", seq: 1 }} partnerName="Ada" myColor="#00ff88" partnerColor="#ffb347" />);
-    expect(screen.queryByTestId("pair-turn-glow")).toBeNull();
-    expect(screen.getByTestId("pair-spectator-dim")).toBeTruthy();
-    const tag = screen.getByTestId("pair-turn-tag").textContent ?? "";
-    expect(tag).toMatch(/Spectating/);
-    expect(tag).toMatch(/Ada's turn/);
-    expect(screen.queryByText("Pass")).toBeNull();
-  });
-
-  it("shows nothing in solo play", () => {
-    const { container } = render(<PairTurnOverlay turn={null} partnerName="Ada" myColor="#0f0" partnerColor="#fb3" />);
-    expect(container.innerHTML).toBe("");
-  });
-
+describe("a spectator cannot cut", () => {
+  // What the overlay draws is checked in canvas/PairTurnOverlay.test.ts.
   it("refuses a spectator's finger before any fence line is drawn", () => {
     // The input layer is where the player hears "not your turn": pinned by
     // source, since a render of it boots a canvas and none of this needs one.

@@ -6,7 +6,6 @@
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { bandShape, inBandSweep, BAND_MAX_POWER, BAND_MIN_POWER, type BandShape } from "@/lib/rubberBand";
 import type { Vector2 } from "@/types/game";
-import type { BandTarget } from "@/components/game/RubberBandOverlay";
 
 /** Board box in the container's CSS px, as GameCanvas hands it over. */
 export interface BoardBox {
@@ -16,8 +15,14 @@ export interface BoardBox {
   canvasOffsetLeft: number;
 }
 
-/** What the band could catch: the DOM overlay's own type, so GameCanvas builds one list for either. */
-export type { BandTarget };
+/** What the band could catch, in world units; GameCanvas builds the list from the board the effect will read. */
+export interface BandTarget {
+  x: number;
+  y: number;
+  radius: number;
+  /** Balls are ringed; destructibles are boxed, so the two reads differ. */
+  kind: "ball" | "object";
+}
 
 /** CSS px per world unit. */
 export function boardScale(b: BoardBox): number {

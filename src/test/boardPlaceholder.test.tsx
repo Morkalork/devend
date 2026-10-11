@@ -12,55 +12,16 @@
  * every side) and the frame is drawn just outside the arena. The outline was
  * sized to the world rectangle, so it was larger than the board; and the world
  * rectangle was what got 95% of the screen, so the board itself got about 88%.
+ *
+ * The outline itself is checked in canvas/BoardPlaceholder.test.ts.
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, cleanup, act } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import "@/i18n";
-import { BoardPlaceholder, type BoardFrameCss } from "@/components/game/BoardPlaceholder";
 import {
   computeBoardRect, VISIBLE_BOARD_FRACTION, BOARD_FRAME_THICKNESS, BOARD_SIZE_PERCENT, BOARD_WIDTH,
 } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
-
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-});
-
-const FRAME: BoardFrameCss = { left: 6, top: 40, width: 388, height: 388, frame: 6 };
-
-describe("the loading outline", () => {
-  it("sits exactly on the frame the canvas hands it", () => {
-    const { getByTestId } = render(<BoardPlaceholder visible accentColor="#00ff88" frame={FRAME} />);
-    const el = getByTestId("board-placeholder-frame");
-    expect(el.style.left).toBe("6px");
-    expect(el.style.top).toBe("40px");
-    expect(el.style.width).toBe("388px");
-    expect(el.style.height).toBe("388px");
-    expect(el.style.borderWidth || el.style.border).toMatch(/6px/);
-  });
-
-  it("says it is loading", () => {
-    const { getByTestId } = render(<BoardPlaceholder visible accentColor="#00ff88" frame={FRAME} />);
-    expect(getByTestId("board-placeholder").textContent).toMatch(/loading/i);
-  });
-
-  it("draws nothing until the canvas has been sized", () => {
-    const { queryByTestId } = render(<BoardPlaceholder visible accentColor="#00ff88" frame={null} />);
-    expect(queryByTestId("board-placeholder")).toBeNull();
-  });
-
-  it("fades out, then leaves the page, once the board is up", () => {
-    vi.useFakeTimers();
-    const { queryByTestId, rerender } = render(<BoardPlaceholder visible accentColor="#00ff88" frame={FRAME} />);
-    rerender(<BoardPlaceholder visible={false} accentColor="#00ff88" frame={FRAME} />);
-    expect(queryByTestId("board-placeholder")?.className).toMatch(/opacity-0/);
-    act(() => { vi.advanceTimersByTime(600); });
-    expect(queryByTestId("board-placeholder")).toBeNull();
-  });
-});
 
 describe("the drawn board's size", () => {
   it("knows how much of the world is actually drawn", () => {

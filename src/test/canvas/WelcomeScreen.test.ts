@@ -4,6 +4,8 @@
  * shows), runBootFeedback (the menu shows it) and hallOfFameScreen (Records).
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   SECRET_GAP_MS, SECRET_TAPS, certificatesTapAction, createSecretTapCounter, dailyTapAction,
   highlightToAck, welcomeButtons, type WelcomeMenuInput,
@@ -41,6 +43,21 @@ describe("Continue / New Game", () => {
     expect(byId({ hasContinue: true }, "newGame")?.glow).toBe(false);
     expect(byId({}, "newGame")?.glow).toBe(true);
     expect(byId({}, "newGame")?.pulse).toBe(true);
+  });
+});
+
+describe("the screen feeds the menu and wires its buttons", () => {
+  const SRC = readFileSync(resolve(process.cwd(), "src/ui/screens/WelcomeScreen.tsx"), "utf8");
+
+  it("builds the menu from its props: the save, its depth and the boot flag", () => {
+    expect(SRC).toContain("hasContinue: !!onContinue,");
+    expect(SRC).toMatch(/\n\s+savedRunAscension,\n/);
+    expect(SRC).toMatch(/\n\s+isLoading,\n/);
+  });
+
+  it("sends Continue to onContinue and New Game to onStartGame", () => {
+    expect(SRC).toContain('case "continue": onContinue?.(); break;');
+    expect(SRC).toContain('case "newGame": onStartGame(); break;');
   });
 });
 

@@ -8,10 +8,11 @@
  *     set. A condition that decorates the card but not the maths is a lie.
  *  3. The condition is ON THE CARD, in every language. A conditional upgrade
  *     the player cannot see is a trap: they pay for a number that never
- *     appears and conclude the game is broken.
+ *     appears and conclude the game is broken. (The card's side is checked
+ *     in canvas/UpgradeShop.test.ts and canvas/ConditionChip.test.ts; the
+ *     words, in every language, here.)
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
@@ -23,7 +24,6 @@ import {
   type RunContext, type UpgradeCondition,
 } from "@/lib/upgradeConditions";
 import { computeGameModifiers } from "@/hooks/useActiveModifiers";
-import { UpgradeShop } from "@/components/game/UpgradeShop";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelConfig, LevelData } from "@/types/level";
 import { NORMAL_LIVES } from "@/hooks/useGameSession";
@@ -44,8 +44,6 @@ function ctx(over: Partial<RunContext> = {}): RunContext {
     ...over,
   };
 }
-
-afterEach(cleanup);
 
 describe("the condition evaluator", () => {
   it("says yes exactly when the situation holds, for every kind", () => {
@@ -122,58 +120,6 @@ describe("an unmet condition contributes nothing", () => {
   it("still applies with no context at all, so nothing regresses off-run", () => {
     expect(computeGameModifiers(["gated"], lookup, undefined, null).extraShopItems).toBe(3);
     expect(computeGameModifiers(["gated"], lookup).extraShopItems).toBe(3);
-  });
-});
-
-describe("the condition is on the card", () => {
-  const live: UpgradeConfig = {
-    id: "live_one", name: "Severance", tier: "Principal", description: "Pays on area maps",
-    cost: 10, unlockLevel: 1, modifiers: { overtimePerSuperiorLock: 45 },
-    condition: { kind: "mapHas", feature: "area" },
-  };
-  const dark: UpgradeConfig = {
-    id: "dark_one", name: "Hot Start", tier: "Architect", description: "Pays late",
-    cost: 10, unlockLevel: 1, modifiers: { instantFencesPerMap: 2 },
-    condition: { kind: "levelAtLeast", value: 20 },
-  };
-
-  function shopProps(over: Partial<React.ComponentProps<typeof UpgradeShop>> = {}) {
-    return {
-      playerPoints: 5000,
-      upgrades: [live, dark],
-      ownedUpgradeIds: [] as string[],
-      completedLevel: 5,
-      isLocked: () => false,
-      onPurchase: vi.fn(),
-      onContinue: vi.fn(),
-      ...over,
-    };
-  }
-
-  it("shows the condition text, and marks it live or not for the NEXT map", () => {
-    // A map with a coloured area, at level 5: the area upgrade is live, the
-    // level-20 one is not. Both must still be READABLE.
-    render(<UpgradeShop {...shopProps({
-      runContext: ctx({ level: 5, map: { ...ctx().map, hasArea: true } }),
-    })} />);
-
-    const areaText = i18n.t("upgradeConditions.mapHas.area");
-    const lateText = i18n.t("upgradeConditions.levelAtLeast", { level: 20 });
-    expect(screen.getAllByText(areaText).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(lateText).length).toBeGreaterThan(0);
-
-    // "Live" and "not live" are told apart by the chip's title, not by the
-    // text vanishing: a hidden condition is the trap this test exists to stop.
-    const liveChip = screen.getAllByText(areaText)[0].closest("span")!;
-    const darkChip = screen.getAllByText(lateText)[0].closest("span")!;
-    expect(liveChip.getAttribute("title")).toBe(i18n.t("upgradeConditions.liveNow"));
-    expect(darkChip.getAttribute("title")).toBe(i18n.t("upgradeConditions.notNow"));
-  });
-
-  it("shows every condition as live when the shop knows no next map", () => {
-    render(<UpgradeShop {...shopProps({ runContext: null })} />);
-    const chip = screen.getAllByText(i18n.t("upgradeConditions.mapHas.area"))[0].closest("span")!;
-    expect(chip.getAttribute("title")).toBe(i18n.t("upgradeConditions.liveNow"));
   });
 });
 

@@ -17,13 +17,12 @@ import { useCallback, useEffect, useState } from "react";
 import type { Graphics } from "pixi.js";
 import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
 import { hex } from "../theme";
 import { Label, TEXT, usePulse, useTween } from "../kit/ui";
 import { Inert } from "./boardParts";
 import { useCycle } from "./fxClock";
 import { outerGlow } from "./boardDraw";
-import { PLACEHOLDER_FADE_MS, placeholderGeometry } from "./overlayModel";
+import { PLACEHOLDER_FADE_MS, placeholderGeometry, type BoardFrameCss } from "./overlayModel";
 
 export type { BoardFrameCss };
 

@@ -4,7 +4,8 @@
  * shared library; these cover what the canvas frame draws).
  */
 import { describe, it, expect } from "vitest";
-import type { BoardFrameCss } from "@/components/game/BoardPlaceholder";
+import { readFileSync } from "node:fs";
+import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { clockRectPoints, deadlineGeometry, polylineLength } from "@/ui/game/overlayModel";
 import { DEADLINE_FLASH, cssHex, sampleKeyframes } from "@/ui/game/fxModel";
 import { hsl } from "@/ui/theme";
@@ -70,5 +71,15 @@ describe("the countdown flash", () => {
   it("holds still under reduced motion, then fades", () => {
     expect(sampleKeyframes(DEADLINE_FLASH.still, 0.5)).toEqual({ alpha: 0.85, scale: 1 });
     expect(sampleKeyframes(DEADLINE_FLASH.still, 1).alpha).toBe(0);
+  });
+});
+
+describe("the countdown numerals", () => {
+  it("share one flash with the final-ten alarm (deadlineFrame.test.tsx)", () => {
+    const frame = readFileSync("src/ui/game/DeadlineFrame.tsx", "utf8");
+    const alarm = readFileSync("src/ui/game/BoardAlert.tsx", "utf8");
+    // Keyed on the value, so each new number plays the flash once.
+    expect(frame).toMatch(/<FlashNumeral key=\{geo\.milestone\}/);
+    expect(alarm).toMatch(/<FlashNumeral key=\{seconds\}/);
   });
 });

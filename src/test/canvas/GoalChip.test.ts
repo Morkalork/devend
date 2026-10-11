@@ -105,4 +105,9 @@ describe("the chip actually asks", () => {
     expect(bar).toContain("everyRequirementMet(goals ?? [])");
     expect(bar, "the chip is left to guess").toContain("winMet={winMet}");
   });
+
+  it("opens the how-to-win text when tapped", () => {
+    // The chip is the short form; a tap hands over to the full wording.
+    expect(read("src/ui/game/GoalChip.tsx")).toContain("usePress({ onTap: onExplain })");
+  });
 });

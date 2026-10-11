@@ -90,7 +90,7 @@ describe("the copy", () => {
 
 describe("the order", () => {
   const gameScreen = read("src/components/game/GameScreen.tsx");
-  const slotBar = read("src/components/game/FenceSlotBar.tsx");
+  const slotBar = read("src/ui/game/FenceSlotBar.tsx");
 
   it("holds the type's card behind the overlay", () => {
     // The card is z-[80] and the overlay z-[60], so without this the card lands

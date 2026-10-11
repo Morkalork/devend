@@ -34,7 +34,7 @@ import { TagChip } from "../game/TagChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { TutorialOverlay } from "../game/TutorialOverlay";
 import { Carousel } from "./Carousel";
-import { ArcadeButton, ArcadeText } from "./betweenArcadeButton";
+import { ArcadeButton, ArcadeText } from "../kit/ui";
 import { RichParagraph } from "./draftParts";
 import {
   CertUnlockedRow, ChipInfoModal, ChoiceChooserModal, ClosedBanner, ClosedInfoModal, Pill, ShopCard, UpgradeDetailModal, WaypointBanner,
@@ -498,7 +498,7 @@ export function UpgradeShop({
 
               {/* Continue */}
               <Appear fromY={20} delay={0.4}>
-                <ArcadeButton onTap={handleContinue} trailingIcon={ArrowRight} layout={{ maxWidth: inset }}>
+                <ArcadeButton onTap={handleContinue} iconAfter={ArrowRight} layout={{ maxWidth: inset }}>
                   {selectedIds.length > 0 ? (
                     <>
                       <ArcadeText text={t("upgradeShop.buyAndContinue", { count: selectedIds.length })} color={COLOR.primary} size={TEXT.sm} />

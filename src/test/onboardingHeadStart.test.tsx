@@ -30,9 +30,10 @@
  *      shared from computeGameModifiers, with initGame keeping its own
  *      defensive copy for the callers (bot harness, Playground, hand-built
  *      test fixtures) that never go through that merge at all.
+ *
+ * The Specs row itself is checked in canvas/ModifierBreakdown.test.ts.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
 import "@/i18n";
 import {
   computeGameModifiers, DEFAULT_MODIFIERS, MAX_STARTING_CAPTURE_PERCENT,
@@ -40,7 +41,6 @@ import {
 import { createInitialGameData } from "@/lib/initGame";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { setRunSeedText } from "@/lib/runRng";
-import { ModifierBreakdown } from "@/components/game/ModifierBreakdown";
 import type { LevelConfig } from "@/types/level";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { UpgradeConfig } from "@/types/upgrade";
@@ -70,7 +70,6 @@ function build(startingCapturePercent: number) {
 }
 
 afterEach(() => {
-  cleanup();
   setRunSeedText(null);
 });
 
@@ -147,30 +146,5 @@ describe("the cap moved to where every reader shares it", () => {
       startingCapturePercent: MAX_STARTING_CAPTURE_PERCENT - 8,
     }).startingCapturePercent;
     expect(uncappedGood).toBe(MAX_STARTING_CAPTURE_PERCENT);
-  });
-});
-
-describe("the Specs panel now confirms it landed", () => {
-  it("lists the head start as active, at the map's actual size", () => {
-    render(<ModifierBreakdown activeModifiers={modsWith(8)} />);
-    expect(screen.getByText("Head Start")).toBeTruthy();
-    expect(screen.getByText("+8%")).toBeTruthy();
-  });
-
-  it("shows the capped number, not a stacked-past-the-ceiling one", () => {
-    const stacked = computeGameModifiers(
-      ["onboarding_junior", "onboarding_senior", "onboarding_principal_a"],
-      lookup,
-      { startingCapturePercent: 30 },
-    );
-    render(<ModifierBreakdown activeModifiers={stacked} />);
-    expect(screen.getByText(`+${MAX_STARTING_CAPTURE_PERCENT}%`)).toBeTruthy();
-    expect(screen.queryByText(/\+46%/)).toBeNull();
-  });
-
-  it("reads as inactive, not merely absent, when nobody owns it", () => {
-    render(<ModifierBreakdown activeModifiers={modsWith(0)} />);
-    expect(screen.getByText("Head Start")).toBeTruthy();
-    expect(screen.getByText(/No head start/)).toBeTruthy();
   });
 });

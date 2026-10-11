@@ -57,10 +57,10 @@ describe("the overlay on the last life (canvas)", () => {
     expect(MAP_FAILED_RUN_OVER_MS).toBeGreaterThan(MAP_FAILED_MS * 4);
   });
 
-  it("keeps the same timers as the DOM overlay it replaces", () => {
-    const dom = read("src/components/game/MapFailedOverlay.tsx");
-    expect(dom).toContain(`MAP_FAILED_MS = ${MAP_FAILED_MS}`);
-    expect(dom).toContain(`MAP_FAILED_RUN_OVER_MS = ${MAP_FAILED_RUN_OVER_MS}`);
+  it("keeps the same timers as the DOM overlay it replaced", () => {
+    // The DOM original is gone; its values are pinned here instead.
+    expect(MAP_FAILED_MS).toBe(4200);
+    expect(MAP_FAILED_RUN_OVER_MS).toBe(30000);
   });
 
   it("dismisses on a tap anywhere and on its own timer", () => {

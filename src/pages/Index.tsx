@@ -16,7 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
 import { usePairSession } from '@/hooks/usePairSession';
-import type { PairedSession } from '@/components/game/PairLobby';
+import type { PairedSession } from '@/lib/net/transport';
 import { useMenuHighlights } from '@/hooks/useMenuHighlights';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/ui/screens/WelcomeScreen';

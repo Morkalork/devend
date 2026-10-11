@@ -18,7 +18,8 @@ import type { MetaProgressionStats } from "@/types/metaProgression";
 import { TAG_ORDER } from "@/lib/buildRecap";
 import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen, type IconSource } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
-import { ArcadeButton, MenuHeading } from "./welcomeParts";
+import { MenuHeading } from "./welcomeParts";
+import { ArcadeButton } from "../kit/ui";
 import {
   RANK_COLORS, SM_BREAKPOINT, archetypeBestText, buildName, capitalizeWords, dayLabel, fmtDate, gridRows,
   hoursText, lifetimeStats, monthLabel, recentDailies, showDaily, sortMapRecords, sortPlaques,

@@ -9,6 +9,8 @@
  * is not something you scroll to find" is "Play Again is pinned, not a detour".
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import i18n from "@/i18n";
 import type { TFunction } from "i18next";
 import type { GameResult } from "@/types/game";
@@ -79,6 +81,23 @@ describe("the detours stay in the recap", () => {
   it("offers Share only when something was banked", () => {
     expect(detourActions({ hasRecords: false, totalScore: 0 })).not.toContain("share");
     expect(detourActions({ hasRecords: false })).not.toContain("share");
+  });
+});
+
+describe("the buttons do what they say", () => {
+  const SRC = readFileSync(resolve(process.cwd(), "src/ui/screens/ResultScreen.tsx"), "utf8");
+
+  it("starts the next run from the pinned bar (Restart restarts, the rest plays on)", () => {
+    expect(SRC).toContain('onTap={() => (a.kind === "restart" ? onRestart?.() : onPlayAgain?.())}');
+  });
+
+  it("opens Records when there is a ladder (hallOfFameScreen)", () => {
+    expect(SRC).toContain("hasRecords: !!onRecords");
+    expect(SRC).toContain('text={t("welcome.records")} onTap={onRecords}');
+  });
+
+  it("still leaves for the menu from lower down", () => {
+    expect(SRC).toContain('text={t("result.mainMenu")} onTap={onMainMenu}');
   });
 });
 
