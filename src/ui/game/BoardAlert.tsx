@@ -19,7 +19,7 @@
  * or they read as one thing.
  */
 import { useTranslation } from "react-i18next";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "../reducedMotion";
 import { Label, TEXT, usePulse } from "../kit/ui";
 import { FlashNumeral, GlowFrame, Inert } from "./boardParts";
 import { ALARM, alarmEdgeAlpha } from "./overlayModel";

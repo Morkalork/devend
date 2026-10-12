@@ -55,6 +55,7 @@ import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges
 import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
 import { BoardBoot } from "@/ui/game/BoardBoot";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
+import { BoardSizeReadout } from "@/ui/game/BoardSizeReadout";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
 import { assignShardBombs, authoredShardBombs, type ShardBombConfig } from "@/lib/bombCore";
 import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
@@ -2579,12 +2580,6 @@ export function GameCanvas({
     // rest of the screen with a handler, since `touch-action` intersects down
     // the tree and could not make the one exception the slot bar needs.
     <div className={`flex flex-col w-full h-full touch-none ${isShaking ? "animate-shake" : ""}`}>
-      {process.env.NODE_ENV === "development" && (
-        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 font-mono z-10 pointer-events-none">
-          {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
-        </div>
-      )}
-
       {/* Only the board's own canvases are DOM. Everything drawn over or around
           the board is on the interface canvas (CANVAS_UI_PLAN.md), positioned
           from this container's box on screen. */}
@@ -2628,6 +2623,12 @@ export function GameCanvas({
               canvasOffsetLeft={canvasOffsetLeft} canvasOffsetTop={canvasOffsetTop} />
           );
         })()}
+        {/* Development builds: the board's size and scale, top right of the
+            container (the only text that was still DOM). */}
+        {process.env.NODE_ENV === "development" && (
+          <BoardSizeReadout origin={origin} width={containerBox.width}
+            boardWidth={debugInfo.boardWidth} boardHeight={debugInfo.boardHeight} scale={debugInfo.scale} />
+        )}
         {/* Frame-timing HUD, off the board's canvas so it costs the renderer
             nothing and can never land inside the render time it reports. */}
         <PerfOverlay visible={showPerfOverlay || perfHudPersisted} origin={origin} />

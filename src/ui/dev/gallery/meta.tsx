@@ -17,6 +17,7 @@ import type { RunLedgerEntry } from "@/types/hallOfFame";
 import { DEFAULT_META_STATS, type MetaProgressionStats } from "@/types/metaProgression";
 import { WelcomeScreen } from "../../screens/WelcomeScreen";
 import { TapToStartGate } from "../../screens/TapToStartGate";
+import { NotFoundScreen } from "../../screens/NotFoundScreen";
 import { OptionsScreen } from "../../screens/OptionsScreen";
 import { TutorialScreen } from "../../screens/TutorialScreen";
 import { JukeboxScreen } from "../../screens/JukeboxScreen";
@@ -110,6 +111,7 @@ export const entries: GalleryEntry[] = [
   // (isAwaitingUserGesture), which props cannot force: once sound is unlocked
   // this entry draws nothing.
   { id: "TapToStartGate", group: "screen", render: () => <TapToStartGate accentColor={ACCENT} /> },
+  { id: "NotFoundScreen", group: "screen", render: () => <NotFoundScreen onHome={() => {}} /> },
   {
     id: "OptionsScreen", group: "screen", render: () => (
       <OptionsScreen onBack={noop} onReEnableTutorials={noop} onTotalReset={noop} accentColor={ACCENT} />

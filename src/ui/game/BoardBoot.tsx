@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useRef } from "react";
 import type { Graphics } from "pixi.js";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "../reducedMotion";
 import { useTranslation } from "react-i18next";
 import { COLOR, hex } from "../theme";
 import { Label, TEXT } from "../kit/ui";

@@ -8,11 +8,10 @@
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
  * Admin screens are lazy-loaded and only available in dev builds.
  */
-import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
+import { lazy, Suspense, useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import type { GameScreen as GameScreenName } from '@/types/game';
 import { useZoomGuard } from '@/hooks/useZoomGuard';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
 import { usePairSession } from '@/hooks/usePairSession';
@@ -28,7 +27,7 @@ import { flushRunSave } from '@/lib/runSaveFlush';
 import { adminOnHere } from '@/lib/adminAccess';
 import { CanvasUiRoot } from '@/ui/CanvasUiRoot';
 import { CanvasLayer } from '@/ui/CanvasLayer';
-import { SCREEN_SETTLED_EVENT } from '@/ui/screenBox';
+import { startScreenSlide } from '@/ui/screenSlide';
 import { CRTBackground } from '@/components/game/CRTBackground';
 import { ResultScreen } from '@/ui/screens/ResultScreen';
 import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
@@ -377,37 +376,30 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
     ascensionDraft: 3, result: 4,
   };
+  // The slide to the new screen happens on the interface canvas (ui/screenSlide):
+  // deeper into a run comes in from the right, back towards the menu from the
+  // left. Not to or from a board screen, whose board is a DOM canvas the slide
+  // cannot carry (those have the boot reveal and the shatter instead).
   const prevScreenRef = useRef(navigation.currentScreen);
-  const transitionDirRef = useRef(1);
-  if (prevScreenRef.current !== navigation.currentScreen) {
-    const prevOrder = SCREEN_ORDER[prevScreenRef.current] ?? 0;
-    const currOrder = SCREEN_ORDER[navigation.currentScreen] ?? 0;
-    transitionDirRef.current = currOrder >= prevOrder ? 1 : -1;
-    prevScreenRef.current = navigation.currentScreen;
-  }
-  const slideVariants = {
-    enter:  (d: number) => ({ x: d > 0 ? '100%' : '-100%' }),
-    center: { x: 0 },
-    exit:   (d: number) => ({ x: d < 0 ? '100%' : '-100%' }),
-  };
+  useLayoutEffect(() => {
+    const prev = prevScreenRef.current;
+    const next = navigation.currentScreen;
+    if (prev === next) return;
+    prevScreenRef.current = next;
+    if (BOARD_SCREENS.includes(prev) || BOARD_SCREENS.includes(next)) return;
+    const prevOrder = SCREEN_ORDER[prev] ?? 0;
+    const currOrder = SCREEN_ORDER[next] ?? 0;
+    startScreenSlide(currOrder >= prevOrder ? 1 : -1);
+  });
 
   return (
     <>
       <div style={{ position: 'relative', overflow: 'hidden', height: '100dvh', width: '100%' }}>
-        <AnimatePresence mode="wait" custom={transitionDirRef.current}>
-          <motion.div
+        {/* Keyed by screen, so each screen mounts fresh as it did under the old
+            slide. Nothing here moves: the slide is the canvas's. */}
+        <div
             key={navigation.currentScreen}
-            custom={transitionDirRef.current}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            // The canvas interface places what it draws over DOM elements from
-            // their boxes, which the slide moves without a resize (ui/screenBox).
-            onAnimationComplete={() => window.dispatchEvent(new Event(SCREEN_SETTLED_EVENT))}
             style={{
-              willChange: 'transform',
               position: 'relative',
               width: '100%',
               // `svh` on a screen showing a board, `dvh` everywhere else.
@@ -827,8 +819,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <PairLoopbackPanel onBack={navigation.goToAdmin} />
               </Suspense>
             )}
-          </motion.div>
-        </AnimatePresence>
+          </div>
       </div>
 
       {/* The shared backdrop for every canvas screen (OWN_BACKGROUND_SCREENS

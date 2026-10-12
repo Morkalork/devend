@@ -15,7 +15,7 @@
  */
 import { useCallback, useMemo } from "react";
 import type { Graphics } from "pixi.js";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "../reducedMotion";
 import { useTranslation } from "react-i18next";
 import type { DebriefText, ScoreDebrief as Debrief } from "@/types/debrief";
 import { DEBRIEF_STAGGER_MS } from "@/lib/scoreDebrief";

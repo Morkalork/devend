@@ -14,6 +14,7 @@ import { ACCENT, BootDemo, DebriefDemo, PARTNER, Replay, Stage, type FakeBoard }
 import { BoardAlert } from "../../game/BoardAlert";
 import { BoardBoot } from "../../game/BoardBoot";
 import { BoardToasts } from "../../game/BoardToasts";
+import { BoardSizeReadout } from "../../game/BoardSizeReadout";
 import { DeadlineFrame } from "../../game/DeadlineFrame";
 import { InteractiveTutorialOverlay } from "../../game/InteractiveTutorialOverlay";
 import { LaunchOverlay } from "../../game/LaunchOverlay";
@@ -157,6 +158,9 @@ export const entries: GalleryEntry[] = [
   ) },
   { id: "ScoreDebrief-locks", group: "board", render: () => (
     <Stage>{b => <Replay everyMs={debriefDurationMs(2, 0) + 1500}>{k => <DebriefDemo key={k} b={b} debrief={DEBRIEF_LOCKS} />}</Replay>}</Stage>
+  ) },
+  { id: "BoardSizeReadout", group: "board", render: () => (
+    <Stage>{b => <BoardSizeReadout origin={b.origin} width={b.size.width} boardWidth={813} boardHeight={813} scale="0.903" />}</Stage>
   ) },
   { id: "PerfOverlay", group: "board", render: () => (
     <Stage>{b => <PerfOverlay visible origin={b.origin} />}</Stage>
