@@ -1,7 +1,7 @@
 /**
  * The upgrade shop's pieces on the canvas (canvas port of the markup inside
- * components/game/UpgradeShop.tsx): the shelf card, the status pills, the
- * banners and the three modals. UpgradeShop.tsx keeps the state; these draw it.
+ * components/game/UpgradeShop.tsx): the ticket, the sprint panel, the status
+ * pills, the banners and the three modals. UpgradeShop.tsx keeps the state; these draw it.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,9 @@ import type { LayoutContainer } from "@pixi/layout/components";
 import type { Graphics } from "pixi.js";
 import { animate } from "motion";
 // Info directly, not the kit's HoldHint: that is fixed at 0.8 alpha and the card's hint is fainter (opacity-30).
-import { Check, Clock, Flag, Info as HoldInfoIcon, Lock, Medal, RefreshCw } from "lucide-react";
+import {
+  Check, ChevronDown, ChevronUp, ChevronsUp, Clock, Equal, Flag, Flame, Info as HoldInfoIcon, Lock, SquareKanban, Medal, RefreshCw, X,
+} from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
 import { conditionMet, type RunContext } from "@/lib/upgradeConditions";
@@ -17,14 +19,15 @@ import { unlockRequirements } from "@/lib/upgradeUnlock";
 import { contentText } from "@/i18n/content";
 import { getUpgradeIcon } from "@/components/game/upgradeIcons";
 import {
-  Appear, COLOR, HoldHint, Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, usePulse, useUiScreen,
+  Appear, COLOR, HoldHint, Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, usePulse, useTween, useUiScreen,
   type Layout,
 } from "../kit/ui";
 import type { IconSource } from "../kit/icons";
 import { TagChip } from "../game/TagChip";
 import { ConditionChip } from "../game/ConditionChip";
 import { AbilityIcon } from "../game/AbilityIcon";
-import { cardLook, lockedReasonParts, tierPalette, type CardModel, type CertChase } from "./shopModel";
+import { lockedReasonParts, tierPalette, type CardModel, type CertChase } from "./shopModel";
+import { STATUS_KEY, capacityShare, priorityRank, ticketKey, ticketStatus, type TicketStatus } from "./storeBoardModel";
 import { DRAFT_HINT } from "./draftModel";
 import { RichParagraph, TopRule } from "./draftParts";
 
@@ -178,84 +181,119 @@ export function CertUnlockedRow({ cert }: { cert: Certificate }) {
   );
 }
 
-// ── The shelf card ─────────────────────────────────────────────────────────
+// ── The ticket ─────────────────────────────────────────────────────────────
 
-interface ShopCardProps {
+interface TicketCardProps {
   upgrade: UpgradeConfig;
   model: CardModel;
   upgrades: UpgradeConfig[];
   index: number;
   shaking: boolean;
-  lockedInfoOpen: boolean;
   hasDiscount: boolean;
   mapsRemaining: number;
   runContext: RunContext | null;
+  /** The band's accent: a ticket in the sprint wears it. */
+  accent: number;
   onTap: () => void;
   onHold: () => void;
-  onLockTap: () => void;
 }
 
+/** Each status's lozenge: ground and ink, the way a board colours them. */
+function statusLook(status: TicketStatus, accent: number): { ground: number | string; ink: number } {
+  switch (status) {
+    case "inSprint": return { ground: tint(accent, 0.18), ink: accent };
+    case "done": return { ground: tint(GREEN_500, 0.18), ink: GREEN_500 };
+    case "blocked": return { ground: tint(RED, 0.16), ink: RED };
+    case "overCapacity": return { ground: tint(ROLE.hours, 0.12), ink: ROLE.hours };
+    default: return { ground: ROLE.edge, ink: ROLE.muted };
+  }
+}
+
+/** The priority glyphs, lowest to highest, one per tier (storeBoardModel). */
+const PRIORITY_GLYPH = [ChevronDown, Equal, ChevronUp, ChevronsUp, Flame] as const;
+
 /**
- * One offer. Selection has to read at arm's length on a phone, in a strip
- * where a neighbour is always half in frame, so a selected card takes the same
- * three-part treatment DraftCard uses - tinted ground, solid accent border and
- * an outer ring - which is also what makes the shop and the drafts read as
- * one system. The ability slot is drawn inverted (light ground, dark ink) so
- * it never reads as a fourth upgrade.
+ * One offer, drawn as a ticket on a sprint board (the store as Jira, the way
+ * the owner asked for it): a stripe in the tier's colour down its left edge,
+ * the ticket's type square, key and priority across the top, the title, the
+ * description, the labels, then the status lozenge and the estimate in hours.
+ *
+ * Selecting a ticket commits it to the sprint: the lozenge says so and the
+ * edge turns to the accent, in place, so nothing jumps under the finger. A
+ * blocked ticket says what blocks it, always, rather than behind its lock.
+ * The ability slot is a ticket of its own type ("Ability"), coloured by the
+ * ability, so it never reads as a fourth upgrade.
  */
-export function ShopCard({
-  upgrade, model, upgrades, index, shaking, lockedInfoOpen, hasDiscount, mapsRemaining, runContext, onTap, onHold, onLockTap,
-}: ShopCardProps) {
+export function TicketCard({
+  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, onTap, onHold,
+}: TicketCardProps) {
   const { t } = useTranslation();
-  const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, cantAfford, certChase, certShown } = model;
+  const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, certChase, certShown } = model;
   const tier = tierPalette(upgrade.tier);
-  const look = cardLook({ selected, owned, locked, purchasable, cantAfford }, inv, tier.border);
-  // On the inverted card the tier palette is unreadable (light on light), so
-  // the ability's own colour carries the icon and kicker, and the rest steps
-  // down through the dark ink.
-  const headColor = inv ? (upgrade.abilityColor ? hex(upgrade.abilityColor) : COLOR.background) : tier.text;
-  const ink = inv ? COLOR.background : COLOR.foreground;
+  const typeColor = inv ? (upgrade.abilityColor ? hex(upgrade.abilityColor) : COLOR.primary) : tier.text;
+  const status = ticketStatus(model);
+  const lozenge = statusLook(status, accent);
   const UpgradeIcon = getUpgradeIcon(displayUpgrade, upgrades);
+  const Priority = PRIORITY_GLYPH[priorityRank(upgrade.tier)];
   const inert = owned || locked;
-  const priceColor = inv
-    ? (purchasable ? AMBER_700 : COLOR.background)
-    : (purchasable ? YELLOW_500 : COLOR.mutedForeground);
-  const priceAlpha = inv && !purchasable ? 0.6 : 1;
+  const name = inv ? upgrade.name : contentText.upgradeName(t, upgrade);
+  const priceColor = purchasable || selected ? ROLE.hours : ROLE.muted;
 
   return (
-    <Appear fromScale={0.9} delay={index * 0.05} layout={{ flex: 1 }}>
+    <Appear fromY={10} delay={index * 0.05} layout={{ flex: 1 }}>
       <Shake active={shaking} layout={{ flex: 1 }}>
-        {/* The outer ring (ring-2 ring-offset-2): always there, coloured only when selected, so selecting never resizes the card. */}
-        <View layout={{ flex: 1, padding: 2, borderRadius: RADIUS.xl + 4, borderWidth: 2, borderColor: look.ring ?? tint(COLOR.black, 0) }}>
-          <Pressable
-            onTap={inert ? undefined : onTap}
-            onHold={onHold}
-            pressedAlpha={inert ? 1 : 0.85}
-            alpha={look.alpha}
-            label={inv ? upgrade.name : contentText.upgradeName(t, upgrade)}
-            layout={{
-              flex: 1, padding: 20, gap: 12, borderRadius: RADIUS.xl,
-              backgroundColor: look.background, borderWidth: 2, borderColor: look.border,
-            }}
-          >
-            {/* Identity: icon, tier, name. One block, so the name has room to be a heading. */}
-            <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingRight: 24 }}>
-              {inv
-                ? <AbilityIcon kind={upgrade.abilityKind ?? ""} size={40} color={headColor} />
-                : UpgradeIcon && <Icon icon={UpgradeIcon} size={40} strokeWidth={1.5} color={headColor} />}
-              <View layout={{ flex: 1 }}>
-                <Label
-                  text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)}
-                  size={11} weight="600" upper letterSpacing={2} color={headColor}
-                />
-                <Label
-                  text={inv ? upgrade.name : contentText.upgradeName(t, upgrade)}
-                  size={TEXT.xl} weight="700" lineHeight={25} color={ink} wrap
-                />
+        <Pressable
+          onTap={inert ? undefined : onTap}
+          onHold={onHold}
+          pressedAlpha={inert ? 1 : 0.85}
+          alpha={locked || owned ? 0.6 : status === "overCapacity" ? 0.75 : 1}
+          label={name}
+          layout={{
+            flex: 1, flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
+            backgroundColor: selected ? tint(accent, 0.07) : ROLE.raised,
+            // The width never changes with the state, so selecting moves nothing.
+            borderWidth: 2, borderColor: selected ? accent : ROLE.edge,
+          }}
+        >
+          {/* The type stripe. */}
+          <View layout={{ width: 4, backgroundColor: typeColor }} />
+
+          <View layout={{ flex: 1, padding: 16, gap: 10 }}>
+            {/* Type square, key and priority. */}
+            <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(typeColor, 0.2) }}>
+                {inv
+                  ? <AbilityIcon kind={upgrade.abilityKind ?? ""} size={14} color={typeColor} />
+                  : UpgradeIcon && <Icon icon={UpgradeIcon} size={14} strokeWidth={2} color={typeColor} />}
               </View>
+              <Label text={ticketKey(upgrade.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+              <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={typeColor} />}
+                <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={typeColor} />
+              </View>
+              <View layout={{ flex: 1 }} />
+              {/* The holdable affordance lives ON the holdable thing. */}
+              <Icon icon={HoldInfoIcon} size={14} color={ROLE.muted} alpha={0.6} />
             </View>
 
-            {/* Archetype tag chips, and the situation a conditional upgrade needs. */}
+            {/* The title. */}
+            <Label text={name} size={TEXT.lg} font="display" weight="600" lineHeight={24} color={ROLE.ink} wrap />
+
+            {/* The description: the one thing on the ticket worth reading slowly. */}
+            <Label
+              text={isChoice && !chosenMember ? t("upgradeShop.choicePrompt") : contentText.upgradeDesc(t, displayUpgrade)}
+              size={TEXT.base} lineHeight={24} color={ROLE.muted} wrap
+            />
+
+            {/* What a retainer actually buys, in the only unit that makes its price legible: maps still to come. */}
+            {inv && (
+              <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon icon={RefreshCw} size={14} color={typeColor} />
+                <Label text={t("upgradeShop.abilityEveryMap", { count: mapsRemaining })} size={TEXT.sm} weight="600" color={typeColor} />
+              </View>
+            )}
+
+            {/* Labels: the archetype tags, and the situation a conditional upgrade needs. */}
             {((upgrade.tags?.length ?? 0) > 0 || upgrade.condition) && (
               <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
                 {upgrade.tags?.map(tag => <TagChip key={tag} tag={tag} />)}
@@ -265,79 +303,119 @@ export function ShopCard({
               </View>
             )}
 
-            {/* Description: the only text on the screen the player has to
-                actually read, so it gets the largest type after the name. */}
-            <Label
-              text={isChoice && !chosenMember ? t("upgradeShop.choicePrompt") : contentText.upgradeDesc(t, displayUpgrade)}
-              size={TEXT.lg} lineHeight={29}
-              color={inv ? COLOR.background : COLOR.mutedForeground}
-              alpha={inv ? 0.75 : 1}
-              wrap
-            />
-            {/* What a retainer actually buys, in the only unit that makes its price legible: maps still to come. */}
-            {inv && (
-              <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }} alpha={0.8}>
-                <Icon icon={RefreshCw} size={16} color={COLOR.background} />
-                <Label text={t("upgradeShop.abilityEveryMap", { count: mapsRemaining })} size={TEXT.sm} weight="600" color={COLOR.background} />
-              </View>
-            )}
-
             {/* Certificate chase: this purchase is also progress toward a permanent unlock. */}
             {certChase && <CertChaseRow chase={certChase} shown={certShown} />}
 
-            {/* The locked card's reason, opened from its lock. In flow at the
-                card's foot: hung below the card it would be clipped by the strip. */}
-            {locked && !owned && lockedInfoOpen && (
-              <View layout={{ borderRadius: RADIUS.base, paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4, backgroundColor: COLOR.card, borderWidth: 1, borderColor: COLOR.border }}>
-                <Label
-                  text={`${t("upgradeShop.requires")} ${lockedReasonParts(t, upgrade, upgrades, model.effectiveOwned).join(", ")}`}
-                  size={TEXT.xs} color={COLOR.mutedForeground} wrap
-                />
+            {/* What blocks it, said outright: a board names a ticket's blockers. */}
+            {locked && !owned && (
+              <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+                <Icon icon={Lock} size={14} color={RED} layout={{ marginTop: 2 }} />
+                <View layout={{ flex: 1 }}>
+                  <Label
+                    text={`${t("upgradeShop.requires")} ${lockedReasonParts(t, upgrade, upgrades, model.effectiveOwned).join(", ")}`}
+                    size={TEXT.xs} color={ROLE.muted} wrap
+                  />
+                </View>
               </View>
             )}
 
-            {/* Cost, pinned to the card's foot whatever the description's length. */}
-            {!owned && (
-              <>
-                <View layout={{ flex: 1 }} />
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 8 }} alpha={priceAlpha}>
-                  <Icon icon={Clock} size={20} color={priceColor} />
+            {/* Status and estimate, pinned to the foot whatever the description's length. */}
+            <View layout={{ flex: 1 }} />
+            <View layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4 }}>
+              <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, backgroundColor: lozenge.ground }}>
+                {status === "inSprint" && <Icon icon={Check} size={12} strokeWidth={3} color={lozenge.ink} />}
+                <Label text={t(STATUS_KEY[status])} size={11} weight="700" upper letterSpacing={0.6} color={lozenge.ink} />
+              </View>
+              <View layout={{ flex: 1 }} />
+              {!owned && (
+                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   {(hasDiscount || shownPrice === 0) && (
-                    <Struck text={t("upgradeShop.hoursValue", { hours: displayUpgrade.cost })} size={TEXT.sm} color={priceColor} alpha={0.5} />
+                    <Struck text={t("upgradeShop.hoursValue", { hours: displayUpgrade.cost })} size={TEXT.xs} color={ROLE.muted} alpha={0.7} />
                   )}
                   {isChoice && !chosenMember && (
-                    <Label text={t("upgradeShop.fromLabel")} size={TEXT.xs} color={priceColor} alpha={0.7} />
+                    <Label text={t("upgradeShop.fromLabel")} size={TEXT.xs} color={ROLE.muted} />
                   )}
-                  <Label
-                    text={shownPrice === 0 ? t("upgradeShop.freeLabel") : t("upgradeShop.hoursValue", { hours: shownPrice })}
-                    size={TEXT.lg} weight="700" color={priceColor}
-                  />
+                  {/* The estimate: a ticket's hours, in gold like every figure in hours. */}
+                  <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: RADIUS.full, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(priceColor, 0.12) }}>
+                    <Icon icon={Clock} size={13} color={priceColor} />
+                    <Label
+                      text={shownPrice === 0 ? t("upgradeShop.freeLabel") : t("upgradeShop.hoursValue", { hours: shownPrice })}
+                      size={TEXT.sm} weight="700" font="display" color={priceColor}
+                    />
+                  </View>
                 </View>
-              </>
-            )}
-
-            {/* Status badge, top right. A filled badge for "selected": a bare
-                tick was lost against a bright icon. */}
-            <View layout={{ position: "absolute", top: 12, right: 12 }}>
-              {selected ? (
-                <View layout={{ borderRadius: RADIUS.full, padding: 4, backgroundColor: COLOR.primary }}>
-                  <Icon icon={Check} size={16} strokeWidth={3} color={COLOR.primaryForeground} />
-                </View>
-              ) : owned ? (
-                <Icon icon={Check} size={16} color={GREEN_500} />
-              ) : locked ? (
-                <Pressable onTap={onLockTap} label={t("upgradeShop.requires")} layout={{ padding: 2, margin: -2 }}>
-                  <Icon icon={Lock} size={16} color={COLOR.mutedForeground} />
-                </Pressable>
-              ) : (
-                // The holdable affordance lives ON the holdable thing.
-                <Icon icon={HoldInfoIcon} size={16} color={ink} alpha={0.3} />
               )}
             </View>
-          </Pressable>
-        </View>
+          </View>
+        </Pressable>
       </Shake>
     </Appear>
+  );
+}
+
+// ── The sprint ─────────────────────────────────────────────────────────────
+
+export interface SprintLine {
+  id: string;
+  /** The upgrade the line names (a choice's chosen member). */
+  upgrade: UpgradeConfig;
+  price: number;
+  /** A retainer, named as written rather than through the upgrade locales. */
+  ability: boolean;
+}
+
+interface SprintPanelProps {
+  /** The level the sprint is for. */
+  level: number;
+  lines: SprintLine[];
+  committed: number;
+  capacity: number;
+  accent: number;
+  /** Tapping a committed line takes it back out of the sprint. */
+  onRemove: (id: string) => void;
+}
+
+/**
+ * The sprint the tickets are pulled into: its capacity as a bar (the hours
+ * the player has; committed hours fill it in gold) and one line per committed
+ * ticket, each tappable to take it back out. Sits above the backlog, so the
+ * running total is in view while the player swipes through the tickets.
+ */
+export function SprintPanel({ level, lines, committed, capacity, accent, onRemove }: SprintPanelProps) {
+  const { t } = useTranslation();
+  const share = useTween(capacityShare(committed, capacity), 0.3);
+  return (
+    <View label="sprint" layout={{ alignSelf: "stretch", gap: 10, padding: 14, borderRadius: RADIUS.sm, backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge }}>
+      <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Icon icon={SquareKanban} size={16} color={accent} />
+        <Label text={t("upgradeShop.sprintTitle", { level })} size={TEXT.base} font="display" weight="700" color={ROLE.ink} />
+        <View layout={{ flex: 1 }} />
+        <Label text={t("upgradeShop.sprintCapacity", { used: committed, total: capacity })} size={TEXT.xs} font="mono" color={ROLE.muted} />
+      </View>
+
+      {/* Capacity. */}
+      <View layout={{ alignSelf: "stretch", height: 6, borderRadius: 3, backgroundColor: ROLE.edge, overflow: "hidden" }}>
+        <View layout={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(share * 1000) / 10}%`, backgroundColor: ROLE.hours }} />
+      </View>
+
+      {lines.length === 0 ? (
+        <Label text={t("upgradeShop.sprintEmpty")} size={TEXT.xs} color={ROLE.muted} wrap />
+      ) : (
+        <View layout={{ gap: 2 }}>
+          {lines.map(line => (
+            <Pressable key={line.id} label={`sprint-${line.id}`} onTap={() => onRemove(line.id)}
+              layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 6, paddingBottom: 6 }}>
+              <Label text={ticketKey(line.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+              <View layout={{ flex: 1 }}>
+                <Label text={line.ability ? line.upgrade.name : contentText.upgradeName(t, line.upgrade)} size={TEXT.sm} color={ROLE.ink} truncate />
+              </View>
+              <Label text={t("upgradeShop.hoursValue", { hours: line.price })} size={TEXT.sm} weight="700" font="display" color={ROLE.hours} />
+              <Icon icon={X} size={14} color={ROLE.muted} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 

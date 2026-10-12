@@ -12,9 +12,6 @@ import { prerequisitesMet, unlockRequirements } from "@/lib/upgradeUnlock";
 import { fenceOfferIsEmpty } from "@/lib/fenceOwnership";
 import { getRunRng } from "@/lib/runRng";
 import { contentText } from "@/i18n/content";
-import {
-  ABILITY_CARD_STATE_CLASSES, UPGRADE_CARD_STATE_CLASSES, selectedCardClasses, type UpgradeCardState,
-} from "@/components/game/upgradeCardState";
 import { COLOR } from "../theme";
 import { tint } from "../kit/style";
 
@@ -410,34 +407,7 @@ export function buildTagChips(counts: Map<string, number>, threshold: number): {
     });
 }
 
-// ── How a card is drawn ────────────────────────────────────────────────────
-
-export type CardStateKey = keyof typeof UPGRADE_CARD_STATE_CLASSES;
-
-/**
- * Which of the mutually exclusive card states applies, decided by the DOM's
- * own selectedCardClasses so the ORDER of the checks (selected beats owned
- * beats locked beats ...) lives in one place for both interfaces.
- */
-export function cardStateKey(state: UpgradeCardState, inverted: boolean): CardStateKey {
-  const classes = selectedCardClasses(state, "border-current", inverted);
-  const table: Record<string, string> = inverted ? ABILITY_CARD_STATE_CLASSES : UPGRADE_CARD_STATE_CLASSES;
-  const key = Object.keys(table).find(k => table[k] === classes);
-  return (key ?? "unavailable") as CardStateKey;
-}
-
-export interface CardLook {
-  background: number | string;
-  border: number | string;
-  /** The selected state's outer ring (Tailwind ring-2 ring-offset-2), or null. */
-  ring: string | null;
-  alpha: number;
-  /** An unaffordable card's border was dashed; Yoga cannot dash, so it is dimmer instead. */
-  dashed: boolean;
-}
-
-const GREEN_500 = 0x22c55e;
-const GREEN_600 = 0x16a34a;
+// ── How a ticket is drawn ──────────────────────────────────────────────────
 
 /** Tailwind's tier palette as numbers (types/upgrade.ts TIER_COLORS). */
 const TIER_PALETTE: Record<UpgradeTier, { text: number; border: string }> = {
@@ -450,27 +420,4 @@ const TIER_PALETTE: Record<UpgradeTier, { text: number; border: string }> = {
 
 export function tierPalette(tier: UpgradeTier): { text: number; border: string } {
   return TIER_PALETTE[tier] ?? TIER_PALETTE.Junior;
-}
-
-/** The card's ground, border and opacity for its state (upgradeCardState.ts as colours). */
-export function cardLook(state: UpgradeCardState, inverted: boolean, tierBorder: string): CardLook {
-  const key = cardStateKey(state, inverted);
-  const dashed = !!state.cantAfford && !state.selected;
-  if (inverted) {
-    switch (key) {
-      case "selected": return { background: COLOR.foreground, border: COLOR.primary, ring: tint(COLOR.primary, 0.7), alpha: 1, dashed };
-      case "owned": return { background: tint(COLOR.foreground, 0.8), border: GREEN_600, ring: null, alpha: 1, dashed };
-      case "purchasable": return { background: COLOR.foreground, border: COLOR.foreground, ring: null, alpha: 1, dashed };
-      case "cantAfford": return { background: tint(COLOR.foreground, 0.6), border: tint(COLOR.foreground, 0.4 * 0.6), ring: null, alpha: 0.7, dashed };
-      default: return { background: tint(COLOR.foreground, 0.4), border: tint(COLOR.foreground, 0.3), ring: null, alpha: 0.5, dashed };
-    }
-  }
-  switch (key) {
-    case "selected": return { background: tint(COLOR.primary, 0.2), border: COLOR.primary, ring: tint(COLOR.primary, 0.6), alpha: 1, dashed };
-    case "owned": return { background: tint(GREEN_500, 0.2), border: tint(GREEN_500, 0.5), ring: null, alpha: 1, dashed };
-    case "locked": return { background: tint(COLOR.muted, 0.3), border: tint(COLOR.muted, 0.3), ring: null, alpha: 0.4, dashed };
-    case "purchasable": return { background: COLOR.card, border: tierBorder, ring: null, alpha: 1, dashed };
-    case "cantAfford": return { background: tint(COLOR.card, 0.5), border: tint(COLOR.mutedForeground, 0.3 * 0.6), ring: null, alpha: 0.6, dashed };
-    default: return { background: tint(COLOR.card, 0.5), border: COLOR.muted, ring: null, alpha: 0.4, dashed };
-  }
 }
