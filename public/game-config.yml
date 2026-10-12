@@ -260,6 +260,11 @@ shard_bombs:
 # fences, the map's walls and the claimed ground, and throws the balls), only
 # bigger. The thrown balls ease back over shard_bombs.boost_seconds.
 box_bombs:
+  # The first map whose slab and chest bombs blast. Below it the bomb is still
+  # in every box and the hit on it still finishes the box, but it strikes,
+  # carves and throws nothing: act I (chest met at 7, slab at 8) teaches the
+  # box, not the crater. map.yml `boxBombBlast: true/false` overrides it.
+  start_level: 11
   blast_radius: 150
   blast_damage: 2
   ball_boost: 1.8

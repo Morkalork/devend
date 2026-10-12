@@ -502,6 +502,19 @@ everything solid in reach, not only the breakables:
   bomb goes up (strike, carve, throw), bigger: `box_bombs` in game-config.yml,
   reach 150 against the shard's 100, a blow of 2, and a bigger fire whose 3D
   light reaches as far as the blast (`ObjectDebrisState.reach`).
+- **From act II.** A slab or chest bomb blasts from `box_bombs.start_level`
+  (11) on. Before it, act I's boxes (chest met at 7, slab at 8) keep the bomb,
+  the wear that shows it and the hit on it that finishes the box, with the
+  fire and the boom, but strike, carve and throw nothing; holding one says it
+  "goes up without a blast". `boxBombBlast: true/false` in map.yml (Admin:
+  Level panel, "Box Bomb Blast") overrides the start level either way.
+- **The reach ring.** Every bomb a player can see shows how far it reaches: a
+  faint red disc with a dashed edge on the floor, at the blast radius, round a
+  shard bomb from the deal and round a box bomb once it is exposed (its next
+  hit is the one that sets it off). Steady, not blinking: the fuse already
+  blinks. Drawn by the object layer under the bricks, so it is a floor mark in
+  both renderers, and only where that kind of bomb is armed, so a quiet act I
+  box has none (`objectLayer.ts` drawReach, `bombLook.ts` REACH_RING).
 - **The balls.** Every active ball in reach is thrown straight out from the
   blast, faster: `ball_boost` (1.5 shard, 1.8 slab or chest) at the centre,
   half the extra at the edge of the reach. It eases back to the speed it had

@@ -524,6 +524,13 @@ export interface LevelConfig {
    */
   shardBombChance?: number;
   /**
+   * Do this map's slab and chest bombs blast (lib/bombCore.ts)? Absent means
+   * game-config.yml's `box_bombs.start_level` decides (11: act I's bombs finish
+   * their box quietly). Set, it wins both ways. The bomb itself, and the rule
+   * that the hit on it finishes the box, are there either way.
+   */
+  boxBombBlast?: boolean;
+  /**
    * Share of this map's points carried by its colored areas, 0..0.8.
    *
    * Absent means the default (0.4) on any map that HAS areas, and nothing at

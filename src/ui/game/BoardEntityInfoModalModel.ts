@@ -35,7 +35,8 @@ export function boardEntityCopy(t: TFunction, hit: BoardEntityHit, accent: strin
     return {
       title: t(`boardInfo.${hit.kind}.title`) as string,
       titleColor: accent,
-      body: t(`boardInfo.${hit.kind}.body`) as string,
+      // A bomb box on a map where it does not blast has its own body.
+      body: t(`boardInfo.${hit.kind}.${hit.detail === "quiet" ? "bodyQuiet" : "body"}`) as string,
       hint,
     };
   }

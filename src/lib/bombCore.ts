@@ -102,6 +102,13 @@ export interface ShardBombConfig {
    * teaches bricks is not also handing out unannounced explosions.
    */
   startLevel: number;
+  /**
+   * The first map whose slab and chest bombs BLAST (strike, carve, throw).
+   * Below it the bomb is still there and still finishes the box, but quietly:
+   * act I is teaching what a chest and a slab are, and a crater in the claimed
+   * ground is not part of that lesson.
+   */
+  boxStartLevel: number;
   /** A shard bomb's blast. */
   blastRadius: number;
   blastDamage: number;
@@ -113,7 +120,7 @@ export interface ShardBombConfig {
 }
 
 export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = {
-  chance: 0.1, startLevel: 17, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
+  chance: 0.1, startLevel: 17, boxStartLevel: 11, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
   box: { radius: 150, damage: 2, ballBoost: 1.8 },
   boostSeconds: 2.5,
 };
@@ -205,6 +212,25 @@ export function mapCanHaveShardBombs(
   if (shards.length === 0) return false;
   if (shards.some(w => w.bomb === true)) return true;
   return effectiveShardBombChance(cfg, level.level ?? 0, level.shardBombChance) > 0;
+}
+
+/**
+ * Do this map's slab and chest bombs blast? The map's own `boxBombBlast` wins
+ * both ways; otherwise from `boxStartLevel` on.
+ */
+export function boxBlastArmed(
+  cfg: Pick<ShardBombConfig, "boxStartLevel">, levelNumber: number, override: boolean | undefined,
+): boolean {
+  return override ?? levelNumber >= cfg.boxStartLevel;
+}
+
+/** Does any box on this map blast, on the shipped config? The ledger's question. */
+export function mapCanHaveBoxBlasts(
+  level: Pick<LevelConfig, "entities" | "level" | "boxBombBlast">,
+  cfg: Pick<ShardBombConfig, "boxStartLevel"> = DEFAULT_SHARD_BOMB_CONFIG,
+): boolean {
+  const boxes = (level.entities ?? []).some(e => e.kind === "wall" && entityHasBomb(e as WallEntity));
+  return boxes && boxBlastArmed(cfg, level.level ?? 0, level.boxBombBlast);
 }
 
 /** Which shards a map pins (`bomb: true`) or keeps clear (`bomb: false`). */

@@ -44,7 +44,7 @@ function build(n: number): CanvasGameState {
 describe("the tuning", () => {
   it("is in game-config.yml, the slab and chest bomb's bigger", () => {
     const yml = read("public/game-config.yml");
-    expect(yml).toMatch(/box_bombs:\n\s+blast_radius: 150\n\s+blast_damage: 2\n\s+ball_boost: 1\.8\n/);
+    expect(yml).toMatch(/box_bombs:\n(?:\s+#.*\n)*\s+start_level: 11\n\s+blast_radius: 150\n\s+blast_damage: 2\n\s+ball_boost: 1\.8\n/);
     expect(yml).toMatch(/\n\s+ball_boost: 1\.5\n/);
     expect(yml).toMatch(/\n\s+boost_seconds: 2\.5\n/);
     const c = DEFAULT_SHARD_BOMB_CONFIG;

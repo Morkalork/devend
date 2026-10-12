@@ -27,7 +27,7 @@ import type { ImpactDent } from "@/types/game";
 import { getBug } from "@/lib/bugs";
 import { simNow } from "@/lib/simClock";
 import { BOMB_CASING, BOMB_LIGHT, bombReveal } from "@/lib/bombCore";
-import { bombHoleOutline, bombLook, bombSeed } from "./bombLook";
+import { REACH_RING, bombHoleOutline, bombLook, bombSeed, reachDashes } from "./bombLook";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -123,10 +123,15 @@ export class ObjectLayer {
   private shadows!: Graphics;
   private bodies = new Graphics();
   private rims = new Graphics();
+  /** The bombs' reach rings, under everything: they are marks on the floor. */
+  private reach = new Graphics();
+  /** This map's blast radii, world units; null where that kind does not blast. */
+  private shardReach: number | null = null;
+  private boxReach: number | null = null;
 
   constructor() {
     // No shadow child: cast shadows go to the shared floor plane.
-    this.container.addChild(this.bodies, this.rims);
+    this.container.addChild(this.reach, this.bodies, this.rims);
   }
 
   sync(
@@ -139,6 +144,9 @@ export class ObjectLayer {
     this.shadows = shadows;
     this.bodies.clear();
     this.rims.clear();
+    this.reach.clear();
+    this.shardReach = game.shardBombBlast?.radius ?? null;
+    this.boxReach = game.boxBombBlast?.radius ?? null;
 
     const phasingPolys = new Set((game.phasingObjects ?? []).map(p => p.polygon));
 
@@ -459,6 +467,10 @@ export class ObjectLayer {
       ? bombLook(1, true, half, now, undefined)
       : bombLook(bombReveal(d), !!d.bombExposed, half, now, d.bombExposedAt);
     if (look.holeR <= 0) return;
+    // How far it will reach, once there is a bomb to see: a shard's from the
+    // start, a box's once it is exposed (the hit that sets it off is the next).
+    const reach = alwaysShown ? this.shardReach : d.bombExposed ? this.boxReach : null;
+    if (reach) this.drawReach(cx, cy, reach * scale, scale);
     const hole = bombHoleOutline(cx, cy, look.holeR, bombSeed(d.id));
     // The hole: the dark inside of the box, and a pale broken lip round it.
     this.bodies.poly(hole).fill({ color: 0x07080a, alpha: 0.92 });
@@ -481,6 +493,21 @@ export class ObjectLayer {
     if (look.flash > 0) {
       this.rims.circle(cx, cy, look.holeR * (1 + 0.5 * (1 - look.flash))).fill({ color: 0xffffff, alpha: 0.5 * look.flash });
     }
+  }
+
+  /** The blast's reach on the floor round a bomb (bombLook.ts REACH_RING). */
+  private drawReach(cx: number, cy: number, r: number, scale: number): void {
+    this.reach.circle(cx, cy, r).fill({ color: BOMB_LIGHT, alpha: REACH_RING.fillAlpha });
+    // Each dash flattened to a short polyline: no arc() in this renderer
+    // (compassRing.test.ts has why).
+    for (const [a0, a1] of reachDashes(r)) {
+      this.reach.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+      for (let k = 1; k <= 3; k++) {
+        const a = a0 + ((a1 - a0) * k) / 3;
+        this.reach.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      }
+    }
+    this.reach.stroke({ width: Math.max(hairline(), scale * 1.6), color: BOMB_LIGHT, alpha: REACH_RING.strokeAlpha });
   }
 
   /**

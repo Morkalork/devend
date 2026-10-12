@@ -21,7 +21,7 @@
  * function rather than each deciding for itself what "uses a mover" means.
  */
 import type { LevelConfig, LevelEntity } from "@/types/level";
-import { mapCanHaveShardBombs } from "@/lib/bombCore";
+import { mapCanHaveBoxBlasts, mapCanHaveShardBombs } from "@/lib/bombCore";
 
 /** A named thing a map can use, and how to spot it. */
 export interface Mechanic {
@@ -59,6 +59,8 @@ export const MECHANICS: Mechanic[] = [
   // the bombs in them are texture. Read through bombCore so the start level
   // the ledger checks is the one the game deals by.
   { key: "shardBomb", label: "Shard bomb", headline: false, detect: l => mapCanHaveShardBombs(l) },
+  // The slab and chest bombs' blast, from act II on: seasoning on the boxes.
+  { key: "boxBlast", label: "Box blast", headline: false, detect: l => mapCanHaveBoxBlasts(l) },
   { key: "reveals", label: "Reveals", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.reveals) },
   { key: "mirror", label: "Mirror", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.mirror) },
   { key: "phasing", label: "Phasing", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.isPhasing) },

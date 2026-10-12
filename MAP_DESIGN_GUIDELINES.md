@@ -387,6 +387,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | phasing | A | Meet | 16 | - | - |
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | shard bomb | A | Seasoning | 17 | - | - |
+| box blast | A | Seasoning | 11 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 21 | - | 31 |
@@ -1899,6 +1900,12 @@ columns and left out:
 | 17 | 7, 22.9 | 6, 27.3 | 2.3 (shards now in) |
 | 18 | 7, 26.4 | 7, 21.9 | 2.3 |
 | 19 | 7, 22.3 | 7, 22.4 | 1.9 |
+
+**Since then, box blasts start at 11** (`box_bombs.start_level`, ledger row
+"box blast"): act I's chests and slabs keep their bomb and the hit that
+finishes them, but blast nothing, so 7 and 9 now sweep exactly their
+disarmed column (7 of 8 at 17.4, 6 of 8 at 46.9). A map overrides it with
+`boxBombBlast: true/false`.
 
 **Inside the noise of eight seeds, in both directions.** Blasts neither strand
 maps nor hand them over; 17 is the only map with shard bombs and gains a win

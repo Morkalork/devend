@@ -160,6 +160,10 @@ export const entries: GalleryEntry[] = [
   { id: "BoardEntityInfoModal-bug", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard", detail: "caffeine" }} accentColor={ACCENT} onClose={noop} /> },
   { id: "BoardEntityInfoModal-bugDanger", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard", detail: "bigBang" }} accentColor={ACCENT} onClose={noop} /> },
   { id: "BoardEntityInfoModal-bugUnknown", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombBox", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombBox" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombBoxQuiet", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombBox", detail: "quiet" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombChestQuiet", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombChest", detail: "quiet" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombShard", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombShard" }} accentColor={ACCENT} onClose={noop} /> },
 
   { id: "MapFailedOverlay", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-runOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },

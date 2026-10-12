@@ -57,7 +57,7 @@ import { BoardBoot } from "@/ui/game/BoardBoot";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
 import { BoardSizeReadout } from "@/ui/game/BoardSizeReadout";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
-import { assignShardBombs, authoredShardBombs, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
+import { assignShardBombs, authoredShardBombs, boxBlastArmed, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
 import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
@@ -1513,7 +1513,7 @@ export function GameCanvas({
       {
         const cfg = shardBombConfigRef.current;
         game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
-        game.boxBombBlast = cfg ? { ...cfg.box } : null;
+        game.boxBombBlast = cfg && boxBlastArmed(cfg, levelNumber, level.boxBombBlast) ? { ...cfg.box } : null;
         game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
         const chance = cfg
           ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, activeModifiers.shardBombChanceBonus ?? 0)

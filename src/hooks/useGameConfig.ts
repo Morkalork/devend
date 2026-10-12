@@ -82,6 +82,7 @@ interface RawShardBombConfig {
 
 /** Raw `box_bombs:` block: the slab and chest bombs' blast. */
 interface RawBoxBombConfig {
+  start_level?: number;
   blast_radius?: number;
   blast_damage?: number;
   ball_boost?: number;
@@ -92,6 +93,7 @@ function parseShardBombConfig(raw: RawShardBombConfig | undefined, box: RawBoxBo
   return {
     chance: raw?.chance ?? d.chance,
     startLevel: raw?.start_level ?? d.startLevel,
+    boxStartLevel: box?.start_level ?? d.boxStartLevel,
     blastRadius: raw?.blast_radius ?? d.blastRadius,
     blastDamage: raw?.blast_damage ?? d.blastDamage,
     ballBoost: raw?.ball_boost ?? d.ballBoost,

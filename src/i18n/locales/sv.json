@@ -1718,15 +1718,17 @@
     },
     "bombBox": {
       "title": "Bombblock",
-      "body": "Det sitter en bomb inuti. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger blocket och river upp ett hål i allt nära intill: tegel, staket, väggar och vunnen yta. Bollar i närheten kastas iväg, snabbare."
+      "body": "Det sitter en bomb inuti. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger blocket och river upp ett hål i allt nära intill: tegel, staket, väggar och vunnen yta. Bollar i närheten kastas iväg, snabbare. När bomben syns markerar en röd ring på golvet hur långt den når.",
+      "bodyQuiet": "Det sitter en bomb inuti. Varje träff nöter skalet tills bomben syns; nästa träff på bomben gör slut på blocket. På den här banan smäller den utan tryckvåg."
     },
     "bombChest": {
       "title": "Skattkista",
-      "body": "Byte, och en bomb. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger upp den och river upp ett hål i allt nära intill. Bollar i närheten kastas iväg, snabbare. Varje krossning höjer också banans utbetalning."
+      "body": "Byte, och en bomb. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spränger upp den och river upp ett hål i allt nära intill. Bollar i närheten kastas iväg, snabbare. Varje krossning höjer också banans utbetalning. När bomben syns markerar en röd ring på golvet hur långt den når.",
+      "bodyQuiet": "Byte, och en bomb. Varje träff nöter skalet tills bomben syns; nästa träff på bomben spräcker den. På den här banan smäller den utan tryckvåg. Varje krossning höjer också banans utbetalning."
     },
     "bombShard": {
       "title": "Bombtegel",
-      "body": "Krossa den så exploderar den: alla tegel nära intill går med, ett block inom räckhåll tar en hård träff, och den river upp ett hål i staket, väggar och vunnen yta. Bollar i närheten kastas iväg, snabbare. En annan bomb i smällen exploderar också."
+      "body": "Krossa den så exploderar den: alla tegel nära intill går med, ett block inom räckhåll tar en hård träff, och den river upp ett hål i staket, väggar och vunnen yta. Bollar i närheten kastas iväg, snabbare. En annan bomb i smällen exploderar också. Den röda ringen på golvet visar hur långt den når."
     },
     "objective": {
       "title": "Uppdragslåda",

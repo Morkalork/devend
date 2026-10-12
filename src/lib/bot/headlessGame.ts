@@ -65,7 +65,7 @@ import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
 import { updatePickups } from "@/lib/pickups";
 import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs, updateBugs } from "@/lib/physics/bugs";
-import { assignShardBombs, authoredShardBombs, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
+import { assignShardBombs, authoredShardBombs, boxBlastArmed, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import { authoredBugCarriers } from "@/lib/bugs";
 import type { BugConfig } from "@/types/bugs";
 import { resolveWinSpec } from "@/lib/winSpec";
@@ -358,7 +358,7 @@ export function createBotGame(
   {
     const cfg = opts.bombs ?? null;
     game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
-    game.boxBombBlast = cfg ? { ...cfg.box } : null;
+    game.boxBombBlast = cfg && boxBlastArmed(cfg, levelNumber, level.boxBombBlast) ? { ...cfg.box } : null;
     game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
     const chance = cfg
       ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, modifiers.shardBombChanceBonus ?? 0)

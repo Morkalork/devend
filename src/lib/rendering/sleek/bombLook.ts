@@ -69,3 +69,22 @@ export function bombSeed(id: string): number {
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
   return Math.abs(h);
 }
+
+/**
+ * The reach ring: how far a bomb's blast goes, drawn on the floor round every
+ * shard bomb and round a box bomb once it shows. A faint disc and a dashed
+ * edge, steady rather than blinking (the fuse light already blinks, and
+ * nothing else on this board pulses that fast). Only where the blast is armed:
+ * a quiet act I box has nothing to reach.
+ */
+export const REACH_RING = { fillAlpha: 0.08, strokeAlpha: 0.55, dashPx: 10, gapPx: 6 };
+
+/** The ring's dashes as [start, end] angles: whole dashes, evenly spread, at least eight. */
+export function reachDashes(radiusPx: number, dashPx = REACH_RING.dashPx, gapPx = REACH_RING.gapPx): [number, number][] {
+  const n = Math.max(8, Math.round((Math.PI * 2 * radiusPx) / (dashPx + gapPx)));
+  const step = (Math.PI * 2) / n;
+  const on = step * (dashPx / (dashPx + gapPx));
+  const out: [number, number][] = [];
+  for (let i = 0; i < n; i++) out.push([i * step, i * step + on]);
+  return out;
+}
