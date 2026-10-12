@@ -843,6 +843,7 @@
       "fail": "Misslyckande:"
     },
     "groupRequiredAll": "Mål:",
+    "groupFailAvoided": "Misslyckande, undvikit",
     "bonusArea": "Lås in en boll i det {{area}} syntaxområdet för {{mult}}x betalning. Att strunta i den kostar ingenting.",
     "tradeBudgetBonus": "Dina staket är ransonerade. Den valfria fickan och en bekväm rensning tävlar om dem.",
     "lock_one": "Lås in minst {{count}} boll.",

@@ -70,6 +70,8 @@ export const ROLE = {
   muted: 0x8b968f,
   hours: 0xf2bc55,
   cost: 0xff6b6b,
+  /** A check that passed (the Debrief's ticket): the pipeline's green. */
+  pass: 0x4fd67f,
 } as const;
 
 export const FONT = {

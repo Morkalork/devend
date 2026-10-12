@@ -55,6 +55,30 @@ const roughScore: LevelScoreData = {
   winReason: "space",
 };
 
+/** The map's Acceptance Criteria, marked, as the ticket Debrief draws them. */
+const ticketScore: LevelScoreData = {
+  ...fullScore,
+  acceptance: [
+    { group: "required", text: "Clear 82% of the board.", met: true },
+    { group: "required", text: "Smash 4 shards (one touch each).", met: true },
+    { group: "required", text: "Lock a ball in the light syntax area (x2 pay).", met: true },
+    { group: "optional", text: "Lock a ball in the dark syntax area for x3 pay. Skipping it costs nothing.", met: false },
+    { group: "fail", text: "The timer runs out (60s).", met: true },
+  ],
+};
+
+/** A win by its "or": the goals were not all met, and a fence budget ran close. */
+const ticketMissedScore: LevelScoreData = {
+  ...roughScore,
+  acceptance: [
+    { group: "required", text: "Clear 76% of the board.", met: false },
+    { group: "required", text: "Lock 2 balls.", met: true },
+    { group: "either", text: "Every ball locked", met: true },
+    { group: "trade", text: "With only 6 fences, the bonus pocket and a clean clear compete.", met: false },
+    { group: "fail", text: "You use all 6 fences without winning.", met: true },
+  ],
+};
+
 const recap: RunRecap = {
   primary: "lock", secondary: "tempo", tagCounts: { lock: 5, tempo: 3, bank: 2, safety: 1 },
   capstoneId: "stock_options", capstoneName: "Stock Options", score: 1840, isArchetypeRecord: true, previousBest: 1520,
@@ -155,6 +179,17 @@ export const entries: GalleryEntry[] = [
   {
     id: "LevelCompleteOverlay-rough", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={roughScore} totalScore={402} onContinue={noop} accentColor={ACCENT} />,
+  },
+  {
+    // The ticket Debrief: the pre-map Acceptance Criteria card, filled in.
+    id: "LevelCompleteOverlay-ticket", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={ticketScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      full={false} newlyUnlockedCerts={[certs[0]]} />,
+  },
+  {
+    id: "LevelCompleteOverlay-ticketMissed", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={ticketMissedScore} totalScore={402} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      full={false} />,
   },
   {
     // A map with no Promotion due: the strip skips that stage and Continue says "Open the store".

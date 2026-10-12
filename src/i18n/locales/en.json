@@ -843,6 +843,7 @@
       "fail": "Failure:"
     },
     "groupRequiredAll": "Goals:",
+    "groupFailAvoided": "Failure, avoided",
     "bonusArea": "Lock a ball in the {{area}} area for a {{mult}}x payout. Skipping it costs nothing.",
     "tradeBudgetBonus": "Your fences are rationed. The optional pocket and a comfortable clear compete for them.",
     "lock_one": "Lock at least {{count}} ball.",

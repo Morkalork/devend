@@ -139,3 +139,22 @@ modal only, because it is the only explainer that is a list; the grouping is
 empty-group rule as the text list. Gallery: `AcceptanceCriteriaModal` (every
 group) and `AcceptanceCriteriaModal-plain`. Tests:
 src/test/canvas/acceptanceCriteria.test.ts.
+
+**The Debrief is that ticket, filled in** (asked for: "the very card shown
+before the map, with the contents filled in ... without all of the other
+overwhelming information", as a trial). The card moved into
+`AcceptanceTicket` (src/ui/game), which the pre-map modal and the Debrief both
+draw. Each criterion now carries a check (`CriterionCheck` in winConditions.ts:
+its clause, the bonus area it names, the failures it warns of, or both halves
+of a trade); `triggerLevelComplete` marks every one on the board as it was won
+(`acceptanceMarks`, applyCut.ts), and GameScreen joins the marks to the words
+the player read before the map, so the two cards cannot disagree. Marked, a
+row is a green check (met, or a failure that did not happen, under the heading
+"Failure, avoided") or a red cross (missed: a goal an "or" win skipped, a bonus
+area not taken). The Debrief keeps the frame (the stage strip and the hours
+headline every stage has) and the rare notices (push failed, a certificate, a
+personal best), and drops the breakdown, the axes and the totals. Those are
+kept whole behind Admin's **Full debrief** switch (`debriefMode.ts`, a display
+setting, not a run flag), to compare and to bring back. Gallery:
+`LevelCompleteOverlay-ticket`, `LevelCompleteOverlay-ticketMissed`. Tests:
+src/test/canvas/ticketDebrief.test.ts.

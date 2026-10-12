@@ -34,7 +34,9 @@ import type { TFunction } from "i18next";
 import type { LevelConfig } from "@/types/level";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { areaStyle, gateAreas, normalizeAreaKind } from "@/lib/coloredAreas";
-import { resolveWinSpec, type RunWinRules } from "@/lib/winSpec";
+import { evaluateWinCondition, resolveWinSpec, type RunWinRules } from "@/lib/winSpec";
+import type { WinSnapshot } from "@/types/winSpec";
+import type { MapFailKind } from "@/lib/mapFailure";
 import type { WinCondition } from "@/types/winSpec";
 import { getBallType } from "@/lib/ballTypes";
 
@@ -68,9 +70,48 @@ export type CriterionGroup = "required" | "optional" | "either" | "trade" | "fai
 export const CRITERION_GROUPS: CriterionGroup[] =
   ["required", "optional", "either", "trade", "fail"];
 
+/**
+ * How a criterion is marked once the map is over (the Debrief's filled-in
+ * ticket): the clause it states, the bonus area it names, or the failures it
+ * warns about. Data rather than text, so the same list the player read before
+ * the map is the one checked after it.
+ */
+export type CriterionCheck =
+  | { kind: "clause"; clause: WinCondition }
+  | { kind: "bonusArea"; areaIndex: number }
+  | { kind: "fail"; on: MapFailKind[] }
+  | { kind: "trade"; areaIndexes: number[] };
+
 export interface Criterion {
   group: CriterionGroup;
   text: string;
+  check?: CriterionCheck;
+}
+
+/** What the map ended with, for marking each criterion. */
+export interface CriterionContext {
+  snap: WinSnapshot;
+  /** `satisfied` per area, in the map's authored order (game.coloredAreas keeps it). */
+  areasSatisfied: boolean[];
+  /** How the map failed, if it did. */
+  failure?: MapFailKind | null;
+}
+
+/**
+ * Was this criterion met? A goal or an "or" by its clause on the final board;
+ * an optional bonus area by whether a ball was locked in it; a failure
+ * condition by not having happened; a trade by having had both. Null for a
+ * criterion with nothing to check.
+ */
+export function criterionMet(c: Criterion, ctx: CriterionContext): boolean | null {
+  const check = c.check;
+  if (!check) return null;
+  switch (check.kind) {
+    case "clause": return evaluateWinCondition(check.clause, ctx.snap).met;
+    case "bonusArea": return !!ctx.areasSatisfied[check.areaIndex];
+    case "fail": return !(ctx.failure && check.on.includes(ctx.failure));
+    case "trade": return check.areaIndexes.every(i => !!ctx.areasSatisfied[i]);
+  }
 }
 
 function winConditionParts(
@@ -85,11 +126,14 @@ function winConditionParts(
   const isBoss = !!level.boss;
   const target = t(isBoss ? "winConditions.targetBoss" : "winConditions.targetBall");
   const areas = gateAreas(level.coloredAreas ?? []);
-  const bonusAreas = (level.coloredAreas ?? []).filter(a => a.required === false);
+  // With their index in the map's list, which is how the runtime areas are matched.
+  const bonusAreas = (level.coloredAreas ?? []).map((a, index) => ({ ...a, index })).filter(a => a.required === false);
 
-  const say = (group: CriterionGroup, text: string) => criteria.push({ group, text });
+  const clause = (c: WinCondition): CriterionCheck => ({ kind: "clause", clause: c });
+  const say = (group: CriterionGroup, text: string, check?: CriterionCheck) =>
+    criteria.push(check ? { group, text, check } : { group, text });
   /** Required, and worth interrupting the map to say. */
-  const must = (text: string) => { say("required", text); noteworthy = true; };
+  const must = (text: string, check?: CriterionCheck) => { say("required", text, check); noteworthy = true; };
 
   for (const c of spec.require) {
     switch (c.kind) {
@@ -98,13 +142,13 @@ function winConditionParts(
         // go" for the whole map, permanently. Required, so it is listed - but
         // `say` rather than `must`, because listing it and interrupting the map
         // to announce it are different questions.
-        say("required", t("winConditions.clear", { percent: Math.max(1, 100 - c.threshold) }));
+        say("required", t("winConditions.clear", { percent: Math.max(1, 100 - c.threshold) }), clause(c));
         break;
       case "locks":
-        must(t("winConditions.lock", { count: c.count }));
+        must(t("winConditions.lock", { count: c.count }), clause(c));
         break;
       case "superiorLocks":
-        must(t("winConditions.superiorLocks", { count: c.count }));
+        must(t("winConditions.superiorLocks", { count: c.count }), clause(c));
         break;
       case "area": {
         const kind = areas[0]?.kind;
@@ -112,7 +156,7 @@ function winConditionParts(
         const name = kind ? areaName(t, kind) : "";
         must(c.count > 1
           ? t("winConditions.areaWinMany", { count: c.count, area: name, mult })
-          : t("winConditions.areaWin", { target, area: name, mult }));
+          : t("winConditions.areaWin", { target, area: name, mult }), clause(c));
         // The fail is a FAIL, not a second thing to do. Sitting beside the win
         // in one paragraph, "trap it outside and you lose a life" read as an
         // instruction rather than as the penalty it is.
@@ -132,13 +176,13 @@ function winConditionParts(
         // the failure. This names the count and the zone, which is what the
         // player is actually deciding about, and the heading supplies the
         // consequence.
-        say("fail", t("winConditions.areaFail", { count: c.count, area: name }));
+        say("fail", t("winConditions.areaFail", { count: c.count, area: name }), { kind: "fail", on: ["areaUnreachable"] });
         break;
       }
       case "lockType":
         must(t("winConditions.lockType", {
           count: c.count, ball: ballName(c.ballType),
-        }));
+        }), clause(c));
         break;
       case "splitLocks":
         // Says the shape rather than the arithmetic, and names the halves the
@@ -148,7 +192,7 @@ function winConditionParts(
         // than "each side" for someone looking at the board it describes.
         must(t(c.axis === "horizontal"
           ? "winConditions.splitLocksHorizontal"
-          : "winConditions.splitLocks", { count: c.count }));
+          : "winConditions.splitLocks", { count: c.count }), clause(c));
         break;
       case "boss": {
         // Say WHERE, when there is a where. Every boss on the ladder is beaten
@@ -161,7 +205,7 @@ function winConditionParts(
         const zone = areas[0]?.kind;
         if (zone) {
           const mult = areaStyle(zone).multiplier;
-          must(t("winConditions.areaWin", { target, area: areaName(t, zone), mult }));
+          must(t("winConditions.areaWin", { target, area: areaName(t, zone), mult }), clause(c));
           // Its OWN string, because on a boss map the rule really is "trap it
           // outside and you lose": gateTargets counts only the boss, so
           // one target locked in the wrong place ends the map. That is exactly
@@ -169,17 +213,17 @@ function winConditionParts(
           // why it had to stop being shared.
           say("fail", t("winConditions.areaFailBoss", {
             count: level.boss?.bossBall?.count ?? 1,
-          }));
+          }), { kind: "fail", on: ["areaUnreachable"] });
         }
         // Two chained bosses are ONE win and neither trap ends the map alone,
         // which is not something the board tells you.
         must((level.boss?.bossBall?.count ?? 1) > 1
           ? t("winConditions.bossPair")
-          : t("winConditions.boss"));
+          : t("winConditions.boss"), clause(c));
         break;
       }
       case "allLocked":
-        must(t("winConditions.allLocked"));
+        must(t("winConditions.allLocked"), clause(c));
         break;
       case "smashed":
         // Each class explains ITS cost in the sentence - one touch versus a
@@ -188,22 +232,22 @@ function winConditionParts(
         must(t(
           c.of === "shards" ? "winConditions.smashedShards"
             : c.of === "monoliths" ? "winConditions.smashedMonoliths"
-            : "winConditions.smashed", { count: c.count }));
+            : "winConditions.smashed", { count: c.count }), clause(c));
         break;
       case "terminals":
-        must(t("winConditions.terminals", { count: c.count }));
+        must(t("winConditions.terminals", { count: c.count }), clause(c));
         break;
       case "harvested":
-        must(t("winConditions.harvested", { count: c.count }));
+        must(t("winConditions.harvested", { count: c.count }), clause(c));
         break;
       case "delivered":
-        must(t("winConditions.delivered", { count: c.count }));
+        must(t("winConditions.delivered", { count: c.count }), clause(c));
         break;
       case "underPar":
-        must(t("winConditions.underPar", { count: level.expectedCuts + c.delta }));
+        must(t("winConditions.underPar", { count: level.expectedCuts + c.delta }), clause(c));
         break;
       case "speedClear":
-        must(t("winConditions.speedClear", { seconds: c.seconds }));
+        must(t("winConditions.speedClear", { seconds: c.seconds }), clause(c));
         break;
     }
   }
@@ -213,13 +257,13 @@ function winConditionParts(
   // otherwise add a line to 38 of 40 maps and teach nobody anything.
   for (const c of spec.alsoWinIf) {
     if (c.kind === "allLocked" && !spec.authored) continue;
-    say("either", clauseText(t, c, level));
+    say("either", clauseText(t, c, level), clause(c));
     noteworthy = true;
   }
 
   const timeLimit = getMapTimeLimit(level, levelNumber);
   if (timeLimit != null) {
-    say("fail", t("winConditions.time", { seconds: timeLimit }));
+    say("fail", t("winConditions.time", { seconds: timeLimit }), { kind: "fail", on: ["timeUp"] });
     // Only an AUTHORED timer is worth announcing. getMapTimeLimit returns a
     // value for every map past the tutorial band, so counting it would mark 37
     // of 40 maps noteworthy and change nothing. The default ramp is the same
@@ -228,7 +272,7 @@ function winConditionParts(
     if (level.timeLimit != null) noteworthy = true;
   }
   if (level.fenceBudget != null) {
-    say("fail", t("winConditions.fences", { count: level.fenceBudget }));
+    say("fail", t("winConditions.fences", { count: level.fenceBudget }), { kind: "fail", on: ["outOfFences"] });
     noteworthy = true;
   }
 
@@ -248,7 +292,7 @@ function winConditionParts(
   // Being in the body is the fix; being in the trigger would be a regression.
   for (const a of bonusAreas) {
     const mult = areaStyle(a.kind).multiplier;
-    say("optional", t("winConditions.bonusArea", { area: areaName(t, a.kind), mult }));
+    say("optional", t("winConditions.bonusArea", { area: areaName(t, a.kind), mult }), { kind: "bonusArea", areaIndex: a.index });
   }
 
   // ── THE TRADE: two things this map will not let you have both of ─────────
@@ -266,7 +310,7 @@ function winConditionParts(
   // announcing itself for the budget, so this rides along rather than being a
   // second reason to open the same modal.
   if (level.fenceBudget != null && bonusAreas.length > 0) {
-    say("trade", t("winConditions.tradeBudgetBonus", { count: level.fenceBudget }));
+    say("trade", t("winConditions.tradeBudgetBonus", { count: level.fenceBudget }), { kind: "trade", areaIndexes: bonusAreas.map(a => a.index) });
   }
 
   return { criteria, noteworthy };
@@ -355,10 +399,10 @@ export function renderCriteria(t: TFunction, criteria: Criterion[]): string {
 }
 
 /** The groups in order with their headings; empty groups say nothing at all (renderCriteria's rule). */
-export function criteriaSections(
-  criteria: Criterion[],
+export function criteriaSections<C extends { group: CriterionGroup }>(
+  criteria: C[],
   heading: (group: CriterionGroup, count: number) => string,
-): { group: CriterionGroup; items: Criterion[]; heading: string }[] {
+): { group: CriterionGroup; items: C[]; heading: string }[] {
   return CRITERION_GROUPS
     .map(group => ({ group, items: criteria.filter(c => c.group === group) }))
     .filter(s => s.items.length > 0)

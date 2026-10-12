@@ -843,6 +843,7 @@
       "fail": "Fallo:"
     },
     "groupRequiredAll": "Objetivos:",
+    "groupFailAvoided": "Fallo, evitado",
     "bonusArea": "Encierra una bola en el área {{area}} para cobrar {{mult}}x. Ignorarla no cuesta nada.",
     "tradeBudgetBonus": "Tus vallas están racionadas. El hueco opcional y una limpieza cómoda compiten por ellas.",
     "lock_one": "Encierra al menos {{count}} bola.",

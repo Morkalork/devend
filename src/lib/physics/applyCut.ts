@@ -9,7 +9,9 @@ import { lockedInsideUnarmedLauncher } from "./launcher";
 import { handleGameOverFn } from "./handleGameOver";
 import { ballStruckFence } from "./fenceStrike";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
-import { mapFailure, type MapFailure } from "@/lib/mapFailure";
+import { mapFailure, type MapFailure, type MapFailKind } from "@/lib/mapFailure";
+import { criterionMet, winConditions } from "@/lib/winConditions";
+import type { TFunction } from "i18next";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -954,6 +956,26 @@ export function checkSpaceWin(
 type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
 
 /** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
+/** Keys for text: the criteria are built only for their checks here, never read. */
+const KEY_T = ((key: string) => key) as unknown as TFunction;
+
+/**
+ * Each Acceptance Criterion met or not, in winConditions' order, on the board
+ * as it stands. Built from the same list the pre-map ticket shows, so the
+ * Debrief can zip the two together without the lists drifting apart.
+ */
+export function acceptanceMarks(
+  game: CanvasGameState, level: LevelConfig, levelNumber: number, rules: GameModifiers,
+  failure: MapFailKind | null = null,
+): (boolean | null)[] {
+  const ctx = {
+    snap: readWinSnapshot(game, level),
+    areasSatisfied: (game.coloredAreas ?? []).map(a => !!a.satisfied),
+    failure,
+  };
+  return winConditions(KEY_T, level, levelNumber, rules).map(c => criterionMet(c, ctx));
+}
+
 export function triggerLevelComplete(
   game: CanvasGameState,
   level: LevelConfig,
@@ -974,6 +996,9 @@ export function triggerLevelComplete(
   playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
+  // The Acceptance Criteria, marked on the board as it was won: the Debrief
+  // draws the ticket the player read before the map, filled in.
+  const criteriaMet = acceptanceMarks(game, level, levelNumber, activeModifiers);
 
   // Ship Early: the all-balls-locked path never opens the push prompt, so the
   // tempo clock freezes here; banking after a prompt keeps the earlier value.
@@ -1102,6 +1127,7 @@ export function triggerLevelComplete(
         // Every power-up claimed this map (#59), so the finish screen lists them.
         pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
         winReason: reason,
+        criteriaMet,
         // Both conditions genuinely landed on the same cut: the space target was
         // already met by what this cut captured, and then the lock ended the map
         // before the space win could open the Push Your Luck prompt. Naming only

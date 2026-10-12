@@ -619,6 +619,13 @@ export type WinReason =
   /** The map's data stream harvested. */
   | 'harvested';
 
+/** One row of the filled-in Acceptance Criteria ticket. */
+export interface AcceptanceRow {
+  group: "required" | "optional" | "either" | "trade" | "fail";
+  text: string;
+  met: boolean | null;
+}
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
@@ -749,6 +756,16 @@ export interface LevelScoreData {
   wonByAllLocked?: boolean;
   /** Which condition finished the map; shown on the results screen. */
   winReason?: WinReason;
+  /**
+   * Each Acceptance Criterion met (true), missed (false) or with nothing to
+   * check (null), in winConditions' order, marked as the map was won.
+   */
+  criteriaMet?: (boolean | null)[];
+  /**
+   * The criteria themselves with their marks, as the player read them before
+   * the map (GameScreen joins the text to criteriaMet). The Debrief's ticket.
+   */
+  acceptance?: AcceptanceRow[];
   /**
    * An all-locked win where the cut had ALSO cleared to the size threshold on
    * its own, before the lock drained the board. Both were genuinely true, and

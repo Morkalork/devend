@@ -810,8 +810,15 @@ export function GameScreen({
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     levelEndedRef.current = true;
     setIsPaused(false);
-    onLevelComplete(scoreData);
-  }, [onLevelComplete]);
+    // The ticket the player read before the map, with the marks the board
+    // earned: same list, same words, so the Debrief is that card filled in.
+    const acceptance = scoreData.criteriaMet
+      ? winConditions(t, level, levelNumber, activeModifiers).map((c, i) => ({
+        group: c.group, text: c.text, met: scoreData.criteriaMet?.[i] ?? null,
+      }))
+      : undefined;
+    onLevelComplete(acceptance ? { ...scoreData, acceptance } : scoreData);
+  }, [onLevelComplete, t, level, levelNumber, activeModifiers]);
 
   const canPause = gameState.pushMode === 'none';
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
@@ -19,6 +19,7 @@ import {
   DEFAULT_HEIGHT_SCALE, getLean, setLean, LEAN_RANGE, DEFAULT_LEAN,
   type QualitySetting, type RendererChoice,
 } from '@/lib/rendering/render3dSettings';
+import { isFullDebrief, setFullDebrief } from '@/ui/screens/debriefMode';
 
 interface AdminScreenProps {
   onBack: () => void;
@@ -33,6 +34,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [ascension, setAscension] = useState(getDebugAscensionOverride);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
+  const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
   const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
@@ -194,6 +196,33 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="text-sm text-muted-foreground">
                 Start a normal run with {DEV_LIVES} lives. Takes effect on the next
                 New Game, and keeps that run off the highscore ledger.
+              </div>
+            </div>
+          </button>
+
+          {/* The Debrief: the Acceptance Criteria ticket, marked (being tried),
+              or the full breakdown it replaced. Display only, so not a run
+              flag: a run with either stays on the ledger. */}
+          <button
+            onClick={() => { const next = !fullDebrief; setFullDebrief(next); setFullDebriefState(next); }}
+            aria-pressed={fullDebrief}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              fullDebrief ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${fullDebrief ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <ClipboardCheck className={`w-6 h-6 ${fullDebrief ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Full debrief{' '}
+                <span className={`text-xs ${fullDebrief ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {fullDebrief ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Off: after a map, the Acceptance Criteria ticket with each line marked met or missed.
+                On: the old breakdown, axes and totals. Takes effect on the next map.
               </div>
             </div>
           </button>
