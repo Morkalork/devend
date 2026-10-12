@@ -18,7 +18,8 @@
  * SHARD BOMBS are the small version, and a different idea: a brittle shard has
  * nothing to chip, so a bomb in one is not a last hit to aim for but a charge
  * waiting in the wall. About one shard in ten carries one (seeded per shard),
- * drawn on the brick so it can be planned around. When it breaks it goes up
+ * from level 17 on (`effectiveShardBombChance`: a map that teaches bricks gets
+ * plain ones), drawn on the brick so it can be planned around. When it breaks it goes up
  * with the full bomb blast and strikes everything close by: neighbouring
  * shards go with it (a bomb among them goes up in turn), and a slab or chest
  * in reach takes a heavy blow. An ordinary shard, by contrast, now breaks with
@@ -95,6 +96,12 @@ export interface BombBlast {
 export interface ShardBombConfig {
   /** Chance an eligible shard carries one, rolled once per shard when the map is dealt. */
   chance: number;
+  /**
+   * The first map that rolls them: their Meet. Below it a map gets none unless
+   * it says so (`shardBombChance`, or `bomb: true` on a shard), so a map that
+   * teaches bricks is not also handing out unannounced explosions.
+   */
+  startLevel: number;
   /** A shard bomb's blast. */
   blastRadius: number;
   blastDamage: number;
@@ -106,7 +113,7 @@ export interface ShardBombConfig {
 }
 
 export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = {
-  chance: 0.1, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
+  chance: 0.1, startLevel: 17, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
   box: { radius: 150, damage: 2, ballBoost: 1.8 },
   boostSeconds: 2.5,
 };
@@ -165,6 +172,39 @@ export function blastEaseSpeed(b: Ball, now: number): number | null {
   // Eased out: most of the kick is spent early, so it reads as a shove.
   const k = 1 - (1 - t) * (1 - t);
   return b.blastBoostFrom + (b.blastRestSpeed - b.blastBoostFrom) * k;
+}
+
+/**
+ * The chance this map's shards carry a bomb. Same shape as the pickups' and
+ * bugs': the map's own `shardBombChance` wins outright (so a map below the
+ * start level can opt in and one above it can say 0), else the global chance
+ * from `startLevel` on, else none. The Playground's bonus goes on top, so a
+ * tester can force bombs onto any map.
+ */
+export function effectiveShardBombChance(
+  cfg: Pick<ShardBombConfig, "chance" | "startLevel">,
+  levelNumber: number,
+  levelChanceOverride: number | undefined,
+  bonus = 0,
+): number {
+  const base = levelChanceOverride ?? (levelNumber >= cfg.startLevel ? cfg.chance : 0);
+  return Math.max(0, Math.min(1, base + bonus));
+}
+
+/**
+ * Can this map show a shard bomb at all, on the shipped config? The ledger's
+ * question (lib/admin/mechanicSpread.ts), answered from the map alone: it has
+ * shards, and either pins one, or its chance (its own, or the default from the
+ * start level) is above zero.
+ */
+export function mapCanHaveShardBombs(
+  level: Pick<LevelConfig, "entities" | "level" | "shardBombChance">,
+  cfg: Pick<ShardBombConfig, "chance" | "startLevel"> = DEFAULT_SHARD_BOMB_CONFIG,
+): boolean {
+  const shards = (level.entities ?? []).filter(e => e.kind === "wall" && (e as WallEntity).brittle) as WallEntity[];
+  if (shards.length === 0) return false;
+  if (shards.some(w => w.bomb === true)) return true;
+  return effectiveShardBombChance(cfg, level.level ?? 0, level.shardBombChance) > 0;
 }
 
 /** Which shards a map pins (`bomb: true`) or keeps clear (`bomb: false`). */

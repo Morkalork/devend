@@ -57,7 +57,7 @@ import { BoardBoot } from "@/ui/game/BoardBoot";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
 import { BoardSizeReadout } from "@/ui/game/BoardSizeReadout";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
-import { assignShardBombs, authoredShardBombs, type ShardBombConfig } from "@/lib/bombCore";
+import { assignShardBombs, authoredShardBombs, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
 import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
@@ -166,6 +166,12 @@ import { measureBottomBars, BOTTOM_BARS_FALLBACK_PX } from "@/hooks/useBottomBar
 import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 import { splitClauseOf } from "@/lib/splitWarn";
 import { visibleOutline } from "@/lib/headStartStrip";
+import { sfxGate, BOMB_SOUND_GAP_MS, BREAK_SOUND_GAP_MS } from "@/lib/sfxGate";
+
+// One board plays at a time, so one gate each: a bomb chain is a few booms and
+// a blast's ring of bricks one crash, not a sound per bomb and per brick.
+const bombSoundGate = sfxGate(BOMB_SOUND_GAP_MS);
+const breakSoundGate = sfxGate(BREAK_SOUND_GAP_MS);
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -1509,7 +1515,9 @@ export function GameCanvas({
         game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
         game.boxBombBlast = cfg ? { ...cfg.box } : null;
         game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
-        const chance = cfg ? Math.min(1, cfg.chance + (activeModifiers.shardBombChanceBonus ?? 0)) : 0;
+        const chance = cfg
+          ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, activeModifiers.shardBombChanceBonus ?? 0)
+          : 0;
         assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
       }
       game.stackObjects       = data.stackObjects;
@@ -1917,14 +1925,14 @@ export function GameCanvas({
         processDestroysFn(game, {
           repaintRegionCanvas,
           setRemainingPercent,
-          onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
+          onObjectDestroyed: () => { if (breakSoundGate()) { playFenceBreakSound(); vibrateFenceBreak(); } },
           // Smashing the chest IS the interaction, so the reward lands here. The
           // gem it drops is a receipt showing what came out of it.
           onChestReward: (rewardId) => handleLootCollectRef.current?.(rewardId),
           // A box going up by its bomb (lib/bombCore.ts): a boom and a jolt, so
           // it lands as an explosion rather than one more break.
           onBombDetonated: () => {
-            playBossLandSound();
+            if (bombSoundGate()) playBossLandSound();
             if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
             setIsShaking(true);
             shakeTimeoutRef.current = setTimeout(() => { setIsShaking(false); shakeTimeoutRef.current = null; }, 260);

@@ -386,6 +386,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
+| shard bomb | A | Seasoning | 17 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
 | terminals | E | Meet | 21 | - | 31 |
@@ -1023,6 +1024,13 @@ put its straight shot on the 8-unit seam between two bricks; the first ball
 struck two brick corners at once and logged "no valid region" on six of eight
 seeds. Moved 34 units so the shot lands on a brick's centre: zero afterwards.
 Worth knowing for any launcher pointed at a brick grid.
+
+**Shard bombs are met here.** One brick in ten carries one from this map on
+(`shard_bombs.start_level: 17`), and this is the wall built to be blown up:
+three rows deep with 8-unit seams, so a bomb in the front row takes the bricks
+round it more than one deep, and one near the vault opens the back row early.
+The armed harness wins 7 of 8 at 22.9 cuts against 6 at 27.3 disarmed (section
+8): the bombs are tempo, which is what this map's clause already is.
 
 **Bot sweep, 8 seeds, 60s:** 3 wins at 19 to 20 cuts against par 9, 5
 `objectiveBuried` (the horizontal-cut rule above), no violations, one benign
@@ -1860,6 +1868,47 @@ the old harness hid it at 1 of 8. By the table at the top of this section that
 is a STOP, and it is a shipped act-I map. Level 13's fall from 8 to 6 and level
 6's from 5 to 4 are the same mechanism in a milder form: Scope Creep now runs,
 so the back half of a long map is faster than anything previously measured.
+
+### The bombs, and what they change  *(2026-10-12)*
+
+**The harness was not blowing anything up.** Every slab and chest has carried
+a bomb since the bomb boxes landed, and shard bombs rolled on every brick, but
+`createBotGame` left both blasts null, so a sweep broke the boxes and never
+carved a hole, reopened a crater or threw a ball. `runBot` now arms the
+shipped tuning by default (`bombs: null` disarms it, for the comparison
+below); `createBotGame` still defaults to off, like `bugs`, so a mechanic test
+is not reshaped by a crater. `BotRunResult` carries `bombs` (detonations) and
+`livesLost`.
+
+**Shard bombs start at 17** (`shard_bombs.start_level`, ledger row "shard
+bomb", seasoning on brittle). They used to roll on 5 and 6, the maps that
+teach the brick, so a blast that reopens claimed ground was arriving before
+anything had introduced it. A map overrides the gate either way with
+`shardBombChance`.
+
+**Sweep, 8 seeds, 60s, armed against disarmed** (wins, mean bot cuts, mean
+detonations per run). Maps with neither a box nor a shard are identical in both
+columns and left out:
+
+| L | armed | disarmed | bombs/run |
+|---|---|---|---|
+| 7 | 7, 19.8 | 7, 17.4 | 1.1 |
+| 9 | 5, 48.9 | 6, 46.9 | 1.3 |
+| 11 | 8, 20.8 | 7, 25.4 | 1.0 |
+| 12 | 8, 21.8 | 8, 20.5 | 1.5 |
+| 17 | 7, 22.9 | 6, 27.3 | 2.3 (shards now in) |
+| 18 | 7, 26.4 | 7, 21.9 | 2.3 |
+| 19 | 7, 22.3 | 7, 22.4 | 1.9 |
+
+**Inside the noise of eight seeds, in both directions.** Blasts neither strand
+maps nor hand them over; 17 is the only map with shard bombs and gains a win
+and four fewer cuts, which is the wall coming down faster, as designed.
+**Thrown balls into growing fences:** of 37 lives the armed runs lost on 7, 9,
+12 and 17, 6 came within three seconds of a blast (32 lost disarmed), so the
+kick is not a pattern worth a rule yet. Level 9's armed seed 1 flags
+`progress-stalled`; both runs of that seed plateau at 10% remaining and the
+disarmed one stops a cut short of the threshold, so it is the map's stall,
+not the bomb's.
 
 ### Two things the harness learned in the play review
 

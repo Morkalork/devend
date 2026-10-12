@@ -235,6 +235,11 @@ bugs:
 shard_bombs:
   # Chance an eligible shard carries one.
   chance: 0.1
+  # The first map that rolls them, their Meet: level 17, the Demolition map,
+  # whose wall is the one built to be blown up. Before it, a map that teaches
+  # bricks (5, 6, 7, 9, 11-13) gets plain bricks. map.yml `shardBombChance`
+  # overrides this per map in either direction, as pickupChance does.
+  start_level: 17
   # How far the blast reaches, world units, from the shard's centre: to the
   # nearest edge of a neighbour it strikes, and the radius of the hole it blows
   # in fences, the map's walls and the claimed ground (physics/blastCarve.ts).

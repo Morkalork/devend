@@ -65,6 +65,7 @@ import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
 import { updatePickups } from "@/lib/pickups";
 import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs, updateBugs } from "@/lib/physics/bugs";
+import { assignShardBombs, authoredShardBombs, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import { authoredBugCarriers } from "@/lib/bugs";
 import type { BugConfig } from "@/types/bugs";
 import { resolveWinSpec } from "@/lib/winSpec";
@@ -140,6 +141,8 @@ export interface BotEvents {
    * an explanation from one refused without.
    */
   messages: GameMessageId[];
+  /** Bombs that went off (shard and box), so a sweep can say how much blasting it measured. */
+  bombs: number;
 }
 
 export interface BotGame {
@@ -186,6 +189,7 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
     },
     onLivesChange: () => { events.livesLost += 1; },
     onGameMessage: (id: GameMessageId) => { events.messages.push(id); },
+    onBombDetonated: () => { events.bombs += 1; },
 
     // ── things that only exist to paint ──────────────────────────────────
     // Enumerated rather than proxied on purpose: a Proxy returning a function
@@ -265,7 +269,14 @@ export function createBotGame(
    * the bot on one seed; a test about bugs passes DEFAULT_BUG_CONFIG here and
    * gets a board whose shards carry them exactly as the browser's would.
    */
-  opts: { mutator?: BotWeather; bugs?: BugConfig } = {},
+  /**
+   * `bombs` arms the blasts (lib/bombCore.ts): the shard and box bombs' reach,
+   * the holes they blow and the balls they throw, and which shards carry one,
+   * dealt exactly as GameCanvas deals them. Off by default for the same reason
+   * as `bugs`, so a test about something else is not reshaped by a crater;
+   * runBot turns it on, because a sweep plays the map the player gets.
+   */
+  opts: { mutator?: BotWeather; bugs?: BugConfig; bombs?: ShardBombConfig | null } = {},
 ): BotGame {
   // A DEAL WITH NO RUN SEED IS A DEAL NOBODY CAN REPRODUCE, so arm one.
   //
@@ -296,7 +307,7 @@ export function createBotGame(
 
   const events: BotEvents = {
     levelComplete: false, gameOver: false, livesLost: 0,
-    cutsMade: 0, locks: 0, remainingPercent: 100, messages: [],
+    cutsMade: 0, locks: 0, remainingPercent: 100, messages: [], bombs: 0,
   };
   // The runtime fields first, then the map's own data over the top - the same
   // order GameCanvas builds its gameRef in. createInitialGameData describes a
@@ -340,6 +351,19 @@ export function createBotGame(
       game.bugConfig.maxPerMap,
       authoredBugCarriers(level),
     );
+  }
+  // Bombs, after the bugs as in the browser: a shard holding a bug is skipped.
+  // Without a config every blast is null, so a bomb box still breaks on its
+  // last hit but strikes, carves and throws nothing.
+  {
+    const cfg = opts.bombs ?? null;
+    game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
+    game.boxBombBlast = cfg ? { ...cfg.box } : null;
+    game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
+    const chance = cfg
+      ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, modifiers.shardBombChanceBonus ?? 0)
+      : 0;
+    assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
   }
   return {
     game, level, levelNumber, modifiers,

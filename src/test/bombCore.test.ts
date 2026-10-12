@@ -126,7 +126,8 @@ describe("going up", () => {
     expect(src).toContain("const fire = spawnDebris(poly, BOMB_BLAST_COLOR");
     expect(src).toContain("callbacks.onBombDetonated?.(d);");
     const canvas = read("src/components/game/GameCanvas.tsx");
-    expect(canvas).toMatch(/onBombDetonated: \(\) => \{\n\s+playBossLandSound\(\);/);
+    // Gated (lib/sfxGate.ts), so a chain is a few booms rather than one per bomb.
+    expect(canvas).toMatch(/onBombDetonated: \(\) => \{\n\s+if \(bombSoundGate\(\)\) playBossLandSound\(\);/);
   });
 });
 
@@ -284,10 +285,10 @@ describe("which shards are bombs", () => {
     expect([...m.entries()]).toEqual([["a", true], ["b", false]]);
   });
 
-  it("is rolled when a map is dealt, after the bugs, with the Admin knob on top", () => {
+  it("is rolled when a map is dealt, after the bugs, from the start level, with the Admin knob on top", () => {
     const canvas = read("src/components/game/GameCanvas.tsx");
     expect(canvas.indexOf("assignShardBombs(game.destructibles")).toBeGreaterThan(canvas.indexOf("assignShardBugs("));
-    expect(canvas).toContain("cfg.chance + (activeModifiers.shardBombChanceBonus ?? 0)");
+    expect(canvas).toContain("effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, activeModifiers.shardBombChanceBonus ?? 0)");
     expect(read("src/components/admin/PlaygroundScreen.tsx")).toMatch(/shardBombChanceBonus:\s+\{ label: 'Shard Bomb Chance \+'/);
   });
 });

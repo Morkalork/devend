@@ -15,6 +15,7 @@ import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, seededRandom } from "./policy";
 import type { LevelConfig } from "@/types/level";
+import { DEFAULT_SHARD_BOMB_CONFIG, type ShardBombConfig } from "@/lib/bombCore";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { MapFailKind } from "@/lib/mapFailure";
 
@@ -31,6 +32,10 @@ export interface BotRunResult {
   /** Why it lost, when the game said. Absent on a win or a plain timeout. */
   failKind?: MapFailKind;
   violations: Violation[];
+  /** Bombs that went off, shard and box alike. */
+  bombs: number;
+  /** Lives the run lost without ending: a ball into a growing fence, mostly. */
+  livesLost: number;
 }
 
 export interface BotRunOptions {
@@ -45,6 +50,12 @@ export interface BotRunOptions {
   /** Frames between cut attempts, so fences have time to finish. */
   cutEvery?: number;
   modifiers?: GameModifiers;
+  /**
+   * The bombs' tuning (lib/bombCore.ts). Omitted, the shipped defaults, so a
+   * run blows the holes and throws the balls a player's would; `null` plays the
+   * map with every blast disarmed, for measuring what the bombs change.
+   */
+  bombs?: ShardBombConfig | null;
 }
 
 export function runBot(
@@ -66,7 +77,7 @@ export function runBot(
   // createBotGame defaults to a bare board precisely so that the many tests
   // which deal a board without arming a run seed stay deterministic.
   const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers(),
-    { mutator: "mutator" in opts ? opts.mutator : "roll" });
+    { mutator: "mutator" in opts ? opts.mutator : "roll", bombs: "bombs" in opts ? opts.bombs : DEFAULT_SHARD_BOMB_CONFIG });
 
   // Fire any launcher before play starts. Without this a launcher map cannot be
   // won by a bot at all: the loaded ball stays dormant, a dormant ball holds its
@@ -200,6 +211,8 @@ export function runBot(
     // screen fires behind a 700ms flash, and no timer runs here.
     failKind: ctx.game.failure?.kind ?? ctx.events.failKind,
     violations,
+    bombs: ctx.events.bombs,
+    livesLost: ctx.events.livesLost,
   };
 }
 
