@@ -86,18 +86,44 @@ function lockItems(game: CanvasGameState): DebriefItem[] {
   return out;
 }
 
-/** Each slab or mirror smashed this map: each one raised the map's payout. */
+/**
+ * What was smashed this map: each one raised the map's payout.
+ *
+ * A slab, chest or mirror is boxed on its own. The small things (the one-touch
+ * bricks) are named ONCE: a wall of them, each boxed and tagged, buried the
+ * board under tags, so they share one tag with a leader running to each.
+ */
 function smashItems(game: CanvasGameState): DebriefItem[] {
   const out: DebriefItem[] = [];
+  const small: { box: Box; objective: boolean }[] = [];
   for (const d of game.destructibles ?? []) {
     if (!d.destroyed) continue;
     const poly = d.obstaclePolygon ?? d.mirrorPolygon;
     const box = poly ? boxOf(poly.vertices, 4) : null;
     if (!box) continue;
+    if (d.brittle) { small.push({ box, objective: !!d.objective }); continue; }
     out.push({
       kind: "smash", box, hours: null,
       title: { key: "debrief.smash" },
       detail: { key: d.objective ? "debrief.smashObjectiveDetail" : "debrief.smashDetail" },
+      color: DEBRIEF_COLORS.smash,
+    });
+  }
+  if (small.length === 1) {
+    out.push({
+      kind: "smash", box: small[0].box, hours: null,
+      title: { key: "debrief.smash" },
+      detail: { key: small[0].objective ? "debrief.smashObjectiveDetail" : "debrief.smashDetail" },
+      color: DEBRIEF_COLORS.smash,
+    });
+  } else if (small.length > 1) {
+    const members = small.map(m => m.box);
+    out.push({
+      kind: "smash",
+      box: boxOf(members.flatMap(b => [{ x: b.x, y: b.y }, { x: b.x + b.w, y: b.y + b.h }]))!,
+      members, hours: null,
+      title: { key: "debrief.smashGroup", values: { n: members.length } },
+      detail: { key: "debrief.smashGroupDetail" },
       color: DEBRIEF_COLORS.smash,
     });
   }

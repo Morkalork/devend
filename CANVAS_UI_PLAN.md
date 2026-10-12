@@ -337,7 +337,9 @@ scoring terms, so the tags match the results card; `checkBallWonState` records
 what each lock paid as it seals (`game.lockPayouts`). `ui/game/ScoreDebrief.tsx`
 draws it, and `scoreDebriefModel.ts` places the tags: above the box first,
 flipped below, beside or inside when the board's edge or another tag or box is
-in the way. The beat lasts 1.8 to 3.4 s depending on how much there is to read,
+in the way. The small things (the one-touch bricks) are named once: one tag
+("Smashed ×12") with small brackets on each brick and a leader from the tag to
+every one, since a tag per brick buried the board on a brick wall. The beat lasts 1.8 to 3.4 s depending on how much there is to read,
 on both routes to a win (a cut, and banking a push); the Playground's
 freeze-on-complete holds it on screen, and Admin > Canvas UI kit > Screens has
 it replaying and held.

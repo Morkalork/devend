@@ -4,7 +4,9 @@
  *
  * Once the lock flashes settle, each thing that earned overtime gets corner
  * brackets that slam in and blink as they lock on, a leader, and a tag plate
- * that types out what it paid and why; one box after the next. What paid
+ * that types out what it paid and why; one box after the next. The small
+ * things (the bricks smashed) share ONE tag, with a leader to each of them:
+ * a tag per brick buried the board. What paid
  * without a place on the board (the clock, the win, an objective) is listed in
  * a small panel in the corner. It fades as the board shatters into the results
  * card, or stays up while the Playground holds the board.
@@ -68,6 +70,28 @@ export function ScoreDebrief({ debrief, delayMs, hold = false, accentColor, orig
       if (f.alpha <= 0) return;
       const color = colors[i];
       const { box, tag, leader } = p;
+      if (p.members && p.leaders) {
+        // A group (the bricks smashed): small brackets on each, then a leader
+        // from the one tag to every member, drawn out as the tag types.
+        for (const m of p.members) {
+          const mx = m.x + m.w / 2, my = m.y + m.h / 2;
+          const w = m.w * f.scale, h = m.h * f.scale, x = mx - w / 2, y = my - h / 2;
+          const len = Math.max(3, Math.min(7, Math.min(w, h) * 0.35));
+          for (const [px, py, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]] as const) {
+            g.moveTo(px + sx * len, py).lineTo(px, py).lineTo(px, py + sy * len);
+          }
+        }
+        g.stroke({ width: 1.5, color, alpha: f.alpha, cap: "square", join: "miter" });
+        if (f.typed <= 0) return;
+        for (const [a, b] of p.leaders) {
+          g.moveTo(a.x, a.y).lineTo(a.x + (b.x - a.x) * f.typed, a.y + (b.y - a.y) * f.typed);
+        }
+        g.stroke({ width: 1, color, alpha: 0.55 * f.alpha });
+        g.rect(tag.x, tag.y, tag.w, tag.h).fill({ color: PLATE, alpha: 0.86 * f.alpha })
+          .stroke({ width: 1, color, alpha: 0.9 * f.alpha, alignment: 1 });
+        g.rect(tag.x, tag.y, 3, tag.h).fill({ color, alpha: f.alpha });
+        return;
+      }
       const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
       const w = box.w * f.scale, h = box.h * f.scale, x = cx - w / 2, y = cy - h / 2;
       const len = Math.max(6, Math.min(18, Math.min(w, h) * 0.28));

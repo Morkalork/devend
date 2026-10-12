@@ -1966,6 +1966,8 @@
     "smash": "Destruido",
     "smashDetail": "más pago del mapa",
     "smashObjectiveDetail": "objetivo destruido",
+    "smashGroup": "Destruidos ×{{n}}",
+    "smashGroupDetail": "cada uno sube el pago",
     "fences": "Bajo par",
     "fencesDetail": "{{used}} vallas, par {{par}}",
     "space": "Bono de espacio",

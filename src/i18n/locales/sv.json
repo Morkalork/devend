@@ -1966,6 +1966,8 @@
     "smash": "Krossad",
     "smashDetail": "höjde kartans pott",
     "smashObjectiveDetail": "målet förstört",
+    "smashGroup": "Krossade ×{{n}}",
+    "smashGroupDetail": "var och en höjde potten",
     "fences": "Under par",
     "fencesDetail": "{{used}} staket, par {{par}}",
     "space": "Utrymmesbonus",
