@@ -136,6 +136,69 @@ describe("what gets boxed", () => {
   });
 });
 
+describe("the small things smashed", () => {
+  // "For small destructables, just create one label and then run lines to each
+  // of the destructables from the label. That ought to reduce the clutter."
+  const brick = (x: number, y: number) =>
+    ({ destroyed: true, brittle: true, obstaclePolygon: { vertices: [{ x, y }, { x: x + 60, y }, { x: x + 60, y: y + 22 }, { x, y: y + 22 }] } });
+
+  it("share one tag, with each brick a member of it", () => {
+    const g = game({ destructibles: [brick(100, 100), brick(170, 100), brick(240, 100), brick(100, 130)] });
+    const items = buildScoreDebrief(g, summary()).items;
+    expect(items).toHaveLength(1);
+    const [group] = items;
+    expect(group.title).toEqual({ key: "debrief.smashGroup", values: { n: 4 } });
+    expect(group.members).toHaveLength(4);
+    // The box the tag is placed against holds every member.
+    for (const m of group.members!) {
+      expect(m.x).toBeGreaterThanOrEqual(group.box.x);
+      expect(m.x + m.w).toBeLessThanOrEqual(group.box.x + group.box.w + 1e-9);
+    }
+  });
+
+  it("leave a slab, chest or mirror boxed on its own, and a lone brick too", () => {
+    const g = game({ destructibles: [brick(100, 100), { destroyed: true, obstaclePolygon: { vertices: square(400, 400, 80) } }] });
+    const items = buildScoreDebrief(g, summary()).items;
+    expect(items).toHaveLength(2);
+    expect(items.every(i => !i.members)).toBe(true);
+  });
+
+  it("get a leader from the tag to every brick, and no tag of their own", () => {
+    const canvas = { canvasWidth: 450, canvasHeight: 450, canvasOffsetLeft: 0, canvasOffsetTop: 0 };
+    const bounds = { x: 0, y: 0, w: 450, h: 450 };
+    const g = game({ destructibles: [brick(300, 300), brick(380, 300), brick(460, 300), brick(300, 340), brick(460, 340)] });
+    const items = buildScoreDebrief(g, summary()).items;
+    const [p] = placeDebrief(items, canvas, bounds);
+    expect(p.members).toHaveLength(5);
+    expect(p.leaders).toHaveLength(5);
+    for (let k = 0; k < 5; k++) {
+      const [a, b] = p.leaders![k];
+      const m = p.members![k];
+      // Starts on the tag, ends on its brick.
+      expect(a.x).toBeGreaterThanOrEqual(p.tag.x - 1e-9);
+      expect(a.x).toBeLessThanOrEqual(p.tag.x + p.tag.w + 1e-9);
+      expect(b.x).toBeGreaterThanOrEqual(m.x - 1e-9);
+      expect(b.x).toBeLessThanOrEqual(m.x + m.w + 1e-9);
+      expect(b.y).toBeGreaterThanOrEqual(m.y - 1e-9);
+      expect(b.y).toBeLessThanOrEqual(m.y + m.h + 1e-9);
+    }
+    // Drawn small: a brick is not blown up to the minimum box a lone thing gets.
+    expect(p.members![0].h).toBeLessThan(MIN_BOX);
+  });
+
+  it("take one beat of the debrief, not one per brick", () => {
+    const many = game({ destructibles: Array.from({ length: 20 }, (_, i) => brick(50 + (i % 10) * 64, 100 + Math.floor(i / 10) * 30)) });
+    const d = buildScoreDebrief(many, summary());
+    expect(d.items).toHaveLength(1);
+    expect(d.durationMs).toBe(debriefDurationMs(1, 0));
+  });
+
+  it("is drawn as brackets on each brick and leaders to the one tag", () => {
+    expect(read("src/ui/game/ScoreDebrief.tsx")).toContain("for (const [a, b] of p.leaders) {");
+    expect(read("src/ui/dev/gallery/board.tsx")).toContain('id: "ScoreDebrief-bricks"');
+  });
+});
+
 describe("how long it stays up", () => {
   it("is long enough to read, a beat per box, and never drags", () => {
     expect(debriefDurationMs(0, 0)).toBe(1800);
@@ -266,7 +329,7 @@ describe("how each box locks on", () => {
 describe("the words", () => {
   const keys = [
     "notes", "lock", "lockDetail", "superior", "superiorDetail", "zone", "zoneDetail", "multiDetail",
-    "smash", "smashDetail", "smashObjectiveDetail", "fences", "fencesDetail", "space", "spaceDetail",
+    "smash", "smashDetail", "smashObjectiveDetail", "smashGroup", "smashGroupDetail", "fences", "fencesDetail", "space", "spaceDetail",
     "shipEarly", "winBonus", "objective", "hazardPay", "push",
   ];
   it.each([["en", en], ["es", es], ["sv", sv]] as const)("are all in %s, with no em-dash", (_, locale) => {

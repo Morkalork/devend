@@ -35,6 +35,12 @@ export interface DebriefItem {
   hours: number | null;
   /** The box's colour, "#rrggbb"; null is the run's accent. */
   color: string | null;
+  /**
+   * A group of small things named once (the bricks smashed): each member gets
+   * its own small brackets and a leader to the one tag, and `box` is the box
+   * round all of them, which the tag is placed against.
+   */
+  members?: { x: number; y: number; w: number; h: number }[];
 }
 
 /** Something that scored without a place on the board (the clock, the win, an objective). */

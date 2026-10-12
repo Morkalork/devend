@@ -65,6 +65,17 @@ const DEBRIEF = debriefOf([
   { title: { key: "debrief.shipEarly" }, hours: 9 },
   { title: { key: "debrief.winBonus" }, hours: 5 },
 ]);
+/** A wall of bricks smashed: one tag, a leader to each brick, beside a chest boxed on its own. */
+const BRICKS = [0, 1, 2, 3, 4, 5].flatMap(i => [{ x: 250 + i * 64, y: 170, w: 60, h: 22 }, { x: 282 + i * 64, y: 196, w: 60, h: 22 }])
+  .filter((_, i) => i % 3 !== 1);
+const DEBRIEF_BRICKS = debriefOf([
+  { kind: "smash", box: { x: 250, y: 170, w: 412, h: 48 }, members: BRICKS, title: { key: "debrief.smashGroup", values: { n: BRICKS.length } },
+    detail: { key: "debrief.smashGroupDetail" }, hours: null, color: DEBRIEF_COLORS.smash },
+  { kind: "smash", box: { x: 600, y: 560, w: 110, h: 90 }, title: { key: "debrief.smash" },
+    detail: { key: "debrief.smashDetail" }, hours: null, color: DEBRIEF_COLORS.smash },
+  { kind: "lock", box: { x: 200, y: 460, w: 160, h: 140 }, title: { key: "debrief.lock" },
+    detail: { key: "debrief.lockDetail" }, hours: 14, color: null },
+], []);
 /** A multi-lock: two balls sealed by one cut, one inside a zone; nothing else scored. */
 const DEBRIEF_LOCKS = debriefOf([
   { kind: "zone", box: { x: 200, y: 200, w: 220, h: 200 }, title: { key: "debrief.zone" },
@@ -140,6 +151,9 @@ export const entries: GalleryEntry[] = [
   ) },
   { id: "ScoreDebrief-held", group: "board", render: () => (
     <Stage>{b => <DebriefDemo b={b} debrief={DEBRIEF} hold />}</Stage>
+  ) },
+  { id: "ScoreDebrief-bricks", group: "board", render: () => (
+    <Stage>{b => <DebriefDemo b={b} debrief={DEBRIEF_BRICKS} hold />}</Stage>
   ) },
   { id: "ScoreDebrief-locks", group: "board", render: () => (
     <Stage>{b => <Replay everyMs={debriefDurationMs(2, 0) + 1500}>{k => <DebriefDemo key={k} b={b} debrief={DEBRIEF_LOCKS} />}</Replay>}</Stage>

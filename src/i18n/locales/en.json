@@ -1405,6 +1405,8 @@
     "smash": "Smashed",
     "smashDetail": "raised map payout",
     "smashObjectiveDetail": "objective destroyed",
+    "smashGroup": "Smashed ×{{n}}",
+    "smashGroupDetail": "each raised the payout",
     "fences": "Under Par",
     "fencesDetail": "{{used}} fences, par {{par}}",
     "space": "Space Bonus",

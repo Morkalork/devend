@@ -33,12 +33,12 @@ export function tagWidth(bounds: Rect): number {
   return Math.round(Math.max(120, Math.min(190, bounds.w * 0.48)));
 }
 
-export function worldToCss(box: Rect, c: DebriefCanvas): Rect {
+export function worldToCss(box: Rect, c: DebriefCanvas, minBox = MIN_BOX): Rect {
   const sx = c.canvasWidth / BOARD_WIDTH, sy = c.canvasHeight / BOARD_HEIGHT;
   let x = c.canvasOffsetLeft + box.x * sx, y = c.canvasOffsetTop + box.y * sy;
   let w = box.w * sx, h = box.h * sy;
-  if (w < MIN_BOX) { x -= (MIN_BOX - w) / 2; w = MIN_BOX; }
-  if (h < MIN_BOX) { y -= (MIN_BOX - h) / 2; h = MIN_BOX; }
+  if (w < minBox) { x -= (minBox - w) / 2; w = minBox; }
+  if (h < minBox) { y -= (minBox - h) / 2; h = minBox; }
   return { x, y, w, h };
 }
 
@@ -81,6 +81,20 @@ export interface PlacedItem {
   tag: Rect;
   /** The leader: from the box's nearest corner to the tag's nearest corner. */
   leader: [{ x: number; y: number }, { x: number; y: number }];
+  /** A group's members, each bracketed small, and a leader from the tag to each. */
+  members?: Rect[];
+  leaders?: [{ x: number; y: number }, { x: number; y: number }][];
+}
+
+/** The point of `r` nearest `p`. */
+function nearestOn(r: Rect, p: { x: number; y: number }): { x: number; y: number } {
+  return { x: Math.max(r.x, Math.min(r.x + r.w, p.x)), y: Math.max(r.y, Math.min(r.y + r.h, p.y)) };
+}
+
+/** A leader from the tag to one member: the tag's nearest edge to the member's nearest edge. */
+export function memberLeader(tag: Rect, m: Rect): [{ x: number; y: number }, { x: number; y: number }] {
+  const a = nearestOn(tag, { x: m.x + m.w / 2, y: m.y + m.h / 2 });
+  return [a, nearestOn(m, a)];
 }
 
 function corners(r: Rect) {
@@ -111,10 +125,16 @@ export function placeDebrief(items: readonly DebriefItem[], canvas: DebriefCanva
   const w = tagWidth(bounds), h = TAG_H;
   const taken: Rect[] = keepOut ? [keepOut] : [];
   const boxes = items.map(item => worldToCss(item.box, canvas));
+  // A group's members as drawn: small, so never the minimum box size (a brick
+  // blown up to MIN_BOX would bracket its neighbours too).
+  const memberBoxes = items.map(item => item.members?.map(m => worldToCss(m, canvas, 10)));
   const small = (r: Rect) => r.w * r.h < bounds.w * bounds.h * 0.25;
+  // What a tag keeps clear of, per item: its small box, or a group's members
+  // (never the box round a whole group, which can span half the board).
+  const solids = items.map((_, j) => memberBoxes[j] ?? (small(boxes[j]) ? [boxes[j]] : []));
   const out: PlacedItem[] = [];
   boxes.forEach((box, i) => {
-    const others = boxes.filter((b, j) => j !== i && small(b));
+    const others = solids.filter((_, j) => j !== i).flat();
     // Each spot as drawn and slid back onto the board, scored: on another tag
     // is worst, on another box bad, over its own box only when nothing else will do.
     const opts = candidates(box, w, h).flatMap(r => [r, clampInto(r, bounds)]).filter(r => inside(r, bounds));
@@ -126,7 +146,10 @@ export function placeDebrief(items: readonly DebriefItem[], canvas: DebriefCanva
       if (c < least) { least = c; placed = r; }
     }
     taken.push(placed);
-    out.push({ box, tag: placed, leader: leaderBetween(box, placed) });
+    const members = memberBoxes[i];
+    out.push(members
+      ? { box, tag: placed, leader: leaderBetween(box, placed), members, leaders: members.map(m => memberLeader(placed, m)) }
+      : { box, tag: placed, leader: leaderBetween(box, placed) });
   });
   return out;
 }
