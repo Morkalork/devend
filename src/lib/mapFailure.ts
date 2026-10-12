@@ -136,6 +136,13 @@ export interface MapFailure {
    * all" and not as "no reason".
    */
   unmet: WinConditionProgress[];
+  /**
+   * Each Acceptance Criterion met, missed or unchecked (null) on the board as
+   * the map failed, in winConditions' order. Attached on the way to the
+   * screen (GameCanvas), where the board is at hand; the failed screen draws
+   * the pre-map ticket with these marks.
+   */
+  criteriaMet?: (boolean | null)[];
 }
 
 /**

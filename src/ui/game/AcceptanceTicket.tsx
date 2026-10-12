@@ -26,13 +26,19 @@ interface AcceptanceTicketProps {
   width: number;
   /** Under the criteria, inside the card ("Tap anywhere to continue"). */
   footer?: ReactNode;
+  /**
+   * Head the failures "Failure, avoided" when every one was. On for the
+   * Debrief; off on the failed screen, where the map DID fail (by a rule the
+   * list may not name, like a ball into a growing fence).
+   */
+  sayAvoided?: boolean;
 }
 
-export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, footer }: AcceptanceTicketProps) {
+export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, footer, sayAvoided = true }: AcceptanceTicketProps) {
   const { t } = useTranslation();
   // Marked, a failure row's green check means it did NOT happen; the heading
   // says so, or "Failure" over a check reads as "yes, the timer ran out".
-  const failsAvoided = rows.some(r => r.group === "fail") && rows.every(r => r.group !== "fail" || r.met === true);
+  const failsAvoided = sayAvoided && rows.some(r => r.group === "fail") && rows.every(r => r.group !== "fail" || r.met === true);
   const sections = criteriaSections(rows, (group, count) => (group === "required" && count > 1
     ? t("winConditions.groupRequiredAll")
     : group === "fail" && failsAvoided ? t("winConditions.groupFailAvoided")

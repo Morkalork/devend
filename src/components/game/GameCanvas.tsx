@@ -156,7 +156,7 @@ import { mapGoals, type Goal } from "@/lib/goalTracker";
 import { holdFlagsOf, loopHoldReason, loopNeedsRestart, WATCHDOG_INTERVAL_MS } from "@/lib/loopWatchdog";
 import { winHighlightRects } from "@/lib/winHighlight";
 import { resolveWinSpec } from "@/lib/winSpec";
-import { readWinSnapshot } from "@/lib/physics/applyCut";
+import { acceptanceMarks, readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
@@ -1787,6 +1787,10 @@ export function GameCanvas({
     };
     startDissolveRef.current = startDissolve;
 
+    const markFailure = (failure: MapFailure): MapFailure => ({
+      ...failure, criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers, failure.kind),
+    });
+
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
       // Called only when a ball locks: mirror the count AND flag that a lock
@@ -1806,9 +1810,11 @@ export function GameCanvas({
       onLevelComplete: d => onLevelCompleteRef.current(d),
       onMapComplete: () => { showDebriefRef.current(); onMapCompleteRef.current?.(); },
       freezeOnComplete: () => freezeOnCompleteRef.current,
-      onGameEnd: r => onGameEndRef.current(r),
+      // A loss carries the Acceptance Criteria marked on the board as it
+      // failed, so the failed screen can draw the pre-map ticket filled in.
+      onGameEnd: r => onGameEndRef.current(r.failure ? { ...r, failure: markFailure(r.failure) } : r),
       onLivesChange,
-      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
+      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(markFailure(failure)),
       onGameMessage: (id: GameMessageId) => {
         // The one message that is also state: the slot bar's shield goes out.
         if (id === "guardrailCaught") setGuardrailSpent(true);

@@ -221,8 +221,9 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Off: after a map, the Acceptance Criteria ticket with each line marked met or missed.
-                On: the old breakdown, axes and totals. Takes effect on the next map.
+                Off: after a map, won or failed, the Acceptance Criteria ticket with each line
+                marked met or missed. On: the old Debrief (breakdown, axes, totals) and the old
+                failed screen ("still needed" lines). Takes effect on the next map.
               </div>
             </div>
           </button>

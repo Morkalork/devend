@@ -19,9 +19,15 @@ export const MAP_FAILED_MS = 4200;
  */
 export const MAP_FAILED_RUN_OVER_MS = 30000;
 
+/**
+ * With the ticket up: the whole Acceptance Criteria card to read, not two
+ * short lines, so a longer window (a tap still goes at once).
+ */
+export const MAP_FAILED_TICKET_MS = 7000;
+
 /** How long the overlay waits before dismissing itself. */
-export function mapFailedDelay(runOver: boolean): number {
-  return runOver ? MAP_FAILED_RUN_OVER_MS : MAP_FAILED_MS;
+export function mapFailedDelay(runOver: boolean, ticket = false): number {
+  return runOver ? MAP_FAILED_RUN_OVER_MS : ticket ? MAP_FAILED_TICKET_MS : MAP_FAILED_MS;
 }
 
 export interface MapFailedCopy {

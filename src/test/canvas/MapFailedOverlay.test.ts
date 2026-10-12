@@ -67,6 +67,6 @@ describe("the overlay on the last life (canvas)", () => {
     // A render needs a canvas; the wiring is checked at the source.
     const src = read("src/ui/game/MapFailedOverlay.tsx");
     expect(src).toMatch(/<Pressable\s+onTap=\{onDismiss\}/);
-    expect(src).toMatch(/setTimeout\(onDismiss, mapFailedDelay\(runOver\)\)/);
+    expect(src).toMatch(/setTimeout\(onDismiss, mapFailedDelay\(runOver, !!rows\)\)/);
   });
 });

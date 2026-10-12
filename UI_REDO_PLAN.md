@@ -158,3 +158,15 @@ kept whole behind Admin's **Full debrief** switch (`debriefMode.ts`, a display
 setting, not a run flag), to compare and to bring back. Gallery:
 `LevelCompleteOverlay-ticket`, `LevelCompleteOverlay-ticketMissed`. Tests:
 src/test/canvas/ticketDebrief.test.ts.
+
+**The failed screen too** ("do the same for the map failed screen"). A lost
+life and the run-ending loss both show the same ticket under the failure's
+headline, marked on the board as the map failed, in place of the "still
+needed" lines; the warning glyph goes to make room, and the overlay waits 7s
+instead of 4.2s before moving on (a tap still goes at once; the last life still
+waits for a tap). The marks ride on the `MapFailure` (`criteriaMet`), attached
+in GameCanvas where both loss callbacks leave the game, so every failure kind
+gets them. The failures are never headed "avoided" here: the map did fail,
+sometimes by a rule the list does not name (a ball into a growing fence on the
+last life). The same Admin **Full debrief** switch brings the old lines back.
+Gallery: `MapFailedOverlay-ticket`, `-ticketRunOver`, `-full`.

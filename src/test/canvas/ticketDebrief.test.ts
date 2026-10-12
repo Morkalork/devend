@@ -146,7 +146,7 @@ describe("the Debrief draws it", () => {
     expect(cut).toContain("        criteriaMet,\n");
     const screen = read("src/components/game/GameScreen.tsx");
     expect(screen).toContain("winConditions(t, level, levelNumber, activeModifiers).map((c, i) => ({");
-    expect(screen).toContain("met: scoreData.criteriaMet?.[i] ?? null,");
+    expect(screen).toContain("met: marks[i] ?? null,");
   });
 
   it("opens as the ticket unless Admin asks for the full one, with nothing but the rare notices beside it", () => {
@@ -176,5 +176,45 @@ describe("the Debrief draws it", () => {
     const g = read("src/ui/dev/gallery/between.tsx");
     expect(g).toContain('id: "LevelCompleteOverlay-ticket"');
     expect(g).toContain('id: "LevelCompleteOverlay-ticketMissed"');
+  });
+});
+
+// "Do the same for the map failed screen."
+describe("the failed screen draws it too", () => {
+  it("gets the marks on the way out of the game, on both loss paths", () => {
+    const canvas = read("src/components/game/GameCanvas.tsx");
+    expect(canvas).toContain("criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers, failure.kind),");
+    expect(canvas).toContain("onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(markFailure(failure)),");
+    expect(canvas).toContain("onGameEnd: r => onGameEndRef.current(r.failure ? { ...r, failure: markFailure(r.failure) } : r),");
+  });
+
+  it("is handed the same rows as the Debrief, for a lost life and for the run's end", () => {
+    const screen = read("src/components/game/GameScreen.tsx");
+    expect(screen).toContain("acceptance={ticketRows(runEndingLoss.failure.criteriaMet)}");
+    expect(screen).toContain("acceptance={ticketRows(mapFailure.criteriaMet)}");
+    expect(screen).toContain("const acceptance = ticketRows(scoreData.criteriaMet);");
+  });
+
+  it("draws the ticket in place of the lines unless Admin asks for the full screen, without 'avoided'", () => {
+    const src = read("src/ui/game/MapFailedOverlay.tsx");
+    expect(src).toContain("const [rows] = useState(() => (full ?? isFullDebrief()) ? undefined : acceptance);");
+    expect(src).toContain("{!rows && lines.length > 0 && (");
+    expect(src).toMatch(/<AcceptanceTicket rows=\{rows\}[\s\S]*?sayAvoided=\{false\} \/>/);
+    expect(read("src/ui/game/AcceptanceTicket.tsx")).toContain("const failsAvoided = sayAvoided && ");
+  });
+
+  it("stays up long enough to read the card, and the last life still waits for a tap", async () => {
+    const { mapFailedDelay, MAP_FAILED_MS, MAP_FAILED_TICKET_MS, MAP_FAILED_RUN_OVER_MS } = await import("@/ui/game/MapFailedOverlayModel");
+    expect(mapFailedDelay(false, true)).toBe(MAP_FAILED_TICKET_MS);
+    expect(MAP_FAILED_TICKET_MS).toBeGreaterThan(MAP_FAILED_MS);
+    expect(mapFailedDelay(false)).toBe(MAP_FAILED_MS);
+    expect(mapFailedDelay(true, true)).toBe(MAP_FAILED_RUN_OVER_MS);
+  });
+
+  it("has gallery entries", () => {
+    const g = read("src/ui/dev/gallery/modals.tsx");
+    for (const id of ["MapFailedOverlay-ticket", "MapFailedOverlay-ticketRunOver", "MapFailedOverlay-full"]) {
+      expect(g).toContain(`id: "${id}"`);
+    }
   });
 });

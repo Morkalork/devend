@@ -23,6 +23,7 @@ import { SuperiorLockInfoModal } from "../../game/SuperiorLockInfoModal";
 import { LockExplainerModal } from "../../game/LockExplainerModal";
 import { BoardEntityInfoModal } from "../../game/BoardEntityInfoModal";
 import { MapFailedOverlay } from "../../game/MapFailedOverlay";
+import type { AcceptanceRow } from "@/types/game";
 import { PushYourLuckOverlay } from "../../game/PushYourLuckOverlay";
 import { PairGuestGate } from "../../game/PairGuestGate";
 import { FeatureUnlockedModal } from "../../game/FeatureUnlockedModal";
@@ -47,6 +48,14 @@ const FAILURE: MapFailure = {
     { condition: { kind: "space", threshold: 25 }, current: 41, target: 25, met: false, mode: "accumulate" },
   ],
 };
+
+/** The pre-map ticket, marked as a map ran out of time with a lock still owed. */
+const FAILED_TICKET: AcceptanceRow[] = [
+  { group: "required", text: "Clear 81% of the board.", met: true },
+  { group: "required", text: "Lock 2 balls.", met: false },
+  { group: "required", text: "Smash 4 of the 10 shards (one touch each).", met: true },
+  { group: "fail", text: "The timer runs out (50s).", met: false },
+];
 
 const UPGRADES: UpgradeConfig[] = [
   { id: "runtime_optimisation_junior", name: "Runtime Optimisation", tier: "Junior", description: "Reduce ball speed by 5%.", tags: ["safety"], modifiers: { ballSpeedMultiplier: 0.95 } },
@@ -167,6 +176,9 @@ export const entries: GalleryEntry[] = [
 
   { id: "MapFailedOverlay", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-runOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-ticket", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-ticketRunOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-full", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} full livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-noLines", group: "modal", render: () => <MapFailedOverlay failure={{ kind: "areaUnreachable", unmet: [] }} livesLeft={1} onDismiss={noop} /> },
 
   { id: "PushYourLuckOverlay", group: "modal", render: () => <PushYourLuckOverlay remainingPercent={18} thresholdPercent={25} basePoints={120} onBank={noop} onPush={noop} /> },

@@ -54,7 +54,7 @@ import { debugMutatorId, devFenceSlots } from '@/lib/devFlags';
 import type { MapMutator } from '@/types/mapMutator';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
-import { GameResult, LevelScoreData } from '@/types/game';
+import { GameResult, LevelScoreData, type AcceptanceRow } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig, AscensionRung } from '@/types/loadout';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
@@ -807,18 +807,23 @@ export function GameScreen({
   const levelEndedRef = useRef(false);
   useEffect(() => { levelEndedRef.current = false; }, [level.id, levelNumber]);
 
+  // The ticket the player read before the map, with the marks the board
+  // earned: same list, same words, so the Debrief and the failed screen are
+  // that card filled in.
+  const ticketRows = useCallback((marks: (boolean | null)[] | undefined): AcceptanceRow[] | undefined => (
+    marks
+      ? winConditions(t, level, levelNumber, activeModifiers).map((c, i) => ({
+        group: c.group, text: c.text, met: marks[i] ?? null,
+      }))
+      : undefined
+  ), [t, level, levelNumber, activeModifiers]);
+
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     levelEndedRef.current = true;
     setIsPaused(false);
-    // The ticket the player read before the map, with the marks the board
-    // earned: same list, same words, so the Debrief is that card filled in.
-    const acceptance = scoreData.criteriaMet
-      ? winConditions(t, level, levelNumber, activeModifiers).map((c, i) => ({
-        group: c.group, text: c.text, met: scoreData.criteriaMet?.[i] ?? null,
-      }))
-      : undefined;
+    const acceptance = ticketRows(scoreData.criteriaMet);
     onLevelComplete(acceptance ? { ...scoreData, acceptance } : scoreData);
-  }, [onLevelComplete, t, level, levelNumber, activeModifiers]);
+  }, [onLevelComplete, ticketRows]);
 
   const canPause = gameState.pushMode === 'none';
 
@@ -1418,6 +1423,9 @@ export function GameScreen({
                 {runEndingLoss?.failure ? (
                   <MapFailedOverlay
                     failure={runEndingLoss.failure}
+                    acceptance={ticketRows(runEndingLoss.failure.criteriaMet)}
+                    levelNumber={levelNumber}
+                    levelId={level.id}
                     livesLeft={0}
                     runOver
                     accentColor={accentColor}
@@ -1426,6 +1434,9 @@ export function GameScreen({
                 ) : mapFailure ? (
                   <MapFailedOverlay
                     failure={mapFailure}
+                    acceptance={ticketRows(mapFailure.criteriaMet)}
+                    levelNumber={levelNumber}
+                    levelId={level.id}
                     livesLeft={lives}
                     accentColor={accentColor}
                     onDismiss={dismissMapFailure}
