@@ -354,6 +354,18 @@ export function renderCriteria(t: TFunction, criteria: Criterion[]): string {
   return blocks.join("\n\n");
 }
 
+/** The groups in order with their headings; empty groups say nothing at all (renderCriteria's rule). */
+export function criteriaSections(
+  criteria: Criterion[],
+  heading: (group: CriterionGroup, count: number) => string,
+): { group: CriterionGroup; items: Criterion[]; heading: string }[] {
+  return CRITERION_GROUPS
+    .map(group => ({ group, items: criteria.filter(c => c.group === group) }))
+    .filter(s => s.items.length > 0)
+    // The locale's headings end in a colon for the old text list; a heading row does not need one.
+    .map(s => ({ ...s, heading: heading(s.group, s.items.length).replace(/:\s*$/, "") }));
+}
+
 /**
  * Should this map ANNOUNCE its win conditions unprompted?
  *

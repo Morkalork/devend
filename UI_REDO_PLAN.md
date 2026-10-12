@@ -127,3 +127,15 @@ The backlog stays the one-ticket-at-a-time strip rather than a board of
 columns. Testers asked for that strip when the shop showed five cards at once
 (contentCopyBudget.test.ts), and a column board on a phone would bring the
 wall of text back. Tests: src/test/canvas/storeBoard.test.ts.
+
+**The pre-map Acceptance Criteria** are the map's own ticket
+(`AcceptanceCriteriaModal`, src/ui/game): the store's ticket look with the band's
+accent as the stripe, a key hashed from the map's id, "Level N" as the title and
+the map's id as its branch, then the criteria as checklist rows under their
+groups (a box for goals and optional items, a fork for "or", a red cross for
+the failure conditions). It replaces the generic explainer card for this one
+modal only, because it is the only explainer that is a list; the grouping is
+`criteriaSections` in winConditions.ts, in the same order and with the same
+empty-group rule as the text list. Gallery: `AcceptanceCriteriaModal` (every
+group) and `AcceptanceCriteriaModal-plain`. Tests:
+src/test/canvas/acceptanceCriteria.test.ts.

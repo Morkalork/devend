@@ -7,7 +7,7 @@ import { getAllFeatures } from "@/lib/features";
 import { getAllFenceTypes, STANDARD_FENCE_ID } from "@/lib/fences";
 import { getAllAbilities } from "@/lib/abilities";
 import { getMapMutators } from "@/lib/mapMutators";
-import { winConditionsBody } from "@/lib/winConditions";
+import { winConditions, winConditionsBody, type Criterion } from "@/lib/winConditions";
 import { DEFAULT_MODIFIERS, type GameModifiers, type ModifierSource } from "@/hooks/useActiveModifiers";
 import type { MapFailure } from "@/lib/mapFailure";
 import type { LevelConfig } from "@/types/level";
@@ -17,6 +17,7 @@ import type { CapstoneConfig } from "@/types/capstone";
 import type { ActiveMapObjective } from "@/types/objective";
 import { PauseOverlay } from "../../game/PauseOverlay";
 import { TutorialOverlay } from "../../game/TutorialOverlay";
+import { AcceptanceCriteriaModal } from "../../game/AcceptanceCriteriaModal";
 import { BreakArt, CircuitArt, FenceArt, LockArt, MoverArt, PickupArt } from "../../game/TutorialArt";
 import { SuperiorLockInfoModal } from "../../game/SuperiorLockInfoModal";
 import { LockExplainerModal } from "../../game/LockExplainerModal";
@@ -103,6 +104,16 @@ function topBarSample(focus: "mapRule" | null = null) {
   );
 }
 
+/** A map with something in every group, from the real strings. */
+const RICH_CRITERIA: Criterion[] = [
+  { group: "required", text: t("winConditions.clear", { percent: 75 }) },
+  { group: "required", text: t("winConditions.underPar", { count: 6 }) },
+  { group: "either", text: t("winConditions.allLocked") },
+  { group: "optional", text: t("winConditions.areaWin", { target: t("winConditions.targetBall"), area: "CSS", mult: 2 }) },
+  { group: "fail", text: t("winConditions.time", { seconds: 90 }) },
+  { group: "fail", text: t("winConditions.fences", { count: 10 }) },
+];
+
 function tutorial(id: string, graphic: ReactNode, extra: Partial<Parameters<typeof TutorialOverlay>[0]> = {}): GalleryEntry {
   return {
     id, group: "modal",
@@ -127,6 +138,15 @@ export const entries: GalleryEntry[] = [
   tutorial("TutorialOverlay-break", <BreakArt />),
   tutorial("TutorialOverlay-pickup", <PickupArt />),
   tutorial("TutorialOverlay-circuit", <CircuitArt />, { title: t("game.circuitTutorialTitle"), body: t("game.circuitTutorialBody"), accentColor: "#7fe3d4" }),
+  // The pre-map Acceptance Criteria as the map's ticket: every group at once, then a plain map's.
+  {
+    id: "AcceptanceCriteriaModal", group: "modal",
+    render: () => <AcceptanceCriteriaModal criteria={RICH_CRITERIA} levelNumber={14} levelId="lvl-14-gatekeeper" accentColor={ACCENT} onDismiss={noop} />,
+  },
+  {
+    id: "AcceptanceCriteriaModal-plain", group: "modal",
+    render: () => <AcceptanceCriteriaModal criteria={winConditions(t, LEVEL, 4, DEFAULT_MODIFIERS)} levelNumber={4} levelId={LEVEL.id} accentColor={ACCENT} onDismiss={noop} />,
+  },
   tutorial("TutorialOverlay-list", undefined, { title: t("winConditions.title"), body: winConditionsBody(t, LEVEL, 4, DEFAULT_MODIFIERS), align: "left" }),
   tutorial("TutorialOverlay-spotTop", undefined, { title: t("game.timeLimitTutorialTitle"), body: t("game.timeLimitTutorialBody"), spotlightArea: "top", spotlightHeightPx: 72 }),
   tutorial("TutorialOverlay-spotBottom", undefined, { title: t("game.fenceSlotsTutorialTitle"), body: t("game.fenceSlotsTutorialBody"), spotlightArea: "bottom", spotlightHeightPx: 150 }),

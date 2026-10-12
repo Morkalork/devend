@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { fencesLeft } from '@/lib/fenceBudget';
-import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
+import { winConditions, winConditionsBody, shouldAnnounceWinConditions, type Criterion } from '@/lib/winConditions';
 import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from '@/ui/game/MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
@@ -36,6 +36,7 @@ import { shouldAutoPause, shouldPauseForZoom } from '@/lib/autoPause';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from '@/ui/game/TutorialOverlay';
+import { AcceptanceCriteriaModal } from '@/ui/game/AcceptanceCriteriaModal';
 import { LockDebugOverlay } from '@/ui/game/LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
@@ -1243,6 +1244,8 @@ export function GameScreen({
           type Explainer = {
             show: boolean; accentColor: string; title: string; body: string;
             onDismiss: () => void; graphic?: ReactNode; align?: "center" | "left";
+            /** The criteria as rows: drawn as the map's ticket, not the generic card. */
+            criteria?: Criterion[];
             /** Cut a hole in the scrim over the thing being talked about. */
             spotlightArea?: 'top' | 'bottom'; spotlightHeightPx?: number;
           };
@@ -1300,8 +1303,10 @@ export function GameScreen({
             {
               show: showWinModal, accentColor,
               title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber, activeModifiers),
-              // The one explainer that is a LIST rather than a paragraph.
+              // The one explainer that is a LIST rather than a paragraph, so it
+              // gets its own modal: the map's ticket, criteria as checklist rows.
               align: 'left' as const,
+              criteria: winConditions(t, level, levelNumber, activeModifiers),
               onDismiss: () => setWinModalOpen(false),
             },
             {
@@ -1340,6 +1345,17 @@ export function GameScreen({
             },
           ];
           const active = queue.find(m => m.show);
+          if (active?.criteria) {
+            return (
+              <AcceptanceCriteriaModal
+                criteria={active.criteria}
+                levelNumber={levelNumber}
+                levelId={level.id}
+                accentColor={active.accentColor}
+                onDismiss={active.onDismiss}
+              />
+            );
+          }
           return active ? (
             <TutorialOverlay
               visible
