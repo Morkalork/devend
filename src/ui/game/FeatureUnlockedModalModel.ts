@@ -2,13 +2,13 @@
  * FeatureUnlockedModal's icon table, in a .ts file so the component file
  * exports components only.
  */
-import { Backpack, Sparkles, Trophy, Award, Zap, type LucideIcon } from "lucide-react";
+import { ClipboardList, Sparkles, Trophy, Award, Zap, type LucideIcon } from "lucide-react";
 import type { GameFeature } from "@/lib/features";
 
 // Resolves the `icon` NAME from features.yml to a lucide component. Add an entry
 // here when a feature uses a new icon; unmapped names fall back to Sparkles.
 export const FEATURE_ICONS: Record<string, LucideIcon> = {
-  Backpack,
+  ClipboardList,
   Sparkles,
   Trophy,
   Award,

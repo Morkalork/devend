@@ -4,7 +4,7 @@
  * order, the conditions and the close-the-menu rules are testable.
  */
 import {
-  Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Target, SlidersHorizontal, TrendingUp, ClipboardList,
+  Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Target, SlidersHorizontal, ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,8 +21,6 @@ export interface ControlsRowProps {
   onOpenWin: () => void;
   soundMuted: boolean;
   onToggleSound: () => void;
-  hasAscensionAnnouncement: boolean;
-  onOpenAscension: () => void;
   adminMode: boolean;
   onOpenTuning: () => void;
   onRestart: () => void;
@@ -31,9 +29,6 @@ export interface ControlsRowProps {
 
 /** A string to show: an i18n key, or a literal (the admin-only "Tune map" was never translated). */
 export type ControlText = { key: string; values?: Record<string, unknown> } | { literal: string };
-
-/** The ascension entry's own colour, whatever the board's accent. */
-export const ASCENSION_COLOR = 0xffb347;
 
 export interface ControlButton {
   id: "menu" | "pause" | "specs" | "win";
@@ -83,7 +78,7 @@ export function specsBadgeLabel(count: number): ControlText {
 }
 
 export interface MenuItem {
-  id: "sound" | "win" | "ascension" | "tuning" | "restart" | "mainMenu";
+  id: "sound" | "win" | "tuning" | "restart" | "mainMenu";
   icon: LucideIcon;
   text: ControlText;
   /** null = the board's accent. */
@@ -94,7 +89,7 @@ export interface MenuItem {
 /**
  * The popup's entries, top to bottom. Every entry but sound closes the menu
  * first: sound toggles in place so the player can hear the change and flip it
- * back. Ascension only when there is an announcement; Tune map only in admin.
+ * back. Tune map only in admin.
  */
 export function menuItems(p: ControlsRowProps): MenuItem[] {
   const closing = (fn: () => void) => () => { p.onCloseMenu(); fn(); };
@@ -105,9 +100,6 @@ export function menuItems(p: ControlsRowProps): MenuItem[] {
     },
     { id: "win", icon: Target, text: { key: "winConditions.menuItem" }, color: null, onTap: closing(p.onOpenWin) },
   ];
-  if (p.hasAscensionAnnouncement) {
-    items.push({ id: "ascension", icon: TrendingUp, text: { key: "ascension.menuItem" }, color: ASCENSION_COLOR, onTap: closing(p.onOpenAscension) });
-  }
   if (p.adminMode) {
     items.push({ id: "tuning", icon: SlidersHorizontal, text: { literal: "Tune map" }, color: null, onTap: closing(p.onOpenTuning) });
   }

@@ -1,6 +1,6 @@
 /**
  * Localized accessors for YAML-authored game content — upgrades, certificates,
- * achievements and loadouts (public/*.yml).
+ * achievements, capstones and Sprint Planning offers (public/*.yml).
  *
  * The YAML files stay the **English source of truth**. Each translated
  * language fills in `content.<kind>.<id>.<field>` keys in its locale file
@@ -88,18 +88,8 @@ export const contentText = {
   mutatorClarify: (t: TFunction, m: WithId & { clarify?: string }) =>
     field(t, 'mapMutators', m.id, 'clarify', m.clarify),
 
-  /**
-   * Ascension ladder rung (the `ascension.ladder` block in loadouts.yml).
-   * Keyed by DEPTH rather than an id: a rung's identity is which depth it comes
-   * into force at, so there is nothing else for it to be called.
-   */
-  rungName: (t: TFunction, r: { depth: number; name?: string }) =>
-    field(t, 'ascensionRungs', String(r.depth), 'name', r.name),
-  rungDesc: (t: TFunction, r: { depth: number; description?: string }) =>
-    field(t, 'ascensionRungs', String(r.depth), 'description', r.description),
-
-  loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
-  loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
-  loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>
-    field(t, 'loadouts', l.id, 'blessing', l.blessing),
+  /** Sprint Planning offer (offers.yml): name, upside and downside. */
+  offerName: (t: TFunction, o: WithId & { name?: string }) => field(t, 'offers', o.id, 'name', o.name),
+  offerDesc: (t: TFunction, o: WithId & { description?: string }) => field(t, 'offers', o.id, 'description', o.description),
+  offerPrice: (t: TFunction, o: WithId & { priceText?: string }) => field(t, 'offers', o.id, 'priceText', o.priceText),
 };

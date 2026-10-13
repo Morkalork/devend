@@ -229,14 +229,6 @@ describe("findings the loader cannot make", () => {
     expect(issue?.message).toContain("12");
   });
 
-  it("catches a normal-run upgrade gated behind an ascension-only one", () => {
-    const graph = buildUpgradeGraph([
-      up("asc", "Junior", { ascensionOnly: true }),
-      up("normal", "Senior", { prerequisites: ["asc"] }),
-    ]);
-    expect(graph.issues.find(i => i.kind === "ascension-gate")?.severity).toBe("error");
-  });
-
   it("catches an upgrade gated past the last map that exists", () => {
     expect(kinds([up("far", "Junior", { unlockLevel: 99 })], 35)).toContain("unlock-past-last-map");
   });
@@ -272,8 +264,9 @@ describe("findings the loader cannot make", () => {
   it("sorts errors above warnings above notes", () => {
     const graph = buildUpgradeGraph([
       up("alone", "Junior"),
-      up("asc", "Junior", { ascensionOnly: true }),
-      up("normal", "Senior", { prerequisites: ["asc"] }),
+      up("x1", "Junior", { choiceGroup: "g" }),
+      up("x2", "Junior", { choiceGroup: "g" }),
+      up("both", "Senior", { prerequisites: ["x1", "x2"] }),
     ]);
     const rank = { error: 0, warn: 1, info: 2 };
     const seen = graph.issues.map(i => rank[i.severity]);

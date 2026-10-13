@@ -126,8 +126,7 @@ export function useUpgradeManager() {
         }
 
         // Ids must be unique. A duplicate would silently overwrite the earlier
-        // entry in the lookup — this previously masked a normal/ascension clash
-        // on the defensive_programming_* ids.
+        // entry in the lookup.
         if (lookup.has(upgrade.id)) {
           throw new Error(`Duplicate upgrade id "${upgrade.id}"`);
         }
@@ -180,21 +179,6 @@ export function useUpgradeManager() {
           }
         }
         tagSets = { threshold, bonuses };
-      }
-
-      // Dev-only sanity: a normal-run upgrade gated behind an ascension-only one
-      // could never be bought outside ascension. Warn rather than throw.
-      if (import.meta.env.DEV) {
-        for (const upgrade of data.upgrades) {
-          if (upgrade.ascensionOnly) continue;
-          for (const prereqId of upgrade.prerequisites ?? []) {
-            if (lookup.get(prereqId)?.ascensionOnly) {
-              console.warn(
-                `[upgrades] "${upgrade.id}" requires ascension-only prerequisite "${prereqId}" — unreachable in a normal run.`,
-              );
-            }
-          }
-        }
       }
       
       setState({

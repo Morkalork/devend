@@ -18,7 +18,7 @@
  */
 import { useCallback, type ReactNode } from "react";
 import type { Graphics } from "pixi.js";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "../reducedMotion";
 import { insetGlow, outerGlow } from "./boardDraw";
 import type { Layout } from "../kit/ui";
 import { Icon, Label, useUiScreen } from "../kit/ui";

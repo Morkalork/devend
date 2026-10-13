@@ -50,37 +50,6 @@ export function baseStartingLives(normal: number): number {
 }
 
 /**
- * Ascension depth requested by `?ascension=N`, or 0 for a normal run.
- *
- * Reaching depth N legitimately means clearing the whole map list N times, so
- * without this the later ladder rungs are effectively untestable. The jump
- * lands you at depth N with NO drafted loadouts, which is deliberate: an
- * ascension normally arrives carrying every curse and blessing drafted on the
- * way up, and those would muddle what a rung on its own actually does.
- *
- * Ledger-ineligible like every other flag in this file.
- */
-export const MAX_DEBUG_ASCENSION = 50;
-
-/** Pure parse, so the clamping is testable without a URL. */
-export function parseAscensionParam(search: string): number {
-  const raw = new URLSearchParams(search).get('ascension');
-  if (raw == null) return 0;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(MAX_DEBUG_ASCENSION, n);
-}
-
-/** The requested depth from the live URL. 0 when absent or malformed. */
-export function debugAscensionDepth(): number {
-  try {
-    return parseAscensionParam(window.location.search) || ascensionOverride;
-  } catch {
-    return ascensionOverride; // no window (SSR / test env without a location)
-  }
-}
-
-/**
  * Mutator forced by `?mutator=<id>`, or null for the normal roll.
  *
  * Map mutators are rolled per map from a weighted pool with a "no mutator"
@@ -177,7 +146,6 @@ export function forcedTilts(): boolean {
 let mutatorOverride: string | null = null;
 let bugOverride: string | null = null;
 let tiltsOverride = false;
-let ascensionOverride = 0;
 
 /** Force a mutator onto every eligible map for this session (null clears). */
 export function setDebugMutatorOverride(id: string | null): void {
@@ -195,12 +163,30 @@ export function getDebugBugOverride(): string | null { return bugOverride; }
 export function setForcedTiltsOverride(on: boolean): void { tiltsOverride = on; }
 export function getForcedTiltsOverride(): boolean { return tiltsOverride; }
 
-/** Start the next New Game at this ascension depth (0 clears). */
-export function setDebugAscensionOverride(depth: number): void {
-  ascensionOverride = Number.isFinite(depth) && depth > 0
-    ? Math.min(MAX_DEBUG_ASCENSION, Math.floor(depth)) : 0;
+// ── Sprint Planning (SPRINT_PLANNING_PLAN.md) ───────────────────────────────
+// In memory like the overrides above: a forced card that survived into next
+// week's runs would hand out a jackpot nobody rolled. Set from the Admin
+// screen. Each makes a run unrepresentative, so each is ledger-ineligible.
+let sprintOfferOverride: string | null = null;
+let jackpotOverride = false;
+let sprintAlwaysOn = false;
+
+/** Put this offer (offers.yml id) in its pool's slot on every deal, locked or not (null clears). */
+export function setForcedSprintOffer(id: string | null): void {
+  sprintOfferOverride = id && id.trim() ? id.trim() : null;
 }
-export function getDebugAscensionOverride(): number { return ascensionOverride; }
+export function getForcedSprintOffer(): string | null { return sprintOfferOverride; }
+
+/**
+ * Deal the jackpot gamble every time. It is a 1-in-20 card at best, and "did
+ * not come up" looks exactly like "does not work" from the outside.
+ */
+export function setForcedJackpot(on: boolean): void { jackpotOverride = on; }
+export function getForcedJackpot(): boolean { return jackpotOverride; }
+
+/** Show the draft before every run, even before Sprint Planning is unlocked. */
+export function setSprintAlwaysOn(on: boolean): void { sprintAlwaysOn = on; }
+export function isSprintAlwaysOn(): boolean { return sprintAlwaysOn; }
 
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
@@ -208,7 +194,9 @@ export function resetDevFlagCache(): void {
   mutatorOverride = null;
   bugOverride = null;
   tiltsOverride = false;
-  ascensionOverride = 0;
+  sprintOfferOverride = null;
+  jackpotOverride = false;
+  sprintAlwaysOn = false;
 }
 
 /**

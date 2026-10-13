@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  AlertCircle, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, Music, Users,
+  AlertCircle, Sparkles, Hexagon, Trophy, ClipboardList, Medal, CalendarDays, Flame, Check, Music, Users,
   ChevronRight, GraduationCap, Lock, Settings, Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -34,16 +34,10 @@ interface WelcomeScreenProps {
   onStartGame: () => void;
   /** When a saved run exists, resumes it. Absent = no save (single Start Game button). */
   onContinue?: () => void;
-  /**
-   * Ascension depth of the saved run, 0 for an unascended one. Shown on the
-   * Continue button so the menu says which run is waiting: at depth the rules
-   * differ enough that resuming blind is a genuine surprise.
-   */
-  savedRunAscension?: number;
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
-  onLoadouts?: () => void;
+  onOffers?: () => void;
   /** Opens the Performance Review (records). Absent until a run has banked. */
   onHallOfFame?: () => void;
   /** Starts today's seeded Daily Stand-up run (HIGHSCORES.md Phase D). */
@@ -91,7 +85,7 @@ const BUTTON_ICON: Partial<Record<WelcomeButtonId, LucideIcon>> = {
   daily: CalendarDays,
   twoPlayer: Users,
   certificates: Sparkles,
-  loadouts: Backpack,
+  offers: ClipboardList,
   records: Medal,
   achievements: Trophy,
   jukebox: Music,
@@ -100,17 +94,16 @@ const BUTTON_ICON: Partial<Record<WelcomeButtonId, LucideIcon>> = {
 /** The buttons that start or resume a run; the rest of the menu is a list. */
 const PLAY_IDS: readonly WelcomeButtonId[] = ["continue", "newGame"];
 
-/** The ascension line under Continue (#ffb347, the ladder's amber). */
-const ASCENSION_INK = 0xffb347;
+/** The streak chip's amber, and a sub-line under a label. */
+const AMBER_INK = 0xffb347;
 
 export function WelcomeScreen({
   onStartGame,
   onContinue,
-  savedRunAscension = 0,
   onTutorial,
   onOptions,
   onOpenCertificateStore,
-  onLoadouts,
+  onOffers,
   onHallOfFame,
   onDaily,
   onTwoPlayer,
@@ -148,14 +141,13 @@ export function WelcomeScreen({
 
   const buttons = welcomeButtons({
     hasContinue: !!onContinue,
-    savedRunAscension,
     hasDaily: !!onDaily,
     hasTwoPlayer: !!onTwoPlayer,
     pairPartnerName,
     dailyStreak,
     dailyDoneToday,
     hasCertificateStore: !!onOpenCertificateStore,
-    hasLoadouts: !!onLoadouts,
+    hasOffers: !!onOffers,
     hasHallOfFame: !!onHallOfFame,
     hasAchievements: !!onAchievements,
     hasJukebox: !!onJukebox,
@@ -186,7 +178,7 @@ export function WelcomeScreen({
         if (certificatesTapAction(!!onOpenCertificateStore) === "store") onOpenCertificateStore?.();
         else setShowCertInfo(true);
         break;
-      case "loadouts": onLoadouts?.(); break;
+      case "offers": onOffers?.(); break;
       case "records": onHallOfFame?.(); break;
       case "achievements": onAchievements?.(); break;
       case "jukebox": onJukebox?.(); break;
@@ -237,9 +229,9 @@ export function WelcomeScreen({
           </>
         ) : (spec.sub || spec.badge || spec.chip || spec.check) ? (
           <>
-            {spec.sub && small(t(spec.sub.key, spec.sub.vars), 10, ASCENSION_INK)}
+            {spec.sub && small(t(spec.sub.key, spec.sub.vars), 10, AMBER_INK)}
             {spec.badge && <NewBadge />}
-            {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={ASCENSION_INK} />}
+            {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={AMBER_INK} />}
             {spec.chip?.kind === "hours" && <MenuChip text={t("welcome.hoursSuffix", { hours: spec.chip.value })} icon={Hexagon} />}
             {spec.chip?.kind === "count" && <MenuChip text={String(spec.chip.value)} />}
             {spec.check && <Icon icon={Check} size={16} color={COLOR.primary} />}
@@ -273,7 +265,7 @@ export function WelcomeScreen({
           <Label text={label} size={TEXT.base} font="display" weight="600" color={spec.ring ? GOLD : ink} />
           {spec.badge && <NewBadge />}
         </View>
-        {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={ASCENSION_INK} />}
+        {spec.chip?.kind === "streak" && <MenuChip text={String(spec.chip.value)} icon={Flame} iconColor={AMBER_INK} />}
         {spec.chip?.kind === "hours" && <MenuChip text={t("welcome.hoursSuffix", { hours: spec.chip.value })} icon={Hexagon} iconColor={ROLE.hours} />}
         {spec.chip?.kind === "count" && <MenuChip text={String(spec.chip.value)} />}
         {spec.check && <Icon icon={Check} size={16} color={COLOR.primary} />}

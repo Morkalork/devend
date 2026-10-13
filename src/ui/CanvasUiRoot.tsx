@@ -11,11 +11,14 @@ import { UiHost } from "./UiHost";
 import { useUiLayers } from "./layerStore";
 import { UiScreenContext } from "./screen";
 import { useViewportSize } from "./viewport";
+import { useScreenSlideOffset } from "./screenSlide";
 
 export function CanvasUiRoot() {
   const layers = useUiLayers();
   const screen = useViewportSize();
   const locked = layers.some(l => l.lock);
+  // The screen transition (screenSlide.ts): the new screen carried in from the side.
+  const slideX = useScreenSlideOffset(screen.width);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -26,7 +29,7 @@ export function CanvasUiRoot() {
   return (
     <UiHost lockPage={false}>
       <UiScreenContext.Provider value={screen}>
-        <layoutContainer layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>
+        <layoutContainer layout={{ position: "absolute", left: slideX, top: 0, width: screen.width, height: screen.height }}>
           {layers.map(l => (
             <layoutContainer key={l.id} label={`layer:${l.id}`}
               layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>

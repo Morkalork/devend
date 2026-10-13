@@ -45,7 +45,7 @@ function useSession() {
   return { nav, session: useGameSession(nav) };
 }
 
-/** A run that reached `depth` has ended, and Play Again has opened the draft. */
+/** A run that reached `depth` has ended, and Play Again has dealt Sprint Planning. */
 async function atTheDraft(depth: number) {
   localStorage.setItem(META_STATS_STORAGE_KEY, JSON.stringify({ lastRunDepth: depth }));
   const hook = renderHook(() => useSession());
@@ -53,23 +53,29 @@ async function atTheDraft(depth: number) {
   await waitFor(() => expect(hook.result.current.session.upgrades.length).toBeGreaterThan(0));
 
   act(() => { hook.result.current.session.handlePlayAgain(); });
-  await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("tenureDraft"));
+  await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
   return hook;
 }
 
-describe("taking a Tenure offer", () => {
-  it("grants every upgrade in the picked chain, and nothing from the others", async () => {
-    const hook = await atTheDraft(TENURE_THRESHOLDS[2]);
-    const offers = hook.result.current.session.pendingTenure!.offers;
-    const picked = offers[0];
-    const others = offers.slice(1).flatMap(o => o.upgrades.map(u => u.id));
+/** The Tenure card: the boon slot, when a head start is owed. */
+function tenureCard(hook: Awaited<ReturnType<typeof atTheDraft>>) {
+  const card = hook.result.current.session.pendingSprint!.cards[0];
+  expect(card.tenure, "the boon slot holds the Tenure chain").toBeDefined();
+  return card;
+}
 
-    act(() => { hook.result.current.session.handleTenurePicked(picked.headId); });
+describe("taking the Tenure card", () => {
+  it("grants every upgrade in the chain, and nothing from the other cards", async () => {
+    const hook = await atTheDraft(TENURE_THRESHOLDS[2]);
+    const picked = tenureCard(hook);
+    const others = hook.result.current.session.pendingSprint!.cards.slice(1).flatMap(c => c.grants.map(u => u.id));
+
+    act(() => { hook.result.current.session.handleSprintPick(0); });
 
     const owned = hook.result.current.session.ownedUpgradeIds;
-    for (const u of picked.upgrades) expect(owned, u.id).toContain(u.id);
+    for (const u of picked.grants) expect(owned, u.id).toContain(u.id);
     for (const id of others) {
-      if (picked.upgrades.some(u => u.id === id)) continue; // chains can overlap
+      if (picked.grants.some(u => u.id === id)) continue; // chains can overlap
       expect(owned, id).not.toContain(id);
     }
   });
@@ -90,44 +96,36 @@ describe("taking a Tenure offer", () => {
    * default. Without the second half this test would pass just as happily if
    * conditions silently disabled upgrades that should have been live.
    *
-   * The offer is rolled with an unseeded Math.random, so which chain arrives
-   * here differs run to run. That is why this holds for whatever is picked
-   * instead of for one sampled chain: the old version asserted a property of
-   * all offers against a single random one, and passed locally and failed in CI
-   * on the same commit.
+   * The chain is rolled with an unseeded Math.random, so which one arrives
+   * differs run to run. That is why this holds for several fresh deals instead
+   * of one sampled chain: a property asserted against a single random chain
+   * passes locally and fails in CI on the same commit.
    */
   it("puts the chain's effects into the modifiers the run is played with", async () => {
-    // EVERY offer in the roll, each on its own fresh run, rather than the one
-    // that happened to land first. Three chains a run instead of one, and the
-    // check no longer depends on which of them Math.random put in slot zero.
-    const probe = await atTheDraft(TENURE_THRESHOLDS[2]);
-    const offerCount = probe.result.current.session.pendingTenure!.offers.length;
-    expect(offerCount).toBeGreaterThan(1);
-
     let checkedLive = 0, checkedDormant = 0;
 
-    for (let index = 0; index < offerCount; index++) {
+    for (let deal = 0; deal < 4; deal++) {
       localStorage.clear();
       const hook = await atTheDraft(TENURE_THRESHOLDS[2]);
-      const picked = hook.result.current.session.pendingTenure!.offers[index];
-      const touched = [...new Set(picked.upgrades.flatMap(u => Object.keys(u.modifiers ?? {})))];
-      expect(touched.length, `${picked.name}: a chain that changes nothing would be vacuous`)
-        .toBeGreaterThan(0);
+      const picked = tenureCard(hook);
+      const name = picked.grants[0].name;
+      const touched = [...new Set(picked.grants.flatMap(u => Object.keys(u.modifiers ?? {})))];
+      expect(touched.length, `${name}: a chain that changes nothing would be vacuous`).toBeGreaterThan(0);
 
-      act(() => { hook.result.current.session.handleTenurePicked(picked.headId); });
+      act(() => { hook.result.current.session.handleSprintPick(0); });
 
       const ctx = hook.result.current.session.runContext;
-      const keysOf = (ups: typeof picked.upgrades) =>
+      const keysOf = (ups: typeof picked.grants) =>
         new Set(ups.flatMap(u => Object.keys(u.modifiers ?? {})));
-      const liveKeys = keysOf(picked.upgrades.filter(u => conditionMet(u.condition, ctx)));
-      const dormantKeys = keysOf(picked.upgrades.filter(u => !conditionMet(u.condition, ctx)));
+      const liveKeys = keysOf(picked.grants.filter(u => conditionMet(u.condition, ctx)));
+      const dormantKeys = keysOf(picked.grants.filter(u => !conditionMet(u.condition, ctx)));
 
       const active = hook.result.current.session.activeModifiers;
 
       // Everything a live upgrade touches has to reach the run.
       for (const key of liveKeys) {
         const k = key as keyof GameModifiers;
-        expect(active[k], `${picked.name} -> ${key} (live)`).not.toBe(DEFAULT_MODIFIERS[k]);
+        expect(active[k], `${name} -> ${key} (live)`).not.toBe(DEFAULT_MODIFIERS[k]);
         checkedLive++;
       }
 
@@ -136,18 +134,15 @@ describe("taking a Tenure offer", () => {
       for (const key of dormantKeys) {
         if (liveKeys.has(key)) continue;
         const k = key as keyof GameModifiers;
-        expect(active[k], `${picked.name} -> ${key} (condition unmet)`).toBe(DEFAULT_MODIFIERS[k]);
+        expect(active[k], `${name} -> ${key} (condition unmet)`).toBe(DEFAULT_MODIFIERS[k]);
         checkedDormant++;
       }
 
       // Every touched key falls into one branch or the other, so a chain
       // cannot slip through by being counted as neither.
-      expect(new Set([...liveKeys, ...dormantKeys]), picked.name).toEqual(new Set(touched));
+      expect(new Set([...liveKeys, ...dormantKeys]), name).toEqual(new Set(touched));
     }
 
-    // The live half must actually have run. The dormant half is not required:
-    // most rolls contain no conditional upgrade at all, and demanding one would
-    // reintroduce exactly the dependence on the roll this test just removed.
     expect(checkedLive, "no live modifier was ever checked").toBeGreaterThan(0);
     void checkedDormant;
   });
@@ -156,35 +151,34 @@ describe("taking a Tenure offer", () => {
     for (const [depth, expected] of [[TENURE_THRESHOLDS[0], 1], [TENURE_THRESHOLDS[1], 2]] as const) {
       localStorage.clear();
       const hook = await atTheDraft(depth);
-      const picked = hook.result.current.session.pendingTenure!.offers[0];
-      expect(picked.upgrades, `depth ${depth}`).toHaveLength(expected);
+      const picked = tenureCard(hook);
+      expect(picked.grants, `depth ${depth}`).toHaveLength(expected);
 
-      act(() => { hook.result.current.session.handleTenurePicked(picked.headId); });
+      act(() => { hook.result.current.session.handleSprintPick(0); });
       expect(hook.result.current.session.ownedUpgradeIds, `depth ${depth}`).toHaveLength(expected);
     }
   });
 
   it("leaves the draft screen and starts the run", async () => {
     const hook = await atTheDraft(TENURE_THRESHOLDS[0]);
-    const picked = hook.result.current.session.pendingTenure!.offers[0];
 
-    act(() => { hook.result.current.session.handleTenurePicked(picked.headId); });
+    act(() => { hook.result.current.session.handleSprintPick(0); });
 
-    expect(hook.result.current.session.pendingTenure).toBeNull();
-    expect(hook.result.current.nav.currentScreen).not.toBe("tenureDraft");
+    expect(hook.result.current.session.pendingSprint).toBeNull();
+    expect(hook.result.current.nav.currentScreen).toBe("game");
   });
 
-  /**
-   * The draft is mandatory, so there is no decline button, but a stale id must
-   * never strand the player on a screen with nothing left to pick.
-   */
-  it("still starts the run if the pick does not match an offer", async () => {
-    const hook = await atTheDraft(TENURE_THRESHOLDS[0]);
+  /** Passing on Tenure for another card is the decision the fold created. */
+  it("grants nothing from the chain when another card, or a skip, is taken", async () => {
+    for (const pick of [1, null] as const) {
+      localStorage.clear();
+      const hook = await atTheDraft(TENURE_THRESHOLDS[0]);
+      const chain = tenureCard(hook).grants.map(u => u.id);
 
-    act(() => { hook.result.current.session.handleTenurePicked("no-such-chain"); });
+      act(() => { hook.result.current.session.handleSprintPick(pick); });
 
-    expect(hook.result.current.session.pendingTenure).toBeNull();
-    expect(hook.result.current.nav.currentScreen).not.toBe("tenureDraft");
-    expect(hook.result.current.session.ownedUpgradeIds).toEqual([]);
+      for (const id of chain) expect(hook.result.current.session.ownedUpgradeIds, `pick ${pick}`).not.toContain(id);
+      expect(hook.result.current.session.pendingSprint).toBeNull();
+    }
   });
 });

@@ -16,7 +16,7 @@
  */
 import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "../reducedMotion";
 import { useTween } from "../kit/ui";
 import { FlashNumeral, Inert } from "./boardParts";
 import { clockRectPoints, deadlineGeometry, type BoardFrameCss } from "./overlayModel";

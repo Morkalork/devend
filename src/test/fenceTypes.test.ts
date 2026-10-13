@@ -168,20 +168,19 @@ describe("the type travels with the fence, not with the player", () => {
       .toMatch(/fenceTypeId: wall\.fenceTypeId \?\? STANDARD_FENCE_ID/);
   });
 
-  it("lets a type's durability override the run's, and only when it states one", () => {
-    // A type that says nothing about hits must not wipe out an Ascension
-    // durability bonus the player earned.
+  it("takes its durability from the fence type, and only when the type states one", () => {
+    // The run-wide durability was Ascension's, and went with it.
     const src = read("src/lib/physics/applyCut.ts");
-    expect(src).toMatch(/getFenceType\(wall\.fenceTypeId\)\.maxHits/);
-    expect(src).toMatch(/typeHits \?\? game\.fenceDurability/);
+    expect(src).toMatch(/const hits = getFenceType\(wall\.fenceTypeId\)\.maxHits;/);
+    expect(src).not.toMatch(/fenceDurability/);
   });
 });
 
 describe("the slot count", () => {
   it("is five, and is its own number", () => {
     // The same as MAX_ABILITY_SLOTS today and deliberately not shared with it:
-    // two bars that happen to agree, and an ascension rule tightening one must
-    // not silently tighten the other.
+    // two bars that happen to agree, and a rule tightening one must not
+    // silently tighten the other.
     expect(FENCE_SLOTS).toBe(5);
     // Checked as "does not IMPORT it". The doc comment names MAX_ABILITY_SLOTS
     // on purpose, to say why they are apart, so a whole-file grep would forbid

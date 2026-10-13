@@ -8,11 +8,10 @@
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
  * Admin screens are lazy-loaded and only available in dev builds.
  */
-import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
+import { lazy, Suspense, useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import type { GameScreen as GameScreenName } from '@/types/game';
 import { useZoomGuard } from '@/hooks/useZoomGuard';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
 import { usePairSession } from '@/hooks/usePairSession';
@@ -28,18 +27,20 @@ import { flushRunSave } from '@/lib/runSaveFlush';
 import { adminOnHere } from '@/lib/adminAccess';
 import { CanvasUiRoot } from '@/ui/CanvasUiRoot';
 import { CanvasLayer } from '@/ui/CanvasLayer';
-import { SCREEN_SETTLED_EVENT } from '@/ui/screenBox';
+import { startScreenSlide } from '@/ui/screenSlide';
 import { CRTBackground } from '@/components/game/CRTBackground';
 import { ResultScreen } from '@/ui/screens/ResultScreen';
 import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
+import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
+import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
-import { TenureDraftScreen } from '@/ui/screens/TenureDraftScreen';
+import { ChainPickScreen } from '@/ui/screens/ChainPickScreen';
 import { ContinuePrompt } from '@/ui/screens/ContinuePrompt';
-import { AscensionDraftScreen } from '@/ui/screens/AscensionDraftScreen';
 import { CertificateStore } from '@/ui/screens/CertificateStore';
-import { LoadoutGalleryScreen } from '@/ui/screens/LoadoutGalleryScreen';
+import { OffersScreen } from '@/ui/screens/OffersScreen';
+import { getOffer, getOfferCatalogue } from '@/lib/sprintOffers';
 import { FeatureUnlockedModal } from '@/ui/game/FeatureUnlockedModal';
 import { PairMismatchNotice } from '@/ui/game/PairMismatchNotice';
 import { PairGuestGate } from '@/ui/game/PairGuestGate';
@@ -85,7 +86,7 @@ const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagn
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
 // intentionally left out so the current band track keeps playing through them.
-const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts', 'hallOfFame']);
+const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'offers', 'hallOfFame']);
 
 const Index = () => {
   const navigation = useScreenNavigation();
@@ -371,43 +372,35 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   }, [navigation.currentScreen, armBackGuard]);
 
   const SCREEN_ORDER: Record<string, number> = {
-    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1, jukebox: 1,
-    // tenureDraft sits just before runDraft: it is picked first so a free
-    // upgrade chain can steer the loadout choice.
-    tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
-    ascensionDraft: 3, result: 4,
+    welcome: 0, tutorial: 1, options: 1, achievements: 1, offers: 1, hallOfFame: 1, jukebox: 1,
+    // The chain pick follows Sprint Planning (runDraft), so it slides on from it.
+    game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, chainPick: 4,
+    result: 4,
   };
+  // The slide to the new screen happens on the interface canvas (ui/screenSlide):
+  // deeper into a run comes in from the right, back towards the menu from the
+  // left. Not to or from a board screen, whose board is a DOM canvas the slide
+  // cannot carry (those have the boot reveal and the shatter instead).
   const prevScreenRef = useRef(navigation.currentScreen);
-  const transitionDirRef = useRef(1);
-  if (prevScreenRef.current !== navigation.currentScreen) {
-    const prevOrder = SCREEN_ORDER[prevScreenRef.current] ?? 0;
-    const currOrder = SCREEN_ORDER[navigation.currentScreen] ?? 0;
-    transitionDirRef.current = currOrder >= prevOrder ? 1 : -1;
-    prevScreenRef.current = navigation.currentScreen;
-  }
-  const slideVariants = {
-    enter:  (d: number) => ({ x: d > 0 ? '100%' : '-100%' }),
-    center: { x: 0 },
-    exit:   (d: number) => ({ x: d < 0 ? '100%' : '-100%' }),
-  };
+  useLayoutEffect(() => {
+    const prev = prevScreenRef.current;
+    const next = navigation.currentScreen;
+    if (prev === next) return;
+    prevScreenRef.current = next;
+    if (BOARD_SCREENS.includes(prev) || BOARD_SCREENS.includes(next)) return;
+    const prevOrder = SCREEN_ORDER[prev] ?? 0;
+    const currOrder = SCREEN_ORDER[next] ?? 0;
+    startScreenSlide(currOrder >= prevOrder ? 1 : -1);
+  });
 
   return (
     <>
       <div style={{ position: 'relative', overflow: 'hidden', height: '100dvh', width: '100%' }}>
-        <AnimatePresence mode="wait" custom={transitionDirRef.current}>
-          <motion.div
+        {/* Keyed by screen, so each screen mounts fresh as it did under the old
+            slide. Nothing here moves: the slide is the canvas's. */}
+        <div
             key={navigation.currentScreen}
-            custom={transitionDirRef.current}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            // The canvas interface places what it draws over DOM elements from
-            // their boxes, which the slide moves without a resize (ui/screenBox).
-            onAnimationComplete={() => window.dispatchEvent(new Event(SCREEN_SETTLED_EVENT))}
             style={{
-              willChange: 'transform',
               position: 'relative',
               width: '100%',
               // `svh` on a screen showing a board, `dvh` everywhere else.
@@ -441,13 +434,13 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <WelcomeScreen
                   onStartGame={() => session.handleStartGame()}
                   onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
-                  savedRunAscension={session.savedRun?.ascensionDepth ?? 0}
                   onTutorial={navigation.goToTutorial}
                   onOptions={navigation.goToOptions}
                   onOpenCertificateStore={
                     session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
                   }
-                  onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
+                  // The Sprint Planning collection, once the draft itself is unlocked.
+                  onOffers={SPRINT_PLANNING_ENABLED && session.sprintUnlocked ? session.handleOpenOffers : undefined}
                   onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                   onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
                   onTwoPlayer={navigation.goToPairLobby}
@@ -501,7 +494,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 costs the MAP, not the app: the run is saved to the current map
                 and you land back on the menu able to resume. The outer
                 boundary in App is the backstop for everything else. */}
-            {navigation.currentScreen === 'game' && session.currentLevel && !session.showLevelComplete && (
+            {/* The ticket Debrief opens over the finished board, so the board
+                stays mounted under it; the full Debrief (Admin) replaces it. */}
+            {navigation.currentScreen === 'game' && session.currentLevel && (!session.showLevelComplete || !isFullDebrief()) && (
               <GameErrorBoundary
                 scope="game"
                 onCrash={flushRunSave}
@@ -527,7 +522,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
-                key={`game-${session.gameInstanceKey}`}
+                // The level too: with the board kept under the ticket, a skipped
+                // store goes straight to the next map without unmounting this.
+                key={`game-${session.gameInstanceKey}-${session.currentLevelIndex}`}
                 backRef={gameBackRef}
                 level={session.currentLevel}
                 adminMode={adminUnlocked}
@@ -542,7 +539,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onGrantAbility={session.handleGrantAbility}
                 onSpendAbility={session.handleSpendAbility}
                 abilityCharges={session.abilityCharges}
-                abilitySlots={session.ascensionRules.abilitySlots}
+                abilitySlots={session.abilitySlots}
                 fenceSlotIds={session.fenceSlotIds}
                 onGameEnd={session.handleGameEnd}
                 onMapTimedOut={session.handleMapTimedOut}
@@ -567,37 +564,30 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 modifierSources={session.modifierSources}
                 tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
-                ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
                 capstone={session.capstone}
-                activeLoadouts={session.activeLoadouts}
-                fenceDurability={session.fenceDurability}
-                ascensionLadder={session.ascensionLadder}
+                runOffer={session.runOffer}
                 scalingReadouts={session.scalingReadouts}
-                everyMapMutated={session.ascensionRules.everyMapMutated}
-                pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
                 runStartIntro={session.runStartIntroPending}
               />
               </GameErrorBoundary>
             )}
-            {navigation.currentScreen === 'tenureDraft' && session.pendingTenure && (
-              <CanvasLayer id="screen-TenureDraftScreen" z={10}>
-                <TenureDraftScreen
-                  offers={session.pendingTenure.offers}
-                  earnedAtLevel={session.pendingTenure.earnedAtLevel}
-                  lastRunUpgradeIds={session.pendingTenure.lastRunUpgradeIds}
-                  onConfirm={session.handleTenurePicked}
+            {navigation.currentScreen === 'runDraft' && session.pendingSprint && (
+              <CanvasLayer id="screen-RunDraftScreen" z={10}>
+                <RunDraftScreen
+                  cards={session.pendingSprint.cards}
+                  onConfirm={session.handleSprintPick}
+                  onBack={session.handleBackToWelcome}
                   accentColor={accentHex}
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'runDraft' && (
-              <CanvasLayer id="screen-RunDraftScreen" z={10}>
-                <RunDraftScreen
-                  loadouts={session.availableLoadouts}
-                  draftedLoadoutIds={session.draftedLoadoutIds}
-                  onConfirm={session.handleConfirmLoadout}
-                  onBack={session.handleBackToWelcome}
+            {navigation.currentScreen === 'chainPick' && session.pendingChainPick && (
+              <CanvasLayer id="screen-ChainPickScreen" z={10}>
+                <ChainPickScreen
+                  offer={getOffer(session.pendingChainPick.offerId) ?? { id: session.pendingChainPick.offerId, name: '' }}
+                  choices={session.pendingChainPick.choices}
+                  onConfirm={session.handleChainPick}
                   accentColor={accentHex}
                 />
               </CanvasLayer>
@@ -607,7 +597,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <UpgradeShop
                   runContext={session.nextRunContext}
                   playerPoints={session.totalScore}
-                  upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
+                  upgrades={session.upgrades}
                   ownedUpgradeIds={session.ownedUpgradeIds}
                   completedLevel={session.currentLevelIndex + 1}
                   isLocked={session.isUpgradeLocked}
@@ -615,6 +605,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onContinue={session.handleContinueFromShop}
                   accentColor={accentHex}
                   pipeline={session.betweenMapPlan}
+                  // The shelf as dealt, kept with the run save: a run closed in
+                  // the store reopens this shelf rather than a new roll.
+                  dealt={session.storeDealt}
+                  onDealt={session.handleShopDealt}
                   extraShopItems={session.activeModifiers.extraShopItems}
                   shopRestockCount={session.activeModifiers.shopRestockCount}
                   shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}
@@ -630,6 +624,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   maxTierCounts={session.maxTierCounts}
                   unlockedCertIds={session.unlockedCertIds}
                   tagSetThreshold={session.tagSetThreshold}
+                  // The run's Specialisation leans the shelf toward its tag.
+                  lean={session.shopLean}
+                  interestPaid={session.storeInterestPaid}
                   freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
                   activeModifiers={session.activeModifiers}
                   closed={session.storeClosed}
@@ -658,22 +655,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'ascensionDraft' && (
-              <CanvasLayer id="screen-AscensionDraftScreen" z={10}>
-                <AscensionDraftScreen
-                  loadouts={session.loadouts}
-                  draftedLoadoutIds={session.draftedLoadoutIds}
-                  ascensionDepth={session.ascensionDepth}
-                  ladder={session.ascensionLadder}
-                  totalScore={session.totalScore}
-                  onAscend={session.handleAscend}
-                  onRetire={session.handleRetire}
-                  accentColor={accentHex}
-                  showTutorial={session.shouldShowAscension}
-                  onTutorialDismiss={session.markAscensionSeen}
-                />
-              </CanvasLayer>
-            )}
             {navigation.currentScreen === 'result' && navigation.lastResult && (
               <CanvasLayer id="screen-ResultScreen" z={10}>
                 <ResultScreen
@@ -685,7 +666,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   accentColor={accentHex}
                   runHoursAwarded={session.lastRunHoursAwarded}
                   runLevelsCompleted={session.lastRunLevelsCompleted}
-                  newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
+                  newlyUnlockedOffers={session.lastRunOfferUnlocks}
                   runRecap={session.lastRunRecap}
                   runRank={session.lastRunRank}
                   dailyKey={session.dailyKey}
@@ -713,11 +694,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'loadouts' && (
-              <CanvasLayer id="screen-LoadoutGalleryScreen" z={10}>
-                <LoadoutGalleryScreen
-                  loadouts={session.loadouts}
-                  wonLoadoutIds={session.wonLoadoutIds}
+            {navigation.currentScreen === 'offers' && (
+              <CanvasLayer id="screen-OffersScreen" z={10}>
+                <OffersScreen
+                  catalogue={getOfferCatalogue()}
+                  unlock={{ highestLevelReached: session.metaStats.highestLevelReached, metArchetypes: session.metArchetypes }}
                   onBack={navigation.goToWelcome}
                   accentColor={accentHex}
                 />
@@ -827,8 +808,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <PairLoopbackPanel onBack={navigation.goToAdmin} />
               </Suspense>
             )}
-          </motion.div>
-        </AnimatePresence>
+          </div>
       </div>
 
       {/* The shared backdrop for every canvas screen (OWN_BACKGROUND_SCREENS

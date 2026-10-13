@@ -482,7 +482,6 @@ export function UpgradeAtlasScreen({ onBack }: UpgradeAtlasScreenProps) {
                   </text>
                   <text x={10} y={49} fontSize={9} fill="#94a3b8" className="pointer-events-none">
                     {node.upgrade.cost}h · L{node.upgrade.unlockLevel ?? 1}
-                    {node.upgrade.ascensionOnly ? ' · ascension' : ''}
                   </text>
 
                   {/* Tag dots */}
@@ -596,9 +595,6 @@ export function UpgradeAtlasScreen({ onBack }: UpgradeAtlasScreenProps) {
                     {tag}
                   </span>
                 ))}
-                {selected.upgrade.ascensionOnly && (
-                  <span className="px-1.5 py-0.5 rounded bg-destructive/20 text-destructive">ascension only</span>
-                )}
               </div>
 
               <p className="text-muted-foreground leading-snug">{selected.upgrade.description}</p>

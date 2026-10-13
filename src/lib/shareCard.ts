@@ -8,7 +8,6 @@
 export interface ShareCardData {
   score: number;
   levelNumber: number;
-  ascensionDepth: number;
   buildLine: string;
   capstoneName: string | null;
   rank: number | null;
@@ -36,7 +35,6 @@ export function buildShareLines(data: ShareCardData, labels: ShareCardLabels): s
   lines.push(labels.outcome);
   lines.push(data.buildLine);
   if (data.capstoneName) lines.push(data.capstoneName);
-  if (data.ascensionDepth > 0) lines.push(`↑ ${data.ascensionDepth}`);
   if (labels.rankLine) lines.push(labels.rankLine);
   if (labels.dailyLine) lines.push(labels.dailyLine);
   return lines;

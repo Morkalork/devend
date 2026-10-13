@@ -26,7 +26,7 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     case 'tutorial':
     case 'options':
     case 'certificateStore':
-    case 'loadouts':
+    case 'offers':
     case 'achievements':
     case 'jukebox':
     case 'result':
@@ -41,9 +41,8 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     // Mid-run flow screens have no meaningful "back" (going back would skip the
     // forced progression), so we just swallow the gesture to prevent an exit.
     case 'upgradeShop':
-    case 'tenureDraft':
+    case 'chainPick': // follows a Sprint Planning pick already made
     case 'capstoneDraft':
-    case 'ascensionDraft':
       return 'consume';
     // Sprint Planning is the one draft that runs BEFORE the run starts, so
     // there is no forced progression to skip past: backing out just returns to

@@ -183,7 +183,7 @@ describe("a save from before the shop level was recorded", () => {
  * chain it could be paid in, which is a difference the whole screen shows.
  */
 describe("the gate the draft actually uses", () => {
-  it("skips the draft when nothing the run saw can pay the reward", async () => {
+  it("deals no Tenure card when nothing the run saw can pay the reward", async () => {
     localStorage.setItem(META_STATS_STORAGE_KEY, JSON.stringify({
       lastRunDepth: TENURE_THRESHOLDS[2], lastRunShopLevel: 1,
     }));
@@ -194,7 +194,9 @@ describe("the gate the draft actually uses", () => {
     act(() => { hook.result.current.session.handlePlayAgain(); });
 
     await waitFor(() => expect(hook.result.current.nav.currentScreen).not.toBe("result"));
-    expect(hook.result.current.nav.currentScreen).not.toBe("tenureDraft");
-    expect(hook.result.current.session.pendingTenure).toBeNull();
+    // The draft may still open (Sprint Planning has its own cards), but the
+    // boon slot holds a plain boon rather than a chain nothing could pay.
+    const cards = hook.result.current.session.pendingSprint?.cards ?? [];
+    expect(cards.some(c => c.tenure)).toBe(false);
   });
 });

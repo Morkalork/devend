@@ -19,8 +19,7 @@ const SAMPLE: RunSaveInput = {
   carrySpendFences: 0,
   carrySpendFenceSpeed: 0.2,
   capstoneId: "cryo_protocol",
-  ascensionDepth: 0,
-  draftedLoadoutIds: [],
+  takenOfferId: null,
 };
 
 describe("useRunSave", () => {

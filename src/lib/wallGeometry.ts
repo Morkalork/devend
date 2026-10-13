@@ -46,7 +46,7 @@ export interface Wall {
   aabbMinY?: number;
   aabbMaxX?: number;
   aabbMaxY?: number;
-  // ── Ascension fence durability (set on fence segments while ascended) ──
+  // ── Fence durability (set on segments of fence types with a hit budget) ──
   /** Total ball hits this fence survives; undefined = indestructible. */
   maxHits?: number;
   /** Remaining hits before the fence breaks. */

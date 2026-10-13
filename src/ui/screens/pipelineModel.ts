@@ -18,9 +18,9 @@ export interface BetweenMapPlan {
   clearedLevel: number;
   /** A Promotion is due after this level and has not been taken. */
   promotion: boolean;
-  /** The store opens after this level (Hiring Freeze skips some). */
+  /** The store opens after this level. */
   store: boolean;
-  /** This was the last level: the run ends in the Ascension screen. */
+  /** This was the last level: the run ends, a win, on the result screen. */
   last: boolean;
 }
 
@@ -77,7 +77,7 @@ export function stageTitle(plan: BetweenMapPlan, id: PipelineStageId, t: TFuncti
     case "debrief": return t("pipeline.debrief");
     case "promotion": return t("pipeline.promotion");
     case "store": return t("pipeline.store");
-    default: return plan.last ? t("pipeline.ascension") : t("pipeline.level", { level: plan.clearedLevel + 1 });
+    default: return plan.last ? t("pipeline.finish") : t("pipeline.level", { level: plan.clearedLevel + 1 });
   }
 }
 
@@ -87,6 +87,6 @@ export function continueLabel(plan: BetweenMapPlan, at: PipelineStageId, t: TFun
   switch (to) {
     case "promotion": return t("pipeline.toPromotion");
     case "store": return t("pipeline.toStore");
-    default: return plan.last ? t("pipeline.toAscension") : t("pipeline.toLevel", { level: plan.clearedLevel + 1 });
+    default: return plan.last ? t("pipeline.toFinish") : t("pipeline.toLevel", { level: plan.clearedLevel + 1 });
   }
 }

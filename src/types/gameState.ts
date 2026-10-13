@@ -392,6 +392,11 @@ export interface CanvasGameState {
   loopRestarts: number;
   /** Active-play seconds this level (physics steps only; pause/prompt/menu excluded). */
   activePlaySeconds: number;
+  /**
+   * Reliability (Sprint Planning): balls move slowed for this many seconds of
+   * active play at the map's start (offerPerks.ts). Set per map; 0 or absent = off.
+   */
+  openingSlowSeconds?: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**
@@ -693,9 +698,7 @@ export interface CanvasGameState {
    *  (0 = disabled). Kills balls bouncing forever in a tiny sliver. */
   lockMinRegionCells: number;
 
-  // ── Ascension fence durability ─────────────────────────────────────────
-  /** Ball hits a new fence survives this level; null = fences indestructible. */
-  fenceDurability: number | null;
+  // ── Fence durability (fence types that wear out) ───────────────────────
   /** Fences whose durability hit 0 this frame, broken after the physics step. */
   pendingWallBreaks: Wall[];
 
@@ -833,7 +836,7 @@ export interface CanvasGameState {
    * reach.
    */
   heldAbilityIds?: string[];
-  /** How many DISTINCT abilities may be held at once (ascension can tighten). */
+  /** How many DISTINCT abilities may be held at once. */
   abilitySlots?: number;
   /** Slow All ability (#38): active-play second the global slow expires at. */
   abilitySlowUntil?: number;

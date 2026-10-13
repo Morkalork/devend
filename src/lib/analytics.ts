@@ -64,7 +64,6 @@ export const analytics = {
     level: number;
     overtime: number;
     perfect: boolean;
-    ascensionDepth: number;
     daily: boolean;
   }) => track('level_completed', p),
 
@@ -87,15 +86,10 @@ export const analytics = {
     isWin: boolean;
     levelsCompleted: number;
     totalScore: number;
-    ascensionDepth: number;
     daily: boolean;
   }) => track('run_ended', p),
 
-  /** Player picked (or skipped) a loadout at the run-start draft. */
-  loadoutSelected: (p: { loadoutId: string | null }) =>
-    track('loadout_selected', p),
-
-  /** Player chose to ascend after beating the final level. */
-  ascensionStarted: (p: { depth: number; loadoutId: string }) =>
-    track('ascension_started', p),
+  /** Player took (or skipped) a Sprint Planning offer at the run start. */
+  offerSelected: (p: { offerId: string | null; pool: string | null; grantedIds: string[] }) =>
+    track('offer_selected', p),
 };

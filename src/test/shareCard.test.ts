@@ -9,7 +9,6 @@ import { buildShareLines, renderShareCard, ShareCardData, ShareCardLabels } from
 const data = (over: Partial<ShareCardData> = {}): ShareCardData => ({
   score: 612,
   levelNumber: 23,
-  ascensionDepth: 0,
   buildLine: "Lock-Risk: Vault Keeper",
   capstoneName: "Golden Handshake",
   rank: 3,
@@ -39,12 +38,12 @@ describe("buildShareLines", () => {
     ]);
   });
 
-  it("adds depth and the daily tag, omits absent pieces", () => {
+  it("adds the daily tag, omits absent pieces", () => {
     const lines = buildShareLines(
-      data({ capstoneName: null, ascensionDepth: 2, rank: null, dailyKey: "2026-07-17" }),
+      data({ capstoneName: null, rank: null, dailyKey: "2026-07-17" }),
       labels({ rankLine: null, dailyLine: "Daily Stand-up 2026-07-17", outcome: "You Win!" }),
     );
-    expect(lines).toEqual(["You Win!", "Lock-Risk: Vault Keeper", "↑ 2", "Daily Stand-up 2026-07-17"]);
+    expect(lines).toEqual(["You Win!", "Lock-Risk: Vault Keeper", "Daily Stand-up 2026-07-17"]);
   });
 });
 

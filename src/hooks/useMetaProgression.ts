@@ -64,7 +64,7 @@ function saveMetaStats(stats: MetaProgressionStats): void {
  */
 function emptyUnlockState(): UnlockState {
   return {
-    unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false, mapHighscores: {},
+    unlockedIds: [], metArchetypes: [], loadoutsIntroduced: false, mapHighscores: {},
     encounteredBallTypeIds: [], archetypeBests: {}, unlockedFeatureIds: [],
     lastRunUpgradeIds: [],
   };
@@ -104,7 +104,7 @@ function loadUnlockState(): UnlockState {
     const stale = needsDeflation(parsed.economyScale);
     return {
       unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : [],
-      wonLoadoutIds: Array.isArray(parsed.wonLoadoutIds) ? parsed.wonLoadoutIds : [],
+      metArchetypes: Array.isArray(parsed.metArchetypes) ? parsed.metArchetypes.filter((t: unknown) => typeof t === 'string') : [],
       loadoutsIntroduced: parsed.loadoutsIntroduced === true,
       mapHighscores: stale ? deflateRecord(mapHighscores) : mapHighscores,
       encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
@@ -152,7 +152,7 @@ function getConditionProgress(condition: UnlockCondition, stats: MetaProgression
 export function useMetaProgression() {
   const [stats, setStats] = useState<MetaProgressionStats>(DEFAULT_META_STATS);
   const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
-  const [wonLoadoutIds, setWonLoadoutIds] = useState<string[]>([]);
+  const [metArchetypes, setMetArchetypes] = useState<string[]>([]);
   const [loadoutsIntroduced, setLoadoutsIntroduced] = useState(false);
   const [mapHighscores, setMapHighscores] = useState<Record<string, number>>({});
   const [encounteredBallTypeIds, setEncounteredBallTypeIds] = useState<string[]>([]);
@@ -161,11 +161,11 @@ export function useMetaProgression() {
   const [unlockedFeatureIds, setUnlockedFeatureIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Refs mirror the persisted unlock state so recordLoadoutWin /
+  // Refs mirror the persisted unlock state so recordArchetypeMet /
   // introduceLoadouts / recordMapHighscore / recordBallTypeEncountered can
   // read/write it synchronously without stale state.
   const unlockedIdsRef = useRef<string[]>([]);
-  const wonLoadoutIdsRef = useRef<string[]>([]);
+  const metArchetypesRef = useRef<string[]>([]);
   const loadoutsIntroducedRef = useRef(false);
   const mapHighscoresRef = useRef<Record<string, number>>({});
   const encounteredBallTypeIdsRef = useRef<string[]>([]);
@@ -178,7 +178,7 @@ export function useMetaProgression() {
   const persistUnlockState = useCallback(() => {
     saveUnlockState({
       unlockedIds: unlockedIdsRef.current,
-      wonLoadoutIds: wonLoadoutIdsRef.current,
+      metArchetypes: metArchetypesRef.current,
       loadoutsIntroduced: loadoutsIntroducedRef.current,
       mapHighscores: mapHighscoresRef.current,
       encounteredBallTypeIds: encounteredBallTypeIdsRef.current,
@@ -194,7 +194,7 @@ export function useMetaProgression() {
     const loadedUnlocks = loadUnlockState();
     setStats(loadedStats);
     setUnlockedIds(loadedUnlocks.unlockedIds);
-    setWonLoadoutIds(loadedUnlocks.wonLoadoutIds);
+    setMetArchetypes(loadedUnlocks.metArchetypes);
     setLoadoutsIntroduced(loadedUnlocks.loadoutsIntroduced);
     setMapHighscores(loadedUnlocks.mapHighscores);
     setEncounteredBallTypeIds(loadedUnlocks.encounteredBallTypeIds);
@@ -202,7 +202,7 @@ export function useMetaProgression() {
     setUnlockedFeatureIds(loadedUnlocks.unlockedFeatureIds);
     setLastRunUpgradeIds(loadedUnlocks.lastRunUpgradeIds);
     unlockedIdsRef.current = loadedUnlocks.unlockedIds;
-    wonLoadoutIdsRef.current = loadedUnlocks.wonLoadoutIds;
+    metArchetypesRef.current = loadedUnlocks.metArchetypes;
     loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
     mapHighscoresRef.current = loadedUnlocks.mapHighscores;
     lastRunUpgradeIdsRef.current = loadedUnlocks.lastRunUpgradeIds;
@@ -235,10 +235,6 @@ export function useMetaProgression() {
         newStats.totalLivesLost = prev.totalLivesLost + updates.totalLivesLost;
       }
 
-      // Like highestLevelReached, deepestAscension only ever increases
-      if (updates.deepestAscension !== undefined) {
-        newStats.deepestAscension = Math.max(prev.deepestAscension, updates.deepestAscension);
-      }
 
       if (updates.pushBonusesBanked !== undefined) {
         newStats.pushBonusesBanked = prev.pushBonusesBanked + updates.pushBonusesBanked;
@@ -300,12 +296,6 @@ export function useMetaProgression() {
     updateStats({ totalLivesLost: count });
   }, [updateStats]);
 
-  /**
-   * Record reaching an ascension depth (Ascension mode)
-   */
-  const recordAscensionDepth = useCallback((depth: number) => {
-    updateStats({ deepestAscension: depth });
-  }, [updateStats]);
 
   /**
    * Record successfully banking a push-your-luck bonus
@@ -314,11 +304,6 @@ export function useMetaProgression() {
     updateStats({ pushBonusesBanked: 1 });
   }, [updateStats]);
 
-  /**
-   * Record a win with a run-start loadout. Adds the id to the unique-win set
-   * only if new, persists, and returns the win-count transition so callers can
-   * compute which loadouts just unlocked. Idempotent for a repeat loadout.
-   */
   /**
    * Remember what the finishing run was built out of, for Tenure's guaranteed
    * offer. REPLACES rather than accumulates: it describes one run, not a career.
@@ -329,17 +314,17 @@ export function useMetaProgression() {
     persistUnlockState();
   }, [persistUnlockState]);
 
-  const recordLoadoutWin = useCallback((loadoutId: string): { added: boolean; prevCount: number; newCount: number } => {
-    const prev = wonLoadoutIdsRef.current;
-    const prevCount = prev.length;
-    if (prev.includes(loadoutId)) {
-      return { added: false, prevCount, newCount: prevCount };
-    }
-    const next = [...prev, loadoutId];
-    wonLoadoutIdsRef.current = next;
-    setWonLoadoutIds(next);
+  /**
+   * Remember that a tag's set bonus fired in some run: it unlocks that tag's
+   * Specialisation for Sprint Planning (offers.yml `archetypeMet`). Returns
+   * true only the first time, so the caller can announce it.
+   */
+  const recordArchetypeMet = useCallback((tag: string): boolean => {
+    if (metArchetypesRef.current.includes(tag)) return false;
+    metArchetypesRef.current = [...metArchetypesRef.current, tag];
+    setMetArchetypes(metArchetypesRef.current);
     persistUnlockState();
-    return { added: true, prevCount, newCount: next.length };
+    return true;
   }, [persistUnlockState]);
 
   /**
@@ -440,14 +425,14 @@ export function useMetaProgression() {
   const resetProgression = useCallback(() => {
     setStats({ ...DEFAULT_META_STATS });
     setUnlockedIds([]);
-    setWonLoadoutIds([]);
+    setMetArchetypes([]);
     setLoadoutsIntroduced(false);
     setMapHighscores({});
     setEncounteredBallTypeIds([]);
     setArchetypeBests({});
     setUnlockedFeatureIds([]);
     unlockedIdsRef.current = [];
-    wonLoadoutIdsRef.current = [];
+    metArchetypesRef.current = [];
     loadoutsIntroducedRef.current = false;
     mapHighscoresRef.current = {};
     encounteredBallTypeIdsRef.current = [];
@@ -460,7 +445,7 @@ export function useMetaProgression() {
   return {
     stats,
     isLoaded,
-    wonLoadoutIds,
+    metArchetypes,
     loadoutsIntroduced,
     mapHighscores,
     encounteredBallTypeIds,
@@ -474,9 +459,8 @@ export function useMetaProgression() {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    recordAscensionDepth,
     recordPushBonusBanked,
-    recordLoadoutWin,
+    recordArchetypeMet,
     recordMapHighscore,
     recordBallTypeEncountered,
     recordArchetypeBest,

@@ -2,8 +2,8 @@
  * The end-of-run screen (canvas port of components/game/ResultScreen.tsx).
  *
  * Two rows, and the split is the whole point: the recap SCROLLS and the
- * run-continuation buttons DO NOT. The screen grew - outcome, ascension, new
- * loadouts, the failure and what was still needed, certificate hours, the
+ * run-continuation buttons DO NOT. The screen grew - outcome, new
+ * Sprint Planning offers, the failure and what was still needed, certificate hours, the
  * ladder with four possible crowns, the build recap - so on a phone Play Again
  * ended up below content that only exists on some runs, and the better the run
  * the deeper it was buried. The middle row owns the overflow; the bar below it
@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Graphics, TextStyleFontWeight } from "pixi.js";
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame, Share2, Check } from "lucide-react";
+import { Trophy, Skull, Home, Hexagon, RotateCcw, ClipboardList, Award, Medal, CalendarDays, Flame, Share2, Check } from "lucide-react";
 import type { GameResult } from "@/types/game";
 import { failHeadline, failLines } from "@/lib/mapFailure";
 import type { RunRecap } from "@/lib/buildRecap";
@@ -42,8 +42,8 @@ interface ResultScreenProps {
   accentColor?: string;
   runHoursAwarded?: number;
   runLevelsCompleted?: number;
-  /** Names of loadouts that unlocked this run (celebrated below the title). */
-  newlyUnlockedLoadouts?: string[];
+  /** Sprint Planning offers this run unlocked (celebrated below the title). */
+  newlyUnlockedOffers?: string[];
   /** End-of-run build recap (archetype identity, capstone, personal best). */
   runRecap?: RunRecap | null;
   /**
@@ -100,7 +100,7 @@ export function ResultScreen({
   accentColor,
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
-  newlyUnlockedLoadouts = [],
+  newlyUnlockedOffers = [],
   runRecap = null,
   runRank = null,
   dailyKey = null,
@@ -108,7 +108,7 @@ export function ResultScreen({
 }: ResultScreenProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames, failure } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, failure } = result;
   const [shareState, setShareState] = useState<"idle" | "done">("idle");
   // The tick goes back to the share glyph after a moment; not after unmount.
   const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,7 +130,6 @@ export function ResultScreen({
       {
         score: result.totalScore ?? 0,
         levelNumber,
-        ascensionDepth: ascensionDepth ?? 0,
         buildLine: t("buildRecap.buildLine", { name: buildName, title: buildTitle }),
         capstoneName: runRecap?.capstoneName ?? null,
         rank: runRank?.rank ?? null,
@@ -214,23 +213,12 @@ export function ResultScreen({
             )}
           </View>
 
-          {/* Ascension summary */}
-          {!!ascensionDepth && ascensionDepth > 0 && (
-            <Appear fromY={10} delay={0.1} layout={{ alignSelf: "stretch", gap: 4 }}>
-              <IconLine icon={ArrowUpCircle} iconColor={TW.peer} iconSize={20} gap={8}
-                text={t("result.ascensionDepth", { depth: ascensionDepth })} size={TEXT.base} font="display" weight="700" color={TW.peer} />
-              {loadoutNames && loadoutNames.length > 0 && (
-                <Label text={t("result.loadoutsBraved", { loadouts: loadoutNames.join(" · ") })} size={TEXT.xs} color={ROLE.muted} wrap />
-              )}
-            </Appear>
-          )}
-
-          {/* New loadout unlocks */}
-          {newlyUnlockedLoadouts.length > 0 && (
+          {/* New Sprint Planning offers */}
+          {newlyUnlockedOffers.length > 0 && (
             <Appear fromY={10} delay={0.15} layout={{ alignSelf: "stretch", gap: 4 }}>
-              <IconLine icon={Backpack} iconColor={COLOR.primary} iconSize={18} gap={8}
-                text={t("result.newLoadoutsUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} />
-              <Label text={newlyUnlockedLoadouts.join(" · ")} size={TEXT.sm} color={ROLE.ink} wrap />
+              <IconLine icon={ClipboardList} iconColor={COLOR.primary} iconSize={18} gap={8}
+                text={t("result.newOffersUnlocked")} size={TEXT.sm} font="display" weight="700" color={COLOR.primary} />
+              <Label text={newlyUnlockedOffers.join(" · ")} size={TEXT.sm} color={ROLE.ink} wrap />
             </Appear>
           )}
 

@@ -97,7 +97,6 @@ export function TopBarSample(p: { goals: Goal[]; highscore?: boolean; extras?: b
       onExplainWin={noop}
       scopeCreepPercent={p.extras ? 35 : 0}
       accentColor={ACCENT}
-      ascensionDepth={p.extras ? 3 : 0}
       showHighscoreBar={p.highscore}
       highscoreCurrent={1840}
       highscoreTarget={2600}
@@ -124,8 +123,6 @@ export function ControlsSample({ open, admin }: { open: boolean; admin?: boolean
       onOpenWin={noop}
       soundMuted={muted}
       onToggleSound={() => setMuted(m => !m)}
-      hasAscensionAnnouncement={!!admin}
-      onOpenAscension={noop}
       adminMode={!!admin}
       onOpenTuning={noop}
       onRestart={noop}

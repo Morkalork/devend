@@ -5,8 +5,7 @@
  * It wires together all the smaller managers:
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
- *   - useLoadoutManager      curse/blessing loadouts from public/loadouts.yml
- *                            (run-start loadout draft + Ascension draft)
+ *   - sprintOffers           the run-start draft's offers from public/offers.yml
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
  *   - useCheckpointSnapshots saved per-level snapshots for the level picker
@@ -19,11 +18,11 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
 import { useUpgradeManager, getLoadedUpgrades } from './useUpgradeManager';
-import { useLoadoutManager } from './useLoadoutManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
-import { useRunSave, RunSave } from './useRunSave';
+import { useRunSave, RunSave, type BetweenMapsSave } from './useRunSave';
+import type { StoreDealt } from '@/ui/screens/shopModel';
 import { useHallOfFame } from './useHallOfFame';
 import { aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
@@ -46,8 +45,13 @@ import type { BetweenMapPlan } from '@/ui/screens/pipelineModel';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
-import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
+import {
+  loadOffers, getOffer, getOfferCatalogue, rollSprintDeal, shopLeanOf, offerModifierLayers, pickLivesDelta,
+  allOffers, type DealtOffer,
+} from '@/lib/sprintOffers';
+import { getForcedSprintOffer, getForcedJackpot, isSprintAlwaysOn } from '@/lib/devFlags';
 import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
+import { storeInterest, desperationMultiplier } from '@/lib/offerPerks';
 import { runwayBonuses, spendChunks, spendBoons, spendChunkCap, SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
@@ -55,22 +59,21 @@ import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
-import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth, debugMutatorId, forcedTilts } from '@/lib/devFlags';
+import { baseStartingLives, isInfiniteLivesEnabled, debugMutatorId, forcedTilts } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
-import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
-import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
+import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers, isContinuation } from '@/lib/tenure';
 import { fenceSlotsFrom } from "@/lib/fenceOwnership";
 import { devFenceSlots } from "@/lib/devFlags";
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
 import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish';
+import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
 
 /**
- * Drop one debug query param, keeping the rest. The old code replaced the whole
- * search string, which meant ?ascension=3&level=12 lost the ascension jump the
- * moment the level jump consumed its own param.
+ * Drop one debug query param, keeping the rest. Replacing the whole search
+ * string would also drop any other param riding along with the level jump.
  */
 function stripQueryParam(name: string): void {
   try {
@@ -97,8 +100,7 @@ const WARM_CACHE_RAMP_CAP = 10;
  *  offer), earn one via certificates / the Insurance Policy set bonus, or
  *  complete level FREE_CONTINUE_LEVEL. */
 const BASE_CONTINUES = 0;
-/** Completing this level grants 1 free Continue (once per pass; an ascension
- *  loop that reaches it again grants another). */
+/** Completing this level grants 1 free Continue (once per run). */
 const FREE_CONTINUE_LEVEL = 20;
 /** War Chest ceiling: banked overtime never slows balls by more than this. */
 const MAX_BANKED_SLOW = 0.08;
@@ -138,13 +140,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     canPurchase: canPurchaseUpgrade,
     isLocked: isUpgradeLocked,
   } = useUpgradeManager();
-
-  const {
-    loadouts,
-    loadoutLookup,
-    ascensionConfig,
-    loadLoadouts,
-  } = useLoadoutManager();
 
   /**
    * A run is booting: every catalogue is being fetched before the first map.
@@ -208,22 +203,30 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [carryFreeShopItems, setCarryFreeShopItems] = useState(0);
 
   /**
-   * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
-   * run's depth, plus whether the loadout draft still follows once picked.
-   * Rolled fresh per run, so a retry is a new draw rather than the same cards.
+   * Sprint Planning (SPRINT_PLANNING_PLAN.md): the three cards dealt before
+   * map 1, already resolved. When the previous run earned Tenure (issue #75),
+   * its chain is the boon card. Dealt fresh per run, so a retry is a new draw.
    */
-  const [pendingTenure, setPendingTenure] = useState<{
-    offers: TenureOffer[];
-    earnedAtLevel: number;
-    thenDraftLoadout: boolean;
-    /** What the previous run owned, so the screen can badge the continuation. */
-    lastRunUpgradeIds: string[];
-  } | null>(null);
+  const [pendingSprint, setPendingSprint] = useState<{ cards: DealtOffer[] } | null>(null);
+  /**
+   * A taken offer whose prize is a choice (Pick a Junior, Headhunted): the
+   * chains the player picks one of on the next screen.
+   */
+  const [pendingChainPick, setPendingChainPick] = useState<{ offerId: string; choices: TenureOffer[] } | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
-  // at the first map end at/past the trigger level. Permanent for the run
-  // (survives ascension); cleared only on run resets.
+  // at the first map end at/past the trigger level. Permanent for the run;
+  // cleared only on run resets.
   const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
+  // What this store visit put on its shelf, kept for the run save (a run
+  // resumed in the store reopens the same shelf). Cleared per visit.
+  const [storeDealt, setStoreDealt] = useState<StoreDealt | null>(null);
+  // Procurement's interest this visit paid, for the store's treasury strip.
+  const [storeInterestPaid, setStoreInterestPaid] = useState(0);
+  const handleShopDealt = useCallback((dealt: StoreDealt) => setStoreDealt(dealt), []);
+  // A resumed run saved between maps, waiting for its level sequence to settle
+  // before it is routed back to the stage it was saved on.
+  const [resumeBetween, setResumeBetween] = useState<{ at: number; between: BetweenMapsSave } | null>(null);
   const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
@@ -246,18 +249,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Locks made this round vs. required (for the closed-store "X/Y" banner, #67).
   const [storeLockProgress, setStoreLockProgress] = useState<{ have: number; need: number }>({ have: 0, need: 1 });
 
-  // Ascension mode: after the final level the player may loop back to level 1
-  // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
-  // draftedLoadoutIds is always the run-start loadout; ascension appends more.
-  const [ascensionDepth, setAscensionDepth] = useState(0);
-  const [draftedLoadoutIds, setDraftedLoadoutIds] = useState<string[]>([]);
+  // The offer this run took at Sprint Planning (null: skipped, or none dealt).
+  const [takenOfferId, setTakenOfferId] = useState<string | null>(null);
 
   // Snapshot of the just-finalized run for the result screen (finalizeRun
   // resets the live counters, so the result screen can't read those).
   const [lastRunSummary, setLastRunSummary] = useState<{ levelsCompleted: number; hoursAwarded: number } | null>(null);
 
-  // Names of loadouts that unlocked this run (shown on the result screen).
-  const [lastRunLoadoutUnlocks, setLastRunLoadoutUnlocks] = useState<string[]>([]);
+  // Sprint Planning offers this run unlocked (shown on the result screen).
+  const [lastRunOfferUnlocks, setLastRunOfferUnlocks] = useState<string[]>([]);
 
   // End-of-run build recap (archetype identity, capstone, per-archetype best).
   const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
@@ -310,7 +310,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowMover,
     shouldShowTopBar,
     shouldShowBottomBar,
-    shouldShowAscension,
     shouldShowDaily,
     shouldShowTimeLimit,
     markOnboardingSeen,
@@ -320,7 +319,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markMoverSeen,
     markTopBarSeen,
     markBottomBarSeen,
-    markAscensionSeen,
     markDailySeen,
     markTimeLimitSeen,
     resetAllTutorials,
@@ -393,7 +391,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
     stats: metaStats,
     isLoaded: metaLoaded,
-    wonLoadoutIds,
+    metArchetypes,
     mapHighscores,
     encounteredBallTypeIds,
     archetypeBests,
@@ -404,24 +402,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    recordAscensionDepth,
     recordPushBonusBanked,
-    recordLoadoutWin,
+    recordArchetypeMet,
     recordMapHighscore,
     recordBallTypeEncountered,
     recordArchetypeBest,
-    introduceLoadouts,
     unlockFeature,
     isFeatureUnlocked,
     resetProgression,
   } = useMetaProgression();
 
-  // Loadouts are gated behind the general feature-unlock system: earned by
-  // beating the game for the first time (completing the final level; see the
-  // isLastLevel win path below). Until then the menu Loadouts entry stays
-  // hidden. (The Sprint Planning draft this used to gate is on hold outright;
-  // the ascension draft is not gated on this flag and still runs.)
-  const loadoutsIntroduced = isFeatureUnlocked('loadouts');
+  // Sprint Planning is a feature unlock (features.yml): the very first run goes
+  // straight into the map, and the draft starts with the run after the one
+  // that cleared its unlock level. Admin can force it on (devFlags).
+  const sprintUnlocked = isFeatureUnlocked('sprintPlanning');
 
   // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
   // modal (surfaced when leaving the level-complete overlay). Idempotent.
@@ -444,9 +438,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     featureReconcileDoneRef.current = true;
     // Reached level 5+ => cleared level 5 => achievements were available.
     if (metaStats.highestLevelReached >= 5) unlockFeature('achievements');
-    // Reached level 11+ => beat the level-10 boss => loadouts were available.
-    // (Complements the loadoutsIntroduced first-win seed in useMetaProgression.)
-    if (metaStats.highestLevelReached >= 11) unlockFeature('loadouts');
+    // Already past Sprint Planning's unlock level: no modal for something the
+    // player has effectively already earned.
+    const sprintLevel = getFeature('sprintPlanning')?.unlockLevel;
+    if (sprintLevel !== undefined && metaStats.highestLevelReached > sprintLevel) unlockFeature('sprintPlanning');
     const hadCertificates =
       totalCertificateHours > 0 ||
       unlockedCertIds.length > 0 ||
@@ -463,57 +458,44 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  /**
-   * Every ladder rung in force at the current depth, folded into one rule set.
-   * Read by the shop, the Promotion, fence durability,
-   * the mutator roll and the forced curse, so a rung is authored once in
-   * loadouts.yml and applies everywhere without a second switch statement.
-   */
-  const ascRules = useMemo(
-    () => (ascensionDepth > 0 ? ascensionRules(ascensionDepth, ascensionConfig.ladder) : NO_ASCENSION_RULES),
-    [ascensionDepth, ascensionConfig.ladder],
-  );
+  /** The Sprint Planning offer this run took (null when it skipped). */
+  const runOffer = useMemo(() => getOffer(takenOfferId) ?? null, [takenOfferId]);
+  /** Its Specialisation's lean on the shop, when it is one. */
+  const shopLean = useMemo(() => shopLeanOf(runOffer), [runOffer]);
 
   /**
-   * Drafted loadouts, the ladder's own modifier rungs, and the forced curse,
-   * folded into the same bonus map the achievements/certificates use.
-   *
-   * Ball speed used to be speedRampPerDepth ^ depth at EVERY depth, which was
-   * the whole of what an ascension meant. It is now one rung among ten, and the
-   * ramp only takes over past the ladder's end so deep ascensions still
-   * escalate once the named rungs run out.
+   * The taken offer, folded into the same bonus map the achievements and
+   * certificates use: its price for the whole run, its modifiers while they
+   * last (a `forMaps` boon stops after the run's first N maps).
    */
-  const loadoutBonuses = useMemo(() => {
+  const offerBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
-    for (const id of draftedLoadoutIds) {
-      const loadout = loadoutLookup.get(id);
-      if (loadout) bonuses = mergeBonuses(bonuses, loadout.modifiers as Partial<Record<keyof GameModifiers, number>>);
-    }
-    if (ascensionDepth > 0) {
-      bonuses = mergeBonuses(bonuses, ascRules.modifiers as Partial<Record<keyof GameModifiers, number>>);
-      // The imposed curse is a normal loadout the player never drafted.
-      const forced = ascRules.forcedCurseLoadoutId
-        ? loadoutLookup.get(ascRules.forcedCurseLoadoutId)
-        : undefined;
-      if (forced && !draftedLoadoutIds.includes(forced.id)) {
-        bonuses = mergeBonuses(bonuses, forced.modifiers as Partial<Record<keyof GameModifiers, number>>);
-      }
-      const past = ascensionDepth - LADDER_LENGTH;
-      if (past > 0) {
-        bonuses = mergeBonuses(bonuses, {
-          ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, past),
-        });
-      }
+    for (const layer of offerModifierLayers(runOffer, runLevelsCompleted)) {
+      bonuses = mergeBonuses(bonuses, layer as Partial<Record<keyof GameModifiers, number>>);
     }
     return bonuses;
-  }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascRules, ascensionConfig.speedRampPerDepth]);
+  }, [runOffer, runLevelsCompleted]);
 
   // Set bonuses: free modifier bundles active while the player owns enough
-  // upgrades of a tag (tagSets block in upgrades.yml).
+  // upgrades of a tag (tagSets block in upgrades.yml). A Specialisation counts
+  // toward its own tag's set.
   const activeTagSets = useMemo(
-    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets),
-    [ownedUpgradeIds, upgrades, tagSets]
+    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets,
+      shopLean ? { tag: shopLean.tag, amount: shopLean.countsTowardSet } : null),
+    [ownedUpgradeIds, upgrades, tagSets, shopLean]
   );
+
+  // A set firing is meeting the archetype: it unlocks that tag's
+  // Specialisation for later runs, and the result screen says so.
+  useEffect(() => {
+    for (const set of activeTagSets) {
+      if (!recordArchetypeMet(set.tag)) continue;
+      const unlocked = allOffers(getOfferCatalogue())
+        .filter(o => o.unlock?.kind === 'archetypeMet' && o.unlock.tag === set.tag)
+        .map(o => o.name);
+      if (unlocked.length > 0) setLastRunOfferUnlocks(prev => [...prev, ...unlocked.filter(n => !prev.includes(n))]);
+    }
+  }, [activeTagSets, recordArchetypeMet]);
   const tagSetBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     for (const s of activeTagSets) {
@@ -567,13 +549,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const mergedBonuses = useMemo(
     () => mergeBonuses(
-      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
+      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), offerBonuses),
       mergeBonuses(
         mergeBonuses(tagSetBonuses, scalingBonuses),
         capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined,
       ),
     ),
-    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, scalingBonuses, capstone]
+    [achievementBonuses, certBonuses, offerBonuses, tagSetBonuses, scalingBonuses, capstone]
   );
 
   // Two-pass modifier resolution: the base pass aggregates every static source;
@@ -591,9 +573,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     level: currentLevelIndex + 1,
     lives: livesAtLevelStart,
     banked: totalScore,
-    depth: ascensionDepth,
     map: mapContextOf(currentLevel),
-  }), [currentLevelIndex, livesAtLevelStart, totalScore, ascensionDepth, currentLevel]);
+  }), [currentLevelIndex, livesAtLevelStart, totalScore, currentLevel]);
 
   /**
    * The run as it will stand on the NEXT map, for the shop.
@@ -613,10 +594,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       level: currentLevelIndex + 2,
       lives: currentLives,
       banked: totalScore,
-      depth: ascensionDepth,
       map: mapContextOf(next),
     };
-  }, [levels, currentLevelIndex, currentLives, totalScore, ascensionDepth]);
+  }, [levels, currentLevelIndex, currentLives, totalScore]);
 
   const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses, runContext);
   const dynamicBonuses = useMemo(() => {
@@ -640,7 +620,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendCapture > 0) {
       bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
     }
-    // Warm Cache loadout: fence growth snowballs with each map cleared this run.
+    // Growth (Sprint Planning): a map started below three lives pays more.
+    // livesAtLevelStart, not currentLives, so the rate is fixed for the map.
+    const desperation = desperationMultiplier(livesAtLevelStart, baseModifiers.scoreBonusPerMissingLife);
+    if (desperation > 1) bonuses = mergeBonuses(bonuses, { scoreMultiplier: desperation });
+    // Warm Cache: fence growth snowballs with each map cleared this run.
     // Translate the per-cleared-map coefficient into a fenceGenerationSpeedMultiplier
     // boost, capped so a deep run can't run away with it.
     if (baseModifiers.fenceSpeedPerMapCleared > 0 && runLevelsCompleted > 0) {
@@ -650,7 +634,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       });
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted, livesAtLevelStart]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -674,14 +658,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
   const tagSetThreshold = tagSets?.threshold ?? DEFAULT_TAG_SET_THRESHOLD;
 
-  const activeLoadouts = useMemo(
-    () => draftedLoadoutIds.map(id => loadoutLookup.get(id)).filter((l): l is NonNullable<typeof l> => l != null),
-    [draftedLoadoutIds, loadoutLookup]
-  );
-
   // Per-source breakdown of what feeds activeModifiers, so the bottom-bar panel
-  // can attribute each active modifier to the upgrade/cert/achievement/loadout/
-  // ascension that produced it.
+  // can attribute each active modifier to the upgrade/cert/achievement/offer
+  // that produced it.
   const modifierSources = useMemo<ModifierSource[]>(() => {
     const sources: ModifierSource[] = [];
 
@@ -708,8 +687,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'achievement', id: a.id, name: a.name, modifiers: { [a.bonus.modifier]: a.bonus.value } });
     }
 
-    for (const l of activeLoadouts) {
-      sources.push({ kind: 'loadout', id: l.id, name: l.name, modifiers: l.modifiers });
+    if (runOffer && offerBonuses) {
+      sources.push({ kind: 'offer', id: runOffer.id, name: runOffer.name, modifiers: offerBonuses as Record<string, number> });
     }
 
     for (const s of activeTagSets) {
@@ -720,41 +699,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'capstone', id: capstone.id, name: capstone.name, modifiers: capstone.modifiers });
     }
 
-    if (ascensionDepth > 0) {
-      sources.push({
-        kind: 'ascension',
-        id: 'ascension',
-        name: String(ascensionDepth),
-        modifiers: { ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, ascensionDepth) },
-      });
-    }
-
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
-
-  // Loadouts offered in the run-start draft: unlocked once the player has
-  // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
-  const availableLoadouts = useMemo(
-    () => unlockedForStart(loadouts, wonLoadoutIds.length),
-    [loadouts, wonLoadoutIds]
-  );
-
-  // Ascension rule: fences wear out after a number of ball hits — generous on
-  // early levels, brutal late, plus the Defensive Programming upgrade bonus.
-  // null = indestructible fences (the normal game). Gated on the "Technical
-  // Debt" rung rather than on depth > 0, so the first three ascensions have a
-  // character of their own and Defensive Programming is a considered buy at
-  // depth 4 instead of mandatory from the very first ascension.
-  const fenceDurability = useMemo(() => {
-    if (!ascRules.fencesWearOut) return null;
-    const levelNumber = currentLevelIndex + 1;
-    const t = totalLevels > 1 ? Math.min(1, (levelNumber - 1) / (totalLevels - 1)) : 0;
-    const base = Math.round(
-      ascensionConfig.fenceDurabilityBase +
-      (ascensionConfig.fenceDurabilityAtFinal - ascensionConfig.fenceDurabilityBase) * t
-    );
-    return Math.max(1, base + activeModifiers.fenceDurabilityBonus);
-  }, [ascRules.fencesWearOut, currentLevelIndex, totalLevels, ascensionConfig, activeModifiers.fenceDurabilityBonus]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, runOffer, offerBonuses, activeTagSets, capstone]);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -762,22 +708,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   /**
-   * Clear every piece of run-scoped state. Shared by all five run-reset paths
-   * (start, play-again, restart, back-to-welcome, ASCEND) so a newly added
-   * field can never be forgotten in one of them again. Lives, continues, level
-   * index and navigation stay with the call sites - they legitimately differ
-   * per path.
-   *
-   * `keepAscension` is what makes ascending a reset at all. An ascension is a
-   * fresh run at a harder rung, so it clears the same list as any other run
-   * start; what it must NOT clear is the three things that are the POINT of
-   * ascending - the depth, the loadouts stacked on the way up, and
-   * runLevelsCompleted, which is the certificate-hours accumulator and the only
-   * meta progress a run carries while it is still being played. Sharing the
-   * list rather than keeping a second one beside it is deliberate: two lists of
-   * "everything run-scoped" is how one of them goes stale.
+   * Clear every piece of run-scoped state. Shared by every run-reset path
+   * (start, play-again, restart, back-to-welcome) so a newly added field can
+   * never be forgotten in one of them again. Lives, continues, level index and
+   * navigation stay with the call sites - they legitimately differ per path.
    */
-  const resetRunScopedState = useCallback((opts?: { keepAscension?: boolean }) => {
+  const resetRunScopedState = useCallback(() => {
     // Signing Bonus: the run opens with hours already banked. Set here rather
     // than at one of the run-start handlers so every path gets it, the Daily
     // included: certs already apply to a seeded run (Equity Grant, Head Start
@@ -797,30 +733,25 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(0);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
-    setPendingTenure(null);
+    setPendingSprint(null);
+    setPendingChainPick(null);
     setCapstone(null);
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
     setRunStartIntroPending(true);
     setStoreClosed(false);
+    setStoreInterestPaid(0);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
-    if (!opts?.keepAscension) {
-      setAscensionDepth(0);
-      setDraftedLoadoutIds([]);
-    }
+    setTakenOfferId(null);
     setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
+    setLastRunOfferUnlocks([]);
     runTrajectoryRef.current = [];
     recordEligibleRef.current = true;
     pbCelebratedRef.current = false;
     setLevelPace(null);
     setLastRunRank(null);
-    // Certificate hours accrue across the whole session of play, ascensions
-    // included, and are banked when the run finally ends. Zeroing this on an
-    // ascension would quietly delete the meta progress the player ascended to
-    // keep earning.
-    if (!opts?.keepAscension) resetRunProgress();
+    resetRunProgress();
   }, [resetRunProgress]);
 
   // Latest run snapshot, refreshed every render, so the save effect can fire
@@ -828,6 +759,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // payload always reflects the settled post-advance state. Reading from a ref
   // avoids re-saving on every mid-map life/score change.
   const runSnapshotRef = useRef<Omit<RunSave, 'version' | 'savedAt'> | null>(null);
+  // Where between two maps the run stands, if it does (set further down, once
+  // the between-map plan exists); merged into every save.
+  const betweenMapsRef = useRef<BetweenMapsSave | null>(null);
+  const currentRunSave = useCallback((): Omit<RunSave, 'version' | 'savedAt'> | null => {
+    const snap = runSnapshotRef.current;
+    if (!snap) return null;
+    const between = betweenMapsRef.current;
+    return between ? { ...snap, betweenMaps: between } : snap;
+  }, []);
   runSnapshotRef.current = {
     levelSequenceIds: levels.map(l => l.id),
     currentLevelIndex,
@@ -844,8 +784,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendCapture,
     carryFreeShopItems,
     capstoneId: capstone?.id ?? null,
-    ascensionDepth,
-    draftedLoadoutIds,
+    takenOfferId,
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
     dailyKey,
@@ -859,11 +798,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // ref so this writes once per map, not on every in-map state change.
   useEffect(() => {
     if (nav.currentScreen !== 'game') return;
-    const snap = runSnapshotRef.current;
+    const snap = currentRunSave();
     if (!snap || snap.levelSequenceIds.length === 0) return;
     if (pairRunRef.current) return; // the pair keeps its own save
     saveRun(snap);
-  }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
+  }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun, currentRunSave]);
 
   /**
    * Also persist when the page is hidden or torn down, and when the error
@@ -876,14 +815,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   useEffect(() => {
     registerRunFlush(() => {
-      const snap = runSnapshotRef.current;
+      const snap = currentRunSave();
       if (!snap || snap.levelSequenceIds.length === 0) return;
       if (pairRunRef.current) return; // the pair keeps its own save
       saveRun(snap);
     });
     const uninstall = installRunFlushListeners();
     return () => { uninstall(); registerRunFlush(null); };
-  }, [saveRun]);
+  }, [saveRun, currentRunSave]);
 
   /** Leave any seeded-run context: normal runs roll Math.random again. */
   const clearDailyMode = useCallback(() => {
@@ -893,47 +832,56 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, []);
 
   /**
-   * The last step of starting a fresh, unseeded run: hand over the Tenure draft
-   * if the previous run earned one, then continue into the loadout draft or
-   * straight into the map.
+   * Deal the Sprint Planning cards. Shared by every run-start path.
    *
-   * Shared because there are three ways to start a run and Tenure originally
-   * fired from only one of them. New Game rolled it; Play Again and Restart went
-   * straight to the loadout draft, so losing past map 10 and pressing Play Again
-   * (the most natural way there is to start the next run) silently skipped the
-   * head start that run had just earned. The tell was that both other paths
-   * already ran the loadout draft, and Tenure is specified to come BEFORE it.
+   * Tenure (issue #75) rides in the boon slot when the previous run earned it.
+   * It used to be a screen of its own before the loadout draft, and it fired
+   * from New Game only at first: Play Again and Restart skipped it, so the
+   * button right under the score of the run that had just earned a head start
+   * was the one path that lost it. Every path comes through here now.
    *
-   * Seeded Daily runs deliberately do not come through here: a per-player head
-   * start would make one shared seed incomparable.
+   * Seeded runs pass `seeded`: the Daily deals from its seed and never offers
+   * Tenure (a per-player head start would make one shared seed incomparable).
    */
-  const enterRun = useCallback((wantsLoadoutDraft: boolean) => {
-    // Sprint Planning is on hold (see @/lib/sprintPlanning). Normalised HERE
-    // rather than at the three call sites so the Tenure continuation below,
-    // which replays this flag out of pendingTenure, is covered by the same
-    // line instead of being the one path that still reaches the draft.
-    const thenDraftLoadout = SPRINT_PLANNING_ENABLED && wantsLoadoutDraft;
+  const dealSprint = useCallback((opts: { seeded: boolean }): DealtOffer[] => {
+    let tenure: { chain: TenureOffer; earnedAtLevel: number; continued: boolean } | null = null;
     const tenureDepth = metaStats.lastRunDepth;
-    const offers = tenureSteps(tenureDepth) > 0
+    if (!opts.seeded && tenureSteps(tenureDepth) > 0) {
       // getLoadedUpgrades(), not the `upgrades` state: on the New Game path this
       // closure was created before loadUpgrades() ran, so the state read here
-      // would be stale. On the other two the catalogue is already loaded from
-      // the run just played, and an empty one simply yields no offers.
-      //
-      // The depth sets how much is granted; lastRunShopLevel limits what may be
-      // granted to what the run could actually have bought.
-      ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
-                         TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)
-      : [];
-    if (offers.length > 0) {
-      setPendingTenure({
-        offers, earnedAtLevel: tenureDepth, thenDraftLoadout,
-        lastRunUpgradeIds: [...lastRunUpgradeIds],
-      });
-      nav.goToTenureDraft();
-    } else if (thenDraftLoadout) nav.goToRunDraft();
-    else nav.startGame();
-  }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
+      // would be stale. The depth sets how much is granted; lastRunShopLevel
+      // limits what may be granted to what the run could actually have bought.
+      // The first offer is the one guaranteed to continue the last run's build.
+      const chain = rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
+        TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)[0];
+      if (chain) tenure = { chain, earnedAtLevel: tenureDepth, continued: isContinuation(chain, lastRunUpgradeIds) };
+    }
+    return rollSprintDeal({
+      catalogue: getOfferCatalogue(),
+      upgrades: getLoadedUpgrades(),
+      unlock: { highestLevelReached: metaStats.highestLevelReached, metArchetypes },
+      rng: opts.seeded ? getRunRng('sprint') : Math.random,
+      tenure,
+      force: { offerId: getForcedSprintOffer(), jackpot: getForcedJackpot() },
+    });
+  }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, metaStats.highestLevelReached, lastRunUpgradeIds, metArchetypes]);
+
+  /**
+   * The last step of starting a run: Sprint Planning when it is unlocked (or
+   * Tenure is owed, which is the boon card), otherwise straight into the map.
+   * `wantsDraft` is false for the debug jump and a pair run (both phones must
+   * start from the same state, and the host's run is the one that counts).
+   */
+  const enterRun = useCallback((wantsDraft: boolean, opts: { seeded?: boolean } = {}) => {
+    const seeded = opts.seeded ?? false;
+    const tenureOwed = !seeded && tenureSteps(metaStats.lastRunDepth) > 0;
+    const draftOn = SPRINT_PLANNING_ENABLED && wantsDraft && (sprintUnlocked || tenureOwed || isSprintAlwaysOn());
+    const cards = draftOn ? dealSprint({ seeded }) : [];
+    if (cards.length > 0) {
+      setPendingSprint({ cards });
+      nav.goToRunDraft();
+    } else nav.startGame();
+  }, [metaStats.lastRunDepth, sprintUnlocked, dealSprint, nav.goToRunDraft, nav.startGame]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean, runSeed?: string) => {
     // Whose run this is, decided first (see pairRunRef).
@@ -948,7 +896,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (runSeed) {
       setRunSeedText(runSeed);
     }
-    // The loadout catalogue backs the run-start draft, but a load failure
+    // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -958,9 +906,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        // Sprint Planning offers (offers.yml). Failure keeps the baked catalogue.
+        loadOffers(),
         // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
-        // it does not gate starting a run — same treatment as loadouts.
+        // it does not gate starting a run, same treatment as the offers.
         loadBallTypes(),
         loadAbilities(),
         // Fence types (fences.yml). Failure keeps the build-time catalogue.
@@ -1004,21 +953,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // unrepresentative in exactly the way the ?level= jump does, so they get
       // the same treatment: play it, but never let highscores / Employee of the
       // Month / Records learn from it.
-      if (isInfiniteLivesEnabled() || hasAnyMapTuning() || debugMutatorId() || forcedTilts()) {
+      if (isInfiniteLivesEnabled() || hasAnyMapTuning() || debugMutatorId() || forcedTilts() || getForcedSprintOffer() || getForcedJackpot()) {
         recordEligibleRef.current = false;
-      }
-
-      // ?ascension=N: start this run already at that depth, so the ladder's
-      // later rungs can be looked at without clearing the map list N times.
-      // Applied after resetRunScopedState (which zeroes the depth) and before
-      // the level jump, so ?ascension=3&level=12 works as one instruction.
-      // The param is consumed here, matching ?level=, so a later Play Again is
-      // an ordinary depth-0 run rather than silently staying ascended.
-      const debugAscension = debugAscensionDepth();
-      if (debugAscension > 0) {
-        setAscensionDepth(debugAscension);
-        recordEligibleRef.current = false; // debug jump: never files on the ledger
-        stripQueryParam('ascension');
       }
 
       if (forceLevel !== undefined) {
@@ -1041,15 +977,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       analytics.runStarted({ mode: 'new', daily: false });
 
-      // A fresh run would draft a loadout first, but the loadout system only
-      // appears once it's been introduced (after the first win), and the first
-      // run and the ?level= debug path go straight into the game anyway.
-      // (Moot while Sprint Planning is on hold: enterRun drops the flag.)
-      const thenDraftLoadout = !(skipDraft || !loadoutsIntroduced);
-
-      enterRun(thenDraftLoadout);
+      // The debug jump and a pair run go straight into the map (see enterRun).
+      enterRun(!skipDraft && !pairRunRef.current);
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, enterRun]);
+  }, [loadLevels, loadUpgrades, loadCertificates, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, clearDailyMode, enterRun]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -1076,7 +1007,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        loadOffers(),
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
@@ -1114,10 +1045,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'daily', daily: true });
 
-    // Daily Stand-up is a seeded, identical-for-everyone challenge: it skips the
-    // loadout draft (which normal runs always show now, #38) to stay clean.
-    nav.startGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, resetRunScopedState, clearRun, resetToFirstLevel, nav.startGame, clearDailyMode]);
+    // The Daily deals Sprint Planning from its seed, so everyone sees the same
+    // three cards (the pick is theirs), and never offers Tenure. A pair run
+    // skips the draft, as it does everywhere.
+    enterRun(!pairRunRef.current, { seeded: true });
+  }, [loadLevels, loadUpgrades, loadCertificates, resetRunScopedState, clearRun, resetToFirstLevel, clearDailyMode, enterRun]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -1170,8 +1102,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     spentThisShopVisitRef.current = 0;
-    setAscensionDepth(save.ascensionDepth);
-    setDraftedLoadoutIds(save.draftedLoadoutIds);
+    // Saves written before Sprint Planning carry `draftedLoadoutIds` instead,
+    // ids the offers catalogue does not know: they resume with no offer.
+    setTakenOfferId(save.takenOfferId ?? null);
     setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
 
     // Resuming mid-run: the short boot, no leftover overlays/offers.
@@ -1216,7 +1149,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        loadOffers(),
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
@@ -1237,8 +1170,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     applyRunRecord(save);
     analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
-    nav.goToGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, applyRunRecord, nav.goToGame]);
+    if (save.betweenMaps) {
+      // Saved after the map was won: back to the stage it was saved on, with
+      // the map's results the store reads, once the sequence has settled.
+      setPendingLevelScore(save.betweenMaps.levelScore);
+      setResumeBetween({ at: save.currentLevelIndex, between: save.betweenMaps });
+    } else {
+      nav.goToGame();
+    }
+  }, [loadLevels, loadUpgrades, loadCertificates, applyRunRecord, nav.goToGame]);
 
 
   const handleContinueRun = useCallback(async () => {
@@ -1286,16 +1226,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const info = recordRun({
       score: finalScore,
       levelsCompleted: trajectory.length,
-      ascensionDepth,
       primaryTag: identity.primary,
       secondaryTag: identity.secondary,
       capstoneId: capstone?.id ?? null,
       capstoneName: capstone?.name ?? null,
-      loadoutIds: draftedLoadoutIds,
+      loadoutIds: takenOfferId ? [takenOfferId] : [],
       savedAt: Date.now(),
     }, trajectory, dailyKeyRef.current);
     setLastRunRank({ ...info, aheadThroughMaps: epitaph });
-  }, [bestRunTrajectory, bestScore, tagCounts, ascensionDepth, capstone, draftedLoadoutIds, recordRun]);
+  }, [bestRunTrajectory, bestScore, tagCounts, capstone, takenOfferId, recordRun]);
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
@@ -1303,7 +1242,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       isWin: result.isWin,
       levelsCompleted,
       totalScore,
-      ascensionDepth,
       daily: dailyKeyRef.current !== null,
     });
     // Tenure (issue #75): the depth this run ENDED at decides the next
@@ -1323,34 +1261,84 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // The run is over: no Continue on the welcome screen. A pair run never
     // held that slot, and the solo run parked in it is not the one that ended.
     if (!pairRunRef.current) clearRun();
-    nav.endGame({
-      ...result,
-      totalScore,
-      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
-    });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
+    nav.endGame({ ...result, totalScore });
+  }, [nav.endGame, totalScore, finalizeRun, runLevelsCompleted, activeModifiers.extraCertificateHours, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
 
   /**
-   * Tenure pick confirmed (issue #75): grant every upgrade in the chosen
-   * chain, then continue into the loadout draft (or straight into the game when
-   * loadouts are not in play yet).
-   *
-   * The WHOLE chain is granted, not just its top tier, because upgrade
-   * modifiers compound: handing over only the Principal would make the
-   * 30-level reward weaker than the 20-level one.
+   * The last map is won: the run is over, as a win. Banked and filed through
+   * the same path a loss takes (Tenure, certificate hours, the ledger), with
+   * the final map's results on the result screen.
    */
-  const handleTenurePicked = useCallback((headId: string) => {
-    const pending = pendingTenure;
-    const offer = pending?.offers.find(o => o.headId === headId) ?? null;
-    if (offer) {
-      const granted = offer.upgrades.map(u => u.id);
-      setOwnedUpgradeIds(prev => [...prev, ...granted.filter(id => !prev.includes(id))]);
+  const handleFinishRun = useCallback(() => {
+    finalizeAndShowResult({
+      isWin: true,
+      remainingPercent: pendingLevelScore?.remainingPercent || 0,
+      levelId: currentLevel?.id || '',
+      levelNumber: currentLevelIndex + 1,
+      completedAllLevels: true,
+      totalScore,
+      levelScore: pendingLevelScore?.levelScore,
+      cutCount: pendingLevelScore?.cutCount,
+      expectedCuts: pendingLevelScore?.expectedCuts,
+      basePoints: pendingLevelScore?.basePoints,
+    });
+    setPendingLevelScore(null);
+  }, [finalizeAndShowResult, pendingLevelScore, currentLevel, currentLevelIndex, totalScore]);
+
+  /**
+   * Hand over upgrades the run did not buy (a Tenure chain, a gamble's prize),
+   * with any life they carry, which a purchase would have added too.
+   *
+   * A chain is granted WHOLE, not just its top tier, because upgrade modifiers
+   * compound: handing over only the Principal would make the 30-level Tenure
+   * reward weaker than the 20-level one.
+   */
+  const grantUpgrades = useCallback((granted: readonly UpgradeConfig[], extraLives = 0) => {
+    const ids = granted.map(u => u.id);
+    setOwnedUpgradeIds(prev => [...prev, ...ids.filter(id => !prev.includes(id))]);
+    if (extraLives !== 0) {
+      setCurrentLives(l => Math.max(1, l + extraLives));
+      setLivesAtLevelStart(l => Math.max(1, l + extraLives));
     }
-    setPendingTenure(null);
-    if (pending?.thenDraftLoadout) nav.goToRunDraft();
-    else nav.startGame();
-  }, [pendingTenure, nav.goToRunDraft, nav.startGame]);
+  }, []);
+
+  /**
+   * Sprint Planning confirmed: take card `index` (null on skip). The pick
+   * applies once (lives, banked hours, granted upgrades); the offer's modifiers
+   * then ride the modifier pipeline for as long as they last. A prize that is a
+   * choice goes to the chain pick before the map.
+   */
+  const handleSprintPick = useCallback((index: number | null) => {
+    const card = index === null ? null : pendingSprint?.cards[index] ?? null;
+    setPendingSprint(null);
+    analytics.offerSelected({
+      offerId: card?.offer.id ?? null,
+      pool: card?.offer.pool ?? null,
+      grantedIds: card?.grants.map(u => u.id) ?? [],
+    });
+    if (!card) {
+      setTakenOfferId(null);
+      nav.startGame();
+      return;
+    }
+    setTakenOfferId(card.offer.id);
+    grantUpgrades(card.grants, pickLivesDelta(card.offer, card.grants));
+    if (card.offer.overtime) setTotalScore(t => t + card.offer.overtime!);
+    if (card.choices && card.choices.length > 0) {
+      setPendingChainPick({ offerId: card.offer.id, choices: card.choices });
+      nav.goToChainPick();
+      return;
+    }
+    nav.startGame();
+  }, [pendingSprint, grantUpgrades, nav.goToChainPick, nav.startGame]);
+
+  /** The chain picked for a choose prize (Pick a Junior, Headhunted). */
+  const handleChainPick = useCallback((headId: string) => {
+    const pick = pendingChainPick?.choices.find(c => c.headId === headId);
+    if (pick) grantUpgrades(pick.upgrades, pick.upgrades.reduce((n, u) => n + (typeof u.modifiers?.extraLives === 'number' ? u.modifiers.extraLives : 0), 0));
+    setPendingChainPick(null);
+    nav.startGame();
+  }, [pendingChainPick, grantUpgrades, nav.startGame]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     if (!result.isWin) {
@@ -1441,12 +1429,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (isOnboardingMap(currentLevel)) markOnboardingSeen();
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
-    // Levels completed while ascended count more toward Certificate Hours
-    incrementRunLevel(1 + ascensionDepth);
+    incrementRunLevel(1);
 
     // Loyalty bonus: completing level FREE_CONTINUE_LEVEL awards a free
     // Continue (runs start with none; the dedupe ref above keeps this to one
-    // grant per pass, and an ascension loop can earn it again).
+    // grant per run).
     if (currentLevelNum === FREE_CONTINUE_LEVEL) setContinuesRemaining(c => c + 1);
 
     if (currentLives >= livesAtLevelStart) recordPerfectLevel();
@@ -1480,7 +1467,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
           ? metaStats.totalLevelsCompletedWithoutLoss + 1
           : metaStats.totalLevelsCompletedWithoutLoss,
       totalLivesLost: metaStats.totalLivesLost,
-      deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
       pushBonusesBanked: metaStats.pushBonusesBanked + (bankedPush ? 1 : 0),
       // Only written when a run ENDS, so these are carried through unchanged.
       lastRunDepth: metaStats.lastRunDepth,
@@ -1488,41 +1474,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     };
     checkAndCompleteAchievements(projectedStats);
 
-    // Feature unlocks (features.ts): completing certain levels, on the real
-    // first run (depth 0), reveals a new system. Level 5 unlocks achievements.
-    // armFeatureUnlock queues the "Feature Unlocked" modal (surfaced when
-    // leaving the level-complete overlay). (Certificates and loadouts unlock on
-    // an event, not a level - see below and handleCertificateHourEarned.)
-    if (ascensionDepth === 0) {
-      for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
-        armFeatureUnlock(feature.id);
-      }
-    }
-
-    // Beating the final level = a win. Credit the run-start loadout (index 0)
-    // toward unique wins, and remember any loadouts that just unlocked so the
-    // result screen can celebrate them. Skipped runs (no drafted loadout) and
-    // repeat wins with the same loadout do not advance the count.
-    if (isLastLevel) {
-      // First full completion unlocks the Loadouts feature: the "Feature
-      // Unlocked" modal surfaces over the ascension draft that follows, right as
-      // the player first meets loadouts (the ascension pick). Idempotent, so
-      // later wins are no-ops.
-      armFeatureUnlock('loadouts');
-      // Legacy bookkeeping flag (loadouts now unlock via the feature system).
-      introduceLoadouts();
-      // Index 0 is the RUN-START loadout, which is what the unique-win count
-      // is specified against. With Sprint Planning on hold no run starts with
-      // one, so index 0 would be the depth-1 ascension pick instead: credit
-      // nothing rather than credit the wrong loadout.
-      const startLoadoutId = SPRINT_PLANNING_ENABLED ? draftedLoadoutIds[0] : undefined;
-      if (startLoadoutId) {
-        const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
-        if (added) {
-          const unlocked = newlyUnlocked(loadouts, prevCount, newCount).map(l => l.name);
-          if (unlocked.length > 0) setLastRunLoadoutUnlocks(unlocked);
-        }
-      }
+    // Feature unlocks (features.ts): completing certain levels reveals a new
+    // system. Level 5 unlocks achievements. armFeatureUnlock queues the
+    // "Feature Unlocked" modal (surfaced when leaving the level-complete
+    // overlay). (Certificates unlock on an event, not a level - see
+    // handleCertificateHourEarned.)
+    for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
+      armFeatureUnlock(feature.id);
     }
 
     // Map highscore (#45): record this map's base score and, if it beat the
@@ -1550,7 +1508,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       level: currentLevelNum,
       overtime: levelOvertime,
       perfect: currentLives >= livesAtLevelStart,
-      ascensionDepth,
       daily: dailyKeyRef.current !== null,
     });
 
@@ -1597,7 +1554,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, recordMapHighscore, armFeatureUnlock, bestRunTrajectory, bestScore]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1606,17 +1563,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const finishShopPhase = useCallback(() => {
     const nextLevelNumber = currentLevelIndex + 2;
-    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
-    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
+    if (nextLevelNumber % 5 === 0) {
       saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
     }
     const pendingUnlocks = takePendingUnlocks();
     if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
     setShopUnlockedCerts([]);
     setPendingLevelScore(null);
+    setStoreDealt(null);
     advanceToNextLevel();
     nav.goToGame();
-  }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
+  }, [currentLevelIndex, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
 
   /**
    * Open this level's shop (or skip past it), the ordinary end of an ordinary
@@ -1646,14 +1603,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // two waives it entirely and the shop is simply always open.
     const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
     const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
-    // Hiring Freeze (ascension rung 1): on the levels the store skips there is
-    // nothing to show, so go straight on.
-    if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
-      finishShopPhase();
-      return;
-    }
     const closed = locksThisRound < locksRequired;
+    setStoreDealt(null); // a new visit: the shelf is dealt fresh
     setStoreClosed(closed);
+    // Procurement (Sprint Planning): interest on the bank, on arrival. Paid
+    // closed or open: it is the bank's, not the shelf's.
+    const interest = storeInterest(totalScore, activeModifiers.shopInterestPercent);
+    if (interest > 0) setTotalScore(t => t + interest);
+    setStoreInterestPaid(interest);
     setStoreLockProgress({ have: locksThisRound, need: locksRequired });
 
     // Open Source Contribution: the ability slot is gone from the shelf, and a
@@ -1667,7 +1624,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         currentLevelIndex + 1,
         getRunRng(`shop:${currentLevelIndex + 1}:freeAbility`),
         held,
-        ascRules.abilitySlots,
+        MAX_ABILITY_SLOTS,
       );
       if (rolled) {
         setAbilityCharges(prev => ({ ...prev, [rolled]: (prev[rolled] ?? 0) + 1 }));
@@ -1678,7 +1635,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setFreeAbilityGrant(null);
     }
     goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, abilityCharges, currentLevelIndex, ascRules, finishShopPhase, goToUpgradeShop]);
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, activeModifiers.shopInterestPercent, totalScore, abilityCharges, currentLevelIndex, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1688,15 +1645,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * fourth in a queue of five reward screens. Returns true when it took the wheel.
    */
   const offerCapstoneIfDue = useCallback((): boolean => {
-    // Promotion Freeze (ascension rung 2): no capstone is awarded at all.
-    if (ascRules.noCapstone || capstone) return false;
+    if (capstone) return false;
     const pool = getCapstones();
     if (pool.length === 0) return false;
     if (!capstoneDueAfter(currentLevelIndex + 1)) return false;
     setCapstoneOffers(drawCapstoneOffers(pool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
     goToCapstoneDraft();
     return true;
-  }, [ascRules.noCapstone, capstone, currentLevelIndex, goToCapstoneDraft]);
+  }, [capstone, currentLevelIndex, goToCapstoneDraft]);
 
   /**
    * What stands between the map just won and the next (UI_REDO_PLAN.md, the
@@ -1710,10 +1666,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const liveBetweenMapPlan = useMemo<BetweenMapPlan>(() => ({
     clearedLevel: currentLevelIndex + 1,
-    promotion: !ascRules.noCapstone && !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
-    store: shopOpensAfter(currentLevelIndex + 1, ascRules),
+    promotion: !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
+    store: true,
     last: isLastLevel,
-  }), [currentLevelIndex, ascRules, capstone, isLastLevel]);
+  }), [currentLevelIndex, capstone, isLastLevel]);
   const [frozenBetweenMapPlan, setFrozenBetweenMapPlan] = useState<BetweenMapPlan | null>(null);
   useEffect(() => {
     if (showLevelComplete) {
@@ -1721,6 +1677,39 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [showLevelComplete, liveBetweenMapPlan]);
   const betweenMapPlan = showLevelComplete ? liveBetweenMapPlan : (frozenBetweenMapPlan ?? liveBetweenMapPlan);
+
+  /**
+   * Save after every finished map, and at each stage after it.
+   *
+   * "Always make a save after a finished map, so that if you close the game in
+   * the store view, that is where you continue next." The map-start save alone
+   * left everything between maps to the page-hide flush, which wrote the
+   * finished map's index with its hours already banked, so a resume replayed
+   * the map it had just paid for. Now the save says it is between maps and
+   * which stage, with what that stage dealt (the Promotion's offers, the
+   * store's shelf), and a resume goes back to it.
+   */
+  const betweenStage: BetweenMapsSave['stage'] | null = !pendingLevelScore ? null
+    : nav.currentScreen === 'upgradeShop' ? 'store'
+    : nav.currentScreen === 'capstoneDraft' ? 'promotion'
+    : showLevelComplete ? 'debrief'
+    : null;
+  betweenMapsRef.current = betweenStage && pendingLevelScore ? {
+    stage: betweenStage,
+    levelScore: pendingLevelScore,
+    plan: betweenMapPlan,
+    capstoneOfferIds: betweenStage === 'promotion' ? capstoneOffers.map(c => c.id) : undefined,
+    store: betweenStage === 'store'
+      ? { closed: storeClosed, lockProgress: storeLockProgress, freeAbilityGrant, dealt: storeDealt }
+      : undefined,
+  } : null;
+  useEffect(() => {
+    if (!betweenStage) return;
+    if (pairRunRef.current) return; // the pair keeps its own save
+    const snap = currentRunSave();
+    if (!snap || snap.levelSequenceIds.length === 0) return;
+    saveRun(snap);
+  }, [betweenStage, storeDealt, capstoneOffers, saveRun, currentRunSave]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -1733,119 +1722,55 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: go STRAIGHT to the finale. The pending level
-      // score is kept so handleRetire can put it on the result screen.
-      nav.goToAscensionDraft();
+      // Beat the final level: the run is won, and that is the end of it.
+      handleFinishRun();
     } else if (!offerCapstoneIfDue()) {
       proceedToShop();
     }
-  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, nav.goToAscensionDraft]);
+  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
+
+  /**
+   * A run saved between maps, routed back to the stage it was saved on once
+   * its level sequence has settled (restoreSequence lands a render later). The
+   * store reopens as it was dealt, with its toll and its free grant as they
+   * stood, and never rolls a second free ability; the Promotion reopens on the
+   * same three offers. A save from the map's card goes on to whatever comes
+   * after the card, exactly as its Continue would have.
+   */
+  useEffect(() => {
+    if (!resumeBetween || !pendingLevelScore) return;
+    if (levels.length === 0 || currentLevelIndex !== resumeBetween.at) return;
+    const { between } = resumeBetween;
+    setResumeBetween(null);
+    // The map is banked: no stale completion may score it again.
+    lastDeliveredCompletionRef.current = resumeBetween.at + 1;
+    if (between.plan) setFrozenBetweenMapPlan(between.plan);
+    if (between.stage === 'store' && between.store) {
+      setStoreClosed(between.store.closed);
+      setStoreLockProgress(between.store.lockProgress);
+      setFreeAbilityGrant(between.store.freeAbilityGrant);
+      setStoreDealt(between.store.dealt);
+      setStoreInterestPaid(0); // paid on the original arrival, already in the bank
+      goToUpgradeShop();
+      return;
+    }
+    if (between.stage === 'promotion' && between.capstoneOfferIds?.length) {
+      const pool = getCapstones();
+      const offers = between.capstoneOfferIds.flatMap(id => pool.filter(c => c.id === id));
+      if (offers.length > 0) {
+        setCapstoneOffers(offers);
+        goToCapstoneDraft();
+        return;
+      }
+    }
+    if (isLastLevel) handleFinishRun();
+    else if (!offerCapstoneIfDue()) proceedToShop();
+  }, [resumeBetween, pendingLevelScore, levels.length, currentLevelIndex, isLastLevel, offerCapstoneIfDue, proceedToShop, goToUpgradeShop, goToCapstoneDraft, handleFinishRun]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
     setUnlockedFeature(pendingFeatureUnlocksRef.current.shift() ?? null);
   }, []);
-
-  /**
-   * Ascend: start a FRESH run at depth + 1, keeping only what ascending is for.
-   *
-   * It used to carry the whole run across - score, every upgrade owned, the
-   * capstone - which made the loop pointless: you
-   * re-entered level 1 with a build assembled over thirty-five maps, and the
-   * ladder's rung was the only thing that had changed. The harder rules landed
-   * on a player who could already buy everything back on the first shop, so
-   * ascending was easier than the run that earned it.
-   *
-   * So it resets exactly like any other run start, through the same shared
-   * list, and keeps three things:
-   *
-   *   - the DEPTH, and with it the ladder rung now in force;
-   *   - the LOADOUTS drafted on the way up, which stack and are the reason to
-   *     ascend at all;
-   *   - runLevelsCompleted, the certificate-hours accumulator, so meta progress
-   *     keeps building across loops and banks when the run finally ends.
-   *
-   * Upgrades, overtime and the Promotion all go. Lives and continues refill to a run's starting values, because that
-   * is what starting a run means.
-   */
-  const handleAscend = useCallback((loadoutId: string) => {
-    const newDepth = ascensionDepth + 1;
-    analytics.ascensionStarted({ depth: newDepth, loadoutId });
-
-    // Clear the run first, then re-establish what survives. Ordering matters:
-    // the shared reset is told to leave the ascension state alone, so the
-    // append below cannot be clobbered by it.
-    resetRunScopedState({ keepAscension: true });
-    setDraftedLoadoutIds(prev => [...prev, loadoutId]);
-    setAscensionDepth(newDepth);
-    recordAscensionDepth(newDepth);
-
-    // A fresh run's lives and continues, plus the drafted loadout's life delta
-    // once - the same arithmetic a run start does, not a carry-over of whatever
-    // the last loop happened to end on.
-    const certs = getLoadedCertBonuses();
-    const startingLives = baseLives() + ((certs.extraLives as number | undefined) ?? 0);
-    const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-    const lives = Math.max(1, startingLives + livesDelta);
-    setCurrentLives(lives);
-    setLivesAtLevelStart(lives);
-    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
-
-    resetToFirstLevel(); // also re-randomizes the level variants for the new loop
-    goToGame();
-  }, [ascensionDepth, recordAscensionDepth, resetRunScopedState, loadoutLookup, resetToFirstLevel, goToGame]);
-
-  /**
-   * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
-   * skip) at depth 0, then enter the game. Applies the loadout's extraLives
-   * delta once, mirroring handleAscend.
-   */
-  const handleConfirmLoadout = useCallback((loadoutId: string | null) => {
-    analytics.loadoutSelected({ loadoutId });
-    if (loadoutId) {
-      setDraftedLoadoutIds([loadoutId]);
-      const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
-      const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-      const lives = Math.max(1, startingLives + livesDelta);
-      setCurrentLives(lives);
-      setLivesAtLevelStart(lives);
-    } else {
-      setDraftedLoadoutIds([]);
-    }
-    nav.startGame();
-  }, [certBonuses, loadoutLookup, nav.startGame]);
-
-  /** Retire: bank the run and show the result screen. */
-  const handleRetire = useCallback(() => {
-    const levelsCompleted = runLevelsCompleted;
-    analytics.runEnded({
-      isWin: true,
-      levelsCompleted,
-      totalScore,
-      ascensionDepth,
-      daily: dailyKeyRef.current !== null,
-    });
-    const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
-    setLastRunSummary({ levelsCompleted, hoursAwarded });
-    captureRunRecap(totalScore);
-    fileRunOnLedger(totalScore);
-    if (!pairRunRef.current) clearRun(); // retiring banks and ends the run
-    nav.endGame({
-      isWin: true,
-      remainingPercent: pendingLevelScore?.remainingPercent || 0,
-      levelId: currentLevel?.id || '',
-      levelNumber: currentLevelIndex + 1,
-      completedAllLevels: true,
-      totalScore,
-      levelScore: pendingLevelScore?.levelScore,
-      cutCount: pendingLevelScore?.cutCount,
-      expectedCuts: pendingLevelScore?.expectedCuts,
-      basePoints: pendingLevelScore?.basePoints,
-      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
-    });
-    setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
@@ -1954,8 +1879,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'playAgain', daily: false });
 
-    enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+    enterRun(true);
+  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
 
   const handleRestartRun = useCallback(() => {
     clearDailyMode(); // restart is always a normal (unseeded) run
@@ -1971,8 +1896,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel();
-    enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+    enterRun(true);
+  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
 
   const handleBackToWelcome = useCallback(() => {
     // NOTE: does NOT clear the daily context; a saved daily run keeps its key
@@ -1991,11 +1916,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nav.goToCertificateStore();
   }, [loadCertificates, loadUpgrades, nav.goToCertificateStore]);
 
-  const handleOpenLoadouts = useCallback(async () => {
-    // The catalogue isn't loaded yet when entering from the welcome screen.
-    await loadLoadouts();
-    nav.goToLoadouts();
-  }, [loadLoadouts, nav.goToLoadouts]);
+  const handleOpenOffers = useCallback(async () => {
+    // Fresh YAML when entering from the welcome screen (the baked one is there regardless).
+    await loadOffers();
+    nav.goToOffers();
+  }, [nav.goToOffers]);
 
   const handleReEnableAllTutorials = useCallback(() => {
     resetAllTutorials();
@@ -2053,13 +1978,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [completedAchievementIds, checkAchievementUnlocks]);
 
-  // Auto-start when a ?level= or ?ascension= debug jump is present. Either one
-  // alone is enough, so ?ascension=6 drops straight into a depth-6 run.
+  // Auto-start when a ?level= debug jump is present.
   const levelQueryHandled = useRef(false);
   useEffect(() => {
     if (levelQueryHandled.current) return;
     const levelParam = new URLSearchParams(window.location.search).get('level');
-    const wantsJump = (levelParam != null && parseInt(levelParam, 10) > 0) || debugAscensionDepth() > 0;
+    const wantsJump = levelParam != null && parseInt(levelParam, 10) > 0;
     if (wantsJump) {
       levelQueryHandled.current = true;
       handleStartGame(undefined, true); // debug jump skips the loadout draft
@@ -2067,9 +1991,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [handleStartGame]);
 
   return {
-    // Tenure (issue #75)
-    pendingTenure,
-    handleTenurePicked,
+    // Sprint Planning (with Tenure as its boon card, issue #75)
+    pendingSprint,
+    handleSprintPick,
+    pendingChainPick,
+    handleChainPick,
+    runOffer,
+    shopLean,
+    sprintUnlocked,
+    metArchetypes,
     // Level state
     currentLevel,
     currentLevelIndex,
@@ -2097,7 +2027,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     showMoverTutorial: shouldShowMover,
     showTopBarTutorial: shouldShowTopBar,
     showBottomBarTutorial: shouldShowBottomBar,
-    shouldShowAscension,
     shouldShowDaily,
     shouldShowTimeLimit,
     markFenceSeen,
@@ -2106,7 +2035,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markMoverSeen,
     markTopBarSeen,
     markBottomBarSeen,
-    markAscensionSeen,
     markDailySeen,
     markTimeLimitSeen,
     // Certificates
@@ -2132,27 +2060,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
-    lastRunLoadoutUnlocks,
+    lastRunOfferUnlocks,
     lastRunRecap,
     // Head Start certificates: the level a fresh run begins at (1 = none).
     // The result screen uses it to label Play Again as "Continue from level N".
     certStartingLevel: getCertStartingLevel(),
-    // Loadouts + Ascension mode
-    ascensionDepth,
     /** What build scaling is paying right now, per upgrade (upgradeScaling.ts). */
     scalingReadouts: scalingDetail,
-    /** The ladder rungs in force at the current depth (ascensionLadder.ts). */
-    ascensionRules: ascRules,
-    ascensionLadder: ascensionConfig.ladder,
-    loadouts,
-    availableLoadouts,
-    draftedLoadoutIds,
-    activeLoadouts,
-    wonLoadoutIds,
-    loadoutsIntroduced,
     isFeatureUnlocked,
     unlockedFeature,
-    fenceDurability,
     // Continue (per-run revive)
     continuesRemaining,
     gameInstanceKey,
@@ -2179,11 +2095,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runContext,
     // Capstone ("Promotion")
     capstoneOffers,
+    storeDealt,
+    storeInterestPaid,
+    handleShopDealt,
     capstone,
     handleSelectCapstone,
     // Run persistence (Continue / New Game on the welcome screen)
     hasSavedRun,
-    /** The saved run's ascension depth, for the menu's Continue button. */
     savedRun,
     handleContinueRun,
     /** Resume a run from a record (the pair save; see TWO_PLAYER_PLAN step 6b). */
@@ -2220,7 +2138,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleStartDaily,
     // Callbacks
     handleStartGame,
-    handleConfirmLoadout,
     handleGameEnd,
     handleMapTimedOut,
     handleSpendContinue,
@@ -2232,8 +2149,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleLevelComplete,
     handleContinueFromOverlay,
     handleDismissFeatureUnlocked,
-    handleAscend,
-    handleRetire,
     handlePurchaseUpgrade,
     handlePurchaseAbility,
     retainedAbilityIds,
@@ -2242,7 +2157,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // render so the shop can roll against it on mount; nothing re-reads it
     // mid-visit, which is what keeps the shelf still.
     heldAbilityIdsNow: heldAbilityIds(abilityCharges, everHeldAbilityIdsRef.current),
-    abilitySlots: ascRules.abilitySlots,
+    abilitySlots: MAX_ABILITY_SLOTS,
     mapsRemaining: Math.max(0, totalLevels - (currentLevelIndex + 1)),
     handleContinueFromShop,
     handlePurchaseCertLevel,
@@ -2250,7 +2165,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleRestartRun,
     handleBackToWelcome,
     handleOpenCertificateStore,
-    handleOpenLoadouts,
+    handleOpenOffers,
     handleReEnableAllTutorials,
     handleTotalReset,
   };

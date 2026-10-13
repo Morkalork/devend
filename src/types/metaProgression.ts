@@ -28,7 +28,6 @@ export interface MetaProgressionStats {
   totalFencesDrawn: number;
   totalLevelsCompletedWithoutLoss: number;
   totalLivesLost: number;
-  deepestAscension: number;
   pushBonusesBanked: number;
   /**
    * Levels reached in the previous ENDED run (died or finished), which decides
@@ -53,13 +52,14 @@ export interface MetaProgressionStats {
 }
 
 /**
- * Tracks permanent unlocks: legacy super-upgrade ids, plus the run-start
- * loadouts the player has won a run with (their count drives loadout unlocks).
+ * Tracks permanent unlocks: legacy super-upgrade ids, the archetypes whose set
+ * bonus the player has fired (they unlock Sprint Planning Specialisations),
+ * and the rest below.
  */
 export interface UnlockState {
   unlockedIds: string[];
-  /** Distinct run-start loadout ids the player has beaten a run with. */
-  wonLoadoutIds: string[];
+  /** Tags whose set bonus fired in some run (offers.yml `archetypeMet`). */
+  metArchetypes: string[];
   /**
    * Whether the loadout system has been revealed. The very first run has no
    * loadout draft (tutorial only); loadouts are introduced after the first win.
@@ -87,7 +87,7 @@ export interface UnlockState {
   /**
    * Ids of game features the player has permanently unlocked (see features.ts,
    * the general "Feature Unlocked" system). A feature absent here is still
-   * hidden. The first entry is 'loadouts', earned by beating the level-10 boss.
+   * hidden (e.g. 'sprintPlanning', earned by clearing level 3).
    */
   unlockedFeatureIds: string[];
   /**
@@ -107,7 +107,6 @@ export const DEFAULT_META_STATS: MetaProgressionStats = {
   totalFencesDrawn: 0,
   totalLevelsCompletedWithoutLoss: 0,
   totalLivesLost: 0,
-  deepestAscension: 0,
   pushBonusesBanked: 0,
   lastRunDepth: 0,
   lastRunShopLevel: 0,

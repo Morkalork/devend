@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
   SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
-  MAX_DEBUG_ASCENSION, getDebugAscensionOverride, setDebugAscensionOverride,
+  getForcedSprintOffer, setForcedSprintOffer, getForcedJackpot, setForcedJackpot,
+  isSprintAlwaysOn, setSprintAlwaysOn,
 } from '@/lib/devFlags';
+import { allOffers } from '@/lib/sprintOffers';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -19,6 +21,7 @@ import {
   DEFAULT_HEIGHT_SCALE, getLean, setLean, LEAN_RANGE, DEFAULT_LEAN,
   type QualitySetting, type RendererChoice,
 } from '@/lib/rendering/render3dSettings';
+import { isFullDebrief, setFullDebrief } from '@/ui/screens/debriefMode';
 
 interface AdminScreenProps {
   onBack: () => void;
@@ -31,8 +34,11 @@ interface AdminScreenProps {
 
 export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback, onNearbyDiagnostics }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
-  const [ascension, setAscension] = useState(getDebugAscensionOverride);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
+  const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
+  const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
+  const [jackpot, setJackpotState] = useState(getForcedJackpot);
+  const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
   const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
@@ -198,6 +204,75 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             </div>
           </button>
 
+          {/* The Debrief: the Acceptance Criteria ticket, marked (being tried),
+              or the full breakdown it replaced. Display only, so not a run
+              flag: a run with either stays on the ledger. */}
+          <button
+            onClick={() => { const next = !fullDebrief; setFullDebrief(next); setFullDebriefState(next); }}
+            aria-pressed={fullDebrief}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              fullDebrief ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${fullDebrief ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <ClipboardCheck className={`w-6 h-6 ${fullDebrief ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Full debrief{' '}
+                <span className={`text-xs ${fullDebrief ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {fullDebrief ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Off: after a map, won or failed, the Acceptance Criteria ticket with each line
+                marked met or missed. On: the old Debrief (breakdown, axes, totals) and the old
+                failed screen ("still needed" lines). Takes effect on the next map.
+              </div>
+            </div>
+          </button>
+
+          {/* Sprint Planning (SPRINT_PLANNING_PLAN.md). The draft is a feature
+              unlock, each card is a draw from its pool, and the jackpot is one
+              gamble in twenty at best: none of it can be looked at on purpose
+              without these. In memory, and ledger-ineligible, like the other
+              forced draws. */}
+          <div className="w-full p-4 rounded-lg bg-card border border-border flex flex-col gap-3">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <ClipboardList className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold">Sprint Planning</div>
+                <div className="text-sm text-muted-foreground">
+                  The run-start offer. Applies to the next run started from the menu (not the
+                  debug level jump, which skips the draft).
+                </div>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="sprint-always-on" checked={sprintAlways}
+                onChange={e => { setSprintAlwaysOn(e.target.checked); setSprintAlwaysState(e.target.checked); }} />
+              Show the draft before every run, even before it is unlocked
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="sprint-force-jackpot" checked={jackpot}
+                onChange={e => { setForcedJackpot(e.target.checked); setJackpotState(e.target.checked); }} />
+              Force the jackpot gamble
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Force an offer into its pool's slot (locked ones too)
+              <select id="sprint-force-offer" className="bg-background border border-border rounded px-2 py-1"
+                value={sprintOffer ?? ''}
+                onChange={e => { const v = e.target.value || null; setForcedSprintOffer(v); setSprintOfferState(v); }}>
+                <option value="">Random draw</option>
+                {allOffers().map(o => (
+                  <option key={o.id} value={o.id}>{o.pool}: {o.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           {/* Pair Programming's network path. At home the direct link always
               wins, so the relay every public-Wi-Fi player uses would never be
               seen from a desk without this. Persisted; only the HOST's
@@ -255,45 +330,6 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             </div>
           </button>
 
-          {/* Ascension depth: `?ascension=N` as a control. Session-only, so it
-              cannot haunt next week's normal runs; the URL form still works and
-              still wins. Depth N arrives with no drafted loadouts, on purpose,
-              so a rung shows what it does on its own. */}
-          <label
-            className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
-              ascension > 0 ? 'border-primary' : 'border-border'
-            }`}
-          >
-            <div className={`p-3 rounded-lg ${ascension > 0 ? 'bg-primary/25' : 'bg-primary/10'}`}>
-              <Layers className={`w-6 h-6 ${ascension > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
-            </div>
-            <div className="text-left flex-1">
-              <div className="font-semibold">
-                Start at ascension depth{' '}
-                <span className={`text-xs ${ascension > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {ascension > 0 ? `+${ascension}` : 'OFF'}
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                The next New Game begins this many loops in, with no loadouts drafted.
-                This session only; keeps that run off the ledger.
-              </div>
-            </div>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={MAX_DEBUG_ASCENSION}
-              value={ascension}
-              onChange={(e) => {
-                const next = Math.max(0, Math.min(MAX_DEBUG_ASCENSION, Number(e.target.value) || 0));
-                setDebugAscensionOverride(next);
-                setAscension(next);
-              }}
-              className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
-              aria-label="Ascension depth"
-            />
-          </label>
         </div>
 
         {/* The board renderer (RENDER_3D_PLAN.md). Device settings, applied

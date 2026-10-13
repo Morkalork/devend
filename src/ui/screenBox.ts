@@ -23,23 +23,17 @@ export function sameBox(a: ScreenBox, b: ScreenBox): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-/**
- * Fired on window when the screen transition (Index's slide) comes to rest,
- * which moves every element on the screen without resizing anything.
- */
-export const SCREEN_SETTLED_EVENT = "devend:screen-settled";
-
 /** How long a fresh mount keeps sampling its box, waiting for it to settle. */
 const SETTLE_MAX_MS = 3000;
 /** Frames in a row the box must hold still to count as settled. */
 const SETTLE_FRAMES = 12;
 
 /**
- * The element's box, following window resizes and the element's own. A
- * transform (the screen transition's slide) moves an element without either,
- * so it is re-read when Index says the slide has come to rest, and sampled
- * every frame after mounting until it holds still, for whatever moves it that
- * is not the slide.
+ * The element's box, following window resizes and the element's own. Sampled
+ * every frame after mounting until it holds still, for whatever moves an
+ * element without resizing it (a layout settling, a font landing). The screen
+ * transition no longer moves the DOM at all: it slides the canvas
+ * (ui/screenSlide.ts).
  */
 export function useScreenBox(ref: RefObject<HTMLElement | null>): ScreenBox {
   const [box, setBox] = useState<ScreenBox>(windowBox);
@@ -65,13 +59,11 @@ export function useScreenBox(ref: RefObject<HTMLElement | null>): ScreenBox {
     };
     raf = requestAnimationFrame(settle);
     window.addEventListener("resize", onResize);
-    window.addEventListener(SCREEN_SETTLED_EVENT, onResize);
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
     if (observer && ref.current) observer.observe(ref.current);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
-      window.removeEventListener(SCREEN_SETTLED_EVENT, onResize);
       observer?.disconnect();
     };
   }, [ref]);

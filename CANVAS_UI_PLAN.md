@@ -75,8 +75,8 @@ and is reached by leaving the canvas screen.
 | **Play HUD** (around the board while playing) | GameTopBar (411), TopBarDetailsPanel (622), GoalChip, ConditionChip, FenceSlotBar (248), AbilityBar, AbilityCountdownBar, GameMessageBar, ShipEarlyBar, PushExitBar, BossBanner, MapRuleBanner, BoardAlert, DeadlineFrame, WinGateFrame, PerfOverlay, LockDebugOverlay | The surface that matters for the zoom problem. FenceSlotBar has the one horizontal scroll on the play screen. |
 | **Play overlays** (over the board) | RubberBandOverlay, LaunchOverlay, InteractiveTutorialOverlay, TutorialOverlay, TutorialArt, PairTurnOverlay, PairDecision, PairLinkBanner, BoardPlaceholder | Already positioned from `boardRect`, so they map onto canvas coordinates directly. |
 | **Info modals** (tap-and-hold) | AbilityInfoModal, FenceTypeInfoModal, LockExplainerModal, SuperiorLockInfoModal, BoardEntityInfoModal, FeatureUnlockedModal, MapTuningModal | One modal component with a backdrop and an X covers all of them. MapTuningModal has inputs. |
-| **Between maps** | LevelCompleteOverlay (794), ResultScreen (560), UpgradeShop (1383), RunDraftScreen, TenureDraftScreen, CapstoneDraftScreen, AscensionDraftScreen, DraftCard, Carousel, MapFailedOverlay, PushYourLuckOverlay, ContinuePrompt, ModifierBreakdown (671), PerformanceReviewAxes | The biggest screens; vertical scrolling and card carousels. |
-| **Meta screens** | WelcomeScreen (623), OptionsScreen, TutorialScreen, AchievementsScreen, HallOfFameScreen, CertificateStore (597), JukeboxScreen, LoadoutGalleryScreen, PairLobby (700), TapToStartGate | OptionsScreen and PairLobby have text inputs. |
+| **Between maps** | LevelCompleteOverlay (794), ResultScreen (560), UpgradeShop (1383), RunDraftScreen, TenureDraftScreen, CapstoneDraftScreen, AscensionDraftScreen (since removed), DraftCard, Carousel, MapFailedOverlay, PushYourLuckOverlay, ContinuePrompt, ModifierBreakdown (671), PerformanceReviewAxes | The biggest screens; vertical scrolling and card carousels. |
+| **Meta screens** | WelcomeScreen (623), OptionsScreen, TutorialScreen, AchievementsScreen, HallOfFameScreen, CertificateStore (597), JukeboxScreen, LoadoutGalleryScreen (now OffersScreen), PairLobby (700), TapToStartGate | OptionsScreen and PairLobby have text inputs. |
 | **Backgrounds** | CRTBackground (569, DOM `<pre>` text), MemoryParallaxLayer (already a 2D canvas) | Become layers under everything on the one canvas. |
 | **Shell** | GameScreen (1724), Index.tsx (831), GameErrorBoundary | Screen routing stays React state; only what it renders changes. |
 
@@ -343,6 +343,27 @@ every one, since a tag per brick buried the board on a brick wall. The beat last
 on both routes to a win (a cut, and banking a push); the Playground's
 freeze-on-complete holds it on screen, and Admin > Canvas UI kit > Screens has
 it replaying and held.
+
+### The last of the DOM
+
+What was left after the build, and where it went:
+
+- **The slide between screens** was a framer-motion slide of Index's DOM
+  wrapper, which moved nothing a player could see (every screen draws on the
+  canvas, which sat still) and made the canvas pieces pinned to DOM boxes chase
+  it frame by frame. It is the canvas root's now (`ui/screenSlide.ts`): the new
+  screen comes in from the side the player is heading, on the old curve and
+  time (280 ms). Not to or from a board screen, whose board is a DOM canvas the
+  slide cannot carry; those have the boot reveal and the shatter. Not at all
+  under reduced motion. Index's wrapper is a plain keyed div, and the "screen
+  settled" event that told pinned pieces to re-read their box is gone.
+- **framer-motion** is imported only by Admin. The canvas reads the
+  reduced-motion setting through `ui/reducedMotion.ts`.
+- **The 404 page** draws on the canvas (`NotFoundScreen`).
+- **The board's size readout** (development builds) is `BoardSizeReadout`.
+- **Kept as DOM, on purpose:** the crash card (`GameErrorBoundary`), which has
+  to show when the canvas is what broke; Admin's screens and their loading
+  fallbacks; the board's own canvases and the backdrops.
 
 ### Still open
 

@@ -513,6 +513,24 @@ export interface LevelConfig {
    */
   bugChance?: number;
   /**
+   * Shard bomb chance override for this map (0-1): the share of its brittle
+   * shards that carry a bomb (lib/bombCore.ts).
+   *
+   * Same shape as `bugChance`: absent means game-config.yml's `shard_bombs`
+   * chance from its `start_level` on and none before it; set, it bypasses the
+   * gate both ways. A map below the start level can opt in, and a map past it
+   * whose wall is a set piece can say 0. A shard's own `bomb: true/false` wins
+   * over either.
+   */
+  shardBombChance?: number;
+  /**
+   * Do this map's slab and chest bombs blast (lib/bombCore.ts)? Absent means
+   * game-config.yml's `box_bombs.start_level` decides (11: act I's bombs finish
+   * their box quietly). Set, it wins both ways. The bomb itself, and the rule
+   * that the hit on it finishes the box, are there either way.
+   */
+  boxBombBlast?: boolean;
+  /**
    * Share of this map's points carried by its colored areas, 0..0.8.
    *
    * Absent means the default (0.4) on any map that HAS areas, and nothing at

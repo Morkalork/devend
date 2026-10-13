@@ -26,6 +26,10 @@ import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
 import { useCountUp } from "./resultMotion";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, samplePlan, type BetweenMapPlan } from "./pipelineModel";
+import { AcceptanceTicket } from "../game/AcceptanceTicket";
+import { useFillIn } from "../game/fillIn";
+import { tutorialCardWidth } from "../game/TutorialOverlayModel";
+import { isFullDebrief } from "./debriefMode";
 
 interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
@@ -41,9 +45,11 @@ interface LevelCompleteOverlayProps {
   pace?: { newPersonalBest: boolean } | null;
   /** The stages between this map and the next; a sample one in the gallery. */
   pipeline?: BetweenMapPlan;
+  /** Force the full Debrief (breakdown, axes, totals) or the ticket; default: Admin's choice. */
+  full?: boolean;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pace, pipeline }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pace, pipeline, full }: LevelCompleteOverlayProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   // Tailwind's `sm:` breakpoint: the card and its type grow a step on a wide screen.
@@ -58,6 +64,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // totals below it are fixed-size and stay out of the fold.
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [displayLevelScore, displayTotalScore] = useCountUp(scoreData.levelScore, totalScore);
+  const ticket = !(full ?? isFullDebrief()) && !!scoreData.acceptance;
+  // Called whichever card is up (a hook cannot be conditional); only the ticket reads it.
+  const fill = useFillIn(ticket ? scoreData.acceptance?.length ?? 0 : 0);
 
   const hold = useCallback((key: string): PressHandlers => ({ onHold: () => setInfoKey(key) }), []);
 
@@ -74,6 +83,80 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const rowY = sm ? 8 : 6;
   const plan = pipeline ?? samplePlan(levelNumber);
   const gold = TW.gold;
+
+  const continueButton = (
+    <Appear fromY={10} delay={0.38} duration={0.22}>
+      <ArcadeButton
+        text={continueLabel(plan, "debrief", t)}
+        iconAfter={ArrowRight}
+        iconSize={sm ? 20 : 16}
+        textSize={sm ? TEXT.base : TEXT.sm}
+        contentLayout={{ paddingTop: sm ? 12 : 8, paddingBottom: sm ? 12 : 8 }}
+        disabled={chosen || !buttonReady}
+        onTap={() => { setChosen(true); onContinue(); }}
+      />
+    </Appear>
+  );
+  const certificates = newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
+    <Appear delay={0.32} duration={0.22} layout={{ gap: 8 }}>
+      {newlyUnlockedCerts.map(cert => (
+        <View key={cert.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(TW.yellow500, 0.4), backgroundColor: tint(TW.yellow500, 0.1) }}>
+          <Icon icon={Medal} size={16} color={TW.yellow400} />
+          <View layout={{ flex: 1 }}>
+            <Label text={t("levelComplete.certificateUnlocked")} size={TEXT.xs} weight="700" color={TW.yellow400} upper letterSpacing={0.6} />
+            <Label text={contentText.certName(t, cert)} size={TEXT.sm} weight="600" wrap />
+          </View>
+        </View>
+      ))}
+    </Appear>
+  );
+  const personalBest = pace?.newPersonalBest && (
+    <Appear delay={0.35} fromScale={0.92} duration={0.3}
+      layout={{ paddingTop: 10, paddingBottom: 10, paddingLeft: 8, paddingRight: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x1a / 255) }}>
+      <RichParagraph runs={[{ text: t("levelComplete.newPersonalBest") }]} size={TEXT.sm} weight="700" color={gold}
+        lead={<Icon icon={Medal} size={16} color={gold} />} leadGap={8} />
+    </Appear>
+  );
+  const pushFailed = m.pushFailedText && (
+    <View layout={{ padding: 12, borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.amber, 0.1), borderColor: tint(COLOR.amber, 0.3), borderWidth: 1 }}>
+      <Label text={m.pushFailedText} size={TEXT.sm} weight="500" color={COLOR.amber} align="center" wrap />
+    </View>
+  );
+
+  // The ticket: the card the player read before the map, filled in, and only
+  // the rare notices beside it. Trying it without the rest (breakdown, axes,
+  // totals), which stays below for Admin's "Full debrief" and for a score
+  // that predates the marks.
+  // The ticket: the card the player read before the map, over the finished
+  // board with its overlays still up, filling in a row at a time; then the
+  // hours and the way on. The full Debrief (breakdown, axes, totals) stays
+  // below for Admin's "Full debrief" and for a score that predates the marks.
+  if (ticket && scoreData.acceptance) {
+    const cardWidth = tutorialCardWidth(screen.width);
+    return (
+      <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>
+        <Appear duration={0.2} layout={{ width: screen.width, height: screen.height }}>
+          {/* A light scrim: the board is the backdrop. A tap finishes the fill. */}
+          <Pressable onTap={fill.finish} pressedAlpha={1} label="ticket-scrim" layout={{
+            width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center",
+            padding: 24, backgroundColor: tint(0x000000, 0.5),
+          }}>
+            <View label="map-ticket" layout={{ width: cardWidth, gap: 12 }}>
+              {pushFailed}
+              <Appear fromY={12} duration={0.25}>
+                <AcceptanceTicket rows={scoreData.acceptance} levelNumber={levelNumber} levelId={levelId}
+                  accent={accent} width={cardWidth} filled={fill.filled}
+                  estimate={fill.done ? `+${displayLevelScore}h` : undefined} />
+              </Appear>
+              {fill.done && personalBest}
+              {fill.done && certificates}
+              {fill.done && continueButton}
+            </View>
+          </Pressable>
+        </Appear>
+      </View>
+    );
+  }
 
   return (
     <PipelineFrame
@@ -102,11 +185,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
       </View>
 
         {/* Push Failed Warning */}
-        {m.pushFailedText && (
-          <View layout={{ padding: 12, borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.amber, 0.1), borderColor: tint(COLOR.amber, 0.3), borderWidth: 1 }}>
-            <Label text={m.pushFailedText} size={TEXT.sm} weight="500" color={COLOR.amber} align="center" wrap />
-          </View>
-        )}
+        {pushFailed}
 
         {/* Stats */}
         <Appear delay={0.2} duration={0.28} layout={{ gap: sm ? 12 : 8 }}>
@@ -339,13 +418,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           </StatRow>
 
           {/* Once per run: the moment the total passes the all-time best. */}
-          {pace?.newPersonalBest && (
-            <Appear delay={0.35} fromScale={0.92} duration={0.3}
-              layout={{ paddingTop: 10, paddingBottom: 10, paddingLeft: 8, paddingRight: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x1a / 255) }}>
-              <RichParagraph runs={[{ text: t("levelComplete.newPersonalBest") }]} size={TEXT.sm} weight="700" color={gold}
-                lead={<Icon icon={Medal} size={16} color={gold} />} leadGap={8} />
-            </Appear>
-          )}
+          {personalBest}
 
           <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 4 }}>
             <Icon icon={Info} size={12} color={COLOR.mutedForeground} alpha={0.7} />
@@ -354,32 +427,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
         </Appear>
 
         {/* Newly unlocked certificates */}
-        {newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
-          <Appear delay={0.32} duration={0.22} layout={{ gap: 8 }}>
-            {newlyUnlockedCerts.map(cert => (
-              <View key={cert.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(TW.yellow500, 0.4), backgroundColor: tint(TW.yellow500, 0.1) }}>
-                <Icon icon={Medal} size={16} color={TW.yellow400} />
-                <View layout={{ flex: 1 }}>
-                  <Label text={t("levelComplete.certificateUnlocked")} size={TEXT.xs} weight="700" color={TW.yellow400} upper letterSpacing={0.6} />
-                  <Label text={contentText.certName(t, cert)} size={TEXT.sm} weight="600" wrap />
-                </View>
-              </View>
-            ))}
-          </Appear>
-        )}
+        {certificates}
 
       {/* Continue: names where it goes, so the next stage is never a surprise. */}
-      <Appear fromY={10} delay={0.38} duration={0.22}>
-        <ArcadeButton
-          text={continueLabel(plan, "debrief", t)}
-          iconAfter={ArrowRight}
-          iconSize={sm ? 20 : 16}
-          textSize={sm ? TEXT.base : TEXT.sm}
-          contentLayout={{ paddingTop: sm ? 12 : 8, paddingBottom: sm ? 12 : 8 }}
-          disabled={chosen || !buttonReady}
-          onTap={() => { setChosen(true); onContinue(); }}
-        />
-      </Appear>
+      {continueButton}
     </PipelineFrame>
   );
 }

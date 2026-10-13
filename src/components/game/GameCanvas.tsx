@@ -55,8 +55,9 @@ import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges
 import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
 import { BoardBoot } from "@/ui/game/BoardBoot";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
+import { BoardSizeReadout } from "@/ui/game/BoardSizeReadout";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
-import { assignShardBombs, authoredShardBombs, type ShardBombConfig } from "@/lib/bombCore";
+import { assignShardBombs, authoredShardBombs, boxBlastArmed, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import type { ScoreDebrief as ScoreDebriefData } from "@/types/debrief";
 import type { BoardFrameCss } from "@/ui/game/overlayModel";
 import { DeadlineFrame } from "@/ui/game/DeadlineFrame";
@@ -155,7 +156,7 @@ import { mapGoals, type Goal } from "@/lib/goalTracker";
 import { holdFlagsOf, loopHoldReason, loopNeedsRestart, WATCHDOG_INTERVAL_MS } from "@/lib/loopWatchdog";
 import { winHighlightRects } from "@/lib/winHighlight";
 import { resolveWinSpec } from "@/lib/winSpec";
-import { readWinSnapshot } from "@/lib/physics/applyCut";
+import { acceptanceMarks, readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { simNow } from "@/lib/simClock";
@@ -165,6 +166,14 @@ import { measureBottomBars, BOTTOM_BARS_FALLBACK_PX } from "@/hooks/useBottomBar
 import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 import { splitClauseOf } from "@/lib/splitWarn";
 import { visibleOutline } from "@/lib/headStartStrip";
+import { sfxGate, BOMB_SOUND_GAP_MS, BREAK_SOUND_GAP_MS } from "@/lib/sfxGate";
+import { isFullDebrief } from "@/ui/screens/debriefMode";
+import { START_FROZEN_SECONDS, startFrozenPicks } from "@/lib/offerPerks";
+
+// One board plays at a time, so one gate each: a bomb chain is a few booms and
+// a blast's ring of bricks one crash, not a sound per bomb and per brick.
+const bombSoundGate = sfxGate(BOMB_SOUND_GAP_MS);
+const breakSoundGate = sfxGate(BREAK_SOUND_GAP_MS);
 
 /**
  * Fences drawn by each player, off the board itself.
@@ -352,8 +361,6 @@ interface GameCanvasProps {
   revealReady?: boolean;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
-  /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
-  fenceDurability?: number | null;
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
   /** When true, freeze the game loop without ending the level. */
   paused?: boolean;
@@ -497,7 +504,6 @@ export function GameCanvas({
   revealReady = true,
   activeModifiers,
   cumulativeLockedBalls = 0,
-  fenceDurability = null,
   parallaxTickRef,
   paused = false,
   showBallSpeeds = false,
@@ -533,6 +539,7 @@ export function GameCanvas({
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
+  const deliverLevelCompleteRef = useRef<((d: LevelScoreData) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onMapCompleteRef = useRef(onMapComplete);
@@ -545,7 +552,9 @@ export function GameCanvas({
   const showDebriefRef = useRef(() => {
     const game = gameRef.current;
     if (!game.debrief) return;
-    setDebriefView({ debrief: game.debrief, delayMs: Math.max(0, game.shimmerStart - simNow()), hold: game.shimmerFrozen });
+    // Held (no fade) under the ticket, which opens over the board with the
+    // overlays still up; the full Debrief fades them as the board shatters.
+    setDebriefView({ debrief: game.debrief, delayMs: Math.max(0, game.shimmerStart - simNow()), hold: game.shimmerFrozen || !isFullDebrief() });
   });
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
@@ -1117,7 +1126,6 @@ export function GameCanvas({
     moverFriction: [],
     moverFenceDragPerFence: 0.45,
     moverFenceDragFloor: 0.3,
-    fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
     destructibles: [] as import("@/types/game").DestructibleState[],
     pendingDestroys: [] as import("@/types/game").DestructibleState[],
@@ -1311,7 +1319,6 @@ export function GameCanvas({
       game.lockMinRegionCells = lockMinRegionCells;
       game.moverFenceDragPerFence = moverFenceDragPerFence;
       game.moverFenceDragFloor = moverFenceDragFloor;
-      game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
       game.objectDebris = [];
@@ -1506,9 +1513,11 @@ export function GameCanvas({
       {
         const cfg = shardBombConfigRef.current;
         game.shardBombBlast = cfg ? { radius: cfg.blastRadius, damage: cfg.blastDamage, ballBoost: cfg.ballBoost } : null;
-        game.boxBombBlast = cfg ? { ...cfg.box } : null;
+        game.boxBombBlast = cfg && boxBlastArmed(cfg, levelNumber, level.boxBombBlast) ? { ...cfg.box } : null;
         game.bombBoostSeconds = cfg?.boostSeconds ?? 0;
-        const chance = cfg ? Math.min(1, cfg.chance + (activeModifiers.shardBombChanceBonus ?? 0)) : 0;
+        const chance = cfg
+          ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, activeModifiers.shardBombChanceBonus ?? 0)
+          : 0;
         assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
       }
       game.stackObjects       = data.stackObjects;
@@ -1542,6 +1551,16 @@ export function GameCanvas({
         const thaw = simNow() + activeModifiers.spawnFreezeSeconds * 1000;
         for (const ball of game.balls) ball.frozenUntil = thaw;
       }
+      // Cold Storage (Sprint Planning): the fastest balls start frozen, by the
+      // same path, and never thaw EARLIER than a Cold Boot already holds them.
+      if (activeModifiers.startFrozenBalls > 0) {
+        const thaw = simNow() + START_FROZEN_SECONDS * 1000;
+        for (const ball of startFrozenPicks(game.balls, activeModifiers.startFrozenBalls)) {
+          ball.frozenUntil = Math.max(ball.frozenUntil ?? 0, thaw);
+        }
+      }
+      // Reliability (Sprint Planning): the opening slow, read by updateBall.
+      game.openingSlowSeconds = activeModifiers.openingSlowSeconds;
       removedSamples = [];
       removedSamplesSet = new Set();
       repaintRegionCanvas();
@@ -1778,6 +1797,17 @@ export function GameCanvas({
     };
     startDissolveRef.current = startDissolve;
 
+    // Every map won reaches the Debrief through here, whichever path won it
+    // (a cut, a lock, Bank & Continue, a failed push), so the marks are
+    // attached here when the path that won it did not already.
+    const deliverLevelComplete = (d: LevelScoreData) => onLevelCompleteRef.current(d.criteriaMet ? d : {
+      ...d, criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers),
+    });
+    deliverLevelCompleteRef.current = deliverLevelComplete;
+    const markFailure = (failure: MapFailure): MapFailure => ({
+      ...failure, criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers, failure.kind),
+    });
+
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
       // Called only when a ball locks: mirror the count AND flag that a lock
@@ -1794,12 +1824,16 @@ export function GameCanvas({
       setWallShieldCount,
       setCompletedCuts,
       setDisplayLives,
-      onLevelComplete: d => onLevelCompleteRef.current(d),
+      onLevelComplete: d => deliverLevelComplete(d),
+      // The ticket opens over the finished board (Admin's Full debrief shatters it).
+      keepBoardAtEnd: () => !isFullDebrief(),
       onMapComplete: () => { showDebriefRef.current(); onMapCompleteRef.current?.(); },
       freezeOnComplete: () => freezeOnCompleteRef.current,
-      onGameEnd: r => onGameEndRef.current(r),
+      // A loss carries the Acceptance Criteria marked on the board as it
+      // failed, so the failed screen can draw the pre-map ticket filled in.
+      onGameEnd: r => onGameEndRef.current(r.failure ? { ...r, failure: markFailure(r.failure) } : r),
       onLivesChange,
-      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
+      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(markFailure(failure)),
       onGameMessage: (id: GameMessageId) => {
         // The one message that is also state: the slot bar's shield goes out.
         if (id === "guardrailCaught") setGuardrailSpent(true);
@@ -1916,14 +1950,14 @@ export function GameCanvas({
         processDestroysFn(game, {
           repaintRegionCanvas,
           setRemainingPercent,
-          onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
+          onObjectDestroyed: () => { if (breakSoundGate()) { playFenceBreakSound(); vibrateFenceBreak(); } },
           // Smashing the chest IS the interaction, so the reward lands here. The
           // gem it drops is a receipt showing what came out of it.
           onChestReward: (rewardId) => handleLootCollectRef.current?.(rewardId),
           // A box going up by its bomb (lib/bombCore.ts): a boom and a jolt, so
           // it lands as an explosion rather than one more break.
           onBombDetonated: () => {
-            playBossLandSound();
+            if (bombSoundGate()) playBossLandSound();
             if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
             setIsShaking(true);
             shakeTimeoutRef.current = setTimeout(() => { setIsShaking(false); shakeTimeoutRef.current = null; }, 260);
@@ -2073,7 +2107,7 @@ export function GameCanvas({
       clearBallEffectsCache();
       clearPickupSpriteCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability, useFallback2d, glKind]);
+  }, [level, levelNumber, activeModifiers, useFallback2d, glKind]);
 
   // The renderer survives level changes (the effect above re-runs per
   // level); the GPU context is torn down only when the component unmounts.
@@ -2177,8 +2211,8 @@ export function GameCanvas({
     // Dev/playground freeze: hold the debriefed board, no overlay.
     if (game.shimmerFrozen) return;
     setTimeout(() => {
-      startDissolveRef.current?.(() => {
-        onLevelCompleteRef.current({
+      const deliver = () => {
+        deliverLevelCompleteRef.current?.({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
           // Who drew what, for a pair. Counted off the fences themselves so
           // it cannot drift from the board; undefined solo, which hides the
@@ -2214,7 +2248,10 @@ export function GameCanvas({
           chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,
           freeShopItemsEarned: game.freeShopItems || undefined,
         });
-      });
+      };
+      // As triggerLevelComplete: the ticket opens over the board, so it stays.
+      if (!isFullDebrief()) deliver();
+      else startDissolveRef.current?.(deliver);
     }, 150 + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
@@ -2579,12 +2616,6 @@ export function GameCanvas({
     // rest of the screen with a handler, since `touch-action` intersects down
     // the tree and could not make the one exception the slot bar needs.
     <div className={`flex flex-col w-full h-full touch-none ${isShaking ? "animate-shake" : ""}`}>
-      {process.env.NODE_ENV === "development" && (
-        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 font-mono z-10 pointer-events-none">
-          {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
-        </div>
-      )}
-
       {/* Only the board's own canvases are DOM. Everything drawn over or around
           the board is on the interface canvas (CANVAS_UI_PLAN.md), positioned
           from this container's box on screen. */}
@@ -2628,6 +2659,12 @@ export function GameCanvas({
               canvasOffsetLeft={canvasOffsetLeft} canvasOffsetTop={canvasOffsetTop} />
           );
         })()}
+        {/* Development builds: the board's size and scale, top right of the
+            container (the only text that was still DOM). */}
+        {process.env.NODE_ENV === "development" && (
+          <BoardSizeReadout origin={origin} width={containerBox.width}
+            boardWidth={debugInfo.boardWidth} boardHeight={debugInfo.boardHeight} scale={debugInfo.scale} />
+        )}
         {/* Frame-timing HUD, off the board's canvas so it costs the renderer
             nothing and can never land inside the render time it reports. */}
         <PerfOverlay visible={showPerfOverlay || perfHudPersisted} origin={origin} />

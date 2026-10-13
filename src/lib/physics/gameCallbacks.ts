@@ -80,4 +80,10 @@ export interface GameCallbacks {
   collectAndDrawRemovedSamples: () => void;
   render: () => void;
   startDissolve: (onComplete: () => void, tint?: string) => void;
+  /**
+   * Leave the finished board standing instead of shattering it: the map's
+   * Acceptance Criteria card opens over it (the ticket Debrief and the failed
+   * screen). False, or absent, keeps the shatter (Admin's Full debrief).
+   */
+  keepBoardAtEnd?: () => boolean;
 }

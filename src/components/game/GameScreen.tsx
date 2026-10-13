@@ -10,10 +10,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo, isValidElement, cloneElement, type MutableRefObject, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
-import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { ownedTagCounts, withVirtualTag, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { shopLeanOf } from '@/lib/sprintOffers';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditions, winConditionsBody, shouldAnnounceWinConditions, type Criterion } from '@/lib/winConditions';
-import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from '@/ui/game/MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { useMeasuredBottomBars, BOTTOM_BARS_FALLBACK_PX } from '@/hooks/useBottomBarsHeight';
@@ -54,9 +54,9 @@ import { debugMutatorId, devFenceSlots } from '@/lib/devFlags';
 import type { MapMutator } from '@/types/mapMutator';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
-import { GameResult, LevelScoreData } from '@/types/game';
+import { GameResult, LevelScoreData, type AcceptanceRow } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
-import { LoadoutConfig, AscensionRung } from '@/types/loadout';
+import type { RunOffer } from '@/types/offer';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
 import { CapstoneConfig } from '@/types/capstone';
 import { useGameConfig } from '@/hooks/useGameConfig';
@@ -139,7 +139,7 @@ interface GameScreenProps {
   onSpendAbility?: (abilityId: string) => void;
   /** Run-wide banked ability charges: { abilityId -> count }, for the ability bar. */
   abilityCharges?: Record<string, number>;
-  /** Distinct abilities holdable at once (ascension can tighten it). */
+  /** Distinct abilities holdable at once. */
   abilitySlots?: number;
   /** The fence types in the player's slots (FENCE_TYPES_PLAN.md). */
   fenceSlotIds?: string[];
@@ -171,22 +171,14 @@ interface GameScreenProps {
   activeModifiers: GameModifiers;
   modifierSources?: ModifierSource[];
   cumulativeLockedBalls?: number;
-  ascensionDepth?: number;
   /** Best score per map id, for the Benchmarking highscore bar (#45). */
   mapHighscores?: Record<string, number>;
   /** The run's Promotion, for the Specs panel. */
   capstone?: CapstoneConfig | null;
-  activeLoadouts?: LoadoutConfig[];
-  /** Ball hits a fence survives (Ascension); null = indestructible. */
-  fenceDurability?: number | null;
-  /** The ladder rungs themselves, for the "what does this depth add" modal. */
-  ascensionLadder?: AscensionRung[];
+  /** The Sprint Planning offer the run took, for the Specs panel. */
+  runOffer?: RunOffer | null;
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
-  /** Constant Change (ascension rung 8): every eligible map rolls a mutator. */
-  everyMapMutated?: boolean;
-  /** Use It Or Lose It (ascension rung 6): multiplies pickup token lifetime. */
-  pickupLifetimeFactor?: number;
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
@@ -260,15 +252,10 @@ export function GameScreen({
   activeModifiers,
   modifierSources = [],
   cumulativeLockedBalls = 0,
-  ascensionDepth = 0,
   mapHighscores,
   capstone = null,
-  activeLoadouts = [],
-  fenceDurability = null,
-  ascensionLadder = [],
+  runOffer = null,
   scalingReadouts = [],
-  everyMapMutated = false,
-  pickupLifetimeFactor = 1,
   adminMode = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
@@ -554,10 +541,9 @@ export function GameScreen({
     // rest of the game reads off `mapMutator`.
     () => mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
       ?? forcedMutator() ?? selectMapMutator(
-        levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
-        everyMapMutated ? 0 : undefined,
+        levelNumber, getRunRng(`mapMutator:${level.id}`),
       ),
-    [levelNumber, level.id, level.boss, level.mutator, everyMapMutated],
+    [levelNumber, level.id, level.boss, level.mutator],
   );
 
   // Per-map objective (issue #55): an optional goal rolled 0-or-1 per eligible
@@ -586,7 +572,11 @@ export function GameScreen({
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
   // Build readout for the bottom bar: owned upgrades per archetype tag.
-  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
+  // A Specialisation counts toward its set, so its chip lights when the set does.
+  const tagCounts = useMemo(() => {
+    const lean = shopLeanOf(runOffer);
+    return withVirtualTag(ownedTagCounts(ownedUpgradeIds, upgrades), lean?.tag, lean?.countsTowardSet ?? 0);
+  }, [ownedUpgradeIds, upgrades, runOffer]);
 
   // ── Boss escalation feedback (issue #56) ─────────────────────────────────
   // Phase banner: flash "HOTFIX INCOMING" / "PANIC MODE" as the boss loses HP.
@@ -665,55 +655,6 @@ export function GameScreen({
     // this map worth announcing even when the map alone was not.
     setWinModalOpen(shouldAnnounceWinConditions(t, level, levelNumber, activeModifiers));
   }, [level, levelNumber, t, activeModifiers]);
-
-  /**
-   * Announce the ascension rules once per DEPTH, not once per map.
-   *
-   * Keyed on the depth rather than on reaching level 1, because the debug jump
-   * (?ascension=9&level=12) never passes through level 1 and would otherwise
-   * drop you into a run governed by nine rules nobody mentioned. Re-openable
-   * from the menu, like the win conditions.
-   */
-  const announcement = useMemo(
-    () => ascensionAnnouncement(t, ascensionDepth, ascensionLadder),
-    [t, ascensionDepth, ascensionLadder],
-  );
-  /** The rungs in force, for the Specs panel. Memoised so the panel is not
-   *  handed a fresh array on every frame of a running game. */
-  const rungsInForce = useMemo(
-    () => rungsUpTo(ascensionDepth, ascensionLadder),
-    [ascensionDepth, ascensionLadder],
-  );
-  const [ascModalOpen, setAscModalOpen] = useState(false);
-  const announcedDepth = useRef<number | null>(null);
-  /**
-   * Announce the ascension rules on LEVEL 1 of a depth, and nowhere else.
-   *
-   * The gate used to be the `announcedDepth` ref alone, on the reasoning that a
-   * depth should be announced once rather than once per map. The reasoning was
-   * right and the mechanism could not deliver it: Index renders this component
-   * only while `currentScreen === 'game'` and the level-complete overlay is
-   * down, so GameScreen UNMOUNTS after every single map (through the overlay,
-   * the shop, every draft) and the ref went back to null with it. A ref cannot
-   * remember something across the remount it is supposed to survive, so the
-   * modal reappeared on every map of an ascended run.
-   *
-   * Level 1 is the honest test, and it needs no memory at all: an ascension
-   * always restarts at level 1, so that IS the moment a depth begins. The ref
-   * stays to stop a re-render firing it twice within one mount, which is all a
-   * ref can honestly promise here.
-   *
-   * The cost is the debug jump (`?ascension=9&level=12`), which never passes
-   * through level 1 and so no longer self-announces. That is covered: the rules
-   * are re-openable from the pause menu (`ascension.menuItem`), which is where
-   * a player who wants them again looks anyway.
-   */
-  useEffect(() => {
-    if (!shouldAnnounceAscension(ascensionDepth, levelNumber, ascensionLadder)) return;
-    if (announcedDepth.current === ascensionDepth) return;
-    announcedDepth.current = ascensionDepth;
-    setAscModalOpen(true);
-  }, [ascensionDepth, levelNumber, ascensionLadder]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open
@@ -807,11 +748,23 @@ export function GameScreen({
   const levelEndedRef = useRef(false);
   useEffect(() => { levelEndedRef.current = false; }, [level.id, levelNumber]);
 
+  // The ticket the player read before the map, with the marks the board
+  // earned: same list, same words, so the Debrief and the failed screen are
+  // that card filled in.
+  const ticketRows = useCallback((marks: (boolean | null)[] | undefined): AcceptanceRow[] | undefined => (
+    marks
+      ? winConditions(t, level, levelNumber, activeModifiers).map((c, i) => ({
+        group: c.group, text: c.text, met: marks[i] ?? null,
+      }))
+      : undefined
+  ), [t, level, levelNumber, activeModifiers]);
+
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     levelEndedRef.current = true;
     setIsPaused(false);
-    onLevelComplete(scoreData);
-  }, [onLevelComplete]);
+    const acceptance = ticketRows(scoreData.criteriaMet);
+    onLevelComplete(acceptance ? { ...scoreData, acceptance } : scoreData);
+  }, [onLevelComplete, ticketRows]);
 
   const canPause = gameState.pushMode === 'none';
 
@@ -848,7 +801,7 @@ export function GameScreen({
   // explainer.
   const anyExplainerModal =
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
-    || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro
+    || fenceIntroOpen || showBoxIntro || showLauncherIntro
     || showCircuitOverlay || fenceSwitchIntro;
 
   // Whether the board may be revealed yet. Ready is not enough: a reveal played
@@ -1015,26 +968,13 @@ export function GameScreen({
               scopeCreep={scopeCreepConfig}
               mapMutator={mapMutator}
               objective={mapObjective}
-              pickupConfig={pickupLifetimeFactor === 1 ? config.pickups : {
-                ...config.pickups,
-                // Use It Or Lose It (ascension rung 6). Floor at 1s so a deep
-                // ladder can never round a token's life down to zero, which
-                // would delete it on the frame it spawned.
-                lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
-              }}
-              bugConfig={pickupLifetimeFactor === 1 ? config.bugs : {
-                ...config.bugs,
-                // Use It Or Lose It shortens a bug's life exactly as it shortens
-                // a token's. A bug is claimed by getting a ball to it, so a rung
-                // that squeezes the window squeezes the harder of the two.
-                lifetimeSeconds: Math.max(1, Math.round(config.bugs.lifetimeSeconds * pickupLifetimeFactor)),
-              }}
+              pickupConfig={config.pickups}
+              bugConfig={config.bugs}
               shardBombConfig={config.shardBombs}
               regionColor={getRegionColor()}
               accentColor={accentColor}
               activeModifiers={activeModifiers}
               cumulativeLockedBalls={cumulativeLockedBalls}
-              fenceDurability={fenceDurability}
               parallaxTickRef={memParallaxTickRef}
               showBallSpeeds={showBallSpeeds}
               showPerfOverlay={showPerfOverlay}
@@ -1074,7 +1014,6 @@ export function GameScreen({
                 scopeCreepPercent={gameState.creepPercent}
                 accentColor={accentColor}
                 certificateProgress={certificateProgress}
-                ascensionDepth={ascensionDepth}
                 showHighscoreBar={showHighscoreBar}
                 highscoreCurrent={projectedScore}
                 highscoreTarget={highscoreTarget}
@@ -1215,8 +1154,6 @@ export function GameScreen({
                     setSoundMuted(next);
                     setSoundMutedState(next);
                   }}
-                  hasAscensionAnnouncement={!!announcement}
-                  onOpenAscension={() => { setMenuOpen(false); setAscModalOpen(true); }}
                   adminMode={!!adminMode}
                   onOpenTuning={() => { setMenuOpen(false); setTuningOpen(true); }}
                   onRestart={() => { setMenuOpen(false); onRestart(); }}
@@ -1259,13 +1196,6 @@ export function GameScreen({
                 setBossIntroSeen(true);
                 try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
               },
-            }] : []),
-            ...(announcement ? [{
-              show: ascModalOpen,
-              accentColor: '#ffb347',
-              title: announcement.title,
-              body: announcement.body,
-              onDismiss: () => setAscModalOpen(false),
             }] : []),
             {
               show: showLauncherIntro,
@@ -1339,7 +1269,7 @@ export function GameScreen({
               // hint that follows is practice, and it still runs this map either
               // way. Previously only a successful tutorial cut persisted anything,
               // so dismissing this and then dying on level 1 - or reloading a
-              // ?level= / ?ascension= debug jump without finishing the map - re-armed
+              // ?level= debug jump without finishing the map - re-armed
               // it on every single run, forever.
               onDismiss: () => { setFenceIntroOpen(false); onFenceSeen?.(); },
             },
@@ -1393,10 +1323,8 @@ export function GameScreen({
                   accentColor={accentColor}
                   certificateProgress={certificateProgress}
                   microManagerPerLock={activeModifiers.microManagerPerLock}
-                  ascensionDepth={ascensionDepth}
-                  ascensionRungs={rungsInForce}
                   scalingReadouts={scalingReadouts}
-                  activeLoadouts={activeLoadouts}
+                  runOffer={runOffer}
                   tagCounts={tagCounts}
                   tagSetThreshold={tagSetThreshold}
                   activeModifiers={activeModifiers}
@@ -1411,6 +1339,9 @@ export function GameScreen({
                 {runEndingLoss?.failure ? (
                   <MapFailedOverlay
                     failure={runEndingLoss.failure}
+                    acceptance={ticketRows(runEndingLoss.failure.criteriaMet)}
+                    levelNumber={levelNumber}
+                    levelId={level.id}
                     livesLeft={0}
                     runOver
                     accentColor={accentColor}
@@ -1419,6 +1350,9 @@ export function GameScreen({
                 ) : mapFailure ? (
                   <MapFailedOverlay
                     failure={mapFailure}
+                    acceptance={ticketRows(mapFailure.criteriaMet)}
+                    levelNumber={levelNumber}
+                    levelId={level.id}
                     livesLeft={lives}
                     accentColor={accentColor}
                     onDismiss={dismissMapFailure}

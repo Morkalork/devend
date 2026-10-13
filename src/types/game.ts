@@ -2,7 +2,7 @@ import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 import type { BankedAxes } from "@/types/scoring";
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'capstoneDraft' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'chainPick' | 'capstoneDraft' | 'runDraft' | 'result' | 'certificateStore' | 'offers' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -267,6 +267,10 @@ export interface GrowingWall {
   isComplete: boolean;
   activeRegionId: string;    // the region this wall is growing in
   startTime?: number;        // performance.now() when growth began (for easing)
+  /** Platform (Sprint Planning): fraction of the build done at the start (offerPerks.ts). */
+  headStart?: number;
+  /** Seconds of the ease curve the head start skipped, fixed on the first update. */
+  headStartOffset?: number;
   /**
    * Which KIND of fence this cut is drawing (FENCE_TYPES_PLAN.md).
    *
@@ -319,9 +323,6 @@ export interface GameResult {
   cutCount?: number;
   expectedCuts?: number;
   basePoints?: number;
-  // Ascension mode (post-final-level loop) — set when the run went past depth 0
-  ascensionDepth?: number;
-  loadoutNames?: string[];
 }
 
 // ── Lock / dissolve animation types (used by GameCanvas rendering) ────────
@@ -619,6 +620,13 @@ export type WinReason =
   /** The map's data stream harvested. */
   | 'harvested';
 
+/** One row of the filled-in Acceptance Criteria ticket. */
+export interface AcceptanceRow {
+  group: "required" | "optional" | "either" | "trade" | "fail";
+  text: string;
+  met: boolean | null;
+}
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
@@ -749,6 +757,16 @@ export interface LevelScoreData {
   wonByAllLocked?: boolean;
   /** Which condition finished the map; shown on the results screen. */
   winReason?: WinReason;
+  /**
+   * Each Acceptance Criterion met (true), missed (false) or with nothing to
+   * check (null), in winConditions' order, marked as the map was won.
+   */
+  criteriaMet?: (boolean | null)[];
+  /**
+   * The criteria themselves with their marks, as the player read them before
+   * the map (GameScreen joins the text to criteriaMet). The Debrief's ticket.
+   */
+  acceptance?: AcceptanceRow[];
   /**
    * An all-locked win where the cut had ALSO cleared to the size threshold on
    * its own, before the lock drained the board. Both were genuinely true, and

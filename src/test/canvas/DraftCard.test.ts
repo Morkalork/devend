@@ -13,13 +13,13 @@ const CARD = readFileSync(join(SCREENS, "DraftCard.tsx"), "utf8");
 
 function draftScreens(): { name: string; text: string }[] {
   return readdirSync(SCREENS)
-    .filter(f => /DraftScreen\.tsx$/.test(f))
+    .filter(f => /(DraftScreen|ChainPickScreen)\.tsx$/.test(f))
     .map(f => ({ name: f, text: readFileSync(join(SCREENS, f), "utf8") }));
 }
 
 describe("the between-map draft screens", () => {
   it("are all present, or this guard is looking at nothing", () => {
-    expect(draftScreens().length).toBeGreaterThanOrEqual(4);
+    expect(draftScreens().length).toBeGreaterThanOrEqual(3);
   });
 
   it("all offer their choices through the shared card", () => {

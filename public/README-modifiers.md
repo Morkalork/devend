@@ -9,7 +9,7 @@ This document covers every modifier key, effect type, stat, and field that can b
 1. [upgrades.yml](#upgradesyml)
 2. [certificates.yml](#certificatesyml)
 3. [achievements.yml](#achievementsyml)
-4. [loadouts.yml](#loadoutsyml)
+4. [offers.yml](#offersyml)
 5. [map.yml](#mapyml)
 6. [GameModifiers — shared modifier keys](#gamemodifiers--shared-modifier-keys)
 7. [Achievement stat types](#achievement-stat-types)
@@ -31,7 +31,6 @@ In-run upgrades purchased in the shop after each map. Each upgrade applies one o
 | `cost` | number | ✓ | Overtime hours required to purchase |
 | `unlockLevel` | number | | Minimum completed level before this appears in the shop (default: 1) |
 | `prerequisites` | string[] | | Other upgrade IDs that must be owned before this can appear |
-| `ascensionOnly` | boolean | | Only offered while ascended (e.g. Defensive Programming fence durability) |
 | `tags` | string[] | ✓ | 1-2 build archetypes: `lock`, `freeze`, `bank`, `tempo`, `risk`, `safety`. Shown as chips on the shop card; the shop weights its random offers toward tags the player already owns (draft coherence). |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** and their values (see below) |
 
@@ -114,8 +113,7 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 Capstones are the once-per-run exclusive perk ("Promotion"). After the first
 completed level at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3
 draft is offered before that level's shop; the pick applies **permanently for
-the rest of the run** (surviving
-ascension) and the two passed-over capstones are gone for good. Capstones are
+the rest of the run** and the two passed-over capstones are gone for good. Capstones are
 rule-breakers, not stat bumps - the pool covers one per archetype (enforced by
 tests) so any build can find its crown.
 
@@ -132,30 +130,30 @@ tests) so any build can find its crown.
 
 ---
 
-## loadouts.yml
+## offers.yml
 
-Curse + blessing bundles drafted after beating the final level (the Ascension draft, `AscensionDraftScreen`), stacking on top of each other as the run loops back to level 1. The same catalogue also backed the run-start draft (the "Sprint Planning" loadout draft, `RunDraftScreen`), which is currently ON HOLD: `SPRINT_PLANNING_ENABLED` in `src/lib/sprintPlanning.ts` is `false`, so no run starts with a loadout until it is flipped back. Loaded by `useLoadoutManager`, folded into the same GameModifiers pipeline as upgrades.
+The Sprint Planning offers (SPRINT_PLANNING_PLAN.md): before map 1 the run deals three cards, one per pool (a **boon**, a **Specialisation**, a **gamble**), and the player takes one or skips. When the previous run earned Tenure, its chain takes the boon slot. Parsed and rolled by `src/lib/sprintOffers.ts` (baked into the bundle, re-fetched at run start); the taken offer folds into the same GameModifiers pipeline as upgrades. It replaced the curse + blessing loadouts (`loadouts.yml`, retired).
 
 ### Fields
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `id` | string | ✓ | Unique identifier |
-| `name` | string | ✓ | Display name on the draft card |
-| `curse` | string | ✓ | Downside text (shown in red) |
-| `blessing` | string | ✓ | Upside text (shown in accent colour) |
-| `modifiers` | map | ✓ | One or more **GameModifier keys** — a curse is simply an adverse value (e.g. `ballSpeedMultiplier: 1.25`) |
-| `uniqueWinsRequired` | number | | How many **unique wins** (runs beaten with distinct run-start loadouts) are needed before this loadout unlocks for the run-start draft. Omit for the loadouts available from scratch. Has no effect on the Ascension draft, which always offers the full catalogue. |
-
-The file also has a top-level `ascension` block:
-
-| Field | Type | Description |
-|---|---|---|
-| `ascension.speedRampPerDepth` | number | Baseline ball-speed multiplier applied per ascension depth on top of drafted loadouts (default 1.08, compounds) |
-| `ascension.fenceDurabilityBase` | number | Ball hits an ascended fence survives on level 1 (default 6) |
-| `ascension.fenceDurabilityAtFinal` | number | …declining linearly to this on the final level (default 2). Fences bordering captured space never break. |
-
-> `extraLives` in a mutator is applied once, on draft, like buying an extra-lives upgrade. Levels completed at depth *d* count *(1 + d)*× toward Certificate Hours.
+| `name` | string | ✓ | Display name on the card |
+| `description` | string | ✓ | The upside |
+| `priceText` | string | when `price` is set | The downside, shown in red |
+| `modifiers` | map | | GameModifier keys, active while the offer is. `extraLives` here applies once, at the pick. |
+| `forMaps` | number | | `modifiers` apply only for the run's first N maps (counted from the run's start, so a Head Start certificate does not swallow them) |
+| `price` | map | | GameModifier keys, adverse, for the whole run |
+| `overtime` | number | | Hours banked at the pick |
+| `prize` | map | | `{ kind: chain, steps: 1-3, shoppedThrough: N }` grants a Junior / Junior+Senior / Junior+Senior+Principal chain on sale by level N (resolved by `tenure.ts`); add `choose: N` to let the player pick one of N chains after the draft, and `distinctTags: true` to lead each with a different archetype. `{ kind: architect }` grants a random Architect with every prerequisite under it. |
+| `unlock` | map | | `{ kind: always }` (default), `{ kind: levelReached, level: N }` (a level the ladder has), or `{ kind: archetypeMet, tag: T }` (own a set's worth of tag T in one run) |
+| `tag` | string | Specialisation | The archetype it leans the store toward |
+| `affinity` | number | | Specialisation: the store weights offers as though the run owned this many more upgrades of the tag |
+| `guaranteedSlot` | bool | | Specialisation: every shelf holds a card of the tag when the unlocked pool has one |
+| `countsTowardSet` | number | | Specialisation: counts as this many owned upgrades of the tag toward its set bonus |
+| `weight` | number | | Gamble: relative odds among the unlocked gambles |
+| `jackpot` | bool | | Gamble: the top prize (drawn gold; Admin can force it) |
 
 ---
 
@@ -268,7 +266,6 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `extraContinues` | `0` | Per-run revives (runs start with none). Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade (Golden Parachute); completing level 20 also awards one for free. | `1` |
 | `extraCertificateHours` | `0` | Bonus Certificate Hours banked when the run ends (Certification Wizard, Night School Diploma). | `1` |
 | `startingCapturePercent` | `0` | Board starts with this % already captured — the arena shrinks and the run starts below 100% remaining (Equity Grant certificate; clamped to 40). | `5` |
-| `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |
 | `ballFreezeDuration` | `0` | Seconds a ball stays frozen when tapped (Feature Freeze). `0` = the ability is off. Values from tiers sum (2+2+2 → 6s; Cascade Freeze adds a further +2 → 8s). After thawing, that ball can't be re-frozen for `duration × 2`. | `2` |
 | `ballFreezeCount` | `0` | Extra balls a single freeze tap also freezes, beyond the tapped one (Cascade Freeze). Total frozen per tap = `1 + ballFreezeCount`; the nearest eligible balls in the tapped ball's region are chosen. | `1` |
 | `autoFreezeDuration` | `0` | Seconds an automatically-frozen ball stays frozen (Cron Job). `0` = the ability is off. Every 10s (`AUTO_FREEZE_INTERVAL_MS`) one random eligible ball is frozen via the same path as Feature Freeze. Values from tiers sum (3+1+1 → 5s). After thawing, that ball can't be re-frozen for `duration × 2`. | `3` |
@@ -289,7 +286,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
 | `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
 | `shipEarlySecondsPerBall` | `0` | Extra seconds PER BALL added to every Ship Early bonus window (Deadline Extension). With `2`, a 4-ball map's windows each gain 8s. | `2` |
-| `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (Hard Deadline ascension rung, Hotfix In Prod loadout). | `1` |
+| `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (the retired Hotfix In Prod loadout; Playground only for now). | `1` |
 | `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `25` |
 | `runwayConcurrentFenceAt` | `0` | Runway: while the bank is at/above this threshold, +1 concurrent fence. | `200` |
 | `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
@@ -300,6 +297,12 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `pickupChanceBonus` | `0` | Extra pickup-token spawn chance per roll, in absolute probability (0.03 = +3 percentage points on the game-config base). Only applies on maps where pickups are enabled; never turns them on. Player-facing copy stays vague on purpose (Benefits Package). | `0.03` |
 | `pickupPayoutLevel` | `0` | Enhances every pickup payout per level: +1h on overtime and cap tokens, +1s on freeze charges, and the Fork's split balls fly 5% slower per level (never below their minimum speed). At level 3 the Fork splits a ball into THREE (Total Compensation). | `1` |
 | `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp. Still folds under the per-map overtime cap. | `2` |
+| `openingSlowSeconds` | `0` | Balls move at 70% of their speed (`OPENING_SLOW_FACTOR`) for this many seconds of active play at every map's start (Reliability Specialisation). Scales displacement, like a Slow Area. | `8` |
+| `fenceHeadStart` | `0` | Every fence starts this fraction of the way built (Platform Specialisation), capped at 0.9. Applied on the fence's first update; the grace window is untouched. | `0.12` |
+| `shopInterestPercent` | `0` | Percent of banked hours paid as interest on arriving at every store, capped at 10h (`STORE_INTEREST_CAP`; Procurement Specialisation). | `5` |
+| `lockStunSeconds` | `0` | Every lock holds the nearest free ball still for this many seconds, by the freeze path (Containment Specialisation). | `1` |
+| `startFrozenBalls` | `0` | Balls, fastest first, that start every map frozen for 12s (`START_FROZEN_SECONDS`; Cold Storage Specialisation). Never shortens a Cold Boot. | `1` |
+| `scoreBonusPerMissingLife` | `0` | Extra overtime per life the run starts a map below 3 (Growth Specialisation), folded into `scoreMultiplier` for that map. | `0.15` = +15% per life |
 
 ---
 
@@ -315,5 +318,4 @@ These are **lifetime cumulative stats** persisted in localStorage.
 | `highestLevelReached` | Highest level number reached in a single run |
 | `totalLevelsCompletedWithoutLoss` | Total levels completed without losing a life |
 | `totalLivesLost` | Total lives lost across all runs |
-| `deepestAscension` | Deepest Ascension depth ever reached |
 | `pushBonusesBanked` | Push-your-luck bonuses successfully banked (not failed) |

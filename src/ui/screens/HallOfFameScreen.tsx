@@ -2,7 +2,7 @@
  * HallOfFameScreen: "Performance Review", the records viewer (HIGHSCORES.md
  * Phase B; canvas port of components/game/HallOfFameScreen). Purely
  * presentational: the all-time Top 10 run ladder, the six archetype bests,
- * deepest Ascension, and per-map records. All data lives in useHallOfFame /
+ * and per-map records. All data lives in useHallOfFame /
  * useMetaProgression and arrives as props.
  *
  * The DOM page sat on CRTBackground, which stays DOM and is drawn once,
@@ -12,7 +12,7 @@
  */
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Medal, ArrowLeft, ArrowUpCircle, Award, CalendarDays, Flame, Map as MapIcon } from "lucide-react";
+import { Medal, ArrowLeft, Award, CalendarDays, Flame, Map as MapIcon } from "lucide-react";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import type { MetaProgressionStats } from "@/types/metaProgression";
 import { TAG_ORDER } from "@/lib/buildRecap";
@@ -148,20 +148,6 @@ export function HallOfFameScreen({
               </HallSection>
             )}
 
-            {/* Deepest ascension */}
-            {metaStats.deepestAscension > 0 && (
-              <View layout={{
-                alignSelf: "stretch", alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 12, paddingBottom: 12,
-                borderRadius: RADIUS.xl, borderWidth: 1, borderColor: tint(AMBER, 0x55 / 255), backgroundColor: tint(AMBER, 0x11 / 255),
-              }}>
-                <Label text={t("hallOfFame.deepestAscension")} size={TEXT.xs} upper letterSpacing={0.6} color={COLOR.mutedForeground} layout={{ marginBottom: 4 }} />
-                <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Icon icon={ArrowUpCircle} size={24} color={AMBER} />
-                  <Label text={String(metaStats.deepestAscension)} size={TEXT["3xl"]} font="display" weight="700" color={AMBER} />
-                </View>
-              </View>
-            )}
-
             {/* Lifetime flavor stats: non-competitive garnish (HIGHSCORES.md
                 keeps grind totals OUT of the ladders; they live here only). */}
             <HallSection title={t("hallOfFame.lifetime")}>
@@ -257,12 +243,6 @@ function HallLadderRow({ run, rank, lang }: { run: RunLedgerEntry; rank: number;
           <Label text={buildName(t, run)} size={TEXT.xs} color={COLOR.mutedForeground} />
         </View>
         <Label text={t("hallOfFame.mapsLabel", { count: run.levelsCompleted })} size={TEXT.xs} color={COLOR.mutedForeground} />
-        {run.ascensionDepth > 0 && (
-          <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-            <Icon icon={ArrowUpCircle} size={12} color={AMBER} />
-            <Label text={t("hallOfFame.depthLabel", { depth: run.ascensionDepth })} size={TEXT.xs} color={AMBER} />
-          </View>
-        )}
         {!!run.capstoneName && (
           <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <Icon icon={Award} size={12} color={COLOR.primary} />

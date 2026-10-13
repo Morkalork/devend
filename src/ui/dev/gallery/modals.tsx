@@ -12,7 +12,7 @@ import { DEFAULT_MODIFIERS, type GameModifiers, type ModifierSource } from "@/ho
 import type { MapFailure } from "@/lib/mapFailure";
 import type { LevelConfig } from "@/types/level";
 import type { UpgradeConfig } from "@/types/upgrade";
-import type { LoadoutConfig, AscensionRung } from "@/types/loadout";
+import { getOffer } from "@/lib/sprintOffers";
 import type { CapstoneConfig } from "@/types/capstone";
 import type { ActiveMapObjective } from "@/types/objective";
 import { PauseOverlay } from "../../game/PauseOverlay";
@@ -23,6 +23,7 @@ import { SuperiorLockInfoModal } from "../../game/SuperiorLockInfoModal";
 import { LockExplainerModal } from "../../game/LockExplainerModal";
 import { BoardEntityInfoModal } from "../../game/BoardEntityInfoModal";
 import { MapFailedOverlay } from "../../game/MapFailedOverlay";
+import type { AcceptanceRow } from "@/types/game";
 import { PushYourLuckOverlay } from "../../game/PushYourLuckOverlay";
 import { PairGuestGate } from "../../game/PairGuestGate";
 import { FeatureUnlockedModal } from "../../game/FeatureUnlockedModal";
@@ -48,6 +49,14 @@ const FAILURE: MapFailure = {
   ],
 };
 
+/** The pre-map ticket, marked as a map ran out of time with a lock still owed. */
+const FAILED_TICKET: AcceptanceRow[] = [
+  { group: "required", text: "Clear 81% of the board.", met: true },
+  { group: "required", text: "Lock 2 balls.", met: false },
+  { group: "required", text: "Smash 4 of the 10 shards (one touch each).", met: true },
+  { group: "fail", text: "The timer runs out (50s).", met: false },
+];
+
 const UPGRADES: UpgradeConfig[] = [
   { id: "runtime_optimisation_junior", name: "Runtime Optimisation", tier: "Junior", description: "Reduce ball speed by 5%.", tags: ["safety"], modifiers: { ballSpeedMultiplier: 0.95 } },
   { id: "micro_manager_senior", name: "Micro Manager", tier: "Senior", description: "Each locked ball slows the rest by 4%.", modifiers: { microManagerPerLock: 4 } },
@@ -59,18 +68,10 @@ const MODIFIERS: GameModifiers = { ...DEFAULT_MODIFIERS, ballSpeedMultiplier: 0.
 const SOURCES: ModifierSource[] = [
   { kind: "upgrade", id: "runtime_optimisation_junior", name: "Runtime Optimisation", modifiers: { ballSpeedMultiplier: 0.95 } },
   { kind: "upgrade", id: "pair_programming_principal", name: "Pair Programming", modifiers: { additionalConcurrentFences: 1 } },
-  { kind: "loadout", id: "gallery-loadout", name: "Legacy Codebase", modifiers: { extraLives: 1 } },
+  { kind: "offer", id: "reliability", name: "Reliability", modifiers: { openingSlowSeconds: 8 } },
 ];
 
-const LOADOUT: LoadoutConfig = {
-  id: "gallery-loadout", name: "Legacy Codebase",
-  curse: "Balls start 10% faster.", blessing: "One extra life every map.", modifiers: { extraLives: 1 },
-};
-
-const RUNGS: AscensionRung[] = [
-  { depth: 1, name: "Tight Budget", description: "The shop opens only after odd-numbered levels." },
-  { depth: 2, name: "Hiring Freeze", description: "Hold at most three distinct abilities at once." },
-];
+const OFFER = getOffer("headhunted") ?? null;
 
 const CAPSTONE: CapstoneConfig = {
   id: "gallery-capstone", name: "Tech Lead", description: "Every lock pays 10% more overtime.",
@@ -93,9 +94,9 @@ function topBarSample(focus: "mapRule" | null = null) {
       spaceRemaining={48} spaceRequired={25} lockedBalls={1} threadLockRequired={2}
       ownedUpgrades={UPGRADES} accentColor={ACCENT}
       certificateProgress={{ levelsCompleted: 5, levelsToNextHour: 1, progressInCurrentHour: 2, hoursEarned: 1, levelsPerHour: 3 }}
-      microManagerPerLock={4} ascensionDepth={2} ascensionRungs={RUNGS}
+      microManagerPerLock={4}
       scalingReadouts={[{ upgradeId: "runtime_optimisation_junior", upgradeName: "Runtime Optimisation", tag: "safety", key: "ballSpeedMultiplier", count: 3, effective: 3, steps: 3, amount: -0.06 }]}
-      activeLoadouts={[LOADOUT]}
+      runOffer={OFFER}
       tagCounts={new Map([["safety", 3], ["tempo", 1], ["lock", 2]])} tagSetThreshold={3}
       activeModifiers={MODIFIERS} modifierSources={SOURCES}
       capstone={CAPSTONE} mapMutator={MUTATOR} objective={OBJECTIVE}
@@ -160,9 +161,16 @@ export const entries: GalleryEntry[] = [
   { id: "BoardEntityInfoModal-bug", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard", detail: "caffeine" }} accentColor={ACCENT} onClose={noop} /> },
   { id: "BoardEntityInfoModal-bugDanger", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard", detail: "bigBang" }} accentColor={ACCENT} onClose={noop} /> },
   { id: "BoardEntityInfoModal-bugUnknown", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bugShard" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombBox", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombBox" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombBoxQuiet", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombBox", detail: "quiet" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombChestQuiet", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombChest", detail: "quiet" }} accentColor={ACCENT} onClose={noop} /> },
+  { id: "BoardEntityInfoModal-bombShard", group: "modal", render: () => <BoardEntityInfoModal hit={{ kind: "bombShard" }} accentColor={ACCENT} onClose={noop} /> },
 
   { id: "MapFailedOverlay", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-runOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-ticket", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-ticketRunOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-full", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} full livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-noLines", group: "modal", render: () => <MapFailedOverlay failure={{ kind: "areaUnreachable", unmet: [] }} livesLeft={1} onDismiss={noop} /> },
 
   { id: "PushYourLuckOverlay", group: "modal", render: () => <PushYourLuckOverlay remainingPercent={18} thresholdPercent={25} basePoints={120} onBank={noop} onPush={noop} /> },

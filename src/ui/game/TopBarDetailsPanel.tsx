@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Award, Wind, Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
 import type { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
-import type { LoadoutConfig, AscensionRung } from '@/types/loadout';
+import type { RunOffer } from '@/types/offer';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
 import type { CapstoneConfig } from '@/types/capstone';
 import type { ActiveMapMutator } from '@/types/mapMutator';
@@ -27,7 +27,7 @@ import { COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tin
 import { TagChip } from './TagChip';
 import { ModifierBreakdown } from './ModifierBreakdown';
 import {
-  cutsCard, hasBuildSection, locksCard, microManagerPercent, mutatorPlacement, objectiveState,
+  cutsCard, hasBuildSection, locksCard, microManagerPercent, mutatorPlacement, objectiveState, offerShowsInSpecs,
   sectionHeading, specsSections, tagChipSpecs, territoryCard, type SpecsSection,
 } from './specsModel';
 import { SPECS, cardHighLayout, cardLayout, filledIcon } from './specsStyle';
@@ -60,12 +60,10 @@ interface TopBarDetailsPanelProps {
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
-  ascensionDepth?: number;
-  /** Ladder rungs in force at that depth (ascensionLadder.ts). */
-  ascensionRungs?: AscensionRung[];
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
-  activeLoadouts?: LoadoutConfig[];
+  /** The Sprint Planning offer the run took. */
+  runOffer?: RunOffer | null;
   // Build readout: owned upgrades per archetype tag, and the count needed to
   // light a tag's set bonus.
   tagCounts?: Map<string, number>;
@@ -107,10 +105,8 @@ export function TopBarDetailsPanel({
   accentColor = '#00ff88',
   certificateProgress,
   microManagerPerLock = 0,
-  ascensionDepth = 0,
-  ascensionRungs = [],
   scalingReadouts = [],
-  activeLoadouts = [],
+  runOffer = null,
   continuesRemaining = 0,
   tagCounts,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
@@ -150,12 +146,12 @@ export function TopBarDetailsPanel({
   const sections = specsSections({
     focus,
     hasMutator: !!mapMutator,
-    hasBuild: hasBuildSection(tagCounts, ascensionDepth, activeLoadouts.length),
+    hasBuild: hasBuildSection(tagCounts, offerShowsInSpecs(runOffer) ? 1 : 0),
     hasAssignment: !!(capstone || mapMutator || objective),
     hasModifiers: !!activeModifiers,
     manualCount: manualSeen.length,
   });
-  const heading = (s: SpecsSection) => sectionHeading(t, s, { ascensionDepth, upgradeCount: ownedUpgrades.length });
+  const heading = (s: SpecsSection) => sectionHeading(t, s, { upgradeCount: ownedUpgrades.length });
 
   /**
    * The map rule, as one card built once and placed in one of two spots. Two
@@ -178,9 +174,7 @@ export function TopBarDetailsPanel({
     // question answers it first. The same card sits in ASSIGNMENT otherwise.
     mapRule: () => mutatorCard,
 
-    // Archetype tags + ascension + loadout: the run's identity. At depth 0 the
-    // drafted loadout is the run-start pick; past it they're the stacked
-    // ascension picks (with the depth multiplier).
+    // Archetype tags + the Sprint Planning offer: the run's identity.
     build: () => (
       <>
         {tagCounts && tagCounts.size > 0 && (
@@ -212,44 +206,33 @@ export function TopBarDetailsPanel({
             </View>
           </View>
         )}
-        {ascensionDepth > 0 && (
-          <View layout={cardLayout(accent, tint(SPECS.amber, 0x55 / 255))}>
-            <SpecsPara text={t('topBarDetails.ascensionDescription', { multiplier: ascensionDepth + 1 })} color={SPECS.ink} alpha={0.7} />
-            {/* Every ladder rung in force, deepest first. The modal at depth
-                start only names the rungs below the newest one, so this is
-                where the full text stays reachable. */}
-            {ascensionRungs.length > 0 && (
-              <View layout={{ marginTop: 10, gap: 8 }}>
-                {[...ascensionRungs].reverse().map(rung => (
-                  <View key={rung.depth} layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                    <SpecsText text={String(rung.depth)} size={10} weight="700" color={SPECS.amber} alpha={0.8} layout={{ marginTop: 2 }} />
-                    <View layout={{ flex: 1 }}>
-                      <SpecsText text={contentText.rungName(t, rung)} size={TEXT.xs} weight="600" color={SPECS.amber} wrap />
-                      <SpecsPara text={contentText.rungDesc(t, rung)} color={SPECS.ink} alpha={0.7} />
-                    </View>
-                  </View>
-                ))}
+        {/* The offer, while it still does something: a prize was granted at
+            the pick and already shows as upgrades, so only an offer with a
+            lasting effect (or a price) earns a card here. */}
+        {runOffer && offerShowsInSpecs(runOffer) && (
+          <View layout={card}>
+            <View layout={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <View layout={{ flex: 1 }}>
+                <SpecsText text={contentText.offerName(t, runOffer)} size={TEXT.sm} weight="700" color={SPECS.amber} wrap />
+              </View>
+              {runOffer.tag && <TagChip tag={runOffer.tag} />}
+            </View>
+            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: runOffer.priceText ? 6 : 0 }}>
+              <Icon icon={Sparkles} size={14} color={accent} layout={{ marginTop: 2 }} />
+              <View layout={{ flex: 1 }}>
+                <SpecsPara text={contentText.offerDesc(t, runOffer)} color={SPECS.ink} alpha={0.85} />
+              </View>
+            </View>
+            {runOffer.priceText && (
+              <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <Icon icon={Skull} size={14} color={SPECS.danger} layout={{ marginTop: 2 }} />
+                <View layout={{ flex: 1 }}>
+                  <SpecsPara text={contentText.offerPrice(t, runOffer)} color={SPECS.danger} />
+                </View>
               </View>
             )}
           </View>
         )}
-        {activeLoadouts.map(loadout => (
-          <View key={loadout.id} layout={card}>
-            <SpecsText text={contentText.loadoutName(t, loadout)} size={TEXT.sm} weight="700" color={SPECS.amber} wrap layout={{ marginBottom: 8 }} />
-            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-              <Icon icon={Skull} size={14} color={SPECS.danger} layout={{ marginTop: 2 }} />
-              <View layout={{ flex: 1 }}>
-                <SpecsPara text={contentText.loadoutCurse(t, loadout)} color={SPECS.danger} />
-              </View>
-            </View>
-            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-              <Icon icon={Sparkles} size={14} color={accent} layout={{ marginTop: 2 }} />
-              <View layout={{ flex: 1 }}>
-                <SpecsPara text={contentText.loadoutBlessing(t, loadout)} color={SPECS.ink} alpha={0.85} />
-              </View>
-            </View>
-          </View>
-        ))}
       </>
     ),
 

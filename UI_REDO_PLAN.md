@@ -21,8 +21,8 @@ own idea of where Continue sits.
   figures, the HUD), bundled at 500/600/700. **Michroma stays for the logo
   only** (`FONT.logo`). Body text and the ledger's monospace are unchanged.
 - **Promotion becomes a stage**: Debrief -> Promotion (when due) -> Store ->
-  next level. **Ascension stays a full screen**: it ends a run and "retire or
-  go again harder" is the biggest decision in the game. Sprint Planning and
+  next level. (Ascension was a full screen here; it has since been removed, and
+  the last map now ends the run on the result screen.) Sprint Planning and
   Tenure come before the first map, so they stay separate screens and only get
   restyled (phase 4).
 
@@ -41,7 +41,7 @@ own idea of where Continue sits.
 | 1 | Display face, colour roles (`ROLE` in theme.ts), kit pieces: `StageRail`, `Headline`, `Ledger`, `Ticket` (src/ui/kit/pipeline.tsx). Gallery samples `Pipeline-debrief`, `Pipeline-store`. | built |
 | 2 | The between-map screen: one pipeline replacing LevelCompleteOverlay, UpgradeShop, CapstoneDraftScreen and ContinuePrompt as separate layouts. | built |
 | 3 | Main menu, run result (win and loss), tap-to-start gate. | built |
-| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure, Ascension. | built |
+| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure (Ascension, since removed). | built |
 | 5 | Motion: the headline counts up, the rail slides between stages, nothing else moves on its own. | built |
 
 ## Build record
@@ -91,7 +91,8 @@ gone. The tap gate is the flat surface with a sentence-case prompt.
 
 **Phase 4.** The meta screens share two headings, both rewritten in place:
 `MenuHeading` (Certificates, Records, Loadouts, Options, Music) and
-`DraftHeader` with `DraftFrame` (Sprint Planning, Tenure, Ascension). Both are
+`DraftHeader` with `DraftFrame` (Sprint Planning, Tenure; Ascension was the third
+until it was removed). Both are
 left-aligned, 700 weight, ink, with the screen's colour on the icon only.
 Achievements, Tutorial and the pair lobby set their own titles and were moved
 onto the same roles. "Re-enable all tutorials" is a secondary button.
@@ -139,3 +140,54 @@ modal only, because it is the only explainer that is a list; the grouping is
 empty-group rule as the text list. Gallery: `AcceptanceCriteriaModal` (every
 group) and `AcceptanceCriteriaModal-plain`. Tests:
 src/test/canvas/acceptanceCriteria.test.ts.
+
+**The Debrief is that ticket, filled in** (asked for: "the very card shown
+before the map, with the contents filled in ... without all of the other
+overwhelming information", as a trial). The card moved into
+`AcceptanceTicket` (src/ui/game), which the pre-map modal and the Debrief both
+draw. Each criterion now carries a check (`CriterionCheck` in winConditions.ts:
+its clause, the bonus area it names, the failures it warns of, or both halves
+of a trade); `triggerLevelComplete` marks every one on the board as it was won
+(`acceptanceMarks`, applyCut.ts), and GameScreen joins the marks to the words
+the player read before the map, so the two cards cannot disagree. Marked, a
+row is a green check (met, or a failure that did not happen, under the heading
+"Failure, avoided") or a red cross (missed: a goal an "or" win skipped, a bonus
+area not taken). The Debrief keeps the frame (the stage strip and the hours
+headline every stage has) and the rare notices (push failed, a certificate, a
+personal best), and drops the breakdown, the axes and the totals. Those are
+kept whole behind Admin's **Full debrief** switch (`debriefMode.ts`, a display
+setting, not a run flag), to compare and to bring back. Gallery:
+`LevelCompleteOverlay-ticket`, `LevelCompleteOverlay-ticketMissed`. Tests:
+src/test/canvas/ticketDebrief.test.ts.
+
+**The failed screen too** ("do the same for the map failed screen"). A lost
+life and the run-ending loss both show the same ticket under the failure's
+headline, marked on the board as the map failed, in place of the "still
+needed" lines; the warning glyph goes to make room, and the overlay waits 7s
+instead of 4.2s before moving on (a tap still goes at once; the last life still
+waits for a tap). The marks ride on the `MapFailure` (`criteriaMet`), attached
+in GameCanvas where both loss callbacks leave the game, so every failure kind
+gets them. The failures are never headed "avoided" here: the map did fail,
+sometimes by a rule the list does not name (a ball into a growing fence on the
+last life). The same Admin **Full debrief** switch brings the old lines back.
+Gallery: `MapFailedOverlay-ticket`, `-ticketRunOver`, `-full`.
+
+**Over the finished board, filling in** ("dismiss the end of map exploding
+game board and instead just show the acceptance criteria modal on top of the
+finished map with overlays, but it is important that the card content is
+filled in one by one, even if quickly"). The board no longer shatters at the
+end of a map, won or lost: the game asks `keepBoardAtEnd` before every
+dissolve (a win, Bank & Continue, a failed push, the run's last life), and the
+score debrief's boxes are held instead of fading. GameScreen stays mounted
+under the card (its key now carries the level, so a skipped store still deals
+the next map a fresh screen). The Debrief is a modal now, not a pipeline
+stage: a light scrim over the board, the ticket opening with every row an
+empty box as it was before the map, then each row marked in reading order
+(`fillIn.ts`: 380ms for the card, 230ms a row; reduced motion marks them all
+at once; a tap finishes it). Once full, the hours earned land in the key row's
+corner (where a store ticket shows its estimate), the rare notices appear, and
+the Continue button, named for the next stage. The failed screen fills in the
+same way. Admin's **Full debrief** brings back the shatter and the old screens
+together. Every win also gets its marks in GameCanvas now, whichever path won
+it: Bank & Continue and a failed push used to arrive without them and fell
+back to the full Debrief.

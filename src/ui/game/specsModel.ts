@@ -41,10 +41,9 @@ export function sourceName(t: TFunction, s: ModifierSource): string {
     case 'upgrade': return contentText.upgradeName(t, s);
     case 'certificate': return contentText.certName(t, s);
     case 'achievement': return contentText.achName(t, s);
-    case 'loadout': return contentText.loadoutName(t, s);
+    case 'offer': return t('bottomBarDetails.offerSource', { name: contentText.offerName(t, s) });
     case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
     case 'capstone': return t('bottomBarDetails.capstoneSource', { name: contentText.capstoneName(t, s) });
-    case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
     default: return s.name;
   }
 }
@@ -606,13 +605,12 @@ export function specsSections(i: SpecsSectionInput): SpecsSection[] {
 
 /** A section's heading, as the panel prints it (upper-cased on screen). */
 export function sectionHeading(
-  t: TFunction, s: SpecsSection, o: { ascensionDepth?: number; upgradeCount?: number } = {},
+  t: TFunction, s: SpecsSection, o: { upgradeCount?: number } = {},
 ): string {
-  const depth = o.ascensionDepth ?? 0;
   const count = o.upgradeCount ?? 0;
   switch (s) {
     case 'mapRule': return t('topBarDetails.mapRule');
-    case 'build': return depth > 0 ? t('topBarDetails.buildAscension', { depth }) : t('topBarDetails.build');
+    case 'build': return t('topBarDetails.build');
     case 'objectives': return t('topBarDetails.objectives');
     case 'assignment': return t('topBarDetails.assignment');
     case 'status': return t('topBarDetails.yourStatus');
@@ -622,9 +620,18 @@ export function sectionHeading(
   }
 }
 
-/** Whether the run has a BUILD to show: archetype tags, ascension or a loadout. */
-export function hasBuildSection(tagCounts: Map<string, number> | undefined, ascensionDepth: number, loadoutCount: number): boolean {
-  return (!!tagCounts && tagCounts.size > 0) || ascensionDepth > 0 || loadoutCount > 0;
+/**
+ * Whether the run's Sprint Planning offer earns a card in the Specs panel: one
+ * with a lasting effect or a price. A prize was granted at the pick and already
+ * shows as upgrades; Tenure is only ever a prize.
+ */
+export function offerShowsInSpecs(offer: { id: string; modifiers?: object; price?: object } | null | undefined): boolean {
+  return !!offer && offer.id !== 'tenure' && !!(offer.modifiers || offer.price);
+}
+
+/** Whether the run has a BUILD to show: archetype tags or a Sprint Planning offer. */
+export function hasBuildSection(tagCounts: Map<string, number> | undefined, offerCount: number): boolean {
+  return (!!tagCounts && tagCounts.size > 0) || offerCount > 0;
 }
 
 export interface TagChipSpec {

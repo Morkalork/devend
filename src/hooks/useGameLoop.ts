@@ -61,7 +61,7 @@ export interface GameLoopCallbacks {
   applyCut: (wall: GrowingWall) => void;
   /** Called once per frame to composite everything onto the canvas. */
   render: () => void;
-  /** Called when Ascension fences ran out of durability this frame. */
+  /** Called when fences ran out of durability this frame. */
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
@@ -705,7 +705,7 @@ export function createGameLoop(
     // somebody else's device.
     tickDrills(game, dt);
 
-    // Break any Ascension fences that ran out of durability (outside the
+    // Break any fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)
     if (game.pendingWallBreaks.length > 0) {
       callbacks.processWallBreaks?.();

@@ -36,7 +36,6 @@ const TIER_ORDER: UpgradeTier[] = ["Junior", "Senior", "Principal", "Architect",
 const families = (() => {
   const byName = new Map<string, UpgradeConfig[]>();
   for (const u of UPGRADES) {
-    if (u.ascensionOnly) continue; // priced for the post-L30 economy, tuned separately
     if (!byName.has(u.name)) byName.set(u.name, []);
     byName.get(u.name)!.push(u);
   }

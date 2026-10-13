@@ -251,7 +251,7 @@ export function isKnownFenceType(id: FenceTypeId | undefined | null): boolean {
  *
  * The same number as MAX_ABILITY_SLOTS and deliberately not shared with it:
  * they are two different bars that happen to agree today, and coupling them
- * would mean an ascension rule tightening one silently tightened the other.
+ * would mean a rule tightening one silently tightened the other.
  */
 export const FENCE_SLOTS = 5;
 

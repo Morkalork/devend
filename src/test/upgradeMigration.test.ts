@@ -146,24 +146,17 @@ describe("Defensive Programming means one thing", () => {
     expect(nanobots.modifiers?.wallShieldsPerMap ?? 0).toBe(0);
   });
 
-  it("protects fences at every tier a normal run can reach", () => {
-    // The trap this walked into once: fenceDurabilityBonus only applies when
-    // ascension makes fences wear out, so building the ladder on it would have
-    // made Junior and Senior do NOTHING in an ordinary run. wallShields is the
-    // expression that works before ascension.
+  it("protects fences at every tier", () => {
+    // wallShields is the expression that works in an ordinary run (fence
+    // durability was Ascension's, and its upgrades went with it).
     for (const tier of ["Junior", "Senior", "Principal"]) {
-      const rung = family.find(u => u.tier === tier && !u.id.includes("ascension"));
+      const rung = family.find(u => u.tier === tier);
       expect(rung, `no ${tier} rung`).toBeTruthy();
-      expect(rung!.modifiers?.wallShieldsPerMap, `${rung!.id} does nothing before ascension`)
-        .toBeGreaterThan(0);
+      expect(rung!.modifiers?.wallShieldsPerMap, `${rung!.id} does nothing`).toBeGreaterThan(0);
     }
   });
 
-  it("keeps durability as its ascension form, which is where fences wear out", () => {
-    // Not a leftover: ascension is the mode that makes fences crumble, so
-    // durability is the same idea expressed where it can apply.
-    const asc = family.filter(u => u.id.includes("ascension"));
-    expect(asc.length).toBeGreaterThan(0);
-    for (const u of asc) expect(u.modifiers?.fenceDurabilityBonus).toBeGreaterThan(0);
+  it("has no Ascension form left", () => {
+    expect(family.filter(u => u.id.includes("ascension"))).toEqual([]);
   });
 });

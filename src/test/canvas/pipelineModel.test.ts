@@ -27,7 +27,7 @@ describe("stageIds", () => {
     expect(stageIds(plan({ promotion: false, store: false }))).toEqual(["debrief", "next"]);
   });
 
-  // The last map goes straight from the Debrief to the Ascension screen.
+  // The last map goes straight from the Debrief to the run's finish.
   it("goes straight to the finale after the last map", () => {
     expect(stageIds(plan({ last: true }))).toEqual(["debrief", "next"]);
   });
@@ -56,8 +56,8 @@ describe("pipelineStages", () => {
     expect(stages.map(s => s.title)).toEqual(["Debrief", "Promotion", "Store", "Level 11"]);
   });
 
-  it("ends the strip in Ascension after the last map", () => {
-    expect(pipelineStages(plan({ last: true }), "debrief", t).at(-1)?.title).toBe("Ascension");
+  it("ends the strip at the run's finish after the last map", () => {
+    expect(pipelineStages(plan({ last: true }), "debrief", t).at(-1)?.title).toBe("Finish");
   });
 });
 

@@ -2,13 +2,13 @@
  * The canvas FeatureUnlockedModal's icon and colour (src/ui/game/FeatureUnlockedModalModel.ts).
  */
 import { describe, it, expect } from "vitest";
-import { Backpack, Sparkles, Trophy } from "lucide-react";
+import { ClipboardList, Sparkles, Trophy } from "lucide-react";
 import { getAllFeatures } from "@/lib/features";
 import { featureAccent, featureIcon } from "@/ui/game/FeatureUnlockedModalModel";
 
 describe("the feature unlocked modal", () => {
   it("resolves a catalogue icon name, and falls back to Sparkles", () => {
-    expect(featureIcon({ id: "x", icon: "Backpack", color: "#fff000" })).toBe(Backpack);
+    expect(featureIcon({ id: "x", icon: "ClipboardList", color: "#fff000" })).toBe(ClipboardList);
     expect(featureIcon({ id: "x", icon: "Trophy", color: "#fff000" })).toBe(Trophy);
     expect(featureIcon({ id: "x", icon: "NotAnIcon", color: "#fff000" })).toBe(Sparkles);
     expect(featureIcon(null)).toBe(Sparkles);

@@ -9,7 +9,9 @@ import { lockedInsideUnarmedLauncher } from "./launcher";
 import { handleGameOverFn } from "./handleGameOver";
 import { ballStruckFence } from "./fenceStrike";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
-import { mapFailure, type MapFailure } from "@/lib/mapFailure";
+import { mapFailure, type MapFailure, type MapFailKind } from "@/lib/mapFailure";
+import { criterionMet, winConditions } from "@/lib/winConditions";
+import type { TFunction } from "i18next";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -269,8 +271,8 @@ export function applyCutFn(
   }
 
   // Commit fence segments to wall list and rasterize them into the grid.
-  // Each segment keeps the cell indices its rasterization removed, plus an
-  // Ascension durability budget — both needed if the fence later breaks
+  // Each segment keeps the cell indices its rasterization removed, plus its
+  // fence type's durability budget — both needed if the fence later breaks
   // (see breakFenceWall.ts).
   // One id for the whole gesture, shared by every segment it lays down. A cut
   // that bounces is several walls and one fence, and the Redeploy throw is
@@ -295,11 +297,8 @@ export function applyCutFn(
       if (game.spaceGrid) {
         segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);
       }
-      // Durability: the fence type's own budget when it states one, otherwise
-      // the run's. A type that says nothing about hits does not override an
-      // Ascension durability bonus the player earned.
-      const typeHits = getFenceType(wall.fenceTypeId).maxHits;
-      const hits = typeHits ?? game.fenceDurability;
+      // Durability: the fence type's own budget, when it states one.
+      const hits = getFenceType(wall.fenceTypeId).maxHits;
       if (hits != null) {
         segment.maxHits = hits;
         segment.hitsLeft = hits;
@@ -951,9 +950,29 @@ export function checkSpaceWin(
   return percent;
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete' | 'keepBoardAtEnd'>;
 
-/** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
+/** Keys for text: the criteria are built only for their checks here, never read. */
+const KEY_T = ((key: string) => key) as unknown as TFunction;
+
+/**
+ * Each Acceptance Criterion met or not, in winConditions' order, on the board
+ * as it stands. Built from the same list the pre-map ticket shows, so the
+ * Debrief can zip the two together without the lists drifting apart.
+ */
+export function acceptanceMarks(
+  game: CanvasGameState, level: LevelConfig, levelNumber: number, rules: GameModifiers,
+  failure: MapFailKind | null = null,
+): (boolean | null)[] {
+  const ctx = {
+    snap: readWinSnapshot(game, level),
+    areasSatisfied: (game.coloredAreas ?? []).map(a => !!a.satisfied),
+    failure,
+  };
+  return winConditions(KEY_T, level, levelNumber, rules).map(c => criterionMet(c, ctx));
+}
+
+/** Finalise the level: score it, fire onLevelComplete, and start the dissolve (or keep the board). */
 export function triggerLevelComplete(
   game: CanvasGameState,
   level: LevelConfig,
@@ -974,6 +993,9 @@ export function triggerLevelComplete(
   playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
+  // The Acceptance Criteria, marked on the board as it was won: the Debrief
+  // draws the ticket the player read before the map, filled in.
+  const criteriaMet = acceptanceMarks(game, level, levelNumber, activeModifiers);
 
   // Ship Early: the all-balls-locked path never opens the push prompt, so the
   // tempo clock freezes here; banking after a prompt keeps the earlier value.
@@ -1078,7 +1100,7 @@ export function triggerLevelComplete(
   // mount the completion overlay (mounting it at the exact end read as a jerky
   // cut, and hid the shatter behind the card).
   setTimeout(() => {
-    callbacks.startDissolve(() => {
+    const deliver = () => {
       callbacks.onLevelComplete({
         levelNumber, levelId: level.id, cutCount: game.wallCount,
         expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
@@ -1102,6 +1124,7 @@ export function triggerLevelComplete(
         // Every power-up claimed this map (#59), so the finish screen lists them.
         pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
         winReason: reason,
+        criteriaMet,
         // Both conditions genuinely landed on the same cut: the space target was
         // already met by what this cut captured, and then the lock ended the map
         // before the space win could open the Push Your Luck prompt. Naming only
@@ -1116,6 +1139,10 @@ export function triggerLevelComplete(
         // push-disabled space wins were all hiding a row that mattered.
         wonByAllLocked: reason === 'allLocked',
       });
-    });
+    };
+    // The ticket Debrief opens over the finished board, overlays and all, so
+    // the board stays; the full Debrief is a screen of its own, so it shatters.
+    if (callbacks.keepBoardAtEnd?.()) deliver();
+    else callbacks.startDissolve(deliver);
   }, lockDelay + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
 }

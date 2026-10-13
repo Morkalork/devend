@@ -11,7 +11,6 @@ import { RunLedgerEntry, HALL_STORAGE_KEY } from "@/types/hallOfFame";
 const entry = (score: number): RunLedgerEntry => ({
   score,
   levelsCompleted: 8,
-  ascensionDepth: 0,
   primaryTag: "freeze",
   secondaryTag: "lock",
   capstoneId: "cryo_protocol",

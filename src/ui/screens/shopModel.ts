@@ -7,7 +7,8 @@
 import type { TFunction } from "i18next";
 import type { UpgradeConfig, UpgradeTag, UpgradeTier } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
-import { ownedTagCounts, weightedSample } from "@/lib/upgradeTags";
+import type { ShopLean } from "@/types/offer";
+import { ownedTagCounts, weightedSample, withVirtualTag } from "@/lib/upgradeTags";
 import { prerequisitesMet, unlockRequirements } from "@/lib/upgradeUnlock";
 import { fenceOfferIsEmpty } from "@/lib/fenceOwnership";
 import { getRunRng } from "@/lib/runRng";
@@ -23,6 +24,13 @@ type IsLocked = (upgradeId: string, ownedIds: string[]) => boolean;
  * items): deselecting a Junior tier also deselects a Senior tier that was
  * picked up via restock on top of it.
  */
+
+/** What one store visit put on the shelf, by id: kept with the run save. */
+export interface StoreDealt {
+  offerIds: string[];
+  abilityIds: string[];
+}
+
 export function deselectWithDependents(
   selected: string[],
   id: string,
@@ -63,6 +71,13 @@ export interface ShelfInput {
   heldFenceTypeIds: string[];
   /** 3 + extraShopItems. */
   shopSlots: number;
+  /** The run's Specialisation, when it has one: weights and the guaranteed slot. */
+  lean?: ShopLean | null;
+}
+
+/** The tag counts the shelf weights by: owned upgrades plus a Specialisation's affinity. */
+export function shelfTagCounts(ownedUpgradeIds: string[], upgrades: UpgradeConfig[], lean?: ShopLean | null): Map<string, number> {
+  return withVirtualTag(ownedTagCounts(ownedUpgradeIds, upgrades), lean?.tag, lean?.affinity ?? 0);
 }
 
 /**
@@ -70,7 +85,7 @@ export interface ShelfInput {
  * Picks are tag-weighted toward the player's owned archetypes (weightedSample),
  * plus at most one locked "teaser" if there is room.
  */
-export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots }: ShelfInput): UpgradeConfig[] {
+export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean }: ShelfInput): UpgradeConfig[] {
   // Filter out owned, upgrades not yet unlocked by level progression, and any
   // choice group whose pick is already made (a sibling owned).
   // The fence bar holds four types and the catalogue has six, so a
@@ -90,12 +105,19 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
     available.filter(u => prerequisitesMet(u, ownedUpgradeIds, byId)));
   const locked = collapseChoiceGroups(
     available.filter(u => !prerequisitesMet(u, ownedUpgradeIds, byId)));
-  const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
+  const counts = shelfTagCounts(ownedUpgradeIds, upgrades, lean);
   // Seeded runs (Daily Stand-up) roll the shelf from the run seed keyed by the
   // level, so everyone opening this shop sees the same offers. Only the roll
   // is shared, not the choices.
   const shelfRng = getRunRng(`shop:${completedLevel}`);
   const offers = weightedSample(unlocked, shopSlots, counts, completedLevel, shelfRng);
+  // A Specialisation's guaranteed slot: odds are what lean the shelf, a
+  // guarantee is what a player can read. The last pick (the least likely the
+  // weights made) gives way to a card of the tag when none came up.
+  if (lean?.guaranteedSlot && offers.length > 0 && !offers.some(u => u.tags?.includes(lean.tag))) {
+    const tagged = unlocked.filter(u => u.tags?.includes(lean.tag) && !offers.includes(u));
+    if (tagged.length > 0) offers[offers.length - 1] = weightedSample(tagged, 1, counts, completedLevel, shelfRng)[0];
+  }
   if (offers.length < shopSlots && locked.length > 0) {
     offers.push(weightedSample(locked, 1, counts, completedLevel, shelfRng)[0]);
   }

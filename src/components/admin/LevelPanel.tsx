@@ -21,7 +21,7 @@ function OptionalNumber({
   level, field, label, min, max, step = 1, scale = 1, hint, onUpdateLevel,
 }: {
   level: LevelConfig;
-  field: 'maxBalls' | 'variety' | 'timeLimit' | 'pickupChance' | 'bugChance' | 'tiltChance';
+  field: 'maxBalls' | 'variety' | 'timeLimit' | 'pickupChance' | 'bugChance' | 'shardBombChance' | 'tiltChance';
   label: string; min: number; max?: number; step?: number; scale?: number; hint?: string;
   onUpdateLevel: (level: LevelConfig) => void;
 }) {
@@ -244,6 +244,29 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="bugChance"
             label="Bug Chance % (blank = global)" min={0} max={100} scale={100}
             hint="The share of this map's breakables that carry a bug, rolled once when the map is dealt (capped by max_per_map). Set at all and the start-level gate is bypassed. 0 suppresses the random roll only: a shard pinned in the Entity panel still carries one." />
+          <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="shardBombChance"
+            label="Shard Bomb Chance % (blank = global)" min={0} max={100} scale={100}
+            hint="The share of this map's brittle shards that carry a bomb. Blank is game-config.yml's chance from its start_level (17) on, and none before it. Set at all and that gate is bypassed both ways. A shard pinned in the Entity panel wins over either." />
+          {/* Slab and chest bombs: blast or finish their box quietly. Blank is
+              box_bombs.start_level (11) in game-config.yml. */}
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Box Bomb Blast (blank = from level 11)</span>
+            <select
+              value={level.boxBombBlast == null ? '' : level.boxBombBlast ? 'on' : 'off'}
+              onChange={(e) => {
+                const next = { ...level };
+                if (e.target.value === '') delete next.boxBombBlast;
+                else next.boxBombBlast = e.target.value === 'on';
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+            >
+              <option value="">Default for this level</option>
+              <option value="on">Blast (strike, carve, throw balls)</option>
+              <option value="off">Quiet (the bomb only finishes its box)</option>
+            </select>
+            <span className="block text-[10px] text-muted-foreground leading-relaxed">Every slab and chest holds a bomb either way; this decides whether it goes up with the full blast. Below level 11 the default is quiet.</span>
+          </label>
           <OptionalNumber level={level} onUpdateLevel={onUpdateLevel} field="tiltChance"
             label="Tilt Chance % (blank = 5-10)" min={0} max={100} scale={100}
             hint="Per progress tier. Needs a gravity well on the map and a level past the tilt floor to mean anything." />

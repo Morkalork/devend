@@ -9,7 +9,6 @@ import { RunLedgerEntry } from "@/types/hallOfFame";
 const entry = (score: number, over: Partial<RunLedgerEntry> = {}): RunLedgerEntry => ({
   score,
   levelsCompleted: 10,
-  ascensionDepth: 0,
   primaryTag: "lock",
   secondaryTag: null,
   capstoneId: null,

@@ -66,7 +66,7 @@ export function levelsToNextTenure(levelsReached: number): number | null {
 }
 
 /**
- * Eligible: not ascension-only, and already on sale by the deepest shop the
+ * Eligible: already on sale by the deepest shop the
  * run actually reached. The gate applies to EVERY granted upgrade, so a card
  * the run never had access to cannot arrive through a chain's later tier
  * either.
@@ -79,7 +79,6 @@ export function levelsToNextTenure(levelsReached: number): number | null {
  * caller passes this separately.
  */
 function isAvailable(upgrade: UpgradeConfig, shoppedThrough: number): boolean {
-  if (upgrade.ascensionOnly) return false;
   return (upgrade.unlockLevel ?? 1) <= shoppedThrough;
 }
 

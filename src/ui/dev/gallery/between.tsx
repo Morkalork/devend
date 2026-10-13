@@ -4,7 +4,7 @@ import type { LevelScoreData, GameResult } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { CapstoneConfig } from "@/types/capstone";
-import type { AscensionRung, LoadoutConfig } from "@/types/loadout";
+import { getOffer, type DealtOffer } from "@/lib/sprintOffers";
 import type { TenureOffer } from "@/lib/tenure";
 import type { RunRecap } from "@/lib/buildRecap";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -12,10 +12,9 @@ import { LevelCompleteOverlay } from "../../screens/LevelCompleteOverlay";
 import { ResultScreen } from "../../screens/ResultScreen";
 import { ContinuePrompt } from "../../screens/ContinuePrompt";
 import { UpgradeShop } from "../../screens/UpgradeShop";
-import { TenureDraftScreen } from "../../screens/TenureDraftScreen";
+import { ChainPickScreen } from "../../screens/ChainPickScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
-import { AscensionDraftScreen } from "../../screens/AscensionDraftScreen";
 import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
 
 const ACCENT = "#00ff88";
@@ -55,6 +54,30 @@ const roughScore: LevelScoreData = {
   winReason: "space",
 };
 
+/** The map's Acceptance Criteria, marked, as the ticket Debrief draws them. */
+const ticketScore: LevelScoreData = {
+  ...fullScore,
+  acceptance: [
+    { group: "required", text: "Clear 82% of the board.", met: true },
+    { group: "required", text: "Smash 4 shards (one touch each).", met: true },
+    { group: "required", text: "Lock a ball in the light syntax area (x2 pay).", met: true },
+    { group: "optional", text: "Lock a ball in the dark syntax area for x3 pay. Skipping it costs nothing.", met: false },
+    { group: "fail", text: "The timer runs out (60s).", met: true },
+  ],
+};
+
+/** A win by its "or": the goals were not all met, and a fence budget ran close. */
+const ticketMissedScore: LevelScoreData = {
+  ...roughScore,
+  acceptance: [
+    { group: "required", text: "Clear 76% of the board.", met: false },
+    { group: "required", text: "Lock 2 balls.", met: true },
+    { group: "either", text: "Every ball locked", met: true },
+    { group: "trade", text: "With only 6 fences, the bonus pocket and a clean clear compete.", met: false },
+    { group: "fail", text: "You use all 6 fences without winning.", met: true },
+  ],
+};
+
 const recap: RunRecap = {
   primary: "lock", secondary: "tempo", tagCounts: { lock: 5, tempo: 3, bank: 2, safety: 1 },
   capstoneId: "stock_options", capstoneName: "Stock Options", score: 1840, isArchetypeRecord: true, previousBest: 1520,
@@ -62,7 +85,6 @@ const recap: RunRecap = {
 
 const winResult: GameResult = {
   isWin: true, remainingPercent: 12, levelId: "lvl-35-release", levelNumber: 35, completedAllLevels: true, totalScore: 1840,
-  ascensionDepth: 2, loadoutNames: ["Crunch Time", "Scope Creep"],
 };
 
 const lossResult: GameResult = {
@@ -124,23 +146,23 @@ const tenureOffers: TenureOffer[] = [
   },
 ];
 
-const loadouts: LoadoutConfig[] = [
-  { id: "crunch_time", name: "Crunch Time", curse: "Balls move 25% faster.", blessing: "Earn 25% more overtime hours.", modifiers: {} },
-  { id: "scope_creep", name: "Scope Creep", curse: "Balls are 30% bigger.", blessing: "Fences grow 35% faster.", modifiers: {} },
-  { id: "death_march", name: "Death March", curse: "Lose one life immediately.", blessing: "Earn 75% more overtime hours.", modifiers: {} },
-  { id: "hiring_freeze", name: "Hiring Freeze", curse: "The shop offers 2 fewer upgrades.", blessing: "All shop prices drop by 10%.", modifiers: {} },
+// Sprint Planning samples, from the real offers.yml so the copy is the shipped copy.
+const offer = (id: string) => getOffer(id)!;
+const sprintCards: DealtOffer[] = [
+  { offer: offer("onboarding_buddy"), grants: [] },
+  { offer: offer("reliability"), grants: [] },
+  { offer: offer("death_march"), grants: tenureOffers[0].upgrades },
+];
+const sprintCardsTenure: DealtOffer[] = [
+  { offer: offer("tenure"), grants: tenureOffers[0].upgrades, tenure: { earnedAtLevel: 22, continued: true } },
+  { offer: offer("containment"), grants: [] },
+  { offer: offer("unicorn"), grants: [...tenureOffers[0].upgrades, shopUpgrades[2]] },
 ];
 
 const capstones: CapstoneConfig[] = [
   { id: "stock_options", name: "Stock Options", tag: "risk", modifiers: {}, description: "The per-map overtime cap rises by 5h for the rest of the run. Big multiplier builds finally pay.", clarify: "Overtime is capped per map, so multipliers past the cap are wasted. This raises the cap by 5h every map. Useless on a low-multiplier build, run-defining on a stacked one." },
   { id: "company_card", name: "Company Card", tag: "bank", modifiers: {}, description: "The cheapest offer in every shop is free.", clarify: "The cheapest upgrade in every shop is free. Over a run that is a lot of saved overtime for the expensive picks. Best if you shop every level." },
   { id: "second_wind", name: "Second Wind", tag: "safety", modifiers: {}, description: "Once per map, a fence survives a ball hit without costing a life.", clarify: "Every map starts with one fence shield: the first ball that would smash a growing fence is absorbed, no life lost. Refreshes each map." },
-];
-
-const ladder: AscensionRung[] = [
-  { depth: 1, name: "Hiring Freeze", description: "The store opens every other level instead of after every one." },
-  { depth: 2, name: "Promotion Freeze", description: "No Promotion is awarded this run, whatever you achieve." },
-  { depth: 3, name: "Technical Debt", description: "Finished fences wear out under repeated ball hits and finally break." },
 ];
 
 export const entries: GalleryEntry[] = [
@@ -157,13 +179,24 @@ export const entries: GalleryEntry[] = [
     render: () => <LevelCompleteOverlay scoreData={roughScore} totalScore={402} onContinue={noop} accentColor={ACCENT} />,
   },
   {
+    // The ticket Debrief: the pre-map Acceptance Criteria card, filled in.
+    id: "LevelCompleteOverlay-ticket", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={ticketScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      full={false} newlyUnlockedCerts={[certs[0]]} />,
+  },
+  {
+    id: "LevelCompleteOverlay-ticketMissed", group: "screen",
+    render: () => <LevelCompleteOverlay scoreData={ticketMissedScore} totalScore={402} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      full={false} />,
+  },
+  {
     // A map with no Promotion due: the strip skips that stage and Continue says "Open the store".
     id: "LevelCompleteOverlay-storeOnly", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       pipeline={{ clearedLevel: 10, promotion: false, store: true, last: false }} />,
   },
   {
-    // The last map: no store, and the strip ends in Ascension.
+    // The last map: no store, and the strip ends with the run's finish.
     id: "LevelCompleteOverlay-last", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={4120} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       pipeline={{ clearedLevel: 35, promotion: false, store: false, last: true }} />,
@@ -171,7 +204,7 @@ export const entries: GalleryEntry[] = [
   {
     id: "ResultScreen-win", group: "screen",
     render: () => <ResultScreen result={winResult} onMainMenu={noop} onPlayAgain={noop} accentColor={ACCENT}
-      runHoursAwarded={7} runLevelsCompleted={35} newlyUnlockedLoadouts={["Death March", "Hiring Freeze"]} runRecap={recap}
+      runHoursAwarded={7} runLevelsCompleted={35} newlyUnlockedOffers={["Containment", "Cold Storage"]} runRecap={recap}
       runRank={{ rank: 3, gapToNext: 64, gapToTop10: null, aheadThroughMaps: 22, monthBest: true, dayBest: true, dailyStreak: 4 }}
       dailyKey="2026-10-10" onRecords={noop} />,
   },
@@ -201,25 +234,20 @@ export const entries: GalleryEntry[] = [
       freeAbilityGrant="freezeAll" activeModifiers={undefined} shopDiscountMultiplier={1} />,
   },
   {
-    id: "TenureDraftScreen", group: "screen",
-    render: () => <TenureDraftScreen offers={tenureOffers} earnedAtLevel={22} lastRunUpgradeIds={["fast_compile_junior"]} onConfirm={noop} accentColor={ACCENT} />,
+    id: "ChainPickScreen", group: "screen",
+    render: () => <ChainPickScreen offer={offer("headhunted")} choices={tenureOffers} onConfirm={noop} accentColor={ACCENT} />,
   },
   {
     id: "RunDraftScreen", group: "screen",
-    render: () => <RunDraftScreen loadouts={loadouts} draftedLoadoutIds={[]} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
+    render: () => <RunDraftScreen cards={sprintCards} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
+  },
+  {
+    id: "RunDraftScreen-tenure", group: "screen",
+    // A run that earned Tenure: its chain is the boon card; the gamble is the jackpot.
+    render: () => <RunDraftScreen cards={sprintCardsTenure} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
   },
   {
     id: "CapstoneDraftScreen", group: "screen",
     render: () => <CapstoneDraftScreen offers={capstones} onSelect={noop} accentColor={ACCENT} />,
-  },
-  {
-    id: "AscensionDraftScreen", group: "screen",
-    render: () => <AscensionDraftScreen loadouts={loadouts} draftedLoadoutIds={["crunch_time"]} ascensionDepth={1} ladder={ladder}
-      totalScore={1840} onAscend={noop} onRetire={noop} accentColor={ACCENT} />,
-  },
-  {
-    id: "AscensionDraftScreen-tutorial", group: "screen",
-    render: () => <AscensionDraftScreen loadouts={loadouts} draftedLoadoutIds={[]} ascensionDepth={0} ladder={ladder}
-      totalScore={1840} onAscend={noop} onRetire={noop} accentColor={ACCENT} showTutorial onTutorialDismiss={noop} />,
   },
 ];

@@ -58,7 +58,6 @@ interface GameTopBarProps {
   scopeCreepPercent?: number;
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
-  ascensionDepth?: number;
   // Map highscore progress (#45): shown only with the Benchmarking certificate and
   // when this map has a stored highscore. current = live projected score.
   showHighscoreBar?: boolean;
@@ -70,7 +69,6 @@ interface GameTopBarProps {
 
 /** rgba(0, 10, 5, 0.9): both rows' ground. */
 const BAR_BG = tint(0x000a05, 0.9);
-const ASCENSION = 0xffb347;
 const SCOPE_CREEP = 0xff6b6b;
 const RECORD = 0xffd54a;
 const CHASING = 0xffb020;
@@ -87,7 +85,6 @@ export function GameTopBar({
   onExplainWin,
   scopeCreepPercent = 0,
   accentColor = "#00ff88",
-  ascensionDepth = 0,
   showHighscoreBar = false,
   highscoreCurrent = 0,
   highscoreTarget = 0,
@@ -153,17 +150,9 @@ export function GameTopBar({
             flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8,
             paddingLeft: 12, paddingRight: 12,
           }}>
-            {/* Level number (+ ascension depth badge while ascended) */}
+            {/* Level number */}
             <View layout={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
               <Label text={`LV${levelNumber}`} font="display" size={TEXT.base} weight="700" color={accent} glow={10} />
-              {ascensionDepth > 0 && (
-                <View layout={{
-                  paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, borderRadius: RADIUS.base,
-                  borderWidth: 1, borderColor: tint(ASCENSION, 0x88 / 255), backgroundColor: tint(ASCENSION, 0x18 / 255),
-                }}>
-                  <Label text={`A${ascensionDepth}`} font="display" size={TEXT.xs} weight="700" color={ASCENSION} glow={8} />
-                </View>
-              )}
             </View>
 
             {/* Lives (+ banked Continues) */}

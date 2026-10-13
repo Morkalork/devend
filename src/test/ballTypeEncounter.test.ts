@@ -60,13 +60,13 @@ describe("useMetaProgression: encountered ball types", () => {
     expect(result.current.encounteredBallTypeIds).toEqual([]);
   });
 
-  it("does not disturb other unlock-state fields (loadouts, highscores)", () => {
+  it("does not disturb other unlock-state fields (met archetypes, highscores)", () => {
     const { result } = renderHook(() => useMetaProgression());
-    act(() => result.current.recordLoadoutWin("crunch_time"));
+    act(() => { result.current.recordArchetypeMet("lock"); });
     act(() => result.current.recordMapHighscore("level-1", 100));
     act(() => result.current.recordBallTypeEncountered("yellow"));
 
-    expect(result.current.wonLoadoutIds).toEqual(["crunch_time"]);
+    expect(result.current.metArchetypes).toEqual(["lock"]);
     expect(result.current.mapHighscores).toEqual({ "level-1": 100 });
     expect(result.current.encounteredBallTypeIds).toEqual(["yellow"]);
   });

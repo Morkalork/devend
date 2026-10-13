@@ -1,22 +1,19 @@
 /**
- * Sprint Planning (the run-start loadout draft) — ON HOLD.
+ * Sprint Planning: the run-start offer (SPRINT_PLANNING_PLAN.md).
  *
- * Sprint Planning is the RunDraftScreen step that a fresh run used to visit
- * before level 1, where the player drafted one curse + blessing loadout (or
- * skipped) to shape the run. It is switched off for now.
+ * Before map 1 the run deals three cards from public/offers.yml (a boon, a
+ * Specialisation, a gamble; src/lib/sprintOffers.ts) and the player takes one
+ * or skips. When the previous run earned Tenure its chain is the boon card.
  *
- * This is a HOLD, not a deletion: RunDraftScreen, public/loadouts.yml, the
- * draft RNG and the whole modifier pipeline are untouched, and so is the
- * ASCENSION loadout draft, which is a separate step after beating the final
- * level and still runs. Flipping this constant back to `true` restores the
- * run-start draft on all three run-start paths (New Game, Play Again, Restart)
- * with no other edit.
+ * It replaced the curse + blessing loadout draft, which was on hold here
+ * because every loadout was a stat trade the shop already sold.
  *
- * What the flag gates, all in useGameSession:
- *  - `enterRun` never routes to the runDraft screen, so a run goes straight
- *    into the map (via the Tenure draft when one is owed).
- *  - the final-level win credits no run-start loadout toward unique wins,
- *    because `draftedLoadoutIds[0]` would otherwise be an ascension pick
- *    rather than the run-start one the count is specified against.
+ * The constant is the kill switch: false sends every run straight into the
+ * map (Tenure included, so it would be lost), hides the main menu's entry, and
+ * leaves the rest of the game untouched. What it gates, in useGameSession:
+ *  - `enterRun` routes to the runDraft screen only while it is on, and only
+ *    once the 'sprintPlanning' feature is unlocked (or Tenure is owed, or
+ *    Admin forces the draft on);
+ *  - Index shows the main menu's Sprint Planning entry.
  */
-export const SPRINT_PLANNING_ENABLED = false;
+export const SPRINT_PLANNING_ENABLED = true;

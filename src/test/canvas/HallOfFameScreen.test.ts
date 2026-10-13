@@ -18,13 +18,13 @@ const t = i18n.t.bind(i18n) as unknown as TFunction;
 
 const runs: RunLedgerEntry[] = [
   {
-    score: 612, levelsCompleted: 22, ascensionDepth: 1,
+    score: 612, levelsCompleted: 22,
     primaryTag: "lock", secondaryTag: "risk",
     capstoneId: "golden_handshake", capstoneName: "Golden Handshake",
     loadoutIds: ["crunch_time"], savedAt: 1752600000000,
   },
   {
-    score: 431, levelsCompleted: 15, ascensionDepth: 0,
+    score: 431, levelsCompleted: 15,
     primaryTag: null, secondaryTag: null,
     capstoneId: null, capstoneName: null, loadoutIds: [], savedAt: 1752500000000,
   },
@@ -49,9 +49,7 @@ describe("HallOfFameScreen model", () => {
     expect(buildName(t, { primaryTag: "lock", secondaryTag: null })).toBe(t("upgradeShop.tags.lock"));
   });
 
-  it("labels depth through i18n", () => {
-    expect(t("hallOfFame.depthLabel", { depth: 1 })).toMatch(/Depth 1/);
-    expect(t("hallOfFame.deepestAscension")).toBe("Deepest Ascension");
+  it("labels through i18n", () => {
     expect(t("hallOfFame.employeeOfMonth")).toBe("Employee of the Month");
   });
 

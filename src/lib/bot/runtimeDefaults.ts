@@ -119,7 +119,6 @@ export function runtimeDefaults() {
     lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockBaseThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockMinRegionCells: 0,
-    fenceDurability: null,
     pendingWallBreaks: [],
     destructibles: [],
     pendingDestroys: [],

@@ -16,7 +16,6 @@ import { ABILITIES_SEEN_KEY } from '@/lib/abilitySeen';
  * - `mover`      — moving-obstacle warning (first level with movers)
  * - `topBar`     — "what is the top bar" hint (level 2)
  * - `bottomBar`  — "what is the bottom bar" hint (level 3)
- * - `ascension`  — Ascension mode intro (first arrival at the draft screen)
  * - `daily`      — Daily Stand-up intro (first time the button is tapped)
  * - `timeLimit`  — map time-limit intro (first timed map, i.e. level 4)
  *
@@ -34,7 +33,6 @@ interface TutorialsSeen {
   mover: boolean;
   topBar: boolean;
   bottomBar: boolean;
-  ascension: boolean;
   daily: boolean;
   timeLimit: boolean;
 }
@@ -47,7 +45,6 @@ const NONE_SEEN: TutorialsSeen = {
   mover: false,
   topBar: false,
   bottomBar: false,
-  ascension: false,
   daily: false,
   timeLimit: false,
 };
@@ -69,7 +66,6 @@ function loadSeen(): TutorialsSeen {
         mover: !!parsed.mover,
         topBar: !!(parsed.topBar ?? parsed.infoPanels),
         bottomBar: !!(parsed.bottomBar ?? parsed.infoPanels),
-        ascension: !!parsed.ascension,
         daily: !!parsed.daily,
         timeLimit: !!parsed.timeLimit,
       };
@@ -120,7 +116,6 @@ export function useTutorialManager() {
   const markMoverSeen = useCallback(() => markSeen('mover'), [markSeen]);
   const markTopBarSeen = useCallback(() => markSeen('topBar'), [markSeen]);
   const markBottomBarSeen = useCallback(() => markSeen('bottomBar'), [markSeen]);
-  const markAscensionSeen = useCallback(() => markSeen('ascension'), [markSeen]);
   const markDailySeen = useCallback(() => markSeen('daily'), [markSeen]);
   const markTimeLimitSeen = useCallback(() => markSeen('timeLimit'), [markSeen]);
 
@@ -171,7 +166,6 @@ export function useTutorialManager() {
     shouldShowMover: !seen.mover,
     shouldShowTopBar: !seen.topBar,
     shouldShowBottomBar: !seen.bottomBar,
-    shouldShowAscension: !seen.ascension,
     shouldShowDaily: !seen.daily,
     shouldShowTimeLimit: !seen.timeLimit,
     markOnboardingSeen,
@@ -181,7 +175,6 @@ export function useTutorialManager() {
     markMoverSeen,
     markTopBarSeen,
     markBottomBarSeen,
-    markAscensionSeen,
     markDailySeen,
     markTimeLimitSeen,
     resetAllTutorials,

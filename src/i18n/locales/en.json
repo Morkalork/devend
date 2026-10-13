@@ -14,34 +14,8 @@
       "highestLevelReached": "Highest level",
       "totalLevelsCompletedWithoutLoss": "Flawless levels",
       "totalLivesLost": "Lives lost",
-      "deepestAscension": "Deepest ascension",
       "pushBonusesBanked": "Push bonuses banked"
     }
-  },
-  "ascension": {
-    "allLevelsCleared": "All Levels Cleared",
-    "ascensionComplete": "Ascension {{depth}} complete. ",
-    "retireOrAscend": "Retire and bank this run - or draft a loadout and ascend to depth {{depth}}.",
-    "ascendedLevelsInfo": "Ascended levels are faster and count {{multiplier}}× toward Certificate Hours. ",
-    "bankedOvertime": "Banked overtime: {{score}}h",
-    "noLoadouts": "No loadouts available - loadouts.yml failed to load. You can still retire below.",
-    "ascendToDepth": "Ascend to Depth {{depth}}",
-    "selectLoadout": "Select a Loadout",
-    "retireBankRun": "Retire - Bank This Run",
-    "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "Every level beaten. Ascend to restart at level 1, harder, keeping your depth, your Certificate Hours and one ",
-    "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": " per ascension: a curse paired with a blessing. Upgrades and overtime reset each loop. Retire anytime to bank it all.",
-    "gotIt": "Got It",
-    "ladderTitle": "Ascension {{depth}}",
-    "alsoInForce": "Also in force: {{names}}.",
-    "menuItem": "Ascension Rules",
-    "youWin": "You Win",
-    "congrats": "Congratulations. You cleared every level and shipped the whole roadmap.",
-    "congratsAscended": "Congratulations. You cleared every level again, at Ascension {{depth}}.",
-    "whatDepthAdds": "What Ascension {{depth}} adds",
-    "noNewRung": "No new rule. The ladder is fully climbed: deeper loops are faster and pay more, nothing else changes.",
-    "resetWarning": "Ascending starts a FRESH run: upgrades, overtime and the Promotion are cleared. Loadouts, depth and Certificate Hours carry."
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",
@@ -206,10 +180,10 @@
     "noModifiers": "No modifiers active yet. Purchase upgrades between levels to gain power-ups for your run.",
     "atDefault": "At Default",
     "fromSources": "From",
-    "ascensionSource": "Ascension x{{depth}}",
     "par": "Par Relief",
     "parActive": "+{{cuts}} par, under-par bonus x{{mult}}",
-    "parInactive": "Maps are scored against their own par"
+    "parInactive": "Maps are scored against their own par",
+    "offerSource": "Sprint Planning: {{name}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Buy the {{upgradeName}} upgrade in {{required}} different runs.",
@@ -627,9 +601,6 @@
     "youWin": "YOU WIN!",
     "gameOver": "You have been replaced by AI.",
     "completedAllLevels": "🎉 Completed all levels! 🎉",
-    "ascensionDepth": "Ascension Depth {{depth}}",
-    "loadoutsBraved": "Loadouts braved: {{loadouts}}",
-    "newLoadoutsUnlocked": "New loadout unlocked",
     "completedLevel": "Completed Level",
     "failedAtLevel": "Failed at Level",
     "arenaRemaining": "Arena Remaining",
@@ -652,7 +623,8 @@
     "dailyStreak_other": "Attendance streak: {{count}} days",
     "share": "Share",
     "shareLevel": "Level {{level}}",
-    "shareDaily": "Daily Stand-up {{date}}"
+    "shareDaily": "Daily Stand-up {{date}}",
+    "newOffersUnlocked": "New Sprint Planning offer"
   },
   "topBar": {
     "clear": "CLEAR",
@@ -684,7 +656,6 @@
     "levelStatusTitle": "Level {{level}} Status",
     "specsTitle": "Level {{level}} Specs",
     "build": "Build",
-    "buildAscension": "Build - Depth {{depth}}",
     "assignment": "Run & map",
     "attributes": "Attributes",
     "closePanel": "Close panel",
@@ -717,8 +688,6 @@
     "certPointsEarned_other": "{{count}} points earned so far.",
     "certPointsToGo_one": "{{count}} more level to the next cert point.",
     "certPointsToGo_other": "{{count}} more levels to the next cert point.",
-    "ascensionDepth": "Ascension - Depth {{depth}}",
-    "ascensionDescription": "You looped past the final level. Faster balls, every drafted mutator active, and each level counts {{multiplier}}× toward Certificate Hours.",
     "activeUpgradesCount": "Active Upgrades ({{count}})",
     "currentlyReducingBallSpeed": "Currently reducing ball speed by {{percent}}%",
     "activeUpgrades": "Active Upgrades",
@@ -843,6 +812,7 @@
       "fail": "Failure:"
     },
     "groupRequiredAll": "Goals:",
+    "groupFailAvoided": "Failure, avoided",
     "bonusArea": "Lock a ball in the {{area}} area for a {{mult}}x payout. Skipping it costs nothing.",
     "tradeBudgetBonus": "Your fences are rationed. The optional pocket and a comfortable clear compete for them.",
     "lock_one": "Lock at least {{count}} ball.",
@@ -947,7 +917,8 @@
     "abilityEveryMap": "One every map, {{count}} left",
     "abilitySlotClosed": "Ability slot closed: your bar is full",
     "freeAbilityGranted": "{{name}} added to your bar",
-    "requiresMaxedFamily": "{{family}}, fully upgraded"
+    "requiresMaxedFamily": "{{family}}, fully upgraded",
+    "interestPaid": "Interest +{{hours}}h"
   },
   "upgradeConditions": {
     "liveNow": "Live on the next map",
@@ -958,7 +929,6 @@
     "levelAtLeast": "From level {{level}}",
     "ballsAtLeast_one": "Maps with {{count}} ball or more",
     "ballsAtLeast_other": "Maps with {{count}} balls or more",
-    "depthAtLeast": "From ascension depth {{depth}}",
     "mapHas": {
       "well": "Maps with a gravity well",
       "mover": "Maps with a mover",
@@ -970,19 +940,15 @@
   "runDraft": {
     "title": "Sprint Planning",
     "back": "Back",
-    "subtitle": "Pick a loadout to shape this run from level 1.",
-    "pickHint": "Each loadout pairs a curse with a blessing. Choose one, or skip to play it straight.",
+    "subtitle": "Three offers for this run. Take one, or skip.",
+    "pickHint": "A boon helps your first maps, a Specialisation leans the store toward one archetype, and a gamble charges a price for a big prize.",
     "startButton": "Start Run",
-    "pickToStart": "Pick a Loadout",
-    "skipButton": "Skip (no loadout)",
-    "noLoadouts": "No loadouts available."
+    "pickToStart": "Pick an Offer",
+    "skipButton": "Skip (no offer)",
+    "noOffers": "No offers available.",
+    "holdHint": "Hold a card for the full details."
   },
   "tenure": {
-    "title": "Tenure",
-    "subtitle": "You reached level {{level}} last run. Your tenure carries over.",
-    "pickHint": "Pick one chain. It is yours from level 1, already paid for.",
-    "confirmButton": "Take It",
-    "pickToStart": "Pick an Upgrade",
     "continued": "From your last run"
   },
   "buildRecap": {
@@ -1008,7 +974,7 @@
     "title": "Promotion",
     "subtitle": "Your review went well. Pick one permanent perk for the rest of this run.",
     "exclusiveHint": "One pick only. The other two are gone for good.",
-    "scopeNote": "Applies for the rest of the run, including ascension.",
+    "scopeNote": "Applies for the rest of the run.",
     "holdHint": "Hold a perk for the full briefing.",
     "closeDetail": "Close",
     "confirmButton": "Accept Promotion",
@@ -1033,7 +999,6 @@
     "certificates": "Certificates",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Achievements",
-    "loadouts": "Loadouts",
     "admin": "Admin",
     "certLockedTitle": "Certificates Locked",
     "certLockedBody": "Certificates are permanent bonuses earned by mastering upgrade families across runs. Reach a family's top tier, or earn your first certificate by playing, and this store opens. Then spend Certificate Hours to level them up.",
@@ -1044,21 +1009,8 @@
     "dailyIntroTitle": "Daily Stand-up",
     "dailyIntroBody": "Everyone gets the same run each day from one shared seed. Your result goes on the daily leaderboard, and playing builds a streak. Starts at level 1.",
     "dailyIntroStart": "Start today's run",
-    "music": "Music"
-  },
-  "loadouts": {
-    "title": "Loadouts",
-    "uniqueWins": "Unique wins",
-    "sectionUnlocked": "Unlocked",
-    "sectionLocked": "Locked",
-    "unlockRequirement_one": "Win with {{count}} more unique loadout to unlock.",
-    "unlockRequirement_other": "Win with {{count}} more unique loadouts to unlock.",
-    "progress": "{{current}} / {{required}} unique wins",
-    "loading": "Loading...",
-    "back": "Back",
-    "unlockedModalTitle": "Loadouts Unlocked",
-    "unlockedModalBody": "First run won! Every run now starts with a loadout: a curse paired with a blessing. Win with different loadouts to unlock more.",
-    "unlockedModalDismiss": "Got It"
+    "music": "Music",
+    "offers": "Sprint Planning"
   },
   "features": {
     "unlockedHeader": "Feature Unlocked",
@@ -1071,13 +1023,13 @@
       "name": "Certificates",
       "body": "First certificate hour banked! Spend hours in the Certificate store on permanent upgrades. More bank as you clear levels."
     },
-    "loadouts": {
-      "name": "Loadouts",
-      "body": "You beat the game! Every run now starts with a loadout draft: a curse paired with a blessing. Win with different loadouts to unlock more."
-    },
     "panicShockwave": {
       "name": "Panic Button",
       "body": "First boss beaten! Every map now starts with a free Shockwave: fire it to blast the balls apart when they slow down. Chests can grant more."
+    },
+    "sprintPlanning": {
+      "name": "Sprint Planning",
+      "body": "From your next run, every run starts with three offers: a boon, a Specialisation that leans the store toward one archetype, and a gamble. Take one, or skip."
     }
   },
   "hallOfFame": {
@@ -1085,9 +1037,7 @@
     "topRuns": "All time Top 10",
     "emptyLadder": "No runs banked yet. Finish a run and it lands here.",
     "mapsLabel": "{{count}} maps",
-    "depthLabel": "Depth {{depth}}",
     "archetypeBests": "Archetype bests",
-    "deepestAscension": "Deepest Ascension",
     "mapRecords": "Map records",
     "back": "Back",
     "employeeOfMonth": "Employee of the Month",
@@ -1166,15 +1116,17 @@
     },
     "bombBox": {
       "title": "Bomb block",
-      "body": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb blows up the block and blasts a hole in everything close by: bricks, fences, walls and claimed ground. Balls nearby are thrown clear, faster."
+      "body": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb blows up the block and blasts a hole in everything close by: bricks, fences, walls and claimed ground. Balls nearby are thrown clear, faster. Once the bomb shows, a red ring on the floor marks how far it reaches.",
+      "bodyQuiet": "A bomb sits inside. Each hit chips the hull until the bomb shows; the next hit on the bomb finishes the block. On this map it goes up without a blast."
     },
     "bombChest": {
       "title": "Treasure chest",
-      "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open and blasts a hole in everything close by. Balls nearby are thrown clear, faster. Every smash also raises this map payout."
+      "body": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb blows it open and blasts a hole in everything close by. Balls nearby are thrown clear, faster. Every smash also raises this map payout. Once the bomb shows, a red ring on the floor marks how far it reaches.",
+      "bodyQuiet": "Loot, and a bomb. Each hit chips the hull until the bomb shows; the next hit on the bomb breaks it open. On this map it goes up without a blast. Every smash also raises this map payout."
     },
     "bombShard": {
       "title": "Bomb brick",
-      "body": "Break it and it blows up: every brick close by goes with it, a block in reach takes a heavy hit, and it blasts a hole in fences, walls and claimed ground. Balls nearby are thrown clear, faster. Another bomb in the blast goes up too."
+      "body": "Break it and it blows up: every brick close by goes with it, a block in reach takes a heavy hit, and it blasts a hole in fences, walls and claimed ground. Balls nearby are thrown clear, faster. Another bomb in the blast goes up too. The red ring on the floor shows how far it reaches."
     },
     "objective": {
       "title": "Objective crate",
@@ -1432,15 +1384,52 @@
     "promotion": "Promotion",
     "store": "Store",
     "level": "Level {{level}}",
-    "ascension": "Ascension",
+    "finish": "Finish",
     "toPromotion": "Choose your promotion",
     "toStore": "Open the store",
     "toLevel": "Start level {{level}}",
-    "toAscension": "Finish the run",
+    "toFinish": "Finish the run",
     "ofPossible": "of {{hours}}h this map could pay",
     "fullPay": "Everything this map could pay",
     "toSpend": "to spend before level {{level}}",
     "toSpendLast": "to spend",
     "pickOne": "Pick 1 of {{count}}"
+  },
+  "sprint": {
+    "kind": {
+      "boon": "Boon",
+      "tenure": "Tenure",
+      "specialisation": "Specialisation",
+      "gamble": "Gamble",
+      "jackpot": "Jackpot"
+    },
+    "tenureUpside": "You reached level {{level}} last run. This chain is yours from level 1, already paid for.",
+    "choosesAfter_one": "You pick {{count}} chain after the draft.",
+    "choosesAfter_other": "You pick one of {{count}} after the draft.",
+    "explain": {
+      "boon": "A boon is small and safe. Most help only your first few maps, so the run is still yours to decide.",
+      "tenure": "Tenure is earned by getting deep in a run: 10, 20 or 30 levels pay one, two or three tiers of a chain. Taking it means passing on the other two offers.",
+      "specialisation": "A Specialisation is only ever offered here. The store treats it as two extra {{tag}} upgrades when it picks its offers, every shelf holds at least one {{tag}} card, and it counts as one {{tag}} upgrade toward the set bonus.",
+      "gamble": "A gamble charges its price for the whole run. The prize lands now, already paid for.",
+      "jackpot": "The jackpot: one gamble in twenty, with no price at all."
+    }
+  },
+  "chainPick": {
+    "subtitle": "Pick one chain. It is yours from level 1, already paid for.",
+    "pickHint": "Every tier on a card lands together.",
+    "confirmButton": "Take It",
+    "pickToStart": "Pick a Chain"
+  },
+  "offers": {
+    "title": "Sprint Planning",
+    "open": "Offers open",
+    "back": "Back",
+    "unlockLevel": "Reach level {{level}} in a run to unlock.",
+    "unlockArchetype": "Own three {{tag}} upgrades in one run to unlock.",
+    "poolHint": {
+      "boon": "Small and safe. Most help your first few maps.",
+      "specialisation": "Only offered here. Leans the store toward one archetype for the whole run.",
+      "gamble": "A price now for a prize that would take ten maps to reach."
+    }
   }
 }

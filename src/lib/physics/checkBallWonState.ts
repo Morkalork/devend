@@ -48,6 +48,7 @@ import type { WinSpec } from "@/types/winSpec";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 import { runStream } from "@/lib/runRng";
 import { simNow } from "@/lib/simClock";
+import { nearestFreeBall } from "@/lib/offerPerks";
 
 // ── Boss ball helpers (issue #56) ────────────────────────────────────────────
 
@@ -764,6 +765,15 @@ export function checkAndUpdateBallWonStates(
 
     game.lockedBallsCount += 1;
     wonThisPass.push(ball);
+
+    // Containment (Sprint Planning): every lock holds the nearest free ball
+    // still, by the freeze path. Its re-freeze cooldown is left alone, so the
+    // player's own freeze is still theirs to spend on it.
+    if (activeModifiers.lockStunSeconds > 0) {
+      const now = simNow();
+      const held = nearestFreeBall(game.balls, ball.position, now);
+      if (held) held.frozenUntil = now + activeModifiers.lockStunSeconds * 1000;
+    }
 
     applyMicroManagerSpeedCap(
       game.balls,

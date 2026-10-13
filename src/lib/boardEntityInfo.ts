@@ -99,9 +99,12 @@ export function boardEntityAt(game: CanvasGameState, x: number, y: number): Boar
     if (d.shardBomb) return { kind: "bombShard" };
     // A box with a bomb in it (lib/bombCore.ts) says so: how to finish it
     // off is the thing worth knowing about it.
-    if (d.chest) return { kind: d.bomb ? "bombChest" : "chest" };
+    // A box whose bomb does not blast on this map (act I: bombCore
+    // boxBlastArmed) says so, rather than promising a crater that never comes.
+    const quiet = game.boxBombBlast ? undefined : "quiet";
+    if (d.chest) return d.bomb ? { kind: "bombChest", detail: quiet } : { kind: "chest" };
     if (d.objective) return { kind: "objective" };
-    if (d.bomb) return { kind: "bombBox" };
+    if (d.bomb) return { kind: "bombBox", detail: quiet };
     return { kind: d.kind === "mirror" ? "mirror" : "breakable" };
   }
 

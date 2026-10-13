@@ -64,33 +64,38 @@ async function afterARunThatReached(depth: number) {
   return hook;
 }
 
+/** The Tenure card on the dealt Sprint Planning screen, or undefined. */
+function tenureCardOf(hook: Awaited<ReturnType<typeof afterARunThatReached>>) {
+  return hook.result.current.session.pendingSprint?.cards.find(c => c.tenure);
+}
+
 describe("starting the next run after one that earned a head start", () => {
-  it("offers Tenure from Play Again, the button under the score", async () => {
+  it("deals Tenure from Play Again, the button under the score", async () => {
     const hook = await afterARunThatReached(EARNING_DEPTH);
 
     act(() => { hook.result.current.session.handlePlayAgain(); });
 
-    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("tenureDraft"));
-    expect(hook.result.current.session.pendingTenure?.offers.length).toBeGreaterThan(0);
-    expect(hook.result.current.session.pendingTenure?.earnedAtLevel).toBe(EARNING_DEPTH);
+    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
+    expect(tenureCardOf(hook)?.grants.length).toBeGreaterThan(0);
+    expect(tenureCardOf(hook)?.tenure?.earnedAtLevel).toBe(EARNING_DEPTH);
   });
 
-  it("offers Tenure from Restart", async () => {
+  it("deals Tenure from Restart", async () => {
     const hook = await afterARunThatReached(EARNING_DEPTH);
 
     act(() => { hook.result.current.session.handleRestartRun(); });
 
-    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("tenureDraft"));
-    expect(hook.result.current.session.pendingTenure?.offers.length).toBeGreaterThan(0);
+    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
+    expect(tenureCardOf(hook)?.grants.length).toBeGreaterThan(0);
   });
 
-  it("still offers Tenure from New Game", async () => {
+  it("still deals Tenure from New Game", async () => {
     const hook = await afterARunThatReached(EARNING_DEPTH);
 
     await act(async () => { await hook.result.current.session.handleStartGame(); });
 
-    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("tenureDraft"));
-    expect(hook.result.current.session.pendingTenure?.offers.length).toBeGreaterThan(0);
+    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
+    expect(tenureCardOf(hook)?.grants.length).toBeGreaterThan(0);
   });
 
   it("grants a deeper chain for a deeper run, whichever button is used", async () => {
@@ -98,23 +103,23 @@ describe("starting the next run after one that earned a head start", () => {
 
     act(() => { hook.result.current.session.handlePlayAgain(); });
 
-    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("tenureDraft"));
+    await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
     // Two tiers at the second threshold, one at the first.
-    for (const offer of hook.result.current.session.pendingTenure!.offers) {
-      expect(offer.upgrades).toHaveLength(2);
-    }
+    expect(tenureCardOf(hook)!.grants).toHaveLength(2);
   });
 });
 
 describe("when no head start was earned", () => {
+  // Sprint Planning is not unlocked in these runs (no level 3 cleared), so
+  // without a head start owed there is nothing to deal.
   it("Play Again goes straight on, with no empty draft screen", async () => {
     const hook = await afterARunThatReached(EARNING_DEPTH - 1);
 
     act(() => { hook.result.current.session.handlePlayAgain(); });
 
     await waitFor(() => expect(hook.result.current.nav.currentScreen).not.toBe("result"));
-    expect(hook.result.current.nav.currentScreen).not.toBe("tenureDraft");
-    expect(hook.result.current.session.pendingTenure).toBeNull();
+    expect(hook.result.current.nav.currentScreen).toBe("game");
+    expect(hook.result.current.session.pendingSprint).toBeNull();
   });
 
   it("Restart goes straight on too", async () => {
@@ -123,6 +128,6 @@ describe("when no head start was earned", () => {
     act(() => { hook.result.current.session.handleRestartRun(); });
 
     await waitFor(() => expect(hook.result.current.nav.currentScreen).not.toBe("result"));
-    expect(hook.result.current.nav.currentScreen).not.toBe("tenureDraft");
+    expect(hook.result.current.nav.currentScreen).toBe("game");
   });
 });

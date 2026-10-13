@@ -23,11 +23,12 @@ import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { RunContext } from "@/lib/upgradeConditions";
-import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from "@/lib/upgradeTags";
+import { ownedTagCounts, weightedSample, withVirtualTag, DEFAULT_TAG_SET_THRESHOLD } from "@/lib/upgradeTags";
+import type { ShopLean } from "@/types/offer";
 import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, type RunwayPerk } from "@/lib/treasury";
 import { inflationForLevel } from "@/lib/upgradePricing";
 import { getRunRng } from "@/lib/runRng";
-import { rollAbilityOffers, abilitySlotClosed as abilityCapReached } from "@/lib/abilityOffer";
+import { abilityOffersFor, rollAbilityOffers, abilitySlotClosed as abilityCapReached } from "@/lib/abilityOffer";
 import { MAX_ABILITY_SLOTS, getAbility } from "@/lib/abilities";
 import { Appear, COLOR, Icon, Label, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
@@ -41,7 +42,7 @@ import {
 } from "./shopParts";
 import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
-  priceOf, purchasesFor, restockCandidates, rollShelf, selectionCost, shelfMarks,
+  priceOf, purchasesFor, restockCandidates, rollShelf, shelfTagCounts, selectionCost, shelfMarks, type StoreDealt,
 } from "./shopModel";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
@@ -85,6 +86,13 @@ interface UpgradeShopProps {
   unlockedCertIds?: string[];
   /** Owned upgrades of a tag needed to activate its set bonus (tagSets). */
   tagSetThreshold?: number;
+  /**
+   * The run's Specialisation (Sprint Planning): leans the shelf and restocks
+   * toward its tag, guarantees a card of it, and counts toward its set.
+   */
+  lean?: ShopLean | null;
+  /** Procurement (Sprint Planning): hours of interest this visit paid on arrival. */
+  interestPaid?: number;
   /** Company Card capstone: the cheapest unowned offer costs nothing. */
   freeCheapestOffer?: boolean;
   /** Full modifier set; drives the treasury strip (Runway + Budget Cycle). */
@@ -122,7 +130,16 @@ interface UpgradeShopProps {
   freeAbilityGrant?: string | null;
   /** The stages between the map just won and the next; a sample one in the gallery. */
   pipeline?: BetweenMapPlan;
+  /**
+   * The shelf this visit was already dealt (upgrade ids, then ability ids), for
+   * a run resumed in the store: it gets the same shelf back, not a re-roll that
+   * closing the game would otherwise buy.
+   */
+  dealt?: StoreDealt | null;
+  /** Told the shelf once it is dealt, so the run save can keep it. */
+  onDealt?: (dealt: StoreDealt) => void;
 }
+
 
 const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
   instantFence: "upgradeShop.runwayChipInstantFence",
@@ -156,6 +173,8 @@ export function UpgradeShop({
   maxTierCounts = {},
   unlockedCertIds = [],
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
+  lean = null,
+  interestPaid = 0,
   freeCheapestOffer = false,
   activeModifiers,
   closed = false,
@@ -166,6 +185,8 @@ export function UpgradeShop({
   mapsRemaining = 0,
   abilityOfferCount = 1,
   onPurchaseAbility,
+  dealt = null,
+  onDealt,
   freeAbilityGrant = null,
   pipeline,
 }: UpgradeShopProps) {
@@ -198,8 +219,15 @@ export function UpgradeShop({
   const dependentsById = useMemo(() => dependentsIndex(upgrades), [upgrades]);
 
   // Pick random offers once on mount; restocks append to this list.
-  const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() =>
-    rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots }));
+  // A resumed visit gets the shelf it was dealt (ids it can no longer find,
+  // after a catalogue change, are dropped).
+  const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
+    if (dealt) {
+      const byId = new Map(upgrades.map(u => [u.id, u]));
+      return dealt.offerIds.flatMap(id => byId.get(id) ?? []);
+    }
+    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean });
+  });
 
   const [restocksUsed, setRestocksUsed] = useState(0);
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
@@ -214,8 +242,9 @@ export function UpgradeShop({
   // count, so picking the piece that reaches the set threshold lights the chip
   // before the purchase is even confirmed.
   const buildTagCounts = useMemo(
-    () => ownedTagCounts([...allOwnedIds, ...selectedIds], upgrades),
-    [allOwnedIds, selectedIds, upgrades],
+    // A Specialisation counts toward its set, so its chip shows that count too.
+    () => withVirtualTag(ownedTagCounts([...allOwnedIds, ...selectedIds], upgrades), lean?.tag, lean?.countsTowardSet ?? 0),
+    [allOwnedIds, selectedIds, upgrades, lean],
   );
 
   // playerPoints (totalScore) is already reduced by onPurchase.
@@ -230,10 +259,22 @@ export function UpgradeShop({
   // assignment block) and then the discount (Bulk Licensing certificate).
   const priceInflation = inflationForLevel(completedLevel);
   // The ability slot's cards, rolled once per visit like the upgrade shelf.
-  const [abilityOffers] = useState<UpgradeConfig[]>(() => rollAbilityOffers(
-    completedLevel, mapsRemaining, heldAbilityIds, abilityOfferCount,
-    getRunRng(`shop:${completedLevel}:ability`), abilitySlots,
-  ));
+  const [abilityOffers] = useState<UpgradeConfig[]>(() => dealt
+    ? abilityOffersFor(dealt.abilityIds, completedLevel, mapsRemaining)
+    : rollAbilityOffers(
+      completedLevel, mapsRemaining, heldAbilityIds, abilityOfferCount,
+      getRunRng(`shop:${completedLevel}:ability`), abilitySlots,
+    ));
+  // Report what was dealt, once: the shelf as it opened, before any restock.
+  const dealtReported = useRef(false);
+  useEffect(() => {
+    if (dealtReported.current) return;
+    dealtReported.current = true;
+    onDealt?.({
+      offerIds: offeredUpgrades.map(u => u.id),
+      abilityIds: abilityOffers.flatMap(o => o.grantsAbility ? [o.grantsAbility] : []),
+    });
+  }, [onDealt, offeredUpgrades, abilityOffers]);
   // Closed only when the cap is what emptied it. A player who has simply bought
   // everything unlocked so far is not at the cap and must not be told they are.
   const abilitySlotClosed = abilityOfferCount > 0 && abilityCapReached(heldAbilityIds, abilitySlots);
@@ -291,7 +332,7 @@ export function UpgradeShop({
         // Restocks lean into the build too: the selection counts as owned.
         // Seeded runs key each restock by its index, so both players' Nth
         // restock rolls identically.
-        const counts = ownedTagCounts(ownedAfterSelect, upgrades);
+        const counts = shelfTagCounts(ownedAfterSelect, upgrades, lean);
         const restockedOffer = weightedSample(candidates, 1, counts, completedLevel, getRunRng(`shop:${completedLevel}:restock:${restocksUsed}`))[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
         setRestocksUsed(prev => prev + 1);
@@ -559,10 +600,20 @@ export function UpgradeShop({
 
       {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
           wrapping row: the player reads them as one status line. */}
-      {!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0) && (
+      {(interestPaid > 0 || (!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0))) && (
         <Appear delay={0.12}>
           <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {runwayPerks.map(p => (
+            {interestPaid > 0 && (
+              <Pill
+                icon={Vault}
+                size={10}
+                text={t("upgradeShop.interestPaid", { hours: interestPaid })}
+                color={RUNWAY}
+                border={tint(RUNWAY, 0x66 / 255)}
+                background={tint(RUNWAY, 0x14 / 255)}
+              />
+            )}
+            {!closed && runwayPerks.map(p => (
               <Pill
                 key={p.perk}
                 icon={Vault}
@@ -575,7 +626,7 @@ export function UpgradeShop({
                 onHold={() => setChipInfo({ text: t("upgradeShop.runwayTitle"), color: RUNWAY })}
               />
             ))}
-            {buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
+            {!closed && buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
               <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
             ))}
           </View>

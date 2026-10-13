@@ -351,6 +351,8 @@ function applyCut(
     isComplete:         isInstant,
     activeRegionId:     cmd.regionId,
     startTime:          isInstant ? undefined : simNow(),
+    // Platform: the fence opens part built (applied on its first update).
+    headStart:          isInstant || !(deps.modifiers.fenceHeadStart > 0) ? undefined : deps.modifiers.fenceHeadStart,
     fenceTypeId:        cmd.fenceTypeId ?? STANDARD_FENCE_ID,
     player:             cmd.player,
   } as GrowingWall);

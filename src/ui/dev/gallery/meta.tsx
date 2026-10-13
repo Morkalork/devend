@@ -7,16 +7,16 @@ import yaml from "js-yaml";
 import type { GalleryEntry } from "../galleryTypes";
 import musicYamlRaw from "../../../../public/music.yml?raw";
 import certificatesYamlRaw from "../../../../public/certificates.yml?raw";
-import loadoutsYamlRaw from "../../../../public/loadouts.yml?raw";
 import achievementsYamlRaw from "../../../../public/achievements.yml?raw";
 import { parseMusicDoc } from "@/lib/musicCatalogue";
 import type { Achievement } from "@/types/achievement";
 import type { CertConfig } from "@/types/certificate";
-import type { LoadoutConfig } from "@/types/loadout";
+import { getOfferCatalogue } from "@/lib/sprintOffers";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import { DEFAULT_META_STATS, type MetaProgressionStats } from "@/types/metaProgression";
 import { WelcomeScreen } from "../../screens/WelcomeScreen";
 import { TapToStartGate } from "../../screens/TapToStartGate";
+import { NotFoundScreen } from "../../screens/NotFoundScreen";
 import { OptionsScreen } from "../../screens/OptionsScreen";
 import { TutorialScreen } from "../../screens/TutorialScreen";
 import { JukeboxScreen } from "../../screens/JukeboxScreen";
@@ -24,7 +24,7 @@ import { PairDecision } from "../../screens/PairDecision";
 import { AchievementsScreen } from "../../screens/AchievementsScreen";
 import { HallOfFameScreen } from "../../screens/HallOfFameScreen";
 import { CertificateStore } from "../../screens/CertificateStore";
-import { LoadoutGalleryScreen } from "../../screens/LoadoutGalleryScreen";
+import { OffersScreen } from "../../screens/OffersScreen";
 import { PairLobby } from "../../screens/PairLobby";
 
 const ACCENT = "#00ff88";
@@ -34,7 +34,6 @@ const noop = () => {};
 
 const music = parseMusicDoc(yaml.load(musicYamlRaw) as Record<string, unknown>);
 const certificates = (yaml.load(certificatesYamlRaw) as CertConfig).certificates;
-const loadouts = (yaml.load(loadoutsYamlRaw) as { loadouts: LoadoutConfig[] }).loadouts;
 const achievements = (yaml.load(achievementsYamlRaw) as { achievements: Achievement[] }).achievements;
 
 // ── A mid-game player ──────────────────────────────────────────────────────
@@ -45,19 +44,18 @@ const metaStats: MetaProgressionStats = {
   totalFencesDrawn: 412,
   totalLevelsCompletedWithoutLoss: 9,
   totalLivesLost: 23,
-  deepestAscension: 2,
   pushBonusesBanked: 6,
 };
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 9, 10, 12);
 const run = (score: number, over: Partial<RunLedgerEntry> = {}): RunLedgerEntry => ({
-  score, levelsCompleted: 12, ascensionDepth: 0, primaryTag: null, secondaryTag: null,
+  score, levelsCompleted: 12, primaryTag: null, secondaryTag: null,
   capstoneId: null, capstoneName: null, loadoutIds: [], savedAt: NOW, ...over,
 });
 const topRuns: RunLedgerEntry[] = [
-  run(612, { levelsCompleted: 22, ascensionDepth: 2, primaryTag: "lock", secondaryTag: "risk", capstoneId: "stock-options", capstoneName: "Stock Options", savedAt: NOW - DAY }),
-  run(488, { levelsCompleted: 20, ascensionDepth: 1, primaryTag: "freeze", savedAt: NOW - 3 * DAY }),
+  run(612, { levelsCompleted: 22, primaryTag: "lock", secondaryTag: "risk", capstoneId: "stock-options", capstoneName: "Stock Options", savedAt: NOW - DAY }),
+  run(488, { levelsCompleted: 20, primaryTag: "freeze", savedAt: NOW - 3 * DAY }),
   run(301, { levelsCompleted: 16, primaryTag: "bank", secondaryTag: "tempo", savedAt: NOW - 9 * DAY }),
   run(140, { levelsCompleted: 11, savedAt: NOW - 20 * DAY }),
   run(52, { levelsCompleted: 5, primaryTag: "safety", savedAt: NOW - 40 * DAY }),
@@ -75,8 +73,8 @@ const welcome = {
 export const entries: GalleryEntry[] = [
   {
     id: "WelcomeScreen", group: "screen", render: () => (
-      <WelcomeScreen {...welcome} onContinue={noop} savedRunAscension={2} onOpenCertificateStore={noop}
-        onLoadouts={noop} onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop}
+      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop}
+        onOffers={noop} onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop}
         onJukebox={noop} onAdmin={noop} totalCertificateHours={18} completedAchievementCount={4} />
     ),
   },
@@ -88,7 +86,7 @@ export const entries: GalleryEntry[] = [
   },
   {
     id: "WelcomeScreen-error", group: "screen", render: () => (
-      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop} onLoadouts={noop}
+      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop} onOffers={noop}
         onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop} onJukebox={noop}
         error="Failed to fetch" />
     ),
@@ -110,6 +108,7 @@ export const entries: GalleryEntry[] = [
   // (isAwaitingUserGesture), which props cannot force: once sound is unlocked
   // this entry draws nothing.
   { id: "TapToStartGate", group: "screen", render: () => <TapToStartGate accentColor={ACCENT} /> },
+  { id: "NotFoundScreen", group: "screen", render: () => <NotFoundScreen onHome={() => {}} /> },
   {
     id: "OptionsScreen", group: "screen", render: () => (
       <OptionsScreen onBack={noop} onReEnableTutorials={noop} onTotalReset={noop} accentColor={ACCENT} />
@@ -184,8 +183,8 @@ export const entries: GalleryEntry[] = [
     ),
   },
   {
-    id: "LoadoutGalleryScreen", group: "screen", render: () => (
-      <LoadoutGalleryScreen loadouts={loadouts} wonLoadoutIds={["crunch_time", "scope_creep", "hiring_freeze"]} onBack={noop} accentColor={ACCENT} />
+    id: "OffersScreen", group: "screen", render: () => (
+      <OffersScreen catalogue={getOfferCatalogue()} unlock={{ highestLevelReached: 12, metArchetypes: ["lock"] }} onBack={noop} accentColor={ACCENT} />
     ),
   },
   { id: "PairLobby", group: "screen", render: () => <PairLobby onBack={noop} onPaired={noop} /> },

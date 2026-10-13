@@ -5,7 +5,6 @@ export type AchievementStat =
   | 'highestLevelReached'
   | 'totalLevelsCompletedWithoutLoss'
   | 'totalLivesLost'
-  | 'deepestAscension'
   | 'pushBonusesBanked';
 
 export interface AchievementRequirement {
@@ -20,7 +19,6 @@ export const ACHIEVEMENT_STAT_LABELS: Record<AchievementStat, string> = {
   highestLevelReached: 'Highest level',
   totalLevelsCompletedWithoutLoss: 'Flawless levels',
   totalLivesLost: 'Lives lost',
-  deepestAscension: 'Deepest ascension',
   pushBonusesBanked: 'Push bonuses banked',
 };
 

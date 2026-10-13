@@ -161,14 +161,6 @@ describe("selection is by tier, not by graph position", () => {
     expect(eligibleTenureChains(doorstep, 10, first).map(o => o.headId))
       .toContain("b_junior");
   });
-
-  it("never offers ascension-only upgrades", () => {
-    const asc = [
-      up("asc_junior", "Junior", 1, [], { ascensionOnly: true }),
-      up("asc_senior", "Senior", 2, ["asc_junior"], { ascensionOnly: true }),
-    ];
-    expect(eligibleTenureChains(asc, 20, first)).toEqual([]);
-  });
 });
 
 describe("the unlockLevel gate covers every granted upgrade", () => {

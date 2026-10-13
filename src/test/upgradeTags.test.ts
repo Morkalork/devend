@@ -106,7 +106,6 @@ describe("tagSets catalogue config", () => {
     const threshold = doc.tagSets!.threshold;
     const counts = new Map<string, number>();
     for (const u of doc.upgrades) {
-      if (u.ascensionOnly) continue; // not purchasable in a normal run
       for (const tag of u.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
     for (const b of doc.tagSets!.bonuses) {
