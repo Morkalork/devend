@@ -91,16 +91,19 @@ export interface Pip {
   active: boolean;
   /** That item cannot be taken right now (the store's blocked or unfunded ticket): a hollow pip. */
   unavailable: boolean;
+  /** Newly added (a restock) and not looked at yet: a pip in the restock colour. */
+  fresh: boolean;
 }
 
 /** One pip per item, or none for a single item, which has nothing to navigate. */
-export function pipsFor(count: number, active: number, marks: boolean[] = [], unavailable: boolean[] = []): Pip[] {
+export function pipsFor(count: number, active: number, marks: boolean[] = [], unavailable: boolean[] = [], fresh: boolean[] = []): Pip[] {
   if (count <= 1) return [];
   return Array.from({ length: count }, (_, i) => ({
     picked: marks[i] === true,
     active: i === active,
     // Picked wins: a committed ticket is never shown as one you cannot take.
     unavailable: marks[i] !== true && unavailable[i] === true,
+    fresh: fresh[i] === true,
   }));
 }
 

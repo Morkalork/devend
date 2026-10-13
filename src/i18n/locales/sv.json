@@ -756,8 +756,8 @@
     }
   },
   "tutorialOverlay": {
-    "tapToContinue": "TRYCK VAR SOM HELST FÖR ATT FORTSÄTTA",
-    "replayFromOptions": "Genomgångar kan spelas upp igen från ALTERNATIV"
+    "tapToContinue": "Tryck var som helst för att fortsätta",
+    "replayFromOptions": "Genomgångar kan spelas upp igen från Alternativ"
   },
   "abilityInfo": {
     "howToUse": "SÅ HÄR ANVÄNDER DU",
@@ -876,7 +876,7 @@
     "detailUnlocks": "Låser upp",
     "detailNoPrereqs": "Tillgänglig från start",
     "detailNoUnlocks": "Inget mer ännu",
-    "certificateUnlocked": "Certifikat upplåst!",
+    "certificateUnlocked": "Certifikat upplåst",
     "buyAndContinue": "Köp {{count}}",
     "continue": "Fortsätt",
     "closedNotEnoughLocks": "Inte tillräckligt många bollar låsta",
@@ -906,6 +906,10 @@
     "statusDone": "Klar",
     "statusBlocked": "Blockerad",
     "statusUnfunded": "Ej finansierad",
+    "commitAndStart": "Planera in {{count}} och starta nivå {{level}}",
+    "checkpointLine": "Kontrollpunkt: framstegen sparas här",
+    "restockedLine": "Påfyllt: {{key}} {{name}} ligger sist i backloggen",
+    "statusNew": "Ny",
     "blockedBy": "Blockerad av",
     "sprintWontFit_one": "{{count}} ärende får inte plats ({{hours}}h saknas)",
     "sprintWontFit_other": "{{count}} ärenden får inte plats ({{hours}}h saknas för det närmaste)",

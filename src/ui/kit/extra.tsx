@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate } from "motion";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { X, Info } from "lucide-react";
-import { COLOR, RADIUS, TEXT } from "../theme";
+import { COLOR, RADIUS, ROLE, TEXT } from "../theme";
 import { Icon, Label, Pressable, View, type Layout } from "./core";
 import { tint } from "./style";
 import { usePulse } from "./motion";
@@ -96,6 +96,14 @@ export interface ModalProps {
   maxWidth?: number;
   /** Close on a backdrop tap (the game's standard; off for a decision that must be made). */
   dismissable?: boolean;
+  /**
+   * Draw the card as an opened ticket (the store's board, UI_REDO_PLAN.md):
+   * flat, a small radius, the edge grey and a 4px stripe of this colour down
+   * its left side. Unset, the card is the standard explainer card.
+   */
+  stripe?: number;
+  /** Drawn in the title's place, beside the X (a ticket's key row). */
+  heading?: ReactNode;
 }
 
 /**
@@ -103,7 +111,7 @@ export interface ModalProps {
  * that closes on a tap, a card with an X. Positioned absolutely over the whole
  * screen, so it can be dropped into any screen's tree.
  */
-export function Modal({ screen, onClose, children, accent = COLOR.primary, title, maxWidth = 380, dismissable = true }: ModalProps) {
+export function Modal({ screen, onClose, children, accent = COLOR.primary, title, maxWidth = 380, dismissable = true, stripe, heading }: ModalProps) {
   const width = Math.min(maxWidth, screen.width - 32);
   return (
     <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height, justifyContent: "center", alignItems: "center" }} zIndex={1000}>
@@ -116,22 +124,29 @@ export function Modal({ screen, onClose, children, accent = COLOR.primary, title
         {/* A Pressable with no handlers: it is interactive, so a tap on the
             card stops here instead of falling through to the backdrop, which
             would close the modal. */}
-        <Pressable pressedAlpha={1} layout={{
+        <Pressable pressedAlpha={1} layout={stripe === undefined ? {
           width, padding: 20, gap: 12, borderRadius: RADIUS.xl,
           backgroundColor: COLOR.card, borderColor: tint(accent, 0.5), borderWidth: 1,
+        } : {
+          width, flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
+          backgroundColor: ROLE.raised, borderColor: ROLE.edge, borderWidth: 1,
         }}>
-          <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-            {title !== undefined && (
-              <View layout={{ flex: 1 }}>
-                <Label text={title} size={TEXT.lg} weight="700" color={accent} wrap />
-              </View>
-            )}
-            {title === undefined && <View layout={{ flex: 1 }} />}
-            <Pressable onTap={onClose} layout={{ padding: 4, borderRadius: RADIUS.md }} label="close">
-              <Icon icon={X} size={18} color={COLOR.mutedForeground} />
-            </Pressable>
+          {stripe !== undefined && <View layout={{ width: 4, backgroundColor: stripe }} />}
+          <View layout={stripe === undefined ? { gap: 12 } : { flex: 1, padding: 18, gap: 12 }}>
+            <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+              {title !== undefined && (
+                <View layout={{ flex: 1 }}>
+                  <Label text={title} size={TEXT.lg} weight="700" font={stripe === undefined ? undefined : "display"}
+                    color={stripe === undefined ? accent : ROLE.ink} wrap />
+                </View>
+              )}
+              {title === undefined && <View layout={{ flex: 1 }}>{heading}</View>}
+              <Pressable onTap={onClose} layout={{ padding: 4, borderRadius: RADIUS.md }} label="close">
+                <Icon icon={X} size={18} color={COLOR.mutedForeground} />
+              </Pressable>
+            </View>
+            {children}
           </View>
-          {children}
         </Pressable>
       </Appear>
     </View>

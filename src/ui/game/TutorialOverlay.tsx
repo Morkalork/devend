@@ -9,8 +9,7 @@ import { useCallback, useRef, type ReactNode } from "react";
 import type { LayoutContainer } from "@pixi/layout/components";
 import type { Graphics } from "pixi.js";
 import { useTranslation } from "react-i18next";
-import { Appear, Label, Pressable, RADIUS, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
-import { GlowFrame } from "./modalParts";
+import { Appear, Label, Pressable, RADIUS, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { useBoxSize } from "./modalMotion";
 
 import {
@@ -23,12 +22,10 @@ interface TutorialOverlayProps {
   title: string;
   body: string;
   /**
-   * Left-align the body instead of centring it.
-   *
-   * Centred prose is right for an explainer paragraph and wrong for a LIST: a
-   * centred bullet list has a ragged left edge, so the eye has to find where
-   * each line starts and the headings stop lining up with the items under
-   * them. The acceptance criteria are the only body here that is a list.
+   * How the card's text lines up. Left by default since the UI redo, where
+   * every card shares one left edge; centre is kept for a caller that wants
+   * it. (A centred list was always wrong: its ragged left edge hides where
+   * each line starts.)
    */
   align?: "center" | "left";
   /** Optional illustration shown between the title and the (shorter) body: a canvas node. */
@@ -40,15 +37,12 @@ interface TutorialOverlayProps {
   accentColor?: string;
 }
 
-/** The card's breathing glow, always the brand green whatever the accent (as in the DOM). */
-const GLOW = 0x00ff88;
-
 export function TutorialOverlay({
   visible,
   onDismiss,
   title,
   body,
-  align = "center",
+  align = "left",
   graphic,
   arrowDirection = 'none',
   showTapHint = true,
@@ -61,9 +55,8 @@ export function TutorialOverlay({
   const accent = hex(accentColor);
   const h = spotlightHeightPx;
   const { hasSpotlight, isArrowUp } = tutorialSpotlight(spotlightArea, h, arrowDirection);
-  // The arrow bobs on a 1.3s ease; the card's glow breathes every 2.4s.
+  // The arrow bobs on a 1.3s ease; it is the one thing here that moves.
   const bobPulse = usePulse(1300, visible && hasSpotlight);
-  const glowPulse = usePulse(2400, visible);
   // The arrow gives way when the card and the strip leave it less than its
   // full height (a short phone with a tall bottom strip): it shrinks rather
   // than running into the strip it points at.
@@ -116,32 +109,36 @@ export function TutorialOverlay({
 
   // "Tap anywhere to continue" means the card too: it is not a Pressable, so a
   // tap on it reaches the overlay's own dismiss (nothing on it to protect).
+  //
+  // Flat, like every card in the redo (UI_REDO_PLAN.md): the raised panel, a
+  // stripe of the explainer's accent down the left, the title in ink, the body
+  // in the body face. It used to be a glowing, breathing, all-caps card in a
+  // monospace body, which made every explainer read as an alarm.
   const card = (
-    <Appear fromScale={0.92} fromY={16} duration={0.25} layout={{ alignSelf: "center" }}>
+    <Appear fromY={12} duration={0.25} layout={{ alignSelf: "center" }}>
       <View layout={{
-        width: tutorialCardWidth(screen.width), padding: 24, gap: 12, borderRadius: RADIUS.xl,
-        backgroundColor: 0x0a0f0a, borderColor: accent, borderWidth: 2,
+        width: tutorialCardWidth(screen.width), flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
+        backgroundColor: ROLE.raised, borderColor: ROLE.edge, borderWidth: 1,
       }}>
-        {/* The breathing glow: box-shadow 0 0 18px..38px rgba(0,255,136,0.14..0.42). */}
-        <GlowFrame color={GLOW} radius={RADIUS.xl} spread={28} strength={0.42} alpha={0.33 + 0.67 * glowPulse} />
-        <Label text={title} size={wide ? TEXT.xl : TEXT.lg} weight="900" font="display" color={accent}
-          upper letterSpacing={(wide ? TEXT.xl : TEXT.lg) * 0.1} align="center" wrap />
+        <View layout={{ width: 4, backgroundColor: accent }} />
+        <View layout={{ flex: 1, padding: 20, gap: 12 }}>
+          <Label text={title} size={wide ? TEXT.xl : TEXT.lg} weight="700" font="display" color={ROLE.ink}
+            align={align === "left" ? "left" : "center"} wrap />
 
-        {graphic && <View layout={{ alignItems: "center" }}>{graphic}</View>}
+          {graphic && <View layout={{ alignItems: "center" }}>{graphic}</View>}
 
-        <Label text={body} size={wide ? TEXT.base : TEXT.sm} font="mono" color={0xc8ffd8}
-          lineHeight={Math.round((wide ? TEXT.base : TEXT.sm) * 1.625)} align={align === "left" ? "left" : "center"} wrap />
+          <Label text={body} size={wide ? TEXT.base : TEXT.sm} color={ROLE.ink}
+            lineHeight={Math.round((wide ? TEXT.base : TEXT.sm) * 1.6)} align={align === "left" ? "left" : "center"} wrap />
 
-        {showTapHint && (
-          <View layout={{ alignItems: "center", marginTop: 4 }}>
-            <Label text={t('tutorialOverlay.tapToContinue')} size={TEXT.xs} font="display" color={accent}
-              alpha={0.7} upper letterSpacing={TEXT.xs * 0.1} align="center" wrap />
+          {showTapHint && (
+            <View layout={{ alignItems: align === "left" ? "flex-start" : "center", marginTop: 4 }}>
+              <Label text={t('tutorialOverlay.tapToContinue')} size={TEXT.xs} weight="600" color={accent} align={align} wrap />
+            </View>
+          )}
+
+          <View layout={{ alignItems: align === "left" ? "flex-start" : "center" }}>
+            <Label text={t('tutorialOverlay.replayFromOptions')} size={TEXT.xs} color={ROLE.muted} align={align} wrap />
           </View>
-        )}
-
-        <View layout={{ alignItems: "center", marginTop: 4 }}>
-          <Label text={t('tutorialOverlay.replayFromOptions')} size={10} font="mono" color={0x4a7a5a}
-            upper letterSpacing={0.25} align="center" wrap />
         </View>
       </View>
     </Appear>

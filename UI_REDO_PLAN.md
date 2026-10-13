@@ -143,6 +143,22 @@ how many tickets won't fit and how close the nearest is. All of it updates as
 tickets are committed or taken back out. Tickets are not re-sorted: the order
 stays put so nothing jumps under the finger. Gallery: `UpgradeShop-reach`.
 
+**Store follow-ups.** Holding a ticket opens it as a ticket view (the kit's
+`Modal` gained a `stripe` and a `heading`): key row, title, labels, the full
+description, its links ("Unlocked by", "Unlocks") by key, and the certificate
+it counts toward. The tier-3 chooser lists its variants as sub-tickets with the
+board's statuses (in the sprint, or unfunded with the shortfall). The rates,
+restocks, budget cycle, runway and set-count pills moved into the Sprint panel
+under its capacity, flat. The commit button names where it goes ("Commit 2 and
+start level 11"). The checkpoint is one line under the headline. The
+certificate-unlocked row is a flat panel with a gold stripe. A restock is
+announced in the Sprint panel and marked on its dot and ticket ("New") until
+the strip reaches it; the line jumps there. The dots start on the column's left
+edge. An unfunded ticket drops the struck-through discount price, since the
+shortfall matters more. And the shared explainer card (`TutorialOverlay`) is
+flat and left-aligned: no glow, no capitals, the body in the body face.
+Gallery: `UpgradeDetailModal`, `ChoiceChooserModal`.
+
 **The pre-map Acceptance Criteria** are the map's own ticket
 (`AcceptanceCriteriaModal`, src/ui/game): the store's ticket look with the band's
 accent as the stripe, a key hashed from the map's id, "Level N" as the title and

@@ -756,8 +756,8 @@
     }
   },
   "tutorialOverlay": {
-    "tapToContinue": "TAP ANYWHERE TO CONTINUE",
-    "replayFromOptions": "Tutorials can be replayed from OPTIONS"
+    "tapToContinue": "Tap anywhere to continue",
+    "replayFromOptions": "Tutorials can be replayed from Options"
   },
   "abilityInfo": {
     "howToUse": "HOW TO USE",
@@ -876,7 +876,7 @@
     "detailUnlocks": "Unlocks",
     "detailNoPrereqs": "Available from the start",
     "detailNoUnlocks": "Nothing further yet",
-    "certificateUnlocked": "Certificate Unlocked!",
+    "certificateUnlocked": "Certificate unlocked",
     "buyAndContinue": "Buy {{count}}",
     "continue": "Continue",
     "closedNotEnoughLocks": "Not enough balls locked",
@@ -906,6 +906,10 @@
     "statusDone": "Done",
     "statusBlocked": "Blocked",
     "statusUnfunded": "Unfunded",
+    "commitAndStart": "Commit {{count}} and start level {{level}}",
+    "checkpointLine": "Checkpoint: progress is saved here",
+    "restockedLine": "Restocked: {{key}} {{name}} is at the end of the backlog",
+    "statusNew": "New",
     "blockedBy": "Blocked by",
     "sprintWontFit_one": "{{count}} ticket won't fit ({{hours}}h short)",
     "sprintWontFit_other": "{{count}} tickets won't fit ({{hours}}h short on the closest)",

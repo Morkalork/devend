@@ -1,5 +1,6 @@
 /** Gallery entries: the between-map screens (end of map, end of run, shop, drafts). */
 import type { GalleryEntry } from "../galleryTypes";
+import { hex } from "../../kit/ui";
 import type { LevelScoreData, GameResult } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
 import type { UpgradeConfig } from "@/types/upgrade";
@@ -12,6 +13,7 @@ import { LevelCompleteOverlay } from "../../screens/LevelCompleteOverlay";
 import { ResultScreen } from "../../screens/ResultScreen";
 import { ContinuePrompt } from "../../screens/ContinuePrompt";
 import { UpgradeShop } from "../../screens/UpgradeShop";
+import { ChoiceChooserModal, UpgradeDetailModal } from "../../screens/shopParts";
 import { ChainPickScreen } from "../../screens/ChainPickScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
@@ -222,6 +224,19 @@ export const entries: GalleryEntry[] = [
   {
     id: "UpgradeShop", group: "screen",
     render: () => <UpgradeShop {...shopProps} tagSetThreshold={3} newlyUnlockedCerts={[certs[1]]} />,
+  },
+  {
+    // Holding a ticket: the ticket opened, with its links and the certificate it counts toward.
+    id: "UpgradeDetailModal", group: "modal",
+    render: () => <UpgradeDetailModal upgrade={shopUpgrades[7]} upgrades={shopUpgrades} dependents={[shopUpgrades[8]]}
+      has={id => shopOwned.includes(id)} cert={{ cert: certs[1], current: 1, required: 3 }} runContext={null}
+      accent={hex(ACCENT)} onClose={noop} />,
+  },
+  {
+    // Tapping a choice ticket: one variant committed, the other a few hours short.
+    id: "ChoiceChooserModal", group: "modal",
+    render: () => <ChoiceChooserModal options={[shopUpgrades[5], shopUpgrades[6]]} selectedIds={[shopUpgrades[5].id]}
+      price={u => (u.id === shopUpgrades[5].id ? 63 : 77)} budget={70} accent={hex(ACCENT)} onChoose={noop} onClose={noop} />,
   },
   {
     // What can and cannot be bought, side by side: an affordable ticket, a

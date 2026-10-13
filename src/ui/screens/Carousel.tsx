@@ -44,6 +44,10 @@ interface CarouselProps {
   marks?: boolean[];
   /** Per-item "cannot be taken right now" flags: a hollow pip, so what is out of reach shows without swiping. */
   unavailable?: boolean[];
+  /** Per-item "just added, not seen yet" flags (a restock at the end of the strip). */
+  fresh?: boolean[];
+  /** Told the item in view each time it changes (the store clears a restock's "new" once it is seen). */
+  onActiveChange?: (index: number) => void;
   /**
    * Move the strip to an item from outside (the store's "Blocked by" link).
    * The nonce makes a second jump to the same index still move it.
@@ -77,6 +81,8 @@ export function Carousel({
   items,
   marks = [],
   unavailable = [],
+  fresh = [],
+  onActiveChange,
   focus = null,
   label,
   prevLabel,
@@ -184,7 +190,14 @@ export function Carousel({
     }
   }, [focus, count]);
 
-  const pips = useMemo(() => pipsFor(count, active, marks, unavailable), [count, active, marks, unavailable]);
+  // The item in view, reported out; the latest callback is read at change time.
+  const activeChangeRef = useRef(onActiveChange);
+  activeChangeRef.current = onActiveChange;
+  useEffect(() => {
+    activeChangeRef.current?.(active);
+  }, [active]);
+
+  const pips = useMemo(() => pipsFor(count, active, marks, unavailable, fresh), [count, active, marks, unavailable, fresh]);
   const showArrows = screen.width >= ARROWS_MIN_SCREEN;
 
   const arrow = (delta: -1 | 1) => (
@@ -232,7 +245,11 @@ export function Carousel({
       {/* Pips: position AND inventory. A green pip means that offer is
           already picked, the one thing the old grid told you for free. */}
       {pips.length > 0 && (
-        <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        // Under a left-aligned strip the pips start on the same edge as its cards.
+        <View layout={{
+          flexDirection: "row", alignItems: "center", gap: 8,
+          ...(alignWidth === undefined ? { justifyContent: "center" } : { width: Math.min(alignWidth, viewW), justifyContent: "flex-start", paddingLeft: 4 }),
+        }}>
           {pips.map((pip, i) => (
             <Pressable
               key={i}
@@ -245,7 +262,7 @@ export function Carousel({
                 width: pip.active ? 20 : 8, height: 8, borderRadius: RADIUS.full,
                 ...(pip.unavailable
                   ? { borderWidth: 1.5, borderColor: tint(COLOR.foreground, pip.active ? 0.8 : 0.35) }
-                  : { backgroundColor: pip.picked ? 0x4ade80 : tint(COLOR.foreground, pip.active ? 0.8 : 0.25) }),
+                  : { backgroundColor: pip.picked ? 0x4ade80 : pip.fresh ? COLOR.cyan : tint(COLOR.foreground, pip.active ? 0.8 : 0.25) }),
               }} />
             </Pressable>
           ))}

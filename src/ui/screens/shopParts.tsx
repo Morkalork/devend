@@ -84,17 +84,19 @@ interface PillProps {
 }
 
 /** A rounded status chip (market rates, restocks, Budget Cycle, Runway). */
-export function Pill({ text, icon, color, border, background, size = 11, alpha, onHold }: PillProps) {
+export function Pill({ text, icon, color, background, size = 11, alpha, onHold }: PillProps) {
   return (
     <Pressable
       onHold={onHold}
       pressedAlpha={1}
       alpha={alpha}
       label={text}
+      // Flat, like a ticket's fields: a tinted ground in the pill's own colour
+      // and no outline. `border` is kept for callers; an unlit pill (no ground
+      // given) takes the edge grey so it still reads as a field.
       layout={{
-        flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2,
-        borderRadius: RADIUS.full, borderWidth: 1, borderColor: border,
-        ...(background !== undefined ? { backgroundColor: background } : {}),
+        flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2,
+        borderRadius: 4, backgroundColor: background !== undefined ? tint(color, 0.14) : ROLE.edge,
       }}
     >
       {icon && <Icon icon={icon} size={12} color={color} />}
@@ -148,18 +150,12 @@ export function ClosedBanner({ locksHave, locksNeed, onHold }: { locksHave?: num
  */
 export function WaypointBanner({ level }: { level: number }) {
   const { t } = useTranslation();
-  const kicker = t("upgradeShop.checkpointReached");
   return (
     <Appear fromY={-6} delay={0.08}>
-      <View layout={{
-        flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch", padding: 12, borderRadius: RADIUS.sm,
-        backgroundColor: ROLE.raised, borderWidth: 1, borderColor: CHECKPOINT,
-      }}>
-        <Icon icon={Flag} size={20} color={CHECKPOINT} />
-        <View layout={{ flex: 1, gap: 2 }}>
-          <Label text={`${kicker.charAt(0).toUpperCase()}${kicker.slice(1)}: ${t("pipeline.level", { level })}`}
-            size={TEXT.base} weight="600" font="display" color={CHECKPOINT} wrap />
-          <Label text={t("upgradeShop.progressSavedHere")} size={TEXT.xs} color={ROLE.muted} wrap />
+      <View label={`checkpoint-${level}`} layout={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "stretch" }}>
+        <Icon icon={Flag} size={16} color={CHECKPOINT} />
+        <View layout={{ flex: 1 }}>
+          <Label text={t("upgradeShop.checkpointLine")} size={TEXT.sm} weight="600" color={CHECKPOINT} wrap />
         </View>
       </View>
     </Appear>
@@ -171,13 +167,17 @@ export function CertUnlockedRow({ cert }: { cert: Certificate }) {
   const { t } = useTranslation();
   return (
     <View layout={{
-      flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: RADIUS.lg,
-      borderWidth: 1, borderColor: tint(YELLOW_500, 0.4), backgroundColor: tint(YELLOW_500, 0.1),
+      flexDirection: "row", alignSelf: "stretch", borderRadius: RADIUS.sm, overflow: "hidden",
+      backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge,
     }}>
-      <Icon icon={Medal} size={16} color={YELLOW_400} />
-      <View layout={{ flex: 1 }}>
-        <Label text={t("upgradeShop.certificateUnlocked")} size={TEXT.xs} weight="700" upper letterSpacing={0.6} color={YELLOW_400} wrap />
-        <Label text={contentText.certName(t, cert)} size={TEXT.sm} weight="600" color={COLOR.foreground} wrap />
+      {/* A gold stripe: a certificate is hours banked for good. */}
+      <View layout={{ width: 4, backgroundColor: YELLOW_400 }} />
+      <View layout={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 12 }}>
+        <Icon icon={Medal} size={18} color={YELLOW_400} />
+        <View layout={{ flex: 1, gap: 2 }}>
+          <Label text={t("upgradeShop.certificateUnlocked")} size={TEXT.xs} weight="600" color={YELLOW_400} wrap />
+          <Label text={contentText.certName(t, cert)} size={TEXT.sm} weight="600" font="display" color={ROLE.ink} wrap />
+        </View>
       </View>
     </View>
   );
@@ -202,6 +202,8 @@ interface TicketCardProps {
   blockers: { upgrade: UpgradeConfig; shelfIndex: number | null }[];
   /** Move the strip to a blocker that is on the shelf. */
   onJump: (shelfIndex: number) => void;
+  /** Restocked this visit and not yet looked at. */
+  fresh?: boolean;
   onTap: () => void;
   onHold: () => void;
 }
@@ -234,7 +236,7 @@ const PRIORITY_GLYPH = [ChevronDown, Equal, ChevronUp, ChevronsUp, Flame] as con
  * ability, so it never reads as a fourth upgrade.
  */
 export function TicketCard({
-  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, remainingBudget, blockers, onJump, onTap, onHold,
+  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, remainingBudget, blockers, onJump, fresh = false, onTap, onHold,
 }: TicketCardProps) {
   const { t } = useTranslation();
   const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, certChase, certShown } = model;
@@ -294,6 +296,12 @@ export function TicketCard({
                 {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={identity} />}
                 <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={identity} />
               </View>
+              {/* A restock: new to this backlog. */}
+              {fresh && (
+                <View layout={{ borderRadius: 4, paddingLeft: 5, paddingRight: 5, backgroundColor: tint(COLOR.cyan, 0.16) }}>
+                  <Label text={t("upgradeShop.statusNew")} size={10} weight="700" upper letterSpacing={0.6} color={COLOR.cyan} />
+                </View>
+              )}
               <View layout={{ flex: 1 }} />
               {/* A blocked ticket wears its lock where the hold hint sits; the hold still works. */}
               {blocked
@@ -381,7 +389,8 @@ export function TicketCard({
               <View layout={{ flex: 1 }} />
               {!owned && (
                 <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {(hasDiscount || shownPrice === 0) && (
+                  {/* On an unfunded ticket the shortfall matters more than the discount. */}
+                  {(hasDiscount || shownPrice === 0) && !unfunded && (
                     <Struck text={t("upgradeShop.hoursValue", { hours: displayUpgrade.cost })} size={TEXT.xs} color={ROLE.muted} alpha={0.7} />
                   )}
                   {isChoice && !chosenMember && (
@@ -427,6 +436,11 @@ interface SprintPanelProps {
   accent: number;
   /** Backlog tickets the hours left cannot pay for, and the closest shortfall; null when all fit. */
   wontFit?: { count: number; closest: number } | null;
+  /** The sprint's fields (rates, restocks, budget cycle, runway, set counts), under the capacity. */
+  fields?: ReactNode;
+  /** The newest restock not yet seen; tapping it moves the strip there. */
+  restocked?: { id: string; upgrade: UpgradeConfig; index: number } | null;
+  onJump?: (shelfIndex: number) => void;
   /** Tapping a committed line takes it back out of the sprint. */
   onRemove: (id: string) => void;
 }
@@ -437,7 +451,9 @@ interface SprintPanelProps {
  * ticket, each tappable to take it back out. Sits above the backlog, so the
  * running total is in view while the player swipes through the tickets.
  */
-export function SprintPanel({ level, lines, committed, capacity, accent, wontFit: notFitting = null, onRemove }: SprintPanelProps) {
+export function SprintPanel({
+  level, lines, committed, capacity, accent, wontFit: notFitting = null, fields, restocked = null, onJump, onRemove,
+}: SprintPanelProps) {
   const { t } = useTranslation();
   const share = useTween(capacityShare(committed, capacity), 0.3);
   return (
@@ -453,6 +469,21 @@ export function SprintPanel({ level, lines, committed, capacity, accent, wontFit
       <View layout={{ alignSelf: "stretch", height: 6, borderRadius: 3, backgroundColor: ROLE.edge, overflow: "hidden" }}>
         <View layout={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(share * 1000) / 10}%`, backgroundColor: ROLE.hours }} />
       </View>
+
+      {fields}
+
+      {/* A restock lands at the end of the strip, out of sight: say so, and go there on a tap. */}
+      {restocked && (
+        <Pressable label={`restocked-${restocked.id}`} onTap={() => onJump?.(restocked.index)}
+          layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Icon icon={RefreshCw} size={13} color={COLOR.cyan} />
+          <View layout={{ flex: 1 }}>
+            <Label text={t("upgradeShop.restockedLine", { key: ticketKey(restocked.id), name: contentText.upgradeName(t, restocked.upgrade) })}
+              size={TEXT.xs} color={COLOR.cyan} wrap />
+          </View>
+          <Icon icon={ArrowRight} size={13} color={COLOR.cyan} />
+        </Pressable>
+      )}
 
       {/* What no longer fits, said where the capacity is. */}
       {notFitting && (
@@ -510,93 +541,111 @@ interface DetailProps {
 }
 
 /**
- * Press-and-hold detail card: track relationships (what unlocks this, and
- * what this unlocks). Backdrop or X closes it.
+ * Press-and-hold detail: the ticket, opened (a Jira issue view). The header is
+ * the ticket's own (type square, key, priority), then the title, the labels
+ * and the description in full; then its links, "Unlocked by" (what it needs)
+ * and "Unlocks" (what it leads to), each a row with the linked ticket's key;
+ * then the certificate it counts toward. Backdrop or X closes it.
  */
 export function UpgradeDetailModal({ upgrade: u, upgrades, dependents, has, cert, runContext, accent, onClose }: DetailProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   const DetailIcon = getUpgradeIcon(u, upgrades);
   const tc = tierPalette(u.tier);
+  const Priority = PRIORITY_GLYPH[priorityRank(u.tier)];
   // Both gates: "Nothing required" over a card the shop refuses to sell is a lie.
   const need = unlockRequirements(u, upgrades);
 
   const relRow = (rel: UpgradeConfig) => {
-    const RelIcon = getUpgradeIcon(rel, upgrades);
     const relTc = tierPalette(rel.tier);
     return (
-      <View key={rel.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        {RelIcon && <Icon icon={RelIcon} size={16} strokeWidth={1.5} color={relTc.text} />}
+      <View key={rel.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4, paddingBottom: 4 }}>
+        <Label text={ticketKey(rel.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
         <View layout={{ flex: 1 }}>
-          <Label text={contentText.upgradeName(t, rel)} size={TEXT.sm} color={COLOR.foreground} truncate />
+          <Label text={contentText.upgradeName(t, rel)} size={TEXT.sm} color={ROLE.ink} truncate />
         </View>
-        <Label text={contentText.tier(t, rel.tier)} size={10} upper letterSpacing={0.5} color={relTc.text} />
+        <Label text={contentText.tier(t, rel.tier)} size={TEXT.xs} weight="600" color={relTc.text} />
+        {/* Owned or committed: that link is already satisfied. */}
         {has(rel.id) && <Icon icon={Check} size={14} color={GREEN_500} />}
       </View>
     );
   };
   const sectionTitle = (text: string) => (
-    <Label text={text} size={11} weight="600" upper letterSpacing={0.6} color={COLOR.mutedForeground} alpha={0.8} layout={{ marginBottom: 6 }} />
+    <Label text={text} size={11} weight="700" upper letterSpacing={0.6} color={ROLE.muted} layout={{ marginBottom: 4 }} />
   );
-  const none = (text: string) => <Label text={text} size={TEXT.xs} color={COLOR.mutedForeground} alpha={0.6} wrap />;
+  const none = (text: string) => <Label text={text} size={TEXT.xs} color={ROLE.muted} wrap />;
+  const rule = <View layout={{ height: 1, alignSelf: "stretch", backgroundColor: ROLE.edge }} />;
 
   return (
-    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent}>
-      {/* Bounded and scrollable, so a tall card is never clipped out of both ends. */}
+    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={tc.text} heading={
+      <>
+          {/* The ticket's header: type square, key and priority. */}
+          <View layout={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 26 }}>
+            <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(tc.text, 0.2) }}>
+              {DetailIcon && <Icon icon={DetailIcon} size={14} strokeWidth={2} color={tc.text} />}
+            </View>
+            <Label text={ticketKey(u.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+            <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+              <Icon icon={Priority} size={14} strokeWidth={2.5} color={tc.text} />
+              <Label text={contentText.tier(t, u.tier)} size={TEXT.xs} weight="600" color={tc.text} />
+            </View>
+          </View>
+      </>
+    }>
+      {/* Bounded and scrollable, so a tall ticket is never clipped out of both ends. */}
       <ScrollView layout={{ maxHeight: screen.height - 160 }}>
-        <View layout={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          {DetailIcon && <Icon icon={DetailIcon} size={32} strokeWidth={1.5} color={tc.text} />}
-          <View layout={{ flex: 1 }}>
-            <Label text={contentText.upgradeName(t, u)} size={TEXT.base} weight="700" color={COLOR.foreground} truncate />
-            <Label text={contentText.tier(t, u.tier)} size={TEXT.xs} color={tc.text} />
-          </View>
-        </View>
+        <View layout={{ gap: 12 }}>
+          <Label text={contentText.upgradeName(t, u)} size={TEXT.xl} font="display" weight="700" color={ROLE.ink} wrap />
 
-        {((u.tags?.length ?? 0) > 0 || u.condition) && (
-          <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
-            {u.tags?.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
-            {u.condition && <ConditionChip condition={u.condition} live={conditionMet(u.condition, runContext)} />}
-          </View>
-        )}
-
-        <Label text={contentText.upgradeDesc(t, u)} size={TEXT.base} color={COLOR.mutedForeground} wrap layout={{ marginBottom: 16 }} />
-
-        {/* Unlocked by (prerequisites) */}
-        <View layout={{ marginBottom: 12 }}>
-          {sectionTitle(t("upgradeShop.detailUnlockedBy"))}
-          {need.prereqs.length > 0 || need.maxedFamily ? (
-            <View layout={{ gap: 6 }}>
-              {need.prereqs.map(relRow)}
-              {need.maxedFamily && (
-                <Label text={t("upgradeShop.requiresMaxedFamily", { family: need.maxedFamily })} size={TEXT.xs} color={COLOR.mutedForeground} wrap />
-              )}
+          {((u.tags?.length ?? 0) > 0 || u.condition) && (
+            <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+              {u.tags?.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
+              {u.condition && <ConditionChip condition={u.condition} live={conditionMet(u.condition, runContext)} />}
             </View>
-          ) : none(t("upgradeShop.detailNoPrereqs"))}
-        </View>
+          )}
 
-        {/* Unlocks (dependents) */}
-        <View>
-          {sectionTitle(t("upgradeShop.detailUnlocks"))}
-          {dependents.length > 0
-            ? <View layout={{ gap: 6 }}>{dependents.map(relRow)}</View>
-            : none(t("upgradeShop.detailNoUnlocks"))}
-        </View>
+          <Label text={contentText.upgradeDesc(t, u)} size={TEXT.base} lineHeight={24} color={ROLE.muted} wrap />
 
-        {/* The card note only has room for a fraction; this is where the rule
-            behind it is stated, including that the runs must be SEPARATE. */}
-        {cert && (
-          <View layout={{ marginTop: 12, paddingTop: 12 }}>
-            <TopRule />
-            <View layout={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <Icon icon={Medal} size={14} color={YELLOW_400} />
-              <Label text={t("upgradeShop.detailCertificate")} size={11} weight="600" upper letterSpacing={0.6} color={YELLOW_400} />
-            </View>
-            <Label
-              text={t("upgradeShop.detailCertificateBody", { name: contentText.certName(t, cert.cert), required: cert.required, current: cert.current })}
-              size={TEXT.xs} color={COLOR.mutedForeground} wrap
-            />
+          {rule}
+
+          {/* Links: what it needs, then what it leads to. */}
+          <View>
+            {sectionTitle(t("upgradeShop.detailUnlockedBy"))}
+            {need.prereqs.length > 0 || need.maxedFamily ? (
+              <View>
+                {need.prereqs.map(relRow)}
+                {need.maxedFamily && (
+                  <Label text={t("upgradeShop.requiresMaxedFamily", { family: need.maxedFamily })} size={TEXT.xs} color={ROLE.muted} wrap />
+                )}
+              </View>
+            ) : none(t("upgradeShop.detailNoPrereqs"))}
           </View>
-        )}
+
+          <View>
+            {sectionTitle(t("upgradeShop.detailUnlocks"))}
+            {dependents.length > 0
+              ? <View>{dependents.map(relRow)}</View>
+              : none(t("upgradeShop.detailNoUnlocks"))}
+          </View>
+
+          {/* The card note only has room for a fraction; this is where the rule
+              behind it is stated, including that the runs must be SEPARATE. */}
+          {cert && (
+            <>
+              {rule}
+              <View layout={{ gap: 4 }}>
+                <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Icon icon={Medal} size={14} color={YELLOW_400} />
+                  <Label text={t("upgradeShop.detailCertificate")} size={11} weight="700" upper letterSpacing={0.6} color={YELLOW_400} />
+                </View>
+                <Label
+                  text={t("upgradeShop.detailCertificateBody", { name: contentText.certName(t, cert.cert), required: cert.required, current: cert.current })}
+                  size={TEXT.xs} color={ROLE.muted} wrap
+                />
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
     </Modal>
   );
@@ -636,42 +685,64 @@ interface ChooserProps {
 }
 
 /**
- * Tier-3 choice chooser, opened by tapping a choice card. Pick ONE of the
- * group's mutually exclusive options (each costs 50% more).
+ * Tier-3 choice chooser, opened by tapping a choice ticket: pick ONE of the
+ * group's mutually exclusive options (each costs 50% more). Each option is a
+ * sub-ticket under the parent's title: its own stripe and key, the variant's
+ * text, its estimate, and the same statuses as the board (in the sprint, or
+ * unfunded with its shortfall).
  */
 export function ChoiceChooserModal({ options, selectedIds, price, budget, accent, onChoose, onClose }: ChooserProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
+  const tc = tierPalette(options[0].tier);
   return (
-    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} title={contentText.upgradeName(t, options[0])}>
+    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={tc.text} title={contentText.upgradeName(t, options[0])}>
       <ScrollView layout={{ maxHeight: screen.height - 200 }}>
-        <Label text={t("upgradeShop.choiceModalHint")} size={TEXT.xs} color={COLOR.mutedForeground} wrap layout={{ marginBottom: 16 }} />
+        <Label text={t("upgradeShop.choiceModalHint")} size={TEXT.xs} color={ROLE.muted} wrap layout={{ marginBottom: 12 }} />
         <View layout={{ gap: 8 }}>
           {options.map(opt => {
             const p = price(opt);
             const isSel = selectedIds.includes(opt.id);
             const affordable = p <= budget;
-            const tc = tierPalette(opt.tier);
+            const short = isSel ? 0 : shortfall(p, budget);
+            const optTc = tierPalette(opt.tier);
             return (
-              <View key={opt.id} layout={{ padding: 2, borderRadius: RADIUS.lg + 4, borderWidth: 2, borderColor: isSel ? tint(COLOR.white, 0.9) : tint(COLOR.black, 0) }}>
-                <Pressable
-                  onTap={() => onChoose(opt)}
-                  alpha={affordable ? 1 : 0.6}
-                  label={contentText.upgradeDesc(t, opt)}
-                  layout={{ borderRadius: RADIUS.lg, borderWidth: 2, borderColor: affordable || isSel ? tc.border : COLOR.muted, padding: 12, gap: 4 }}
-                >
+              <Pressable
+                key={opt.id}
+                onTap={() => onChoose(opt)}
+                alpha={affordable || isSel ? 1 : 0.85}
+                label={contentText.upgradeDesc(t, opt)}
+                layout={{
+                  flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
+                  backgroundColor: isSel ? tint(accent, 0.07) : ROLE.surface,
+                  borderWidth: 2, borderColor: isSel ? accent : ROLE.edge,
+                }}
+              >
+                <View layout={{ width: 4, backgroundColor: affordable || isSel ? optTc.text : ROLE.edge }} />
+                <View layout={{ flex: 1, padding: 12, gap: 8 }}>
+                  <Label text={ticketKey(opt.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+                  <Label text={contentText.upgradeDesc(t, opt)} size={TEXT.base} lineHeight={22} color={affordable || isSel ? ROLE.ink : ROLE.muted} wrap />
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View layout={{ flex: 1 }}>
-                      <Label text={contentText.upgradeDesc(t, opt)} size={TEXT.base} weight="600" color={COLOR.foreground} wrap />
+                    {isSel && (
+                      <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(accent, 0.18) }}>
+                        <Icon icon={Check} size={12} strokeWidth={3} color={accent} />
+                        <Label text={t("upgradeShop.statusInSprint")} size={11} weight="700" upper letterSpacing={0.6} color={accent} />
+                      </View>
+                    )}
+                    {short > 0 && (
+                      <View layout={{ borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(ROLE.hours, 0.14) }}>
+                        <Label text={t("upgradeShop.statusUnfunded")} size={11} weight="700" upper letterSpacing={0.6} color={ROLE.hours} />
+                      </View>
+                    )}
+                    <View layout={{ flex: 1 }} />
+                    {short > 0 && <Label text={t("upgradeShop.shortBy", { hours: short })} size={TEXT.xs} weight="700" color={ROLE.cost} />}
+                    <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: RADIUS.full, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(affordable || isSel ? ROLE.hours : ROLE.muted, 0.12) }}>
+                      <Icon icon={Clock} size={13} color={affordable || isSel ? ROLE.hours : ROLE.muted} />
+                      <Label text={p === 0 ? t("upgradeShop.freeLabel") : t("upgradeShop.hoursValue", { hours: p })} size={TEXT.sm} weight="700" font="display" color={affordable || isSel ? ROLE.hours : ROLE.muted} />
                     </View>
-                    {isSel && <Icon icon={Check} size={16} color={COLOR.white} />}
                   </View>
-                  <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Icon icon={Clock} size={14} color={YELLOW_500} />
-                    <Label text={p === 0 ? t("upgradeShop.freeLabel") : t("upgradeShop.hoursValue", { hours: p })} size={TEXT.xs} weight="700" color={YELLOW_500} />
-                  </View>
-                </Pressable>
-              </View>
+                </View>
+              </Pressable>
             );
           })}
         </View>

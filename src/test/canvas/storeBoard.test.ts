@@ -132,3 +132,51 @@ describe("what cannot be bought (blocked or unfunded)", () => {
     expect(read("src/ui/dev/gallery/between.tsx")).toContain('id: "UpgradeShop-reach"');
   });
 });
+
+describe("the store's follow-up tweaks", () => {
+  const shop = read("src/ui/screens/UpgradeShop.tsx");
+  const parts = read("src/ui/screens/shopParts.tsx");
+
+  it("opens a held ticket and a choice ticket as ticket views (a striped modal)", () => {
+    expect(parts).toMatch(/<Modal screen=\{screen\} maxWidth=\{MODAL_W\} onClose=\{onClose\} accent=\{accent\} stripe=\{tc\.text\} heading=/);
+    expect(parts).toMatch(/stripe=\{tc\.text\} title=\{contentText\.upgradeName\(t, options\[0\]\)\}/);
+  });
+
+  it("puts the rates, restocks, budget cycle, runway and set counts inside the Sprint panel", () => {
+    expect(shop).toContain("fields={hasFields ? fields : undefined}");
+    // A closed store has no sprint, so its fields stand alone.
+    expect(shop).toContain("{closed && hasFields && ");
+  });
+
+  it("names the destination on the commit button too", () => {
+    expect(shop).toContain('t("upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })');
+  });
+
+  it("says a checkpoint in one line", () => {
+    expect(parts).toContain('t("upgradeShop.checkpointLine")');
+  });
+
+  it("announces a restock until it is seen, and marks its dot", () => {
+    expect(shop).toContain("setFreshIds(prev => [...prev, restockedOffer.id]);");
+    expect(shop).toContain("onActiveChange={i => {");
+    expect(pipsFor(3, 0, [], [], [false, false, true])[2].fresh).toBe(true);
+  });
+
+  it("drops the struck-through price on an unfunded ticket", () => {
+    expect(parts).toContain("{(hasDiscount || shownPrice === 0) && !unfunded && (");
+  });
+
+  it("has gallery entries for the two modals", () => {
+    const g = read("src/ui/dev/gallery/between.tsx");
+    expect(g).toContain('id: "UpgradeDetailModal"');
+    expect(g).toContain('id: "ChoiceChooserModal"');
+  });
+
+  it("says nothing in capitals on the explainer card", () => {
+    for (const lng of ["en", "es", "sv"]) {
+      const v = i18n.getFixedT(lng)("tutorialOverlay.tapToContinue");
+      expect(v, lng).not.toBe(v.toUpperCase());
+    }
+    expect(read("src/ui/game/TutorialOverlay.tsx")).not.toContain("GlowFrame");
+  });
+});

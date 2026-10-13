@@ -209,6 +209,9 @@ export function UpgradeShop({
   const [chipInfo, setChipInfo] = useState<{ text: string; color: number } | null>(null);
   // A "Blocked by" link's jump: the strip moves to the blocker on the shelf.
   const [jump, setJump] = useState<{ index: number; nonce: number } | null>(null);
+  // Restocked tickets the player has not swiped to yet: a restock lands at
+  // the END of the strip, out of sight, so it is announced until it is seen.
+  const [freshIds, setFreshIds] = useState<string[]>([]);
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -338,6 +341,7 @@ export function UpgradeShop({
         const counts = shelfTagCounts(ownedAfterSelect, upgrades, lean);
         const restockedOffer = weightedSample(candidates, 1, counts, completedLevel, getRunRng(`shop:${completedLevel}:restock:${restocksUsed}`))[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
+        setFreshIds(prev => [...prev, restockedOffer.id]);
         setRestocksUsed(prev => prev + 1);
       }
     }
@@ -392,6 +396,7 @@ export function UpgradeShop({
         accent={boardAccent}
         remainingBudget={remainingBudget}
         blockers={blockers}
+        fresh={freshIds.includes(upgrade.id)}
         onJump={i => setJump(prev => ({ index: i, nonce: (prev?.nonce ?? 0) + 1 }))}
         hasDiscount={hasDiscount}
         mapsRemaining={mapsRemaining}
@@ -416,6 +421,10 @@ export function UpgradeShop({
     const u = shelfItems.find(o => o.id === id) ?? upgrades.find(o => o.id === id);
     return u ? [{ id, upgrade: u, price: priceFor(u), ability: !!u.grantsAbility }] : [];
   });
+  // The newest restock not yet seen, for the Sprint panel's "added" line.
+  const freshest = freshIds.length > 0 ? shelfItems.find(u => u.id === freshIds[freshIds.length - 1]) : undefined;
+  const freshLine = freshest ? { id: freshest.id, upgrade: freshest, index: shelfItems.indexOf(freshest) } : null;
+
   const removeFromSprint = (id: string) => {
     const u = shelfItems.find(o => o.id === id) ?? upgrades.find(o => o.id === id);
     if (u) {
@@ -427,6 +436,101 @@ export function UpgradeShop({
   const chooserOptions = chooserGroup ? upgrades.filter(u => u.choiceGroup === chooserGroup) : [];
   const freeGrant = freeAbilityGrant ? getAbility(freeAbilityGrant) : undefined;
   const freeGrantColor = freeGrant?.color ? hex(freeGrant.color) : COLOR.foreground;
+
+  // The sprint's fields: what changes what the budget buys (rates, restocks,
+  // the budget cycle), the runway thresholds and the archetype set counts.
+  // They live in the Sprint panel, under its capacity, because they are facts
+  // about this sprint's budget rather than a status line of their own.
+  const hasRunway = interestPaid > 0 || (!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0));
+  const hasFields = hasChips || hasRunway;
+  const fields = (
+    <View layout={{ gap: 6 }}>
+
+
+      {/* The modifiers that change what the budget buys. Three of them are a
+          name and a number, which is a chip, not a sentence. */}
+      {hasChips && (
+        <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 6, rowGap: 6 }}>
+            {/* Market rates: prices rise each assignment block. */}
+            {inflationPercent > 0 && (
+              <Pill
+                text={t("upgradeShop.marketRatesChip", { percent: inflationPercent })}
+                color={MARKET} border={tint(MARKET, 0x55 / 255)} background={tint(MARKET, 0x0f / 255)}
+                onHold={() => setChipInfo({ text: t("upgradeShop.marketRates", { percent: inflationPercent }), color: MARKET })}
+              />
+            )}
+
+            {/* Restocks: buying an item adds a fresh offer to the strip. */}
+            {!closed && shopRestockCount > 0 && (
+              <Pill
+                icon={RefreshCw}
+                text={t("upgradeShop.restockChip", { count: restocksLeft })}
+                color={restocksLeft > 0 ? cyan : COLOR.mutedForeground}
+                border={restocksLeft > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
+                background={restocksLeft > 0 ? tint(cyan, 0.05) : undefined}
+                onHold={() => setChipInfo({
+                  text: restocksLeft > 0 ? t("upgradeShop.restocksLeft", { count: restocksLeft }) : t("upgradeShop.noRestocksLeft"),
+                  color: cyan,
+                })}
+              />
+            )}
+
+            {/* Budget Cycle: spending charges a boon for the next map. */}
+            {!closed && hasBudgetCycle && (
+              <Pill
+                icon={ShoppingCart}
+                text={budgetChunks > 0
+                  ? t("upgradeShop.budgetCycleChipCharged", { count: budgetChunks })
+                  : t("upgradeShop.budgetCycleChip", { spent: selectedTotalCost, next: chunkHours })}
+                color={budgetChunks > 0 ? cyan : COLOR.mutedForeground}
+                border={budgetChunks > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
+                background={budgetChunks > 0 ? tint(cyan, 0.05) : undefined}
+                onHold={() => setChipInfo({
+                  text: budgetChunks > 0
+                    ? t("upgradeShop.budgetCycleCharged", { count: budgetChunks, spent: selectedTotalCost })
+                    : t("upgradeShop.budgetCycleProgress", { spent: selectedTotalCost, next: chunkHours }),
+                  color: cyan,
+                })}
+              />
+            )}
+        </View>
+      )}
+
+      {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
+          wrapping row: the player reads them as one status line. */}
+      {hasRunway && (
+        <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {interestPaid > 0 && (
+              <Pill
+                icon={Vault}
+                size={10}
+                text={t("upgradeShop.interestPaid", { hours: interestPaid })}
+                color={RUNWAY}
+                border={tint(RUNWAY, 0x66 / 255)}
+                background={tint(RUNWAY, 0x14 / 255)}
+              />
+            )}
+            {!closed && runwayPerks.map(p => (
+              <Pill
+                key={p.perk}
+                icon={Vault}
+                size={10}
+                text={t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours }) + (p.met ? " ✓" : "")}
+                color={p.met ? RUNWAY : RUNWAY_OFF}
+                border={p.met ? tint(RUNWAY, 0x66 / 255) : tint(RUNWAY_OFF, 0x33 / 255)}
+                background={p.met ? tint(RUNWAY, 0x14 / 255) : undefined}
+                alpha={p.met ? 1 : 0.8}
+                onHold={() => setChipInfo({ text: t("upgradeShop.runwayTitle"), color: RUNWAY })}
+              />
+            ))}
+            {!closed && buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
+              <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
+            ))}
+        </View>
+      )}
+
+    </View>
+  );
 
   return (
     <PipelineFrame
@@ -482,6 +586,13 @@ export function UpgradeShop({
                 alignWidth={column}
                 marks={shelfMarks(shelfItems, upgrades, selectedIds, allOwnedIds)}
                 unavailable={outOfReach}
+                fresh={shelfItems.map(u => freshIds.includes(u.id))}
+                onActiveChange={i => {
+                  const seen = shelfItems[i]?.id;
+                  if (seen) {
+                    setFreshIds(prev => (prev.includes(seen) ? prev.filter(x => x !== seen) : prev));
+                  }
+                }}
                 focus={jump}
                 items={cards}
               />
@@ -505,7 +616,8 @@ export function UpgradeShop({
             <ArcadeButton onTap={handleContinue} iconAfter={ArrowRight}>
               {selectedIds.length > 0 ? (
                 <>
-                  <ArcadeText text={t("upgradeShop.buyAndContinue", { count: selectedIds.length })} color={arcadeInk("primary")} size={TEXT.sm} />
+                  {/* Commit the sprint and go: the button still says where it goes. */}
+                  <ArcadeText text={t("upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
                   {/* Cost as an icon chip: the display font's parentheses look broken. */}
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     <Icon icon={Clock} size={16} color={arcadeInk("primary")} />
@@ -564,93 +676,8 @@ export function UpgradeShop({
     >
       {closed && <ClosedBanner locksHave={locksHave} locksNeed={locksNeed} onHold={() => setShowClosedInfo(true)} />}
 
+      {/* Every fifth map: one line, not a panel, so the tickets stay in view. */}
       {completedLevel % 5 === 0 && <WaypointBanner level={completedLevel} />}
-
-      {/* The modifiers that change what the budget buys. Three of them are a
-          name and a number, which is a chip, not a sentence. */}
-      {hasChips && (
-        <Appear fromY={-8} delay={0.1}>
-          <View layout={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 8 }}>
-            {/* Market rates: prices rise each assignment block. */}
-            {inflationPercent > 0 && (
-              <Pill
-                text={t("upgradeShop.marketRatesChip", { percent: inflationPercent })}
-                color={MARKET} border={tint(MARKET, 0x55 / 255)} background={tint(MARKET, 0x0f / 255)}
-                onHold={() => setChipInfo({ text: t("upgradeShop.marketRates", { percent: inflationPercent }), color: MARKET })}
-              />
-            )}
-
-            {/* Restocks: buying an item adds a fresh offer to the strip. */}
-            {!closed && shopRestockCount > 0 && (
-              <Pill
-                icon={RefreshCw}
-                text={t("upgradeShop.restockChip", { count: restocksLeft })}
-                color={restocksLeft > 0 ? cyan : COLOR.mutedForeground}
-                border={restocksLeft > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
-                background={restocksLeft > 0 ? tint(cyan, 0.05) : undefined}
-                onHold={() => setChipInfo({
-                  text: restocksLeft > 0 ? t("upgradeShop.restocksLeft", { count: restocksLeft }) : t("upgradeShop.noRestocksLeft"),
-                  color: cyan,
-                })}
-              />
-            )}
-
-            {/* Budget Cycle: spending charges a boon for the next map. */}
-            {!closed && hasBudgetCycle && (
-              <Pill
-                icon={ShoppingCart}
-                text={budgetChunks > 0
-                  ? t("upgradeShop.budgetCycleChipCharged", { count: budgetChunks })
-                  : t("upgradeShop.budgetCycleChip", { spent: selectedTotalCost, next: chunkHours })}
-                color={budgetChunks > 0 ? cyan : COLOR.mutedForeground}
-                border={budgetChunks > 0 ? tint(cyan, 0.4) : tint(COLOR.muted, 0.4)}
-                background={budgetChunks > 0 ? tint(cyan, 0.05) : undefined}
-                onHold={() => setChipInfo({
-                  text: budgetChunks > 0
-                    ? t("upgradeShop.budgetCycleCharged", { count: budgetChunks, spent: selectedTotalCost })
-                    : t("upgradeShop.budgetCycleProgress", { spent: selectedTotalCost, next: chunkHours }),
-                  color: cyan,
-                })}
-              />
-            )}
-          </View>
-        </Appear>
-      )}
-
-      {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
-          wrapping row: the player reads them as one status line. */}
-      {(interestPaid > 0 || (!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0))) && (
-        <Appear delay={0.12}>
-          <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {interestPaid > 0 && (
-              <Pill
-                icon={Vault}
-                size={10}
-                text={t("upgradeShop.interestPaid", { hours: interestPaid })}
-                color={RUNWAY}
-                border={tint(RUNWAY, 0x66 / 255)}
-                background={tint(RUNWAY, 0x14 / 255)}
-              />
-            )}
-            {!closed && runwayPerks.map(p => (
-              <Pill
-                key={p.perk}
-                icon={Vault}
-                size={10}
-                text={t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours }) + (p.met ? " ✓" : "")}
-                color={p.met ? RUNWAY : RUNWAY_OFF}
-                border={p.met ? tint(RUNWAY, 0x66 / 255) : tint(RUNWAY_OFF, 0x33 / 255)}
-                background={p.met ? tint(RUNWAY, 0x14 / 255) : undefined}
-                alpha={p.met ? 1 : 0.8}
-                onHold={() => setChipInfo({ text: t("upgradeShop.runwayTitle"), color: RUNWAY })}
-              />
-            ))}
-            {!closed && buildTagChips(buildTagCounts, tagSetThreshold).map(c => (
-              <TagChip key={c.tag} tag={c.tag} pill ringed={c.active} sizeClass="text-[10px]" suffix={c.suffix} />
-            ))}
-          </View>
-        </Appear>
-      )}
 
       {/* The sprint the backlog's tickets are pulled into. Not on a closed
           store: nothing can be committed there. */}
@@ -663,10 +690,16 @@ export function UpgradeShop({
             capacity={effectiveOvertime}
             accent={boardAccent}
             wontFit={notFitting}
+            fields={hasFields ? fields : undefined}
+            restocked={freshLine}
+            onJump={i => setJump(prev => ({ index: i, nonce: (prev?.nonce ?? 0) + 1 }))}
             onRemove={removeFromSprint}
           />
         </Appear>
       )}
+
+      {/* A closed store has no sprint to hold its fields, so they stand alone. */}
+      {closed && hasFields && <Appear fromY={-8} delay={0.1}>{fields}</Appear>}
     </PipelineFrame>
   );
 }
