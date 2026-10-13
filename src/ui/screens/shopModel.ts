@@ -419,6 +419,15 @@ export function lockedReasonParts(t: TFunction, upgrade: UpgradeConfig, upgrades
   return parts;
 }
 
+/**
+ * The prerequisites still missing, as upgrades, so a blocked ticket can link
+ * to each one ("Blocked by DEV-973 Code Review") rather than only name it.
+ * The maxed-family gate has no single ticket to point at, so it stays text.
+ */
+export function missingPrereqs(upgrade: UpgradeConfig, upgrades: UpgradeConfig[], effectiveOwned: string[]): UpgradeConfig[] {
+  return unlockRequirements(upgrade, upgrades).prereqs.filter(p => !effectiveOwned.includes(p.id));
+}
+
 /** Build readout chips, largest set first, with their set-bonus suffix. */
 export function buildTagChips(counts: Map<string, number>, threshold: number): { tag: UpgradeTag; active: boolean; suffix: string }[] {
   return [...counts.entries()]

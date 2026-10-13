@@ -224,6 +224,14 @@ export const entries: GalleryEntry[] = [
     render: () => <UpgradeShop {...shopProps} tagSetThreshold={3} newlyUnlockedCerts={[certs[1]]} />,
   },
   {
+    // What can and cannot be bought, side by side: an affordable ticket, a
+    // BLOCKED one whose blocker is on the shelf (its link jumps there), and an
+    // UNFUNDED one a few hours short. The dots show the same at a glance.
+    id: "UpgradeShop-reach", group: "screen",
+    render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
+      dealt={{ offerIds: ["code_review", "hot_start_principal", "hot_start_junior", "multithreading_principal"], abilityIds: [] }} />,
+  },
+  {
     id: "UpgradeShop-closed", group: "screen",
     render: () => <UpgradeShop {...shopProps} completedLevel={9} closed locksHave={1} locksNeed={3} />,
   },

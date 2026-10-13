@@ -3,14 +3,14 @@
  * components/game/UpgradeShop.tsx): the ticket, the sprint panel, the status
  * pills, the banners and the three modals. UpgradeShop.tsx keeps the state; these draw it.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { LayoutContainer } from "@pixi/layout/components";
-import type { Graphics } from "pixi.js";
+import { ColorMatrixFilter, type Graphics } from "pixi.js";
 import { animate } from "motion";
 // Info directly, not the kit's HoldHint: that is fixed at 0.8 alpha and the card's hint is fainter (opacity-30).
 import {
-  Check, ChevronDown, ChevronUp, ChevronsUp, Clock, Equal, Flag, Flame, Info as HoldInfoIcon, Lock, SquareKanban, Medal, RefreshCw, X,
+  ArrowRight, Check, ChevronDown, ChevronUp, ChevronsUp, Clock, Equal, Flag, Flame, Info as HoldInfoIcon, Lock, SquareKanban, Medal, RefreshCw, X,
 } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
@@ -27,7 +27,9 @@ import { TagChip } from "../game/TagChip";
 import { ConditionChip } from "../game/ConditionChip";
 import { AbilityIcon } from "../game/AbilityIcon";
 import { lockedReasonParts, tierPalette, type CardModel, type CertChase } from "./shopModel";
-import { STATUS_KEY, capacityShare, priorityRank, ticketKey, ticketStatus, type TicketStatus } from "./storeBoardModel";
+import {
+  STATUS_KEY, capacityShare, fundedShare, priorityRank, shortfall, ticketKey, ticketStatus, unavailable, type TicketStatus,
+} from "./storeBoardModel";
 import { DRAFT_HINT } from "./draftModel";
 import { RichParagraph, TopRule } from "./draftParts";
 
@@ -194,6 +196,12 @@ interface TicketCardProps {
   runContext: RunContext | null;
   /** The band's accent: a ticket in the sprint wears it. */
   accent: number;
+  /** Hours left to spend after the current picks: what an unfunded ticket is short of. */
+  remainingBudget: number;
+  /** The tickets blocking this one, each with its place on the shelf (null when it is not on it). */
+  blockers: { upgrade: UpgradeConfig; shelfIndex: number | null }[];
+  /** Move the strip to a blocker that is on the shelf. */
+  onJump: (shelfIndex: number) => void;
   onTap: () => void;
   onHold: () => void;
 }
@@ -204,7 +212,8 @@ function statusLook(status: TicketStatus, accent: number): { ground: number | st
     case "inSprint": return { ground: tint(accent, 0.18), ink: accent };
     case "done": return { ground: tint(GREEN_500, 0.18), ink: GREEN_500 };
     case "blocked": return { ground: tint(RED, 0.16), ink: RED };
-    case "overCapacity": return { ground: tint(ROLE.hours, 0.12), ink: ROLE.hours };
+    // Gold: it is short of hours, and gold means hours.
+    case "unfunded": return { ground: tint(ROLE.hours, 0.14), ink: ROLE.hours };
     default: return { ground: ROLE.edge, ink: ROLE.muted };
   }
 }
@@ -225,7 +234,7 @@ const PRIORITY_GLYPH = [ChevronDown, Equal, ChevronUp, ChevronsUp, Flame] as con
  * ability, so it never reads as a fourth upgrade.
  */
 export function TicketCard({
-  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, onTap, onHold,
+  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, remainingBudget, blockers, onJump, onTap, onHold,
 }: TicketCardProps) {
   const { t } = useTranslation();
   const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, certChase, certShown } = model;
@@ -233,11 +242,25 @@ export function TicketCard({
   const typeColor = inv ? (upgrade.abilityColor ? hex(upgrade.abilityColor) : COLOR.primary) : tier.text;
   const status = ticketStatus(model);
   const lozenge = statusLook(status, accent);
+  // Out of reach right now, for either reason: the ticket loses its colour,
+  // so it reads as unavailable even half off-screen in the peek.
+  const out = unavailable(status);
+  const blocked = status === "blocked";
+  const unfunded = status === "unfunded";
+  const identity = out ? ROLE.muted : typeColor;
+  const stripe = blocked ? RED : out ? ROLE.edge : typeColor;
+  const short = unfunded ? shortfall(shownPrice, remainingBudget) : 0;
+  const grey = useMemo(() => {
+    const f = new ColorMatrixFilter();
+    f.desaturate();
+    return [f];
+  }, []);
+  const familyGate = blocked ? lockedReasonParts(t, upgrade, upgrades, model.effectiveOwned).slice(blockers.length) : [];
   const UpgradeIcon = getUpgradeIcon(displayUpgrade, upgrades);
   const Priority = PRIORITY_GLYPH[priorityRank(upgrade.tier)];
   const inert = owned || locked;
   const name = inv ? upgrade.name : contentText.upgradeName(t, upgrade);
-  const priceColor = purchasable || selected ? ROLE.hours : ROLE.muted;
+  const priceColor = (purchasable && !unfunded) || selected ? ROLE.hours : ROLE.muted;
 
   return (
     <Appear fromY={10} delay={index * 0.05} layout={{ flex: 1 }}>
@@ -246,7 +269,7 @@ export function TicketCard({
           onTap={inert ? undefined : onTap}
           onHold={onHold}
           pressedAlpha={inert ? 1 : 0.85}
-          alpha={locked || owned ? 0.6 : status === "overCapacity" ? 0.75 : 1}
+          alpha={owned ? 0.6 : out ? 0.9 : 1}
           label={name}
           layout={{
             flex: 1, flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
@@ -255,29 +278,31 @@ export function TicketCard({
             borderWidth: 2, borderColor: selected ? accent : ROLE.edge,
           }}
         >
-          {/* The type stripe. */}
-          <View layout={{ width: 4, backgroundColor: typeColor }} />
+          {/* The type stripe: red on a blocked ticket, grey on an unfunded one. */}
+          <View layout={{ width: 4, backgroundColor: stripe }} />
 
           <View layout={{ flex: 1, padding: 16, gap: 10 }}>
             {/* Type square, key and priority. */}
             <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(typeColor, 0.2) }}>
+              <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(identity, 0.2) }}>
                 {inv
-                  ? <AbilityIcon kind={upgrade.abilityKind ?? ""} size={14} color={typeColor} />
-                  : UpgradeIcon && <Icon icon={UpgradeIcon} size={14} strokeWidth={2} color={typeColor} />}
+                  ? <AbilityIcon kind={upgrade.abilityKind ?? ""} size={14} color={identity} />
+                  : UpgradeIcon && <Icon icon={UpgradeIcon} size={14} strokeWidth={2} color={identity} />}
               </View>
               <Label text={ticketKey(upgrade.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
               <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={typeColor} />}
-                <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={typeColor} />
+                {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={identity} />}
+                <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={identity} />
               </View>
               <View layout={{ flex: 1 }} />
-              {/* The holdable affordance lives ON the holdable thing. */}
-              <Icon icon={HoldInfoIcon} size={14} color={ROLE.muted} alpha={0.6} />
+              {/* A blocked ticket wears its lock where the hold hint sits; the hold still works. */}
+              {blocked
+                ? <Icon icon={Lock} size={14} color={RED} />
+                : <Icon icon={HoldInfoIcon} size={14} color={ROLE.muted} alpha={0.6} />}
             </View>
 
             {/* The title. */}
-            <Label text={name} size={TEXT.lg} font="display" weight="600" lineHeight={24} color={ROLE.ink} wrap />
+            <Label text={name} size={TEXT.lg} font="display" weight="600" lineHeight={24} color={out ? ROLE.muted : ROLE.ink} wrap />
 
             {/* The description: the one thing on the ticket worth reading slowly. */}
             <Label
@@ -288,34 +313,61 @@ export function TicketCard({
             {/* What a retainer actually buys, in the only unit that makes its price legible: maps still to come. */}
             {inv && (
               <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Icon icon={RefreshCw} size={14} color={typeColor} />
-                <Label text={t("upgradeShop.abilityEveryMap", { count: mapsRemaining })} size={TEXT.sm} weight="600" color={typeColor} />
+                <Icon icon={RefreshCw} size={14} color={identity} />
+                <Label text={t("upgradeShop.abilityEveryMap", { count: mapsRemaining })} size={TEXT.sm} weight="600" color={identity} />
               </View>
             )}
 
             {/* Labels: the archetype tags, and the situation a conditional upgrade needs. */}
             {((upgrade.tags?.length ?? 0) > 0 || upgrade.condition) && (
-              <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+              <layoutContainer layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }} filters={out ? grey : undefined} alpha={out ? 0.7 : 1}>
                 {upgrade.tags?.map(tag => <TagChip key={tag} tag={tag} />)}
                 {upgrade.condition && (
                   <ConditionChip condition={upgrade.condition} live={conditionMet(upgrade.condition, runContext)} />
                 )}
-              </View>
+              </layoutContainer>
             )}
 
             {/* Certificate chase: this purchase is also progress toward a permanent unlock. */}
             {certChase && <CertChaseRow chase={certChase} shown={certShown} />}
 
             {/* What blocks it, said outright: a board names a ticket's blockers. */}
-            {locked && !owned && (
-              <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-                <Icon icon={Lock} size={14} color={RED} layout={{ marginTop: 2 }} />
-                <View layout={{ flex: 1 }}>
-                  <Label
-                    text={`${t("upgradeShop.requires")} ${lockedReasonParts(t, upgrade, upgrades, model.effectiveOwned).join(", ")}`}
-                    size={TEXT.xs} color={ROLE.muted} wrap
-                  />
-                </View>
+            {/* What blocks it, as links: a board names a ticket's blockers, and a
+                blocker on this shelf is one tap away. */}
+            {blocked && (
+              <View layout={{ gap: 4, padding: 10, borderRadius: RADIUS.sm, backgroundColor: tint(RED, 0.08) }}>
+                <Label text={t("upgradeShop.blockedBy")} size={11} weight="700" upper letterSpacing={0.6} color={RED} />
+                {blockers.map(b => {
+                  const shelfIndex = b.shelfIndex;
+                  const row = (
+                    <>
+                      <Label text={ticketKey(b.upgrade.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+                      <View layout={{ flex: 1 }}>
+                        <Label text={contentText.upgradeName(t, b.upgrade)} size={TEXT.sm} color={ROLE.ink} wrap />
+                      </View>
+                      {shelfIndex !== null && <Icon icon={ArrowRight} size={14} color={ROLE.muted} />}
+                    </>
+                  );
+                  return shelfIndex !== null ? (
+                    <Pressable key={b.upgrade.id} label={`blocker-${b.upgrade.id}`} onTap={() => onJump(shelfIndex)}
+                      layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4, paddingBottom: 4 }}>
+                      {row}
+                    </Pressable>
+                  ) : (
+                    <View key={b.upgrade.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4, paddingBottom: 4 }}>
+                      {row}
+                    </View>
+                  );
+                })}
+                {/* The maxed-family gate has no single ticket to link to. */}
+                {familyGate.map((text, i) => <Label key={`gate${i}`} text={text} size={TEXT.sm} color={ROLE.ink} wrap />)}
+              </View>
+            )}
+
+            {/* How much of it the hours left would cover: close is worth knowing. */}
+            {unfunded && (
+              <View layout={{ alignSelf: "stretch", height: 4, borderRadius: 2, backgroundColor: ROLE.edge, overflow: "hidden" }}>
+                <View layout={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(fundedShare(shownPrice, remainingBudget) * 1000) / 10}%`, backgroundColor: ROLE.hours }} />
               </View>
             )}
 
@@ -335,6 +387,8 @@ export function TicketCard({
                   {isChoice && !chosenMember && (
                     <Label text={t("upgradeShop.fromLabel")} size={TEXT.xs} color={ROLE.muted} />
                   )}
+                  {/* The shortfall, in the red of a cost: what it would take. */}
+                  {short > 0 && <Label text={t("upgradeShop.shortBy", { hours: short })} size={TEXT.xs} weight="700" color={ROLE.cost} />}
                   {/* The estimate: a ticket's hours, in gold like every figure in hours. */}
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: RADIUS.full, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2, backgroundColor: tint(priceColor, 0.12) }}>
                     <Icon icon={Clock} size={13} color={priceColor} />
@@ -371,6 +425,8 @@ interface SprintPanelProps {
   committed: number;
   capacity: number;
   accent: number;
+  /** Backlog tickets the hours left cannot pay for, and the closest shortfall; null when all fit. */
+  wontFit?: { count: number; closest: number } | null;
   /** Tapping a committed line takes it back out of the sprint. */
   onRemove: (id: string) => void;
 }
@@ -381,7 +437,7 @@ interface SprintPanelProps {
  * ticket, each tappable to take it back out. Sits above the backlog, so the
  * running total is in view while the player swipes through the tickets.
  */
-export function SprintPanel({ level, lines, committed, capacity, accent, onRemove }: SprintPanelProps) {
+export function SprintPanel({ level, lines, committed, capacity, accent, wontFit: notFitting = null, onRemove }: SprintPanelProps) {
   const { t } = useTranslation();
   const share = useTween(capacityShare(committed, capacity), 0.3);
   return (
@@ -397,6 +453,11 @@ export function SprintPanel({ level, lines, committed, capacity, accent, onRemov
       <View layout={{ alignSelf: "stretch", height: 6, borderRadius: 3, backgroundColor: ROLE.edge, overflow: "hidden" }}>
         <View layout={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(share * 1000) / 10}%`, backgroundColor: ROLE.hours }} />
       </View>
+
+      {/* What no longer fits, said where the capacity is. */}
+      {notFitting && (
+        <Label text={t("upgradeShop.sprintWontFit", { count: notFitting.count, hours: notFitting.closest })} size={TEXT.xs} color={ROLE.cost} wrap />
+      )}
 
       {lines.length === 0 ? (
         <Label text={t("upgradeShop.sprintEmpty")} size={TEXT.xs} color={ROLE.muted} wrap />

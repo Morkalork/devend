@@ -89,12 +89,19 @@ export interface Pip {
   /** That item is already chosen: the pips are inventory, not just position. */
   picked: boolean;
   active: boolean;
+  /** That item cannot be taken right now (the store's blocked or unfunded ticket): a hollow pip. */
+  unavailable: boolean;
 }
 
 /** One pip per item, or none for a single item, which has nothing to navigate. */
-export function pipsFor(count: number, active: number, marks: boolean[] = []): Pip[] {
+export function pipsFor(count: number, active: number, marks: boolean[] = [], unavailable: boolean[] = []): Pip[] {
   if (count <= 1) return [];
-  return Array.from({ length: count }, (_, i) => ({ picked: marks[i] === true, active: i === active }));
+  return Array.from({ length: count }, (_, i) => ({
+    picked: marks[i] === true,
+    active: i === active,
+    // Picked wins: a committed ticket is never shown as one you cannot take.
+    unavailable: marks[i] !== true && unavailable[i] === true,
+  }));
 }
 
 /** The step buttons are disabled at the ends. */

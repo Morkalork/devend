@@ -42,6 +42,13 @@ interface CarouselProps {
    * I picked. Losing that was the main thing a strip took away from the grid.
    */
   marks?: boolean[];
+  /** Per-item "cannot be taken right now" flags: a hollow pip, so what is out of reach shows without swiping. */
+  unavailable?: boolean[];
+  /**
+   * Move the strip to an item from outside (the store's "Blocked by" link).
+   * The nonce makes a second jump to the same index still move it.
+   */
+  focus?: { index: number; nonce: number } | null;
   /** Accessible name for the strip. */
   label: string;
   prevLabel: string;
@@ -69,6 +76,8 @@ const ARROWS_MIN_SCREEN = 640;
 export function Carousel({
   items,
   marks = [],
+  unavailable = [],
+  focus = null,
   label,
   prevLabel,
   nextLabel,
@@ -168,7 +177,14 @@ export function Carousel({
     else slideTo(offsetOf(active), 0.25);
   }, [active, cardW, count, offsetOf, slideTo]);
 
-  const pips = useMemo(() => pipsFor(count, active, marks), [count, active, marks]);
+  // An outside jump (a blocked ticket's link to what blocks it).
+  useEffect(() => {
+    if (focus) {
+      setActive(clampIndex(focus.index, count));
+    }
+  }, [focus, count]);
+
+  const pips = useMemo(() => pipsFor(count, active, marks, unavailable), [count, active, marks, unavailable]);
   const showArrows = screen.width >= ARROWS_MIN_SCREEN;
 
   const arrow = (delta: -1 | 1) => (
@@ -224,9 +240,12 @@ export function Carousel({
               onTap={() => setActive(i)}
               layout={{ padding: 4, margin: -4 }}
             >
+              {/* Hollow: that ticket cannot be taken right now. */}
               <View layout={{
                 width: pip.active ? 20 : 8, height: 8, borderRadius: RADIUS.full,
-                backgroundColor: pip.picked ? 0x4ade80 : tint(COLOR.foreground, pip.active ? 0.8 : 0.25),
+                ...(pip.unavailable
+                  ? { borderWidth: 1.5, borderColor: tint(COLOR.foreground, pip.active ? 0.8 : 0.35) }
+                  : { backgroundColor: pip.picked ? 0x4ade80 : tint(COLOR.foreground, pip.active ? 0.8 : 0.25) }),
               }} />
             </Pressable>
           ))}

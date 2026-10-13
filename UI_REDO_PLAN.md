@@ -114,7 +114,7 @@ is a ticket (`TicketCard`, shopParts.tsx): a stripe in the tier's colour down
 the left edge, a type square with the upgrade's icon, a stable key hashed
 from the upgrade id (`DEV-214`, storeBoardModel.ts), the tier as a priority
 glyph, the title, the description, the tags as labels, a status lozenge (To
-do, In sprint, Done, Blocked, Over capacity) and the price as the estimate in
+do, In sprint, Done, Blocked, Unfunded) and the price as the estimate in
 gold. A blocked ticket names its blockers outright instead of behind its lock.
 The ability slot is a ticket of its own type, coloured by the ability, where
 it used to be an inverted card.
@@ -128,6 +128,20 @@ The backlog stays the one-ticket-at-a-time strip rather than a board of
 columns. Testers asked for that strip when the shop showed five cards at once
 (contentCopyBudget.test.ts), and a column board on a phone would bring the
 wall of text back. Tests: src/test/canvas/storeBoard.test.ts.
+
+**What cannot be bought.** A ticket is out of reach for one of two reasons,
+kept apart because they ask different things of the player. BLOCKED (a
+prerequisite is missing): red stripe, a lock where the hold hint sits, a red
+lozenge and a "Blocked by" box listing each missing ticket by key and name; a
+blocker that is on the shelf is a link that moves the strip to it. UNFUNDED
+(not enough hours left): a gold lozenge (gold means hours), a funding bar of
+how much of the price the hours left would cover, and the shortfall in red
+beside the price ("6h short"). Both lose their colour (identity greyed, tags
+desaturated), so either reads as unavailable even half off-screen. The dots
+under the strip are hollow for out-of-reach tickets, and the Sprint panel says
+how many tickets won't fit and how close the nearest is. All of it updates as
+tickets are committed or taken back out. Tickets are not re-sorted: the order
+stays put so nothing jumps under the finger. Gallery: `UpgradeShop-reach`.
 
 **The pre-map Acceptance Criteria** are the map's own ticket
 (`AcceptanceCriteriaModal`, src/ui/game): the store's ticket look with the band's
