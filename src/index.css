@@ -722,6 +722,21 @@ html.canvas-ui body {
   -webkit-touch-callout: none;
 }
 
+/*
+ * ...and the DOM UNDER the canvas too. `touch-action` does not inherit, and
+ * the browser decides what a touch is from the element under the finger,
+ * intersecting only up to the nearest scroll container. Index's per-screen
+ * wrapper is `overflow-y: auto` (for the DOM screens that still scroll), so a
+ * swipe on a canvas screen landed on a pannable box: the browser took it as a
+ * pan, sent `pointercancel` after the first move, and the canvas never saw
+ * the rest of the gesture. Reported as Sprint Planning scrolling once and then
+ * refusing to scroll back. While the lock is on, nothing in the DOM pans.
+ */
+html.canvas-ui #root,
+html.canvas-ui #root * {
+  touch-action: none;
+}
+
 .canvas-ui-surface {
   position: fixed;
   inset: 0;

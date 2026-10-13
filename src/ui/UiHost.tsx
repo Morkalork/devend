@@ -105,9 +105,25 @@ function EventBridge(): null {
     // the page (a DOM screen's buttons, Admin). The page lock is CSS instead.
     events.autoPreventDefault = false;
     events.setTargetElement(target);
+    // Pixi does not listen for `pointercancel`. When the browser cancels a
+    // touch (it took the gesture for itself, or the OS interrupted it), Pixi
+    // never hears that the finger is gone: a scroll view stays "held" and
+    // stops scrolling, and a card's hold timer runs out and opens its
+    // explainer. Delivered as an up OUTSIDE, which every press and every
+    // scroll view already treats as "let go, do nothing".
+    const onPointerCancel = (nativeEvent: PointerEvent) => {
+      internal.rootBoundary.rootTarget = internal.renderer.lastObjectRendered;
+      for (const data of internal._normalizeToPointerData(nativeEvent)) {
+        const event = internal._bootstrapEvent(internal._rootPointerEvent, data);
+        event.type = "pointerupoutside";
+        internal.rootBoundary.mapEvent(event);
+      }
+    };
+    window.addEventListener("pointercancel", onPointerCancel, true);
     setUiHitTester((x, y) => interactiveAt(app, x, y));
     if (import.meta.env.DEV) (window as unknown as { __uiApp?: PixiApplication }).__uiApp = app;
     return () => {
+      window.removeEventListener("pointercancel", onPointerCancel, true);
       setUiHitTester(null);
       try { events.setTargetElement(null as unknown as HTMLElement); } catch { /* torn down */ }
       internal._onPointerUp = originalUp;
