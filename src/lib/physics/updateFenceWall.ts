@@ -16,6 +16,7 @@ import { MINIMUM_WALL_TIME } from "@/lib/gameConstants";
 import { cutSpeedFactor } from "@/lib/physics/fenceZones";
 import { getFenceType } from "@/lib/fences";
 import { simNow } from "@/lib/simClock";
+import { headStartTime } from "@/lib/offerPerks";
 
 export { clearFreeze, FREEZE_MAX_MS };
 
@@ -101,8 +102,20 @@ export function updateFenceWallFn(
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   let growth: number;
   if (wall.startTime) {
-    const elapsed = (simNow() - wall.startTime) / 1000;
     const expectedDuration = longestHalf / wallSpeedFinal;
+    // Platform (Sprint Planning): the fence opens part built. Fixed on the first
+    // update, when the build's duration is first known: the curve jumps ahead
+    // to where easeInOut reaches the head start, and the tips are carried out
+    // that far in the same frame, so the rest of the build continues smoothly
+    // from there. An offset on elapsed, never a shifted startTime: the grace
+    // window below reads startTime and is not this perk's to shorten.
+    let headStartGrowth = 0;
+    if (wall.headStart && wall.headStartOffset === undefined) {
+      const t0 = headStartTime(wall.headStart);
+      wall.headStartOffset = t0 * expectedDuration;
+      headStartGrowth = easeInOut(t0) * longestHalf;
+    }
+    const elapsed = (simNow() - wall.startTime) / 1000 + (wall.headStartOffset ?? 0);
     const currT = Math.max(0, Math.min(1, elapsed / expectedDuration));
 
     if (currT >= 1) {
@@ -115,7 +128,7 @@ export function updateFenceWallFn(
     }
 
     const prevT = Math.max(0, Math.min(1, (elapsed - dt) / expectedDuration));
-    growth = (easeInOut(currT) - easeInOut(prevT)) * longestHalf;
+    growth = (easeInOut(currT) - easeInOut(prevT)) * longestHalf + headStartGrowth;
   } else {
     growth = wallSpeedFinal * dt;
   }

@@ -13,7 +13,7 @@ The wizard completed a targeted analytics integration for **Dev/End** (Vite + Re
 | `upgrade_purchased` | Bought an upgrade in the shop | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `capstone_selected` | Picked the run's Promotion capstone | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `run_ended` | Run is over - win or final death (also fixed: now fires on retire) | `src/hooks/useGameSession.ts` *(pre-existing + retire fix)* |
-| `loadout_selected` | Player picked or skipped a loadout at the run-start draft | `src/hooks/useGameSession.ts` *(new)* |
+| `offer_selected` | Player took or skipped a Sprint Planning offer at the run start (offerId, pool, grantedIds; replaced `loadout_selected`) | `src/hooks/useGameSession.ts` |
 
 ## Files changed
 

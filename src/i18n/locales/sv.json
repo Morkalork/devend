@@ -182,7 +182,8 @@
     "fromSources": "Från",
     "par": "Par-marginal",
     "parActive": "+{{cuts}} par, under par-bonus x{{mult}}",
-    "parInactive": "Banor bedöms mot sitt eget par"
+    "parInactive": "Banor bedöms mot sitt eget par",
+    "offerSource": "Sprintplanering: {{name}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Köp uppgraderingen {{upgradeName}} i {{required}} olika omgångar.",
@@ -600,7 +601,6 @@
     "youWin": "DU VANN!",
     "gameOver": "Du har blivit ersatt av AI.",
     "completedAllLevels": "🎉 Klarade alla nivåer! 🎉",
-    "newLoadoutsUnlocked": "Ny loadout upplåst",
     "completedLevel": "Klarade nivå",
     "failedAtLevel": "Föll på nivå",
     "arenaRemaining": "Arena kvar",
@@ -623,7 +623,8 @@
     "dailyStreak_other": "Närvarosvit: {{count}} dagar",
     "share": "Dela",
     "shareLevel": "Nivå {{level}}",
-    "shareDaily": "Morgonmöte {{date}}"
+    "shareDaily": "Morgonmöte {{date}}",
+    "newOffersUnlocked": "Nytt sprintplaneringserbjudande"
   },
   "topBar": {
     "clear": "KLART",
@@ -916,7 +917,8 @@
     "abilityEveryMap": "En per bana, {{count}} kvar",
     "abilitySlotClosed": "Förmågeplatsen är stängd: din rad är full",
     "freeAbilityGranted": "{{name}} lades till i din rad",
-    "requiresMaxedFamily": "{{family}}, fullt uppgraderad"
+    "requiresMaxedFamily": "{{family}}, fullt uppgraderad",
+    "interestPaid": "Ränta +{{hours}} h"
   },
   "upgradeConditions": {
     "liveNow": "Aktiv på nästa bana",
@@ -938,19 +940,15 @@
   "runDraft": {
     "title": "Sprintplanering",
     "back": "Tillbaka",
-    "subtitle": "Välj en laddning som formar omgången från nivå 1.",
-    "pickHint": "Varje laddning kombinerar en förbannelse med en välsignelse. Välj en, eller hoppa över för att spela rakt.",
+    "subtitle": "Tre erbjudanden för den här omgången. Ta ett, eller hoppa över.",
+    "pickHint": "En förmån hjälper dina första banor, en specialisering lutar butiken mot en arketyp, och ett vågspel tar ett pris för en stor vinst.",
     "startButton": "Starta omgång",
-    "pickToStart": "Välj en laddning",
-    "skipButton": "Hoppa över (ingen laddning)",
-    "noLoadouts": "Inga laddningar tillgängliga."
+    "pickToStart": "Välj ett erbjudande",
+    "skipButton": "Hoppa över (inget erbjudande)",
+    "noOffers": "Inga erbjudanden tillgängliga.",
+    "holdHint": "Håll in ett kort för alla detaljer."
   },
   "tenure": {
-    "title": "Anställningstid",
-    "subtitle": "Du nådde nivå {{level}} förra rundan. Din anställningstid följer med.",
-    "pickHint": "Välj en kedja. Den är din från nivå 1, redan betald.",
-    "confirmButton": "Ta Den",
-    "pickToStart": "Välj en Uppgradering",
     "continued": "Från din förra runda"
   },
   "buildRecap": {
@@ -1001,7 +999,6 @@
     "certificates": "Certifikat",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Prestationer",
-    "loadouts": "Loadouts",
     "admin": "Admin",
     "certLockedTitle": "Certifikat låsta",
     "certLockedBody": "Certifikat är permanenta bonusar du tjänar genom att bemästra uppgraderingsfamiljer över flera omgångar. Nå en familjs toppnivå, eller tjäna ditt första certifikat genom att spela, så öppnar butiken. Spendera sedan Certifikattimmar för att höja dem.",
@@ -1012,7 +1009,8 @@
     "dailyIntroTitle": "Morgonmöte",
     "dailyIntroBody": "Alla får samma omgång varje dag från ett delat frö. Ditt resultat hamnar på dagens topplista, och att spela bygger en svit. Börjar på nivå 1.",
     "dailyIntroStart": "Starta dagens runda",
-    "music": "Musik"
+    "music": "Musik",
+    "offers": "Sprintplanering"
   },
   "content": {
     "upgrades": {
@@ -1461,107 +1459,81 @@
         "bonusDescription": "+5% chans att snitt rensar extra utrymme"
       }
     },
-    "loadouts": {
-      "crunch_time": {
-        "name": "Crunch Time",
-        "curse": "Bollar rör sig 25% snabbare.",
-        "blessing": "Tjäna 50% mer övertidstimmar."
+    "offers": {
+      "onboarding_buddy": {
+        "name": "Introduktionsfadder",
+        "description": "Dina första 3 banor börjar med 2 direktstängsel var."
       },
-      "scope_creep": {
-        "name": "Scope Creep",
-        "curse": "Bollar är 30% större.",
-        "blessing": "Stängsel växer 35% snabbare."
+      "gentle_ramp": {
+        "name": "Mjuk start",
+        "description": "Bollarna rör sig 15% långsammare på dina första 3 banor."
+      },
+      "salary_advance": {
+        "name": "Löneförskott",
+        "description": "Börja omgången med 30 övertidstimmar sparade."
+      },
+      "spare_laptop": {
+        "name": "Reservlaptop",
+        "description": "Börja omgången med ett extra liv."
+      },
+      "pick_a_junior": {
+        "name": "Välj en junior",
+        "description": "Välj en av fyra juniorer från första hyllan, gratis."
+      },
+      "reliability": {
+        "name": "Tillförlitlighet",
+        "description": "Säkerhetsuppgraderingar dyker upp mycket oftare, och bollarna börjar varje bana i 70% fart i 8 sekunder."
+      },
+      "platform": {
+        "name": "Plattform",
+        "description": "Tempouppgraderingar dyker upp mycket oftare, och varje stängsel börjar 12% draget."
+      },
+      "procurement": {
+        "name": "Inköp",
+        "description": "Bankuppgraderingar dyker upp mycket oftare, och varje butik betalar 5% ränta på dina timmar (upp till 10 h)."
+      },
+      "containment": {
+        "name": "Inneslutning",
+        "description": "Låsuppgraderingar dyker upp mycket oftare, och varje låsning stoppar närmaste fria boll i en sekund."
+      },
+      "cold_storage": {
+        "name": "Kylförvaring",
+        "description": "Frysuppgraderingar dyker upp mycket oftare, och den snabbaste bollen börjar varje bana frusen i 12 sekunder."
+      },
+      "growth": {
+        "name": "Tillväxt",
+        "description": "Riskuppgraderingar dyker upp mycket oftare, och varje bana ger 15% mer övertid för varje liv under 3 du börjar den med."
       },
       "death_march": {
         "name": "Dödsmarsch",
-        "curse": "Förlora ett liv omedelbart.",
-        "blessing": "Tjäna 75% mer övertidstimmar."
+        "description": "En gratis junior- och seniorkedja.",
+        "priceText": "Börja med ett liv mindre."
       },
       "hiring_freeze": {
         "name": "Anställningsstopp",
-        "curse": "Butiken erbjuder 2 färre uppgraderingar.",
-        "blessing": "Alla butikspriser sänks med 10%."
+        "description": "En gratis junior-, senior- och principalkedja.",
+        "priceText": "Butiken visar ett kort färre hela omgången."
       },
-      "legacy_codebase": {
-        "name": "Legacy-kodbas",
-        "curse": "Stängsel växer 20% långsammare.",
-        "blessing": "Börja varje karta med 2 omedelbara stängsel."
+      "headhunted": {
+        "name": "Headhuntad",
+        "description": "Välj en av tre fulla principalkedjor, var och en från en annan arketyp.",
+        "priceText": "Bollarna rör sig 10% snabbare hela omgången."
       },
-      "parallel_pipelines": {
-        "name": "Parallella pipelines",
-        "curse": "Bollar rör sig 15% snabbare.",
-        "blessing": "Rita ett extra stängsel samtidigt."
+      "unicorn": {
+        "name": "Enhörning",
+        "description": "En arkitekt och allt under den, gratis."
       },
-      "tech_debt_audit": {
-        "name": "Teknisk skuld-granskning",
-        "curse": "Bollar rör sig 10% snabbare och är 10% större.",
-        "blessing": "Snitt har 25% chans att rensa 5% extra utrymme."
+      "definition_of_done": {
+        "name": "Definition of Done",
+        "description": "Tjäna 60% fler övertidstimmar hela omgången.",
+        "priceText": "Varje bana där det går kräver också en låst boll på varje sida av brädet."
       },
-      "night_school": {
-        "name": "Kvällskurs",
-        "curse": "Bollar rör sig 20% snabbare.",
-        "blessing": "Säkra 1 extra certifikattimme när omgången slutar."
-      },
-      "micromanagement": {
-        "name": "Detaljstyrning",
-        "curse": "Bollar är 20% större.",
-        "blessing": "Varje låst boll saktar ner de återstående bollarna med 1%."
-      },
-      "roadmap_clarity": {
-        "name": "Tydlig roadmap",
-        "curse": "Bollar rör sig 15% snabbare.",
-        "blessing": "Se den förutsagda banan för de två snabbaste bollarna."
-      },
-      "golden_handcuffs": {
-        "name": "Gyllene handbojor",
-        "curse": "Tjäna 25% mindre övertid.",
-        "blessing": "Få 2 extra liv omedelbart."
-      },
-      "agile_transformation": {
-        "name": "Agil transformation",
-        "curse": "Stängsel växer 15% långsammare.",
-        "blessing": "Butiken erbjuder 1 extra uppgradering och fyller på två gånger per besök."
-      },
-      "hotfix_in_prod": {
-        "name": "Hotfix i Prod",
-        "curse": "Scope creep börjar direkt, ingen frist.",
-        "blessing": "Tidig leverans ger 2,5x med längre fönster, och en skrapning bryter inte längre ditt stängsel."
-      },
-      "bus_factor": {
-        "name": "Bussfaktorn",
-        "curse": "Ingen Push Your Luck, och bollarna är 20% större.",
-        "blessing": "Lås ger +4 övertid (överlägsna lås dubbelt) och saktar övriga bollar med 3%."
-      },
-      "series_a": {
-        "name": "Serie A",
-        "curse": "Tjäna 30% mindre övertid.",
-        "blessing": "Börja varje bana med 15% intaget. Butiken erbjuder 2 fler föremål, fyller på två gånger och det billigaste är gratis."
-      },
-      "warm_cache": {
-        "name": "Varm Cache",
-        "curse": "Stängsel växer 25% långsammare.",
-        "blessing": "Stängsel växer snabbare för varje bana du klarar under körningen."
-      },
-      "move_fast_break_things": {
-        "name": "Rör dig snabbt, ha sönder saker",
-        "curse": "Betala ett liv, och bollarna rör sig 20% snabbare.",
-        "blessing": "Push Your Luck-utbetalningar tredubblas."
+      "architectural_review": {
+        "name": "Arkitekturgranskning",
+        "description": "Rita ett böjt snitt. Ett stängsel behåller upp till två hörn av linjen du ritade, och bara dess två lösa ändar projiceras mot väggarna.",
+        "priceText": "Stängsel växer 25% långsammare hela omgången."
       }
     }
-  },
-  "loadouts": {
-    "title": "Loadouts",
-    "uniqueWins": "Unika vinster",
-    "sectionUnlocked": "Upplåsta",
-    "sectionLocked": "Låsta",
-    "unlockRequirement_one": "Vinn med {{count}} unik loadout till för att låsa upp.",
-    "unlockRequirement_other": "Vinn med {{count}} unika loadouts till för att låsa upp.",
-    "progress": "{{current}} / {{required}} unika vinster",
-    "loading": "Laddar...",
-    "back": "Tillbaka",
-    "unlockedModalTitle": "Loadouts upplåsta",
-    "unlockedModalBody": "Första omgången vunnen! Varje omgång börjar nu med en utrustning: en förbannelse parad med en välsignelse. Vinn med olika utrustningar för att låsa upp fler.",
-    "unlockedModalDismiss": "Uppfattat"
   },
   "features": {
     "unlockedHeader": "Funktion upplåst",
@@ -1574,13 +1546,13 @@
       "name": "Certifikat",
       "body": "Första certifikattimmen bankad! Spendera timmar i Certifikatbutiken på permanenta uppgraderingar. Fler bankas när du klarar nivåer."
     },
-    "loadouts": {
-      "name": "Loadouts",
-      "body": "Du klarade spelet! Varje omgång börjar nu med ett utrustningsval: en förbannelse parad med en välsignelse. Vinn med olika utrustningar för att låsa upp fler."
-    },
     "panicShockwave": {
       "name": "Panikknapp",
       "body": "Första bossen besegrad! Varje bana börjar nu med en gratis Chockvåg: avfyra den för att spränga isär bollarna när de saktar in. Kistor kan ge fler."
+    },
+    "sprintPlanning": {
+      "name": "Sprintplanering",
+      "body": "Från nästa omgång börjar varje omgång med tre erbjudanden: en förmån, en specialisering som lutar butiken mot en arketyp, och ett vågspel. Ta ett, eller hoppa över."
     }
   },
   "hallOfFame": {
@@ -1945,5 +1917,42 @@
     "toSpend": "att spendera före nivå {{level}}",
     "toSpendLast": "att spendera",
     "pickOne": "Välj 1 av {{count}}"
+  },
+  "sprint": {
+    "kind": {
+      "boon": "Förmån",
+      "tenure": "Anställningstid",
+      "specialisation": "Specialisering",
+      "gamble": "Vågspel",
+      "jackpot": "Jackpott"
+    },
+    "tenureUpside": "Du nådde nivå {{level}} förra omgången. Den här kedjan är din från nivå 1, redan betald.",
+    "choosesAfter_one": "Du väljer {{count}} kedja efter dragningen.",
+    "choosesAfter_other": "Du väljer en av {{count}} efter dragningen.",
+    "explain": {
+      "boon": "En förmån är liten och säker. De flesta hjälper bara dina första banor, så omgången är fortfarande din att avgöra.",
+      "tenure": "Anställningstid tjänas in genom att komma långt i en omgång: 10, 20 eller 30 nivåer ger ett, två eller tre steg i en kedja. Att ta den betyder att avstå de två andra erbjudandena.",
+      "specialisation": "En specialisering erbjuds bara här. Butiken räknar den som två extra {{tag}}-uppgraderingar när den väljer sina erbjudanden, varje hylla har minst ett {{tag}}-kort, och den räknas som en {{tag}}-uppgradering mot setbonusen.",
+      "gamble": "Ett vågspel tar sitt pris hela omgången. Vinsten kommer nu, redan betald.",
+      "jackpot": "Jackpotten: ett vågspel av tjugo, helt utan pris."
+    }
+  },
+  "chainPick": {
+    "subtitle": "Välj en kedja. Den är din från nivå 1, redan betald.",
+    "pickHint": "Alla steg på ett kort kommer tillsammans.",
+    "confirmButton": "Ta den",
+    "pickToStart": "Välj en kedja"
+  },
+  "offers": {
+    "title": "Sprintplanering",
+    "open": "Öppna erbjudanden",
+    "back": "Tillbaka",
+    "unlockLevel": "Nå nivå {{level}} i en omgång för att låsa upp.",
+    "unlockArchetype": "Äg tre {{tag}}-uppgraderingar i en omgång för att låsa upp.",
+    "poolHint": {
+      "boon": "Små och säkra. De flesta hjälper dina första banor.",
+      "specialisation": "Erbjuds bara här. Lutar butiken mot en arketyp hela omgången.",
+      "gamble": "Ett pris nu för en vinst som skulle ta tio banor att nå."
+    }
   }
 }

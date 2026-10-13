@@ -163,12 +163,40 @@ export function getDebugBugOverride(): string | null { return bugOverride; }
 export function setForcedTiltsOverride(on: boolean): void { tiltsOverride = on; }
 export function getForcedTiltsOverride(): boolean { return tiltsOverride; }
 
+// ── Sprint Planning (SPRINT_PLANNING_PLAN.md) ───────────────────────────────
+// In memory like the overrides above: a forced card that survived into next
+// week's runs would hand out a jackpot nobody rolled. Set from the Admin
+// screen. Each makes a run unrepresentative, so each is ledger-ineligible.
+let sprintOfferOverride: string | null = null;
+let jackpotOverride = false;
+let sprintAlwaysOn = false;
+
+/** Put this offer (offers.yml id) in its pool's slot on every deal, locked or not (null clears). */
+export function setForcedSprintOffer(id: string | null): void {
+  sprintOfferOverride = id && id.trim() ? id.trim() : null;
+}
+export function getForcedSprintOffer(): string | null { return sprintOfferOverride; }
+
+/**
+ * Deal the jackpot gamble every time. It is a 1-in-20 card at best, and "did
+ * not come up" looks exactly like "does not work" from the outside.
+ */
+export function setForcedJackpot(on: boolean): void { jackpotOverride = on; }
+export function getForcedJackpot(): boolean { return jackpotOverride; }
+
+/** Show the draft before every run, even before Sprint Planning is unlocked. */
+export function setSprintAlwaysOn(on: boolean): void { sprintAlwaysOn = on; }
+export function isSprintAlwaysOn(): boolean { return sprintAlwaysOn; }
+
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;
   mutatorOverride = null;
   bugOverride = null;
   tiltsOverride = false;
+  sprintOfferOverride = null;
+  jackpotOverride = false;
+  sprintAlwaysOn = false;
 }
 
 /**

@@ -13,7 +13,7 @@ const CARD = readFileSync(join(SCREENS, "DraftCard.tsx"), "utf8");
 
 function draftScreens(): { name: string; text: string }[] {
   return readdirSync(SCREENS)
-    .filter(f => /DraftScreen\.tsx$/.test(f))
+    .filter(f => /(DraftScreen|ChainPickScreen)\.tsx$/.test(f))
     .map(f => ({ name: f, text: readFileSync(join(SCREENS, f), "utf8") }));
 }
 

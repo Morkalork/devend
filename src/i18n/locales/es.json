@@ -182,7 +182,8 @@
     "fromSources": "De",
     "par": "Margen de Par",
     "parActive": "+{{cuts}} de par, bonus bajo par x{{mult}}",
-    "parInactive": "Los mapas se puntúan con su par propio"
+    "parInactive": "Los mapas se puntúan con su par propio",
+    "offerSource": "Planificación de sprint: {{name}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Compra la mejora {{upgradeName}} en {{required}} partidas diferentes.",
@@ -600,7 +601,6 @@
     "youWin": "¡GANASTE!",
     "gameOver": "Te ha reemplazado una IA.",
     "completedAllLevels": "🎉 ¡Completaste todos los niveles! 🎉",
-    "newLoadoutsUnlocked": "Nuevo equipamiento desbloqueado",
     "completedLevel": "Nivel completado",
     "failedAtLevel": "Fallaste en el nivel",
     "arenaRemaining": "Arena restante",
@@ -623,7 +623,8 @@
     "dailyStreak_other": "Racha de asistencia: {{count}} días",
     "share": "Compartir",
     "shareLevel": "Nivel {{level}}",
-    "shareDaily": "Reunión diaria {{date}}"
+    "shareDaily": "Reunión diaria {{date}}",
+    "newOffersUnlocked": "Nueva oferta de planificación de sprint"
   },
   "topBar": {
     "clear": "DESPEJADO",
@@ -916,7 +917,8 @@
     "abilityEveryMap": "Una por mapa, quedan {{count}}",
     "abilitySlotClosed": "Ranura de habilidad cerrada: tu barra esta llena",
     "freeAbilityGranted": "{{name}} anadida a tu barra",
-    "requiresMaxedFamily": "{{family}}, al máximo"
+    "requiresMaxedFamily": "{{family}}, al máximo",
+    "interestPaid": "Interés +{{hours}} h"
   },
   "upgradeConditions": {
     "liveNow": "Activa en el próximo mapa",
@@ -938,19 +940,15 @@
   "runDraft": {
     "title": "Planificación de sprint",
     "back": "Atrás",
-    "subtitle": "Elige un equipamiento para definir esta partida desde el nivel 1.",
-    "pickHint": "Cada equipamiento combina una maldición con una bendición. Elige uno o sáltalo para jugar sin extras.",
+    "subtitle": "Tres ofertas para esta partida. Toma una o sáltala.",
+    "pickHint": "Una ventaja ayuda en tus primeros mapas, una especialización inclina la tienda hacia un arquetipo y una apuesta cobra un precio por un gran premio.",
     "startButton": "Empezar partida",
-    "pickToStart": "Elige un equipamiento",
-    "skipButton": "Saltar (sin equipamiento)",
-    "noLoadouts": "No hay equipamientos disponibles."
+    "pickToStart": "Elige una oferta",
+    "skipButton": "Saltar (sin oferta)",
+    "noOffers": "No hay ofertas disponibles.",
+    "holdHint": "Mantén pulsada una carta para ver todos los detalles."
   },
   "tenure": {
-    "title": "Antigüedad",
-    "subtitle": "Llegaste al nivel {{level}} en la partida anterior. Tu antigüedad se conserva.",
-    "pickHint": "Elige una cadena. Es tuya desde el nivel 1, ya pagada.",
-    "confirmButton": "Aceptar",
-    "pickToStart": "Elige una Mejora",
     "continued": "De tu partida anterior"
   },
   "buildRecap": {
@@ -1001,7 +999,6 @@
     "certificates": "Certificados",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Logros",
-    "loadouts": "Equipamientos",
     "admin": "Admin",
     "certLockedTitle": "Certificados bloqueados",
     "certLockedBody": "Los certificados son bonos permanentes que se ganan dominando familias de mejoras en varias partidas. Alcanza el nivel máximo de una familia, o gana tu primer certificado jugando, y esta tienda se abre. Luego gasta Horas de Certificado para subirlos.",
@@ -1012,7 +1009,8 @@
     "dailyIntroTitle": "Reunión diaria",
     "dailyIntroBody": "Todos reciben la misma partida cada día a partir de una semilla compartida. Tu resultado entra en la clasificación diaria, y jugar acumula racha. Empieza en el nivel 1.",
     "dailyIntroStart": "Empezar la partida de hoy",
-    "music": "Música"
+    "music": "Música",
+    "offers": "Planificación de sprint"
   },
   "content": {
     "upgrades": {
@@ -1461,107 +1459,81 @@
         "bonusDescription": "+5% de probabilidad de que los cortes despejen espacio extra"
       }
     },
-    "loadouts": {
-      "crunch_time": {
-        "name": "Crunch Time",
-        "curse": "Las bolas se mueven un 25% más rápido.",
-        "blessing": "Gana un 50% más de horas extra."
+    "offers": {
+      "onboarding_buddy": {
+        "name": "Mentor de incorporación",
+        "description": "Tus primeros 3 mapas empiezan con 2 vallas instantáneas cada uno."
       },
-      "scope_creep": {
-        "name": "Scope Creep",
-        "curse": "Las bolas son un 30% más grandes.",
-        "blessing": "Las vallas crecen un 35% más rápido."
+      "gentle_ramp": {
+        "name": "Rampa suave",
+        "description": "Las bolas van un 15% más lentas en tus primeros 3 mapas."
+      },
+      "salary_advance": {
+        "name": "Adelanto de sueldo",
+        "description": "Empieza la partida con 30 horas extra ahorradas."
+      },
+      "spare_laptop": {
+        "name": "Portátil de repuesto",
+        "description": "Empieza la partida con una vida extra."
+      },
+      "pick_a_junior": {
+        "name": "Elige un junior",
+        "description": "Elige uno de cuatro juniors del primer estante, gratis."
+      },
+      "reliability": {
+        "name": "Fiabilidad",
+        "description": "Las mejoras de seguridad aparecen mucho más a menudo, y las bolas empiezan cada mapa al 70% de velocidad durante 8 segundos."
+      },
+      "platform": {
+        "name": "Plataforma",
+        "description": "Las mejoras de ritmo aparecen mucho más a menudo, y cada valla empieza dibujada al 12%."
+      },
+      "procurement": {
+        "name": "Compras",
+        "description": "Las mejoras de banco aparecen mucho más a menudo, y cada tienda paga un 5% de interés sobre tus horas (hasta 10 h)."
+      },
+      "containment": {
+        "name": "Contención",
+        "description": "Las mejoras de bloqueo aparecen mucho más a menudo, y cada bloqueo detiene la bola libre más cercana durante un segundo."
+      },
+      "cold_storage": {
+        "name": "Almacén frío",
+        "description": "Las mejoras de congelación aparecen mucho más a menudo, y la bola más rápida empieza cada mapa congelada durante 12 segundos."
+      },
+      "growth": {
+        "name": "Crecimiento",
+        "description": "Las mejoras de riesgo aparecen mucho más a menudo, y cada mapa paga un 15% más de horas extra por cada vida por debajo de 3 con la que lo empiezas."
       },
       "death_march": {
-        "name": "Marcha de la Muerte",
-        "curse": "Pierde una vida de inmediato.",
-        "blessing": "Gana un 75% más de horas extra."
+        "name": "Marcha de la muerte",
+        "description": "Una cadena gratis de junior y senior.",
+        "priceText": "Empiezas con una vida menos."
       },
       "hiring_freeze": {
-        "name": "Congelación de Contrataciones",
-        "curse": "La tienda ofrece 2 mejoras menos.",
-        "blessing": "Todos los precios de la tienda bajan un 10%."
+        "name": "Congelación de contrataciones",
+        "description": "Una cadena gratis de junior, senior y principal.",
+        "priceText": "La tienda muestra una carta menos toda la partida."
       },
-      "legacy_codebase": {
-        "name": "Código Heredado",
-        "curse": "Las vallas crecen un 20% más lento.",
-        "blessing": "Empieza cada mapa con 2 vallas instantáneas."
+      "headhunted": {
+        "name": "Cazatalentos",
+        "description": "Elige una de tres cadenas completas hasta principal, cada una de un arquetipo distinto.",
+        "priceText": "Las bolas van un 10% más rápido toda la partida."
       },
-      "parallel_pipelines": {
-        "name": "Pipelines Paralelos",
-        "curse": "Las bolas se mueven un 15% más rápido.",
-        "blessing": "Dibuja una valla extra al mismo tiempo."
+      "unicorn": {
+        "name": "Unicornio",
+        "description": "Un arquitecto y todo lo que hay debajo, gratis."
       },
-      "tech_debt_audit": {
-        "name": "Auditoría de Deuda Técnica",
-        "curse": "Las bolas se mueven un 10% más rápido y son un 10% más grandes.",
-        "blessing": "Los cortes tienen un 25% de probabilidad de despejar un 5% de espacio extra."
+      "definition_of_done": {
+        "name": "Definición de terminado",
+        "description": "Gana un 60% más de horas extra toda la partida.",
+        "priceText": "Cada mapa donde sea posible exige además una bola bloqueada a cada lado del tablero."
       },
-      "night_school": {
-        "name": "Escuela Nocturna",
-        "curse": "Las bolas se mueven un 20% más rápido.",
-        "blessing": "Embolsa 1 Hora de Certificado extra cuando termina la partida."
-      },
-      "micromanagement": {
-        "name": "Microgestión",
-        "curse": "Las bolas son un 20% más grandes.",
-        "blessing": "Cada bola bloqueada ralentiza a las bolas restantes un 1%."
-      },
-      "roadmap_clarity": {
-        "name": "Claridad de Hoja de Ruta",
-        "curse": "Las bolas se mueven un 15% más rápido.",
-        "blessing": "Ve la trayectoria prevista de las dos bolas más rápidas."
-      },
-      "golden_handcuffs": {
-        "name": "Esposas Doradas",
-        "curse": "Gana un 25% menos de horas extra.",
-        "blessing": "Gana 2 vidas extra de inmediato."
-      },
-      "agile_transformation": {
-        "name": "Transformación Ágil",
-        "curse": "Las vallas crecen un 15% más lento.",
-        "blessing": "La tienda ofrece 1 mejora extra y se reabastece dos veces por visita."
-      },
-      "hotfix_in_prod": {
-        "name": "Hotfix en Producción",
-        "curse": "La Corrupción del alcance empieza de inmediato, sin periodo de gracia.",
-        "blessing": "La entrega temprana paga 2.5x con una ventana más larga, y un roce ya no rompe tu valla."
-      },
-      "bus_factor": {
-        "name": "El Factor Autobús",
-        "curse": "Sin arriesgarse, y las bolas son un 20% más grandes.",
-        "blessing": "Los bloqueos dan +4 horas extra (los superiores el doble) y ralentizan al resto un 3%."
-      },
-      "series_a": {
-        "name": "Serie A",
-        "curse": "Gana un 30% menos de horas extra.",
-        "blessing": "Empieza cada mapa con un 15% capturado. La tienda ofrece 2 objetos más, se reabastece dos veces y el más barato es gratis."
-      },
-      "warm_cache": {
-        "name": "Caché Caliente",
-        "curse": "Las vallas crecen un 25% más lento.",
-        "blessing": "Las vallas crecen más rápido por cada mapa que completes en esta partida."
-      },
-      "move_fast_break_things": {
-        "name": "Muévete Rápido y Rompe Cosas",
-        "curse": "Paga una vida, y las bolas se mueven un 20% más rápido.",
-        "blessing": "Los pagos de arriesgarse se triplican."
+      "architectural_review": {
+        "name": "Revisión de arquitectura",
+        "description": "Dibuja un corte doblado. Una valla conserva hasta dos esquinas de la línea que dibujaste, y solo sus dos extremos sueltos se proyectan hasta las paredes.",
+        "priceText": "Las vallas crecen un 25% más despacio toda la partida."
       }
     }
-  },
-  "loadouts": {
-    "title": "Equipamientos",
-    "uniqueWins": "Victorias únicas",
-    "sectionUnlocked": "Desbloqueados",
-    "sectionLocked": "Bloqueados",
-    "unlockRequirement_one": "Gana con {{count}} equipamiento único más para desbloquear.",
-    "unlockRequirement_other": "Gana con {{count}} equipamientos únicos más para desbloquear.",
-    "progress": "{{current}} / {{required}} victorias únicas",
-    "loading": "Cargando...",
-    "back": "Atrás",
-    "unlockedModalTitle": "Equipamientos desbloqueados",
-    "unlockedModalBody": "¡Primera partida ganada! Ahora cada partida empieza con una carga: una maldición unida a una bendición. Gana con cargas distintas para desbloquear más.",
-    "unlockedModalDismiss": "Entendido"
   },
   "features": {
     "unlockedHeader": "Función desbloqueada",
@@ -1574,13 +1546,13 @@
       "name": "Certificados",
       "body": "¡Primera hora de certificado en el banco! Gasta horas en la tienda de Certificados en mejoras permanentes. Bancarás más al superar niveles."
     },
-    "loadouts": {
-      "name": "Equipamientos",
-      "body": "¡Te pasaste el juego! Ahora cada partida empieza con un reparto de carga: una maldición unida a una bendición. Gana con cargas distintas para desbloquear más."
-    },
     "panicShockwave": {
       "name": "Boton de panico",
       "body": "¡Primer jefe vencido! Ahora cada mapa empieza con una Onda de Choque gratis: dispárala para dispersar las bolas cuando se frenen. Los cofres pueden dar más."
+    },
+    "sprintPlanning": {
+      "name": "Planificación de sprint",
+      "body": "Desde tu próxima partida, cada partida empieza con tres ofertas: una ventaja, una especialización que inclina la tienda hacia un arquetipo y una apuesta. Toma una o sáltala."
     }
   },
   "hallOfFame": {
@@ -1945,5 +1917,42 @@
     "toSpend": "para gastar antes del nivel {{level}}",
     "toSpendLast": "para gastar",
     "pickOne": "Elige 1 de {{count}}"
+  },
+  "sprint": {
+    "kind": {
+      "boon": "Ventaja",
+      "tenure": "Antigüedad",
+      "specialisation": "Especialización",
+      "gamble": "Apuesta",
+      "jackpot": "Premio gordo"
+    },
+    "tenureUpside": "Llegaste al nivel {{level}} en tu última partida. Esta cadena es tuya desde el nivel 1, ya pagada.",
+    "choosesAfter_one": "Eliges {{count}} cadena después del sorteo.",
+    "choosesAfter_other": "Eliges una de {{count}} después del sorteo.",
+    "explain": {
+      "boon": "Una ventaja es pequeña y segura. La mayoría solo ayuda en tus primeros mapas, así que la partida sigue siendo tuya.",
+      "tenure": "La antigüedad se gana llegando lejos en una partida: 10, 20 o 30 niveles pagan uno, dos o tres rangos de una cadena. Tomarla significa renunciar a las otras dos ofertas.",
+      "specialisation": "Una especialización solo se ofrece aquí. La tienda la cuenta como dos mejoras extra de {{tag}} al elegir sus ofertas, cada estante tiene al menos una carta de {{tag}}, y cuenta como una mejora de {{tag}} para el bonus de conjunto.",
+      "gamble": "Una apuesta cobra su precio durante toda la partida. El premio llega ahora, ya pagado.",
+      "jackpot": "El premio gordo: una apuesta de cada veinte, sin ningún precio."
+    }
+  },
+  "chainPick": {
+    "subtitle": "Elige una cadena. Es tuya desde el nivel 1, ya pagada.",
+    "pickHint": "Todos los rangos de una carta llegan juntos.",
+    "confirmButton": "Tomarla",
+    "pickToStart": "Elige una cadena"
+  },
+  "offers": {
+    "title": "Planificación de sprint",
+    "open": "Ofertas abiertas",
+    "back": "Atrás",
+    "unlockLevel": "Llega al nivel {{level}} en una partida para desbloquearla.",
+    "unlockArchetype": "Ten tres mejoras de {{tag}} en una partida para desbloquearla.",
+    "poolHint": {
+      "boon": "Pequeñas y seguras. La mayoría ayuda en tus primeros mapas.",
+      "specialisation": "Solo se ofrecen aquí. Inclinan la tienda hacia un arquetipo toda la partida.",
+      "gamble": "Un precio ahora por un premio que tardarías diez mapas en alcanzar."
+    }
   }
 }

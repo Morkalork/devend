@@ -5,8 +5,7 @@
  * It wires together all the smaller managers:
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
- *   - useLoadoutManager      curse/blessing loadouts from public/loadouts.yml
- *                            (run-start loadout draft; parked while on hold)
+ *   - sprintOffers           the run-start draft's offers from public/offers.yml
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
  *   - useCheckpointSnapshots saved per-level snapshots for the level picker
@@ -19,7 +18,6 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
 import { useUpgradeManager, getLoadedUpgrades } from './useUpgradeManager';
-import { useLoadoutManager } from './useLoadoutManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
@@ -47,8 +45,13 @@ import type { BetweenMapPlan } from '@/ui/screens/pipelineModel';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
-import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
+import {
+  loadOffers, getOffer, getOfferCatalogue, rollSprintDeal, shopLeanOf, offerModifierLayers, pickLivesDelta,
+  allOffers, type DealtOffer,
+} from '@/lib/sprintOffers';
+import { getForcedSprintOffer, getForcedJackpot, isSprintAlwaysOn } from '@/lib/devFlags';
 import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
+import { storeInterest, desperationMultiplier } from '@/lib/offerPerks';
 import { runwayBonuses, spendChunks, spendBoons, spendChunkCap, SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
@@ -58,7 +61,7 @@ import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled, debugMutatorId, forcedTilts } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
-import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
+import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers, isContinuation } from '@/lib/tenure';
 import { fenceSlotsFrom } from "@/lib/fenceOwnership";
 import { devFenceSlots } from "@/lib/devFlags";
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
@@ -138,12 +141,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     isLocked: isUpgradeLocked,
   } = useUpgradeManager();
 
-  const {
-    loadouts,
-    loadoutLookup,
-    loadLoadouts,
-  } = useLoadoutManager();
-
   /**
    * A run is booting: every catalogue is being fetched before the first map.
    *
@@ -206,17 +203,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [carryFreeShopItems, setCarryFreeShopItems] = useState(0);
 
   /**
-   * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
-   * run's depth, plus whether the loadout draft still follows once picked.
-   * Rolled fresh per run, so a retry is a new draw rather than the same cards.
+   * Sprint Planning (SPRINT_PLANNING_PLAN.md): the three cards dealt before
+   * map 1, already resolved. When the previous run earned Tenure (issue #75),
+   * its chain is the boon card. Dealt fresh per run, so a retry is a new draw.
    */
-  const [pendingTenure, setPendingTenure] = useState<{
-    offers: TenureOffer[];
-    earnedAtLevel: number;
-    thenDraftLoadout: boolean;
-    /** What the previous run owned, so the screen can badge the continuation. */
-    lastRunUpgradeIds: string[];
-  } | null>(null);
+  const [pendingSprint, setPendingSprint] = useState<{ cards: DealtOffer[] } | null>(null);
+  /**
+   * A taken offer whose prize is a choice (Pick a Junior, Headhunted): the
+   * chains the player picks one of on the next screen.
+   */
+  const [pendingChainPick, setPendingChainPick] = useState<{ offerId: string; choices: TenureOffer[] } | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
   // at the first map end at/past the trigger level. Permanent for the run;
@@ -225,6 +221,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // What this store visit put on its shelf, kept for the run save (a run
   // resumed in the store reopens the same shelf). Cleared per visit.
   const [storeDealt, setStoreDealt] = useState<StoreDealt | null>(null);
+  // Procurement's interest this visit paid, for the store's treasury strip.
+  const [storeInterestPaid, setStoreInterestPaid] = useState(0);
   const handleShopDealt = useCallback((dealt: StoreDealt) => setStoreDealt(dealt), []);
   // A resumed run saved between maps, waiting for its level sequence to settle
   // before it is routed back to the stage it was saved on.
@@ -251,16 +249,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Locks made this round vs. required (for the closed-store "X/Y" banner, #67).
   const [storeLockProgress, setStoreLockProgress] = useState<{ have: number; need: number }>({ have: 0, need: 1 });
 
-  // The run-start loadout, when Sprint Planning drafts one (on hold: loadouts
-  // are parked, so this stays empty in play).
-  const [draftedLoadoutIds, setDraftedLoadoutIds] = useState<string[]>([]);
+  // The offer this run took at Sprint Planning (null: skipped, or none dealt).
+  const [takenOfferId, setTakenOfferId] = useState<string | null>(null);
 
   // Snapshot of the just-finalized run for the result screen (finalizeRun
   // resets the live counters, so the result screen can't read those).
   const [lastRunSummary, setLastRunSummary] = useState<{ levelsCompleted: number; hoursAwarded: number } | null>(null);
 
-  // Names of loadouts that unlocked this run (shown on the result screen).
-  const [lastRunLoadoutUnlocks, setLastRunLoadoutUnlocks] = useState<string[]>([]);
+  // Sprint Planning offers this run unlocked (shown on the result screen).
+  const [lastRunOfferUnlocks, setLastRunOfferUnlocks] = useState<string[]>([]);
 
   // End-of-run build recap (archetype identity, capstone, per-archetype best).
   const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
@@ -394,7 +391,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
     stats: metaStats,
     isLoaded: metaLoaded,
-    wonLoadoutIds,
+    metArchetypes,
     mapHighscores,
     encounteredBallTypeIds,
     archetypeBests,
@@ -406,22 +403,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordPerfectLevel,
     recordLivesLost,
     recordPushBonusBanked,
-    recordLoadoutWin,
+    recordArchetypeMet,
     recordMapHighscore,
     recordBallTypeEncountered,
     recordArchetypeBest,
-    introduceLoadouts,
     unlockFeature,
     isFeatureUnlocked,
     resetProgression,
   } = useMetaProgression();
 
-  // Loadouts are gated behind the general feature-unlock system: earned by
-  // beating the game for the first time (completing the final level; see the
-  // isLastLevel win path below). Until then the menu Loadouts entry stays
-  // hidden. (Loadouts are parked for now: Sprint Planning is on hold and the
-  // Ascension draft was removed, so the menu entry stays hidden regardless.)
-  const loadoutsIntroduced = isFeatureUnlocked('loadouts');
+  // Sprint Planning is a feature unlock (features.yml): the very first run goes
+  // straight into the map, and the draft starts with the run after the one
+  // that cleared its unlock level. Admin can force it on (devFlags).
+  const sprintUnlocked = isFeatureUnlocked('sprintPlanning');
 
   // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
   // modal (surfaced when leaving the level-complete overlay). Idempotent.
@@ -444,9 +438,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     featureReconcileDoneRef.current = true;
     // Reached level 5+ => cleared level 5 => achievements were available.
     if (metaStats.highestLevelReached >= 5) unlockFeature('achievements');
-    // Reached level 11+ => beat the level-10 boss => loadouts were available.
-    // (Complements the loadoutsIntroduced first-win seed in useMetaProgression.)
-    if (metaStats.highestLevelReached >= 11) unlockFeature('loadouts');
+    // Already past Sprint Planning's unlock level: no modal for something the
+    // player has effectively already earned.
+    const sprintLevel = getFeature('sprintPlanning')?.unlockLevel;
+    if (sprintLevel !== undefined && metaStats.highestLevelReached > sprintLevel) unlockFeature('sprintPlanning');
     const hadCertificates =
       totalCertificateHours > 0 ||
       unlockedCertIds.length > 0 ||
@@ -463,22 +458,44 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  /** Drafted loadouts, folded into the same bonus map the achievements/certificates use. */
-  const loadoutBonuses = useMemo(() => {
+  /** The Sprint Planning offer this run took (null when it skipped). */
+  const runOffer = useMemo(() => getOffer(takenOfferId) ?? null, [takenOfferId]);
+  /** Its Specialisation's lean on the shop, when it is one. */
+  const shopLean = useMemo(() => shopLeanOf(runOffer), [runOffer]);
+
+  /**
+   * The taken offer, folded into the same bonus map the achievements and
+   * certificates use: its price for the whole run, its modifiers while they
+   * last (a `forMaps` boon stops after the run's first N maps).
+   */
+  const offerBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
-    for (const id of draftedLoadoutIds) {
-      const loadout = loadoutLookup.get(id);
-      if (loadout) bonuses = mergeBonuses(bonuses, loadout.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    for (const layer of offerModifierLayers(runOffer, runLevelsCompleted)) {
+      bonuses = mergeBonuses(bonuses, layer as Partial<Record<keyof GameModifiers, number>>);
     }
     return bonuses;
-  }, [draftedLoadoutIds, loadoutLookup]);
+  }, [runOffer, runLevelsCompleted]);
 
   // Set bonuses: free modifier bundles active while the player owns enough
-  // upgrades of a tag (tagSets block in upgrades.yml).
+  // upgrades of a tag (tagSets block in upgrades.yml). A Specialisation counts
+  // toward its own tag's set.
   const activeTagSets = useMemo(
-    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets),
-    [ownedUpgradeIds, upgrades, tagSets]
+    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets,
+      shopLean ? { tag: shopLean.tag, amount: shopLean.countsTowardSet } : null),
+    [ownedUpgradeIds, upgrades, tagSets, shopLean]
   );
+
+  // A set firing is meeting the archetype: it unlocks that tag's
+  // Specialisation for later runs, and the result screen says so.
+  useEffect(() => {
+    for (const set of activeTagSets) {
+      if (!recordArchetypeMet(set.tag)) continue;
+      const unlocked = allOffers(getOfferCatalogue())
+        .filter(o => o.unlock?.kind === 'archetypeMet' && o.unlock.tag === set.tag)
+        .map(o => o.name);
+      if (unlocked.length > 0) setLastRunOfferUnlocks(prev => [...prev, ...unlocked.filter(n => !prev.includes(n))]);
+    }
+  }, [activeTagSets, recordArchetypeMet]);
   const tagSetBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     for (const s of activeTagSets) {
@@ -532,13 +549,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const mergedBonuses = useMemo(
     () => mergeBonuses(
-      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
+      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), offerBonuses),
       mergeBonuses(
         mergeBonuses(tagSetBonuses, scalingBonuses),
         capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined,
       ),
     ),
-    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, scalingBonuses, capstone]
+    [achievementBonuses, certBonuses, offerBonuses, tagSetBonuses, scalingBonuses, capstone]
   );
 
   // Two-pass modifier resolution: the base pass aggregates every static source;
@@ -603,7 +620,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendCapture > 0) {
       bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
     }
-    // Warm Cache loadout: fence growth snowballs with each map cleared this run.
+    // Growth (Sprint Planning): a map started below three lives pays more.
+    // livesAtLevelStart, not currentLives, so the rate is fixed for the map.
+    const desperation = desperationMultiplier(livesAtLevelStart, baseModifiers.scoreBonusPerMissingLife);
+    if (desperation > 1) bonuses = mergeBonuses(bonuses, { scoreMultiplier: desperation });
+    // Warm Cache: fence growth snowballs with each map cleared this run.
     // Translate the per-cleared-map coefficient into a fenceGenerationSpeedMultiplier
     // boost, capped so a deep run can't run away with it.
     if (baseModifiers.fenceSpeedPerMapCleared > 0 && runLevelsCompleted > 0) {
@@ -613,7 +634,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       });
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted, livesAtLevelStart]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -637,13 +658,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
   const tagSetThreshold = tagSets?.threshold ?? DEFAULT_TAG_SET_THRESHOLD;
 
-  const activeLoadouts = useMemo(
-    () => draftedLoadoutIds.map(id => loadoutLookup.get(id)).filter((l): l is NonNullable<typeof l> => l != null),
-    [draftedLoadoutIds, loadoutLookup]
-  );
-
   // Per-source breakdown of what feeds activeModifiers, so the bottom-bar panel
-  // can attribute each active modifier to the upgrade/cert/achievement/loadout
+  // can attribute each active modifier to the upgrade/cert/achievement/offer
   // that produced it.
   const modifierSources = useMemo<ModifierSource[]>(() => {
     const sources: ModifierSource[] = [];
@@ -671,8 +687,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'achievement', id: a.id, name: a.name, modifiers: { [a.bonus.modifier]: a.bonus.value } });
     }
 
-    for (const l of activeLoadouts) {
-      sources.push({ kind: 'loadout', id: l.id, name: l.name, modifiers: l.modifiers });
+    if (runOffer && offerBonuses) {
+      sources.push({ kind: 'offer', id: runOffer.id, name: runOffer.name, modifiers: offerBonuses as Record<string, number> });
     }
 
     for (const s of activeTagSets) {
@@ -684,14 +700,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, capstone]);
-
-  // Loadouts offered in the run-start draft: unlocked once the player has
-  // enough unique wins (see loadoutUnlock).
-  const availableLoadouts = useMemo(
-    () => unlockedForStart(loadouts, wonLoadoutIds.length),
-    [loadouts, wonLoadoutIds]
-  );
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, runOffer, offerBonuses, activeTagSets, capstone]);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -724,17 +733,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(0);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
-    setPendingTenure(null);
+    setPendingSprint(null);
+    setPendingChainPick(null);
     setCapstone(null);
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
     setRunStartIntroPending(true);
     setStoreClosed(false);
+    setStoreInterestPaid(0);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
-    setDraftedLoadoutIds([]);
+    setTakenOfferId(null);
     setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
+    setLastRunOfferUnlocks([]);
     runTrajectoryRef.current = [];
     recordEligibleRef.current = true;
     pbCelebratedRef.current = false;
@@ -773,7 +784,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendCapture,
     carryFreeShopItems,
     capstoneId: capstone?.id ?? null,
-    draftedLoadoutIds,
+    takenOfferId,
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
     dailyKey,
@@ -821,47 +832,56 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, []);
 
   /**
-   * The last step of starting a fresh, unseeded run: hand over the Tenure draft
-   * if the previous run earned one, then continue into the loadout draft or
-   * straight into the map.
+   * Deal the Sprint Planning cards. Shared by every run-start path.
    *
-   * Shared because there are three ways to start a run and Tenure originally
-   * fired from only one of them. New Game rolled it; Play Again and Restart went
-   * straight to the loadout draft, so losing past map 10 and pressing Play Again
-   * (the most natural way there is to start the next run) silently skipped the
-   * head start that run had just earned. The tell was that both other paths
-   * already ran the loadout draft, and Tenure is specified to come BEFORE it.
+   * Tenure (issue #75) rides in the boon slot when the previous run earned it.
+   * It used to be a screen of its own before the loadout draft, and it fired
+   * from New Game only at first: Play Again and Restart skipped it, so the
+   * button right under the score of the run that had just earned a head start
+   * was the one path that lost it. Every path comes through here now.
    *
-   * Seeded Daily runs deliberately do not come through here: a per-player head
-   * start would make one shared seed incomparable.
+   * Seeded runs pass `seeded`: the Daily deals from its seed and never offers
+   * Tenure (a per-player head start would make one shared seed incomparable).
    */
-  const enterRun = useCallback((wantsLoadoutDraft: boolean) => {
-    // Sprint Planning is on hold (see @/lib/sprintPlanning). Normalised HERE
-    // rather than at the three call sites so the Tenure continuation below,
-    // which replays this flag out of pendingTenure, is covered by the same
-    // line instead of being the one path that still reaches the draft.
-    const thenDraftLoadout = SPRINT_PLANNING_ENABLED && wantsLoadoutDraft;
+  const dealSprint = useCallback((opts: { seeded: boolean }): DealtOffer[] => {
+    let tenure: { chain: TenureOffer; earnedAtLevel: number; continued: boolean } | null = null;
     const tenureDepth = metaStats.lastRunDepth;
-    const offers = tenureSteps(tenureDepth) > 0
+    if (!opts.seeded && tenureSteps(tenureDepth) > 0) {
       // getLoadedUpgrades(), not the `upgrades` state: on the New Game path this
       // closure was created before loadUpgrades() ran, so the state read here
-      // would be stale. On the other two the catalogue is already loaded from
-      // the run just played, and an empty one simply yields no offers.
-      //
-      // The depth sets how much is granted; lastRunShopLevel limits what may be
-      // granted to what the run could actually have bought.
-      ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
-                         TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)
-      : [];
-    if (offers.length > 0) {
-      setPendingTenure({
-        offers, earnedAtLevel: tenureDepth, thenDraftLoadout,
-        lastRunUpgradeIds: [...lastRunUpgradeIds],
-      });
-      nav.goToTenureDraft();
-    } else if (thenDraftLoadout) nav.goToRunDraft();
-    else nav.startGame();
-  }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
+      // would be stale. The depth sets how much is granted; lastRunShopLevel
+      // limits what may be granted to what the run could actually have bought.
+      // The first offer is the one guaranteed to continue the last run's build.
+      const chain = rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
+        TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)[0];
+      if (chain) tenure = { chain, earnedAtLevel: tenureDepth, continued: isContinuation(chain, lastRunUpgradeIds) };
+    }
+    return rollSprintDeal({
+      catalogue: getOfferCatalogue(),
+      upgrades: getLoadedUpgrades(),
+      unlock: { highestLevelReached: metaStats.highestLevelReached, metArchetypes },
+      rng: opts.seeded ? getRunRng('sprint') : Math.random,
+      tenure,
+      force: { offerId: getForcedSprintOffer(), jackpot: getForcedJackpot() },
+    });
+  }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, metaStats.highestLevelReached, lastRunUpgradeIds, metArchetypes]);
+
+  /**
+   * The last step of starting a run: Sprint Planning when it is unlocked (or
+   * Tenure is owed, which is the boon card), otherwise straight into the map.
+   * `wantsDraft` is false for the debug jump and a pair run (both phones must
+   * start from the same state, and the host's run is the one that counts).
+   */
+  const enterRun = useCallback((wantsDraft: boolean, opts: { seeded?: boolean } = {}) => {
+    const seeded = opts.seeded ?? false;
+    const tenureOwed = !seeded && tenureSteps(metaStats.lastRunDepth) > 0;
+    const draftOn = SPRINT_PLANNING_ENABLED && wantsDraft && (sprintUnlocked || tenureOwed || isSprintAlwaysOn());
+    const cards = draftOn ? dealSprint({ seeded }) : [];
+    if (cards.length > 0) {
+      setPendingSprint({ cards });
+      nav.goToRunDraft();
+    } else nav.startGame();
+  }, [metaStats.lastRunDepth, sprintUnlocked, dealSprint, nav.goToRunDraft, nav.startGame]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean, runSeed?: string) => {
     // Whose run this is, decided first (see pairRunRef).
@@ -876,7 +896,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (runSeed) {
       setRunSeedText(runSeed);
     }
-    // The loadout catalogue backs the run-start draft, but a load failure
+    // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -886,9 +906,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        // Sprint Planning offers (offers.yml). Failure keeps the baked catalogue.
+        loadOffers(),
         // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
-        // it does not gate starting a run — same treatment as loadouts.
+        // it does not gate starting a run, same treatment as the offers.
         loadBallTypes(),
         loadAbilities(),
         // Fence types (fences.yml). Failure keeps the build-time catalogue.
@@ -932,7 +953,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // unrepresentative in exactly the way the ?level= jump does, so they get
       // the same treatment: play it, but never let highscores / Employee of the
       // Month / Records learn from it.
-      if (isInfiniteLivesEnabled() || hasAnyMapTuning() || debugMutatorId() || forcedTilts()) {
+      if (isInfiniteLivesEnabled() || hasAnyMapTuning() || debugMutatorId() || forcedTilts() || getForcedSprintOffer() || getForcedJackpot()) {
         recordEligibleRef.current = false;
       }
 
@@ -956,15 +977,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       analytics.runStarted({ mode: 'new', daily: false });
 
-      // A fresh run would draft a loadout first, but the loadout system only
-      // appears once it's been introduced (after the first win), and the first
-      // run and the ?level= debug path go straight into the game anyway.
-      // (Moot while Sprint Planning is on hold: enterRun drops the flag.)
-      const thenDraftLoadout = !(skipDraft || !loadoutsIntroduced);
-
-      enterRun(thenDraftLoadout);
+      // The debug jump and a pair run go straight into the map (see enterRun).
+      enterRun(!skipDraft && !pairRunRef.current);
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, enterRun]);
+  }, [loadLevels, loadUpgrades, loadCertificates, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, clearDailyMode, enterRun]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -991,7 +1007,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        loadOffers(),
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
@@ -1029,10 +1045,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'daily', daily: true });
 
-    // Daily Stand-up is a seeded, identical-for-everyone challenge: it skips the
-    // loadout draft (which normal runs always show now, #38) to stay clean.
-    nav.startGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, resetRunScopedState, clearRun, resetToFirstLevel, nav.startGame, clearDailyMode]);
+    // The Daily deals Sprint Planning from its seed, so everyone sees the same
+    // three cards (the pick is theirs), and never offers Tenure. A pair run
+    // skips the draft, as it does everywhere.
+    enterRun(!pairRunRef.current, { seeded: true });
+  }, [loadLevels, loadUpgrades, loadCertificates, resetRunScopedState, clearRun, resetToFirstLevel, clearDailyMode, enterRun]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -1085,7 +1102,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     spentThisShopVisitRef.current = 0;
-    setDraftedLoadoutIds(save.draftedLoadoutIds);
+    // Saves written before Sprint Planning carry `draftedLoadoutIds` instead,
+    // ids the offers catalogue does not know: they resume with no offer.
+    setTakenOfferId(save.takenOfferId ?? null);
     setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
 
     // Resuming mid-run: the short boot, no leftover overlays/offers.
@@ -1130,7 +1149,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         loadLevels(),
         loadUpgrades(),
         loadCertificates(),
-        loadLoadouts(),
+        loadOffers(),
         loadBallTypes(),
         loadAbilities(),
         loadFenceTypes(),
@@ -1159,7 +1178,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     } else {
       nav.goToGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, applyRunRecord, nav.goToGame]);
+  }, [loadLevels, loadUpgrades, loadCertificates, applyRunRecord, nav.goToGame]);
 
 
   const handleContinueRun = useCallback(async () => {
@@ -1211,11 +1230,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       secondaryTag: identity.secondary,
       capstoneId: capstone?.id ?? null,
       capstoneName: capstone?.name ?? null,
-      loadoutIds: draftedLoadoutIds,
+      loadoutIds: takenOfferId ? [takenOfferId] : [],
       savedAt: Date.now(),
     }, trajectory, dailyKeyRef.current);
     setLastRunRank({ ...info, aheadThroughMaps: epitaph });
-  }, [bestRunTrajectory, bestScore, tagCounts, capstone, draftedLoadoutIds, recordRun]);
+  }, [bestRunTrajectory, bestScore, tagCounts, capstone, takenOfferId, recordRun]);
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
@@ -1267,25 +1286,59 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [finalizeAndShowResult, pendingLevelScore, currentLevel, currentLevelIndex, totalScore]);
 
   /**
-   * Tenure pick confirmed (issue #75): grant every upgrade in the chosen
-   * chain, then continue into the loadout draft (or straight into the game when
-   * loadouts are not in play yet).
+   * Hand over upgrades the run did not buy (a Tenure chain, a gamble's prize),
+   * with any life they carry, which a purchase would have added too.
    *
-   * The WHOLE chain is granted, not just its top tier, because upgrade
-   * modifiers compound: handing over only the Principal would make the
-   * 30-level reward weaker than the 20-level one.
+   * A chain is granted WHOLE, not just its top tier, because upgrade modifiers
+   * compound: handing over only the Principal would make the 30-level Tenure
+   * reward weaker than the 20-level one.
    */
-  const handleTenurePicked = useCallback((headId: string) => {
-    const pending = pendingTenure;
-    const offer = pending?.offers.find(o => o.headId === headId) ?? null;
-    if (offer) {
-      const granted = offer.upgrades.map(u => u.id);
-      setOwnedUpgradeIds(prev => [...prev, ...granted.filter(id => !prev.includes(id))]);
+  const grantUpgrades = useCallback((granted: readonly UpgradeConfig[], extraLives = 0) => {
+    const ids = granted.map(u => u.id);
+    setOwnedUpgradeIds(prev => [...prev, ...ids.filter(id => !prev.includes(id))]);
+    if (extraLives !== 0) {
+      setCurrentLives(l => Math.max(1, l + extraLives));
+      setLivesAtLevelStart(l => Math.max(1, l + extraLives));
     }
-    setPendingTenure(null);
-    if (pending?.thenDraftLoadout) nav.goToRunDraft();
-    else nav.startGame();
-  }, [pendingTenure, nav.goToRunDraft, nav.startGame]);
+  }, []);
+
+  /**
+   * Sprint Planning confirmed: take card `index` (null on skip). The pick
+   * applies once (lives, banked hours, granted upgrades); the offer's modifiers
+   * then ride the modifier pipeline for as long as they last. A prize that is a
+   * choice goes to the chain pick before the map.
+   */
+  const handleSprintPick = useCallback((index: number | null) => {
+    const card = index === null ? null : pendingSprint?.cards[index] ?? null;
+    setPendingSprint(null);
+    analytics.offerSelected({
+      offerId: card?.offer.id ?? null,
+      pool: card?.offer.pool ?? null,
+      grantedIds: card?.grants.map(u => u.id) ?? [],
+    });
+    if (!card) {
+      setTakenOfferId(null);
+      nav.startGame();
+      return;
+    }
+    setTakenOfferId(card.offer.id);
+    grantUpgrades(card.grants, pickLivesDelta(card.offer, card.grants));
+    if (card.offer.overtime) setTotalScore(t => t + card.offer.overtime!);
+    if (card.choices && card.choices.length > 0) {
+      setPendingChainPick({ offerId: card.offer.id, choices: card.choices });
+      nav.goToChainPick();
+      return;
+    }
+    nav.startGame();
+  }, [pendingSprint, grantUpgrades, nav.goToChainPick, nav.startGame]);
+
+  /** The chain picked for a choose prize (Pick a Junior, Headhunted). */
+  const handleChainPick = useCallback((headId: string) => {
+    const pick = pendingChainPick?.choices.find(c => c.headId === headId);
+    if (pick) grantUpgrades(pick.upgrades, pick.upgrades.reduce((n, u) => n + (typeof u.modifiers?.extraLives === 'number' ? u.modifiers.extraLives : 0), 0));
+    setPendingChainPick(null);
+    nav.startGame();
+  }, [pendingChainPick, grantUpgrades, nav.startGame]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     if (!result.isWin) {
@@ -1430,25 +1483,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       armFeatureUnlock(feature.id);
     }
 
-    // Beating the final level = a win. Credit the run-start loadout (index 0)
-    // toward unique wins, and remember any loadouts that just unlocked so the
-    // result screen can celebrate them. Skipped runs (no drafted loadout) and
-    // repeat wins with the same loadout do not advance the count.
-    if (isLastLevel) {
-      // Loadouts are parked (Sprint Planning on hold, Ascension removed), so
-      // a full completion no longer announces them: the "Loadouts unlocked"
-      // modal would point at a menu entry that is hidden. The unique-win
-      // count below only runs with Sprint Planning on, so it is parked too.
-      const startLoadoutId = SPRINT_PLANNING_ENABLED ? draftedLoadoutIds[0] : undefined;
-      if (startLoadoutId) {
-        const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
-        if (added) {
-          const unlocked = newlyUnlocked(loadouts, prevCount, newCount).map(l => l.name);
-          if (unlocked.length > 0) setLastRunLoadoutUnlocks(unlocked);
-        }
-      }
-    }
-
     // Map highscore (#45): record this map's base score and, if it beat the
     // map's previous highscore, credit a bonus multiplier on TOP of the base
     // (applied after the per-map cap, so beating a record always pays). A map's
@@ -1520,7 +1554,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, recordMapHighscore, armFeatureUnlock, bestRunTrajectory, bestScore]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1572,6 +1606,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const closed = locksThisRound < locksRequired;
     setStoreDealt(null); // a new visit: the shelf is dealt fresh
     setStoreClosed(closed);
+    // Procurement (Sprint Planning): interest on the bank, on arrival. Paid
+    // closed or open: it is the bank's, not the shelf's.
+    const interest = storeInterest(totalScore, activeModifiers.shopInterestPercent);
+    if (interest > 0) setTotalScore(t => t + interest);
+    setStoreInterestPaid(interest);
     setStoreLockProgress({ have: locksThisRound, need: locksRequired });
 
     // Open Source Contribution: the ability slot is gone from the shelf, and a
@@ -1596,7 +1635,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setFreeAbilityGrant(null);
     }
     goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, abilityCharges, currentLevelIndex, goToUpgradeShop]);
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, activeModifiers.shopInterestPercent, totalScore, abilityCharges, currentLevelIndex, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1711,6 +1750,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setStoreLockProgress(between.store.lockProgress);
       setFreeAbilityGrant(between.store.freeAbilityGrant);
       setStoreDealt(between.store.dealt);
+      setStoreInterestPaid(0); // paid on the original arrival, already in the bank
       goToUpgradeShop();
       return;
     }
@@ -1731,25 +1771,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Advance to the next queued unlock, or close if none remain.
     setUnlockedFeature(pendingFeatureUnlocksRef.current.shift() ?? null);
   }, []);
-
-  /**
-   * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
-   * skip), then enter the game. Applies the loadout's extraLives delta once.
-   */
-  const handleConfirmLoadout = useCallback((loadoutId: string | null) => {
-    analytics.loadoutSelected({ loadoutId });
-    if (loadoutId) {
-      setDraftedLoadoutIds([loadoutId]);
-      const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
-      const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-      const lives = Math.max(1, startingLives + livesDelta);
-      setCurrentLives(lives);
-      setLivesAtLevelStart(lives);
-    } else {
-      setDraftedLoadoutIds([]);
-    }
-    nav.startGame();
-  }, [certBonuses, loadoutLookup, nav.startGame]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
@@ -1858,8 +1879,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'playAgain', daily: false });
 
-    enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+    enterRun(true);
+  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
 
   const handleRestartRun = useCallback(() => {
     clearDailyMode(); // restart is always a normal (unseeded) run
@@ -1875,8 +1896,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel();
-    enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+    enterRun(true);
+  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
 
   const handleBackToWelcome = useCallback(() => {
     // NOTE: does NOT clear the daily context; a saved daily run keeps its key
@@ -1895,11 +1916,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nav.goToCertificateStore();
   }, [loadCertificates, loadUpgrades, nav.goToCertificateStore]);
 
-  const handleOpenLoadouts = useCallback(async () => {
-    // The catalogue isn't loaded yet when entering from the welcome screen.
-    await loadLoadouts();
-    nav.goToLoadouts();
-  }, [loadLoadouts, nav.goToLoadouts]);
+  const handleOpenOffers = useCallback(async () => {
+    // Fresh YAML when entering from the welcome screen (the baked one is there regardless).
+    await loadOffers();
+    nav.goToOffers();
+  }, [nav.goToOffers]);
 
   const handleReEnableAllTutorials = useCallback(() => {
     resetAllTutorials();
@@ -1970,9 +1991,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [handleStartGame]);
 
   return {
-    // Tenure (issue #75)
-    pendingTenure,
-    handleTenurePicked,
+    // Sprint Planning (with Tenure as its boon card, issue #75)
+    pendingSprint,
+    handleSprintPick,
+    pendingChainPick,
+    handleChainPick,
+    runOffer,
+    shopLean,
+    sprintUnlocked,
+    metArchetypes,
     // Level state
     currentLevel,
     currentLevelIndex,
@@ -2033,20 +2060,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
-    lastRunLoadoutUnlocks,
+    lastRunOfferUnlocks,
     lastRunRecap,
     // Head Start certificates: the level a fresh run begins at (1 = none).
     // The result screen uses it to label Play Again as "Continue from level N".
     certStartingLevel: getCertStartingLevel(),
-    // Loadouts (parked)
     /** What build scaling is paying right now, per upgrade (upgradeScaling.ts). */
     scalingReadouts: scalingDetail,
-    loadouts,
-    availableLoadouts,
-    draftedLoadoutIds,
-    activeLoadouts,
-    wonLoadoutIds,
-    loadoutsIntroduced,
     isFeatureUnlocked,
     unlockedFeature,
     // Continue (per-run revive)
@@ -2076,6 +2096,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Capstone ("Promotion")
     capstoneOffers,
     storeDealt,
+    storeInterestPaid,
     handleShopDealt,
     capstone,
     handleSelectCapstone,
@@ -2117,7 +2138,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleStartDaily,
     // Callbacks
     handleStartGame,
-    handleConfirmLoadout,
     handleGameEnd,
     handleMapTimedOut,
     handleSpendContinue,
@@ -2145,7 +2165,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleRestartRun,
     handleBackToWelcome,
     handleOpenCertificateStore,
-    handleOpenLoadouts,
+    handleOpenOffers,
     handleReEnableAllTutorials,
     handleTotalReset,
   };

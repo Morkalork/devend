@@ -38,7 +38,7 @@ src/
 public/
 ├── map.yml                  All levels (see public/README-modifiers.md)
 ├── upgrades.yml             Shop upgrades
-├── loadouts.yml            Loadouts (run-start draft; parked while it is on hold)
+├── offers.yml              Sprint Planning offers (the run-start draft: boons, Specialisations, gambles)
 ├── certificates.yml         Meta-progression certificates
 ├── achievements.yml         Achievements
 ├── colors.yml               Accent colour per level range
@@ -52,8 +52,8 @@ public/
 `Index.tsx` renders exactly one screen at a time, chosen by [useScreenNavigation](src/hooks/useScreenNavigation.ts) (a simple state machine over the `GameScreen` union in [types/game.ts](src/types/game.ts)):
 
 ```
-welcome ──► runDraft ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
-   │        (loadout)      │ (final level: the run is won) ▲                              │
+welcome ──► runDraft ──► [chainPick] ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
+   │      (Sprint Planning)                │ (final level: the run is won) ▲                              │
    │                       │                               │ (ContinuePrompt on death,    │
    │                       │                               └─ spend a Continue to retry)  │
    │                       └──────────────────────────────────────────────► result         │
@@ -61,7 +61,7 @@ welcome ──► runDraft ──► game ──► (LevelCompleteOverlay) ─�
    └──► admin ──► mapBuilder / animationTest        (dev builds only)
 ```
 
-A fresh run used to visit **runDraft** ("Sprint Planning") first, where the player drafted one curse+blessing mutator (or skipped) to shape the run from level 1. That step is currently ON HOLD (`SPRINT_PLANNING_ENABLED` in [sprintPlanning.ts](src/lib/sprintPlanning.ts) is `false`), so a fresh run goes straight into the map; the screen and the catalogue are still in the tree, and flipping the constant restores the step. While it is off the loadouts are parked: nothing hands them out (Ascension, the other draft, was removed), so the menu's Loadouts entry is hidden. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skipped the draft too.
+A fresh run visits **runDraft** ("Sprint Planning", [SPRINT_PLANNING_PLAN.md](SPRINT_PLANNING_PLAN.md)) first, once the `sprintPlanning` feature is unlocked (clearing level 3) or Tenure is owed: three cards from [offers.yml](public/offers.yml), one per pool, dealt and resolved by [sprintOffers.ts](src/lib/sprintOffers.ts). A **boon** is small and mostly helps the first maps; a **Specialisation** (one per archetype tag, handed out nowhere else) leans the store toward its tag (`ShopLean`: shelf weights, a guaranteed slot, a count toward the set) and carries a signature rule ([offerPerks.ts](src/lib/offerPerks.ts)); a **gamble** charges a price for a prize of upgrades, with a 1-in-20 jackpot. When the previous run earned **Tenure** (issue #75), its chain is the boon card, so taking it means passing on the other two. An offer whose prize is a choice (Pick a Junior, Headhunted) continues to **chainPick** before the map. The Daily deals from its seed and never offers Tenure; a pair run and the debug jump skip the draft. The taken offer rides the modifier pipeline as an `offer` source and is saved as `takenOfferId`. It replaced the curse + blessing loadouts. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skipped the draft too.
 
 All run state (score, lives, owned upgrades, current level) lives in [useGameSession](src/hooks/useGameSession.ts), which composes the smaller managers below and is created once in `Index.tsx`.
 
@@ -75,7 +75,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useScreenNavigation](src/hooks/useScreenNavigation.ts) | visible screen | — | — |
 | [useLevelManager](src/hooks/useLevelManager.ts) | level sequence | `map.yml` | — |
 | [useUpgradeManager](src/hooks/useUpgradeManager.ts) | upgrade catalogue | `upgrades.yml` | — |
-| [useLoadoutManager](src/hooks/useLoadoutManager.ts) | loadout catalogue (run-start draft, parked) | `loadouts.yml` | — |
+| [sprintOffers](src/lib/sprintOffers.ts) | Sprint Planning offers, the deal, prizes, the shop lean | `offers.yml` | — |
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
@@ -97,7 +97,7 @@ Everything that changes gameplay numbers flows through one structure: **`GameMod
 owned upgrades (this run)        → useActiveModifiers(upgrades, ownedIds, extraBonuses)
 achievement bonuses (permanent)  ─┐
 certificate bonuses (permanent)  ─┼→ mergeBonuses() → extraBonuses
-drafted loadouts (parked)        ─┘
+Sprint Planning offer (this run) ─┘
 ```
 
 The merged `GameModifiers` object is passed as a prop into `GameScreen` → `GameCanvas` and read by the physics code. Multiplicative keys (listed in `MULTIPLICATIVE_KEYS`) stack by multiplication, the rest by addition. The key names are a public contract: YAML files reference them as strings, so renaming a key means updating `upgrades.yml`, `certificates.yml`, `achievements.yml` and [public/README-modifiers.md](public/README-modifiers.md) together.
@@ -133,7 +133,7 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Add an upgrade** — add an entry to [public/upgrades.yml](public/upgrades.yml) using existing `GameModifiers` keys. No code needed unless you need a brand-new modifier key.
 
-**Add a loadout** — add an entry to [public/loadouts.yml](public/loadouts.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). Add `uniqueWinsRequired: N` to gate it behind N unique wins in the run-start draft (omit for the loadouts available from scratch).
+**Add a Sprint Planning offer** — add an entry to the right pool in [public/offers.yml](public/offers.yml) (`id`, `name`, `description`; then any of `modifiers`, `forMaps`, `price` + `priceText`, `overtime`, `prize`, `unlock`; a Specialisation also needs `tag`, `affinity`, `guaranteedSlot`, `countsTowardSet`, a gamble a `weight`). Add its `content.offers.<id>` strings to es/sv. The Admin screen's offer picker lists it with nothing else to do; [sprintOffers.test.ts](src/test/sprintOffers.test.ts) checks every key is a real modifier and every unlock is reachable.
 
 **Add a new modifier key** — add the field + default to `GameModifiers` and `DEFAULT_MODIFIERS` in [useActiveModifiers.ts](src/hooks/useActiveModifiers.ts) (and `MULTIPLICATIVE_KEYS` if it stacks by ×), consume it in the physics/scoring code, document it in `README-modifiers.md`, and add a slider entry in [PlaygroundScreen.tsx](src/components/admin/PlaygroundScreen.tsx) so it can be tested live.
 

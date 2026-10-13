@@ -77,9 +77,8 @@ describe("nothing of Ascension is left to reach", () => {
     expect(read("public/achievements.yml")).not.toMatch(/deepestAscension/);
   });
 
-  it("parks the loadouts: the catalogue stays, the menu entry waits for Sprint Planning", () => {
-    expect(read("public/loadouts.yml")).toMatch(/^loadouts:/m);
-    expect(read("public/loadouts.yml")).not.toMatch(/^ascension:/m);
-    expect(read("src/pages/Index.tsx")).toContain("SPRINT_PLANNING_ENABLED && session.loadoutsIntroduced");
+  it("retires the loadouts for Sprint Planning's offers, with no ascension block", () => {
+    expect(read("public/offers.yml")).toMatch(/^gambles:/m);
+    expect(read("public/offers.yml")).not.toMatch(/^ascension:/m);
   });
 });

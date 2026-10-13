@@ -392,6 +392,11 @@ export interface CanvasGameState {
   loopRestarts: number;
   /** Active-play seconds this level (physics steps only; pause/prompt/menu excluded). */
   activePlaySeconds: number;
+  /**
+   * Reliability (Sprint Planning): balls move slowed for this many seconds of
+   * active play at the map's start (offerPerks.ts). Set per map; 0 or absent = off.
+   */
+  openingSlowSeconds?: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**

@@ -36,10 +36,11 @@ import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
-import { TenureDraftScreen } from '@/ui/screens/TenureDraftScreen';
+import { ChainPickScreen } from '@/ui/screens/ChainPickScreen';
 import { ContinuePrompt } from '@/ui/screens/ContinuePrompt';
 import { CertificateStore } from '@/ui/screens/CertificateStore';
-import { LoadoutGalleryScreen } from '@/ui/screens/LoadoutGalleryScreen';
+import { OffersScreen } from '@/ui/screens/OffersScreen';
+import { getOffer, getOfferCatalogue } from '@/lib/sprintOffers';
 import { FeatureUnlockedModal } from '@/ui/game/FeatureUnlockedModal';
 import { PairMismatchNotice } from '@/ui/game/PairMismatchNotice';
 import { PairGuestGate } from '@/ui/game/PairGuestGate';
@@ -85,7 +86,7 @@ const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagn
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
 // intentionally left out so the current band track keeps playing through them.
-const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts', 'hallOfFame']);
+const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'offers', 'hallOfFame']);
 
 const Index = () => {
   const navigation = useScreenNavigation();
@@ -371,10 +372,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   }, [navigation.currentScreen, armBackGuard]);
 
   const SCREEN_ORDER: Record<string, number> = {
-    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1, jukebox: 1,
-    // tenureDraft sits just before runDraft: it is picked first so a free
-    // upgrade chain can steer the loadout choice.
-    tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
+    welcome: 0, tutorial: 1, options: 1, achievements: 1, offers: 1, hallOfFame: 1, jukebox: 1,
+    // The chain pick follows Sprint Planning (runDraft), so it slides on from it.
+    game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, chainPick: 4,
     result: 4,
   };
   // The slide to the new screen happens on the interface canvas (ui/screenSlide):
@@ -439,9 +439,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onOpenCertificateStore={
                     session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
                   }
-                  // Loadouts are parked: nothing hands them out while Sprint
-                  // Planning is on hold, so the entry comes back with it.
-                  onLoadouts={SPRINT_PLANNING_ENABLED && session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
+                  // The Sprint Planning collection, once the draft itself is unlocked.
+                  onOffers={SPRINT_PLANNING_ENABLED && session.sprintUnlocked ? session.handleOpenOffers : undefined}
                   onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                   onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
                   onTwoPlayer={navigation.goToPairLobby}
@@ -567,30 +566,28 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 mapHighscores={session.mapHighscores}
                 capstone={session.capstone}
-                activeLoadouts={session.activeLoadouts}
+                runOffer={session.runOffer}
                 scalingReadouts={session.scalingReadouts}
                 runStartIntro={session.runStartIntroPending}
               />
               </GameErrorBoundary>
             )}
-            {navigation.currentScreen === 'tenureDraft' && session.pendingTenure && (
-              <CanvasLayer id="screen-TenureDraftScreen" z={10}>
-                <TenureDraftScreen
-                  offers={session.pendingTenure.offers}
-                  earnedAtLevel={session.pendingTenure.earnedAtLevel}
-                  lastRunUpgradeIds={session.pendingTenure.lastRunUpgradeIds}
-                  onConfirm={session.handleTenurePicked}
+            {navigation.currentScreen === 'runDraft' && session.pendingSprint && (
+              <CanvasLayer id="screen-RunDraftScreen" z={10}>
+                <RunDraftScreen
+                  cards={session.pendingSprint.cards}
+                  onConfirm={session.handleSprintPick}
+                  onBack={session.handleBackToWelcome}
                   accentColor={accentHex}
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'runDraft' && (
-              <CanvasLayer id="screen-RunDraftScreen" z={10}>
-                <RunDraftScreen
-                  loadouts={session.availableLoadouts}
-                  draftedLoadoutIds={session.draftedLoadoutIds}
-                  onConfirm={session.handleConfirmLoadout}
-                  onBack={session.handleBackToWelcome}
+            {navigation.currentScreen === 'chainPick' && session.pendingChainPick && (
+              <CanvasLayer id="screen-ChainPickScreen" z={10}>
+                <ChainPickScreen
+                  offer={getOffer(session.pendingChainPick.offerId) ?? { id: session.pendingChainPick.offerId, name: '' }}
+                  choices={session.pendingChainPick.choices}
+                  onConfirm={session.handleChainPick}
                   accentColor={accentHex}
                 />
               </CanvasLayer>
@@ -627,6 +624,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   maxTierCounts={session.maxTierCounts}
                   unlockedCertIds={session.unlockedCertIds}
                   tagSetThreshold={session.tagSetThreshold}
+                  // The run's Specialisation leans the shelf toward its tag.
+                  lean={session.shopLean}
+                  interestPaid={session.storeInterestPaid}
                   freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
                   activeModifiers={session.activeModifiers}
                   closed={session.storeClosed}
@@ -666,7 +666,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   accentColor={accentHex}
                   runHoursAwarded={session.lastRunHoursAwarded}
                   runLevelsCompleted={session.lastRunLevelsCompleted}
-                  newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
+                  newlyUnlockedOffers={session.lastRunOfferUnlocks}
                   runRecap={session.lastRunRecap}
                   runRank={session.lastRunRank}
                   dailyKey={session.dailyKey}
@@ -694,11 +694,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'loadouts' && (
-              <CanvasLayer id="screen-LoadoutGalleryScreen" z={10}>
-                <LoadoutGalleryScreen
-                  loadouts={session.loadouts}
-                  wonLoadoutIds={session.wonLoadoutIds}
+            {navigation.currentScreen === 'offers' && (
+              <CanvasLayer id="screen-OffersScreen" z={10}>
+                <OffersScreen
+                  catalogue={getOfferCatalogue()}
+                  unlock={{ highestLevelReached: session.metaStats.highestLevelReached, metArchetypes: session.metArchetypes }}
                   onBack={navigation.goToWelcome}
                   accentColor={accentHex}
                 />

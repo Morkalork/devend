@@ -5,7 +5,7 @@ Guidance for Claude Code (and humans) working in this repository.
 ## Project
 
 **Dev/End** — a browser game built with Vite + React 18 + TypeScript, packaged
-for Android via Capacitor. Game content (levels, upgrades, scoring, loadouts,
+for Android via Capacitor. Game content (levels, upgrades, scoring, Sprint Planning offers,
 etc.) is data-driven from YAML files in `public/`.
 
 ## Commands
@@ -39,7 +39,7 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
 - `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv}.json`.
 - `src/test/` — Vitest tests.
 - `public/*.yml` — runtime game config (`map.yml`, `upgrades.yml`,
-  `scoring-config.yml`, `loadouts.yml`, `certificates.yml`, `balls.yml`,
+  `scoring-config.yml`, `offers.yml`, `certificates.yml`, `balls.yml`,
   `bugs.yml`, …),
   loaded at runtime with `js-yaml`.
 
@@ -67,7 +67,7 @@ one full-screen Pixi canvas over the board (built), and
 for display, Michroma for the logo only; built), **SPRINT_PLANNING_PLAN.md**
 for the plan to redo the run-start draft as a Slay-the-Spire style offer (a
 boon, a Specialisation that leans the shop toward one archetype, a gamble with
-a jackpot; planned, not built), and
+a jackpot; built), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions

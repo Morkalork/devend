@@ -23,6 +23,17 @@ export function ownedTagCounts(ownedIds: string[], upgrades: UpgradeConfig[]): M
   return counts;
 }
 
+/**
+ * Counts with virtual upgrades of one tag added (a Specialisation's affinity,
+ * or its count toward the set). A new map; the input is not touched.
+ */
+export function withVirtualTag(counts: Map<string, number>, tag: string | undefined, amount: number): Map<string, number> {
+  if (!tag || amount <= 0) return counts;
+  const out = new Map(counts);
+  out.set(tag, (out.get(tag) ?? 0) + amount);
+  return out;
+}
+
 /** Shop-offer weight: 1 + owned upgrades sharing at least one tag. */
 export function tagWeight(u: UpgradeConfig, counts: Map<string, number>): number {
   let w = 1;
@@ -75,14 +86,19 @@ export function weightedSample(
   return picked;
 }
 
-/** The set bonuses currently active for an owned-upgrade set. */
+/**
+ * The set bonuses currently active for an owned-upgrade set. `virtual` adds
+ * upgrades the run does not own but counts toward a set (a Specialisation's
+ * countsTowardSet).
+ */
 export function computeActiveTagSets(
   ownedIds: string[],
   upgrades: UpgradeConfig[],
   tagSets: TagSetsConfig | undefined,
+  virtual?: { tag: string; amount: number } | null,
 ): TagSetBonus[] {
   if (!tagSets || tagSets.bonuses.length === 0) return [];
   const threshold = tagSets.threshold > 0 ? tagSets.threshold : DEFAULT_TAG_SET_THRESHOLD;
-  const counts = ownedTagCounts(ownedIds, upgrades);
+  const counts = withVirtualTag(ownedTagCounts(ownedIds, upgrades), virtual?.tag, virtual?.amount ?? 0);
   return tagSets.bonuses.filter(b => (counts.get(b.tag) ?? 0) >= threshold);
 }

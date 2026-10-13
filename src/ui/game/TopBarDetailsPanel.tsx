@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Award, Wind, Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
 import type { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
-import type { LoadoutConfig } from '@/types/loadout';
+import type { RunOffer } from '@/types/offer';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
 import type { CapstoneConfig } from '@/types/capstone';
 import type { ActiveMapMutator } from '@/types/mapMutator';
@@ -27,7 +27,7 @@ import { COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tin
 import { TagChip } from './TagChip';
 import { ModifierBreakdown } from './ModifierBreakdown';
 import {
-  cutsCard, hasBuildSection, locksCard, microManagerPercent, mutatorPlacement, objectiveState,
+  cutsCard, hasBuildSection, locksCard, microManagerPercent, mutatorPlacement, objectiveState, offerShowsInSpecs,
   sectionHeading, specsSections, tagChipSpecs, territoryCard, type SpecsSection,
 } from './specsModel';
 import { SPECS, cardHighLayout, cardLayout, filledIcon } from './specsStyle';
@@ -62,7 +62,8 @@ interface TopBarDetailsPanelProps {
   microManagerPerLock?: number;
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
-  activeLoadouts?: LoadoutConfig[];
+  /** The Sprint Planning offer the run took. */
+  runOffer?: RunOffer | null;
   // Build readout: owned upgrades per archetype tag, and the count needed to
   // light a tag's set bonus.
   tagCounts?: Map<string, number>;
@@ -105,7 +106,7 @@ export function TopBarDetailsPanel({
   certificateProgress,
   microManagerPerLock = 0,
   scalingReadouts = [],
-  activeLoadouts = [],
+  runOffer = null,
   continuesRemaining = 0,
   tagCounts,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
@@ -145,7 +146,7 @@ export function TopBarDetailsPanel({
   const sections = specsSections({
     focus,
     hasMutator: !!mapMutator,
-    hasBuild: hasBuildSection(tagCounts, activeLoadouts.length),
+    hasBuild: hasBuildSection(tagCounts, offerShowsInSpecs(runOffer) ? 1 : 0),
     hasAssignment: !!(capstone || mapMutator || objective),
     hasModifiers: !!activeModifiers,
     manualCount: manualSeen.length,
@@ -173,7 +174,7 @@ export function TopBarDetailsPanel({
     // question answers it first. The same card sits in ASSIGNMENT otherwise.
     mapRule: () => mutatorCard,
 
-    // Archetype tags + loadout: the run's identity.
+    // Archetype tags + the Sprint Planning offer: the run's identity.
     build: () => (
       <>
         {tagCounts && tagCounts.size > 0 && (
@@ -205,23 +206,33 @@ export function TopBarDetailsPanel({
             </View>
           </View>
         )}
-        {activeLoadouts.map(loadout => (
-          <View key={loadout.id} layout={card}>
-            <SpecsText text={contentText.loadoutName(t, loadout)} size={TEXT.sm} weight="700" color={SPECS.amber} wrap layout={{ marginBottom: 8 }} />
-            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-              <Icon icon={Skull} size={14} color={SPECS.danger} layout={{ marginTop: 2 }} />
+        {/* The offer, while it still does something: a prize was granted at
+            the pick and already shows as upgrades, so only an offer with a
+            lasting effect (or a price) earns a card here. */}
+        {runOffer && offerShowsInSpecs(runOffer) && (
+          <View layout={card}>
+            <View layout={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <View layout={{ flex: 1 }}>
-                <SpecsPara text={contentText.loadoutCurse(t, loadout)} color={SPECS.danger} />
+                <SpecsText text={contentText.offerName(t, runOffer)} size={TEXT.sm} weight="700" color={SPECS.amber} wrap />
               </View>
+              {runOffer.tag && <TagChip tag={runOffer.tag} />}
             </View>
-            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: runOffer.priceText ? 6 : 0 }}>
               <Icon icon={Sparkles} size={14} color={accent} layout={{ marginTop: 2 }} />
               <View layout={{ flex: 1 }}>
-                <SpecsPara text={contentText.loadoutBlessing(t, loadout)} color={SPECS.ink} alpha={0.85} />
+                <SpecsPara text={contentText.offerDesc(t, runOffer)} color={SPECS.ink} alpha={0.85} />
               </View>
             </View>
+            {runOffer.priceText && (
+              <View layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <Icon icon={Skull} size={14} color={SPECS.danger} layout={{ marginTop: 2 }} />
+                <View layout={{ flex: 1 }}>
+                  <SpecsPara text={contentText.offerPrice(t, runOffer)} color={SPECS.danger} />
+                </View>
+              </View>
+            )}
           </View>
-        ))}
+        )}
       </>
     ),
 

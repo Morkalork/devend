@@ -19,6 +19,19 @@ describe("Sprint Planning can be left", () => {
   it("can be skipped to play vanilla", () => {
     expect(SRC).toMatch(/onTap=\{\(\) => onConfirm\(null\)\}/);
   });
+  it("confirms the selected card by its index, and only once one is chosen", () => {
+    expect(SRC).toMatch(/disabled=\{selected === null\}/);
+    expect(SRC).toMatch(/onTap=\{\(\) => selected !== null && onConfirm\(selected\)\}/);
+  });
+
+  it("explains every card on hold, the game's standard gesture", () => {
+    expect(SRC).toMatch(/onLongPress=\{\(\) => setDetail\(i\)\}/);
+    expect(SRC).toMatch(/runDraft\.holdHint/);
+  });
+
+  it("shows the price of a card in the price red", () => {
+    expect(SRC).toMatch(/icon=\{Skull\} color=\{DRAFT_RED\}/);
+  });
 });
 
 describe("the draft grid", () => {

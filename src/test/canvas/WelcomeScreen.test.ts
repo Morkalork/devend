@@ -12,7 +12,7 @@ import {
 
 const input = (over: Partial<WelcomeMenuInput> = {}): WelcomeMenuInput => ({
   hasContinue: false, hasDaily: false, hasTwoPlayer: false, hasCertificateStore: false,
-  hasLoadouts: false, hasHallOfFame: false, hasAchievements: false, hasJukebox: false, hasAdmin: false,
+  hasOffers: false, hasHallOfFame: false, hasAchievements: false, hasJukebox: false, hasAdmin: false,
   ...over,
 });
 const labels = (over: Partial<WelcomeMenuInput> = {}) => welcomeButtons(input(over)).map(b => b.label?.key);
@@ -83,7 +83,7 @@ describe("the menu while a run boots", () => {
 
   it("leaves everything pressable when nothing is loading", () => {
     const all = welcomeButtons(input({
-      hasContinue: true, hasDaily: true, hasTwoPlayer: true, hasLoadouts: true, hasHallOfFame: true,
+      hasContinue: true, hasDaily: true, hasTwoPlayer: true, hasOffers: true, hasHallOfFame: true,
       hasAchievements: true, hasJukebox: true, hasAdmin: true, isLoading: false,
     }));
     expect(all.filter(x => x.disabled).length, "the menu is disabled when it should be idle").toBe(0);

@@ -1,7 +1,8 @@
 # Sprint Planning, redone: the run-start offer
 
-A plan, not a build record. Nothing here is built; the sections at the end say
-what to build first and what the owner still has to decide.
+The plan and its build record. **Built** (section 9 records what shipped and
+where it differs from the plan below); the owner confirmed the Tenure fold
+(decision 1).
 
 ## 1. The ask
 
@@ -101,9 +102,9 @@ upgrades are job titles, so these are teams you join):
 | safety | Reliability | `openingSlowSeconds: 8`: balls move at 70% speed for the first 8 s of every map. |
 | tempo | Platform | `fenceHeadStart: 0.12`: every fence starts 12% drawn. |
 | lock | Containment | `lockStunSeconds: 1`: a lock stops the nearest free ball for a second. |
-| freeze | Cold Storage | `startFrozenBalls: 1`: one ball starts every map frozen. |
+| freeze | Cold Storage | `startFrozenBalls: 1`: the fastest ball starts every map frozen for 12 s. |
 | bank | Procurement | `shopInterestPercent: 5`: 5% of banked hours paid at every store, capped at 10h. |
-| risk | Growth | `extraPushes: 1`: Push Your Luck can be taken one extra time per map. |
+| risk | Growth | `scoreBonusPerMissingLife: 0.15`: a map pays 15% more for each life you start it below 3. (Built this way; see 9.) |
 
 Each perk is a mechanic the game can show on the board or on the shelf. None
 is a multiplier on something the shop already multiplies, which is the test for
@@ -331,3 +332,66 @@ the design risk is, so it goes last and lands one card at a time.
    comparability. The plan says seeded.
 5. Whether any of the old curse + blessing bundles are worth keeping as
    gambles beyond Death March and Hiring Freeze. The plan retires the rest.
+
+## 9. Build record
+
+Shipped in one pass, stages 1 to 6 together, because the draft, the shop lean
+and the retirement of the loadouts all touch the same session state.
+
+**What exists**
+
+- `public/offers.yml`: 5 boons, 6 Specialisations, 6 gambles.
+  `src/types/offer.ts`, and `src/lib/sprintOffers.ts` (parse, unlocks, the
+  deal, prizes via `tenure.ts`, the shop lean, what a taken offer contributes).
+- `RunDraftScreen` is the three-card draft, with a hold-to-explain modal per
+  card. `ChainPickScreen` (grown out of the Tenure draft) follows a choose prize.
+  `OffersScreen` is the collection page behind the menu's **Sprint Planning**
+  entry and lists all three pools.
+- The store reads a `ShopLean`: `shelfTagCounts` adds the affinity to the
+  shelf and restock weights, `rollShelf` swaps its last pick for a card of the
+  tag when none came up, and `computeActiveTagSets` takes the virtual count, so
+  a Specialisation lights its set one purchase early (the HUD and store chips
+  show that count too).
+- The six signature rules live in `src/lib/offerPerks.ts`, each with a
+  `GameModifiers` key and a Playground knob.
+- Admin: a Sprint Planning card on the Admin screen forces any offer into its
+  slot (locked ones too), forces the jackpot, and shows the draft before it is
+  unlocked. In memory, and a forced draw makes the run ledger-ineligible.
+- Meta: `metArchetypes` (replacing the loadouts' `wonLoadoutIds`) records each
+  tag whose set fired; the result screen names a Specialisation it unlocked.
+- Retired: `loadouts.yml`, `LoadoutConfig`, `useLoadoutManager`,
+  `loadoutUnlock`, `loadoutDraft`, the loadout gallery, and the 'loadouts'
+  feature (legacy players are seeded 'sprintPlanning').
+
+**Where it differs from the plan**
+
+- **Growth's rule.** Push Your Luck is a mode you enter once per map, not a
+  count, so "one extra push" had nothing to attach to. Growth pays 15% more
+  overtime per life a map starts below 3 instead: still a multiplier with a
+  downside attached, which is what the risk archetype is.
+- **Headhunted's price.** Runs start with no Continues, so "lose your first
+  Continue" cost nothing. It is balls 10% faster all run instead.
+- **Unlock levels.** The ladder has 19 maps, so a "reach level 20" unlock could
+  never fire. Hiring Freeze opens at 8, Architectural Review at 10, Definition
+  of Done at 12, Headhunted at 15; `sprintOffers.test.ts` pins every unlock to a
+  level the ladder has.
+- **Two more gambles.** Definition of Done (the card that changes what winning
+  means) and Architectural Review (bent fences, the card that changes the verb)
+  were the two loadouts with mechanics nothing else hands out, so they carried
+  over as gambles whose prize is a rule rather than upgrades.
+- **`forMaps`, not `untilLevel`.** Counted from the run's own start, so a Head
+  Start certificate (which starts runs at level 5 or 10) does not swallow a
+  "first three maps" boon.
+- **Tenure's card** shows one chain: the one `rollTenureOffers` guarantees
+  continues the last run's build.
+- **When the draft opens.** Sprint Planning is a feature unlock at clearing
+  level 3, so the very first run is just the game. It also opens whenever
+  Tenure is owed (Tenure is its boon card). The Daily deals seeded; a pair run
+  and the debug jump skip it.
+- **Granted lives.** A prize or Tenure chain that carries `extraLives` now adds
+  the life, as a purchase does. The old Tenure grant did not.
+
+**Noticed, not changed:** Tenure's 20- and 30-level thresholds cannot be
+reached on a 19-map ladder, so today Tenure only ever pays one tier. They will
+start paying as the ladder grows toward the planned map count.
+

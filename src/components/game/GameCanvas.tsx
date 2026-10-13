@@ -168,6 +168,7 @@ import { splitClauseOf } from "@/lib/splitWarn";
 import { visibleOutline } from "@/lib/headStartStrip";
 import { sfxGate, BOMB_SOUND_GAP_MS, BREAK_SOUND_GAP_MS } from "@/lib/sfxGate";
 import { isFullDebrief } from "@/ui/screens/debriefMode";
+import { START_FROZEN_SECONDS, startFrozenPicks } from "@/lib/offerPerks";
 
 // One board plays at a time, so one gate each: a bomb chain is a few booms and
 // a blast's ring of bricks one crash, not a sound per bomb and per brick.
@@ -1550,6 +1551,16 @@ export function GameCanvas({
         const thaw = simNow() + activeModifiers.spawnFreezeSeconds * 1000;
         for (const ball of game.balls) ball.frozenUntil = thaw;
       }
+      // Cold Storage (Sprint Planning): the fastest balls start frozen, by the
+      // same path, and never thaw EARLIER than a Cold Boot already holds them.
+      if (activeModifiers.startFrozenBalls > 0) {
+        const thaw = simNow() + START_FROZEN_SECONDS * 1000;
+        for (const ball of startFrozenPicks(game.balls, activeModifiers.startFrozenBalls)) {
+          ball.frozenUntil = Math.max(ball.frozenUntil ?? 0, thaw);
+        }
+      }
+      // Reliability (Sprint Planning): the opening slow, read by updateBall.
+      game.openingSlowSeconds = activeModifiers.openingSlowSeconds;
       removedSamples = [];
       removedSamplesSet = new Set();
       repaintRegionCanvas();

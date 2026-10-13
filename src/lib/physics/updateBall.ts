@@ -55,6 +55,7 @@ import { queryWallsNear } from "@/lib/physics/wallGrid";
 import { runStream } from "@/lib/runRng";
 import { ballMayPass } from "@/lib/physics/obstacleRules";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
+import { openingSlowFactor } from "@/lib/offerPerks";
 import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
@@ -515,7 +516,9 @@ export function updateBall(
   // erased within a frame by the rescalers, and would fight the minimum-speed
   // floor, whose entire job is to stop a ball moving this slowly.
   const slowFactor = slowFactorAt(ball.position.x, ball.position.y, game.slowAreas);
-  const moveDt = dt * (game.creepFactor || 1) * splitFactor * slowFactor;
+  // Reliability's opening slow scales displacement for the same reason.
+  const opening = openingSlowFactor(game.activePlaySeconds, game.openingSlowSeconds ?? 0);
+  const moveDt = dt * (game.creepFactor || 1) * splitFactor * slowFactor * opening;
   ball.position.x += ball.velocity.x * moveDt;
   ball.position.y += ball.velocity.y * moveDt;
 

@@ -260,6 +260,28 @@ export interface GameModifiers {
   // progress bar in the HUD (a second bar under the capture readout). Granted
   // by the `benchmarking` certificate, so once earned it is on for every run.
   showHighscoreProgress: number;
+
+  // ── Sprint Planning Specialisations (offers.yml; src/lib/offerPerks.ts) ──
+  // One signature rule each, a rule the tag's upgrades do not sell.
+  //
+  // Additive (sum) — Reliability: balls move at OPENING_SLOW_FACTOR of their
+  // speed for this many seconds of active play at the start of every map.
+  openingSlowSeconds: number;
+  // Additive (sum) — Platform: every fence starts this fraction of the way
+  // built (0.12 = 12%). Capped below a whole fence.
+  fenceHeadStart: number;
+  // Additive (sum) — Procurement: percent of banked hours paid as interest on
+  // arriving at every store, capped at STORE_INTEREST_CAP hours.
+  shopInterestPercent: number;
+  // Additive (sum) — Containment: seconds the nearest free ball is held still
+  // after every lock.
+  lockStunSeconds: number;
+  // Additive (sum) — Cold Storage: balls (the fastest first) that start every
+  // map frozen, for START_FROZEN_SECONDS.
+  startFrozenBalls: number;
+  // Additive (sum) — Growth: extra overtime per life the run is below
+  // DESPERATION_BASE_LIVES at the start of a map (0.15 = +15% per life).
+  scoreBonusPerMissingLife: number;
 }
 
 /**
@@ -302,12 +324,12 @@ export const MAX_STARTING_CAPTURE_PERCENT = 40;
 
 /**
  * A single named contributor to the merged GameModifiers — an owned upgrade,
- * certificate, activated achievement, drafted loadout, tag set or capstone.
+ * certificate, activated achievement, Sprint Planning offer, tag set or capstone.
  * Its `modifiers` are that source's raw (pre-merge) contribution, so the HUD
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'tagSet' | 'capstone';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'offer' | 'tagSet' | 'capstone';
   id: string;
   name: string;
   modifiers: Record<string, number>;
@@ -431,6 +453,12 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   moverDerailPerMap: 0,
   moverBandPerMap: 0,
   showHighscoreProgress: 0,
+  openingSlowSeconds: 0,
+  fenceHeadStart: 0,
+  shopInterestPercent: 0,
+  lockStunSeconds: 0,
+  startFrozenBalls: 0,
+  scoreBonusPerMissingLife: 0,
 };
 
 /**

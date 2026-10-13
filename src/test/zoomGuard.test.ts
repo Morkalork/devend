@@ -91,7 +91,7 @@ describe("which screens may zoom", () => {
     // and make.
     const played: GameScreen[] = [
       "welcome", "tutorial", "game", "upgradeShop", "result", "runDraft",
-      "capstoneDraft", "tenureDraft", "certificateStore", "loadouts",
+      "capstoneDraft", "chainPick", "certificateStore", "offers",
       "options", "achievements", "hallOfFame",
     ];
     for (const s of played) expect(zoomAllowedOn(s), s).toBe(false);
@@ -454,7 +454,7 @@ describe("which screens hold every drag", () => {
     for (const s of ["game", "tutorial"] as GameScreen[]) {
       expect(dragIsAlwaysGameplay(s), `${s} still lets the browser pan`).toBe(true);
     }
-    for (const s of ["upgradeShop", "loadouts", "achievements", "hallOfFame",
+    for (const s of ["upgradeShop", "offers", "achievements", "hallOfFame",
                      "options", "jukebox", "welcome"] as GameScreen[]) {
       expect(dragIsAlwaysGameplay(s), `${s} scrolls and must keep panning`).toBe(false);
     }

@@ -12,7 +12,7 @@ import { DEFAULT_MODIFIERS, type GameModifiers, type ModifierSource } from "@/ho
 import type { MapFailure } from "@/lib/mapFailure";
 import type { LevelConfig } from "@/types/level";
 import type { UpgradeConfig } from "@/types/upgrade";
-import type { LoadoutConfig } from "@/types/loadout";
+import { getOffer } from "@/lib/sprintOffers";
 import type { CapstoneConfig } from "@/types/capstone";
 import type { ActiveMapObjective } from "@/types/objective";
 import { PauseOverlay } from "../../game/PauseOverlay";
@@ -68,13 +68,10 @@ const MODIFIERS: GameModifiers = { ...DEFAULT_MODIFIERS, ballSpeedMultiplier: 0.
 const SOURCES: ModifierSource[] = [
   { kind: "upgrade", id: "runtime_optimisation_junior", name: "Runtime Optimisation", modifiers: { ballSpeedMultiplier: 0.95 } },
   { kind: "upgrade", id: "pair_programming_principal", name: "Pair Programming", modifiers: { additionalConcurrentFences: 1 } },
-  { kind: "loadout", id: "gallery-loadout", name: "Legacy Codebase", modifiers: { extraLives: 1 } },
+  { kind: "offer", id: "reliability", name: "Reliability", modifiers: { openingSlowSeconds: 8 } },
 ];
 
-const LOADOUT: LoadoutConfig = {
-  id: "gallery-loadout", name: "Legacy Codebase",
-  curse: "Balls start 10% faster.", blessing: "One extra life every map.", modifiers: { extraLives: 1 },
-};
+const OFFER = getOffer("headhunted") ?? null;
 
 const CAPSTONE: CapstoneConfig = {
   id: "gallery-capstone", name: "Tech Lead", description: "Every lock pays 10% more overtime.",
@@ -99,7 +96,7 @@ function topBarSample(focus: "mapRule" | null = null) {
       certificateProgress={{ levelsCompleted: 5, levelsToNextHour: 1, progressInCurrentHour: 2, hoursEarned: 1, levelsPerHour: 3 }}
       microManagerPerLock={4}
       scalingReadouts={[{ upgradeId: "runtime_optimisation_junior", upgradeName: "Runtime Optimisation", tag: "safety", key: "ballSpeedMultiplier", count: 3, effective: 3, steps: 3, amount: -0.06 }]}
-      activeLoadouts={[LOADOUT]}
+      runOffer={OFFER}
       tagCounts={new Map([["safety", 3], ["tempo", 1], ["lock", 2]])} tagSetThreshold={3}
       activeModifiers={MODIFIERS} modifierSources={SOURCES}
       capstone={CAPSTONE} mapMutator={MUTATOR} objective={OBJECTIVE}

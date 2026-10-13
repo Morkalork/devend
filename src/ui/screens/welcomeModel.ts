@@ -8,7 +8,7 @@ import type { MenuHighlightFlags, MenuHighlightKey } from "@/hooks/useMenuHighli
 
 export type WelcomeButtonId =
   | "continue" | "newGame" | "daily" | "twoPlayer" | "tutorial" | "options"
-  | "certificates" | "loadouts" | "records" | "achievements" | "jukebox" | "admin";
+  | "certificates" | "offers" | "records" | "achievements" | "jukebox" | "admin";
 
 /** A translation key and its values. */
 export interface TextRef {
@@ -55,7 +55,7 @@ export interface WelcomeMenuInput {
   dailyStreak?: number;
   dailyDoneToday?: boolean;
   hasCertificateStore: boolean;
-  hasLoadouts: boolean;
+  hasOffers: boolean;
   hasHallOfFame: boolean;
   hasAchievements: boolean;
   hasJukebox: boolean;
@@ -152,7 +152,7 @@ export function welcomeButtons(p: WelcomeMenuInput): WelcomeButtonSpec[] {
     highlightKey: "certificates",
   });
 
-  if (p.hasLoadouts) out.push({ ...base("loadouts", loading), label: { key: "welcome.loadouts" } });
+  if (p.hasOffers) out.push({ ...base("offers", loading), label: { key: "welcome.offers" } });
 
   if (p.hasHallOfFame) {
     out.push({

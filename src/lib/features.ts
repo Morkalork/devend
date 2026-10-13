@@ -62,9 +62,9 @@ function parseCatalogue(text: string): GameFeature[] {
 }
 
 // Last resort so a malformed features.yml still keeps the game bootable and
-// loadouts still unlockable at the level-10 boss.
+// Sprint Planning still unlockable.
 const LAST_RESORT: GameFeature[] = [
-  { id: "loadouts", unlockLevel: 10, icon: "Backpack", color: "#00ff88" },
+  { id: "sprintPlanning", unlockLevel: 3, icon: "ClipboardList", color: "#00ff88" },
   { id: "panicShockwave", unlockLevel: 10, icon: "Zap", color: "#ff9e6b" },
 ];
 
@@ -92,11 +92,12 @@ export function featuresUnlockedAtLevel(level: number): GameFeature[] {
 /**
  * Carry players forward from the pre-feature-system unlock flags so nobody
  * loses access they already earned. Today: the old `loadoutsIntroduced`
- * first-win flag maps to the 'loadouts' feature. Returns a new array (never
- * mutates the input) with any legacy grants merged in.
+ * first-win flag (a player who beat the game) maps to 'sprintPlanning', the
+ * run-start draft the loadouts became. Returns a new array (never mutates the
+ * input) with any legacy grants merged in.
  */
 export function seedLegacyFeatureUnlocks(ids: string[], loadoutsIntroduced: boolean): string[] {
-  if (loadoutsIntroduced && !ids.includes("loadouts")) return [...ids, "loadouts"];
+  if (loadoutsIntroduced && !ids.includes("sprintPlanning")) return [...ids, "sprintPlanning"];
   return ids;
 }
 

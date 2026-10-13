@@ -10,7 +10,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo, isValidElement, cloneElement, type MutableRefObject, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
-import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { ownedTagCounts, withVirtualTag, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { shopLeanOf } from '@/lib/sprintOffers';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditions, winConditionsBody, shouldAnnounceWinConditions, type Criterion } from '@/lib/winConditions';
 import { MapTuningModal } from '@/ui/game/MapTuningModal';
@@ -55,7 +56,7 @@ import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData, type AcceptanceRow } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
-import { LoadoutConfig } from '@/types/loadout';
+import type { RunOffer } from '@/types/offer';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
 import { CapstoneConfig } from '@/types/capstone';
 import { useGameConfig } from '@/hooks/useGameConfig';
@@ -174,7 +175,8 @@ interface GameScreenProps {
   mapHighscores?: Record<string, number>;
   /** The run's Promotion, for the Specs panel. */
   capstone?: CapstoneConfig | null;
-  activeLoadouts?: LoadoutConfig[];
+  /** The Sprint Planning offer the run took, for the Specs panel. */
+  runOffer?: RunOffer | null;
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
   /** Admin: unlocks the live map tuner in the in-game menu. */
@@ -252,7 +254,7 @@ export function GameScreen({
   cumulativeLockedBalls = 0,
   mapHighscores,
   capstone = null,
-  activeLoadouts = [],
+  runOffer = null,
   scalingReadouts = [],
   adminMode = false,
   showBallSpeeds = false,
@@ -570,7 +572,11 @@ export function GameScreen({
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
   // Build readout for the bottom bar: owned upgrades per archetype tag.
-  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
+  // A Specialisation counts toward its set, so its chip lights when the set does.
+  const tagCounts = useMemo(() => {
+    const lean = shopLeanOf(runOffer);
+    return withVirtualTag(ownedTagCounts(ownedUpgradeIds, upgrades), lean?.tag, lean?.countsTowardSet ?? 0);
+  }, [ownedUpgradeIds, upgrades, runOffer]);
 
   // ── Boss escalation feedback (issue #56) ─────────────────────────────────
   // Phase banner: flash "HOTFIX INCOMING" / "PANIC MODE" as the boss loses HP.
@@ -1318,7 +1324,7 @@ export function GameScreen({
                   certificateProgress={certificateProgress}
                   microManagerPerLock={activeModifiers.microManagerPerLock}
                   scalingReadouts={scalingReadouts}
-                  activeLoadouts={activeLoadouts}
+                  runOffer={runOffer}
                   tagCounts={tagCounts}
                   tagSetThreshold={tagSetThreshold}
                   activeModifiers={activeModifiers}

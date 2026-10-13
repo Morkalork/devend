@@ -4,7 +4,7 @@ import type { LevelScoreData, GameResult } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { CapstoneConfig } from "@/types/capstone";
-import type { LoadoutConfig } from "@/types/loadout";
+import { getOffer, type DealtOffer } from "@/lib/sprintOffers";
 import type { TenureOffer } from "@/lib/tenure";
 import type { RunRecap } from "@/lib/buildRecap";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -12,7 +12,7 @@ import { LevelCompleteOverlay } from "../../screens/LevelCompleteOverlay";
 import { ResultScreen } from "../../screens/ResultScreen";
 import { ContinuePrompt } from "../../screens/ContinuePrompt";
 import { UpgradeShop } from "../../screens/UpgradeShop";
-import { TenureDraftScreen } from "../../screens/TenureDraftScreen";
+import { ChainPickScreen } from "../../screens/ChainPickScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
 import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
@@ -146,11 +146,17 @@ const tenureOffers: TenureOffer[] = [
   },
 ];
 
-const loadouts: LoadoutConfig[] = [
-  { id: "crunch_time", name: "Crunch Time", curse: "Balls move 25% faster.", blessing: "Earn 25% more overtime hours.", modifiers: {} },
-  { id: "scope_creep", name: "Scope Creep", curse: "Balls are 30% bigger.", blessing: "Fences grow 35% faster.", modifiers: {} },
-  { id: "death_march", name: "Death March", curse: "Lose one life immediately.", blessing: "Earn 75% more overtime hours.", modifiers: {} },
-  { id: "hiring_freeze", name: "Hiring Freeze", curse: "The shop offers 2 fewer upgrades.", blessing: "All shop prices drop by 10%.", modifiers: {} },
+// Sprint Planning samples, from the real offers.yml so the copy is the shipped copy.
+const offer = (id: string) => getOffer(id)!;
+const sprintCards: DealtOffer[] = [
+  { offer: offer("onboarding_buddy"), grants: [] },
+  { offer: offer("reliability"), grants: [] },
+  { offer: offer("death_march"), grants: tenureOffers[0].upgrades },
+];
+const sprintCardsTenure: DealtOffer[] = [
+  { offer: offer("tenure"), grants: tenureOffers[0].upgrades, tenure: { earnedAtLevel: 22, continued: true } },
+  { offer: offer("containment"), grants: [] },
+  { offer: offer("unicorn"), grants: [...tenureOffers[0].upgrades, shopUpgrades[2]] },
 ];
 
 const capstones: CapstoneConfig[] = [
@@ -198,7 +204,7 @@ export const entries: GalleryEntry[] = [
   {
     id: "ResultScreen-win", group: "screen",
     render: () => <ResultScreen result={winResult} onMainMenu={noop} onPlayAgain={noop} accentColor={ACCENT}
-      runHoursAwarded={7} runLevelsCompleted={35} newlyUnlockedLoadouts={["Death March", "Hiring Freeze"]} runRecap={recap}
+      runHoursAwarded={7} runLevelsCompleted={35} newlyUnlockedOffers={["Containment", "Cold Storage"]} runRecap={recap}
       runRank={{ rank: 3, gapToNext: 64, gapToTop10: null, aheadThroughMaps: 22, monthBest: true, dayBest: true, dailyStreak: 4 }}
       dailyKey="2026-10-10" onRecords={noop} />,
   },
@@ -228,12 +234,17 @@ export const entries: GalleryEntry[] = [
       freeAbilityGrant="freezeAll" activeModifiers={undefined} shopDiscountMultiplier={1} />,
   },
   {
-    id: "TenureDraftScreen", group: "screen",
-    render: () => <TenureDraftScreen offers={tenureOffers} earnedAtLevel={22} lastRunUpgradeIds={["fast_compile_junior"]} onConfirm={noop} accentColor={ACCENT} />,
+    id: "ChainPickScreen", group: "screen",
+    render: () => <ChainPickScreen offer={offer("headhunted")} choices={tenureOffers} onConfirm={noop} accentColor={ACCENT} />,
   },
   {
     id: "RunDraftScreen", group: "screen",
-    render: () => <RunDraftScreen loadouts={loadouts} draftedLoadoutIds={[]} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
+    render: () => <RunDraftScreen cards={sprintCards} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
+  },
+  {
+    id: "RunDraftScreen-tenure", group: "screen",
+    // A run that earned Tenure: its chain is the boon card; the gamble is the jackpot.
+    render: () => <RunDraftScreen cards={sprintCardsTenure} onConfirm={noop} onBack={noop} accentColor={ACCENT} />,
   },
   {
     id: "CapstoneDraftScreen", group: "screen",

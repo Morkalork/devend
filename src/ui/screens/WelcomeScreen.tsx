@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  AlertCircle, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, Music, Users,
+  AlertCircle, Sparkles, Hexagon, Trophy, ClipboardList, Medal, CalendarDays, Flame, Check, Music, Users,
   ChevronRight, GraduationCap, Lock, Settings, Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -37,7 +37,7 @@ interface WelcomeScreenProps {
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
-  onLoadouts?: () => void;
+  onOffers?: () => void;
   /** Opens the Performance Review (records). Absent until a run has banked. */
   onHallOfFame?: () => void;
   /** Starts today's seeded Daily Stand-up run (HIGHSCORES.md Phase D). */
@@ -85,7 +85,7 @@ const BUTTON_ICON: Partial<Record<WelcomeButtonId, LucideIcon>> = {
   daily: CalendarDays,
   twoPlayer: Users,
   certificates: Sparkles,
-  loadouts: Backpack,
+  offers: ClipboardList,
   records: Medal,
   achievements: Trophy,
   jukebox: Music,
@@ -103,7 +103,7 @@ export function WelcomeScreen({
   onTutorial,
   onOptions,
   onOpenCertificateStore,
-  onLoadouts,
+  onOffers,
   onHallOfFame,
   onDaily,
   onTwoPlayer,
@@ -147,7 +147,7 @@ export function WelcomeScreen({
     dailyStreak,
     dailyDoneToday,
     hasCertificateStore: !!onOpenCertificateStore,
-    hasLoadouts: !!onLoadouts,
+    hasOffers: !!onOffers,
     hasHallOfFame: !!onHallOfFame,
     hasAchievements: !!onAchievements,
     hasJukebox: !!onJukebox,
@@ -178,7 +178,7 @@ export function WelcomeScreen({
         if (certificatesTapAction(!!onOpenCertificateStore) === "store") onOpenCertificateStore?.();
         else setShowCertInfo(true);
         break;
-      case "loadouts": onLoadouts?.(); break;
+      case "offers": onOffers?.(); break;
       case "records": onHallOfFame?.(); break;
       case "achievements": onAchievements?.(); break;
       case "jukebox": onJukebox?.(); break;

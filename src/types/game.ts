@@ -2,7 +2,7 @@ import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 import type { BankedAxes } from "@/types/scoring";
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'capstoneDraft' | 'runDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'chainPick' | 'capstoneDraft' | 'runDraft' | 'result' | 'certificateStore' | 'offers' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -267,6 +267,10 @@ export interface GrowingWall {
   isComplete: boolean;
   activeRegionId: string;    // the region this wall is growing in
   startTime?: number;        // performance.now() when growth began (for easing)
+  /** Platform (Sprint Planning): fraction of the build done at the start (offerPerks.ts). */
+  headStart?: number;
+  /** Seconds of the ease curve the head start skipped, fixed on the first update. */
+  headStartOffset?: number;
   /**
    * Which KIND of fence this cut is drawing (FENCE_TYPES_PLAN.md).
    *

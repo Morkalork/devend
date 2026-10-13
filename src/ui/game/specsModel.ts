@@ -41,7 +41,7 @@ export function sourceName(t: TFunction, s: ModifierSource): string {
     case 'upgrade': return contentText.upgradeName(t, s);
     case 'certificate': return contentText.certName(t, s);
     case 'achievement': return contentText.achName(t, s);
-    case 'loadout': return contentText.loadoutName(t, s);
+    case 'offer': return t('bottomBarDetails.offerSource', { name: contentText.offerName(t, s) });
     case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
     case 'capstone': return t('bottomBarDetails.capstoneSource', { name: contentText.capstoneName(t, s) });
     default: return s.name;
@@ -620,9 +620,18 @@ export function sectionHeading(
   }
 }
 
-/** Whether the run has a BUILD to show: archetype tags or a loadout. */
-export function hasBuildSection(tagCounts: Map<string, number> | undefined, loadoutCount: number): boolean {
-  return (!!tagCounts && tagCounts.size > 0) || loadoutCount > 0;
+/**
+ * Whether the run's Sprint Planning offer earns a card in the Specs panel: one
+ * with a lasting effect or a price. A prize was granted at the pick and already
+ * shows as upgrades; Tenure is only ever a prize.
+ */
+export function offerShowsInSpecs(offer: { id: string; modifiers?: object; price?: object } | null | undefined): boolean {
+  return !!offer && offer.id !== 'tenure' && !!(offer.modifiers || offer.price);
+}
+
+/** Whether the run has a BUILD to show: archetype tags or a Sprint Planning offer. */
+export function hasBuildSection(tagCounts: Map<string, number> | undefined, offerCount: number): boolean {
+  return (!!tagCounts && tagCounts.size > 0) || offerCount > 0;
 }
 
 export interface TagChipSpec {

@@ -8,7 +8,7 @@ import { GameScreen } from "@/types/game";
 
 const ALL_SCREENS: GameScreen[] = [
   'welcome', 'tutorial', 'game', 'upgradeShop', 'capstoneDraft',
-  'runDraft', 'result', 'certificateStore', 'loadouts',
+  'runDraft', 'chainPick', 'result', 'certificateStore', 'offers',
   'options', 'achievements', 'hallOfFame', 'admin', 'mapBuilder', 'animationTest',
   'upgradeAtlas',
 ];
@@ -48,7 +48,7 @@ describe("backActionForScreen", () => {
   });
 
   it("menu/info screens return to the main menu", () => {
-    for (const s of ['tutorial', 'options', 'certificateStore', 'loadouts', 'achievements', 'result'] as GameScreen[]) {
+    for (const s of ['tutorial', 'options', 'certificateStore', 'offers', 'achievements', 'result'] as GameScreen[]) {
       expect(backActionForScreen(s)).toBe('welcome');
     }
   });

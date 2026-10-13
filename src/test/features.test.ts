@@ -17,10 +17,11 @@ describe("feature catalogue (loaded from public/features.yml)", () => {
     expect(getAllFeatures().length).toBeGreaterThan(0);
   });
 
-  it("ships loadouts as an EVENT-unlocked feature (beating the game; no unlock level)", () => {
-    const loadouts = getFeature("loadouts");
-    expect(loadouts).toBeDefined();
-    expect(loadouts!.unlockLevel).toBeUndefined();
+  it("ships Sprint Planning, tied to clearing level 3 (the first run is just the game)", () => {
+    const sprint = getFeature("sprintPlanning");
+    expect(sprint).toBeDefined();
+    expect(sprint!.unlockLevel).toBe(3);
+    expect(getFeature("loadouts")).toBeUndefined();
   });
 
   it("ships achievements, tied to clearing level 5", () => {
@@ -66,11 +67,9 @@ describe("featuresUnlockedAtLevel", () => {
     expect(featuresUnlockedAtLevel(9).map(f => f.id)).not.toContain("panicShockwave");
   });
 
-  it("never returns event-unlocked features (certificates, loadouts) for any level", () => {
+  it("never returns event-unlocked features (certificates) for any level", () => {
     for (let level = 1; level <= 40; level++) {
-      const ids = featuresUnlockedAtLevel(level).map(f => f.id);
-      expect(ids).not.toContain("certificates");
-      expect(ids).not.toContain("loadouts");
+      expect(featuresUnlockedAtLevel(level).map(f => f.id)).not.toContain("certificates");
     }
   });
 
@@ -81,8 +80,8 @@ describe("featuresUnlockedAtLevel", () => {
 });
 
 describe("seedLegacyFeatureUnlocks", () => {
-  it("grants loadouts to players who had the old first-win flag", () => {
-    expect(seedLegacyFeatureUnlocks([], true)).toEqual(["loadouts"]);
+  it("grants Sprint Planning to players who had the old first-win flag", () => {
+    expect(seedLegacyFeatureUnlocks([], true)).toEqual(["sprintPlanning"]);
   });
 
   it("leaves the list untouched when the legacy flag is false", () => {
@@ -90,11 +89,11 @@ describe("seedLegacyFeatureUnlocks", () => {
   });
 
   it("is idempotent (never duplicates an already-present id)", () => {
-    expect(seedLegacyFeatureUnlocks(["loadouts"], true)).toEqual(["loadouts"]);
+    expect(seedLegacyFeatureUnlocks(["sprintPlanning"], true)).toEqual(["sprintPlanning"]);
   });
 
   it("preserves other already-unlocked ids", () => {
-    expect(seedLegacyFeatureUnlocks(["something"], true)).toEqual(["something", "loadouts"]);
+    expect(seedLegacyFeatureUnlocks(["something"], true)).toEqual(["something", "sprintPlanning"]);
   });
 
   it("does not mutate the input array", () => {

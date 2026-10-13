@@ -7,12 +7,11 @@ import yaml from "js-yaml";
 import type { GalleryEntry } from "../galleryTypes";
 import musicYamlRaw from "../../../../public/music.yml?raw";
 import certificatesYamlRaw from "../../../../public/certificates.yml?raw";
-import loadoutsYamlRaw from "../../../../public/loadouts.yml?raw";
 import achievementsYamlRaw from "../../../../public/achievements.yml?raw";
 import { parseMusicDoc } from "@/lib/musicCatalogue";
 import type { Achievement } from "@/types/achievement";
 import type { CertConfig } from "@/types/certificate";
-import type { LoadoutConfig } from "@/types/loadout";
+import { getOfferCatalogue } from "@/lib/sprintOffers";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import { DEFAULT_META_STATS, type MetaProgressionStats } from "@/types/metaProgression";
 import { WelcomeScreen } from "../../screens/WelcomeScreen";
@@ -25,7 +24,7 @@ import { PairDecision } from "../../screens/PairDecision";
 import { AchievementsScreen } from "../../screens/AchievementsScreen";
 import { HallOfFameScreen } from "../../screens/HallOfFameScreen";
 import { CertificateStore } from "../../screens/CertificateStore";
-import { LoadoutGalleryScreen } from "../../screens/LoadoutGalleryScreen";
+import { OffersScreen } from "../../screens/OffersScreen";
 import { PairLobby } from "../../screens/PairLobby";
 
 const ACCENT = "#00ff88";
@@ -35,7 +34,6 @@ const noop = () => {};
 
 const music = parseMusicDoc(yaml.load(musicYamlRaw) as Record<string, unknown>);
 const certificates = (yaml.load(certificatesYamlRaw) as CertConfig).certificates;
-const loadouts = (yaml.load(loadoutsYamlRaw) as { loadouts: LoadoutConfig[] }).loadouts;
 const achievements = (yaml.load(achievementsYamlRaw) as { achievements: Achievement[] }).achievements;
 
 // ── A mid-game player ──────────────────────────────────────────────────────
@@ -76,7 +74,7 @@ export const entries: GalleryEntry[] = [
   {
     id: "WelcomeScreen", group: "screen", render: () => (
       <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop}
-        onLoadouts={noop} onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop}
+        onOffers={noop} onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop}
         onJukebox={noop} onAdmin={noop} totalCertificateHours={18} completedAchievementCount={4} />
     ),
   },
@@ -88,7 +86,7 @@ export const entries: GalleryEntry[] = [
   },
   {
     id: "WelcomeScreen-error", group: "screen", render: () => (
-      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop} onLoadouts={noop}
+      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop} onOffers={noop}
         onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop} onJukebox={noop}
         error="Failed to fetch" />
     ),
@@ -185,8 +183,8 @@ export const entries: GalleryEntry[] = [
     ),
   },
   {
-    id: "LoadoutGalleryScreen", group: "screen", render: () => (
-      <LoadoutGalleryScreen loadouts={loadouts} wonLoadoutIds={["crunch_time", "scope_creep", "hiring_freeze"]} onBack={noop} accentColor={ACCENT} />
+    id: "OffersScreen", group: "screen", render: () => (
+      <OffersScreen catalogue={getOfferCatalogue()} unlock={{ highestLevelReached: 12, metArchetypes: ["lock"] }} onBack={noop} accentColor={ACCENT} />
     ),
   },
   { id: "PairLobby", group: "screen", render: () => <PairLobby onBack={noop} onPaired={noop} /> },

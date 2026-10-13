@@ -230,6 +230,26 @@ describe("catalogue-driven pickers stay catalogue-driven", () => {
   it("the Playground's mutator picker reads mapMutators.yml, not a list", () => {
     expect(PLAYGROUND).toMatch(/getMapMutators\(\)/);
   });
+  it("Admin's Sprint Planning offer picker reads offers.yml, not a list", () => {
+    expect(ADMIN).toMatch(/allOffers\(\)\.map\(/);
+  });
+});
+
+describe("Sprint Planning can be reached on purpose", () => {
+  // A NEW CLASS for this file, with the run-start offer: the draft is a
+  // feature unlock, every card is a draw from its pool, and the jackpot is one
+  // gamble in twenty at best. Each of those needs a way past it, in memory.
+  const setters = [...DEV_FLAGS.matchAll(/export function (setForced\w+|setSprint\w+)\(/g)].map(m => m[1]);
+
+  it("is checking a real set of switches", () => {
+    expect(setters).toEqual(expect.arrayContaining(["setForcedSprintOffer", "setForcedJackpot", "setSprintAlwaysOn"]));
+  });
+
+  for (const setter of setters) {
+    it(`${setter} is called from Admin or the Playground`, () => {
+      expect(PLAYGROUND + ADMIN).toMatch(new RegExp(`${setter}\\(`));
+    });
+  }
 });
 
 describe("a phone can reach the knobs", () => {

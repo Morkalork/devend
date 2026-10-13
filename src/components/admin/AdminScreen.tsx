@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
   SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
+  getForcedSprintOffer, setForcedSprintOffer, getForcedJackpot, setForcedJackpot,
+  isSprintAlwaysOn, setSprintAlwaysOn,
 } from '@/lib/devFlags';
+import { allOffers } from '@/lib/sprintOffers';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -33,6 +36,9 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
   const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
+  const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
+  const [jackpot, setJackpotState] = useState(getForcedJackpot);
+  const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
   const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
@@ -225,6 +231,47 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               </div>
             </div>
           </button>
+
+          {/* Sprint Planning (SPRINT_PLANNING_PLAN.md). The draft is a feature
+              unlock, each card is a draw from its pool, and the jackpot is one
+              gamble in twenty at best: none of it can be looked at on purpose
+              without these. In memory, and ledger-ineligible, like the other
+              forced draws. */}
+          <div className="w-full p-4 rounded-lg bg-card border border-border flex flex-col gap-3">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <ClipboardList className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold">Sprint Planning</div>
+                <div className="text-sm text-muted-foreground">
+                  The run-start offer. Applies to the next run started from the menu (not the
+                  debug level jump, which skips the draft).
+                </div>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="sprint-always-on" checked={sprintAlways}
+                onChange={e => { setSprintAlwaysOn(e.target.checked); setSprintAlwaysState(e.target.checked); }} />
+              Show the draft before every run, even before it is unlocked
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="sprint-force-jackpot" checked={jackpot}
+                onChange={e => { setForcedJackpot(e.target.checked); setJackpotState(e.target.checked); }} />
+              Force the jackpot gamble
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Force an offer into its pool's slot (locked ones too)
+              <select id="sprint-force-offer" className="bg-background border border-border rounded px-2 py-1"
+                value={sprintOffer ?? ''}
+                onChange={e => { const v = e.target.value || null; setForcedSprintOffer(v); setSprintOfferState(v); }}>
+                <option value="">Random draw</option>
+                {allOffers().map(o => (
+                  <option key={o.id} value={o.id}>{o.pool}: {o.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           {/* Pair Programming's network path. At home the direct link always
               wins, so the relay every public-Wi-Fi player uses would never be

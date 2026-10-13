@@ -60,17 +60,18 @@ export function useScreenNavigation() {
     setCurrentScreen('certificateStore');
   }, []);
 
-  const goToLoadouts = useCallback(() => {
-    setCurrentScreen('loadouts');
+  /** The Sprint Planning collection page (every offer, and what unlocks the rest). */
+  const goToOffers = useCallback(() => {
+    setCurrentScreen('offers');
   }, []);
 
   const goToOptions = useCallback(() => {
     setCurrentScreen('options');
   }, []);
 
-  /** Tenure pick (issue #75): shown before the loadout draft. */
-  const goToTenureDraft = useCallback(() => {
-    setCurrentScreen('tenureDraft');
+  /** The chain pick after Sprint Planning, for an offer whose prize is a choice. */
+  const goToChainPick = useCallback(() => {
+    setCurrentScreen('chainPick');
   }, []);
 
   const goToAdmin = useCallback(() => {
@@ -126,12 +127,12 @@ export function useScreenNavigation() {
     goToRunDraft,
     goToCapstoneDraft,
     goToCertificateStore,
-    goToLoadouts,
+    goToOffers,
     goToOptions,
     goToAchievements,
     goToHallOfFame,
     goToJukebox,
-    goToTenureDraft,
+    goToChainPick,
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,

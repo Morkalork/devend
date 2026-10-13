@@ -57,8 +57,11 @@ export interface RunSave {
   // assignmentRewardModifiers and activeDoorId; they are ignored on load.
   capstoneId: string | null;
   // Saves from before Ascension was removed also carry ascensionDepth; it is
-  // ignored on load (a resumed run is an ordinary one).
-  draftedLoadoutIds: string[];
+  // ignored on load (a resumed run is an ordinary one). Saves from before
+  // Sprint Planning carry draftedLoadoutIds instead of takenOfferId, and
+  // resume with no offer.
+  /** The Sprint Planning offer the run took (offers.yml id, or "tenure"). */
+  takenOfferId?: string | null;
   // Records (HIGHSCORES.md): cumulative overtime after each completed map, and
   // whether the run may file on the ledger (debug starts are not eligible).
   // Optional so saves written before Phase A still load; default [] / true.

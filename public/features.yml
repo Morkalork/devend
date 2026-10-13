@@ -32,11 +32,13 @@ features:
     icon: Award
     color: "#7fd4ff"
 
-  # Loadouts: earned by beating the game for the first time (completing the final
-  # level). An EVENT, not a level - armed in code from the last-level win, so it
-  # tracks the real final level even if the map length changes.
-  - id: loadouts
-    icon: Backpack
+  # Sprint Planning (SPRINT_PLANNING_PLAN.md): the run-start offer. Unlocked by
+  # completing level 3, so the very first run is just the game and the draft
+  # starts with the next one. (Tenure, its boon card, can open it earlier:
+  # useGameSession shows the draft whenever a head start is owed.)
+  - id: sprintPlanning
+    unlockLevel: 3
+    icon: ClipboardList
     color: "#00ff88"
 
   # Panic Shockwave: beating the first boss (completing level 10) grants a free

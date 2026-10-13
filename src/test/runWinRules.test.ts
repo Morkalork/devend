@@ -1,5 +1,5 @@
 /**
- * A loadout that changes what WINNING MEANS.
+ * A run-wide card that changes what WINNING MEANS (a Sprint Planning gamble).
  *
  * Every other modifier in the game tunes a number. `winRequiresSplitLocks`
  * appends a clause to a map's own win, which is a different kind of thing and
@@ -19,8 +19,7 @@ import { readWinSnapshot } from "@/lib/physics/applyCut";
 import { LADDER } from "@/test/fixtures/maps";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import yaml from "js-yaml";
-import type { LoadoutData } from "@/types/loadout";
+import { parseOfferCatalogue } from "@/lib/sprintOffers";
 import type { LevelConfig } from "@/types/level";
 import type { WinSnapshot } from "@/types/winSpec";
 import { noSmashes } from "@/lib/destructibleClass";
@@ -152,17 +151,15 @@ describe("acceptsRunClause states the rule on its own", () => {
 });
 
 describe("Definition of Done ships the rule as a card", () => {
-  // Straight from the YAML source of truth, like loadoutDraft.test.ts.
-  const catalogue = (yaml.load(
-    readFileSync(resolve(process.cwd(), "public/loadouts.yml"), "utf8"),
-  ) as LoadoutData).loadouts;
+  // Straight from the YAML source of truth.
+  const catalogue = parseOfferCatalogue(readFileSync(resolve(process.cwd(), "public/offers.yml"), "utf8"));
 
-  it("is in the catalogue, gated, and pays for what it asks", () => {
-    const card = catalogue.find(l => l.id === "definition_of_done");
-    expect(card, "the loadout should ship").toBeDefined();
-    expect(card!.modifiers.winRequiresSplitLocks).toBe(1);
-    // A curse this large has to be paid for, or nobody drafts it twice.
-    expect(card!.modifiers.scoreMultiplier).toBeGreaterThan(1);
-    expect(card!.uniqueWinsRequired).toBeGreaterThan(0);
+  it("is a gamble, gated, and pays for what it asks", () => {
+    const card = catalogue.gambles.find(l => l.id === "definition_of_done");
+    expect(card, "the gamble should ship").toBeDefined();
+    expect(card!.price?.winRequiresSplitLocks).toBe(1);
+    // A price this large has to be paid for, or nobody takes it twice.
+    expect(card!.modifiers?.scoreMultiplier).toBeGreaterThan(1);
+    expect(card!.unlock?.kind).toBe("levelReached");
   });
 });

@@ -14,7 +14,7 @@ import {
   dailySeedText,
 } from "@/lib/runRng";
 import { drawRandom } from "@/lib/yamlCatalogue";
-import { drawOffers } from "@/lib/loadoutDraft";
+import { rollSprintDeal, getOfferCatalogue } from "@/lib/sprintOffers";
 
 afterEach(() => setRunSeedText(null));
 
@@ -48,17 +48,18 @@ describe("getRunRng", () => {
     expect(getRunRng("shop:5")()).not.toBe(getRunRng("shop:6")());
   });
 
-  it("seeded draws are shared: drawRandom and drawOffers replay identically", () => {
+  it("seeded draws are shared: drawRandom and the Sprint Planning deal replay identically", () => {
     setRunSeedText(dailySeedText("2026-07-16"));
     const pool = ["a", "b", "c", "d", "e", "f"].map(id => ({ id }));
     const draw1 = drawRandom(pool, 3, getRunRng("doors:5")).map(d => d.id);
     const draw2 = drawRandom(pool, 3, getRunRng("doors:5")).map(d => d.id);
     expect(draw1).toEqual(draw2);
 
-    const loadouts = pool.map(p => ({ id: p.id, name: p.id, modifiers: {} })) as never[];
-    const offers1 = drawOffers(loadouts, [], 3, getRunRng("runDraft")).map((l: { id: string }) => l.id);
-    const offers2 = drawOffers(loadouts, [], 3, getRunRng("runDraft")).map((l: { id: string }) => l.id);
-    expect(offers1).toEqual(offers2);
+    const deal = () => rollSprintDeal({
+      catalogue: getOfferCatalogue(), upgrades: [], rng: getRunRng("sprint"),
+      unlock: { highestLevelReached: 0, metArchetypes: [] },
+    }).map(c => c.offer.id);
+    expect(deal()).toEqual(deal());
   });
 });
 
