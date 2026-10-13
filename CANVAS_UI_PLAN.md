@@ -265,8 +265,12 @@ the go-ahead: every screen moved.
   the play screen unlocked, inside a `UiFrame` fitted to its pane.
 - **Icons** are lucide-react components rasterised by the browser (Pixi's SVG
   parser rejects lucide's arc syntax), cached per icon, colour and size.
-- **No `@pixi/ui`, no BitmapText.** Scroll views are @pixi/layout's trackpad;
-  text entry is a hidden DOM input (TextField). Live numbers are plain Text;
+- **No `@pixi/ui`, no BitmapText.** Scroll views are the kit's own ScrollView
+  (`src/ui/kit/extra.tsx`, physics in `scrollModel.ts`). It started on
+  @pixi/layout's trackpad, which counted momentum per frame and took every
+  drag under the finger, so the store's page scrolled with each swipe of its
+  card strip; a drag now belongs to whoever claims it first past the slop
+  along its own axis (`src/ui/kit/gesture.ts`). Text entry is a hidden DOM input (TextField). Live numbers are plain Text;
   nothing measured needed BitmapText yet.
 - **CRTBackground stays DOM**, drawn once under every canvas screen: it is
   decorative, takes no touches and so plays no part in the zoom problem.

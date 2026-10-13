@@ -2,7 +2,9 @@
  * The canvas interface's larger pieces: scrolling, modals, progress, text
  * entry and entrance animation. Built on core.tsx.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Ticker, type FederatedPointerEvent, type FederatedWheelEvent } from "pixi.js";
+import { useTick } from "@pixi/react";
 import { animate } from "motion";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { X, Info } from "lucide-react";
@@ -10,6 +12,11 @@ import { COLOR, RADIUS, ROLE, TEXT } from "../theme";
 import { Icon, Label, Pressable, View, type Layout } from "./core";
 import { tint } from "./style";
 import { usePulse } from "./motion";
+import { beginPointer, claimPointer, claimedByOther, releasePointer } from "./gesture";
+import {
+  SCROLL_SLOP_PX, STOP_SPEED, clampScroll, isSettled, pruneSamples, releaseVelocity, rubberBand, scrollMin, stepScroll,
+  type Sample, type ScrollMotion,
+} from "./scrollModel";
 
 // ── ScrollView ─────────────────────────────────────────────────────────────
 
@@ -20,19 +27,234 @@ export interface ScrollViewProps {
   direction?: "vertical" | "horizontal";
 }
 
+/** The listeners @pixi/layout's own scroller puts on a scroll box (LayoutContainer's constructor). */
+const LIBRARY_SCROLL_EVENTS = ["pointerdown", "pointerup", "pointerupoutside", "pointermove", "pointercancel", "wheel"] as const;
+
+/** Yoga's edge indices (yoga-layout's Edge.Right / Edge.Bottom). */
+const EDGE_RIGHT = 2;
+const EDGE_BOTTOM = 3;
+
+/** The box's size along the axis, and how far its laid-out content reaches. */
+function measureScroll(box: LayoutContainer, vertical: boolean): { viewport: number; content: number } {
+  const yoga = box.layout?.yoga;
+  if (!yoga) {
+    return { viewport: 0, content: 0 };
+  }
+  let reach = 0;
+  for (let i = 0; i < yoga.getChildCount(); i++) {
+    const child = yoga.getChild(i);
+    const end = vertical
+      ? child.getComputedTop() + child.getComputedHeight() + child.getComputedMargin(EDGE_BOTTOM)
+      : child.getComputedLeft() + child.getComputedWidth() + child.getComputedMargin(EDGE_RIGHT);
+    if (end > reach) {
+      reach = end;
+    }
+  }
+  const viewport = vertical ? yoga.getComputedHeight() : yoga.getComputedWidth();
+  const content = reach + yoga.getComputedPadding(vertical ? EDGE_BOTTOM : EDGE_RIGHT);
+  return { viewport, content };
+}
+
+/**
+ * When the input happened, not when its handler ran: on a busy frame the moves
+ * and the lift are handled back to back after it, and handler time would make a
+ * flick look like a finger that had stopped.
+ */
+function inputTime(e: FederatedPointerEvent): number {
+  const stamp = (e.nativeEvent as Event | undefined)?.timeStamp;
+  return typeof stamp === "number" && stamp > 0 ? stamp : performance.now();
+}
+
+interface ScrollDrag {
+  pointerId: number;
+  /** Where the finger went down, along and across the axis. */
+  startAxis: number;
+  startCross: number;
+  /** The content position the finger's travel is added to. */
+  from: number;
+  /** Past the slop along this axis, and the pointer is ours. */
+  claimed: boolean;
+  samples: Sample[];
+}
+
 /**
  * A box whose content scrolls under a drag, with momentum and a rubber band at
- * the ends (@pixi/layout's trackpad). The content is laid out inside it as a
- * flex column (or row), exactly like an `overflow-y-auto` div.
+ * the ends, laid out inside it as a flex column (or row) exactly like an
+ * `overflow-y-auto` div.
+ *
+ * Not @pixi/layout's built-in trackpad, which this replaced (and unhooks): it
+ * counted its physics in frames, ran on a ticker of its own, stopped tracking
+ * a finger that left the box, and took every drag whatever else wanted it - so the
+ * store's page scrolled along with every swipe of the card strip inside it.
+ * Here the drag is claimed (gesture.ts) only once it has travelled past the
+ * slop along this box's axis, the physics run on elapsed time
+ * (scrollModel.ts), and the step runs on the interface's own ticker, so the
+ * content is placed in the frame that draws it.
  */
 export function ScrollView({ layout, children, direction = "vertical" }: ScrollViewProps) {
   const vertical = direction === "vertical";
+  const boxRef = useRef<LayoutContainer | null>(null);
+  const owner = useRef(Symbol("ScrollView"));
+  const motion = useRef<ScrollMotion>({ position: 0, velocity: 0 });
+  const drag = useRef<ScrollDrag | null>(null);
+
+  // The box stays `overflow: "scroll"`, because that is what tells Yoga to lay
+  // the content out at its own size rather than squeeze it into the box (with
+  // "hidden" the store's card strip collapsed to nothing). But "scroll" also
+  // switches on @pixi/layout's built-in scroller, which would fight this one
+  // for the content's position every frame: unhook it. Our handlers are the
+  // `on...` properties @pixi/react sets, which removeAllListeners leaves alone.
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box) {
+      return;
+    }
+    // Protected in its typings; the instance's own method is what the constructor registered.
+    const libraryStep = (box as unknown as { update: () => void }).update;
+    Ticker.shared.remove(libraryStep, box);
+    for (const type of LIBRARY_SCROLL_EVENTS) {
+      box.removeAllListeners(type);
+    }
+  }, []);
+
+  const place = useCallback((position: number) => {
+    motion.current.position = position;
+    const box = boxRef.current;
+    if (!box || box.destroyed) {
+      return;
+    }
+    if (vertical) {
+      box.overflowContainer.y = position;
+    } else {
+      box.overflowContainer.x = position;
+    }
+  }, [vertical]);
+
+  // Released: let a fling run out, or pull back from past an end (which is
+  // also where content that shrank under a resting page brings it back).
+  useTick(useCallback((ticker: Ticker) => {
+    const box = boxRef.current;
+    if (!box || box.destroyed || drag.current?.claimed) {
+      return;
+    }
+    const { viewport, content } = measureScroll(box, vertical);
+    const min = scrollMin(viewport, content);
+    if (isSettled(motion.current, min)) {
+      return;
+    }
+    const next = stepScroll(motion.current, ticker.deltaMS, min);
+    motion.current.velocity = next.velocity;
+    place(next.position);
+  }, [place, vertical]));
+
+  const along = useCallback((e: FederatedPointerEvent) => (vertical ? e.global.y : e.global.x), [vertical]);
+  const across = useCallback((e: FederatedPointerEvent) => (vertical ? e.global.x : e.global.y), [vertical]);
+
+  const onPointerDown = useCallback((e: FederatedPointerEvent) => {
+    const box = boxRef.current;
+    if (!box || box.destroyed) {
+      return;
+    }
+    beginPointer(e.pointerId, e.nativeEvent);
+    const { viewport, content } = measureScroll(box, vertical);
+    // Content that fits has nothing to scroll: stay out, so a scroller around
+    // this one can take the drag.
+    if (scrollMin(viewport, content) === 0 && motion.current.position === 0) {
+      drag.current = null;
+      return;
+    }
+    // A touch on a moving page catches it, as on a phone: the fling stops and
+    // the touch is the page's, so the card under it does not take a tap.
+    const catching = Math.abs(motion.current.velocity) > STOP_SPEED * 5;
+    motion.current.velocity = 0;
+    const claimed = catching && claimPointer(e.pointerId, owner.current);
+    drag.current = {
+      pointerId: e.pointerId,
+      startAxis: along(e),
+      startCross: across(e),
+      from: motion.current.position,
+      claimed,
+      samples: [{ t: inputTime(e), position: motion.current.position }],
+    };
+  }, [along, across, vertical]);
+
+  const onGlobalPointerMove = useCallback((e: FederatedPointerEvent) => {
+    const d = drag.current;
+    const box = boxRef.current;
+    if (!d || e.pointerId !== d.pointerId || !box || box.destroyed) {
+      return;
+    }
+    const travel = along(e) - d.startAxis;
+    if (!d.claimed) {
+      if (claimedByOther(e.pointerId, owner.current)) {
+        drag.current = null;
+        return;
+      }
+      const cross = across(e) - d.startCross;
+      if (Math.hypot(travel, cross) < SCROLL_SLOP_PX) {
+        return;
+      }
+      // Mostly across this axis: not ours (the card strip, or a scroller the other way).
+      if (Math.abs(travel) < Math.abs(cross) || !claimPointer(e.pointerId, owner.current)) {
+        drag.current = null;
+        return;
+      }
+      d.claimed = true;
+      // Follow from here, so the content does not jump by the slop.
+      d.from = motion.current.position - travel;
+    }
+    const { viewport, content } = measureScroll(box, vertical);
+    const position = rubberBand(d.from + travel, scrollMin(viewport, content), viewport);
+    place(position);
+    const now = inputTime(e);
+    d.samples.push({ t: now, position });
+    d.samples = pruneSamples(d.samples, now);
+  }, [along, across, place, vertical]);
+
+  const endDrag = useCallback((e: FederatedPointerEvent) => {
+    const d = drag.current;
+    if (!d || e.pointerId !== d.pointerId) {
+      return;
+    }
+    drag.current = null;
+    if (!d.claimed) {
+      return;
+    }
+    releasePointer(e.pointerId, owner.current);
+    motion.current.velocity = releaseVelocity(d.samples, inputTime(e));
+  }, []);
+
+  // A wheel or trackpad scrolls directly. One that cannot move this box (it
+  // fits, or is at that end) is left to the box around it.
+  const onWheel = useCallback((e: FederatedWheelEvent) => {
+    const box = boxRef.current;
+    if (!box || box.destroyed) {
+      return;
+    }
+    const lines = e.deltaMode === 1 ? 16 : 1;
+    const delta = (vertical ? e.deltaY : (e.deltaX || e.deltaY)) * lines;
+    const { viewport, content } = measureScroll(box, vertical);
+    const next = clampScroll(motion.current.position - delta, scrollMin(viewport, content));
+    if (next === motion.current.position) {
+      return;
+    }
+    motion.current.velocity = 0;
+    place(next);
+    e.stopPropagation();
+  }, [place, vertical]);
+
   return (
     <layoutContainer
+      ref={boxRef}
       layout={{ overflow: "scroll", flexDirection: vertical ? "column" : "row", ...(layout ?? {}) }}
-      // The trackpad listens on this box, so it must be a touch target.
+      // The drag starts on this box (or bubbles to it), so it must be a touch target.
       eventMode="static"
-      trackpad={vertical ? { xConstrainPercent: -1, yConstrainPercent: 0.15 } : { yConstrainPercent: -1, xConstrainPercent: 0.15 }}
+      onPointerDown={onPointerDown}
+      onGlobalPointerMove={onGlobalPointerMove}
+      onPointerUp={endDrag}
+      onPointerUpOutside={endDrag}
+      onPointerCancel={endDrag}
+      onWheel={onWheel}
     >
       {children}
     </layoutContainer>

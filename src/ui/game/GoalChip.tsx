@@ -90,7 +90,7 @@ export function GoalChip({
         hold.current = { live: true, x: e.global.x, y: e.global.y };
         onHoldStart?.();
       }}
-      onPointerUp={() => { endHold(); props.onPointerUp(); }}
+      onPointerUp={(e: FederatedPointerEvent) => { endHold(); props.onPointerUp(e); }}
       onPointerUpOutside={() => { endHold(); props.onPointerUpOutside(); }}
       onPointerCancel={() => { endHold(); props.onPointerCancel(); }}
       onGlobalPointerMove={(e: FederatedPointerEvent) => {

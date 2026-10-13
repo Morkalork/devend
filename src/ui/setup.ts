@@ -14,8 +14,6 @@ import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { LayoutContainer, type LayoutContainerOptions } from "@pixi/layout/components";
 import { UiGraphics, UiText } from "./elements";
 import { Layout, LayoutSystem, getYoga, getYogaConfig, setYoga, setYogaConfig } from "@pixi/layout";
-// A grab drops an unfinished scroll spring (a @pixi/layout bug; see the module).
-import "./scrollPatch";
 
 /**
  * `<layoutContainer>` is passive unless it says otherwise. @pixi/layout makes
