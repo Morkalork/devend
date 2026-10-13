@@ -1,9 +1,9 @@
 /**
  * Run-ledger pure logic (HIGHSCORES.md Phase A): Top 10 insertion + rank/gap
- * math, Record Pace deltas, and the near-miss "ahead through map N" epitaph.
+ * math, and the near-miss "ahead through map N" epitaph.
  */
 import { describe, it, expect } from "vitest";
-import { insertRun, paceDelta, aheadThroughMaps } from "@/lib/runLedger";
+import { insertRun, aheadThroughMaps } from "@/lib/runLedger";
 import { RunLedgerEntry } from "@/types/hallOfFame";
 
 const entry = (score: number, over: Partial<RunLedgerEntry> = {}): RunLedgerEntry => ({
@@ -62,25 +62,6 @@ describe("insertRun", () => {
     const ladder = [entry(400)];
     insertRun(ladder, entry(500));
     expect(ladder.map(r => r.score)).toEqual([400]);
-  });
-});
-
-describe("paceDelta", () => {
-  const best = [50, 120, 200]; // best run's cumulative per map, final score 200
-
-  it("is null with no best run or before any map", () => {
-    expect(paceDelta(80, 1, [], null)).toBeNull();
-    expect(paceDelta(0, 0, best, 200)).toBeNull();
-  });
-
-  it("compares against the best run at the same map", () => {
-    expect(paceDelta(70, 1, best, 200)).toBe(20);   // 70 vs 50
-    expect(paceDelta(100, 2, best, 200)).toBe(-20); // 100 vs 120
-  });
-
-  it("past the best run's end compares against its final score", () => {
-    expect(paceDelta(180, 5, best, 200)).toBe(-20);
-    expect(paceDelta(230, 5, best, 200)).toBe(30);
   });
 });
 

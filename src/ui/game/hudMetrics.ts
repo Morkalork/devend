@@ -13,8 +13,6 @@ export const HUD = {
   topRow1: 41,
   /** The stat chips. */
   topRow2: 34,
-  /** The projected-score bar under the chips, when a highscore is in reach. */
-  highscoreRow: 22,
   /** The five fence slots, once a special fence type is owned. */
   fenceRow: 52,
   /** The ability buttons, one row (it scrolls sideways rather than wrapping). */
@@ -27,8 +25,8 @@ export const HUD = {
   controlsRow: 56,
 } as const;
 
-export function topBarHeight(showHighscoreBar: boolean): number {
-  return HUD.topRow1 + HUD.topRow2 + (showHighscoreBar ? HUD.highscoreRow : 0);
+export function topBarHeight(): number {
+  return HUD.topRow1 + HUD.topRow2;
 }
 
 export interface BottomStackShape {

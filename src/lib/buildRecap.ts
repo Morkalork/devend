@@ -24,12 +24,6 @@ export interface RunRecap extends BuildIdentity {
   tagCounts: Record<string, number>;
   capstoneId: string | null;
   capstoneName: string | null;
-  /** Banked overtime the run ended with. */
-  score: number;
-  /** True when `score` set a new personal best for the primary archetype. */
-  isArchetypeRecord: boolean;
-  /** The best it beat (null on a first-ever run with this primary). */
-  previousBest: number | null;
 }
 
 /** How many owned upgrades a tag needs before it counts as a lean. */

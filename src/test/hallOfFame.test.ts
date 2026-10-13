@@ -1,7 +1,7 @@
 /**
  * useHallOfFame: the persisted all-time run ledger (HIGHSCORES.md Phase A).
  * recordRun files runs, returns rank info synchronously, and only a new #1
- * replaces the Record Pace trajectory.
+ * replaces the best-run trajectory.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
@@ -44,7 +44,7 @@ describe("useHallOfFame", () => {
     expect(second.result.current.bestRunTrajectory).toEqual([80, 180, 300]);
   });
 
-  it("only a new #1 replaces the Record Pace trajectory", () => {
+  it("only a new #1 replaces the best-run trajectory", () => {
     const { result } = renderHook(() => useHallOfFame());
     act(() => { result.current.recordRun(entry(300), [80, 180, 300]); });
     act(() => { result.current.recordRun(entry(200), [90, 200]); }); // rank 2

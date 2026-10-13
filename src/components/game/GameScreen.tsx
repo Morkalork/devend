@@ -9,7 +9,6 @@
  */
 import { useState, useCallback, useRef, useEffect, useMemo, isValidElement, cloneElement, type MutableRefObject, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, withVirtualTag, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { shopLeanOf } from '@/lib/sprintOffers';
 import { fencesLeft } from '@/lib/fenceBudget';
@@ -171,8 +170,6 @@ interface GameScreenProps {
   activeModifiers: GameModifiers;
   modifierSources?: ModifierSource[];
   cumulativeLockedBalls?: number;
-  /** Best score per map id, for the Benchmarking highscore bar (#45). */
-  mapHighscores?: Record<string, number>;
   /** The run's Promotion, for the Specs panel. */
   capstone?: CapstoneConfig | null;
   /** The Sprint Planning offer the run took, for the Specs panel. */
@@ -252,7 +249,6 @@ export function GameScreen({
   activeModifiers,
   modifierSources = [],
   cumulativeLockedBalls = 0,
-  mapHighscores,
   capstone = null,
   runOffer = null,
   scalingReadouts = [],
@@ -471,29 +467,11 @@ export function GameScreen({
     onGameStateChange?.(state); // forward to a parent (Playground ability tester)
   }, [onGameStateChange]);
 
-  // Map-highscore bar (#45): only with the Benchmarking certificate and a stored
-  // highscore for this map. `projectedScore` is the score the map would pay if
-  // it ended now (same formula as the real level score, sans lock/break bonus),
-  // so the bar tracks how close the run is to beating the record.
-  const showHighscoreBar = activeModifiers.showHighscoreProgress > 0;
   // Read once per mount: the flag is flipped in the admin screen, which can only
   // be reached by leaving the game, so it cannot change while a map is running.
   const [lockDebug] = useState(isLockDebugEnabled);
   // Admin A/B for the unattributed frame time; see isStaticBgEnabled.
   const [staticBg] = useState(isStaticBgEnabled);
-  const highscoreTarget = mapHighscores?.[level.id] ?? 0;
-  const projectedScore = useMemo(() => {
-    if (!showHighscoreBar || highscoreTarget <= 0) return 0;
-    return calculateScore(
-      gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining, level.sizeThreshold, level.points, {
-        scoreMultiplier: activeModifiers.scoreMultiplier,
-        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-        flatBonus: activeModifiers.overtimeCapBonus,
-      },
-    ).levelScore;
-  }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
-      level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
-      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
 
   /**
    * Locks THIS MAP, for every readout that sits next to a per-map requirement.
@@ -896,7 +874,7 @@ export function GameScreen({
   // the DOM keeps only the backgrounds, the board, and two spacers that
   // reserve the HUD's space so GameCanvas lays the board out exactly where
   // the canvas HUD leaves room for it (ui/game/hudMetrics).
-  const topHeight = topBarHeight(showHighscoreBar);
+  const topHeight = topBarHeight();
   // The pane the play screen fills: the window in the game, a pane beside its
   // controls in the admin Playground. The canvas interface is framed to it.
   const paneBox = useScreenBox(paneRef);
@@ -1014,9 +992,6 @@ export function GameScreen({
                 scopeCreepPercent={gameState.creepPercent}
                 accentColor={accentColor}
                 certificateProgress={certificateProgress}
-                showHighscoreBar={showHighscoreBar}
-                highscoreCurrent={projectedScore}
-                highscoreTarget={highscoreTarget}
                 // Opened to BROWSE, so nothing leads.
                 onExpand={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
               />

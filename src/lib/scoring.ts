@@ -291,7 +291,6 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
       superiorMultiplier: 2.0,
     },
     lampLockMultiplier: 1.5,
-    highscoreBonusMultiplier: 1.25,
     shipEarly: {
       maxPercent: 30,
       thresholds: [
@@ -328,7 +327,6 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
             axes: { ...DEFAULT_SCORING_CONFIG.scoring.axes, ...parsed.scoring.axes },
             lockQuality: { ...DEFAULT_SCORING_CONFIG.scoring.lockQuality, ...parsed.scoring.lockQuality },
             lampLockMultiplier: parsed.scoring.lampLockMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.lampLockMultiplier,
-            highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             shipEarly: { ...DEFAULT_SCORING_CONFIG.scoring.shipEarly, ...parsed.scoring.shipEarly },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
           },
@@ -382,12 +380,6 @@ export function getLockQuality(): { superiorThresholdFraction: number; superiorM
 export function getLampLockMultiplier(): number {
   const m = loadedConfig.scoring?.lampLockMultiplier;
   return Number.isFinite(m) && m > 0 ? m : DEFAULT_SCORING_CONFIG.scoring.lampLockMultiplier;
-}
-
-/** The beat-the-highscore score multiplier from the loaded config (#45). */
-export function getHighscoreBonusMultiplier(): number {
-  const m = loadedConfig.scoring.highscoreBonusMultiplier;
-  return Number.isFinite(m) && m > 0 ? m : 1;
 }
 
 /**

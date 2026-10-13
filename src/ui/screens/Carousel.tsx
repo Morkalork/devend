@@ -29,7 +29,7 @@ import { animate } from "motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { COLOR, Icon, Pressable, RADIUS, View, tint, useUiScreen } from "../kit/ui";
 import {
-  CAROUSEL_GAP, DEFAULT_CARD_WIDTH, canStep, clampIndex, parseCardWidth, pipsFor, releaseIndex, stripOffset,
+  CAROUSEL_GAP, DEFAULT_CARD_WIDTH, canStep, clampIndex, parseCardWidth, pipsFor, releaseIndex, stripOffset, stripOffsetFrom,
 } from "./carouselModel";
 
 interface CarouselProps {
@@ -42,6 +42,13 @@ interface CarouselProps {
    * I picked. Losing that was the main thing a strip took away from the grid.
    */
   marks?: boolean[];
+  /** Per-item "cannot be taken right now" flags: a hollow pip, so what is out of reach shows without swiping. */
+  unavailable?: boolean[];
+  /**
+   * Move the strip to an item from outside (the store's "Blocked by" link).
+   * The nonce makes a second jump to the same index still move it.
+   */
+  focus?: { index: number; nonce: number } | null;
   /** Accessible name for the strip. */
   label: string;
   prevLabel: string;
@@ -50,6 +57,11 @@ interface CarouselProps {
   positionLabel: (index: number, total: number) => string;
   /** Card width (`Npx`, `Nvw` or `min(a, b)`), relative to the screen so a phone shows one and a desktop a few. */
   cardWidth?: string;
+  /**
+   * Line the active card's left edge up with a column this wide, centred in
+   * the strip, instead of centring the card. Unset: the card is centred.
+   */
+  alignWidth?: number;
   /** Kept for prop parity with the DOM component; there are no CSS classes on the canvas. */
   className?: string;
 }
@@ -64,11 +76,14 @@ const ARROWS_MIN_SCREEN = 640;
 export function Carousel({
   items,
   marks = [],
+  unavailable = [],
+  focus = null,
   label,
   prevLabel,
   nextLabel,
   positionLabel,
   cardWidth = DEFAULT_CARD_WIDTH,
+  alignWidth,
 }: CarouselProps) {
   const screen = useUiScreen();
   const viewW = Math.min(screen.width, MAX_STRIP_WIDTH);
@@ -80,7 +95,10 @@ export function Carousel({
 
   const rowRef = useRef<LayoutContainer | null>(null);
   // The strip's current translation, so an animation starts from wherever a drag left it.
-  const pos = useRef(stripOffset(0, cardW, viewW));
+  const offsetOf = useCallback((index: number) => (alignWidth === undefined
+    ? stripOffset(index, cardW, viewW)
+    : stripOffsetFrom(index, cardW, Math.max(0, (viewW - alignWidth) / 2))), [alignWidth, cardW, viewW]);
+  const pos = useRef(offsetOf(0));
   const drag = useRef<{ x: number; y: number; live: boolean; horizontal: boolean; from: number } | null>(null);
   // The one running slide, so a new one (or unmounting) stops it rather than two fighting over the strip.
   const slide = useRef<{ stop: () => void } | null>(null);
@@ -105,8 +123,8 @@ export function Carousel({
 
   // Settle on the active card whenever it (or the geometry) changes.
   useEffect(() => {
-    slideTo(stripOffset(active, cardW, viewW), 0.3);
-  }, [active, cardW, viewW, slideTo]);
+    slideTo(offsetOf(active), 0.3);
+  }, [active, offsetOf, slideTo]);
 
   const step = useCallback((delta: -1 | 1) => {
     setActive(a => clampIndex(clampIndex(a, count) + delta, count));
@@ -156,10 +174,17 @@ export function Carousel({
     const next = releaseIndex(active, dx, cardW, count);
     if (next !== active) setActive(next);
     // Same card: spring back to it.
-    else slideTo(stripOffset(active, cardW, viewW), 0.25);
-  }, [active, cardW, viewW, count, slideTo]);
+    else slideTo(offsetOf(active), 0.25);
+  }, [active, cardW, count, offsetOf, slideTo]);
 
-  const pips = useMemo(() => pipsFor(count, active, marks), [count, active, marks]);
+  // An outside jump (a blocked ticket's link to what blocks it).
+  useEffect(() => {
+    if (focus) {
+      setActive(clampIndex(focus.index, count));
+    }
+  }, [focus, count]);
+
+  const pips = useMemo(() => pipsFor(count, active, marks, unavailable), [count, active, marks, unavailable]);
   const showArrows = screen.width >= ARROWS_MIN_SCREEN;
 
   const arrow = (delta: -1 | 1) => (
@@ -215,9 +240,12 @@ export function Carousel({
               onTap={() => setActive(i)}
               layout={{ padding: 4, margin: -4 }}
             >
+              {/* Hollow: that ticket cannot be taken right now. */}
               <View layout={{
                 width: pip.active ? 20 : 8, height: 8, borderRadius: RADIUS.full,
-                backgroundColor: pip.picked ? 0x4ade80 : tint(COLOR.foreground, pip.active ? 0.8 : 0.25),
+                ...(pip.unavailable
+                  ? { borderWidth: 1.5, borderColor: tint(COLOR.foreground, pip.active ? 0.8 : 0.35) }
+                  : { backgroundColor: pip.picked ? 0x4ade80 : tint(COLOR.foreground, pip.active ? 0.8 : 0.25) }),
               }} />
             </Pressable>
           ))}

@@ -102,10 +102,6 @@ export interface ScoringConfig {
      * safe to tune: all of it lands in the capped Craft axis.
      */
     lampLockMultiplier: number;
-    // Multiplier applied to a map's score when the player beats that map's
-    // existing highscore (#45). Applied AFTER the per-map cap, so it genuinely
-    // rewards a record instead of being clamped away.
-    highscoreBonusMultiplier: number;
     // Ship Early tempo bonus: ladder of active-play seconds to first meet the
     // win condition, scaled by the map's ball count (windows are per ball, so
     // busy maps get proportionally more time). The clock stops when the push
@@ -128,7 +124,7 @@ export interface ScoringConfig {
 
 export interface ScoreBreakdown {
   /** Thrift's payout. Kept under the old name so the results screen, the
-   *  level-complete payload and the highscore ledger stay source-compatible. */
+   *  level-complete payload and the run ledger stay source-compatible. */
   underParBonus: number;
   /** Greed's payout, under its old name for the same reason. */
   spaceBonus: number;

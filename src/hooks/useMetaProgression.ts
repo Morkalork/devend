@@ -14,9 +14,7 @@ import {
   META_STATS_STORAGE_KEY,
   UNLOCK_STATE_STORAGE_KEY,
 } from '@/types/metaProgression';
-import { bestHighscore, isHighscoreRecord } from '@/lib/highscore';
 import { seedLegacyFeatureUnlocks } from '@/lib/features';
-import { ECONOMY_SCALE_VERSION, deflateRecord, needsDeflation } from '@/lib/economyDeflation';
 
 /**
  * Load meta stats from localStorage
@@ -64,8 +62,8 @@ function saveMetaStats(stats: MetaProgressionStats): void {
  */
 function emptyUnlockState(): UnlockState {
   return {
-    unlockedIds: [], metArchetypes: [], loadoutsIntroduced: false, mapHighscores: {},
-    encounteredBallTypeIds: [], archetypeBests: {}, unlockedFeatureIds: [],
+    unlockedIds: [], metArchetypes: [], loadoutsIntroduced: false,
+    encounteredBallTypeIds: [], unlockedFeatureIds: [],
     lastRunUpgradeIds: [],
   };
 }
@@ -76,20 +74,6 @@ function loadUnlockState(): UnlockState {
     if (!stored) return emptyUnlockState();
 
     const parsed = JSON.parse(stored);
-    // Only accept finite positive numbers for the map-highscore record.
-    const mapHighscores: Record<string, number> = {};
-    if (parsed.mapHighscores && typeof parsed.mapHighscores === 'object') {
-      for (const [id, v] of Object.entries(parsed.mapHighscores)) {
-        if (typeof v === 'number' && Number.isFinite(v) && v > 0) mapHighscores[id] = v;
-      }
-    }
-    // Same sanitising for the per-archetype bests.
-    const archetypeBests: Record<string, number> = {};
-    if (parsed.archetypeBests && typeof parsed.archetypeBests === 'object') {
-      for (const [tag, v] of Object.entries(parsed.archetypeBests)) {
-        if (typeof v === 'number' && Number.isFinite(v) && v > 0) archetypeBests[tag] = v;
-      }
-    }
     // Migrate legacy unlock flags into the general feature list so players who
     // already earned a feature (e.g. loadouts, via the old first-win flag) keep
     // it under the new "Feature Unlocked" system.
@@ -97,18 +81,11 @@ function loadUnlockState(): UnlockState {
       Array.isArray(parsed.unlockedFeatureIds) ? parsed.unlockedFeatureIds : [],
       parsed.loadoutsIntroduced === true,
     );
-    // Both records are banked OVERTIME, so a save written before the economy
-    // was deflated holds old-scale hours. Rescale once, stamped, or every
-    // record stays 4x above what the new economy can pay and no highscore is
-    // ever beaten again.
-    const stale = needsDeflation(parsed.economyScale);
     return {
       unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : [],
       metArchetypes: Array.isArray(parsed.metArchetypes) ? parsed.metArchetypes.filter((t: unknown) => typeof t === 'string') : [],
       loadoutsIntroduced: parsed.loadoutsIntroduced === true,
-      mapHighscores: stale ? deflateRecord(mapHighscores) : mapHighscores,
       encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
-      archetypeBests: stale ? deflateRecord(archetypeBests) : archetypeBests,
       unlockedFeatureIds: featureIds,
       lastRunUpgradeIds: Array.isArray(parsed.lastRunUpgradeIds) ? parsed.lastRunUpgradeIds : [],
     };
@@ -122,13 +99,7 @@ function loadUnlockState(): UnlockState {
  */
 function saveUnlockState(state: UnlockState): void {
   try {
-    // The stamp rides along with the state rather than living in it: it is a
-    // fact about the SAVE, not about the player's unlocks, and stamping on
-    // write is what makes the load-side rescale run exactly once.
-    localStorage.setItem(
-      UNLOCK_STATE_STORAGE_KEY,
-      JSON.stringify({ ...state, economyScale: ECONOMY_SCALE_VERSION }),
-    );
+    localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
     console.warn('Failed to persist unlock state', e);
   }
@@ -154,23 +125,19 @@ export function useMetaProgression() {
   const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
   const [metArchetypes, setMetArchetypes] = useState<string[]>([]);
   const [loadoutsIntroduced, setLoadoutsIntroduced] = useState(false);
-  const [mapHighscores, setMapHighscores] = useState<Record<string, number>>({});
   const [encounteredBallTypeIds, setEncounteredBallTypeIds] = useState<string[]>([]);
   const [lastRunUpgradeIds, setLastRunUpgradeIds] = useState<string[]>([]);
-  const [archetypeBests, setArchetypeBests] = useState<Record<string, number>>({});
   const [unlockedFeatureIds, setUnlockedFeatureIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Refs mirror the persisted unlock state so recordArchetypeMet /
-  // introduceLoadouts / recordMapHighscore / recordBallTypeEncountered can
+  // introduceLoadouts / recordBallTypeEncountered can
   // read/write it synchronously without stale state.
   const unlockedIdsRef = useRef<string[]>([]);
   const metArchetypesRef = useRef<string[]>([]);
   const loadoutsIntroducedRef = useRef(false);
-  const mapHighscoresRef = useRef<Record<string, number>>({});
   const encounteredBallTypeIdsRef = useRef<string[]>([]);
   const lastRunUpgradeIdsRef = useRef<string[]>([]);
-  const archetypeBestsRef = useRef<Record<string, number>>({});
   const unlockedFeatureIdsRef = useRef<string[]>([]);
 
   // Persist the full unlock state from the refs (single source, so no save site
@@ -180,9 +147,7 @@ export function useMetaProgression() {
       unlockedIds: unlockedIdsRef.current,
       metArchetypes: metArchetypesRef.current,
       loadoutsIntroduced: loadoutsIntroducedRef.current,
-      mapHighscores: mapHighscoresRef.current,
       encounteredBallTypeIds: encounteredBallTypeIdsRef.current,
-      archetypeBests: archetypeBestsRef.current,
       unlockedFeatureIds: unlockedFeatureIdsRef.current,
       lastRunUpgradeIds: lastRunUpgradeIdsRef.current,
     });
@@ -196,18 +161,14 @@ export function useMetaProgression() {
     setUnlockedIds(loadedUnlocks.unlockedIds);
     setMetArchetypes(loadedUnlocks.metArchetypes);
     setLoadoutsIntroduced(loadedUnlocks.loadoutsIntroduced);
-    setMapHighscores(loadedUnlocks.mapHighscores);
     setEncounteredBallTypeIds(loadedUnlocks.encounteredBallTypeIds);
-    setArchetypeBests(loadedUnlocks.archetypeBests);
     setUnlockedFeatureIds(loadedUnlocks.unlockedFeatureIds);
     setLastRunUpgradeIds(loadedUnlocks.lastRunUpgradeIds);
     unlockedIdsRef.current = loadedUnlocks.unlockedIds;
     metArchetypesRef.current = loadedUnlocks.metArchetypes;
     loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
-    mapHighscoresRef.current = loadedUnlocks.mapHighscores;
     lastRunUpgradeIdsRef.current = loadedUnlocks.lastRunUpgradeIds;
     encounteredBallTypeIdsRef.current = loadedUnlocks.encounteredBallTypeIds;
-    archetypeBestsRef.current = loadedUnlocks.archetypeBests;
     unlockedFeatureIdsRef.current = loadedUnlocks.unlockedFeatureIds;
     setIsLoaded(true);
   }, []);
@@ -328,30 +289,6 @@ export function useMetaProgression() {
   }, [persistUnlockState]);
 
   /**
-   * Record a map's final score. Updates the stored best only if the new score is
-   * higher, and reports whether it beat a PREVIOUS highscore (isRecord) - which
-   * is what grants the beat-highscore bonus - vs. simply setting the first-ever
-   * baseline (wasFirstPlay). Idempotent-safe to call once per map completion.
-   */
-  const recordMapHighscore = useCallback(
-    (mapId: string, score: number): { previous: number | null; isRecord: boolean; wasFirstPlay: boolean } => {
-      const prevAll = mapHighscoresRef.current;
-      const previous = Object.prototype.hasOwnProperty.call(prevAll, mapId) ? prevAll[mapId] : null;
-      const wasFirstPlay = previous === null;
-      const isRecord = isHighscoreRecord(previous, score);
-      const best = bestHighscore(previous, score);
-      if (best !== previous) {
-        const next = { ...prevAll, [mapId]: best };
-        mapHighscoresRef.current = next;
-        setMapHighscores(next);
-        persistUnlockState();
-      }
-      return { previous, isRecord, wasFirstPlay };
-    },
-    [persistUnlockState],
-  );
-
-  /**
    * Record that the player has LOCKED (captured) a ball of this type at least
    * once. Fired once per lock (see GameCanvas.onBallTypeLocked); idempotent for
    * a type already encountered. Drives the tutorial's ball-types section - see
@@ -366,27 +303,6 @@ export function useMetaProgression() {
     persistUnlockState();
     return true;
   }, [persistUnlockState]);
-
-  /**
-   * Record a finished run's banked overtime against its dominant build
-   * archetype (see buildRecap.ts). Updates the stored best only when beaten,
-   * and reports the previous best so the result screen can celebrate records.
-   */
-  const recordArchetypeBest = useCallback(
-    (tag: string, score: number): { previous: number | null; isRecord: boolean } => {
-      const prevAll = archetypeBestsRef.current;
-      const previous = Object.prototype.hasOwnProperty.call(prevAll, tag) ? prevAll[tag] : null;
-      const isRecord = score > 0 && (previous === null || score > previous);
-      if (isRecord) {
-        const next = { ...prevAll, [tag]: score };
-        archetypeBestsRef.current = next;
-        setArchetypeBests(next);
-        persistUnlockState();
-      }
-      return { previous, isRecord };
-    },
-    [persistUnlockState],
-  );
 
   /**
    * Reveal the loadout system (called on the first win). Returns true only the
@@ -427,16 +343,12 @@ export function useMetaProgression() {
     setUnlockedIds([]);
     setMetArchetypes([]);
     setLoadoutsIntroduced(false);
-    setMapHighscores({});
     setEncounteredBallTypeIds([]);
-    setArchetypeBests({});
     setUnlockedFeatureIds([]);
     unlockedIdsRef.current = [];
     metArchetypesRef.current = [];
     loadoutsIntroducedRef.current = false;
-    mapHighscoresRef.current = {};
     encounteredBallTypeIdsRef.current = [];
-    archetypeBestsRef.current = {};
     unlockedFeatureIdsRef.current = [];
     saveMetaStats({ ...DEFAULT_META_STATS });
     saveUnlockState(emptyUnlockState());
@@ -447,11 +359,9 @@ export function useMetaProgression() {
     isLoaded,
     metArchetypes,
     loadoutsIntroduced,
-    mapHighscores,
     encounteredBallTypeIds,
     lastRunUpgradeIds,
     recordRunUpgrades,
-    archetypeBests,
     unlockedFeatureIds,
     updateStats,
     recordLevelReached,
@@ -461,9 +371,7 @@ export function useMetaProgression() {
     recordLivesLost,
     recordPushBonusBanked,
     recordArchetypeMet,
-    recordMapHighscore,
     recordBallTypeEncountered,
-    recordArchetypeBest,
     introduceLoadouts,
     unlockFeature,
     isFeatureUnlocked,

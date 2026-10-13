@@ -353,7 +353,6 @@
     "breakBonus": "Demolition Bonus",
     "chestBonus": "Treasure Hauled",
     "shipEarly": "Ship Early ({{seconds}}s)",
-    "newHighscore": "New Highscore",
     "totalBonus": "Total Bonus",
     "overtimeEarned": "Overtime Earned",
     "totalOvertime": "Total Overtime",
@@ -466,11 +465,6 @@
           }
         }
       },
-      "newHighscore": {
-        "title": "New Highscore",
-        "body": "You beat this map's record, so the payout is x1.25. Applied after the cap, so it always pays extra.",
-        "tip": "Records are kept per map. A strong upgrade build can beat your old scores map after map."
-      },
       "totalBonus": {
         "title": "Total Bonus",
         "body": "All this level's bonuses added together: par, space, locks, demolition, tempo and push.",
@@ -478,8 +472,8 @@
       },
       "overtimeEarned": {
         "title": "Overtime Earned",
-        "body": "The level's total: scaled base plus all bonuses, capped at twice the base. A highscore multiplies past the cap. The number after the slash is the most this map could have paid.",
-        "tip": "Hitting the cap often? Chase the highscore multiplier: it applies after the cap."
+        "body": "The level's total: scaled base plus all bonuses, capped at twice the base. The number after the slash is the most this map could have paid.",
+        "tip": "Hitting the cap often? The hours listed below the Score line, such as the win bonus, are paid on top of it."
       },
       "totalOvertime": {
         "title": "Total Overtime",
@@ -532,7 +526,6 @@
         "tip": "Herd balls into one pocket and close it with one fence. Two pays; four pays far more."
       }
     },
-    "newPersonalBest": "New personal best, and you are still going!",
     "breakdownTitle": "Score breakdown",
     "winReason": {
       "label": "Won by",
@@ -634,7 +627,6 @@
     "spaceLeft": "Remaining",
     "spaceCleared": "Cleared",
     "spaceGoalReached": "Goal reached",
-    "recordPace": "RECORD",
     "currentlyReducingBy": "Currently reducing by {{percent}}%",
     "continues_one": "{{count}} Continue banked",
     "continues_other": "{{count}} Continues banked",
@@ -913,7 +905,11 @@
     "statusInSprint": "In sprint",
     "statusDone": "Done",
     "statusBlocked": "Blocked",
-    "statusOverCapacity": "Over capacity",
+    "statusUnfunded": "Unfunded",
+    "blockedBy": "Blocked by",
+    "sprintWontFit_one": "{{count}} ticket won't fit ({{hours}}h short)",
+    "sprintWontFit_other": "{{count}} tickets won't fit ({{hours}}h short on the closest)",
+    "shortBy": "{{hours}}h short",
     "abilityEveryMap": "One every map, {{count}} left",
     "abilitySlotClosed": "Ability slot closed: your bar is full",
     "freeAbilityGranted": "{{name}} added to your bar",
@@ -965,10 +961,7 @@
       "risk": "Crunch Junkie",
       "safety": "Defensive Programmer"
     },
-    "capstoneLine": "Capstone: {{name}}",
-    "newRecord": "New personal best for {{archetype}} builds: {{hours}}h (was {{previous}}h)",
-    "firstRecord": "First {{archetype}} build on record: {{hours}}h banked",
-    "bestSoFar": "Best {{archetype}} build so far: {{hours}}h"
+    "capstoneLine": "Capstone: {{name}}"
   },
   "capstoneDraft": {
     "title": "Promotion",
@@ -1037,8 +1030,6 @@
     "topRuns": "All time Top 10",
     "emptyLadder": "No runs banked yet. Finish a run and it lands here.",
     "mapsLabel": "{{count}} maps",
-    "archetypeBests": "Archetype bests",
-    "mapRecords": "Map records",
     "back": "Back",
     "employeeOfMonth": "Employee of the Month",
     "lifetime": "Lifetime",
@@ -1075,7 +1066,6 @@
     "extraCertificateHours": "Certificate Hours per run +{{hours}}",
     "bankedSlowPerStep": "Ball speed {{percent}}% per 13h banked",
     "microManagerPerLock": "Ball speed {{percent}}% per locked ball",
-    "showHighscoreProgress": "Adds the map highscore bar to the HUD",
     "startingOvertime": "Start with +{{hours}}h overtime",
     "storeLockReliefOne": "The store never asks for more than one lock",
     "storeLockReliefFull": "The store never asks for locks at all",

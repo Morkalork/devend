@@ -564,7 +564,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 modifierSources={session.modifierSources}
                 tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
-                mapHighscores={session.mapHighscores}
                 capstone={session.capstone}
                 runOffer={session.runOffer}
                 scalingReadouts={session.scalingReadouts}
@@ -711,8 +710,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   monthlyBests={session.monthlyBests}
                   dailyBests={session.dailyBests}
                   dailyStreak={session.dailyStreak}
-                  archetypeBests={session.archetypeBests}
-                  mapHighscores={session.mapHighscores}
                   metaStats={session.metaStats}
                   onBack={handleHallBack}
                   accentColor={accentHex}
@@ -826,7 +823,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             onContinue={session.handleContinueFromOverlay}
             accentColor={accentHex}
             newlyUnlockedCerts={session.pendingCertUnlocks}
-            pace={session.levelPace}
             pipeline={session.betweenMapPlan}
           />
         )}

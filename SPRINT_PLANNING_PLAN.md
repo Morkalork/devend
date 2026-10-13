@@ -175,8 +175,8 @@ pools open up over runs rather than all at once:
 - **Specialisations**: three from the start (safety, tempo, bank: the readable
   ones). The other three unlock by *meeting the archetype*: own three upgrades
   of the tag in one run (the set bonus firing is the moment, and the toast
-  can say "Containment is now a Specialisation"). `metaStats` already tracks
-  `archetypeBests`, so the check is a lookup.
+  can say "Containment is now a Specialisation"). The unlock state already
+  tracks `metArchetypes`, so the check is a lookup.
 - **Gambles**: Death March from the start; Hiring Freeze after the first win;
   Headhunted after reaching map 20; Unicorn is always in the pool (a jackpot
   that has to be unlocked first is not a jackpot).

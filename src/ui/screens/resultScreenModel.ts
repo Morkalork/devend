@@ -118,16 +118,11 @@ export interface RecapBlock {
   /** Tag chips, most-owned first, zero counts dropped. */
   chips: Array<{ tag: UpgradeTag; count: number }>;
   capstoneText: string | null;
-  /** A new (or first) per-archetype best. */
-  recordText: string | null;
-  bestSoFarText: string | null;
 }
 
-/** Build recap: what this run WAS - the build's name, the capstone, a per-archetype best. */
+/** Build recap: what this run WAS - the build's name and the capstone. */
 export function recapBlock(runRecap: RunRecap | null, t: TFunction): RecapBlock | null {
   if (!runRecap) return null;
-  const tagLabel = (tag: UpgradeTag) => t(`upgradeShop.tags.${tag}`);
-  const { primary } = runRecap;
   return {
     buildLine: buildIdentity(runRecap, t).buildLine,
     chips: Object.entries(runRecap.tagCounts)
@@ -135,13 +130,5 @@ export function recapBlock(runRecap: RunRecap | null, t: TFunction): RecapBlock 
       .filter(([, count]) => count > 0)
       .map(([tag, count]) => ({ tag: tag as UpgradeTag, count })),
     capstoneText: runRecap.capstoneName ? t("buildRecap.capstoneLine", { name: runRecap.capstoneName }) : null,
-    recordText: primary && runRecap.isArchetypeRecord
-      ? runRecap.previousBest !== null
-        ? t("buildRecap.newRecord", { archetype: tagLabel(primary), hours: runRecap.score, previous: runRecap.previousBest })
-        : t("buildRecap.firstRecord", { archetype: tagLabel(primary), hours: runRecap.score })
-      : null,
-    bestSoFarText: primary && !runRecap.isArchetypeRecord && runRecap.previousBest !== null
-      ? t("buildRecap.bestSoFar", { archetype: tagLabel(primary), hours: runRecap.previousBest })
-      : null,
   };
 }

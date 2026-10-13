@@ -5,9 +5,11 @@
  * same questions are asked of carouselModel.ts: where am I, where does a
  * released drag land, which offers are picked.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
-  CAROUSEL_GAP, SWIPE_THRESHOLD_PX, canStep, clampIndex, parseCardWidth, pipsFor, releaseIndex, stripOffset,
+  CAROUSEL_GAP, SWIPE_THRESHOLD_PX, canStep, clampIndex, parseCardWidth, pipsFor, releaseIndex, stripOffset, stripOffsetFrom,
 } from "@/ui/screens/carouselModel";
 
 const CARD_W = 340;
@@ -82,5 +84,20 @@ describe("the offer strip", () => {
     expect(parseCardWidth("250px", 390)).toBe(250);
     expect(parseCardWidth("nonsense", 1200)).toBe(340);
     expect(parseCardWidth(undefined, 390)).toBeCloseTo(304.2);
+  });
+});
+
+describe("stripOffsetFrom (the store's left-aligned strip)", () => {
+  // The store lines its tickets up with the Sprint panel above them.
+  it("puts the active card's left edge on the column's left edge", () => {
+    const inset = 16;
+    for (let i = 0; i < 4; i++) {
+      expect(stripOffsetFrom(i, 313, inset) + i * (313 + CAROUSEL_GAP)).toBe(inset);
+    }
+  });
+
+  it("is what the store asks for", () => {
+    const shop = readFileSync(resolve(process.cwd(), "src/ui/screens/UpgradeShop.tsx"), "utf8");
+    expect(shop).toContain("alignWidth={column}");
   });
 });

@@ -1,8 +1,8 @@
 /**
  * HallOfFameScreen: "Performance Review", the records viewer (HIGHSCORES.md
  * Phase B; canvas port of components/game/HallOfFameScreen). Purely
- * presentational: the all-time Top 10 run ladder, the six archetype bests,
- * and per-map records. All data lives in useHallOfFame /
+ * presentational: the all-time Top 10 run ladder, the Daily Stand-up,
+ * Employee of the Month and lifetime stats. All data lives in useHallOfFame /
  * useMetaProgression and arrives as props.
  *
  * The DOM page sat on CRTBackground, which stays DOM and is drawn once,
@@ -12,17 +12,16 @@
  */
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Medal, ArrowLeft, Award, CalendarDays, Flame, Map as MapIcon } from "lucide-react";
+import { Medal, ArrowLeft, Award, CalendarDays, Flame } from "lucide-react";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import type { MetaProgressionStats } from "@/types/metaProgression";
-import { TAG_ORDER } from "@/lib/buildRecap";
 import { Appear, COLOR, Icon, Label, RADIUS, ScrollView, TEXT, View, tint, useUiScreen, type IconSource } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
 import { MenuHeading } from "./welcomeParts";
 import { ArcadeButton } from "../kit/ui";
 import {
-  RANK_COLORS, SM_BREAKPOINT, archetypeBestText, buildName, capitalizeWords, dayLabel, fmtDate, gridRows,
-  hoursText, lifetimeStats, monthLabel, recentDailies, showDaily, sortMapRecords, sortPlaques,
+  RANK_COLORS, SM_BREAKPOINT, buildName, capitalizeWords, dayLabel, fmtDate, gridRows,
+  hoursText, lifetimeStats, monthLabel, recentDailies, showDaily, sortPlaques,
 } from "./hallModel";
 
 interface HallOfFameScreenProps {
@@ -32,8 +31,6 @@ interface HallOfFameScreenProps {
   /** Daily Stand-up: best run per "YYYY-MM-DD" + attendance streak (Phase D). */
   dailyBests?: Record<string, RunLedgerEntry>;
   dailyStreak?: { count: number; lastKey: string };
-  archetypeBests: Record<string, number>;
-  mapHighscores: Record<string, number>;
   metaStats: MetaProgressionStats;
   onBack: () => void;
   accentColor?: string;
@@ -49,8 +46,6 @@ export function HallOfFameScreen({
   monthlyBests = {},
   dailyBests = {},
   dailyStreak = { count: 0, lastKey: "" },
-  archetypeBests,
-  mapHighscores,
   metaStats,
   onBack,
 }: HallOfFameScreenProps) {
@@ -62,7 +57,6 @@ export function HallOfFameScreen({
   const contentWidth = Math.min(672, screen.width - pad * 2);
   const lang = i18n.language;
 
-  const mapRecords = sortMapRecords(mapHighscores);
   const plaques = sortPlaques(monthlyBests);
   const dailies = recentDailies(dailyBests);
 
@@ -87,24 +81,6 @@ export function HallOfFameScreen({
                   </Appear>
                 ))}
               </View>
-            </HallSection>
-
-            {/* Archetype bests: one slot per build identity; empty slots are
-                quiet quests ("no Freeze run yet"). */}
-            <HallSection title={t("hallOfFame.archetypeBests")}>
-              <HallGrid cols={wide ? 3 : 2} columnGap={8} rowGap={8} items={TAG_ORDER.map(tag => {
-                const best = archetypeBests[tag];
-                return (
-                  <View key={tag} layout={{
-                    flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8,
-                    paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
-                    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLOR.border, backgroundColor: CARD_HALF,
-                  }} alpha={best ? 1 : 0.55}>
-                    <TagChip tag={tag} pill sizeClass="text-[10px]" />
-                    <Label text={archetypeBestText(best)} size={TEXT.sm} font="display" weight="700" />
-                  </View>
-                );
-              })} />
             </HallSection>
 
             {/* Daily Stand-up: attendance streak + the last banked days. */}
@@ -162,15 +138,6 @@ export function HallOfFameScreen({
               ))} />
             </HallSection>
 
-            {/* Per-map records */}
-            {mapRecords.length > 0 && (
-              <HallSection title={t("hallOfFame.mapRecords")} icon={MapIcon}>
-                <HallGrid cols={wide ? 3 : 2} columnGap={16} rowGap={4} items={mapRecords.map(([mapId, score]) => (
-                  <HallRecordCell key={mapId} name={mapId} value={hoursText(score)} />
-                ))} />
-              </HallSection>
-            )}
-
             {/* Back */}
             <ArcadeButton variant="secondary" size="sm" text={t("hallOfFame.back")} icon={ArrowLeft} onTap={onBack} layout={{ marginTop: 8, minWidth: 200 }} />
           </View>
@@ -206,7 +173,7 @@ function HallGrid({ cols, columnGap, rowGap, items }: { cols: number; columnGap:
   );
 }
 
-/** A day or map record: name left, hours right, a hairline under it. */
+/** A day's best: name left, hours right, a hairline under it. */
 function HallRecordCell({ name, value }: { name: string; value: string }) {
   return (
     <View>

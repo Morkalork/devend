@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { HUD, topBarHeight } from "@/ui/game/hudMetrics";
 import {
-  FLASH_REST, heartPulse, highscoreBar, spaceDetail, statFlashAt,
+  FLASH_REST, heartPulse, spaceDetail, statFlashAt,
 } from "@/ui/game/topBarModel";
 import { IDLE, SWIPE_EXPAND_PX, swipeDown, swipeMove, swipeUp } from "@/ui/game/topBarGestures";
 
@@ -18,15 +18,14 @@ const bar = read("src/ui/game/GameTopBar.tsx");
 
 describe("the bar's height", () => {
   it("is the HUD's reserved height, row by row", () => {
-    expect(topBarHeight(false)).toBe(HUD.topRow1 + HUD.topRow2);
-    expect(topBarHeight(true)).toBe(HUD.topRow1 + HUD.topRow2 + HUD.highscoreRow);
+    expect(topBarHeight()).toBe(HUD.topRow1 + HUD.topRow2);
   });
 
   it("gives the goal row its filled height from the first frame", () => {
     // The goals arrive a commit after mount; a content-sized row grew when
     // they did and pushed the placed board down 20px.
     expect(bar).toContain("height: HUD.topRow2");
-    expect(bar).toContain("height: topBarHeight(showHighscoreBar)");
+    expect(bar).toContain("height: topBarHeight()");
     expect(bar).toContain("width: screen.width");
   });
 });
@@ -75,31 +74,6 @@ describe("what the status bar is allowed to carry", () => {
 
   it("leaves the map's own numbers on it", () => {
     for (const kept of ["spaceRemaining", "lockedBalls", "goals"]) expect(bar).toContain(kept);
-  });
-});
-
-describe("the highscore row", () => {
-  it("draws nothing to chase without a stored highscore", () => {
-    expect(highscoreBar(50, 20, 100, 0)).toBeNull();
-  });
-
-  it("tracks capture toward the clear and score toward the record", () => {
-    const b = highscoreBar(60, 20, 300, 1000)!;
-    expect(b.captureFraction).toBeCloseTo(0.5);
-    expect(b.hsFraction).toBeCloseTo(0.3);
-    expect(b.beat).toBe(false);
-    expect(b.percent).toBe(30);
-  });
-
-  it("says record pace instead of a percentage once ahead", () => {
-    const b = highscoreBar(60, 20, 1200, 1000)!;
-    expect(b.beat).toBe(true);
-    expect(b.hsFraction).toBe(1);
-    expect(b.percent).toBeNull();
-  });
-
-  it("has no capture bar on a map that requires nothing cleared", () => {
-    expect(highscoreBar(60, 100, 1, 10)!.captureFraction).toBe(0);
   });
 });
 

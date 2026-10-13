@@ -243,7 +243,7 @@ describe("a selected ticket looks selected (shopSelectionVisible)", () => {
     expect(PARTS).toMatch(/borderWidth: 2, borderColor: selected \? accent : ROLE\.edge/);
   });
 
-  it("never draws a selected ticket as over capacity", () => {
+  it("never draws a selected ticket as unfunded", () => {
     expect(ticketStatus({ selected: true, owned: false, locked: false, cantAfford: true })).toBe("inSprint");
   });
 
@@ -259,7 +259,7 @@ describe("a selected ticket looks selected (shopSelectionVisible)", () => {
       { selected: false, owned: false, locked: false, cantAfford: true },
       { selected: false, owned: false, locked: false, cantAfford: false },
     ].map(ticketStatus);
-    expect(states).toEqual(["inSprint", "done", "blocked", "overCapacity", "todo"]);
+    expect(states).toEqual(["inSprint", "done", "blocked", "unfunded", "todo"]);
   });
 });
 

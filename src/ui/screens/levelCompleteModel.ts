@@ -10,7 +10,7 @@
 import type { TFunction } from "i18next";
 import type { LucideIcon } from "lucide-react";
 import {
-  Trophy, Sparkles, TrendingUp, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Gift, CodeXml,
+  Trophy, Sparkles, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Gift, CodeXml,
 } from "lucide-react";
 import type { LevelScoreData } from "@/types/game";
 import { isFlawlessRun } from "@/lib/scoreAxes";
@@ -29,7 +29,7 @@ export const TW = {
   emerald400: 0x34d399,
   yellow400: 0xfacc15,
   yellow500: 0xeab308,
-  /** The gold of FLAWLESS, a new highscore and a personal best. */
+  /** The gold of FLAWLESS and of a new best run on the ladder. */
   gold: 0xffd54a,
   /** The second player's colour. */
   peer: 0xffb347,
@@ -56,7 +56,6 @@ export const STAT_INFO: Record<string, { icon: LucideIcon; color: number }> = {
   pickupBonus: { icon: Gift, color: TW.fuchsia400 },
   capBonus: { icon: Clock, color: COLOR.primary },
   qualifiedOvertime: { icon: Lock, color: TW.emerald400 },
-  newHighscore: { icon: TrendingUp, color: TW.yellow400 },
   totalBonus: { icon: Sparkles, color: SUCCESS },
   overtimeEarned: { icon: Clock, color: COLOR.primary },
   // The DOM said text-accent-foreground, which is near-black in this theme and
@@ -147,8 +146,6 @@ export function levelCompleteModel(scoreData: LevelScoreData, t: TFunction): Lev
     breakBonus = 0,
     shipEarlyBonus = 0,
     pickupBonus = 0,
-    beatHighscore = false,
-    highscoreBonus = 0,
     wonByAllLocked = false,
     winReason,
     alsoClearedSpace = false,
@@ -193,7 +190,6 @@ export function levelCompleteModel(scoreData: LevelScoreData, t: TFunction): Lev
    */
   const onTopRows: OnTopRow[] = [
     { key: "winBonus", label: t("levelComplete.winBonus", { percent: Math.round(winBonusPercent) }), hours: winBonus, color: TW.violet400 },
-    { key: "newHighscore", label: t("levelComplete.newHighscore"), hours: beatHighscore ? highscoreBonus : 0, color: TW.gold },
     { key: "bouncerHours", label: t("levelComplete.bouncerHours"), hours: bouncerOvertime, color: COLOR.primary },
     { key: "pickupBonus", label: t("levelComplete.pickupHours"), hours: pickupBonus, color: TW.fuchsia400 },
     { key: "qualifiedOvertime", label: t("levelComplete.qualifiedOvertime"), hours: qualifiedOvertime, color: TW.emerald400 },

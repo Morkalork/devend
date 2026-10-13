@@ -42,8 +42,9 @@ import {
 } from "./shopParts";
 import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
-  priceOf, purchasesFor, restockCandidates, rollShelf, shelfTagCounts, selectionCost, shelfMarks, type StoreDealt,
+  missingPrereqs, priceOf, purchasesFor, restockCandidates, rollShelf, shelfTagCounts, selectionCost, shelfMarks, type StoreDealt,
 } from "./shopModel";
+import { ticketStatus, unavailable, wontFit } from "./storeBoardModel";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 
@@ -206,6 +207,8 @@ export function UpgradeShop({
   const [chooserGroup, setChooserGroup] = useState<string | null>(null);
   // A status pill's explanation (the DOM's hover title), opened by holding it.
   const [chipInfo, setChipInfo] = useState<{ text: string; color: number } | null>(null);
+  // A "Blocked by" link's jump: the strip moves to the blocker on the shelf.
+  const [jump, setJump] = useState<{ index: number; nonce: number } | null>(null);
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -362,10 +365,21 @@ export function UpgradeShop({
   const hasChips = inflationPercent > 0 || (!closed && (shopRestockCount > 0 || hasBudgetCycle));
   const cyan = COLOR.cyan;
 
+  const models = shelfItems.map(upgrade => cardModel({
+    upgrade, upgrades, selectedIds, allOwnedIds, isLocked, price: priceFor,
+    effectiveOvertime, remainingBudget, certChaseByKey,
+  }));
+  const statuses = models.map(ticketStatus);
+  // The dots under the strip: hollow for what is out of reach. Not on a closed
+  // store, where the whole shelf is already greyed and nothing is in reach.
+  const outOfReach = closed ? [] : statuses.map(unavailable);
+  const notFitting = closed ? null : wontFit(statuses.map((status, i) => ({ status, price: models[i].shownPrice })), remainingBudget);
+
   const cards = shelfItems.map((upgrade, index) => {
-    const model = cardModel({
-      upgrade, upgrades, selectedIds, allOwnedIds, isLocked, price: priceFor,
-      effectiveOvertime, remainingBudget, certChaseByKey,
+    const model = models[index];
+    const blockers = missingPrereqs(upgrade, upgrades, model.effectiveOwned).map(b => {
+      const at = shelfItems.findIndex(o => o.id === b.id);
+      return { upgrade: b, shelfIndex: at >= 0 ? at : null };
     });
     return (
       <TicketCard
@@ -376,6 +390,9 @@ export function UpgradeShop({
         index={index}
         shaking={shakingId === upgrade.id}
         accent={boardAccent}
+        remainingBudget={remainingBudget}
+        blockers={blockers}
+        onJump={i => setJump(prev => ({ index: i, nonce: (prev?.nonce ?? 0) + 1 }))}
         hasDiscount={hasDiscount}
         mapsRemaining={mapsRemaining}
         runContext={runContext}
@@ -461,7 +478,11 @@ export function UpgradeShop({
                 nextLabel={t("upgradeShop.nextOffer")}
                 positionLabel={(index, total) => t("upgradeShop.offerPosition", { index, total })}
                 cardWidth="min(76vw, 340px)"
+                // Tickets start on the column's left edge, under the Sprint panel and the backlog heading.
+                alignWidth={column}
                 marks={shelfMarks(shelfItems, upgrades, selectedIds, allOwnedIds)}
+                unavailable={outOfReach}
+                focus={jump}
                 items={cards}
               />
             </layoutContainer>
@@ -641,6 +662,7 @@ export function UpgradeShop({
             committed={selectedTotalCost}
             capacity={effectiveOvertime}
             accent={boardAccent}
+            wontFit={notFitting}
             onRemove={removeFromSprint}
           />
         </Appear>

@@ -40,16 +40,13 @@ interface LevelCompleteOverlayProps {
   buttonDelay?: number;
   /** Certs newly unlocked this level — shown before the Continue button */
   newlyUnlockedCerts?: Certificate[];
-  /** The one-time personal-best banner. Record Pace used to ride in here
-   *  too; see useGameSession for why it was taken out. */
-  pace?: { newPersonalBest: boolean } | null;
   /** The stages between this map and the next; a sample one in the gallery. */
   pipeline?: BetweenMapPlan;
   /** Force the full Debrief (breakdown, axes, totals) or the ticket; default: Admin's choice. */
   full?: boolean;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pace, pipeline, full }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pipeline, full }: LevelCompleteOverlayProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   // Tailwind's `sm:` breakpoint: the card and its type grow a step on a wide screen.
@@ -84,7 +81,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const plan = pipeline ?? samplePlan(levelNumber);
   const gold = TW.gold;
 
-  const continueButton = (
+  // `waiting` holds the button disabled while something above it still plays out.
+  const renderContinueButton = (waiting: boolean) => (
     <Appear fromY={10} delay={0.38} duration={0.22}>
       <ArcadeButton
         text={continueLabel(plan, "debrief", t)}
@@ -92,11 +90,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
         iconSize={sm ? 20 : 16}
         textSize={sm ? TEXT.base : TEXT.sm}
         contentLayout={{ paddingTop: sm ? 12 : 8, paddingBottom: sm ? 12 : 8 }}
-        disabled={chosen || !buttonReady}
-        onTap={() => { setChosen(true); onContinue(); }}
+        disabled={chosen || !buttonReady || waiting}
+        onTap={() => {
+          setChosen(true);
+          onContinue();
+        }}
       />
     </Appear>
   );
+  const continueButton = renderContinueButton(false);
   const certificates = newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
     <Appear delay={0.32} duration={0.22} layout={{ gap: 8 }}>
       {newlyUnlockedCerts.map(cert => (
@@ -108,13 +110,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           </View>
         </View>
       ))}
-    </Appear>
-  );
-  const personalBest = pace?.newPersonalBest && (
-    <Appear delay={0.35} fromScale={0.92} duration={0.3}
-      layout={{ paddingTop: 10, paddingBottom: 10, paddingLeft: 8, paddingRight: 8, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(gold, 0x66 / 255), backgroundColor: tint(gold, 0x1a / 255) }}>
-      <RichParagraph runs={[{ text: t("levelComplete.newPersonalBest") }]} size={TEXT.sm} weight="700" color={gold}
-        lead={<Icon icon={Medal} size={16} color={gold} />} leadGap={8} />
     </Appear>
   );
   const pushFailed = m.pushFailedText && (
@@ -148,9 +143,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   accent={accent} width={cardWidth} filled={fill.filled}
                   estimate={fill.done ? `+${displayLevelScore}h` : undefined} />
               </Appear>
-              {fill.done && personalBest}
               {fill.done && certificates}
-              {fill.done && continueButton}
+              {/* Always shown, so the way on is in view from the start; live once the card is filled in. */}
+              {renderContinueButton(!fill.done)}
             </View>
           </Pressable>
         </Appear>
@@ -416,9 +411,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               left={<Label text={t("levelComplete.totalOvertime")} size={sm ? TEXT.lg : TEXT.base} weight="700" />}
               right={<Label text={`${displayTotalScore}h`} size={sm ? TEXT["3xl"] : TEXT["2xl"]} weight="800" color={ROLE.hours} />} />
           </StatRow>
-
-          {/* Once per run: the moment the total passes the all-time best. */}
-          {personalBest}
 
           <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 4 }}>
             <Icon icon={Info} size={12} color={COLOR.mutedForeground} alpha={0.7} />

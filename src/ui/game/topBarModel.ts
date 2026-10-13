@@ -2,35 +2,6 @@
  * The arithmetic behind the canvas GameTopBar, kept out of the component so it
  * can be tested without a renderer.
  */
-export interface HighscoreBar {
-  /** Capture progress toward clearing the map, 0..1. */
-  captureFraction: number;
-  /** Projected score against the map's highscore, 0..1. */
-  hsFraction: number;
-  /** On record pace. */
-  beat: boolean;
-  /** The readout beside the bars: a percentage, or null for "record pace". */
-  percent: number | null;
-}
-
-/**
- * Highscore progress (#45): the Benchmarking certificate reveals a second bar
- * tracking the live projected score against the map highscore, under one
- * showing capture progress toward clearing the map. Null when there is no
- * highscore to chase.
- */
-export function highscoreBar(
-  spaceRemaining: number, spaceRequired: number, current: number, target: number,
-): HighscoreBar | null {
-  if (target <= 0) return null;
-  const captureFraction = spaceRequired < 100
-    ? Math.max(0, Math.min(1, (100 - spaceRemaining) / (100 - spaceRequired)))
-    : 0;
-  const hsFraction = Math.max(0, Math.min(1, current / target));
-  const beat = current >= target;
-  return { captureFraction, hsFraction, beat, percent: beat ? null : Math.round(hsFraction * 100) };
-}
-
 export interface SpaceDetail {
   remaining: number;
   cleared: number;

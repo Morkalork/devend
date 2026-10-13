@@ -3,18 +3,17 @@
  *
  * Hours were divided by four. Almost nothing in the economy notices, because
  * almost all of it is ratios: axis ceilings against axis ratios, prices against
- * an anchor, block inflation as a multiplier. What DOES notice is everything
- * already written down - per-map highscores, per-archetype bests, the Hall of
- * Fame - which is banked in the old hours and, left alone, sits four times
- * above anything the new economy can pay. Every record would be permanently
- * unbeatable and the beat-your-highscore bonus would never fire again.
+ * an anchor, block inflation as a multiplier. What DOES notice is what is
+ * already written down - the Hall of Fame - which is banked in the old hours
+ * and, left alone, sits four times above anything the new economy can pay.
+ * Every run on it would be permanently unbeatable.
  *
  * So these tests are in two halves: that the shipped economy actually moved
  * together (a price that did not follow its income is a shelf nobody can
  * afford), and that the migration converts a stale save exactly once.
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useMetaProgression } from "@/hooks/useMetaProgression";
 import { useHallOfFame } from "@/hooks/useHallOfFame";
 import { UNLOCK_STATE_STORAGE_KEY } from "@/types/metaProgression";
@@ -23,7 +22,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
-  DEFLATION_FACTOR, ECONOMY_SCALE_VERSION, deflateHours, deflateRecord, needsDeflation,
+  DEFLATION_FACTOR, ECONOMY_SCALE_VERSION, deflateHours, needsDeflation,
 } from "@/lib/economyDeflation";
 import { DEFAULT_SCORING_CONFIG, getAxisCeilings, getLockValue } from "@/lib/scoring";
 import { mergePricing, computeUpgradeCost } from "@/lib/upgradePricing";
@@ -114,11 +113,6 @@ describe("the migration runs exactly once", () => {
     // A newer build's save opened by an older one must not be re-divided.
     expect(needsDeflation(ECONOMY_SCALE_VERSION + 1)).toBe(false);
   });
-
-  it("rescales every entry of a highscore record", () => {
-    expect(deflateRecord({ "level-1": 120, "level-2": 40 })).toEqual({ "level-1": 30, "level-2": 10 });
-    expect(deflateRecord({})).toEqual({});
-  });
 });
 
 /**
@@ -128,34 +122,29 @@ describe("the migration runs exactly once", () => {
  * the code path that needed it, so the migration is exercised through the real
  * hooks and real localStorage rather than by trusting the call sites.
  */
-describe("the migration is wired into the saves that need it", () => {
+describe("the migration is wired into the save that needs it", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it("quarters an unstamped unlock save and stamps it on the way out", async () => {
+  it("drops the retired map and archetype records from an old unlock save", async () => {
+    // Per-map highscores and per-archetype bests were taken out; a save that
+    // still carries them sheds them (and its now-pointless scale stamp) on the
+    // next write, so nothing of them lingers in localStorage.
     localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify({
-      unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: true,
-      mapHighscores: { "level-1": 120, "level-2": 60 },
-      archetypeBests: { lock: 400 },
+      unlockedIds: [], loadoutsIntroduced: true,
+      mapHighscores: { "level-1": 120 }, archetypeBests: { lock: 400 },
       encounteredBallTypeIds: [], unlockedFeatureIds: [], lastRunUpgradeIds: [],
     }));
     const hook = renderHook(() => useMetaProgression());
     await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));
-    expect(hook.result.current.mapHighscores["level-1"]).toBe(30);
-    expect(hook.result.current.mapHighscores["level-2"]).toBe(15);
-  });
-
-  it("leaves a stamped unlock save exactly where it is", async () => {
-    localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify({
-      unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: true,
-      mapHighscores: { "level-1": 30 },
-      archetypeBests: {}, encounteredBallTypeIds: [], unlockedFeatureIds: [],
-      lastRunUpgradeIds: [], economyScale: ECONOMY_SCALE_VERSION,
-    }));
-    const hook = renderHook(() => useMetaProgression());
-    await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));
-    // Reopening must not quarter an already-converted record a second time.
-    expect(hook.result.current.mapHighscores["level-1"]).toBe(30);
+    act(() => {
+      hook.result.current.recordArchetypeMet("lock");
+    });
+    const saved = JSON.parse(localStorage.getItem(UNLOCK_STATE_STORAGE_KEY) ?? "{}");
+    expect(saved).not.toHaveProperty("mapHighscores");
+    expect(saved).not.toHaveProperty("archetypeBests");
+    expect(saved).not.toHaveProperty("economyScale");
+    expect(saved.metArchetypes).toEqual(["lock"]);
   });
 
   it("quarters an unstamped Hall of Fame, scores and trajectory alike", async () => {

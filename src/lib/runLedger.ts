@@ -2,7 +2,7 @@
  * Run-ledger helpers (HIGHSCORES.md Phase A). Pure functions shared by the
  * persistence hook (useHallOfFame) and the run session (useGameSession), so the
  * "where did this run rank, and how far was the miss" logic lives in one
- * tested place — same pattern as highscore.ts for map records.
+ * tested place.
  */
 import { RunLedgerEntry, MAX_TOP_RUNS } from '@/types/hallOfFame';
 
@@ -54,37 +54,6 @@ export function insertRun(
 export function monthKey(timestamp: number): string {
   const d = new Date(timestamp);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-/**
- * Record Pace: the current run's total after `mapsCompleted` maps, minus the
- * best run at the same point. Beyond the best run's length the comparison
- * target is its final score. null when there is no best run to race, or
- * nothing completed yet.
- *
- * NOTHING RENDERS THIS TODAY. The readouts it fed - a row on the level-complete
- * card and a live chip in the top bar - were taken out as confusing, and they
- * were: the number handed in is `totalScore`, which is the WALLET (buying an
- * upgrade subtracts from it), so the row read as a performance gap while
- * actually measuring how much you had spent. It is kept, with its tests,
- * because the feature is meant to return.
- *
- * WHEN IT DOES, fix the input first. HIGHSCORES.md says a run's score is
- * CUMULATIVE banked overtime; a wallet is not cumulative, and until something
- * tracks gross earnings this function cannot answer the question its own name
- * asks. The arithmetic below is right; what is passed to it is not.
- */
-export function paceDelta(
-  cumulativeScore: number,
-  mapsCompleted: number,
-  bestTrajectory: number[],
-  bestScore: number | null,
-): number | null {
-  if (bestScore === null || mapsCompleted <= 0) return null;
-  const target = mapsCompleted <= bestTrajectory.length
-    ? bestTrajectory[mapsCompleted - 1]
-    : bestScore;
-  return cumulativeScore - target;
 }
 
 /**

@@ -33,9 +33,9 @@ export const entries: GalleryEntry[] = [
     id: "Sheet-topBars", group: "play", render: () => (
       <Stack>
         <TopBarSample goals={BASIC_GOALS} />
-        <TopBarSample goals={BASIC_GOALS} highscore extras />
+        <TopBarSample goals={BASIC_GOALS} extras />
         <TopBarSample goals={LONG_GOALS} extras />
-        <InLocale lng="es"><TopBarSample goals={LONG_GOALS} highscore extras /></InLocale>
+        <InLocale lng="es"><TopBarSample goals={LONG_GOALS} extras /></InLocale>
         <TopBarSample goals={[]} />
       </Stack>
     ),
@@ -116,9 +116,9 @@ export const entries: GalleryEntry[] = [
   { id: "PlayLayout-push", group: "play", render: () => <WholeHud abilities={false} pushExit /> },
 
   { id: "GameTopBar", group: "play", render: () => <TopBarSample goals={BASIC_GOALS} /> },
-  { id: "GameTopBar-highscore", group: "play", render: () => <TopBarSample goals={BASIC_GOALS} highscore extras /> },
+  { id: "GameTopBar-extras", group: "play", render: () => <TopBarSample goals={BASIC_GOALS} extras /> },
   { id: "GameTopBar-longGoals", group: "play", render: () => <TopBarSample goals={LONG_GOALS} extras /> },
-  { id: "GameTopBar-es", group: "play", render: () => <InLocale lng="es"><TopBarSample goals={LONG_GOALS} highscore extras /></InLocale> },
+  { id: "GameTopBar-es", group: "play", render: () => <InLocale lng="es"><TopBarSample goals={LONG_GOALS} extras /></InLocale> },
   { id: "GameTopBar-empty", group: "play", render: () => <TopBarSample goals={[]} /> },
 
   {
@@ -194,13 +194,13 @@ export const entries: GalleryEntry[] = [
   {
     id: "MapRuleBanner", group: "play", render: () => (
       // The gutter above a square board on a 390x844 phone: about 150px.
-      <MapRuleBanner mutator={GRAVITY} onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(false), width: 390, height: 150 }} />
+      <MapRuleBanner mutator={GRAVITY} onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(), width: 390, height: 150 }} />
     ),
   },
   {
     id: "MapRuleBanner-narrow", group: "play", render: () => (
       <InLocale lng="es">
-        <MapRuleBanner mutator={GRAVITY} onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(false), width: 320, height: 110 }} />
+        <MapRuleBanner mutator={GRAVITY} onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(), width: 320, height: 110 }} />
       </InLocale>
     ),
   },
@@ -226,7 +226,7 @@ export const entries: GalleryEntry[] = [
 
   {
     id: "PlayChips", group: "play", render: () => (
-      <PlayChips accentColor={ACCENT} top={topBarHeight(false)}
+      <PlayChips accentColor={ACCENT} top={topBarHeight()}
         freeze={{ left: 2, total: 3 }} derails={{ left: 0, total: 2 }} bands={{ left: 1, total: 2 }} fenceBudget={{ left: 2, total: 9 }} />
     ),
   },

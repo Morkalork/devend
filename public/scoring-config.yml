@@ -129,12 +129,6 @@ scoring:
   # ceiling with fewer perfect locks; it cannot go past it.
   lampLockMultiplier: 1.5
 
-  # Beat-the-highscore bonus (#45)
-  # When you finish a map with a higher score than its previous highscore, the
-  # map's score is multiplied by this. Applied after the per-map cap, so beating
-  # a record always pays. Only fires if the map has been played before.
-  highscoreBonusMultiplier: 1.25
-
   # Ship Early Bonus
   # Ladder of ACTIVE-play seconds to first meet the win condition (the push
   # prompt opening, or the last ball locking). Windows are PER BALL: a map's

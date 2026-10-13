@@ -353,7 +353,6 @@
     "breakBonus": "Rivningsbonus",
     "chestBonus": "Skatt bärgad",
     "shipEarly": "Tidig leverans ({{seconds}}s)",
-    "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",
     "overtimeEarned": "Intjänad övertid",
     "totalOvertime": "Total övertid",
@@ -466,11 +465,6 @@
           }
         }
       },
-      "newHighscore": {
-        "title": "Nytt rekord",
-        "body": "Du slog banans rekord, så betalningen är x1,25. Tillämpas efter taket, så den ger alltid extra.",
-        "tip": "Rekord sparas per bana. En stark uppgraderingsbuild kan slå dina gamla resultat bana efter bana."
-      },
       "totalBonus": {
         "title": "Total bonus",
         "body": "Alla nivåns bonusar sammanlagda: par, utrymme, lås, rivning, tempo och press.",
@@ -478,8 +472,8 @@
       },
       "overtimeEarned": {
         "title": "Intjänad övertid",
-        "body": "Nivåns totalsumma: skalad bas plus alla bonusar, med tak på dubbla basen. Ett rekord multiplicerar förbi taket. Talet efter snedstrecket är det mesta banan kunde ha betalat.",
-        "tip": "Slår du i taket ofta? Jaga rekordmultiplikatorn: den tillämpas efter taket."
+        "body": "Nivåns totalsumma: skalad bas plus alla bonusar, med tak på dubbla basen. Talet efter snedstrecket är det mesta banan kunde ha betalat.",
+        "tip": "Slår du i taket ofta? Timmarna under poängraden, som vinstbonusen, betalas ut utöver taket."
       },
       "totalOvertime": {
         "title": "Total övertid",
@@ -532,7 +526,6 @@
         "tip": "Valla bollarna i en ficka och stäng den med ett enda staket. Två betalar; fyra betalar mycket mer."
       }
     },
-    "newPersonalBest": "Nytt personbästa, och du är fortfarande igång!",
     "breakdownTitle": "Poänguppdelning",
     "winReason": {
       "label": "Vunnen genom",
@@ -634,7 +627,6 @@
     "spaceLeft": "Kvar",
     "spaceCleared": "Rensat",
     "spaceGoalReached": "Mål uppnått",
-    "recordPace": "REKORD",
     "currentlyReducingBy": "Minskar just nu med {{percent}}%",
     "continues_one": "{{count}} Fortsättning sparad",
     "continues_other": "{{count}} Fortsättningar sparade",
@@ -913,7 +905,11 @@
     "statusInSprint": "I sprint",
     "statusDone": "Klar",
     "statusBlocked": "Blockerad",
-    "statusOverCapacity": "Över kapacitet",
+    "statusUnfunded": "Ej finansierad",
+    "blockedBy": "Blockerad av",
+    "sprintWontFit_one": "{{count}} ärende får inte plats ({{hours}}h saknas)",
+    "sprintWontFit_other": "{{count}} ärenden får inte plats ({{hours}}h saknas för det närmaste)",
+    "shortBy": "{{hours}}h saknas",
     "abilityEveryMap": "En per bana, {{count}} kvar",
     "abilitySlotClosed": "Förmågeplatsen är stängd: din rad är full",
     "freeAbilityGranted": "{{name}} lades till i din rad",
@@ -965,10 +961,7 @@
       "risk": "Crunch-narkoman",
       "safety": "Defensiv programmerare"
     },
-    "capstoneLine": "Befordran: {{name}}",
-    "newRecord": "Nytt personbästa för {{archetype}}-byggen: {{hours}}h (tidigare {{previous}}h)",
-    "firstRecord": "Första {{archetype}}-bygget på tavlan: {{hours}}h bankade",
-    "bestSoFar": "Bästa {{archetype}}-bygget hittills: {{hours}}h"
+    "capstoneLine": "Befordran: {{name}}"
   },
   "capstoneDraft": {
     "title": "Befordran",
@@ -1560,8 +1553,6 @@
     "topRuns": "Topp 10 genom tiderna",
     "emptyLadder": "Inga rundor sparade ännu. Avsluta en runda så hamnar den här.",
     "mapsLabel": "{{count}} kartor",
-    "archetypeBests": "Bästa per arketyp",
-    "mapRecords": "Kartrekord",
     "back": "Tillbaka",
     "employeeOfMonth": "Månadens anställd",
     "lifetime": "Livstid",
@@ -1598,7 +1589,6 @@
     "extraCertificateHours": "Certifikattimmar per omgång +{{hours}}",
     "bankedSlowPerStep": "Bollhastighet {{percent}}% per 13h i banken",
     "microManagerPerLock": "Bollhastighet {{percent}}% per inlåst boll",
-    "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en",
     "startingOvertime": "Börja med +{{hours}}h övertid",
     "storeLockReliefOne": "Butiken kräver aldrig mer än en inlåsning",
     "storeLockReliefFull": "Butiken kräver inga inlåsningar alls",

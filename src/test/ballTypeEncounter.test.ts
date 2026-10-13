@@ -4,7 +4,7 @@ import { useMetaProgression } from "@/hooks/useMetaProgression";
 
 // Ball-type "encountered" tracking (tutorial: show a ball's ability only after
 // the player has LOCKED one, per the user's chosen definition - not merely
-// having seen it spawn). Mirrors the recordLoadoutWin/recordMapHighscore
+// having seen it spawn). Mirrors the recordArchetypeMet
 // pattern: an id set persisted under the existing jezzball_unlock_state key.
 
 describe("useMetaProgression: encountered ball types", () => {
@@ -60,14 +60,12 @@ describe("useMetaProgression: encountered ball types", () => {
     expect(result.current.encounteredBallTypeIds).toEqual([]);
   });
 
-  it("does not disturb other unlock-state fields (met archetypes, highscores)", () => {
+  it("does not disturb other unlock-state fields (met archetypes)", () => {
     const { result } = renderHook(() => useMetaProgression());
     act(() => { result.current.recordArchetypeMet("lock"); });
-    act(() => result.current.recordMapHighscore("level-1", 100));
     act(() => result.current.recordBallTypeEncountered("yellow"));
 
     expect(result.current.metArchetypes).toEqual(["lock"]);
-    expect(result.current.mapHighscores).toEqual({ "level-1": 100 });
     expect(result.current.encounteredBallTypeIds).toEqual(["yellow"]);
   });
 });

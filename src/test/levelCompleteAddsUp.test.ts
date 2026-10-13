@@ -11,8 +11,8 @@
  *                   and were rendered nowhere. So were Comp Time / Stock
  *                   Options (flatBonus) and Qualified Overtime, which is paid
  *                   above the backstop.
- *   WRONG SIDE      The win premium and the highscore bonus DID have rows, but
- *                   above the "Score" line, whose numerator excludes both. Read
+ *   WRONG SIDE      The win premium DID have a row, but above the "Score"
+ *                   line, whose numerator excludes it. Read
  *                   down the column and the last number before the payout was
  *                   already missing them.
  *   NO CLAMP ROW    When the backstop clipped the total, nothing said so.
@@ -57,7 +57,7 @@ function score(p: Play) {
 }
 
 /** The overlay's Score row, and the rows it now renders beneath it. */
-function screen(p: Play, highscoreBonus = 0) {
+function screen(p: Play) {
   const r = score(p);
   const b = r.breakdown as unknown as { multipliedBase?: number; zoneShareWithheld?: number };
   const paidBase = Math.round(b.multipliedBase ?? 0);
@@ -65,12 +65,11 @@ function screen(p: Play, highscoreBonus = 0) {
   const scoreRow = Math.max(0, Math.round(paidBase + r.axes.total - zonesMissedCost));
   // Exactly the rows the overlay builds, in the same order. The cap raise is
   // deliberately absent: it is not income, it lifts the ceiling.
-  const onTop = [r.winBonus, highscoreBonus, p.postCap, r.qualifiedOvertime]
+  const onTop = [r.winBonus, p.postCap, r.qualifiedOvertime]
     .filter(h => h > 0)
     .reduce((sum, h) => sum + h, 0);
-  // The payout as the player banks it: the scorer's, plus the highscore bonus
-  // that useGameSession adds on top before the overlay is handed it.
-  const payout = r.levelScore + highscoreBonus;
+  // The payout as the player banks it: the scorer's.
+  const payout = r.levelScore;
   const clipped = Math.max(0, scoreRow + onTop - payout);
   return { scoreRow, onTop, payout, clipped };
 }
@@ -101,11 +100,9 @@ describe("the column reaches the payout", () => {
   it("Score plus the rows beneath it equals what the run banks", () => {
     const broken: string[] = [];
     for (const p of PLAYS) {
-      for (const highscore of [0, 11]) {
-        const s = screen(p, highscore);
-        if (s.scoreRow + s.onTop - s.clipped !== s.payout) {
-          broken.push(`${JSON.stringify(p)} hs=${highscore} -> ${JSON.stringify(s)}`);
-        }
+      const s = screen(p);
+      if (s.scoreRow + s.onTop - s.clipped !== s.payout) {
+        broken.push(`${JSON.stringify(p)} -> ${JSON.stringify(s)}`);
       }
     }
     expect(broken.slice(0, 3), `${broken.length} plays do not reconcile`).toEqual([]);
@@ -123,7 +120,7 @@ describe("the column reaches the payout", () => {
     // eating hours off good runs, which is exactly the complaint in #79.
     const shipped = PLAYS.filter(p => p.winPct === 0);
     expect(shipped.length).toBeGreaterThan(200);
-    const bitten = shipped.filter(p => screen(p, 11).clipped > 0);
+    const bitten = shipped.filter(p => screen(p).clipped > 0);
     expect(bitten.length, `the backstop clipped ${bitten.length} ordinary plays`).toBe(0);
   });
 
@@ -180,13 +177,10 @@ describe("each unaccounted term was really unaccounted", () => {
     expect(with_.onTop).toBe(9);
   });
 
-  it("counts the win premium and the highscore bonus below the Score line", () => {
-    // Both used to render ABOVE a Score row that excludes them.
+  it("counts the win premium below the Score line", () => {
+    // It used to render ABOVE a Score row that excludes it.
     const premium = screen({ ...base, winPct: 50 });
     expect(premium.onTop).toBeGreaterThan(0);
     expect(premium.scoreRow, "the premium must not be inside the Score row").toBe(screen(base).scoreRow);
-    const record = screen(base, 11);
-    expect(record.onTop).toBe(11);
-    expect(record.payout - screen(base).payout).toBe(11);
   });
 });

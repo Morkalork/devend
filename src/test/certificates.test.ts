@@ -169,9 +169,6 @@ describe("certificate effect labels", () => {
  * gated behind an upgrade chain, an achievement or lifetime spending, so the
  * store was a room of locked doors and the currency was easy to forget you had.
  * At least one cert is now simply on the shelf.
- *
- * (Benchmarking used to be tested here. It was removed: a HUD toggle bought
- * with the same scarce currency as a permanent stat was never worth the hours.)
  */
 describe("the store has something to sell from the start", () => {
   const starters = certificates.filter(c => c.unlockType === "always");
@@ -201,12 +198,6 @@ describe("the store has something to sell from the start", () => {
       const gated = cert.sourceUpgradeId ?? cert.sourceAchievementId ?? cert.requiredHoursSpent;
       expect(gated, `${cert.id} is gated but names no source`).toBeDefined();
     }
-  });
-
-  it("does not sell Benchmarking any more", () => {
-    expect(certificates.some(c => c.id === "benchmarking")).toBe(false);
-    // ...and nothing quietly took its place in the shop either.
-    expect([...upgradeIds].filter(id => id.startsWith("benchmarking"))).toEqual([]);
   });
 });
 

@@ -248,7 +248,7 @@ describe("the card over the finished board", () => {
     expect(src).toContain("const failsAvoided = sayAvoided && (filled == null || filled >= rows.length) && ");
   });
 
-  it("is a modal over the board, shows the hours and the way on only once it is full, and a tap finishes it", () => {
+  it("is a modal over the board, shows the hours only once it is full, the way on always but live only then, and a tap finishes it", () => {
     const src = read("src/ui/screens/LevelCompleteOverlay.tsx");
     const start = src.indexOf("if (ticket && scoreData.acceptance) {");
     const modal = src.slice(start, src.indexOf("  return (\n    <PipelineFrame", start));
@@ -256,7 +256,8 @@ describe("the card over the finished board", () => {
     expect(modal).toContain("<Pressable onTap={fill.finish}");
     expect(modal).toContain("filled={fill.filled}");
     expect(modal).toContain("estimate={fill.done ? `+${displayLevelScore}h` : undefined}");
-    expect(modal).toContain("{fill.done && continueButton}");
+    expect(modal).toContain("{renderContinueButton(!fill.done)}");
+    expect(modal).not.toContain("{fill.done && continueButton}");
     expect(read("src/ui/game/MapFailedOverlay.tsx")).toContain("const fill = useFillIn(rows?.length ?? 0);");
   });
 

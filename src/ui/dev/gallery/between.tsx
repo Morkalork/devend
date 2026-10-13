@@ -37,7 +37,7 @@ const fullScore: LevelScoreData = {
     ceilings: { delivery: 18, craft: 14, tempo: 12, thrift: 8, greed: 10, engagement: 10 },
   },
   lockedBallsCount: 3, superiorLockCount: 3, zoneLockCount: 1, zoneCount: 2, zoneShareWithheld: 0,
-  winBonus: 8, winBonusPercent: 10, beatHighscore: true, highscoreBonus: 5, bouncerOvertime: 3, pickupBonus: 4, qualifiedOvertime: 2, capBonus: 5,
+  winBonus: 8, winBonusPercent: 10, bouncerOvertime: 3, pickupBonus: 4, qualifiedOvertime: 2, capBonus: 5,
   winReason: "allLocked", alsoClearedSpace: true,
 };
 
@@ -80,7 +80,7 @@ const ticketMissedScore: LevelScoreData = {
 
 const recap: RunRecap = {
   primary: "lock", secondary: "tempo", tagCounts: { lock: 5, tempo: 3, bank: 2, safety: 1 },
-  capstoneId: "stock_options", capstoneName: "Stock Options", score: 1840, isArchetypeRecord: true, previousBest: 1520,
+  capstoneId: "stock_options", capstoneName: "Stock Options",
 };
 
 const winResult: GameResult = {
@@ -172,7 +172,7 @@ export const entries: GalleryEntry[] = [
   {
     id: "LevelCompleteOverlay", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT}
-      newlyUnlockedCerts={[certs[0]]} pace={{ newPersonalBest: true }} />,
+      newlyUnlockedCerts={[certs[0]]} />,
   },
   {
     id: "LevelCompleteOverlay-rough", group: "screen",
@@ -212,7 +212,7 @@ export const entries: GalleryEntry[] = [
     id: "ResultScreen-loss", group: "screen",
     render: () => <ResultScreen result={lossResult} onMainMenu={noop} onPlayAgain={noop} onRestart={noop} checkpointLevel={11} accentColor={ACCENT}
       runLevelsCompleted={13} runHoursAwarded={2}
-      runRecap={{ primary: null, secondary: null, tagCounts: { safety: 1 }, capstoneId: null, capstoneName: null, score: 412, isArchetypeRecord: false, previousBest: null }}
+      runRecap={{ primary: null, secondary: null, tagCounts: { safety: 1 }, capstoneId: null, capstoneName: null }}
       runRank={{ rank: null, gapToNext: null, gapToTop10: 88, aheadThroughMaps: null }} />,
   },
   {
@@ -222,6 +222,14 @@ export const entries: GalleryEntry[] = [
   {
     id: "UpgradeShop", group: "screen",
     render: () => <UpgradeShop {...shopProps} tagSetThreshold={3} newlyUnlockedCerts={[certs[1]]} />,
+  },
+  {
+    // What can and cannot be bought, side by side: an affordable ticket, a
+    // BLOCKED one whose blocker is on the shelf (its link jumps there), and an
+    // UNFUNDED one a few hours short. The dots show the same at a glance.
+    id: "UpgradeShop-reach", group: "screen",
+    render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
+      dealt={{ offerIds: ["code_review", "hot_start_principal", "hot_start_junior", "multithreading_principal"], abilityIds: [] }} />,
   },
   {
     id: "UpgradeShop-closed", group: "screen",

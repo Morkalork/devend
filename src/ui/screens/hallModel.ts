@@ -20,18 +20,11 @@ export function buildName(t: TFunction, run: Pick<RunLedgerEntry, "primaryTag" |
     : t("buildRecap.generalist");
 }
 
-/** A ladder score, an archetype best or a record: banked hours as "612h". */
+/** A ladder score: banked hours as "612h". */
 export const hoursText = (score: number) => `${score}h`;
-
-/** An archetype slot: its best, or a quiet "-" for a build never banked yet. */
-export const archetypeBestText = (best: number | undefined) => (best ? hoursText(best) : "-");
 
 export const fmtDate = (ts: number, lang: string) =>
   new Date(ts).toLocaleDateString(lang, { year: "numeric", month: "short", day: "numeric" });
-
-/** Map records in natural level order (level-2 before level-10). */
-export const sortMapRecords = (mapHighscores: Record<string, number>) =>
-  Object.entries(mapHighscores).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
 
 /** Employee-of-the-Month plaques, newest month first ("YYYY-MM" keys sort lexicographically). */
 export const sortPlaques = (monthlyBests: Record<string, RunLedgerEntry>) =>

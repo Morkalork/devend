@@ -6,12 +6,11 @@
 import { describe, it, expect } from "vitest";
 import i18n from "@/i18n";
 import type { TFunction } from "i18next";
-import { TAG_ORDER } from "@/lib/buildRecap";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import { DEFAULT_META_STATS } from "@/types/metaProgression";
 import {
-  RANK_COLORS, archetypeBestText, buildName, capitalizeWords, gridRows, hoursText, lifetimeStats,
-  monthLabel, recentDailies, showDaily, sortMapRecords, sortPlaques,
+  RANK_COLORS, buildName, capitalizeWords, gridRows, hoursText, lifetimeStats,
+  monthLabel, recentDailies, showDaily, sortPlaques,
 } from "@/ui/screens/hallModel";
 
 const t = i18n.t.bind(i18n) as unknown as TFunction;
@@ -31,14 +30,8 @@ const runs: RunLedgerEntry[] = [
 ];
 
 describe("HallOfFameScreen model", () => {
-  it("scores read as hours, and the archetype grid shows empty slots as '-'", () => {
+  it("scores read as hours", () => {
     expect(hoursText(612)).toBe("612h");
-    const bests: Record<string, number> = { lock: 612, freeze: 200 };
-    const cells = TAG_ORDER.map(tag => archetypeBestText(bests[tag]));
-    expect(cells).toHaveLength(6);
-    expect(cells.filter(c => c === "-")).toHaveLength(4);
-    expect(cells).toContain("612h");
-    expect(cells).toContain("200h");
   });
 
   it("names a build from its tags, with the Generalist fallback", () => {
@@ -57,11 +50,6 @@ describe("HallOfFameScreen model", () => {
     const plaques = sortPlaques({ "2026-06": runs[1], "2026-07": runs[0] });
     expect(plaques.map(([m]) => monthLabel(m, "en"))).toEqual(["July 2026", "June 2026"]);
     expect(plaques.map(([, r]) => r.score)).toEqual([612, 431]);
-  });
-
-  it("sorts map records naturally (level-2b before level-10)", () => {
-    const ids = sortMapRecords({ "level-1": 34, "level-10": 61, "level-2b": 40 }).map(([id]) => id);
-    expect(ids).toEqual(["level-1", "level-2b", "level-10"]);
   });
 
   it("keeps the last seven dailies, newest first, and shows the section only with something in it", () => {

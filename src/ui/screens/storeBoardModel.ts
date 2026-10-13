@@ -8,7 +8,7 @@ import type { UpgradeTier } from "@/types/upgrade";
 import type { CardModel } from "./shopModel";
 
 /** Where a ticket stands, in the order the checks run. */
-export type TicketStatus = "inSprint" | "done" | "blocked" | "overCapacity" | "todo";
+export type TicketStatus = "inSprint" | "done" | "blocked" | "unfunded" | "todo";
 
 export function ticketStatus(m: Pick<CardModel, "selected" | "owned" | "locked" | "cantAfford">): TicketStatus {
   if (m.selected) {
@@ -21,7 +21,7 @@ export function ticketStatus(m: Pick<CardModel, "selected" | "owned" | "locked" 
     return "blocked";
   }
   if (m.cantAfford) {
-    return "overCapacity";
+    return "unfunded";
   }
   return "todo";
 }
@@ -31,7 +31,7 @@ export const STATUS_KEY: Record<TicketStatus, string> = {
   inSprint: "upgradeShop.statusInSprint",
   done: "upgradeShop.statusDone",
   blocked: "upgradeShop.statusBlocked",
-  overCapacity: "upgradeShop.statusOverCapacity",
+  unfunded: "upgradeShop.statusUnfunded",
   todo: "upgradeShop.statusTodo",
 };
 
@@ -66,4 +66,39 @@ export function capacityShare(committed: number, capacity: number): number {
     return committed > 0 ? 1 : 0;
   }
   return Math.max(0, Math.min(1, committed / capacity));
+}
+
+/**
+ * The two reasons a ticket cannot be bought, which ask different things of the
+ * player: a BLOCKED ticket needs another ticket first, an UNFUNDED one needs
+ * hours. Anything else (to do, in the sprint, done) is available or settled.
+ */
+export function unavailable(status: TicketStatus): boolean {
+  return status === "blocked" || status === "unfunded";
+}
+
+/** How many hours an unfunded ticket is short of, given what is left to spend. */
+export function shortfall(price: number, remaining: number): number {
+  return Math.max(0, price - Math.max(0, remaining));
+}
+
+/** How much of a ticket's price the hours left would cover, 0..1: the ticket's funding bar. */
+export function fundedShare(price: number, remaining: number): number {
+  if (price <= 0) {
+    return 1;
+  }
+  return Math.max(0, Math.min(1, remaining / price));
+}
+
+/**
+ * The sprint panel's "won't fit" line: how many backlog tickets the hours
+ * left cannot pay for, and the smallest shortfall among them (the one the
+ * player is closest to). Null when everything still fits.
+ */
+export function wontFit(tickets: { status: TicketStatus; price: number }[], remaining: number): { count: number; closest: number } | null {
+  const short = tickets.filter(x => x.status === "unfunded").map(x => shortfall(x.price, remaining));
+  if (short.length === 0) {
+    return null;
+  }
+  return { count: short.length, closest: Math.min(...short) };
 }
