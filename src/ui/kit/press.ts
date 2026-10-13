@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FederatedPointerEvent } from "pixi.js";
+import { beginPointer, claimedByOther } from "./gesture";
 
 /** How long a press must last to count as a hold: the game's explainer gesture (CLAUDE.md). */
 export const HOLD_MS = 450;
@@ -20,8 +21,8 @@ export interface PressHandlers {
  */
 export function usePress({ onTap, onHold, disabled }: PressHandlers) {
   const [pressed, setPressed] = useState(false);
-  const state = useRef<{ x: number; y: number; timer: number | null; held: boolean; live: boolean }>(
-    { x: 0, y: 0, timer: null, held: false, live: false });
+  const state = useRef<{ x: number; y: number; pointerId: number; timer: number | null; held: boolean; live: boolean }>(
+    { x: 0, y: 0, pointerId: -1, timer: null, held: false, live: false });
   const handlers = useRef({ onTap, onHold });
   handlers.current = { onTap, onHold };
 
@@ -38,12 +39,16 @@ export function usePress({ onTap, onHold, disabled }: PressHandlers) {
   const onPointerDown = useCallback((e: FederatedPointerEvent) => {
     if (disabled) return;
     const s = state.current;
-    s.x = e.global.x; s.y = e.global.y; s.held = false; s.live = true;
+    beginPointer(e.pointerId, e.nativeEvent);
+    s.x = e.global.x; s.y = e.global.y; s.pointerId = e.pointerId; s.held = false; s.live = true;
     setPressed(true);
     if (handlers.current.onHold) {
       s.timer = window.setTimeout(() => {
         s.timer = null;
-        if (!s.live) return;
+        // A scroller that caught a fling owns this touch: no explainer.
+        if (!s.live || claimedByOther(s.pointerId)) {
+          return;
+        }
         s.held = true;
         setPressed(false);
         handlers.current.onHold?.();
@@ -53,13 +58,17 @@ export function usePress({ onTap, onHold, disabled }: PressHandlers) {
 
   const onGlobalPointerMove = useCallback((e: FederatedPointerEvent) => {
     const s = state.current;
-    if (!s.live) return;
-    if (Math.hypot(e.global.x - s.x, e.global.y - s.y) > PRESS_SLOP_PX) cancel();
+    if (!s.live || e.pointerId !== s.pointerId) return;
+    // A scroller or the card strip took the finger (gesture.ts): let go of the tap.
+    if (claimedByOther(e.pointerId) || Math.hypot(e.global.x - s.x, e.global.y - s.y) > PRESS_SLOP_PX) {
+      cancel();
+    }
   }, [cancel]);
 
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = useCallback((e: FederatedPointerEvent) => {
     const s = state.current;
-    const fire = s.live && !s.held;
+    // A touch that caught a moving page belongs to the page, not to this card.
+    const fire = s.live && !s.held && !claimedByOther(e.pointerId);
     cancel();
     if (fire && !disabled) handlers.current.onTap?.();
   }, [cancel, disabled]);

@@ -28,6 +28,7 @@ import type { LayoutContainer } from "@pixi/layout/components";
 import { animate } from "motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { COLOR, Icon, Pressable, RADIUS, View, tint, useUiScreen } from "../kit/ui";
+import { beginPointer, claimPointer, claimedByOther, releasePointer } from "../kit/gesture";
 import {
   CAROUSEL_GAP, DEFAULT_CARD_WIDTH, canStep, clampIndex, parseCardWidth, pipsFor, releaseIndex, stripOffset, stripOffsetFrom,
 } from "./carouselModel";
@@ -99,7 +100,9 @@ export function Carousel({
     ? stripOffset(index, cardW, viewW)
     : stripOffsetFrom(index, cardW, Math.max(0, (viewW - alignWidth) / 2))), [alignWidth, cardW, viewW]);
   const pos = useRef(offsetOf(0));
-  const drag = useRef<{ x: number; y: number; live: boolean; horizontal: boolean; from: number } | null>(null);
+  const drag = useRef<{ pointerId: number; x: number; y: number; live: boolean; horizontal: boolean; from: number } | null>(null);
+  // This strip's name in the drag claims (gesture.ts).
+  const owner = useRef(Symbol("Carousel"));
   // The one running slide, so a new one (or unmounting) stops it rather than two fighting over the strip.
   const slide = useRef<{ stop: () => void } | null>(null);
 
@@ -144,19 +147,28 @@ export function Carousel({
 
   // ── Swipe ──
   // The press lands on a card first and bubbles here. Once the finger has
-  // moved more than the press slop the card has already let go of its tap, so
-  // the strip can take the gesture. A mostly vertical drag is left to the page.
+  // moved more than the press slop along the strip, the strip claims it
+  // (gesture.ts): the card lets go of its tap and the page around it leaves
+  // the drag alone. A mostly vertical drag is the page's, and the strip lets go.
   const onPointerDown = useCallback((e: FederatedPointerEvent) => {
-    drag.current = { x: e.global.x, y: e.global.y, live: true, horizontal: false, from: pos.current };
+    beginPointer(e.pointerId, e.nativeEvent);
+    drag.current = { pointerId: e.pointerId, x: e.global.x, y: e.global.y, live: true, horizontal: false, from: pos.current };
   }, []);
   const onGlobalPointerMove = useCallback((e: FederatedPointerEvent) => {
     const d = drag.current;
-    if (!d || !d.live) return;
+    if (!d || !d.live || e.pointerId !== d.pointerId) return;
     const dx = e.global.x - d.x;
     const dy = e.global.y - d.y;
     if (!d.horizontal) {
+      if (claimedByOther(e.pointerId, owner.current)) {
+        d.live = false;
+        return;
+      }
       if (Math.hypot(dx, dy) < DRAG_START_PX) return;
-      if (Math.abs(dy) > Math.abs(dx)) { d.live = false; return; }
+      if (Math.abs(dy) > Math.abs(dx) || !claimPointer(e.pointerId, owner.current)) {
+        d.live = false;
+        return;
+      }
       d.horizontal = true;
       // The finger owns the strip now: stop a slide still settling from the last swipe.
       slide.current?.stop();
@@ -168,8 +180,10 @@ export function Carousel({
   }, [place]);
   const endDrag = useCallback((e?: FederatedPointerEvent) => {
     const d = drag.current;
+    if (d && e && e.pointerId !== d.pointerId) return;
     drag.current = null;
     if (!d || !d.horizontal) return;
+    releasePointer(d.pointerId, owner.current);
     const dx = e ? e.global.x - d.x : 0;
     const next = releaseIndex(active, dx, cardW, count);
     if (next !== active) setActive(next);
