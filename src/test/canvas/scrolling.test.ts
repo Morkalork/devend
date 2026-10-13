@@ -81,6 +81,28 @@ describe("a fling", () => {
   });
 });
 
+describe("grabbing a scroll while it settles", () => {
+  // Reported as Sprint Planning scrolling down and then refusing to scroll back
+  // up: @pixi/layout's scroller kept its spring across a grab, so a drag that
+  // began before the settle finished was thrown back to the bottom on release.
+  // This model keeps no spring between steps: where it goes depends only on
+  // where the drag left it.
+  const min = -100;
+
+  it("goes where the new drag takes it, not where the old spring was heading", () => {
+    let m = run({ position: -130, velocity: 0 }, 48, 16, min); // springing back up to the bottom
+    expect(m.position).toBeLessThan(min);
+    // Grabbed (the finger zeroes the velocity), dragged down past the top, let go still.
+    m = { position: rubberBand(200, min, 800), velocity: 0 };
+    expect(run(m, 3000, 16, min).position).toBe(0);
+  });
+
+  it("still springs back to the bottom after a drag that ends past it", () => {
+    const m = { position: rubberBand(-120, min, 800), velocity: 0 };
+    expect(run(m, 3000, 16, min).position).toBe(min);
+  });
+});
+
 describe("a drag past an end", () => {
   it("follows the finger one for one in range", () => {
     expect(rubberBand(-250, -500, 800)).toBe(-250);
@@ -184,6 +206,11 @@ describe("the wiring", () => {
     expect(scroll).toContain("onGlobalPointerMove={onGlobalPointerMove}");
   });
 
+  it("lets go on an up outside, which is how a cancelled touch arrives", () => {
+    expect(scroll).toContain("onPointerUpOutside={endDrag}");
+    expect(scroll).toContain("onPointerCancel={endDrag}");
+  });
+
   it("has the card strip claim its swipe and leave a claimed one alone", () => {
     const carousel = read("src/ui/screens/Carousel.tsx");
     expect(carousel).toContain("!claimPointer(e.pointerId, owner.current)");
@@ -195,5 +222,21 @@ describe("the wiring", () => {
     const press = read("src/ui/kit/press.ts");
     expect(press).toContain("claimedByOther(e.pointerId) || Math.hypot");
     expect(press).toContain("!claimedByOther(e.pointerId)");
+  });
+});
+
+describe("the browser never takes a canvas screen's swipe", () => {
+  // Under the canvas sits Index's per-screen wrapper, `overflow-y: auto`. A
+  // swipe landing on it was a page pan, the browser cancelled the touch after
+  // its first move, and the scroll view never saw the rest.
+  it("turns panning off for the whole DOM while the canvas lock is on", () => {
+    expect(read("src/index.css")).toMatch(/html\.canvas-ui #root,\s*html\.canvas-ui #root \* \{\s*touch-action: none;/);
+  });
+
+  it("tells Pixi when the browser cancels a touch, as an up outside", () => {
+    const host = read("src/ui/UiHost.tsx");
+    expect(host).toMatch(/window\.addEventListener\("pointercancel", onPointerCancel, true\)/);
+    expect(host).toMatch(/event\.type = "pointerupoutside";/);
+    expect(host).toMatch(/window\.removeEventListener\("pointercancel", onPointerCancel, true\)/);
   });
 });
