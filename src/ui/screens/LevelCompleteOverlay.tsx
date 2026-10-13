@@ -84,7 +84,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const plan = pipeline ?? samplePlan(levelNumber);
   const gold = TW.gold;
 
-  const continueButton = (
+  // `waiting` holds the button disabled while something above it still plays out.
+  const renderContinueButton = (waiting: boolean) => (
     <Appear fromY={10} delay={0.38} duration={0.22}>
       <ArcadeButton
         text={continueLabel(plan, "debrief", t)}
@@ -92,11 +93,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
         iconSize={sm ? 20 : 16}
         textSize={sm ? TEXT.base : TEXT.sm}
         contentLayout={{ paddingTop: sm ? 12 : 8, paddingBottom: sm ? 12 : 8 }}
-        disabled={chosen || !buttonReady}
-        onTap={() => { setChosen(true); onContinue(); }}
+        disabled={chosen || !buttonReady || waiting}
+        onTap={() => {
+          setChosen(true);
+          onContinue();
+        }}
       />
     </Appear>
   );
+  const continueButton = renderContinueButton(false);
   const certificates = newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
     <Appear delay={0.32} duration={0.22} layout={{ gap: 8 }}>
       {newlyUnlockedCerts.map(cert => (
@@ -150,7 +155,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </Appear>
               {fill.done && personalBest}
               {fill.done && certificates}
-              {fill.done && continueButton}
+              {/* Always shown, so the way on is in view from the start; live once the card is filled in. */}
+              {renderContinueButton(!fill.done)}
             </View>
           </Pressable>
         </Appear>
