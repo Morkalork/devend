@@ -27,7 +27,7 @@ import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from "@/lib
 import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, type RunwayPerk } from "@/lib/treasury";
 import { inflationForLevel } from "@/lib/upgradePricing";
 import { getRunRng } from "@/lib/runRng";
-import { rollAbilityOffers, abilitySlotClosed as abilityCapReached } from "@/lib/abilityOffer";
+import { abilityOffersFor, rollAbilityOffers, abilitySlotClosed as abilityCapReached } from "@/lib/abilityOffer";
 import { MAX_ABILITY_SLOTS, getAbility } from "@/lib/abilities";
 import { Appear, COLOR, Icon, Label, RADIUS, ROLE, ScrollView, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { TagChip } from "../game/TagChip";
@@ -41,7 +41,7 @@ import {
 } from "./shopParts";
 import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
-  priceOf, purchasesFor, restockCandidates, rollShelf, selectionCost, shelfMarks,
+  priceOf, purchasesFor, restockCandidates, rollShelf, selectionCost, shelfMarks, type StoreDealt,
 } from "./shopModel";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
@@ -122,7 +122,16 @@ interface UpgradeShopProps {
   freeAbilityGrant?: string | null;
   /** The stages between the map just won and the next; a sample one in the gallery. */
   pipeline?: BetweenMapPlan;
+  /**
+   * The shelf this visit was already dealt (upgrade ids, then ability ids), for
+   * a run resumed in the store: it gets the same shelf back, not a re-roll that
+   * closing the game would otherwise buy.
+   */
+  dealt?: StoreDealt | null;
+  /** Told the shelf once it is dealt, so the run save can keep it. */
+  onDealt?: (dealt: StoreDealt) => void;
 }
+
 
 const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
   instantFence: "upgradeShop.runwayChipInstantFence",
@@ -166,6 +175,8 @@ export function UpgradeShop({
   mapsRemaining = 0,
   abilityOfferCount = 1,
   onPurchaseAbility,
+  dealt = null,
+  onDealt,
   freeAbilityGrant = null,
   pipeline,
 }: UpgradeShopProps) {
@@ -198,8 +209,15 @@ export function UpgradeShop({
   const dependentsById = useMemo(() => dependentsIndex(upgrades), [upgrades]);
 
   // Pick random offers once on mount; restocks append to this list.
-  const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() =>
-    rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots }));
+  // A resumed visit gets the shelf it was dealt (ids it can no longer find,
+  // after a catalogue change, are dropped).
+  const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
+    if (dealt) {
+      const byId = new Map(upgrades.map(u => [u.id, u]));
+      return dealt.offerIds.flatMap(id => byId.get(id) ?? []);
+    }
+    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots });
+  });
 
   const [restocksUsed, setRestocksUsed] = useState(0);
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
@@ -230,10 +248,22 @@ export function UpgradeShop({
   // assignment block) and then the discount (Bulk Licensing certificate).
   const priceInflation = inflationForLevel(completedLevel);
   // The ability slot's cards, rolled once per visit like the upgrade shelf.
-  const [abilityOffers] = useState<UpgradeConfig[]>(() => rollAbilityOffers(
-    completedLevel, mapsRemaining, heldAbilityIds, abilityOfferCount,
-    getRunRng(`shop:${completedLevel}:ability`), abilitySlots,
-  ));
+  const [abilityOffers] = useState<UpgradeConfig[]>(() => dealt
+    ? abilityOffersFor(dealt.abilityIds, completedLevel, mapsRemaining)
+    : rollAbilityOffers(
+      completedLevel, mapsRemaining, heldAbilityIds, abilityOfferCount,
+      getRunRng(`shop:${completedLevel}:ability`), abilitySlots,
+    ));
+  // Report what was dealt, once: the shelf as it opened, before any restock.
+  const dealtReported = useRef(false);
+  useEffect(() => {
+    if (dealtReported.current) return;
+    dealtReported.current = true;
+    onDealt?.({
+      offerIds: offeredUpgrades.map(u => u.id),
+      abilityIds: abilityOffers.flatMap(o => o.grantsAbility ? [o.grantsAbility] : []),
+    });
+  }, [onDealt, offeredUpgrades, abilityOffers]);
   // Closed only when the cap is what emptied it. A player who has simply bought
   // everything unlocked so far is not at the cap and must not be told they are.
   const abilitySlotClosed = abilityOfferCount > 0 && abilityCapReached(heldAbilityIds, abilitySlots);

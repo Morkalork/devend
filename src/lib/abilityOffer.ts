@@ -153,7 +153,12 @@ export function rollAbilityOffers(
     picked.push(remaining.splice(idx, 1)[0]);
   }
 
-  return picked.map((def): UpgradeConfig => ({
+  return picked.map(def => offerCard(def, cost));
+}
+
+/** One retainer card for an ability, at the given price. */
+function offerCard(def: AbilityDef, cost: number): UpgradeConfig {
+  return {
     id: abilityOfferId(def.id),
     name: def.name,
     tier: tierFor(def),
@@ -164,5 +169,16 @@ export function rollAbilityOffers(
     abilityColor: def.color,
     abilityKind: def.kind,
     modifiers: {},
-  }));
+  };
+}
+
+/**
+ * The cards a store visit was already dealt, rebuilt from their ability ids:
+ * a run resumed in the store gets the same slot back rather than a re-roll.
+ * Ids no longer eligible (a catalogue change) are dropped.
+ */
+export function abilityOffersFor(abilityIds: readonly string[], level: number, mapsRemaining: number): UpgradeConfig[] {
+  const pool = new Map(getEligibleAbilities(level).map(a => [a.id, a]));
+  const cost = abilityOfferCost(mapsRemaining);
+  return abilityIds.flatMap(id => { const def = pool.get(id); return def ? [offerCard(def, cost)] : []; });
 }

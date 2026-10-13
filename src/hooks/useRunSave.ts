@@ -7,7 +7,12 @@
  * Game is started. The welcome screen shows a Continue button while a save
  * exists.
  *
- * Resume granularity is one map: the run resumes at the START of the map the
+ * A second snapshot is written once a map is FINISHED, and again at each
+ * stage after it (the Promotion, the store): a run closed in the store
+ * resumes in that store, with the same shelf, rather than replaying the map
+ * it just banked (`betweenMaps`).
+ *
+ * Otherwise resume granularity is one map: the run resumes at the START of the map the
  * player was on, with score, upgrades, lives, carries, capstone and
  * ascension state intact. The capstone is stored by id and re-hydrated from
  * the loaded pool; the level sequence is stored by id so the resumed variants
@@ -18,6 +23,8 @@
  * picker) or the in-run Continue revive (a per-run resource spent on death).
  */
 import { useCallback, useEffect, useState } from 'react';
+import type { LevelScoreData } from '@/types/game';
+import type { BetweenMapPlan } from '@/ui/screens/pipelineModel';
 
 const RUN_SAVE_KEY = 'jezzball_run_v1';
 const RUN_SAVE_VERSION = 1;
@@ -74,6 +81,32 @@ export interface RunSave {
   // questions: held says the slot is spoken for, retained says the ability
   // comes back every map. Optional; pre-feature saves default to [].
   retainedAbilityIds?: string[];
+  /**
+   * Set when the save was written BETWEEN maps: the map at currentLevelIndex is
+   * finished and banked (its hours are in totalScore), and a resume goes on
+   * from the stage the player was on (the store, the Promotion) instead of
+   * replaying the map. Absent: a resume starts the map at currentLevelIndex.
+   */
+  betweenMaps?: BetweenMapsSave;
+}
+
+/** Where between two maps a run was saved, and what that stage had dealt. */
+export interface BetweenMapsSave {
+  /** "debrief": the map's card was up; a resume goes on to what comes after it. */
+  stage: "debrief" | "promotion" | "store";
+  /** The finished map's results, which the store reads (its lock toll). */
+  levelScore: LevelScoreData;
+  /** The stages strip as it stood when the map ended. */
+  plan?: BetweenMapPlan;
+  /** The Promotion's three offers, by id, so a resume shows the same three. */
+  capstoneOfferIds?: string[];
+  /** The store as it opened, so a resume reopens the same store. */
+  store?: {
+    closed: boolean;
+    lockProgress: { have: number; need: number };
+    freeAbilityGrant: string | null;
+    dealt: { offerIds: string[]; abilityIds: string[] } | null;
+  };
 }
 
 /** Payload the caller supplies; version + savedAt are stamped on write. */

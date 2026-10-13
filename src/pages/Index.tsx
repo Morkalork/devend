@@ -612,6 +612,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onContinue={session.handleContinueFromShop}
                   accentColor={accentHex}
                   pipeline={session.betweenMapPlan}
+                  // The shelf as dealt, kept with the run save: a run closed in
+                  // the store reopens this shelf rather than a new roll.
+                  dealt={session.storeDealt}
+                  onDealt={session.handleShopDealt}
                   extraShopItems={session.activeModifiers.extraShopItems}
                   shopRestockCount={session.activeModifiers.shopRestockCount}
                   shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}

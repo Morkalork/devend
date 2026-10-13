@@ -23,7 +23,8 @@ import { useLoadoutManager } from './useLoadoutManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
-import { useRunSave, RunSave } from './useRunSave';
+import { useRunSave, RunSave, type BetweenMapsSave } from './useRunSave';
+import type { StoreDealt } from '@/ui/screens/shopModel';
 import { useHallOfFame } from './useHallOfFame';
 import { aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
@@ -224,6 +225,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // at the first map end at/past the trigger level. Permanent for the run
   // (survives ascension); cleared only on run resets.
   const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
+  // What this store visit put on its shelf, kept for the run save (a run
+  // resumed in the store reopens the same shelf). Cleared per visit.
+  const [storeDealt, setStoreDealt] = useState<StoreDealt | null>(null);
+  const handleShopDealt = useCallback((dealt: StoreDealt) => setStoreDealt(dealt), []);
+  // A resumed run saved between maps, waiting for its level sequence to settle
+  // before it is routed back to the stage it was saved on.
+  const [resumeBetween, setResumeBetween] = useState<{ at: number; between: BetweenMapsSave } | null>(null);
   const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
@@ -828,6 +836,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // payload always reflects the settled post-advance state. Reading from a ref
   // avoids re-saving on every mid-map life/score change.
   const runSnapshotRef = useRef<Omit<RunSave, 'version' | 'savedAt'> | null>(null);
+  // Where between two maps the run stands, if it does (set further down, once
+  // the between-map plan exists); merged into every save.
+  const betweenMapsRef = useRef<BetweenMapsSave | null>(null);
+  const currentRunSave = useCallback((): Omit<RunSave, 'version' | 'savedAt'> | null => {
+    const snap = runSnapshotRef.current;
+    if (!snap) return null;
+    const between = betweenMapsRef.current;
+    return between ? { ...snap, betweenMaps: between } : snap;
+  }, []);
   runSnapshotRef.current = {
     levelSequenceIds: levels.map(l => l.id),
     currentLevelIndex,
@@ -859,11 +876,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // ref so this writes once per map, not on every in-map state change.
   useEffect(() => {
     if (nav.currentScreen !== 'game') return;
-    const snap = runSnapshotRef.current;
+    const snap = currentRunSave();
     if (!snap || snap.levelSequenceIds.length === 0) return;
     if (pairRunRef.current) return; // the pair keeps its own save
     saveRun(snap);
-  }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
+  }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun, currentRunSave]);
 
   /**
    * Also persist when the page is hidden or torn down, and when the error
@@ -876,14 +893,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   useEffect(() => {
     registerRunFlush(() => {
-      const snap = runSnapshotRef.current;
+      const snap = currentRunSave();
       if (!snap || snap.levelSequenceIds.length === 0) return;
       if (pairRunRef.current) return; // the pair keeps its own save
       saveRun(snap);
     });
     const uninstall = installRunFlushListeners();
     return () => { uninstall(); registerRunFlush(null); };
-  }, [saveRun]);
+  }, [saveRun, currentRunSave]);
 
   /** Leave any seeded-run context: normal runs roll Math.random again. */
   const clearDailyMode = useCallback(() => {
@@ -1237,7 +1254,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     applyRunRecord(save);
     analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
-    nav.goToGame();
+    if (save.betweenMaps) {
+      // Saved after the map was won: back to the stage it was saved on, with
+      // the map's results the store reads, once the sequence has settled.
+      setPendingLevelScore(save.betweenMaps.levelScore);
+      setResumeBetween({ at: save.currentLevelIndex, between: save.betweenMaps });
+    } else {
+      nav.goToGame();
+    }
   }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, applyRunRecord, nav.goToGame]);
 
 
@@ -1614,6 +1638,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
     setShopUnlockedCerts([]);
     setPendingLevelScore(null);
+    setStoreDealt(null);
     advanceToNextLevel();
     nav.goToGame();
   }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
@@ -1633,7 +1658,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Pulling them out satisfies the rule with no extra re-creation, and CI
   // lints with --max-warnings, so a new warning is a broken build rather than
   // a note.
-  const { goToUpgradeShop, goToCapstoneDraft, goToGame } = nav;
+  const { goToUpgradeShop, goToCapstoneDraft, goToGame, goToAscensionDraft } = nav;
 
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
@@ -1653,6 +1678,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       return;
     }
     const closed = locksThisRound < locksRequired;
+    setStoreDealt(null); // a new visit: the shelf is dealt fresh
     setStoreClosed(closed);
     setStoreLockProgress({ have: locksThisRound, need: locksRequired });
 
@@ -1722,6 +1748,39 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [showLevelComplete, liveBetweenMapPlan]);
   const betweenMapPlan = showLevelComplete ? liveBetweenMapPlan : (frozenBetweenMapPlan ?? liveBetweenMapPlan);
 
+  /**
+   * Save after every finished map, and at each stage after it.
+   *
+   * "Always make a save after a finished map, so that if you close the game in
+   * the store view, that is where you continue next." The map-start save alone
+   * left everything between maps to the page-hide flush, which wrote the
+   * finished map's index with its hours already banked, so a resume replayed
+   * the map it had just paid for. Now the save says it is between maps and
+   * which stage, with what that stage dealt (the Promotion's offers, the
+   * store's shelf), and a resume goes back to it.
+   */
+  const betweenStage: BetweenMapsSave['stage'] | null = !pendingLevelScore ? null
+    : nav.currentScreen === 'upgradeShop' ? 'store'
+    : nav.currentScreen === 'capstoneDraft' ? 'promotion'
+    : showLevelComplete ? 'debrief'
+    : null;
+  betweenMapsRef.current = betweenStage && pendingLevelScore ? {
+    stage: betweenStage,
+    levelScore: pendingLevelScore,
+    plan: betweenMapPlan,
+    capstoneOfferIds: betweenStage === 'promotion' ? capstoneOffers.map(c => c.id) : undefined,
+    store: betweenStage === 'store'
+      ? { closed: storeClosed, lockProgress: storeLockProgress, freeAbilityGrant, dealt: storeDealt }
+      : undefined,
+  } : null;
+  useEffect(() => {
+    if (!betweenStage) return;
+    if (pairRunRef.current) return; // the pair keeps its own save
+    const snap = currentRunSave();
+    if (!snap || snap.levelSequenceIds.length === 0) return;
+    saveRun(snap);
+  }, [betweenStage, storeDealt, capstoneOffers, saveRun, currentRunSave]);
+
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
@@ -1740,6 +1799,43 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       proceedToShop();
     }
   }, [isLastLevel, offerCapstoneIfDue, proceedToShop, nav.goToAscensionDraft]);
+
+  /**
+   * A run saved between maps, routed back to the stage it was saved on once
+   * its level sequence has settled (restoreSequence lands a render later). The
+   * store reopens as it was dealt, with its toll and its free grant as they
+   * stood, and never rolls a second free ability; the Promotion reopens on the
+   * same three offers. A save from the map's card goes on to whatever comes
+   * after the card, exactly as its Continue would have.
+   */
+  useEffect(() => {
+    if (!resumeBetween || !pendingLevelScore) return;
+    if (levels.length === 0 || currentLevelIndex !== resumeBetween.at) return;
+    const { between } = resumeBetween;
+    setResumeBetween(null);
+    // The map is banked: no stale completion may score it again.
+    lastDeliveredCompletionRef.current = resumeBetween.at + 1;
+    if (between.plan) setFrozenBetweenMapPlan(between.plan);
+    if (between.stage === 'store' && between.store) {
+      setStoreClosed(between.store.closed);
+      setStoreLockProgress(between.store.lockProgress);
+      setFreeAbilityGrant(between.store.freeAbilityGrant);
+      setStoreDealt(between.store.dealt);
+      goToUpgradeShop();
+      return;
+    }
+    if (between.stage === 'promotion' && between.capstoneOfferIds?.length) {
+      const pool = getCapstones();
+      const offers = between.capstoneOfferIds.flatMap(id => pool.filter(c => c.id === id));
+      if (offers.length > 0) {
+        setCapstoneOffers(offers);
+        goToCapstoneDraft();
+        return;
+      }
+    }
+    if (isLastLevel) goToAscensionDraft();
+    else if (!offerCapstoneIfDue()) proceedToShop();
+  }, [resumeBetween, pendingLevelScore, levels.length, currentLevelIndex, isLastLevel, offerCapstoneIfDue, proceedToShop, goToUpgradeShop, goToCapstoneDraft, goToAscensionDraft]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -2179,6 +2275,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runContext,
     // Capstone ("Promotion")
     capstoneOffers,
+    storeDealt,
+    handleShopDealt,
     capstone,
     handleSelectCapstone,
     // Run persistence (Continue / New Game on the welcome screen)

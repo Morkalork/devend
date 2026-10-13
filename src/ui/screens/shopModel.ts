@@ -23,6 +23,13 @@ type IsLocked = (upgradeId: string, ownedIds: string[]) => boolean;
  * items): deselecting a Junior tier also deselects a Senior tier that was
  * picked up via restock on top of it.
  */
+
+/** What one store visit put on the shelf, by id: kept with the run save. */
+export interface StoreDealt {
+  offerIds: string[];
+  abilityIds: string[];
+}
+
 export function deselectWithDependents(
   selected: string[],
   id: string,
