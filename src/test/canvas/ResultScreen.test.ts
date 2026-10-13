@@ -30,8 +30,7 @@ const RECAP: RunRecap = {
   primary: "lock", secondary: "freeze",
   tagCounts: { lock: 5, freeze: 3 },
   capstoneId: "golden_handshake", capstoneName: "Golden Handshake",
-  score: 640, previousBest: 500, isArchetypeRecord: true,
-} as RunRecap;
+};
 
 const RANK: ResultRunRank = {
   rank: 2, gapToNext: 40, gapToTop10: null, monthBest: true, dayBest: true,

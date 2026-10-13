@@ -154,14 +154,12 @@ export const entries: GalleryEntry[] = [
         monthlyBests={{ "2026-10": topRuns[0], "2026-09": topRuns[2], "2026-08": topRuns[3] }}
         dailyBests={{ "2026-10-10": run(88), "2026-10-09": run(120), "2026-10-08": run(64), "2026-10-06": run(97) }}
         dailyStreak={{ count: 3, lastKey: "2026-10-10" }}
-        archetypeBests={{ lock: 612, freeze: 488, bank: 301 }}
-        mapHighscores={{ "level-1": 14, "level-2": 22, "level-10": 61, "level-3": 30, "level-14": 75 }}
         metaStats={metaStats} onBack={noop} accentColor={ACCENT} />
     ),
   },
   {
     id: "HallOfFameScreen-empty", group: "screen", render: () => (
-      <HallOfFameScreen topRuns={[]} archetypeBests={{}} mapHighscores={{}} metaStats={DEFAULT_META_STATS} onBack={noop} accentColor={ACCENT} />
+      <HallOfFameScreen topRuns={[]} metaStats={DEFAULT_META_STATS} onBack={noop} accentColor={ACCENT} />
     ),
   },
   {

@@ -1,7 +1,8 @@
 /**
  * Integration (HIGHSCORES.md Phase A): a finished run files on the Hall of
- * Fame ledger with its trajectory, the result screen gets its rank, and the
- * NEXT run races the recorded trajectory via the level-complete pace payload.
+ * Fame ledger with its trajectory and the result screen gets its rank. A map
+ * played again pays exactly what it scored: there is no per-map record to
+ * beat and no bonus for beating one.
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -42,7 +43,7 @@ async function finishMap(result: { current: ReturnType<typeof useSession> }, sco
 }
 
 describe("Hall of Fame session integration", () => {
-  it("files the run on death, then the next run races its trajectory", async () => {
+  it("files the run on death, and a replayed map pays only its own score", async () => {
     const { result } = renderHook(() => useSession());
 
     // Run 1: two maps, then die and decline the revive.
@@ -69,17 +70,19 @@ describe("Hall of Fame session integration", () => {
     expect(hall.topRuns[0].levelsCompleted).toBe(2);
     expect(hall.bestRunTrajectory).toEqual([30, 60]);
 
-    // Run 2: matching the ghost is not a personal best, so the overlay gets
-    // nothing. It used to get a Record Pace delta of 0 here; that row is out
-    // (see useGameSession), and the payload is now the PB banner alone.
+    // Run 2: the same first map, scored higher than last time, pays its own
+    // score and nothing on top.
     await act(async () => { await result.current.session.handleStartGame(undefined, true); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
-    await finishMap(result, 30); // cumulative 30, level with the ghost
-    expect(result.current.session.levelPace).toBeNull();
-
-    // Passing the all-time best mid-run still fires the banner, once.
-    await finishMap(result, 40); // cumulative 70, past the recorded 60
-    expect(result.current.session.levelPace).toEqual({ newPersonalBest: true });
+    await act(async () => {
+      result.current.session.handleLevelComplete({
+        levelId: result.current.session.currentLevel!.id,
+        levelScore: 40, cutCount: 10, expectedCuts: 10, remainingPercent: 30,
+        lockedBallsCount: 2,
+      } as never);
+    });
+    expect(result.current.session.pendingLevelScore?.levelScore).toBe(40);
+    expect(result.current.session.pendingLevelScore).not.toHaveProperty("highscoreBonus");
   });
 
   it("debug-started runs never file on the ledger", async () => {
@@ -100,7 +103,5 @@ describe("Hall of Fame session integration", () => {
 
     expect(result.current.session.lastRunRank).toBeNull();
     expect(localStorage.getItem("jezzball_hall_v1")).toBeNull();
-    // And the pace payload stayed absent (nothing to race, ineligible anyway).
-    expect(result.current.session.levelPace).toBeNull();
   });
 });

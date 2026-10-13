@@ -20,7 +20,7 @@ const DEBRIEF: Stage[] = [
 ];
 
 const STORE: Stage[] = [
-  { id: "debrief", title: "Debrief", detail: "+96h, new personal best", state: "done" },
+  { id: "debrief", title: "Debrief", detail: "+96h", state: "done" },
   { id: "promotion", title: "Promotion", detail: "Stock Options", state: "done" },
   { id: "store", title: "Store", detail: "Rates +32%, 2 restocks", state: "now" },
   { id: "deploy", title: "Level 11", detail: "Electric blue band", state: "todo" },

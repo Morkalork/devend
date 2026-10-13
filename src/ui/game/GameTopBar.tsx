@@ -1,22 +1,21 @@
 /**
  * GameTopBar: the compact status bar above the board (canvas port of
- * components/game/GameTopBar.tsx). Level, lives, the goal tracker and, with
- * the Benchmarking certificate, highscore progress. Tapping either row (or
+ * components/game/GameTopBar.tsx). Level, lives and the goal tracker. Tapping either row (or
  * swiping down on it) opens TopBarDetailsPanel, which holds the run's build,
  * upgrades, assignment and attributes.
  *
- * Exactly topBarHeight(showHighscoreBar) tall and the screen's full width,
+ * Exactly topBarHeight() tall and the screen's full width,
  * whatever it shows: the board below is laid out against that height once and
  * must never move after it appears (hudMetrics.ts). The parent places it at
  * the top of the screen.
  */
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, Target, ChevronDown, RotateCcw, TrendingUp, Gauge } from "lucide-react";
+import { Heart, Target, ChevronDown, RotateCcw, Gauge } from "lucide-react";
 import { everyRequirementMet, goalAtRisk, type Goal } from "@/lib/goalTracker";
 import {
-  COLOR, Icon, Label, Modal, ProgressBar, RADIUS, ScrollView, TEXT, View,
-  HOLD_MS, hex, tint, useTween, useUiScreen,
+  COLOR, Icon, Label, Modal, RADIUS, ScrollView, TEXT, View,
+  HOLD_MS, hex, tint, useUiScreen,
 } from "../kit/ui";
 import { HUD, topBarHeight } from "./hudMetrics";
 import { GoalChip } from "./GoalChip";
@@ -24,7 +23,7 @@ import { ScreenOverlay } from "./bottomOverlay";
 import { StatFlash } from "./TopBarFlash";
 import { useTapOrSwipeDown } from "./topBarGestures";
 import { filledIcon } from "./topBarIcons";
-import { HEART_PULSE_MS, highscoreBar, spaceDetail as spaceDetailOf } from "./topBarModel";
+import { HEART_PULSE_MS, spaceDetail as spaceDetailOf } from "./topBarModel";
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -58,11 +57,6 @@ interface GameTopBarProps {
   scopeCreepPercent?: number;
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
-  // Map highscore progress (#45): shown only with the Benchmarking certificate and
-  // when this map has a stored highscore. current = live projected score.
-  showHighscoreBar?: boolean;
-  highscoreCurrent?: number;
-  highscoreTarget?: number;
   /** Opens the Specs panel (TopBarDetailsPanel). */
   onExpand?: () => void;
 }
@@ -70,8 +64,6 @@ interface GameTopBarProps {
 /** rgba(0, 10, 5, 0.9): both rows' ground. */
 const BAR_BG = tint(0x000a05, 0.9);
 const SCOPE_CREEP = 0xff6b6b;
-const RECORD = 0xffd54a;
-const CHASING = 0xffb020;
 
 export function GameTopBar({
   levelNumber,
@@ -85,9 +77,6 @@ export function GameTopBar({
   onExplainWin,
   scopeCreepPercent = 0,
   accentColor = "#00ff88",
-  showHighscoreBar = false,
-  highscoreCurrent = 0,
-  highscoreTarget = 0,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
@@ -141,7 +130,7 @@ export function GameTopBar({
   }, [scopeCreepPercent, flash]);
 
   return (
-    <View layout={{ width: screen.width, height: topBarHeight(showHighscoreBar), flexShrink: 0 }}>
+    <View layout={{ width: screen.width, height: topBarHeight(), flexShrink: 0 }}>
       {/* Rows 1 and 2 share one gesture surface: tap or swipe down = Specs. */}
       <layoutContainer layout={{ flexDirection: "column" }} {...gesture}>
         {/* Row 1: level, lives, and the expand chevron */}
@@ -229,18 +218,6 @@ export function GameTopBar({
         </View>
       </layoutContainer>
 
-      {/* Highscore progress (#45). The row is reserved whenever the bar says it
-          shows, so the height never waits on the target arriving. */}
-      {showHighscoreBar && (
-        <HighscoreRow
-          accent={accent}
-          spaceRemaining={spaceRemaining}
-          spaceRequired={spaceRequired}
-          current={highscoreCurrent}
-          target={highscoreTarget}
-        />
-      )}
-
       {/* The full-width SPECS button used to sit under here; it moved to the
           control row with the other controls. The row taps, the swipe and the
           chevron stay as shortcuts that cost no space. */}
@@ -270,46 +247,6 @@ function PulsingHeart({ color }: { color: number }) {
     <StatFlash breatheMs={HEART_PULSE_MS}>
       <Icon icon={filledIcon(Heart, color)} size={20} color={color} />
     </StatFlash>
-  );
-}
-
-interface HighscoreRowProps {
-  accent: number;
-  spaceRemaining: number;
-  spaceRequired: number;
-  current: number;
-  target: number;
-}
-
-/**
- * Capture progress toward clearing the map (top bar) over the live projected
- * score against the map highscore (bottom bar).
- */
-function HighscoreRow({ accent, spaceRemaining, spaceRequired, current, target }: HighscoreRowProps) {
-  const { t } = useTranslation();
-  const bar = highscoreBar(spaceRemaining, spaceRequired, current, target);
-  // The DOM bars eased their width over 300ms.
-  const capture = useTween(bar?.captureFraction ?? 0, 0.3);
-  const hs = useTween(bar?.hsFraction ?? 0, 0.3);
-  const track = tint(COLOR.white, 0.12);
-  return (
-    <View layout={{ height: HUD.highscoreRow, paddingTop: 6, paddingLeft: 12, paddingRight: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-      {bar && (
-        <>
-          <Icon icon={TrendingUp} size={14} color={bar.beat ? RECORD : CHASING} />
-          <View layout={{ flex: 1, gap: 4 }}>
-            <ProgressBar value={capture} color={accent} track={track} height={4} />
-            <ProgressBar value={hs} color={bar.beat ? RECORD : CHASING} track={track} height={4} />
-          </View>
-          <Label
-            text={bar.percent === null ? t("topBar.recordPace") : `${bar.percent}%`}
-            font="display" size={10} weight="700"
-            color={bar.beat ? RECORD : COLOR.mutedForeground}
-            glow={bar.beat ? 8 : undefined}
-          />
-        </>
-      )}
-    </View>
   );
 }
 

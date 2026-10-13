@@ -178,11 +178,6 @@ describe("hours paid on top of the Score line (#79)", () => {
     expect(m.onTopTotal).toBe(11);
   });
 
-  it("counts the highscore bonus only when the highscore was actually beaten", () => {
-    expect(model({ highscoreBonus: 5 }).onTopRows).toHaveLength(0);
-    expect(model({ highscoreBonus: 5, beatHighscore: true }).onTopRows.map(r => r.key)).toEqual(["newHighscore"]);
-  });
-
   it("reports what the backstop clipped, and never a negative clip", () => {
     const axes = { delivery: 30, craft: 0, tempo: 0, thrift: 0, greed: 0, total: 30, ratios: {}, ceilings: {} };
     const m = model({ multipliedBase: 20, axes, levelScore: 40 } as Partial<LevelScoreData>);

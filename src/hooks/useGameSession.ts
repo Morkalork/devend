@@ -36,15 +36,13 @@ import { performTotalReset } from '@/lib/totalReset';
 import { loadAbilities, getAllAbilities, rollCappedAbilityReward } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
-import { isOnboardingMap, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
+import { isOnboardingMap } from '@/lib/onboardingMap';
 import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
 import { UpgradeConfig } from '@/types/upgrade';
 import { loadCapstones, getCapstones, capstoneDueAfter, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import type { BetweenMapPlan } from '@/ui/screens/pipelineModel';
 import { CapstoneConfig } from '@/types/capstone';
-import { getHighscoreBonusMultiplier } from '@/lib/scoring';
-import { highscoreBonus } from '@/lib/highscore';
 import {
   loadOffers, getOffer, getOfferCatalogue, rollSprintDeal, shopLeanOf, offerModifierLayers, pickLivesDelta,
   allOffers, type DealtOffer,
@@ -334,7 +332,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const { hasSavedRun, savedRun, saveRun, clearRun, readRun } = useRunSave();
 
   // Hall of Fame (HIGHSCORES.md Phase A): the all-time Top 10 run ledger plus
-  // the #1 run's per-map trajectory, which Record Pace races during the run.
+  // the #1 run's per-map trajectory, which the end-of-run epitaph reads.
   const { topRuns, bestRunTrajectory, monthlyBests, dailyBests, dailyStreak, bestScore, recordRun } = useHallOfFame();
   // Cumulative overtime after each completed map of the CURRENT run. A ref
   // because it's appended inside handleLevelComplete's synchronous flow and
@@ -377,10 +375,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const pairRunRef = useRef(false);
   const pairStartPendingRef = useRef(false);
   const beginPairRun = useCallback(() => { pairStartPendingRef.current = true; }, []);
-  // The mid-run "new personal best" banner fires once per run.
-  const pbCelebratedRef = useRef(false);
-  // Personal-best banner payload for the current level-complete overlay.
-  const [levelPace, setLevelPace] = useState<{ newPersonalBest: boolean } | null>(null);
   // Where the just-finished run landed on the ladder (for the result screen).
   const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null; monthBest: boolean; dayBest?: boolean; dailyStreak?: number }) | null>(null);
   // Daily Stand-up (HIGHSCORES.md Phase D): non-null = this run is the seeded
@@ -392,9 +386,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     stats: metaStats,
     isLoaded: metaLoaded,
     metArchetypes,
-    mapHighscores,
     encounteredBallTypeIds,
-    archetypeBests,
     recordLevelReached,
     recordRunEnded,
     recordRunUpgrades,
@@ -404,9 +396,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordLivesLost,
     recordPushBonusBanked,
     recordArchetypeMet,
-    recordMapHighscore,
     recordBallTypeEncountered,
-    recordArchetypeBest,
     unlockFeature,
     isFeatureUnlocked,
     resetProgression,
@@ -748,8 +738,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLastRunOfferUnlocks([]);
     runTrajectoryRef.current = [];
     recordEligibleRef.current = true;
-    pbCelebratedRef.current = false;
-    setLevelPace(null);
     setLastRunRank(null);
     resetRunProgress();
   }, [resetRunProgress]);
@@ -1119,14 +1107,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // written before Phase A default to eligible with an empty trajectory).
     runTrajectoryRef.current = save.runTrajectory ?? [];
     recordEligibleRef.current = save.recordEligible ?? true;
-    // Don't re-flash the PB banner if the saved run had already passed it.
-    pbCelebratedRef.current = bestScore !== null && save.totalScore > bestScore;
-    setLevelPace(null);
     setLastRunRank(null);
 
     restoreRunProgress(save.runLevelsCompleted);
     restoreSequence(save.levelSequenceIds, save.currentLevelIndex);
-  }, [restoreRunProgress, restoreSequence, bestScore]);
+  }, [restoreRunProgress, restoreSequence]);
 
   const resumeRunFrom = useCallback(async (save: RunSave, runSeed?: string) => {
     // Whose run this is, decided first (see pairRunRef).
@@ -1187,27 +1172,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     await resumeRunFrom(save);
   }, [readRun, resumeRunFrom]);
 
-  // End-of-run build recap: name the build from its archetype lean and score
-  // the banked overtime against the dominant archetype's personal best.
-  const captureRunRecap = useCallback((finalScore: number) => {
+  // End-of-run build recap: name the build from its archetype lean.
+  const captureRunRecap = useCallback(() => {
     const identity = computeBuildIdentity(tagCounts);
-    let previousBest: number | null = null;
-    let isArchetypeRecord = false;
-    if (identity.primary) {
-      const res = recordArchetypeBest(identity.primary, finalScore);
-      previousBest = res.previous;
-      isArchetypeRecord = res.isRecord;
-    }
     setLastRunRecap({
       ...identity,
       tagCounts: Object.fromEntries(tagCounts),
       capstoneId: capstone?.id ?? null,
       capstoneName: capstone?.name ?? null,
-      score: finalScore,
-      isArchetypeRecord,
-      previousBest,
     });
-  }, [tagCounts, capstone, recordArchetypeBest]);
+  }, [tagCounts, capstone]);
 
   /**
    * File the finished run on the Hall of Fame ledger (HIGHSCORES.md Phase A)
@@ -1256,7 +1230,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordRunUpgrades(ownedUpgradeIds);
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
-    captureRunRecap(totalScore);
+    captureRunRecap();
     fileRunOnLedger(totalScore);
     // The run is over: no Continue on the welcome screen. A pair run never
     // held that slot, and the solo run parked in it is not the one that ended.
@@ -1483,26 +1457,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       armFeatureUnlock(feature.id);
     }
 
-    // Map highscore (#45): record this map's base score and, if it beat the
-    // map's previous highscore, credit a bonus multiplier on TOP of the base
-    // (applied after the per-map cap, so beating a record always pays). A map's
-    // first-ever completion just sets the baseline, no bonus.
-    const baseLevelScore = scoreData.levelScore;
-    let highscoreBonusEarned = 0;
-    let beatHighscore = false;
-    let previousHighscore: number | undefined;
-    // The onboarding map is played once, ever, so it gets no map record: a row
-    // in the Records screen that can never be beaten is just noise.
-    if (scoreData.levelId && scoreData.levelId !== ONBOARDING_MAP_ID) {
-      const { previous, isRecord } = recordMapHighscore(scoreData.levelId, baseLevelScore);
-      if (isRecord) {
-        beatHighscore = true;
-        previousHighscore = previous ?? undefined;
-        highscoreBonusEarned = highscoreBonus(previous, baseLevelScore, getHighscoreBonusMultiplier());
-      }
-    }
-
-    const levelOvertime = baseLevelScore + highscoreBonusEarned;
+    const levelOvertime = scoreData.levelScore;
 
     analytics.levelCompleted({
       level: currentLevelNum,
@@ -1512,31 +1467,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     });
 
 
-    // Extend this run's trajectory, and fire the personal-best banner once, the
-    // moment the total passes the all-time best mid-run.
-    //
-    // RECORD PACE IS OUT. It showed this run's total minus the best run's at the
-    // same maps-completed point, on the level-complete card and as a live chip.
-    // Taken out as confusing, and it was: the number it compared is `totalScore`,
-    // which is the WALLET - buying an upgrade subtracts from it - so the row read
-    // as a performance gap while actually measuring how much you had spent. The
-    // shop repricing made that plain, every run sitting near -100h because the
-    // ghost run was recorded when the cheapest card was 30h.
-    //
-    // The trajectory is still recorded (the ledger stores it, and the result
-    // screen's "ahead through N maps" epitaph reads it), so bringing the row
-    // back is re-rendering `paceDelta`, which is still in lib/runLedger with its
-    // tests. Fix what it compares first: HIGHSCORES.md says the score is
-    // CUMULATIVE overtime, and a wallet is not cumulative.
+    // Extend this run's trajectory (the ledger stores it, and the result
+    // screen's "ahead through N maps" epitaph reads it).
     const cumulative = totalScore + levelOvertime;
     runTrajectoryRef.current = [...runTrajectoryRef.current, cumulative];
-    let pace: { newPersonalBest: boolean } | null = null;
-    if (recordEligibleRef.current && bestScore !== null
-        && cumulative > bestScore && !pbCelebratedRef.current) {
-      pbCelebratedRef.current = true;
-      pace = { newPersonalBest: true };
-    }
-    setLevelPace(pace);
 
     // Functional, not `totalScore + levelOvertime`. Every other writer of this
     // state already is (a purchase), and a
@@ -1544,8 +1478,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // the same React batch. The wallet is the one number a player counts.
     setTotalScore(prev => prev + levelOvertime);
     setPendingLevelScore({
-      ...scoreData, levelScore: levelOvertime, tierMultiplier: 1,
-      beatHighscore, previousHighscore, highscoreBonus: highscoreBonusEarned,
+      ...scoreData, tierMultiplier: 1,
     });
     setShowLevelComplete(true);
 
@@ -1554,7 +1487,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, recordMapHighscore, armFeatureUnlock, bestRunTrajectory, bestScore]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, armFeatureUnlock]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -2053,7 +1986,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
     // Meta progression
     metaStats,
-    mapHighscores,
     encounteredBallTypeIds,
     recordBallTypeEncountered,
     runHoursAwarded,
@@ -2126,11 +2058,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
      */
     readRunSnapshot: () => runSnapshotRef.current,
     // Records (HIGHSCORES.md Phase A/B/C/D)
-    levelPace,
     lastRunRank,
     topRuns,
     monthlyBests,
-    archetypeBests,
     // Daily Stand-up
     dailyKey,
     dailyBests,

@@ -25,7 +25,8 @@ export interface HallOfFameState {
   topRuns: RunLedgerEntry[];
   /**
    * The #1 run's cumulative banked overtime after each completed map
-   * (index 0 = after the first map). Drives the Record Pace comparison.
+   * (index 0 = after the first map). Drives the result screen's
+   * "ahead through N maps" epitaph.
    */
   bestRunTrajectory: number[];
   /**

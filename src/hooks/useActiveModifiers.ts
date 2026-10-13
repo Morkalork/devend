@@ -256,11 +256,6 @@ export interface GameModifiers {
   // throws what it hits.
   moverBandPerMap: number;
 
-  // Additive (sum) — Benchmarking (#45): 0 = off, >0 = show the map-highscore
-  // progress bar in the HUD (a second bar under the capture readout). Granted
-  // by the `benchmarking` certificate, so once earned it is on for every run.
-  showHighscoreProgress: number;
-
   // ── Sprint Planning Specialisations (offers.yml; src/lib/offerPerks.ts) ──
   // One signature rule each, a rule the tag's upgrades do not sell.
   //
@@ -452,7 +447,6 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   moverDrive: 0,
   moverDerailPerMap: 0,
   moverBandPerMap: 0,
-  showHighscoreProgress: 0,
   openingSlowSeconds: 0,
   fenceHeadStart: 0,
   shopInterestPercent: 0,

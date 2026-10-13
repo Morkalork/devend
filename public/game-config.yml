@@ -102,7 +102,7 @@ scope_creep:
 # Tokens spawn in open playable space. Locking a ball in a pocket that contains
 # the token claims it; capturing the token's area with NO ball locked in that
 # pocket wastes it; an unclaimed token expires after lifetime_seconds. Claimed
-# overtime is paid AFTER the per-map cap (like the highscore bonus). Maps can
+# overtime is paid AFTER the per-map cap. Maps can
 # override the spawn chance (map.yml pickupChance, also bypasses start_level)
 # and suggest curated anchor positions (pickupSpots).
 pickups:

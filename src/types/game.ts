@@ -747,10 +747,6 @@ export interface LevelScoreData {
   freeShopItemsEarned?: number;
   // Active-play seconds to first meet the win condition (drives the row label)
   clearTimeSeconds?: number;
-  // Map highscore (#45): set when this map's score beat its previous highscore.
-  beatHighscore?: boolean;
-  previousHighscore?: number; // the record that was beaten (for display)
-  highscoreBonus?: number;    // extra score credited for beating it
   // True when the map was won by locking every ball (an auto-win). The board
   // fully drains once no ball is left in play, so "remaining space" is 0% and
   // meaningless here - the results screen hides the Remaining row.

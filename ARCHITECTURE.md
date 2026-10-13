@@ -79,7 +79,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
-| [useMetaProgression](src/hooks/useMetaProgression.ts) | lifetime stats, super-upgrade unlocks, per-map highscores, encountered ball types | — | `jezzball_meta_stats`, `jezzball_unlock_state` |
+| [useMetaProgression](src/hooks/useMetaProgression.ts) | lifetime stats, super-upgrade unlocks, encountered ball types | — | `jezzball_meta_stats`, `jezzball_unlock_state` |
 | [useTutorialManager](src/hooks/useTutorialManager.ts) | one-time tutorial flags | — | `tutorials_seen_v1` |
 | [useCheckpointSnapshots](src/hooks/useCheckpointSnapshots.ts) | level snapshots | — | `jezzball_checkpoints_v2` |
 | [useColorProgression](src/hooks/useColorProgression.ts) | accent colour per level | `colors.yml` | — |
@@ -172,8 +172,8 @@ the only tactic the score could see.
 [economyDeflation.ts](src/lib/economyDeflation.ts): a good map paid ~136h and
 now pays ~34h. Every price, ceiling and threshold moved with it, so the ratios
 are unchanged; the point was legibility, not balance. Because banked scores
-outlive the economy that produced them, per-map highscores, archetype bests and
-the Hall of Fame carry an `economyScale` stamp and are converted once on load.
+outlive the economy that produced them, the Hall of Fame carries an
+`economyScale` stamp and is converted once on load.
 
 Upgrade multipliers raise an axis **ceiling**, not its payout, so an upgrade is
 a commitment to a lane and is dead weight in a run that never played it.

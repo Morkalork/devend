@@ -44,7 +44,7 @@ interface ResultScreenProps {
   runLevelsCompleted?: number;
   /** Sprint Planning offers this run unlocked (celebrated below the title). */
   newlyUnlockedOffers?: string[];
-  /** End-of-run build recap (archetype identity, capstone, personal best). */
+  /** End-of-run build recap (archetype identity, capstone). */
   runRecap?: RunRecap | null;
   /**
    * Where this run landed on the all-time ladder (HIGHSCORES.md Phase A),
@@ -295,10 +295,6 @@ export function ResultScreen({
               {recap.capstoneText && (
                 <IconLine icon={Award} iconColor={COLOR.primary} text={recap.capstoneText} size={TEXT.sm} />
               )}
-              {recap.recordText && (
-                <IconLine icon={Medal} iconColor={TW.yellow400} text={recap.recordText} size={TEXT.sm} weight="700" color={TW.yellow400} />
-              )}
-              {recap.bestSoFarText && <Label text={recap.bestSoFarText} size={TEXT.xs} color={ROLE.muted} wrap />}
             </Appear>
           )}
 

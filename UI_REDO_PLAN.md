@@ -153,8 +153,7 @@ the player read before the map, so the two cards cannot disagree. Marked, a
 row is a green check (met, or a failure that did not happen, under the heading
 "Failure, avoided") or a red cross (missed: a goal an "or" win skipped, a bonus
 area not taken). The Debrief keeps the frame (the stage strip and the hours
-headline every stage has) and the rare notices (push failed, a certificate, a
-personal best), and drops the breakdown, the axes and the totals. Those are
+headline every stage has) and the rare notices (push failed, a certificate), and drops the breakdown, the axes and the totals. Those are
 kept whole behind Admin's **Full debrief** switch (`debriefMode.ts`, a display
 setting, not a run flag), to compare and to bring back. Gallery:
 `LevelCompleteOverlay-ticket`, `LevelCompleteOverlay-ticketMissed`. Tests:

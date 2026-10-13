@@ -353,7 +353,6 @@
     "breakBonus": "Bono de demolición",
     "chestBonus": "Botín obtenido",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
-    "newHighscore": "Nuevo récord",
     "totalBonus": "Bonificación total",
     "overtimeEarned": "Horas extra ganadas",
     "totalOvertime": "Horas extra totales",
@@ -466,11 +465,6 @@
           }
         }
       },
-      "newHighscore": {
-        "title": "Nuevo récord",
-        "body": "Batiste el récord de este mapa, así que el pago es x1,25. Se aplica tras el tope, así que siempre suma.",
-        "tip": "Los récords se guardan por mapa. Una buena build de mejoras puede batir tus marcas mapa tras mapa."
-      },
       "totalBonus": {
         "title": "Bonificación total",
         "body": "Todos los bonos de este nivel sumados: par, espacio, bloqueos, demolición, ritmo y presión.",
@@ -478,8 +472,8 @@
       },
       "overtimeEarned": {
         "title": "Horas extra ganadas",
-        "body": "El total del nivel: base escalada más todos los bonos, con tope del doble de la base. Un récord multiplica más allá del tope. El número tras la barra es lo máximo que podía pagar este mapa.",
-        "tip": "¿Tocas el tope a menudo? Persigue el multiplicador de récord: se aplica después del tope."
+        "body": "El total del nivel: base escalada más todos los bonos, con tope del doble de la base. El número tras la barra es lo máximo que podía pagar este mapa.",
+        "tip": "¿Tocas el tope a menudo? Las horas listadas bajo la línea de puntuación, como el bono de victoria, se pagan aparte del tope."
       },
       "totalOvertime": {
         "title": "Horas extra totales",
@@ -532,7 +526,6 @@
         "tip": "Junta las bolas en un hueco y ciérralo con una sola valla. Dos pagan; cuatro pagan mucho más."
       }
     },
-    "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
     "breakdownTitle": "Desglose de puntuación",
     "winReason": {
       "label": "Victoria por",
@@ -634,7 +627,6 @@
     "spaceLeft": "Restante",
     "spaceCleared": "Despejado",
     "spaceGoalReached": "Meta alcanzada",
-    "recordPace": "RECORD",
     "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%",
     "continues_one": "{{count}} Continuación guardada",
     "continues_other": "{{count}} Continuaciones guardadas",
@@ -965,10 +957,7 @@
       "risk": "Adicto al crunch",
       "safety": "Programador defensivo"
     },
-    "capstoneLine": "Culminación: {{name}}",
-    "newRecord": "Nuevo récord personal para builds de {{archetype}}: {{hours}}h (antes {{previous}}h)",
-    "firstRecord": "Primera build de {{archetype}} registrada: {{hours}}h aseguradas",
-    "bestSoFar": "Mejor build de {{archetype}} hasta ahora: {{hours}}h"
+    "capstoneLine": "Culminación: {{name}}"
   },
   "capstoneDraft": {
     "title": "Ascenso",
@@ -1560,8 +1549,6 @@
     "topRuns": "Top 10 de todos los tiempos",
     "emptyLadder": "Aún no hay partidas registradas. Termina una partida y aparecerá aquí.",
     "mapsLabel": "{{count}} mapas",
-    "archetypeBests": "Mejores por arquetipo",
-    "mapRecords": "Récords por mapa",
     "back": "Volver",
     "employeeOfMonth": "Empleado del mes",
     "lifetime": "Historial",
@@ -1598,7 +1585,6 @@
     "extraCertificateHours": "Horas de Certificación por partida +{{hours}}",
     "bankedSlowPerStep": "Velocidad de bola {{percent}}% por cada 13h en el banco",
     "microManagerPerLock": "Velocidad de bola {{percent}}% por bola encerrada",
-    "showHighscoreProgress": "Añade la barra de récord del mapa al HUD",
     "startingOvertime": "Empieza con +{{hours}}h de horas extra",
     "storeLockReliefOne": "La tienda nunca pide más de un encierro",
     "storeLockReliefFull": "La tienda deja de pedir encierros",

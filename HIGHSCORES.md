@@ -24,8 +24,8 @@ Principles:
   every push-your-luck decision; a record you see at the end changes nothing.
 - **Every death must print a target.** The result screen converts failure into
   "I was this close".
-- **Never pay records in power** beyond the existing 1.25x per-map highscore
-  bonus. Records are pride currency; paying overtime re-opens issue #43.
+- **Never pay records in power.** Records are pride currency; paying overtime
+  re-opens issue #43.
 
 ## The score
 
@@ -42,18 +42,11 @@ completed map (`bestRunTrajectory`, indexed by maps-completed; it used to
 extend through ascension, which has since been removed). It is still recorded on every completion, and the result
 screen's "you were ahead through map N" epitaph reads it.
 
-The moment a run's total passes the all-time best, the overlay fires a one-time
-**"New personal best, and you're still going"** banner — from then on every map
-is bonus territory. That banner is the whole of what the overlay shows today.
-
-**Record Pace is OUT.** The level-complete row (`Record Pace  +12h` / `-8h`) and
-the Benchmarking top-bar chip that carried the same delta are removed: the row
-read as a performance gap while actually measuring how much you had spent, since
-the number it compared is `totalScore`, which is the WALLET (buying an upgrade
-subtracts from it). Every run sat near -100h once the shop was repriced.
-`paceDelta` stays in `src/lib/runLedger.ts` with its tests, so bringing the row
-back is re-rendering it — but fix its input first: a run's score is CUMULATIVE
-banked overtime, and a wallet is not cumulative.
+Nothing about the ghost is shown during the run. The mid-run "new personal
+best" banner, the Record Pace row and chip, the per-map highscores (with their
+1.25x beat-the-record bonus and the Benchmarking HUD bar) and the per-archetype
+bests have all been removed; the ledger, the epitaph and the screens below are
+what remains of personal records.
 
 Trajectory comparison is indexed by maps-completed (not level number) so runs
 using Certificate Head Starts compare fairly: both sides had N maps of income.
@@ -88,14 +81,9 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
 "Performance Review" (`src/components/game/HallOfFameScreen.tsx`):
 
 - **All-Time Top 10** as hold-to-inspect rows (the established gesture).
-- **Archetype bests** — the six `archetypeBests` records as a grid; empty
-  slots ("no Freeze run yet") are quiet quests.
-- **Map records** — the 35 `mapHighscores` as a browsable list. The existing
-  1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
-Also shipped: the **Benchmarking** certificate shows a persistent top-bar
-per-map record bar, and the screen carries a lifetime-stats flavor footer
-(highest level, fences drawn, perfect maps, lives lost). The run-pace delta
-chip that sat next to that bar went out with Record Pace (see §1).
+Also shipped: the screen carries a lifetime-stats flavor footer (highest
+level, fences drawn, perfect maps, lives lost). The archetype-bests grid and
+the per-map records list were removed with those records (see §1).
 
 ### 5. Employee of the Month (Phase C, shipped)
 
@@ -150,8 +138,8 @@ small API on the web — strictly opt-in if ever.
 
 | Phase | Contents | Status |
 |---|---|---|
-| A | Ledger + trajectory, PB banner, rank/gap + epitaph on result | **shipped** (Record Pace row pulled, see §1) |
-| B | Performance Review screen + Benchmarking record bar + lifetime footer | **shipped** (run-pace chip pulled with the row) |
+| A | Ledger + trajectory, rank/gap + epitaph on result | **shipped** (PB banner and Record Pace pulled, see §1) |
+| B | Performance Review screen + lifetime footer | **shipped** (map records, archetype bests and the Benchmarking bar pulled) |
 | C | Employee of the Month | **shipped** |
 | D | Daily Stand-up (seeded runs, daily ledger, attendance streak) | **shipped** |
 | E | Share card | **shipped** (real leaderboards remain optional) |

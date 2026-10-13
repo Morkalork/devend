@@ -44,8 +44,6 @@ const SPECIAL: Partial<Record<string, SpecialFormatter>> = {
   // Conditional rates: the value is a per-unit reduction, not a flat one.
   bankedSlowPerStep: (t, v) => t('certificateEffects.bankedSlowPerStep', { percent: signed(-ratePct(v)) }),
   microManagerPerLock: (t, v) => t('certificateEffects.microManagerPerLock', { percent: signed(-ratePct(v)) }),
-  // A toggle, so a signed number would be meaningless.
-  showHighscoreProgress: t => t('certificateEffects.showHighscoreProgress'),
   startingOvertime: (t, v) => t('certificateEffects.startingOvertime', { hours: v }),
   // Not a count of anything: the two levels are two different rules, so each
   // states its own. Anything past the second is still the second.

@@ -20,18 +20,16 @@
  *
  * ── The migration ──────────────────────────────────────────────────────────
  *
- * Banked scores OUTLIVE the economy that produced them: per-map highscores,
- * per-archetype bests and the Hall of Fame are all in localStorage in old
- * hours. Left alone they would sit 4x above anything the new economy can pay,
- * so every record becomes permanently unbeatable and the beat-your-highscore
- * bonus (highscoreBonusMultiplier) never fires again. That is a silent,
- * permanent loss of a whole progression system, which is why this is not
+ * Banked scores OUTLIVE the economy that produced them: the Hall of Fame is
+ * in localStorage in old hours. Left alone it would sit 4x above anything the
+ * new economy can pay, so every run on it becomes permanently unbeatable.
+ * That is a silent, permanent loss of the ladder, which is why this is not
  * optional cleanup.
  *
  * Each store carries an `economyScale` stamp. A blob written before the
  * deflation has no stamp, so it is divided once and re-stamped; a stamped blob
  * is passed through untouched. The stamp is what makes it idempotent - without
- * it a player who opened the game twice would have their records quartered
+ * it a player who opened the game twice would have their runs quartered
  * twice.
  */
 
@@ -48,9 +46,9 @@ export const ECONOMY_SCALE_VERSION = 2;
  * Convert one old-economy hour figure to the new scale.
  *
  * Rounds rather than floors so a record does not drift downward every time the
- * scale changes, and keeps any positive value at 1 or more: a 2h record
- * quartering to 0 would read as "never played this map" to every caller that
- * treats 0 as absent, and would drop the map off the highscore board entirely.
+ * scale changes, and keeps any positive value at 1 or more: a 2h run
+ * quartering to 0 would read as no score at all to every caller that treats 0
+ * as absent.
  */
 export function deflateHours(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 0;
@@ -61,11 +59,4 @@ export function deflateHours(value: number): number {
 export function needsDeflation(stamp: unknown): boolean {
   const seen = typeof stamp === 'number' && Number.isFinite(stamp) ? stamp : 1;
   return seen < ECONOMY_SCALE_VERSION;
-}
-
-/** Rescale a map-id -> hours record (map highscores, archetype bests). */
-export function deflateRecord(values: Record<string, number>): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const [key, value] of Object.entries(values)) out[key] = deflateHours(value);
-  return out;
 }

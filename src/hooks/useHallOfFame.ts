@@ -4,8 +4,8 @@
  * Persists the Top 10 runs plus the #1 run's per-map score trajectory
  * (localStorage HALL_STORAGE_KEY). recordRun() files a finished run and
  * reports its rank / near-miss gaps for the result screen; the trajectory only
- * updates when the run takes the #1 spot, so Record Pace always races the
- * reigning best.
+ * updates when the run takes the #1 spot, so the result screen's epitaph
+ * always measures against the reigning best.
  */
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -125,7 +125,7 @@ export function useHallOfFame() {
 
     const next: HallOfFameState = {
       topRuns: result.topRuns,
-      // Record Pace races the reigning #1: only a new best replaces the ghost.
+      // The epitaph measures against the reigning #1: only a new best replaces it.
       bestRunTrajectory: result.info.rank === 1 ? [...trajectory] : prev.bestRunTrajectory,
       monthlyBests,
       dailyBests,

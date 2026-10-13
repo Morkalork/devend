@@ -81,7 +81,7 @@ export function AbilitiesSeen({ ids, children }: { ids: string[]; children: Reac
 
 // ── Stateful samples ───────────────────────────────────────────────────────
 
-export function TopBarSample(p: { goals: Goal[]; highscore?: boolean; extras?: boolean }) {
+export function TopBarSample(p: { goals: Goal[]; extras?: boolean }) {
   return (
     <GameTopBar
       levelNumber={p.extras ? 24 : 7}
@@ -97,9 +97,6 @@ export function TopBarSample(p: { goals: Goal[]; highscore?: boolean; extras?: b
       onExplainWin={noop}
       scopeCreepPercent={p.extras ? 35 : 0}
       accentColor={ACCENT}
-      showHighscoreBar={p.highscore}
-      highscoreCurrent={1840}
-      highscoreTarget={2600}
       onExpand={noop}
     />
   );
@@ -173,7 +170,7 @@ export function AbilitySample({ charges, armed }: { charges: Record<string, numb
 /** The whole play screen's HUD around an empty board, as GameScreen stacks it. */
 export function WholeHud({ abilities, pushExit }: { abilities: boolean; pushExit: boolean }) {
   const screen = useUiScreen();
-  const top = topBarHeight(false);
+  const top = topBarHeight();
   const bottom = bottomStackHeight({ mapComplete: false, hasFenceTypes: true, hasAbilities: abilities, pushExit });
   return (
     <PlayLayout

@@ -224,11 +224,6 @@ upgrades:
       lockThresholdBonus: 8
     condition: { kind: mapHas, feature: mover }
 
-  # Benchmarking (the map-highscore HUD bar, #45) used to live here, hanging off
-  # Memory Footprint. It is now the `benchmarking` CERTIFICATE - see
-  # certificates.yml. It buys information rather than power, and re-buying it
-  # every run out of the same budget as an actual upgrade was a bad trade.
-
   # ===============================
   # FAST COMPILE (Fence Speed)
   # ===============================
