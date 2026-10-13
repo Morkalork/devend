@@ -420,6 +420,8 @@ export function UpgradeShop({
                 nextLabel={t("upgradeShop.nextOffer")}
                 positionLabel={(index, total) => t("upgradeShop.offerPosition", { index, total })}
                 cardWidth="min(76vw, 340px)"
+                // Tickets start on the column's left edge, under the Sprint panel and the backlog heading.
+                alignWidth={column}
                 marks={shelfMarks(shelfItems, upgrades, selectedIds, allOwnedIds)}
                 items={cards}
               />

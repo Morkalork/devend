@@ -55,6 +55,16 @@ export function stripOffset(index: number, cardWidth: number, viewWidth: number,
 }
 
 /**
+ * The strip's offset when the active card sits on a column's LEFT edge rather
+ * than in the middle: the store lines its tickets up with the Sprint panel and
+ * the backlog heading above them, which share that column. `inset` is how far
+ * in from the strip's left the column starts. Only the next card peeks then.
+ */
+export function stripOffsetFrom(index: number, cardWidth: number, inset: number, gap = CAROUSEL_GAP): number {
+  return inset - index * (cardWidth + gap);
+}
+
+/**
  * Which card a released drag lands on. The NEAREST card to the middle, so a
  * drag released past halfway reads as the next card and one short of it does
  * not; and a quick flick past the threshold still steps one, because a swipe
