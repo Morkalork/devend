@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { GitBranch, SquareKanban } from "lucide-react";
 import { criteriaSections } from "@/lib/winConditions";
-import { Icon, Label, RADIUS, ROLE, TEXT, View, tint } from "../kit/ui";
+import { Appear, Icon, Label, RADIUS, ROLE, TEXT, View, tint } from "../kit/ui";
 import { rowLook, type TicketRow } from "./AcceptanceTicketModel";
 import { ticketKey } from "../screens/storeBoardModel";
 
@@ -32,17 +32,27 @@ interface AcceptanceTicketProps {
    * list may not name, like a ball into a growing fence).
    */
   sayAvoided?: boolean;
+  /**
+   * How many rows (in reading order) show their mark; the rest show the empty
+   * glyph they had before the map. Absent: all of them (fillIn.ts).
+   */
+  filled?: number;
+  /** The figure in the key row's corner, the way a store ticket shows its estimate: the hours earned. */
+  estimate?: string;
 }
 
-export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, footer, sayAvoided = true }: AcceptanceTicketProps) {
+export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, footer, sayAvoided = true, filled, estimate }: AcceptanceTicketProps) {
   const { t } = useTranslation();
   // Marked, a failure row's green check means it did NOT happen; the heading
   // says so, or "Failure" over a check reads as "yes, the timer ran out".
-  const failsAvoided = sayAvoided && rows.some(r => r.group === "fail") && rows.every(r => r.group !== "fail" || r.met === true);
+  const failsAvoided = sayAvoided && (filled == null || filled >= rows.length) && rows.some(r => r.group === "fail") && rows.every(r => r.group !== "fail" || r.met === true);
   const sections = criteriaSections(rows, (group, count) => (group === "required" && count > 1
     ? t("winConditions.groupRequiredAll")
     : group === "fail" && failsAvoided ? t("winConditions.groupFailAvoided")
     : t(`winConditions.group.${group}`)));
+  // Where each group's rows start in reading order.
+  const order0: Record<string, number> = {};
+  sections.reduce((n, sec) => { order0[sec.group] = n; return n + sec.items.length; }, 0);
 
   return (
     <View label="acceptance-criteria" layout={{
@@ -59,6 +69,13 @@ export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, fo
             <Icon icon={SquareKanban} size={14} color={accent} />
           </View>
           <Label text={ticketKey(levelId)} size={TEXT.xs} font="mono" color={ROLE.muted} />
+          {/* Pushes the estimate to the corner; the key stays beside its square. */}
+          <View layout={{ flex: 1 }} />
+          {estimate && (
+            <Appear fromScale={1.3} duration={0.2}>
+              <Label text={estimate} size={TEXT.base} font="display" weight="700" color={ROLE.hours} />
+            </Appear>
+          )}
         </View>
 
         {/* Title and branch. */}
@@ -78,10 +95,17 @@ export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, fo
           <View key={section.group} label={`criteria-${section.group}`} layout={{ gap: 8 }}>
             <Label text={section.heading} size={TEXT.sm} font="display" weight="600" color={section.group === "fail" ? ROLE.cost : ROLE.ink} />
             {section.items.map((item, i) => {
-              const look = rowLook(item, accent);
+              // Reading order across the groups, so the marks go down the card.
+              const order = order0[section.group] + i;
+              const shown = filled == null || order < filled;
+              const look = rowLook(shown ? item : { ...item, met: undefined }, accent);
               return (
                 <View key={i} label={`criterion-${look.label}`} layout={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                  <Icon icon={look.icon} size={16} color={look.color} layout={{ marginTop: 2 }} />
+                  {/* A mark lands with a small pop; keyed so it replays when the box is ticked. */}
+                  <Appear key={shown && item.met != null ? "marked" : "open"} fromScale={shown && item.met != null && filled != null ? 1.7 : 1} duration={0.18}
+                    layout={{ marginTop: 2 }}>
+                    <Icon icon={look.icon} size={16} color={look.color} />
+                  </Appear>
                   <View layout={{ flex: 1 }}>
                     <Label text={item.text} size={TEXT.base} lineHeight={22} color={ROLE.ink} wrap />
                   </View>

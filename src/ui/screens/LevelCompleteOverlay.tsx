@@ -25,8 +25,10 @@ import { RichParagraph } from "./draftParts";
 import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
 import { useCountUp } from "./resultMotion";
 import { PipelineFrame } from "./PipelineFrame";
-import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
+import { continueLabel, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 import { AcceptanceTicket } from "../game/AcceptanceTicket";
+import { useFillIn } from "../game/fillIn";
+import { tutorialCardWidth } from "../game/TutorialOverlayModel";
 import { isFullDebrief } from "./debriefMode";
 
 interface LevelCompleteOverlayProps {
@@ -62,6 +64,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // totals below it are fixed-size and stay out of the fold.
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [displayLevelScore, displayTotalScore] = useCountUp(scoreData.levelScore, totalScore);
+  const ticket = !(full ?? isFullDebrief()) && !!scoreData.acceptance;
+  // Called whichever card is up (a hook cannot be conditional); only the ticket reads it.
+  const fill = useFillIn(ticket ? scoreData.acceptance?.length ?? 0 : 0);
 
   const hold = useCallback((key: string): PressHandlers => ({ onHold: () => setInfoKey(key) }), []);
 
@@ -122,27 +127,34 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // the rare notices beside it. Trying it without the rest (breakdown, axes,
   // totals), which stays below for Admin's "Full debrief" and for a score
   // that predates the marks.
-  if (!(full ?? isFullDebrief()) && scoreData.acceptance) {
+  // The ticket: the card the player read before the map, over the finished
+  // board with its overlays still up, filling in a row at a time; then the
+  // hours and the way on. The full Debrief (breakdown, axes, totals) stays
+  // below for Admin's "Full debrief" and for a score that predates the marks.
+  if (ticket && scoreData.acceptance) {
+    const cardWidth = tutorialCardWidth(screen.width);
     return (
-      <PipelineFrame
-        plan={plan}
-        at="debrief"
-        accent={accent}
-        headline={{
-          value: `+${displayLevelScore}`,
-          unit: "h",
-          caption: m.overtimeIsFull ? t("pipeline.fullPay") : t("pipeline.ofPossible", { hours: m.overtimeCeiling }),
-        }}
-      >
-        {pushFailed}
-        <Appear delay={0.15} duration={0.28}>
-          <AcceptanceTicket rows={scoreData.acceptance} levelNumber={levelNumber} levelId={levelId}
-            accent={accent} width={pipelineColumnWidth(screen.width)} />
+      <View layout={{ position: "absolute", left: 0, top: 0, width: screen.width, height: screen.height }}>
+        <Appear duration={0.2} layout={{ width: screen.width, height: screen.height }}>
+          {/* A light scrim: the board is the backdrop. A tap finishes the fill. */}
+          <Pressable onTap={fill.finish} pressedAlpha={1} label="ticket-scrim" layout={{
+            width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center",
+            padding: 24, backgroundColor: tint(0x000000, 0.5),
+          }}>
+            <View label="map-ticket" layout={{ width: cardWidth, gap: 12 }}>
+              {pushFailed}
+              <Appear fromY={12} duration={0.25}>
+                <AcceptanceTicket rows={scoreData.acceptance} levelNumber={levelNumber} levelId={levelId}
+                  accent={accent} width={cardWidth} filled={fill.filled}
+                  estimate={fill.done ? `+${displayLevelScore}h` : undefined} />
+              </Appear>
+              {fill.done && personalBest}
+              {fill.done && certificates}
+              {fill.done && continueButton}
+            </View>
+          </Pressable>
         </Appear>
-        {personalBest}
-        {certificates}
-        {continueButton}
-      </PipelineFrame>
+      </View>
     );
   }
 

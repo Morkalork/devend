@@ -26,6 +26,7 @@ import type { MapFailure } from '@/lib/mapFailure';
 import type { AcceptanceRow } from '@/types/game';
 import { Appear, Icon, Label, Pressable, RADIUS, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { AcceptanceTicket } from "./AcceptanceTicket";
+import { useFillIn } from "./fillIn";
 import { isFullDebrief } from "../screens/debriefMode";
 
 import { mapFailedCopy, mapFailedDelay } from "./MapFailedOverlayModel";
@@ -62,6 +63,8 @@ export function MapFailedOverlay({
   // ended, not whatever the state does while this is up.
   const [lines] = useState(() => copy.lines);
   const [rows] = useState(() => (full ?? isFullDebrief()) ? undefined : acceptance);
+  // Filled in a row at a time, as on the Debrief.
+  const fill = useFillIn(rows?.length ?? 0);
   const accent = hex(accentColor);
   // Inside the scrim's 32px gutters.
   const cardWidth = Math.min(448, screen.width - 64);
@@ -97,7 +100,7 @@ export function MapFailedOverlay({
 
               {rows && (
                 <AcceptanceTicket rows={rows} levelNumber={levelNumber} levelId={levelId} accent={accent}
-                  width={cardWidth} sayAvoided={false} />
+                  width={cardWidth} sayAvoided={false} filled={fill.filled} />
               )}
 
               {!rows && lines.length > 0 && (

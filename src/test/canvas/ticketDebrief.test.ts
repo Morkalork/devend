@@ -151,8 +151,10 @@ describe("the Debrief draws it", () => {
 
   it("opens as the ticket unless Admin asks for the full one, with nothing but the rare notices beside it", () => {
     const src = read("src/ui/screens/LevelCompleteOverlay.tsx");
-    expect(src).toContain("if (!(full ?? isFullDebrief()) && scoreData.acceptance) {");
-    const ticket = src.slice(src.indexOf("if (!(full ?? isFullDebrief())"), src.indexOf("  return (\n    <PipelineFrame", src.indexOf("if (!(full ?? isFullDebrief())")));
+    expect(src).toContain("const ticket = !(full ?? isFullDebrief()) && !!scoreData.acceptance;");
+    const start = src.indexOf("if (ticket && scoreData.acceptance) {");
+    expect(start).toBeGreaterThan(0);
+    const ticket = src.slice(start, src.indexOf("  return (\n    <PipelineFrame", start));
     expect(ticket).toContain("<AcceptanceTicket rows={scoreData.acceptance}");
     expect(ticket).not.toContain("breakdown");
     expect(ticket).not.toContain("PerformanceReviewAxes");
@@ -199,7 +201,7 @@ describe("the failed screen draws it too", () => {
     const src = read("src/ui/game/MapFailedOverlay.tsx");
     expect(src).toContain("const [rows] = useState(() => (full ?? isFullDebrief()) ? undefined : acceptance);");
     expect(src).toContain("{!rows && lines.length > 0 && (");
-    expect(src).toMatch(/<AcceptanceTicket rows=\{rows\}[\s\S]*?sayAvoided=\{false\} \/>/);
+    expect(src).toMatch(/<AcceptanceTicket rows=\{rows\}[\s\S]*?sayAvoided=\{false\} filled=\{fill\.filled\} \/>/);
     expect(read("src/ui/game/AcceptanceTicket.tsx")).toContain("const failsAvoided = sayAvoided && ");
   });
 
@@ -216,5 +218,72 @@ describe("the failed screen draws it too", () => {
     for (const id of ["MapFailedOverlay-ticket", "MapFailedOverlay-ticketRunOver", "MapFailedOverlay-full"]) {
       expect(g).toContain(`id: "${id}"`);
     }
+  });
+});
+
+
+// "We can now dismiss the end of map exploding game board and instead just show
+// the acceptance criteria modal on top of the finished map with overlays, but it
+// is important that the card content is filled in one by one, even if quickly."
+describe("the card over the finished board", () => {
+  it("fills in one row at a time, quickly, after the card has opened", async () => {
+    const { fillCount, fillDoneMs, FILL_START_MS, FILL_STEP_MS } = await import("@/ui/game/fillIn");
+    expect(fillCount(0, 5)).toBe(0);
+    expect(fillCount(FILL_START_MS - 1, 5)).toBe(0);
+    expect(fillCount(FILL_START_MS, 5)).toBe(1);
+    expect(fillCount(FILL_START_MS + FILL_STEP_MS, 5)).toBe(2);
+    expect(fillCount(FILL_START_MS + FILL_STEP_MS * 10, 5)).toBe(5);
+    // Every row gets a beat of its own, and a long card is still done fast.
+    for (let n = 1; n < 6; n++) expect(fillCount(fillDoneMs(6) - (6 - n) * FILL_STEP_MS, 6)).toBe(n);
+    expect(FILL_STEP_MS).toBeGreaterThanOrEqual(150);
+    expect(fillDoneMs(8)).toBeLessThan(2500);
+  });
+
+  it("marks rows in reading order and leaves the rest as the empty boxes of the pre-map card", () => {
+    const src = read("src/ui/game/AcceptanceTicket.tsx");
+    expect(src).toContain("const order = order0[section.group] + i;");
+    expect(src).toContain("const shown = filled == null || order < filled;");
+    expect(src).toContain("const look = rowLook(shown ? item : { ...item, met: undefined }, accent);");
+    // "Failure, avoided" only once every row is marked.
+    expect(src).toContain("const failsAvoided = sayAvoided && (filled == null || filled >= rows.length) && ");
+  });
+
+  it("is a modal over the board, shows the hours and the way on only once it is full, and a tap finishes it", () => {
+    const src = read("src/ui/screens/LevelCompleteOverlay.tsx");
+    const start = src.indexOf("if (ticket && scoreData.acceptance) {");
+    const modal = src.slice(start, src.indexOf("  return (\n    <PipelineFrame", start));
+    expect(modal).not.toContain("<PipelineFrame");
+    expect(modal).toContain("<Pressable onTap={fill.finish}");
+    expect(modal).toContain("filled={fill.filled}");
+    expect(modal).toContain("estimate={fill.done ? `+${displayLevelScore}h` : undefined}");
+    expect(modal).toContain("{fill.done && continueButton}");
+    expect(read("src/ui/game/MapFailedOverlay.tsx")).toContain("const fill = useFillIn(rows?.length ?? 0);");
+  });
+
+  it("leaves the board standing: no shatter on a win, a bank, a failed push or the run's end", () => {
+    const cut = read("src/lib/physics/applyCut.ts");
+    expect(cut).toContain("if (callbacks.keepBoardAtEnd?.()) deliver();\n    else callbacks.startDissolve(deliver);");
+    const over = read("src/lib/physics/handleGameOver.ts");
+    expect(over.match(/if \(!callbacks\.keepBoardAtEnd\?\.\(\)\) callbacks\.startDissolve\(/g)).toHaveLength(2);
+    expect(over).not.toMatch(/^\s*callbacks\.startDissolve\(/m);
+    const canvas = read("src/components/game/GameCanvas.tsx");
+    expect(canvas).toContain("keepBoardAtEnd: () => !isFullDebrief(),");
+    expect(canvas).toContain("if (!isFullDebrief()) deliver();\n      else startDissolveRef.current?.(deliver);");
+  });
+
+  it("keeps the overlays up under the card, and the board mounted", () => {
+    const canvas = read("src/components/game/GameCanvas.tsx");
+    expect(canvas).toContain("hold: game.shimmerFrozen || !isFullDebrief() });");
+    const index = read("src/pages/Index.tsx");
+    expect(index).toContain("(!session.showLevelComplete || !isFullDebrief())");
+    // Kept mounted, a skipped store would otherwise feed the next map to the same screen.
+    expect(index).toContain("key={`game-${session.gameInstanceKey}-${session.currentLevelIndex}`}");
+  });
+
+  it("marks every win, whichever path won it (a bank or a failed push included)", () => {
+    const canvas = read("src/components/game/GameCanvas.tsx");
+    expect(canvas).toContain("const deliverLevelComplete = (d: LevelScoreData) => onLevelCompleteRef.current(d.criteriaMet ? d : {");
+    expect(canvas).toContain("onLevelComplete: d => deliverLevelComplete(d),");
+    expect(canvas).toContain("deliverLevelCompleteRef.current?.({");
   });
 });

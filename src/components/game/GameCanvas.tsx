@@ -167,6 +167,7 @@ import { turnViewFor, type TurnView } from "@/lib/net/pairTurn";
 import { splitClauseOf } from "@/lib/splitWarn";
 import { visibleOutline } from "@/lib/headStartStrip";
 import { sfxGate, BOMB_SOUND_GAP_MS, BREAK_SOUND_GAP_MS } from "@/lib/sfxGate";
+import { isFullDebrief } from "@/ui/screens/debriefMode";
 
 // One board plays at a time, so one gate each: a bomb chain is a few booms and
 // a blast's ring of bricks one crash, not a sound per bomb and per brick.
@@ -540,6 +541,7 @@ export function GameCanvas({
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
+  const deliverLevelCompleteRef = useRef<((d: LevelScoreData) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onMapCompleteRef = useRef(onMapComplete);
@@ -552,7 +554,9 @@ export function GameCanvas({
   const showDebriefRef = useRef(() => {
     const game = gameRef.current;
     if (!game.debrief) return;
-    setDebriefView({ debrief: game.debrief, delayMs: Math.max(0, game.shimmerStart - simNow()), hold: game.shimmerFrozen });
+    // Held (no fade) under the ticket, which opens over the board with the
+    // overlays still up; the full Debrief fades them as the board shatters.
+    setDebriefView({ debrief: game.debrief, delayMs: Math.max(0, game.shimmerStart - simNow()), hold: game.shimmerFrozen || !isFullDebrief() });
   });
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
@@ -1787,6 +1791,13 @@ export function GameCanvas({
     };
     startDissolveRef.current = startDissolve;
 
+    // Every map won reaches the Debrief through here, whichever path won it
+    // (a cut, a lock, Bank & Continue, a failed push), so the marks are
+    // attached here when the path that won it did not already.
+    const deliverLevelComplete = (d: LevelScoreData) => onLevelCompleteRef.current(d.criteriaMet ? d : {
+      ...d, criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers),
+    });
+    deliverLevelCompleteRef.current = deliverLevelComplete;
     const markFailure = (failure: MapFailure): MapFailure => ({
       ...failure, criteriaMet: acceptanceMarks(game, level, levelNumber, activeModifiers, failure.kind),
     });
@@ -1807,7 +1818,9 @@ export function GameCanvas({
       setWallShieldCount,
       setCompletedCuts,
       setDisplayLives,
-      onLevelComplete: d => onLevelCompleteRef.current(d),
+      onLevelComplete: d => deliverLevelComplete(d),
+      // The ticket opens over the finished board (Admin's Full debrief shatters it).
+      keepBoardAtEnd: () => !isFullDebrief(),
       onMapComplete: () => { showDebriefRef.current(); onMapCompleteRef.current?.(); },
       freezeOnComplete: () => freezeOnCompleteRef.current,
       // A loss carries the Acceptance Criteria marked on the board as it
@@ -2192,8 +2205,8 @@ export function GameCanvas({
     // Dev/playground freeze: hold the debriefed board, no overlay.
     if (game.shimmerFrozen) return;
     setTimeout(() => {
-      startDissolveRef.current?.(() => {
-        onLevelCompleteRef.current({
+      const deliver = () => {
+        deliverLevelCompleteRef.current?.({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
           // Who drew what, for a pair. Counted off the fences themselves so
           // it cannot drift from the board; undefined solo, which hides the
@@ -2229,7 +2242,10 @@ export function GameCanvas({
           chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,
           freeShopItemsEarned: game.freeShopItems || undefined,
         });
-      });
+      };
+      // As triggerLevelComplete: the ticket opens over the board, so it stays.
+      if (!isFullDebrief()) deliver();
+      else startDissolveRef.current?.(deliver);
     }, 150 + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 

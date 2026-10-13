@@ -31,6 +31,7 @@ import { startScreenSlide } from '@/ui/screenSlide';
 import { CRTBackground } from '@/components/game/CRTBackground';
 import { ResultScreen } from '@/ui/screens/ResultScreen';
 import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
+import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
@@ -493,7 +494,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 costs the MAP, not the app: the run is saved to the current map
                 and you land back on the menu able to resume. The outer
                 boundary in App is the backstop for everything else. */}
-            {navigation.currentScreen === 'game' && session.currentLevel && !session.showLevelComplete && (
+            {/* The ticket Debrief opens over the finished board, so the board
+                stays mounted under it; the full Debrief (Admin) replaces it. */}
+            {navigation.currentScreen === 'game' && session.currentLevel && (!session.showLevelComplete || !isFullDebrief()) && (
               <GameErrorBoundary
                 scope="game"
                 onCrash={flushRunSave}
@@ -519,7 +522,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
-                key={`game-${session.gameInstanceKey}`}
+                // The level too: with the board kept under the ticket, a skipped
+                // store goes straight to the next map without unmounting this.
+                key={`game-${session.gameInstanceKey}-${session.currentLevelIndex}`}
                 backRef={gameBackRef}
                 level={session.currentLevel}
                 adminMode={adminUnlocked}

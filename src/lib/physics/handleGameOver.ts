@@ -97,7 +97,8 @@ export function handleGameOverFn(
       shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
       pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
     });
-    callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
+    // The board stays for the card that opens over it (keepBoardAtEnd).
+    if (!callbacks.keepBoardAtEnd?.()) callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
     return;
   }
 
@@ -166,5 +167,6 @@ export function handlePushFailedFn(
     shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
     pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
   });
-  callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
+  // The board stays for the card that opens over it (keepBoardAtEnd).
+  if (!callbacks.keepBoardAtEnd?.()) callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
 }

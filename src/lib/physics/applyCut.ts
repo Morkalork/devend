@@ -953,9 +953,8 @@ export function checkSpaceWin(
   return percent;
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete' | 'keepBoardAtEnd'>;
 
-/** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
 /** Keys for text: the criteria are built only for their checks here, never read. */
 const KEY_T = ((key: string) => key) as unknown as TFunction;
 
@@ -976,6 +975,7 @@ export function acceptanceMarks(
   return winConditions(KEY_T, level, levelNumber, rules).map(c => criterionMet(c, ctx));
 }
 
+/** Finalise the level: score it, fire onLevelComplete, and start the dissolve (or keep the board). */
 export function triggerLevelComplete(
   game: CanvasGameState,
   level: LevelConfig,
@@ -1103,7 +1103,7 @@ export function triggerLevelComplete(
   // mount the completion overlay (mounting it at the exact end read as a jerky
   // cut, and hid the shatter behind the card).
   setTimeout(() => {
-    callbacks.startDissolve(() => {
+    const deliver = () => {
       callbacks.onLevelComplete({
         levelNumber, levelId: level.id, cutCount: game.wallCount,
         expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
@@ -1142,6 +1142,10 @@ export function triggerLevelComplete(
         // push-disabled space wins were all hiding a row that mattered.
         wonByAllLocked: reason === 'allLocked',
       });
-    });
+    };
+    // The ticket Debrief opens over the finished board, overlays and all, so
+    // the board stays; the full Debrief is a screen of its own, so it shatters.
+    if (callbacks.keepBoardAtEnd?.()) deliver();
+    else callbacks.startDissolve(deliver);
   }, lockDelay + game.debrief.durationMs + LEVEL_CLEAR_HOLD_MS);
 }

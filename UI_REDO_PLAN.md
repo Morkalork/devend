@@ -170,3 +170,23 @@ gets them. The failures are never headed "avoided" here: the map did fail,
 sometimes by a rule the list does not name (a ball into a growing fence on the
 last life). The same Admin **Full debrief** switch brings the old lines back.
 Gallery: `MapFailedOverlay-ticket`, `-ticketRunOver`, `-full`.
+
+**Over the finished board, filling in** ("dismiss the end of map exploding
+game board and instead just show the acceptance criteria modal on top of the
+finished map with overlays, but it is important that the card content is
+filled in one by one, even if quickly"). The board no longer shatters at the
+end of a map, won or lost: the game asks `keepBoardAtEnd` before every
+dissolve (a win, Bank & Continue, a failed push, the run's last life), and the
+score debrief's boxes are held instead of fading. GameScreen stays mounted
+under the card (its key now carries the level, so a skipped store still deals
+the next map a fresh screen). The Debrief is a modal now, not a pipeline
+stage: a light scrim over the board, the ticket opening with every row an
+empty box as it was before the map, then each row marked in reading order
+(`fillIn.ts`: 380ms for the card, 230ms a row; reduced motion marks them all
+at once; a tap finishes it). Once full, the hours earned land in the key row's
+corner (where a store ticket shows its estimate), the rare notices appear, and
+the Continue button, named for the next stage. The failed screen fills in the
+same way. Admin's **Full debrief** brings back the shatter and the old screens
+together. Every win also gets its marks in GameCanvas now, whichever path won
+it: Bank & Continue and a failed push used to arrive without them and fell
+back to the full Debrief.
