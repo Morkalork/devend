@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Award, Wind, Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
 import type { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
-import type { LoadoutConfig, AscensionRung } from '@/types/loadout';
+import type { LoadoutConfig } from '@/types/loadout';
 import type { ScalingReadout } from '@/lib/upgradeScaling';
 import type { CapstoneConfig } from '@/types/capstone';
 import type { ActiveMapMutator } from '@/types/mapMutator';
@@ -60,9 +60,6 @@ interface TopBarDetailsPanelProps {
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
-  ascensionDepth?: number;
-  /** Ladder rungs in force at that depth (ascensionLadder.ts). */
-  ascensionRungs?: AscensionRung[];
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
   activeLoadouts?: LoadoutConfig[];
@@ -107,8 +104,6 @@ export function TopBarDetailsPanel({
   accentColor = '#00ff88',
   certificateProgress,
   microManagerPerLock = 0,
-  ascensionDepth = 0,
-  ascensionRungs = [],
   scalingReadouts = [],
   activeLoadouts = [],
   continuesRemaining = 0,
@@ -150,12 +145,12 @@ export function TopBarDetailsPanel({
   const sections = specsSections({
     focus,
     hasMutator: !!mapMutator,
-    hasBuild: hasBuildSection(tagCounts, ascensionDepth, activeLoadouts.length),
+    hasBuild: hasBuildSection(tagCounts, activeLoadouts.length),
     hasAssignment: !!(capstone || mapMutator || objective),
     hasModifiers: !!activeModifiers,
     manualCount: manualSeen.length,
   });
-  const heading = (s: SpecsSection) => sectionHeading(t, s, { ascensionDepth, upgradeCount: ownedUpgrades.length });
+  const heading = (s: SpecsSection) => sectionHeading(t, s, { upgradeCount: ownedUpgrades.length });
 
   /**
    * The map rule, as one card built once and placed in one of two spots. Two
@@ -178,9 +173,7 @@ export function TopBarDetailsPanel({
     // question answers it first. The same card sits in ASSIGNMENT otherwise.
     mapRule: () => mutatorCard,
 
-    // Archetype tags + ascension + loadout: the run's identity. At depth 0 the
-    // drafted loadout is the run-start pick; past it they're the stacked
-    // ascension picks (with the depth multiplier).
+    // Archetype tags + loadout: the run's identity.
     build: () => (
       <>
         {tagCounts && tagCounts.size > 0 && (
@@ -210,27 +203,6 @@ export function TopBarDetailsPanel({
                 </View>
               ))}
             </View>
-          </View>
-        )}
-        {ascensionDepth > 0 && (
-          <View layout={cardLayout(accent, tint(SPECS.amber, 0x55 / 255))}>
-            <SpecsPara text={t('topBarDetails.ascensionDescription', { multiplier: ascensionDepth + 1 })} color={SPECS.ink} alpha={0.7} />
-            {/* Every ladder rung in force, deepest first. The modal at depth
-                start only names the rungs below the newest one, so this is
-                where the full text stays reachable. */}
-            {ascensionRungs.length > 0 && (
-              <View layout={{ marginTop: 10, gap: 8 }}>
-                {[...ascensionRungs].reverse().map(rung => (
-                  <View key={rung.depth} layout={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                    <SpecsText text={String(rung.depth)} size={10} weight="700" color={SPECS.amber} alpha={0.8} layout={{ marginTop: 2 }} />
-                    <View layout={{ flex: 1 }}>
-                      <SpecsText text={contentText.rungName(t, rung)} size={TEXT.xs} weight="600" color={SPECS.amber} wrap />
-                      <SpecsPara text={contentText.rungDesc(t, rung)} color={SPECS.ink} alpha={0.7} />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         )}
         {activeLoadouts.map(loadout => (

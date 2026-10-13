@@ -39,7 +39,7 @@ const conditional = upgrades.filter(u => u.condition);
 
 function ctx(over: Partial<RunContext> = {}): RunContext {
   return {
-    level: 5, lives: 3, banked: 0, depth: 0,
+    level: 5, lives: 3, banked: 0,
     map: { balls: 1, hasWell: false, hasMover: false, hasBreakable: false, hasArea: false, hasBoss: false },
     ...over,
   };
@@ -51,7 +51,6 @@ describe("the condition evaluator", () => {
       [{ kind: "livesAtMost", value: 1 }, { lives: 1 }, { lives: 2 }],
       [{ kind: "bankedAtLeast", value: 150 }, { banked: 150 }, { banked: 149 }],
       [{ kind: "levelAtLeast", value: 20 }, { level: 20 }, { level: 19 }],
-      [{ kind: "depthAtLeast", value: 1 }, { depth: 1 }, { depth: 0 }],
       [{ kind: "ballsAtLeast", value: 3 }, { map: ctx().map && { ...ctx().map, balls: 3 } }, { map: { ...ctx().map, balls: 2 } }],
     ];
     for (const [condition, met, unmet] of cases) {
@@ -333,7 +332,7 @@ describe("the converted catalogue", () => {
         expect(c.value, `${u.id}: gates at or above the starting lives, so it is flat`)
           .toBeLessThan(startingLives);
       }
-      if (c.kind === "bankedAtLeast" || c.kind === "depthAtLeast") {
+      if (c.kind === "bankedAtLeast") {
         expect(c.value, `${u.id}: a gate at 0 is always met`).toBeGreaterThan(0);
       }
       if (c.kind === "levelAtLeast") {

@@ -13,8 +13,7 @@
  * it just banked (`betweenMaps`).
  *
  * Otherwise resume granularity is one map: the run resumes at the START of the map the
- * player was on, with score, upgrades, lives, carries, capstone and
- * ascension state intact. The capstone is stored by id and re-hydrated from
+ * player was on, with score, upgrades, lives, carries and capstone intact. The capstone is stored by id and re-hydrated from
  * the loaded pool; the level sequence is stored by id so the resumed variants
  * match the ones the player was playing (the sequence is otherwise re-randomized
  * every run).
@@ -57,7 +56,8 @@ export interface RunSave {
   // before assignments were cut also carry blockStats, blockResults,
   // assignmentRewardModifiers and activeDoorId; they are ignored on load.
   capstoneId: string | null;
-  ascensionDepth: number;
+  // Saves from before Ascension was removed also carry ascensionDepth; it is
+  // ignored on load (a resumed run is an ordinary one).
   draftedLoadoutIds: string[];
   // Records (HIGHSCORES.md): cumulative overtime after each completed map, and
   // whether the run may file on the ledger (debug starts are not eligible).
@@ -145,11 +145,11 @@ function removeRunSave(): void {
 
 /** The little the main menu needs to know about a save without loading it. */
 export interface SavedRunSummary {
-  ascensionDepth: number;
+  savedAt: number;
 }
 
 const summarise = (save: RunSave | null): SavedRunSummary | null =>
-  save ? { ascensionDepth: save.ascensionDepth ?? 0 } : null;
+  save ? { savedAt: save.savedAt } : null;
 
 export function useRunSave() {
   // One piece of state, not a boolean beside a depth: two would drift the

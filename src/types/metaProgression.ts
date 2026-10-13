@@ -28,7 +28,6 @@ export interface MetaProgressionStats {
   totalFencesDrawn: number;
   totalLevelsCompletedWithoutLoss: number;
   totalLivesLost: number;
-  deepestAscension: number;
   pushBonusesBanked: number;
   /**
    * Levels reached in the previous ENDED run (died or finished), which decides
@@ -107,7 +106,6 @@ export const DEFAULT_META_STATS: MetaProgressionStats = {
   totalFencesDrawn: 0,
   totalLevelsCompletedWithoutLoss: 0,
   totalLivesLost: 0,
-  deepestAscension: 0,
   pushBonusesBanked: 0,
   lastRunDepth: 0,
   lastRunShopLevel: 0,

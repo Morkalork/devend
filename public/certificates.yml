@@ -236,9 +236,11 @@ certificates:
   - id: night-school-diploma
     name: Night School Diploma
     description: Bank extra Certificate Hours every run.
-    unlockType: achievement
-    # "Beyond The Backlog" — ascend past the final level
-    sourceAchievementId: beyond-the-backlog
+    # Was unlocked by "Beyond The Backlog" (ascend past the final level); with
+    # Ascension removed it unlocks by Certificate Hours spent, so it stays in
+    # the meta progression rather than becoming unreachable.
+    unlockType: hours-spent
+    requiredHoursSpent: 32
     levels:
       - cost: 10
         effect: { type: extraCertificateHours, value: 1 }

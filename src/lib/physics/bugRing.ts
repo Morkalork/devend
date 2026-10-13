@@ -182,7 +182,7 @@ function layRing(game: CanvasGameState, centre: Vector2, radius: number): void {
     if (game.spaceGrid) {
       segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, points[i], points[i + 1], RING_THICKNESS);
     }
-    // No durability budget. An Ascension fence that can be broken is a fence
+    // No durability budget. A fence that can be broken is a fence
     // the player drew and can choose to defend; a ring nobody drew, breaking
     // open and releasing a ball that was already scored, would be an event
     // with no author and no cue.

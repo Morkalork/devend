@@ -1,7 +1,6 @@
 /**
  * The canvas main menu's rules (src/ui/screens/welcomeModel.ts), carried over
- * from the DOM menu's tests: welcomeContinue, savedRunAscension (what the menu
- * shows), runBootFeedback (the menu shows it) and hallOfFameScreen (Records).
+ * from the DOM menu's tests: welcomeContinue, runBootFeedback (the menu shows it) and hallOfFameScreen (Records).
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
@@ -57,9 +56,8 @@ describe("Continue / New Game", () => {
 describe("the screen feeds the menu and wires its buttons", () => {
   const SRC = readFileSync(resolve(process.cwd(), "src/ui/screens/WelcomeScreen.tsx"), "utf8");
 
-  it("builds the menu from its props: the save, its depth and the boot flag", () => {
+  it("builds the menu from its props: the save and the boot flag", () => {
     expect(SRC).toContain("hasContinue: !!onContinue,");
-    expect(SRC).toMatch(/\n\s+savedRunAscension,\n/);
     expect(SRC).toMatch(/\n\s+isLoading,\n/);
   });
 
@@ -69,19 +67,9 @@ describe("the screen feeds the menu and wires its buttons", () => {
   });
 });
 
-describe("the saved run's ascension depth", () => {
-  it("says nothing about ascension on an unascended save", () => {
-    expect(byId({ hasContinue: true, savedRunAscension: 0 }, "continue")?.sub).toBeUndefined();
-  });
-
-  it("names the depth waiting behind Continue", () => {
-    expect(byId({ hasContinue: true, savedRunAscension: 4 }, "continue")?.sub)
-      .toEqual({ key: "ascension.ladderTitle", vars: { depth: 4 } });
-  });
-
-  it("says nothing when there is no save to continue", () => {
-    const all = welcomeButtons(input({ savedRunAscension: 4 }));
-    expect(all.some(b => b.sub?.key === "ascension.ladderTitle")).toBe(false);
+describe("the Continue button", () => {
+  it("has no second line now that a saved run has no depth to name", () => {
+    expect(byId({ hasContinue: true }, "continue")?.sub).toBeUndefined();
   });
 });
 

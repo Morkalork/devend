@@ -72,9 +72,9 @@ exists to avoid. A build should change *how* a map is solved, never *whether*.
 a legal move is not difficult, it is broken with extra steps. See the slack rule
 below, and anti-pattern *No slack on a counted clause*.
 
-The one legitimate home for build-gating is **ascension**, where the player
-opted into the difficulty. It is fine as an opt-in and wrong as the default
-curve.
+Build-gating has no legitimate home on the ladder. It used to be allowed in
+**ascension**, where the player opted into the difficulty; Ascension has been
+removed, so a map that needs a particular build is simply wrong.
 
 #### The slack rule
 
@@ -2071,8 +2071,8 @@ stays a set-piece.
 - **One answer.** A map with a single viable line is *requires perfection*
   wearing a premise. Name two answers before placing an entity.
 - **Build-gated.** A map that cannot be beaten without a particular upgrade,
-  fence type or certificate. That map was decided in the shop; it belongs in
-  ascension, where the difficulty was opted into, or nowhere.
+  fence type or certificate. That map was decided in the shop; it belongs
+  nowhere (Ascension, the opt-in home it once had, has been removed).
 - **Unfair surprise.** An untelegraphed Turn that wrecks an in-progress fence.
 - **No safe path past the hook.** Greed is only a decision if skipping is viable.
 - **Maze with no drawing room.** Walls so dense a fence cannot be drawn.

@@ -7,18 +7,17 @@ The wizard completed a targeted analytics integration for **Dev/End** (Vite + Re
 | Event name | Description | File |
 |---|---|---|
 | `run_started` | A run began (mode: new/daily/resume/playAgain, daily flag) | `src/hooks/useGameSession.ts` *(pre-existing)* |
-| `level_completed` | A map was cleared (level, overtime, perfect, ascensionDepth, daily) | `src/hooks/useGameSession.ts` *(pre-existing)* |
+| `level_completed` | A map was cleared (level, overtime, perfect, daily) | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `level_failed` | Ran out of lives on a map | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `continue_spent` | Spent a Continue to retry the current level | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `upgrade_purchased` | Bought an upgrade in the shop | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `capstone_selected` | Picked the run's Promotion capstone | `src/hooks/useGameSession.ts` *(pre-existing)* |
 | `run_ended` | Run is over - win or final death (also fixed: now fires on retire) | `src/hooks/useGameSession.ts` *(pre-existing + retire fix)* |
 | `loadout_selected` | Player picked or skipped a loadout at the run-start draft | `src/hooks/useGameSession.ts` *(new)* |
-| `ascension_started` | Player chose to ascend after beating the final level | `src/hooks/useGameSession.ts` *(new)* |
 
 ## Files changed
 
-- `src/lib/analytics.ts` — added `loadoutSelected`, `ascensionStarted` event definitions
+- `src/lib/analytics.ts` — added `loadoutSelected` (and `ascensionStarted`, since removed with Ascension) event definitions
 - `src/hooks/useGameSession.ts` — called the three new events from their handlers; fixed `handleRetire` to emit `run_ended`
 - `.env.local` — wrote `VITE_POSTHOG_KEY` and `VITE_POSTHOG_HOST`
 

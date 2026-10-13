@@ -4,7 +4,7 @@ This document explains how the game is put together. Read it once before touchin
 
 ## The game in one paragraph
 
-Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store. Beating the final level offers **Ascension**: draft a curse-and-blessing *mutator* and loop back to level 1 at higher intensity, or retire and bank the run. While ascended, fences *wear out*: each fence survives a limited number of ball hits (fewer on later levels) and then crumbles, re-merging the areas it separated — except fences bordering captured space, which never break (see [physics/breakFenceWall.ts](src/lib/physics/breakFenceWall.ts)).
+Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store. Beating the final level wins the run: it is banked and filed on the result screen. (Ascension, the loop back to level 1 at higher intensity, was removed: the plan is many more maps, replayability and meta progress instead.) Fences of a type with a hit budget *wear out*: each survives that many ball hits and then crumbles, re-merging the areas it separated, except fences bordering captured space, which never break (see [physics/breakFenceWall.ts](src/lib/physics/breakFenceWall.ts)).
 
 ## Tech stack
 
@@ -38,7 +38,7 @@ src/
 public/
 ├── map.yml                  All levels (see public/README-modifiers.md)
 ├── upgrades.yml             Shop upgrades
-├── loadouts.yml            Loadouts (run-start draft + Ascension loop)
+├── loadouts.yml            Loadouts (run-start draft; parked while it is on hold)
 ├── certificates.yml         Meta-progression certificates
 ├── achievements.yml         Achievements
 ├── colors.yml               Accent colour per level range
@@ -53,15 +53,15 @@ public/
 
 ```
 welcome ──► runDraft ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
-   │        (loadout)      │ (final level)            ▲                                   │
-   │                       │                          │ (ContinuePrompt on death,         │
-   │                       │                          └─ spend a Continue to retry level) │
-   │                       └──► ascensionDraft ──► game (loop) or result                  │
+   │        (loadout)      │ (final level: the run is won) ▲                              │
+   │                       │                               │ (ContinuePrompt on death,    │
+   │                       │                               └─ spend a Continue to retry)  │
+   │                       └──────────────────────────────────────────────► result         │
    ├──► tutorial / options / achievements / certificateStore ◄───────────────────────────┘
    └──► admin ──► mapBuilder / animationTest        (dev builds only)
 ```
 
-A fresh run used to visit **runDraft** ("Sprint Planning") first, where the player drafted one curse+blessing mutator (or skipped) to shape the run from level 1. That step is currently ON HOLD (`SPRINT_PLANNING_ENABLED` in [sprintPlanning.ts](src/lib/sprintPlanning.ts) is `false`), so a fresh run goes straight into the map; the screen, the catalogue and the Ascension draft that shares it are all still in the tree, and flipping the constant restores the step. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skipped the draft too.
+A fresh run used to visit **runDraft** ("Sprint Planning") first, where the player drafted one curse+blessing mutator (or skipped) to shape the run from level 1. That step is currently ON HOLD (`SPRINT_PLANNING_ENABLED` in [sprintPlanning.ts](src/lib/sprintPlanning.ts) is `false`), so a fresh run goes straight into the map; the screen and the catalogue are still in the tree, and flipping the constant restores the step. While it is off the loadouts are parked: nothing hands them out (Ascension, the other draft, was removed), so the menu's Loadouts entry is hidden. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skipped the draft too.
 
 All run state (score, lives, owned upgrades, current level) lives in [useGameSession](src/hooks/useGameSession.ts), which composes the smaller managers below and is created once in `Index.tsx`.
 
@@ -75,7 +75,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useScreenNavigation](src/hooks/useScreenNavigation.ts) | visible screen | — | — |
 | [useLevelManager](src/hooks/useLevelManager.ts) | level sequence | `map.yml` | — |
 | [useUpgradeManager](src/hooks/useUpgradeManager.ts) | upgrade catalogue | `upgrades.yml` | — |
-| [useLoadoutManager](src/hooks/useLoadoutManager.ts) | loadout catalogue (run-start + Ascension drafts) | `loadouts.yml` | — |
+| [useLoadoutManager](src/hooks/useLoadoutManager.ts) | loadout catalogue (run-start draft, parked) | `loadouts.yml` | — |
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
@@ -97,7 +97,7 @@ Everything that changes gameplay numbers flows through one structure: **`GameMod
 owned upgrades (this run)        → useActiveModifiers(upgrades, ownedIds, extraBonuses)
 achievement bonuses (permanent)  ─┐
 certificate bonuses (permanent)  ─┼→ mergeBonuses() → extraBonuses
-loadouts + depth ramp (ascension)─┘
+drafted loadouts (parked)        ─┘
 ```
 
 The merged `GameModifiers` object is passed as a prop into `GameScreen` → `GameCanvas` and read by the physics code. Multiplicative keys (listed in `MULTIPLICATIVE_KEYS`) stack by multiplication, the rest by addition. The key names are a public contract: YAML files reference them as strings, so renaming a key means updating `upgrades.yml`, `certificates.yml`, `achievements.yml` and [public/README-modifiers.md](public/README-modifiers.md) together.
@@ -133,7 +133,7 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Add an upgrade** — add an entry to [public/upgrades.yml](public/upgrades.yml) using existing `GameModifiers` keys. No code needed unless you need a brand-new modifier key.
 
-**Add a loadout** — add an entry to [public/loadouts.yml](public/loadouts.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). Add `uniqueWinsRequired: N` to gate it behind N unique wins in the run-start draft (omit for the loadouts available from scratch). The per-depth difficulty ramp is the `ascension.speedRampPerDepth` field in the same file.
+**Add a loadout** — add an entry to [public/loadouts.yml](public/loadouts.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). Add `uniqueWinsRequired: N` to gate it behind N unique wins in the run-start draft (omit for the loadouts available from scratch).
 
 **Add a new modifier key** — add the field + default to `GameModifiers` and `DEFAULT_MODIFIERS` in [useActiveModifiers.ts](src/hooks/useActiveModifiers.ts) (and `MULTIPLICATIVE_KEYS` if it stacks by ×), consume it in the physics/scoring code, document it in `README-modifiers.md`, and add a slider entry in [PlaygroundScreen.tsx](src/components/admin/PlaygroundScreen.tsx) so it can be tested live.
 
@@ -178,10 +178,9 @@ the Hall of Fame carry an `economyScale` stamp and are converted once on load.
 Upgrade multipliers raise an axis **ceiling**, not its payout, so an upgrade is
 a commitment to a lane and is dead weight in a run that never played it.
 
-**Test gameplay changes** — Welcome → Admin → Animation Test opens the Playground: every modifier adjustable live with apply-and-restart, plus a forced mutator and forced board tilts. The Admin screen itself carries the run flags (infinite lives, start-at-ascension-depth). The URL forms still work (`?level=N`, `?mutator=<id>`, `?tilt=1`, `?ascension=N`) and win over the controls. The rule, and the test that keeps it (`src/test/adminCoverage.test.ts`): whatever changes how the game plays ships with its admin control in the same commit; see CLAUDE.md.
+**Test gameplay changes** — Welcome → Admin → Animation Test opens the Playground: every modifier adjustable live with apply-and-restart, plus a forced mutator and forced board tilts. The Admin screen itself carries the run flags (infinite lives). The URL forms still work (`?level=N`, `?mutator=<id>`, `?tilt=1`) and win over the controls. The rule, and the test that keeps it (`src/test/adminCoverage.test.ts`): whatever changes how the game plays ships with its admin control in the same commit; see CLAUDE.md.
 
 ## Known gaps
 
-- Ascension state (depth, drafted loadouts) is not persisted across sessions: a quit ascended run starts over from depth 0 next launch. (In-run, the per-run Continue lets you retry a level after death at any depth.)
 - Test coverage is minimal (one placeholder test). The `lib/` modules are pure and React-free, so they are the natural place to start adding unit tests.
 - `eslint` reports 12 `react-hooks/exhaustive-deps` warnings that are intentional (adding the deps would re-trigger effects); review carefully before "fixing".

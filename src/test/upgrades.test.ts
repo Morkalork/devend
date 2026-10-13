@@ -23,7 +23,7 @@ const effectiveCost = (u: UpgradeConfig): number | null =>
 const byId = new Map(upgrades.map(u => [u.id, u] as const));
 const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
 
-// The intended track heads — the only non-ascension upgrades with no prereqs.
+// The intended track heads — the only upgrades with no prereqs.
 // One head per archetype line: the synergy rework promoted Fault Tolerance,
 // Technical Debt, Feature Freeze and Severance Package to roots (their old
 // cross-family prereqs were whimsical, not tactical).
@@ -165,15 +165,14 @@ describe("upgrade catalogue integrity", () => {
 });
 
 describe("track structure", () => {
-  it("has exactly the intended non-ascension roots", () => {
+  it("has exactly the intended roots", () => {
     // A root is what a player can be offered from a standing start, and
     // `prerequisites` is no longer the only thing that stops that: the four
     // crown-of-a-maxed-family fences carry no prerequisites at all and are
     // gated by `unlockAfterChoice` instead. Counting them here would have
     // called four of the most-gated upgrades in the catalogue roots.
     const roots = upgrades
-      .filter(u => !u.ascensionOnly
-        && (u.prerequisites?.length ?? 0) === 0
+      .filter(u => (u.prerequisites?.length ?? 0) === 0
         && !u.unlockAfterChoice)
       .map(u => u.id)
       .sort();
@@ -186,28 +185,6 @@ describe("track structure", () => {
     );
     expect(firstShop.length).toBeGreaterThanOrEqual(3);
   });
-
-  it("never gates a normal-run upgrade directly behind an ascension-only one", () => {
-    const offenders: string[] = [];
-    for (const u of upgrades) {
-      if (u.ascensionOnly) continue;
-      for (const p of u.prerequisites ?? [])
-        if (byId.get(p)?.ascensionOnly) offenders.push(`${u.id} -> ${p}`);
-    }
-    expect(offenders).toEqual([]);
-  });
-
-  it("no normal-run upgrade transitively depends on an ascension-only upgrade", () => {
-    const ancestors = (id: string, acc = new Set<string>()): Set<string> => {
-      for (const p of prereqsOf(id)) if (!acc.has(p)) { acc.add(p); ancestors(p, acc); }
-      return acc;
-    };
-    const offenders = upgrades
-      .filter(u => !u.ascensionOnly)
-      .filter(u => [...ancestors(u.id)].some(a => byId.get(a)?.ascensionOnly))
-      .map(u => u.id);
-    expect(offenders).toEqual([]);
-  });
 });
 
 describe("pricing", () => {
@@ -219,7 +196,6 @@ describe("pricing", () => {
   it("is monotonic within each family: later tiers never cost less", () => {
     const families = new Map<string, UpgradeConfig[]>();
     for (const u of upgrades) {
-      if (u.ascensionOnly) continue;
       if (!families.has(u.name)) families.set(u.name, []);
       families.get(u.name)!.push(u);
     }
@@ -295,7 +271,7 @@ describe("what a map pays against what the shop charges", () => {
 
   const cheapestFormula = Math.min(
     ...upgrades
-      .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
+      .filter(u => typeof u.cost !== "number")
       .map(u => effectiveCost(u) ?? Infinity),
   );
 
@@ -336,7 +312,7 @@ describe("what a map pays against what the shop charges", () => {
     // The ratio is the claim, so the ratio is what is pinned. A future anchor
     // change fails here rather than quietly making the first shop free again.
     const firstHires = upgrades.filter(u =>
-      !u.ascensionOnly && typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1);
+      typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1);
     expect(firstHires.length, "the level-1 on-ramp is gone").toBeGreaterThan(0);
     const cheapestHire = Math.min(...firstHires.map(u => u.cost as number));
     const ratio = cheapestHire / cheapestFormula;
@@ -349,7 +325,7 @@ describe("what a map pays against what the shop charges", () => {
     // unlocks at level 1, so this IS the opening shelf rather than a sample of
     // it, and the shop shows three of them.
     const openingShelf = upgrades
-      .filter(u => !u.ascensionOnly && (u.unlockLevel ?? 1) === 1 && !(u.prerequisites ?? []).length)
+      .filter(u => (u.unlockLevel ?? 1) === 1 && !(u.prerequisites ?? []).length)
       .map(u => effectiveCost(u) ?? Infinity)
       .sort((a, b) => a - b);
     expect(openingShelf.length, "nothing is offerable at level 1").toBeGreaterThanOrEqual(3);
@@ -368,7 +344,6 @@ describe("what a map pays against what the shop charges", () => {
       readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
     ) as LevelData).levels.length;
     const total = upgrades
-      .filter(u => !u.ascensionOnly)
       .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
     expect(total).toBeGreaterThan(FLAWLESS * maps);
   });
@@ -380,7 +355,7 @@ describe("what a map pays against what the shop charges", () => {
     // by hand whenever the anchor is - which is what this catches.
     const parachute = effectiveCost(byId.get("golden_parachute")!)!;
     const pricier = upgrades
-      .filter(u => u.id !== "golden_parachute" && !u.ascensionOnly)
+      .filter(u => u.id !== "golden_parachute")
       .filter(u => (effectiveCost(u) ?? 0) >= parachute)
       .map(u => u.id);
     expect(pricier).toEqual([]);

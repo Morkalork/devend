@@ -137,18 +137,17 @@ describe("section order and contents", () => {
       .toEqual(["objectives", "status", "upgrades"]);
   });
 
-  it("titles the build and upgrades by depth and count", () => {
-    expect(sectionHeading(t, "build", { ascensionDepth: 2 })).toBe(t("topBarDetails.buildAscension", { depth: 2 }));
+  it("titles the build plainly and the upgrades by count", () => {
+    expect(sectionHeading(t, "build")).toBe(t("topBarDetails.build"));
     expect(sectionHeading(t, "upgrades", { upgradeCount: 3 })).toBe(t("topBarDetails.activeUpgradesCount", { count: 3 }));
     expect(sectionHeading(t, "upgrades", { upgradeCount: 0 })).toBe(t("topBarDetails.activeUpgrades"));
   });
 
-  it("has a build only with tags, ascension or a loadout", () => {
-    expect(hasBuildSection(undefined, 0, 0)).toBe(false);
-    expect(hasBuildSection(new Map(), 0, 0)).toBe(false);
-    expect(hasBuildSection(new Map([["lock", 1]]), 0, 0)).toBe(true);
-    expect(hasBuildSection(undefined, 1, 0)).toBe(true);
-    expect(hasBuildSection(undefined, 0, 1)).toBe(true);
+  it("has a build only with tags or a loadout", () => {
+    expect(hasBuildSection(undefined, 0)).toBe(false);
+    expect(hasBuildSection(new Map(), 0)).toBe(false);
+    expect(hasBuildSection(new Map([["lock", 1]]), 0)).toBe(true);
+    expect(hasBuildSection(undefined, 1)).toBe(true);
   });
 
   it("orders tag chips most-owned first and checks a lit set", () => {

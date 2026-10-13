@@ -14,7 +14,7 @@
  *      map's own explainer. It ambushes a later map, looking like a tutorial
  *      that will not stay dismissed.
  *
- * The ascension announcement shipped with exactly that bug. This is a source
+ * An announcement once shipped with exactly that bug. This is a source
  * check rather than a render test because the failure is structural: the two
  * lists have to agree, and nothing in the type system makes them.
  */
@@ -66,9 +66,5 @@ describe("the explainer queue and the flag that gates it", () => {
       missing,
       `these modals can never show on their own, and will ambush a later map: ${missing.join(", ")}`,
     ).toEqual([]);
-  });
-
-  it("includes the ascension announcement, which shipped without it", () => {
-    expect(gateFlags()).toContain("ascModalOpen");
   });
 });

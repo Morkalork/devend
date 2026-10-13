@@ -360,8 +360,6 @@ interface GameCanvasProps {
   revealReady?: boolean;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
-  /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
-  fenceDurability?: number | null;
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
   /** When true, freeze the game loop without ending the level. */
   paused?: boolean;
@@ -505,7 +503,6 @@ export function GameCanvas({
   revealReady = true,
   activeModifiers,
   cumulativeLockedBalls = 0,
-  fenceDurability = null,
   parallaxTickRef,
   paused = false,
   showBallSpeeds = false,
@@ -1128,7 +1125,6 @@ export function GameCanvas({
     moverFriction: [],
     moverFenceDragPerFence: 0.45,
     moverFenceDragFloor: 0.3,
-    fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
     destructibles: [] as import("@/types/game").DestructibleState[],
     pendingDestroys: [] as import("@/types/game").DestructibleState[],
@@ -1322,7 +1318,6 @@ export function GameCanvas({
       game.lockMinRegionCells = lockMinRegionCells;
       game.moverFenceDragPerFence = moverFenceDragPerFence;
       game.moverFenceDragFloor = moverFenceDragFloor;
-      game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
       game.objectDebris = [];
@@ -2101,7 +2096,7 @@ export function GameCanvas({
       clearBallEffectsCache();
       clearPickupSpriteCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability, useFallback2d, glKind]);
+  }, [level, levelNumber, activeModifiers, useFallback2d, glKind]);
 
   // The renderer survives level changes (the effect above re-runs per
   // level); the GPU context is torn down only when the component unmounts.

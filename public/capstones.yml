@@ -2,7 +2,7 @@
 #
 # The first ORDINARY level at/past `offeredAfterLevel` routes through a mandatory
 # 1-of-3 draft, before that level's shop. The pick applies for the rest of the
-# run (surviving ascension); the two passed-over capstones are gone for good.
+# run; the two passed-over capstones are gone for good.
 # These are rule-breakers, not stat bumps - one per archetype, so the pick can
 # crown a build or rescue a weak one. Keys are GameModifiers
 # (see README-modifiers.md).

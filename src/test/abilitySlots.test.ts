@@ -16,8 +16,6 @@ import { describe, it, expect } from "vitest";
 import {
   rollAbilityReward, rollCappedAbilityReward, getAllAbilities, MAX_ABILITY_SLOTS,
 } from "@/lib/abilities";
-import { ascensionRules, NO_ASCENSION_RULES } from "@/lib/ascensionLadder";
-import type { AscensionRung } from "@/types/loadout";
 
 /** A generator that walks a fixed sequence, so a roll is reproducible. */
 const seq = (...xs: number[]) => { let i = 0; return () => xs[i++ % xs.length]; };
@@ -140,7 +138,7 @@ describe("at the cap", () => {
 });
 
 describe("a tighter cap", () => {
-  it("is honoured when ascension supplies one", () => {
+  it("is honoured when a caller supplies one", () => {
     const h = ALL().slice(0, 3);
     for (let s = 1; s <= 200; s++) {
       const got = rollCappedAbilityReward(undefined, LATE, stream(s), h, 3);
@@ -154,32 +152,5 @@ describe("a tighter cap", () => {
       const got = rollCappedAbilityReward(undefined, LATE, stream(9), h, slots);
       expect(got, `slots ${slots}`).not.toBeNull();
     }
-  });
-});
-
-describe("the ascension ladder tightens it", () => {
-  const mk = (depth: number, effects: Record<string, unknown>): AscensionRung =>
-    ({ depth, name: `r${depth}`, description: "", effects } as unknown as AscensionRung);
-
-  it("starts at the full cap with no ascension", () => {
-    expect(NO_ASCENSION_RULES.abilitySlots).toBe(MAX_ABILITY_SLOTS);
-  });
-
-  it("takes the tighter of two rungs, so a later one can never widen it", () => {
-    const l = [mk(1, { abilitySlots: 4 }), mk(2, { abilitySlots: 3 })];
-    expect(ascensionRules(2, l).abilitySlots).toBe(3);
-    const reversed = [mk(1, { abilitySlots: 3 }), mk(2, { abilitySlots: 4 })];
-    expect(ascensionRules(2, reversed).abilitySlots).toBe(3);
-  });
-
-  it("never drops below one slot", () => {
-    expect(ascensionRules(1, [mk(1, { abilitySlots: 0 })]).abilitySlots).toBe(1);
-    expect(ascensionRules(1, [mk(1, { abilitySlots: -5 })]).abilitySlots).toBe(1);
-  });
-
-  it("leaves the cap alone at depths the rung has not reached", () => {
-    const l = [mk(7, { abilitySlots: 4 })];
-    expect(ascensionRules(6, l).abilitySlots).toBe(MAX_ABILITY_SLOTS);
-    expect(ascensionRules(7, l).abilitySlots).toBe(4);
   });
 });

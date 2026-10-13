@@ -25,7 +25,7 @@ export interface GameFeature {
   /** Stable id; also the i18n namespace (`features.<id>.name` / `.body`). */
   id: string;
   /**
-   * Completing this level number, at ascension depth 0, unlocks the feature.
+   * Completing this level number unlocks the feature.
    * OPTIONAL: event-unlocked features (e.g. certificates on the first hour)
    * omit it and are armed from code instead of by level completion.
    */

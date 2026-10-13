@@ -943,7 +943,7 @@ export function createInitialGameData(
   // multiplier) — no per-level scaling, no per-cut acceleration ramp.
 
   // Floor the low end so a slow-stacked run never spawns balls below
-  // MIN_BALL_SPEED_FACTOR of normal (issue #42); >1 (ascension, Crunch Time)
+  // MIN_BALL_SPEED_FACTOR of normal (issue #42); >1 (Crunch Time and the like)
   // is unaffected.
   // The map's own tempo, multiplied OUTSIDE the upgrade floor: the floor stops a
   // stacked slow build halving a ball, and it should mean half of what THIS map

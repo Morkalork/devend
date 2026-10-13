@@ -2,7 +2,7 @@ import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 import type { BankedAxes } from "@/types/scoring";
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'capstoneDraft' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'capstoneDraft' | 'runDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'jukebox' | 'admin' | 'pairLobby' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas' | 'pairLoopback' | 'nearbyDiagnostics';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -319,9 +319,6 @@ export interface GameResult {
   cutCount?: number;
   expectedCuts?: number;
   basePoints?: number;
-  // Ascension mode (post-final-level loop) — set when the run went past depth 0
-  ascensionDepth?: number;
-  loadoutNames?: string[];
 }
 
 // ── Lock / dissolve animation types (used by GameCanvas rendering) ────────

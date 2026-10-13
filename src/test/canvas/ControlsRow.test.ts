@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import {
-  controlButtons, menuItems, specsBadgeLabel, ASCENSION_COLOR, CONTROL_TARGET, type ControlsRowProps,
+  controlButtons, menuItems, specsBadgeLabel, CONTROL_TARGET, type ControlsRowProps,
 } from "@/ui/game/ControlsRowModel";
 import { HUD } from "@/ui/game/hudMetrics";
 
@@ -19,9 +19,9 @@ function props(over: Partial<ControlsRowProps> = {}): ControlsRowProps {
   const fn = (name: string) => vi.fn(() => { calls.push(name); });
   const p: ControlsRowProps & { calls: string[] } = {
     accentColor: "#00ff88", menuOpen: false, canPause: true, isPaused: false, manualUnread: 0,
-    soundMuted: false, hasAscensionAnnouncement: false, adminMode: false,
+    soundMuted: false, adminMode: false,
     onToggleMenu: fn("toggleMenu"), onCloseMenu: fn("closeMenu"), onTogglePause: fn("togglePause"),
-    onOpenSpecs: fn("specs"), onOpenWin: fn("win"), onToggleSound: fn("sound"), onOpenAscension: fn("ascension"),
+    onOpenSpecs: fn("specs"), onOpenWin: fn("win"), onToggleSound: fn("sound"),
     onOpenTuning: fn("tuning"), onRestart: fn("restart"), onMainMenu: fn("mainMenu"),
     calls, ...over,
   };
@@ -96,16 +96,9 @@ describe("the menu", () => {
     expect(order()).toEqual(["sound", "win", "restart", "mainMenu"]);
   });
 
-  it("adds ascension only with an announcement, in amber", () => {
-    expect(order({ hasAscensionAnnouncement: true })).toEqual(["sound", "win", "ascension", "restart", "mainMenu"]);
-    const asc = menuItems(props({ hasAscensionAnnouncement: true })).find(i => i.id === "ascension")!;
-    expect(asc.color).toBe(ASCENSION_COLOR);
-    expect(ASCENSION_COLOR).toBe(0xffb347);
-  });
-
-  it("adds Tune map for admin only, after ascension", () => {
-    expect(order({ adminMode: true, hasAscensionAnnouncement: true }))
-      .toEqual(["sound", "win", "ascension", "tuning", "restart", "mainMenu"]);
+  it("adds Tune map for admin only, after the win conditions", () => {
+    expect(order({ adminMode: true }))
+      .toEqual(["sound", "win", "tuning", "restart", "mainMenu"]);
     expect(menuItems(props({ adminMode: true })).find(i => i.id === "tuning")!.text).toEqual({ literal: "Tune map" });
   });
 
@@ -125,9 +118,9 @@ describe("the menu", () => {
   });
 
   it.each([
-    ["win", "win"], ["ascension", "ascension"], ["tuning", "tuning"], ["restart", "restart"], ["mainMenu", "mainMenu"],
+    ["win", "win"], ["tuning", "tuning"], ["restart", "restart"], ["mainMenu", "mainMenu"],
   ] as const)("%s closes the menu first", (id, action) => {
-    const p = props({ menuOpen: true, adminMode: true, hasAscensionAnnouncement: true });
+    const p = props({ menuOpen: true, adminMode: true });
     menuItems(p).find(i => i.id === id)!.onTap();
     expect(callsOf(p)).toEqual(["closeMenu", action]);
   });

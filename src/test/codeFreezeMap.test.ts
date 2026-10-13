@@ -57,7 +57,7 @@ const MODS = {
   scoreMultiplier: 1, shopDiscountMultiplier: 1, pushBonusMultiplier: 1,
   instantFencesPerMap: 0, additionalConcurrentFences: 0, extraLives: 0, extraShopItems: 0, shopRestockCount: 0, extraAbilityOffers: 0, freeAbilityPerStore: 0,
   extraContinues: 0, extraCertificateHours: 0, startingCapturePercent: 0,
-  fenceDurabilityBonus: 0, microManagerPerLock: 0, ballPathPredictionBounces: 0,
+  microManagerPerLock: 0, ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0, disablePushYourLuck: 0, ballFreezeDuration: 0,
   freezeUsesPerMap: 0, moverBrake: 0, moverDrive: 0, moverDerailPerMap: 0, moverBandPerMap: 0, slowOneBallFactor: 0, freezePickups: 0, ballFreezeCount: 0,
   autoFreezeDuration: 0, showHighscoreProgress: 0, overtimePerLock: 0,

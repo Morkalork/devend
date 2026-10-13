@@ -43,7 +43,6 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     case 'upgradeShop':
     case 'tenureDraft':
     case 'capstoneDraft':
-    case 'ascensionDraft':
       return 'consume';
     // Sprint Planning is the one draft that runs BEFORE the run starts, so
     // there is no forced progression to skip past: backing out just returns to

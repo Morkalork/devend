@@ -3,9 +3,9 @@
  *
  * "Let's put Sprint Planning on hold, remove it" is a request to take the
  * run-start loadout draft out of the run flow, not to delete the loadout
- * system: the ASCENSION draft draws from the same catalogue and is a different
- * step (it runs after the final level, not before level 1), and the Loadouts
- * catalogue screen still has something to show because of it.
+ * system. Since Ascension (the other draft) was removed, this is the only way
+ * loadouts reach a run, so while it is off the loadouts are parked: the
+ * catalogue stays, and the main menu's Loadouts entry is hidden.
  *
  * So the hold is one constant and these tests pin both halves of it: that no
  * run-start path can reach the draft while it is off, and that everything
@@ -53,20 +53,18 @@ describe("no run start reaches the draft", () => {
   });
 
   it("credits no run-start loadout toward unique wins while it is off", () => {
-    // draftedLoadoutIds[0] is specified as the RUN-START pick. With no run-start
-    // draft, index 0 becomes the depth-1 ascension pick, which would then be
-    // credited on every deeper loop forever.
+    // draftedLoadoutIds[0] is specified as the RUN-START pick; with no
+    // run-start draft there is nothing to credit.
     expect(SESSION).toMatch(
       /const startLoadoutId = SPRINT_PLANNING_ENABLED \? draftedLoadoutIds\[0\] : undefined;/
     );
   });
 });
 
-describe("the ascension draft is untouched", () => {
-  it("still runs, because it is a different step", () => {
-    expect(SESSION).toMatch(/nav\.goToAscensionDraft\(\)/);
-    const body = SESSION.slice(SESSION.indexOf("const handleAscend = useCallback("));
-    expect(body.slice(0, 1200)).not.toMatch(/SPRINT_PLANNING_ENABLED/);
+describe("the loadouts it would hand out are parked, not deleted", () => {
+  it("hides the menu entry while it is off, and only then", () => {
+    expect(read("../pages/Index.tsx")).toContain(
+      "onLoadouts={SPRINT_PLANNING_ENABLED && session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}");
   });
 
   it("still has loadouts to offer", () => {
@@ -90,7 +88,7 @@ describe("it can be switched back on", () => {
   });
 
   it("keeps the loadout catalogue loading at run start", () => {
-    // The ascension draft needs it, and so does the draft this hold parks.
+    // The draft this hold parks needs it.
     expect(SESSION).toMatch(/loadLoadouts\(\)/);
   });
 });

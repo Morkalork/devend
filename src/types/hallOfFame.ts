@@ -8,15 +8,14 @@ import { UpgradeTag } from './upgrade';
 export interface RunLedgerEntry {
   /** Banked overtime at run end (death or retirement). */
   score: number;
-  /** Raw maps completed this run (trajectory length, ascension included). */
+  /** Raw maps completed this run (trajectory length). */
   levelsCompleted: number;
-  ascensionDepth: number;
   /** Build identity at run end (null = Generalist). */
   primaryTag: UpgradeTag | null;
   secondaryTag: UpgradeTag | null;
   capstoneId: string | null;
   capstoneName: string | null;
-  /** Drafted loadouts (index 0 = run start; ascension appends). */
+  /** Drafted loadouts (the run-start pick; parked while Sprint Planning is on hold). */
   loadoutIds: string[];
   savedAt: number;
 }

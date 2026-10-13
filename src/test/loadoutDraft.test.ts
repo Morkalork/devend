@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { LoadoutConfig, LoadoutData } from "@/types/loadout";
 import { drawOffers } from "@/lib/loadoutDraft";
-import { unlockedForStart, isLoadoutUnlocked, draftableAtAscension } from "@/lib/loadoutUnlock";
+import { unlockedForStart, isLoadoutUnlocked } from "@/lib/loadoutUnlock";
 import {
   mergeBonuses,
   computeGameModifiers,
@@ -24,9 +24,9 @@ const loadouts = loadoutDoc.loadouts;
 const VALID_MODIFIER_KEYS = new Set(Object.keys(computeGameModifiers([], new Map())));
 
 describe("run-start loadout draft", () => {
-  // Imposed loadouts (the Ascension ladder's forced curse) are never offered by
-  // either draft, so they sit outside every question this suite asks about the
-  // draft pool. Filtered with the same flag the game filters on.
+  // Cards marked neverDrafted are never offered by the draft, so they sit
+  // outside every question this suite asks about the draft pool. Filtered with
+  // the same flag the game filters on.
   const draftable = loadouts.filter(l => !l.neverDrafted);
 
   it("has exactly two loadouts available from scratch (no uniqueWinsRequired)", () => {
@@ -34,13 +34,12 @@ describe("run-start loadout draft", () => {
     expect(fromScratch).toHaveLength(2);
   });
 
-  it("never offers an imposed loadout, at any win count or either draft", () => {
+  it("never offers a neverDrafted card, at any win count", () => {
     const imposed = loadouts.filter(l => l.neverDrafted);
-    expect(imposed.length, "the ladder's forced curse should be one").toBeGreaterThan(0);
+    expect(imposed.length, "Architectural Review is one").toBeGreaterThan(0);
     for (const l of imposed) {
       expect(isLoadoutUnlocked(l, 0), l.id).toBe(false);
       expect(isLoadoutUnlocked(l, 999), l.id).toBe(false);
-      expect(draftableAtAscension(loadouts).map(x => x.id), l.id).not.toContain(l.id);
     }
   });
 

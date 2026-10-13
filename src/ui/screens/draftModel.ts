@@ -3,8 +3,6 @@
  * components/game/*DraftScreen.tsx and DraftCard.tsx), kept out of the .tsx
  * files so they can be tested without rendering.
  */
-import type { AscensionRung } from "@/types/loadout";
-import { rungAt, rungsUpTo } from "@/lib/ascensionLadder";
 import { tint } from "../kit/style";
 import { COLOR, hex } from "../theme";
 
@@ -64,19 +62,6 @@ export function draftCardLook(accent: number, selected: boolean): DraftCardLook 
 /** A hold hint is a promise: only a card that does something on hold shows one. */
 export function draftCardShowsHoldHint(onLongPress: (() => void) | undefined): boolean {
   return !!onLongPress;
-}
-
-/**
- * What ascending would switch on. Past the ladder's end no NEW rung lands, so
- * there is nothing to promise and the screen says only what already holds.
- */
-export function ascensionBriefing(ascensionDepth: number, ladder: AscensionRung[]) {
-  const nextDepth = ascensionDepth + 1;
-  return {
-    nextDepth,
-    incoming: rungAt(nextDepth, ladder),
-    alreadyInForce: rungsUpTo(ascensionDepth, ladder),
-  };
 }
 
 export interface RichRun {

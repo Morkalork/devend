@@ -12,7 +12,7 @@ import { DEFAULT_MODIFIERS, type GameModifiers, type ModifierSource } from "@/ho
 import type { MapFailure } from "@/lib/mapFailure";
 import type { LevelConfig } from "@/types/level";
 import type { UpgradeConfig } from "@/types/upgrade";
-import type { LoadoutConfig, AscensionRung } from "@/types/loadout";
+import type { LoadoutConfig } from "@/types/loadout";
 import type { CapstoneConfig } from "@/types/capstone";
 import type { ActiveMapObjective } from "@/types/objective";
 import { PauseOverlay } from "../../game/PauseOverlay";
@@ -76,11 +76,6 @@ const LOADOUT: LoadoutConfig = {
   curse: "Balls start 10% faster.", blessing: "One extra life every map.", modifiers: { extraLives: 1 },
 };
 
-const RUNGS: AscensionRung[] = [
-  { depth: 1, name: "Tight Budget", description: "The shop opens only after odd-numbered levels." },
-  { depth: 2, name: "Hiring Freeze", description: "Hold at most three distinct abilities at once." },
-];
-
 const CAPSTONE: CapstoneConfig = {
   id: "gallery-capstone", name: "Tech Lead", description: "Every lock pays 10% more overtime.",
   clarify: "Applies to superior locks too.", modifiers: { scoreMultiplier: 1.1 },
@@ -102,7 +97,7 @@ function topBarSample(focus: "mapRule" | null = null) {
       spaceRemaining={48} spaceRequired={25} lockedBalls={1} threadLockRequired={2}
       ownedUpgrades={UPGRADES} accentColor={ACCENT}
       certificateProgress={{ levelsCompleted: 5, levelsToNextHour: 1, progressInCurrentHour: 2, hoursEarned: 1, levelsPerHour: 3 }}
-      microManagerPerLock={4} ascensionDepth={2} ascensionRungs={RUNGS}
+      microManagerPerLock={4}
       scalingReadouts={[{ upgradeId: "runtime_optimisation_junior", upgradeName: "Runtime Optimisation", tag: "safety", key: "ballSpeedMultiplier", count: 3, effective: 3, steps: 3, amount: -0.06 }]}
       activeLoadouts={[LOADOUT]}
       tagCounts={new Map([["safety", 3], ["tempo", 1], ["lock", 2]])} tagSetThreshold={3}

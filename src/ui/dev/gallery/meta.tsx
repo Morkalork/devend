@@ -46,19 +46,18 @@ const metaStats: MetaProgressionStats = {
   totalFencesDrawn: 412,
   totalLevelsCompletedWithoutLoss: 9,
   totalLivesLost: 23,
-  deepestAscension: 2,
   pushBonusesBanked: 6,
 };
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 9, 10, 12);
 const run = (score: number, over: Partial<RunLedgerEntry> = {}): RunLedgerEntry => ({
-  score, levelsCompleted: 12, ascensionDepth: 0, primaryTag: null, secondaryTag: null,
+  score, levelsCompleted: 12, primaryTag: null, secondaryTag: null,
   capstoneId: null, capstoneName: null, loadoutIds: [], savedAt: NOW, ...over,
 });
 const topRuns: RunLedgerEntry[] = [
-  run(612, { levelsCompleted: 22, ascensionDepth: 2, primaryTag: "lock", secondaryTag: "risk", capstoneId: "stock-options", capstoneName: "Stock Options", savedAt: NOW - DAY }),
-  run(488, { levelsCompleted: 20, ascensionDepth: 1, primaryTag: "freeze", savedAt: NOW - 3 * DAY }),
+  run(612, { levelsCompleted: 22, primaryTag: "lock", secondaryTag: "risk", capstoneId: "stock-options", capstoneName: "Stock Options", savedAt: NOW - DAY }),
+  run(488, { levelsCompleted: 20, primaryTag: "freeze", savedAt: NOW - 3 * DAY }),
   run(301, { levelsCompleted: 16, primaryTag: "bank", secondaryTag: "tempo", savedAt: NOW - 9 * DAY }),
   run(140, { levelsCompleted: 11, savedAt: NOW - 20 * DAY }),
   run(52, { levelsCompleted: 5, primaryTag: "safety", savedAt: NOW - 40 * DAY }),
@@ -76,7 +75,7 @@ const welcome = {
 export const entries: GalleryEntry[] = [
   {
     id: "WelcomeScreen", group: "screen", render: () => (
-      <WelcomeScreen {...welcome} onContinue={noop} savedRunAscension={2} onOpenCertificateStore={noop}
+      <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop}
         onLoadouts={noop} onHallOfFame={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop}
         onJukebox={noop} onAdmin={noop} totalCertificateHours={18} completedAchievementCount={4} />
     ),

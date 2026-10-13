@@ -40,8 +40,6 @@ export interface RunContext {
   lives: number;
   /** Overtime in hand right now. */
   banked: number;
-  /** Ascension depth: 0 is a first pass through the ladder. */
-  depth: number;
   map: MapContext;
 }
 
@@ -73,9 +71,7 @@ export type UpgradeCondition =
   /** Busy maps only. Pairs with the ball roster the ladder ramps. */
   | { kind: "ballsAtLeast"; value: number }
   /** This map contains a particular thing to play against. */
-  | { kind: "mapHas"; feature: MapFeature }
-  /** Ascended runs only. */
-  | { kind: "depthAtLeast"; value: number };
+  | { kind: "mapHas"; feature: MapFeature };
 
 /** Read a map's features once, so a condition never re-scans the level. */
 export function mapContextOf(level: LevelConfig | null | undefined): MapContext {
@@ -111,7 +107,6 @@ export function conditionMet(
     case "bankedAtLeast": return ctx.banked >= condition.value;
     case "levelAtLeast": return ctx.level >= condition.value;
     case "ballsAtLeast": return ctx.map.balls >= condition.value;
-    case "depthAtLeast": return ctx.depth >= condition.value;
     case "mapHas":
       switch (condition.feature) {
         case "well": return ctx.map.hasWell;
@@ -138,13 +133,12 @@ export function conditionText(
     case "bankedAtLeast": return { key: "upgradeConditions.bankedAtLeast", params: { hours: condition.value } };
     case "levelAtLeast": return { key: "upgradeConditions.levelAtLeast", params: { level: condition.value } };
     case "ballsAtLeast": return { key: "upgradeConditions.ballsAtLeast", params: { count: condition.value } };
-    case "depthAtLeast": return { key: "upgradeConditions.depthAtLeast", params: { depth: condition.value } };
     case "mapHas": return { key: `upgradeConditions.mapHas.${condition.feature}`, params: {} };
   }
 }
 
 /** Every condition kind, for the tests that check each one has words. */
 export const CONDITION_KINDS = [
-  "livesAtMost", "bankedAtLeast", "levelAtLeast", "ballsAtLeast", "depthAtLeast",
+  "livesAtMost", "bankedAtLeast", "levelAtLeast", "ballsAtLeast",
 ] as const;
 export const MAP_FEATURES: MapFeature[] = ["well", "mover", "breakable", "area", "boss"];

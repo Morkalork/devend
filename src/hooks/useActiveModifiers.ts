@@ -23,9 +23,9 @@ export interface GameModifiers {
    *
    * 0 is the game as it has always been - a swipe is a direction, and the fence
    * is that direction cast to the walls. Above 0 the drag's own shape is kept
-   * (up to this many bends) and only the two loose ends are projected. An
-   * ascension loadout, since it widens what a cut can do rather than tuning a
-   * number, and the run-start ladder has nothing to trade against it.
+   * (up to this many bends) and only the two loose ends are projected. A
+   * loadout's effect (parked with the loadouts), since it widens what a cut
+   * can do rather than tuning a number.
    */
   bentFenceBends: number;
   /**
@@ -63,7 +63,6 @@ export interface GameModifiers {
   extraContinues: number;   // extra per-run revives beyond the base 1 (cert/upgrade grantable)
   extraCertificateHours: number;
   startingCapturePercent: number; // board starts with this % already captured (Equity Grant)
-  fenceDurabilityBonus: number;   // extra ball hits Ascension fences survive
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
@@ -303,12 +302,12 @@ export const MAX_STARTING_CAPTURE_PERCENT = 40;
 
 /**
  * A single named contributor to the merged GameModifiers — an owned upgrade,
- * certificate, activated achievement, drafted loadout, or the ascension ramp.
+ * certificate, activated achievement, drafted loadout, tag set or capstone.
  * Its `modifiers` are that source's raw (pre-merge) contribution, so the HUD
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'capstone';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'tagSet' | 'capstone';
   id: string;
   name: string;
   modifiers: Record<string, number>;
@@ -376,7 +375,6 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   extraContinues: 0,
   extraCertificateHours: 0,
   startingCapturePercent: 0,
-  fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
   fastestBallSlowPercent: 0,
   overtimePerLock: 0,

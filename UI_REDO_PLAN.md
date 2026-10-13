@@ -21,8 +21,8 @@ own idea of where Continue sits.
   figures, the HUD), bundled at 500/600/700. **Michroma stays for the logo
   only** (`FONT.logo`). Body text and the ledger's monospace are unchanged.
 - **Promotion becomes a stage**: Debrief -> Promotion (when due) -> Store ->
-  next level. **Ascension stays a full screen**: it ends a run and "retire or
-  go again harder" is the biggest decision in the game. Sprint Planning and
+  next level. (Ascension was a full screen here; it has since been removed, and
+  the last map now ends the run on the result screen.) Sprint Planning and
   Tenure come before the first map, so they stay separate screens and only get
   restyled (phase 4).
 
@@ -41,7 +41,7 @@ own idea of where Continue sits.
 | 1 | Display face, colour roles (`ROLE` in theme.ts), kit pieces: `StageRail`, `Headline`, `Ledger`, `Ticket` (src/ui/kit/pipeline.tsx). Gallery samples `Pipeline-debrief`, `Pipeline-store`. | built |
 | 2 | The between-map screen: one pipeline replacing LevelCompleteOverlay, UpgradeShop, CapstoneDraftScreen and ContinuePrompt as separate layouts. | built |
 | 3 | Main menu, run result (win and loss), tap-to-start gate. | built |
-| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure, Ascension. | built |
+| 4 | Meta screens: Certificates, Achievements, Records, Loadouts, Options, Tutorial, Music, Pair lobby, Sprint Planning, Tenure (Ascension, since removed). | built |
 | 5 | Motion: the headline counts up, the rail slides between stages, nothing else moves on its own. | built |
 
 ## Build record
@@ -91,7 +91,8 @@ gone. The tap gate is the flat surface with a sentence-case prompt.
 
 **Phase 4.** The meta screens share two headings, both rewritten in place:
 `MenuHeading` (Certificates, Records, Loadouts, Options, Music) and
-`DraftHeader` with `DraftFrame` (Sprint Planning, Tenure, Ascension). Both are
+`DraftHeader` with `DraftFrame` (Sprint Planning, Tenure; Ascension was the third
+until it was removed). Both are
 left-aligned, 700 weight, ink, with the screen's colour on the icon only.
 Achievements, Tutorial and the pair lobby set their own titles and were moved
 onto the same roles. "Re-enable all tutorials" is a secondary button.

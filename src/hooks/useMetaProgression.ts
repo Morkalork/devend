@@ -235,10 +235,6 @@ export function useMetaProgression() {
         newStats.totalLivesLost = prev.totalLivesLost + updates.totalLivesLost;
       }
 
-      // Like highestLevelReached, deepestAscension only ever increases
-      if (updates.deepestAscension !== undefined) {
-        newStats.deepestAscension = Math.max(prev.deepestAscension, updates.deepestAscension);
-      }
 
       if (updates.pushBonusesBanked !== undefined) {
         newStats.pushBonusesBanked = prev.pushBonusesBanked + updates.pushBonusesBanked;
@@ -300,12 +296,6 @@ export function useMetaProgression() {
     updateStats({ totalLivesLost: count });
   }, [updateStats]);
 
-  /**
-   * Record reaching an ascension depth (Ascension mode)
-   */
-  const recordAscensionDepth = useCallback((depth: number) => {
-    updateStats({ deepestAscension: depth });
-  }, [updateStats]);
 
   /**
    * Record successfully banking a push-your-luck bonus
@@ -474,7 +464,6 @@ export function useMetaProgression() {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    recordAscensionDepth,
     recordPushBonusBanked,
     recordLoadoutWin,
     recordMapHighscore,

@@ -14,34 +14,8 @@
       "highestLevelReached": "Nivel más alto",
       "totalLevelsCompletedWithoutLoss": "Niveles impecables",
       "totalLivesLost": "Vidas perdidas",
-      "deepestAscension": "Ascensión más profunda",
       "pushBonusesBanked": "Bonos de presión asegurados"
     }
-  },
-  "ascension": {
-    "allLevelsCleared": "Todos los niveles superados",
-    "ascensionComplete": "Ascensión {{depth}} completada. ",
-    "retireOrAscend": "Retírate y guarda esta partida, o elige un equipamiento y asciende al nivel {{depth}}.",
-    "ascendedLevelsInfo": "Los niveles ascendidos son más rápidos y cuentan {{multiplier}}× para las Horas de Certificado. ",
-    "bankedOvertime": "Horas extra aseguradas: {{score}}h",
-    "noLoadouts": "No hay equipamientos disponibles: no se pudo cargar loadouts.yml. Aun así puedes retirarte abajo.",
-    "ascendToDepth": "Ascender a la profundidad {{depth}}",
-    "selectLoadout": "Selecciona un equipamiento",
-    "retireBankRun": "Retirarse - asegurar esta partida",
-    "ascensionUnlocked": "Ascensión desbloqueada",
-    "tutorialIntro1": "Todos los niveles superados. Asciende para reiniciar en el nivel 1, más difícil, conservando tu profundidad, tus Horas de Certificado y un ",
-    "tutorialLoadoutWord": "equipamiento",
-    "tutorialIntro2": " por ascensión: una maldición con una bendición. Mejoras y horas extra se reinician en cada bucle. Retírate cuando quieras y guárdalo todo.",
-    "gotIt": "Entendido",
-    "ladderTitle": "Ascensión {{depth}}",
-    "alsoInForce": "También en vigor: {{names}}.",
-    "menuItem": "Reglas de Ascensión",
-    "youWin": "Has Ganado",
-    "congrats": "Enhorabuena. Has superado todos los niveles y entregado la hoja de ruta completa.",
-    "congratsAscended": "Enhorabuena. Has vuelto a superar todos los niveles, en Ascensión {{depth}}.",
-    "whatDepthAdds": "Qué añade la Ascensión {{depth}}",
-    "noNewRung": "Sin regla nueva. La escalera está completa: los bucles más profundos son más rápidos y pagan más, nada más cambia.",
-    "resetWarning": "Ascender inicia una partida NUEVA: mejoras, horas extra y el Ascenso se borran. Cargas, profundidad y Horas de Certificado se conservan."
   },
   "bottomBar": {
     "ballSpeed": "Velocidad de bola",
@@ -206,7 +180,6 @@
     "noModifiers": "Aún no hay modificadores activos. Compra mejoras entre niveles para obtener potenciadores para tu partida.",
     "atDefault": "Por defecto",
     "fromSources": "De",
-    "ascensionSource": "Ascensión x{{depth}}",
     "par": "Margen de Par",
     "parActive": "+{{cuts}} de par, bonus bajo par x{{mult}}",
     "parInactive": "Los mapas se puntúan con su par propio"
@@ -627,8 +600,6 @@
     "youWin": "¡GANASTE!",
     "gameOver": "Te ha reemplazado una IA.",
     "completedAllLevels": "🎉 ¡Completaste todos los niveles! 🎉",
-    "ascensionDepth": "Profundidad de ascensión {{depth}}",
-    "loadoutsBraved": "Equipamientos afrontados: {{loadouts}}",
     "newLoadoutsUnlocked": "Nuevo equipamiento desbloqueado",
     "completedLevel": "Nivel completado",
     "failedAtLevel": "Fallaste en el nivel",
@@ -684,7 +655,6 @@
     "levelStatusTitle": "Estado del nivel {{level}}",
     "specsTitle": "Ficha del nivel {{level}}",
     "build": "Estilo",
-    "buildAscension": "Estilo - Profundidad {{depth}}",
     "assignment": "Partida y mapa",
     "attributes": "Atributos",
     "closePanel": "Cerrar panel",
@@ -717,8 +687,6 @@
     "certPointsEarned_other": "{{count}} puntos ganados hasta ahora.",
     "certPointsToGo_one": "{{count}} nivel más para el siguiente punto de certificado.",
     "certPointsToGo_other": "{{count}} niveles más para el siguiente punto de certificado.",
-    "ascensionDepth": "Ascensión - Profundidad {{depth}}",
-    "ascensionDescription": "Superaste el último nivel. Bolas más rápidas, todos los mutadores elegidos activos, y cada nivel cuenta {{multiplier}}× para Horas de Certificado.",
     "activeUpgradesCount": "Mejoras activas ({{count}})",
     "currentlyReducingBallSpeed": "Reduciendo actualmente la velocidad de la bola un {{percent}}%",
     "activeUpgrades": "Mejoras activas",
@@ -959,7 +927,6 @@
     "levelAtLeast": "A partir del nivel {{level}}",
     "ballsAtLeast_one": "Mapas con {{count}} bola o más",
     "ballsAtLeast_other": "Mapas con {{count}} bolas o más",
-    "depthAtLeast": "A partir de la profundidad de ascensión {{depth}}",
     "mapHas": {
       "well": "Mapas con un pozo de gravedad",
       "mover": "Mapas con un obstáculo móvil",
@@ -1009,7 +976,7 @@
     "title": "Ascenso",
     "subtitle": "Tu evaluación fue bien. Elige una ventaja permanente para el resto de la partida.",
     "exclusiveHint": "Solo una elección. Las otras dos desaparecen para siempre.",
-    "scopeNote": "Se aplica durante el resto de la partida, incluida la ascensión.",
+    "scopeNote": "Se aplica durante el resto de la partida.",
     "holdHint": "Mantén pulsada una ventaja para ver el informe completo.",
     "closeDetail": "Cerrar",
     "confirmButton": "Aceptar el ascenso",
@@ -1272,18 +1239,6 @@
       "defensive_programming_principal": {
         "name": "Programación Defensiva",
         "description": "Reduce todas las bolas un 8% adicional."
-      },
-      "defensive_programming_ascension_junior": {
-        "name": "Programación Defensiva",
-        "description": "Las vallas sobreviven a 1 impacto de bola extra antes de desmoronarse (Ascensión)."
-      },
-      "defensive_programming_ascension_senior": {
-        "name": "Programación Defensiva",
-        "description": "Las vallas sobreviven a 2 impactos de bola extra antes de desmoronarse (Ascensión)."
-      },
-      "defensive_programming_ascension_principal": {
-        "name": "Programación Defensiva",
-        "description": "Las vallas sobreviven a 3 impactos de bola extra antes de desmoronarse (Ascensión)."
       }
     },
     "tiers": {
@@ -1500,11 +1455,6 @@
         "description": "Dibuja 10000 vallas. Tu código sigue ejecutándose en producción en algún lado.",
         "bonusDescription": "+1 valla simultánea"
       },
-      "beyond-the-backlog": {
-        "name": "Más Allá del Backlog",
-        "description": "Asciende más allá del nivel final. El sprint nunca termina: se repite en bucle.",
-        "bonusDescription": "Multiplicador de horas extra +5%"
-      },
       "calculated-risk": {
         "name": "Riesgo Calculado",
         "description": "Embolsa un bonus de Tienta la Suerte 5 veces. La fortuna favorece a quien se cubre las espaldas.",
@@ -1638,9 +1588,7 @@
     "topRuns": "Top 10 de todos los tiempos",
     "emptyLadder": "Aún no hay partidas registradas. Termina una partida y aparecerá aquí.",
     "mapsLabel": "{{count}} mapas",
-    "depthLabel": "Profundidad {{depth}}",
     "archetypeBests": "Mejores por arquetipo",
-    "deepestAscension": "Ascensión más profunda",
     "mapRecords": "Récords por mapa",
     "back": "Volver",
     "employeeOfMonth": "Empleado del mes",
@@ -1987,11 +1935,11 @@
     "promotion": "Ascenso",
     "store": "Tienda",
     "level": "Nivel {{level}}",
-    "ascension": "Ascensión",
+    "finish": "Final",
     "toPromotion": "Elige tu ascenso",
     "toStore": "Abrir la tienda",
     "toLevel": "Empezar el nivel {{level}}",
-    "toAscension": "Terminar la partida",
+    "toFinish": "Terminar la partida",
     "ofPossible": "de {{hours}} h que podía pagar este mapa",
     "fullPay": "Todo lo que podía pagar este mapa",
     "toSpend": "para gastar antes del nivel {{level}}",

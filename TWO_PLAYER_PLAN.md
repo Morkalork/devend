@@ -678,8 +678,8 @@ What differs, and how each is handled:
 ### Step 6 - The run around the map  (M)
 
 The host owns run state. Before each map the host sends `runState` (level
-index, owned upgrades, ability charges, fence slots, lives, score, ascension
-depth) and the guest's `useGameSession` adopts it, so both compute the same
+index, owned upgrades, ability charges, fence slots, lives, score; ascension
+depth too, until Ascension was removed) and the guest's `useGameSession` adopts it, so both compute the same
 `activeModifiers` and both `getRunRng` contexts line up. Between maps the
 guest sees the shop the host sees, read-only, with the host's selection
 highlighted live; the push-your-luck prompt and the continue prompt are host

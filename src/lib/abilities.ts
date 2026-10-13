@@ -149,9 +149,6 @@ export function getEligibleAbilities(level: number): AbilityDef[] {
  * available at once there is no wrong moment to smash a chest and no reason to
  * prefer one reward over another, so the whole system flattens into "press the
  * button that helps".
- *
- * Ascension tightens it (see AscensionRules.abilitySlots), which is a rules
- * change rather than a stat nerf: the same abilities, fewer of them at a time.
  */
 export const MAX_ABILITY_SLOTS = 5;
 

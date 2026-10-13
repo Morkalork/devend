@@ -938,7 +938,7 @@ export function updateBall(
       if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
       else playWallHitSound(impactStrength);
 
-      // Ascension fence durability: each (debounced) hit wears the fence down.
+      // Fence durability: each (debounced) hit wears the fence down.
       // Exhausted fences are queued and broken after the physics step.
       if (wall.hitsLeft !== undefined) {
         if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {

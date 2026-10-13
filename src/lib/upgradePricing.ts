@@ -38,8 +38,7 @@
  * the sentence true.
  *
  * An explicit `cost:` on an upgrade overrides the formula entirely (the four
- * level-1 first hires, the two hand-priced specials, and the ascension trio
- * whose post-L30 economy is tuned separately).
+ * level-1 first hires and the hand-priced specials).
  */
 import { UpgradeTier, UpgradePricing } from '@/types/upgrade';
 

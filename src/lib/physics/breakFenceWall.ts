@@ -1,8 +1,8 @@
 /**
- * Ascension fence durability — breaking worn-out fences.
+ * Fence durability — breaking worn-out fences.
  *
- * While ascended, every fence segment gets a hit budget (assigned in
- * applyCut). updateBall decrements it on ball impacts and queues exhausted
+ * A fence of a type with a hit budget (fences.yml `maxHits`) gets that budget
+ * on every segment (assigned in applyCut). updateBall decrements it on ball impacts and queues exhausted
  * segments in game.pendingWallBreaks; the game loop calls processWallBreaksFn
  * after the physics step.
  *

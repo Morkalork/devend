@@ -14,34 +14,8 @@
       "highestLevelReached": "Högsta nivå",
       "totalLevelsCompletedWithoutLoss": "Felfria nivåer",
       "totalLivesLost": "Förlorade liv",
-      "deepestAscension": "Djupaste uppstigning",
       "pushBonusesBanked": "Säkrade pressbonusar"
     }
-  },
-  "ascension": {
-    "allLevelsCleared": "Alla nivåer klara",
-    "ascensionComplete": "Uppstigning {{depth}} klar. ",
-    "retireOrAscend": "Gå i pension och banka den här rundan, eller välj en loadout och stig till djup {{depth}}.",
-    "ascendedLevelsInfo": "Ascension-banor går fortare och räknas {{multiplier}}× mot Certifikattimmar. ",
-    "bankedOvertime": "Säkrad övertid: {{score}}h",
-    "noLoadouts": "Inga loadouts tillgängliga - loadouts.yml kunde inte laddas. Du kan ändå dra dig tillbaka nedan.",
-    "ascendToDepth": "Stig upp till djup {{depth}}",
-    "selectLoadout": "Välj en loadout",
-    "retireBankRun": "Dra dig tillbaka - säkra denna omgång",
-    "ascensionUnlocked": "Uppstigning upplåst",
-    "tutorialIntro1": "Alla nivåer klarade. Ascendera för att börja om på nivå 1, svårare, och behåll djup, Certifikattimmar och en ",
-    "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": " per ascension: en förbannelse med en välsignelse. Uppgraderingar och övertid nollställs varje varv. Gå i pension när som helst och ta med allt.",
-    "gotIt": "Uppfattat",
-    "ladderTitle": "Ascension {{depth}}",
-    "alsoInForce": "Gäller också: {{names}}.",
-    "menuItem": "Ascension-regler",
-    "youWin": "Du Vann",
-    "congrats": "Grattis. Du klarade varje bana och levererade hela färdplanen.",
-    "congratsAscended": "Grattis. Du klarade varje bana igen, på Ascension {{depth}}.",
-    "whatDepthAdds": "Vad Ascension {{depth}} lägger till",
-    "noNewRung": "Ingen ny regel. Stegen är färdigklättrad: djupare varv går snabbare och betalar mer, inget annat ändras.",
-    "resetWarning": "Uppstigning startar en NY omgång: uppgraderingar, övertid och Befordran nollställs. Utrustningar, djup och Certifikattimmar följer med."
   },
   "bottomBar": {
     "ballSpeed": "Bollhastighet",
@@ -206,7 +180,6 @@
     "noModifiers": "Inga modifierare aktiva ännu. Köp uppgraderingar mellan nivåerna för att få förstärkningar till din omgång.",
     "atDefault": "Standard",
     "fromSources": "Från",
-    "ascensionSource": "Uppstigning x{{depth}}",
     "par": "Par-marginal",
     "parActive": "+{{cuts}} par, under par-bonus x{{mult}}",
     "parInactive": "Banor bedöms mot sitt eget par"
@@ -627,8 +600,6 @@
     "youWin": "DU VANN!",
     "gameOver": "Du har blivit ersatt av AI.",
     "completedAllLevels": "🎉 Klarade alla nivåer! 🎉",
-    "ascensionDepth": "Uppstigningsdjup {{depth}}",
-    "loadoutsBraved": "Loadouts trotsade: {{loadouts}}",
     "newLoadoutsUnlocked": "Ny loadout upplåst",
     "completedLevel": "Klarade nivå",
     "failedAtLevel": "Föll på nivå",
@@ -684,7 +655,6 @@
     "levelStatusTitle": "Status för nivå {{level}}",
     "specsTitle": "Specs för nivå {{level}}",
     "build": "Bygge",
-    "buildAscension": "Bygge - Djup {{depth}}",
     "assignment": "Körning och karta",
     "attributes": "Attribut",
     "closePanel": "Stäng panel",
@@ -717,8 +687,6 @@
     "certPointsEarned_other": "{{count}} poäng intjänade hittills.",
     "certPointsToGo_one": "{{count}} nivå kvar till nästa certifikatpoäng.",
     "certPointsToGo_other": "{{count}} nivåer kvar till nästa certifikatpoäng.",
-    "ascensionDepth": "Uppstigning - Djup {{depth}}",
-    "ascensionDescription": "Du gick förbi sista nivån. Snabbare bollar, varje vald mutator aktiv, och varje nivå räknas {{multiplier}}× mot Certifikattimmar.",
     "activeUpgradesCount": "Aktiva uppgraderingar ({{count}})",
     "currentlyReducingBallSpeed": "Minskar just nu bollhastigheten med {{percent}}%",
     "activeUpgrades": "Aktiva uppgraderingar",
@@ -959,7 +927,6 @@
     "levelAtLeast": "Från nivå {{level}}",
     "ballsAtLeast_one": "Banor med {{count}} boll eller fler",
     "ballsAtLeast_other": "Banor med {{count}} bollar eller fler",
-    "depthAtLeast": "Från uppstigningsdjup {{depth}}",
     "mapHas": {
       "well": "Banor med en gravitationsbrunn",
       "mover": "Banor med ett rörligt hinder",
@@ -1009,7 +976,7 @@
     "title": "Befordran",
     "subtitle": "Din utvecklingsrunda gick bra. Välj en permanent förmån för resten av omgången.",
     "exclusiveHint": "Bara ett val. De andra två försvinner för gott.",
-    "scopeNote": "Gäller resten av omgången, inklusive ascension.",
+    "scopeNote": "Gäller resten av omgången.",
     "holdHint": "Håll in en förmån för hela genomgången.",
     "closeDetail": "Stäng",
     "confirmButton": "Acceptera befordran",
@@ -1248,18 +1215,6 @@
       "defensive_programming_principal": {
         "name": "Defensiv programmering",
         "description": "Krymp alla bollar med ytterligare 8%."
-      },
-      "defensive_programming_ascension_junior": {
-        "name": "Defensiv programmering",
-        "description": "Stängsel överlever 1 extra bollträff innan de smular sönder (Uppstigning)."
-      },
-      "defensive_programming_ascension_senior": {
-        "name": "Defensiv programmering",
-        "description": "Stängsel överlever 2 extra bollträffar innan de smular sönder (Uppstigning)."
-      },
-      "defensive_programming_ascension_principal": {
-        "name": "Defensiv programmering",
-        "description": "Stängsel överlever 3 extra bollträffar innan de smular sönder (Uppstigning)."
       },
       "scrum_master_1": {
         "name": "SCRUM Master",
@@ -1500,11 +1455,6 @@
         "description": "Rita 10000 stängsel. Din kod körs fortfarande i produktion någonstans.",
         "bonusDescription": "+1 samtidigt stängsel"
       },
-      "beyond-the-backlog": {
-        "name": "Bortom backloggen",
-        "description": "Stig upp förbi den sista nivån. Sprinten tar aldrig slut - den loopar.",
-        "bonusDescription": "Övertidsmultiplikator +5%"
-      },
       "calculated-risk": {
         "name": "Kalkylerad risk",
         "description": "Säkra en Push-Your-Luck-bonus 5 gånger. Lyckan står den väl skyddade bi.",
@@ -1638,9 +1588,7 @@
     "topRuns": "Topp 10 genom tiderna",
     "emptyLadder": "Inga rundor sparade ännu. Avsluta en runda så hamnar den här.",
     "mapsLabel": "{{count}} kartor",
-    "depthLabel": "Djup {{depth}}",
     "archetypeBests": "Bästa per arketyp",
-    "deepestAscension": "Djupaste uppstigning",
     "mapRecords": "Kartrekord",
     "back": "Tillbaka",
     "employeeOfMonth": "Månadens anställd",
@@ -1987,11 +1935,11 @@
     "promotion": "Befordran",
     "store": "Butik",
     "level": "Nivå {{level}}",
-    "ascension": "Ascension",
+    "finish": "Avslut",
     "toPromotion": "Välj din befordran",
     "toStore": "Öppna butiken",
     "toLevel": "Starta nivå {{level}}",
-    "toAscension": "Avsluta omgången",
+    "toFinish": "Avsluta omgången",
     "ofPossible": "av {{hours}} h som banan kunde ge",
     "fullPay": "Allt som banan kunde ge",
     "toSpend": "att spendera före nivå {{level}}",

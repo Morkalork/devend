@@ -72,7 +72,6 @@ describe("the shop's run context", () => {
     const hook = await startRun();
     const s = () => hook.result.current.session;
     expect(s().nextRunContext!.banked).toBe(s().totalScore);
-    expect(s().nextRunContext!.depth).toBe(s().ascensionDepth);
 
     // Lives as they stand, not as they stood at the START of the map just
     // played. Asserting this on a fresh run would prove nothing, because the

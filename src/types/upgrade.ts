@@ -60,8 +60,6 @@ export interface UpgradeConfig {
    * Composes with the choiceGroup surcharge rather than replacing it.
    */
   costMultiplier?: number;
-  /** Only offered while ascended (Ascension mode, depth ≥ 1) */
-  ascensionOnly?: boolean;
   /**
    * Icon name (see upgradeIcons.ts registry) shown on the upgrade card.
    * Only set on the first tier of each family; higher tiers inherit it.

@@ -32,7 +32,7 @@ describe('Daily Stand-up intro flag', () => {
     const { result } = renderHook(() => useTutorialManager());
     act(() => result.current.markDailySeen());
     expect(result.current.shouldShowFence).toBe(true);
-    expect(result.current.shouldShowAscension).toBe(true);
+    expect(result.current.shouldShowStore).toBe(true);
   });
 
   it('is re-armed by resetAllTutorials', () => {

@@ -4,7 +4,7 @@ import type { LevelScoreData, GameResult } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { CapstoneConfig } from "@/types/capstone";
-import type { AscensionRung, LoadoutConfig } from "@/types/loadout";
+import type { LoadoutConfig } from "@/types/loadout";
 import type { TenureOffer } from "@/lib/tenure";
 import type { RunRecap } from "@/lib/buildRecap";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -15,7 +15,6 @@ import { UpgradeShop } from "../../screens/UpgradeShop";
 import { TenureDraftScreen } from "../../screens/TenureDraftScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
-import { AscensionDraftScreen } from "../../screens/AscensionDraftScreen";
 import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
 
 const ACCENT = "#00ff88";
@@ -86,7 +85,6 @@ const recap: RunRecap = {
 
 const winResult: GameResult = {
   isWin: true, remainingPercent: 12, levelId: "lvl-35-release", levelNumber: 35, completedAllLevels: true, totalScore: 1840,
-  ascensionDepth: 2, loadoutNames: ["Crunch Time", "Scope Creep"],
 };
 
 const lossResult: GameResult = {
@@ -161,12 +159,6 @@ const capstones: CapstoneConfig[] = [
   { id: "second_wind", name: "Second Wind", tag: "safety", modifiers: {}, description: "Once per map, a fence survives a ball hit without costing a life.", clarify: "Every map starts with one fence shield: the first ball that would smash a growing fence is absorbed, no life lost. Refreshes each map." },
 ];
 
-const ladder: AscensionRung[] = [
-  { depth: 1, name: "Hiring Freeze", description: "The store opens every other level instead of after every one." },
-  { depth: 2, name: "Promotion Freeze", description: "No Promotion is awarded this run, whatever you achieve." },
-  { depth: 3, name: "Technical Debt", description: "Finished fences wear out under repeated ball hits and finally break." },
-];
-
 export const entries: GalleryEntry[] = [
   // The UI redo's kit pieces (rail, ledger, tickets), assembled with sample figures (pipelineSample.tsx).
   { id: "Pipeline-debrief", group: "screen", render: () => <PipelineDebriefSample /> },
@@ -198,7 +190,7 @@ export const entries: GalleryEntry[] = [
       pipeline={{ clearedLevel: 10, promotion: false, store: true, last: false }} />,
   },
   {
-    // The last map: no store, and the strip ends in Ascension.
+    // The last map: no store, and the strip ends with the run's finish.
     id: "LevelCompleteOverlay-last", group: "screen",
     render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={4120} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       pipeline={{ clearedLevel: 35, promotion: false, store: false, last: true }} />,
@@ -246,15 +238,5 @@ export const entries: GalleryEntry[] = [
   {
     id: "CapstoneDraftScreen", group: "screen",
     render: () => <CapstoneDraftScreen offers={capstones} onSelect={noop} accentColor={ACCENT} />,
-  },
-  {
-    id: "AscensionDraftScreen", group: "screen",
-    render: () => <AscensionDraftScreen loadouts={loadouts} draftedLoadoutIds={["crunch_time"]} ascensionDepth={1} ladder={ladder}
-      totalScore={1840} onAscend={noop} onRetire={noop} accentColor={ACCENT} />,
-  },
-  {
-    id: "AscensionDraftScreen-tutorial", group: "screen",
-    render: () => <AscensionDraftScreen loadouts={loadouts} draftedLoadoutIds={[]} ascensionDepth={0} ladder={ladder}
-      totalScore={1840} onAscend={noop} onRetire={noop} accentColor={ACCENT} showTutorial onTutorialDismiss={noop} />,
   },
 ];

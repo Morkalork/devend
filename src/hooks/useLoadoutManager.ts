@@ -1,22 +1,16 @@
 /**
  * useLoadoutManager — loads the loadout catalogue from public/loadouts.yml
- * (curse + blessing bundles drafted at the run start and during Ascension)
- * plus the ascension tuning block. The drafted set itself lives in
+ * (curse + blessing bundles drafted at the run start; parked while Sprint
+ * Planning is on hold). The drafted set itself lives in
  * useGameSession, mirroring how useUpgradeManager owns only the catalogue.
  */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
-import {
-  LoadoutConfig,
-  LoadoutData,
-  AscensionConfig,
-  DEFAULT_ASCENSION_CONFIG,
-} from '@/types/loadout';
+import { LoadoutConfig, LoadoutData } from '@/types/loadout';
 
 interface LoadoutManagerState {
   loadouts: LoadoutConfig[];
   loadoutLookup: Map<string, LoadoutConfig>;
-  ascensionConfig: AscensionConfig;
   isLoading: boolean;
   error: string | null;
 }
@@ -25,7 +19,6 @@ export function useLoadoutManager() {
   const [state, setState] = useState<LoadoutManagerState>({
     loadouts: [],
     loadoutLookup: new Map(),
-    ascensionConfig: DEFAULT_ASCENSION_CONFIG,
     isLoading: false,
     error: null,
   });
@@ -57,17 +50,9 @@ export function useLoadoutManager() {
         lookup.set(loadout.id, loadout);
       }
 
-      // Ladder rungs are dropped individually if malformed rather than failing
-      // the load: a typo in one rung should cost that rung, not the catalogue
-      // that also backs the run-start draft.
-      const ladder = (Array.isArray(data.ascension?.ladder) ? data.ascension!.ladder : [])
-        .filter(r => r && typeof r.depth === 'number' && r.depth > 0 && typeof r.name === 'string')
-        .sort((a, b) => a.depth - b.depth);
-
       setState({
         loadouts: data.loadouts,
         loadoutLookup: lookup,
-        ascensionConfig: { ...DEFAULT_ASCENSION_CONFIG, ...data.ascension, ladder },
         isLoading: false,
         error: null,
       });
@@ -87,7 +72,6 @@ export function useLoadoutManager() {
   return {
     loadouts: state.loadouts,
     loadoutLookup: state.loadoutLookup,
-    ascensionConfig: state.ascensionConfig,
     isLoading: state.isLoading,
     error: state.error,
     loadLoadouts,

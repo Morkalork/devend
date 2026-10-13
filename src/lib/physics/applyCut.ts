@@ -271,8 +271,8 @@ export function applyCutFn(
   }
 
   // Commit fence segments to wall list and rasterize them into the grid.
-  // Each segment keeps the cell indices its rasterization removed, plus an
-  // Ascension durability budget — both needed if the fence later breaks
+  // Each segment keeps the cell indices its rasterization removed, plus its
+  // fence type's durability budget — both needed if the fence later breaks
   // (see breakFenceWall.ts).
   // One id for the whole gesture, shared by every segment it lays down. A cut
   // that bounces is several walls and one fence, and the Redeploy throw is
@@ -297,11 +297,8 @@ export function applyCutFn(
       if (game.spaceGrid) {
         segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);
       }
-      // Durability: the fence type's own budget when it states one, otherwise
-      // the run's. A type that says nothing about hits does not override an
-      // Ascension durability bonus the player earned.
-      const typeHits = getFenceType(wall.fenceTypeId).maxHits;
-      const hits = typeHits ?? game.fenceDurability;
+      // Durability: the fence type's own budget, when it states one.
+      const hits = getFenceType(wall.fenceTypeId).maxHits;
       if (hits != null) {
         segment.maxHits = hits;
         segment.hitsLeft = hits;

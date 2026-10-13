@@ -20,7 +20,7 @@ export interface WelcomeButtonSpec {
   id: WelcomeButtonId;
   /** Absent while `loading` (the button shows the spinner and "Loading" instead). */
   label?: TextRef;
-  /** A second line under the label (the saved run's ascension depth). */
+  /** A second line under the label. */
   sub?: TextRef;
   /** Shows the spinner and `welcome.loading` in place of the label. */
   loading: boolean;
@@ -49,7 +49,6 @@ export interface WelcomeButtonSpec {
 /** The props of WelcomeScreen that decide what the menu shows. */
 export interface WelcomeMenuInput {
   hasContinue: boolean;
-  savedRunAscension?: number;
   hasDaily: boolean;
   hasTwoPlayer: boolean;
   pairPartnerName?: string;
@@ -88,12 +87,10 @@ export function welcomeButtons(p: WelcomeMenuInput): WelcomeButtonSpec[] {
   // Continue only appears when a saved run exists; it shimmers to mark it as
   // the recommended action. New Game is always a normal button.
   if (p.hasContinue) {
-    const depth = p.savedRunAscension ?? 0;
     out.push({
       ...base("continue", loading),
       loading,
       label: loading ? undefined : { key: "welcome.continueGame" },
-      sub: !loading && depth > 0 ? { key: "ascension.ladderTitle", vars: { depth } } : undefined,
       glow: true,
       shimmer: true,
     });

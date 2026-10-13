@@ -70,7 +70,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   shopDiscountMultiplier:           { label: 'Shop Discount',          kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies upgrade-shop prices (< 1 = cheaper)' },
   pushBonusMultiplier:              { label: 'Push Bonus Mult.',       kind: 'multiplicative', step: 0.25, min: 0.25, defaultValue: 1,    description: 'Multiplies push-your-luck chunk payouts' },
   startingCapturePercent:           { label: 'Starting Capture %',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Board starts with this % already captured (max 40)' },
-  fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
   disablePushYourLuck:              { label: 'Disable Push Luck',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bus Factor loadout: > 0 banks straight through, no push prompt' },
   ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
   freezeUsesPerMap:                 { label: 'Freeze Uses/Map',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: tap-freezes allowed per map, refilled each map (0 = off)' },

@@ -7,7 +7,6 @@ import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
   SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
-  MAX_DEBUG_ASCENSION, getDebugAscensionOverride, setDebugAscensionOverride,
 } from '@/lib/devFlags';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
@@ -32,7 +31,6 @@ interface AdminScreenProps {
 
 export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback, onNearbyDiagnostics }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
-  const [ascension, setAscension] = useState(getDebugAscensionOverride);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
   const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
@@ -285,45 +283,6 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             </div>
           </button>
 
-          {/* Ascension depth: `?ascension=N` as a control. Session-only, so it
-              cannot haunt next week's normal runs; the URL form still works and
-              still wins. Depth N arrives with no drafted loadouts, on purpose,
-              so a rung shows what it does on its own. */}
-          <label
-            className={`w-full p-4 rounded-lg bg-card border flex items-center gap-4 ${
-              ascension > 0 ? 'border-primary' : 'border-border'
-            }`}
-          >
-            <div className={`p-3 rounded-lg ${ascension > 0 ? 'bg-primary/25' : 'bg-primary/10'}`}>
-              <Layers className={`w-6 h-6 ${ascension > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
-            </div>
-            <div className="text-left flex-1">
-              <div className="font-semibold">
-                Start at ascension depth{' '}
-                <span className={`text-xs ${ascension > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {ascension > 0 ? `+${ascension}` : 'OFF'}
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                The next New Game begins this many loops in, with no loadouts drafted.
-                This session only; keeps that run off the ledger.
-              </div>
-            </div>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={MAX_DEBUG_ASCENSION}
-              value={ascension}
-              onChange={(e) => {
-                const next = Math.max(0, Math.min(MAX_DEBUG_ASCENSION, Number(e.target.value) || 0));
-                setDebugAscensionOverride(next);
-                setAscension(next);
-              }}
-              className="w-16 px-2 py-1 rounded bg-background border border-border text-center"
-              aria-label="Ascension depth"
-            />
-          </label>
         </div>
 
         {/* The board renderer (RENDER_3D_PLAN.md). Device settings, applied

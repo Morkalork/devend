@@ -10,7 +10,7 @@ Dev/End's economy makes scores *honest*: the flat 80h/map overtime cap means a
 run's banked overtime measures consistency × survival × lock skill, never
 multiplier stacking. Scores from different runs are genuinely comparable, which
 is the property most roguelites lack. Runs also carry an identity (build
-archetype, capstone, loadout, ascension depth), so a record is a story, not
+archetype, capstone, loadout), so a record is a story, not
 just a number.
 
 There is no backend; everything is localStorage. That makes the core rivalry
@@ -38,8 +38,8 @@ totals reward grinding, not playing well, and stay as flavor stats only.
 ### 1. Racing your best run's ghost (Phase A, partly shipped)
 
 The best run persists its **trajectory**: cumulative banked overtime after each
-completed map (`bestRunTrajectory`, indexed by maps-completed so it extends
-through ascension). It is still recorded on every completion, and the result
+completed map (`bestRunTrajectory`, indexed by maps-completed; it used to
+extend through ascension, which has since been removed). It is still recorded on every completion, and the result
 screen's "you were ahead through map N" epitaph reads it.
 
 The moment a run's total passes the all-time best, the overlay fires a one-time
@@ -72,7 +72,7 @@ The result screen shows where the run landed on the all-time Top 10:
 ### 3. The run ledger (Phase A, shipped)
 
 `localStorage: jezzball_hall_v1` — the all-time Top 10 runs, rich rows:
-score, maps completed, ascension depth, build archetype (primary/secondary
+score, maps completed, build archetype (primary/secondary
 tag), capstone, loadout ids, date. Plus the best run's trajectory.
 Pure ranking/pace logic lives in `src/lib/runLedger.ts`; persistence in
 `src/hooks/useHallOfFame.ts`.
@@ -90,7 +90,6 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
 - **All-Time Top 10** as hold-to-inspect rows (the established gesture).
 - **Archetype bests** — the six `archetypeBests` records as a grid; empty
   slots ("no Freeze run yet") are quiet quests.
-- **Deepest Ascension** — tracked today, shown nowhere.
 - **Map records** — the 35 `mapHighscores` as a browsable list. The existing
   1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
 Also shipped: the **Benchmarking** certificate shows a persistent top-bar

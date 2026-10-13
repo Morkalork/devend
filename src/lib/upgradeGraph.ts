@@ -86,8 +86,6 @@ export type IssueSeverity = 'error' | 'warn' | 'info';
 export type GraphIssueKind =
   /** Requires two members of one choiceGroup: unbuyable, they lock each other. */
   | 'mutually-exclusive-prereqs'
-  /** A normal-run upgrade sitting behind an ascension-only prerequisite. */
-  | 'ascension-gate'
   /** Requires a choiceGroup member, so taking the sibling locks this branch out. */
   | 'choice-gated-branch'
   /** Sits behind a HIGHER tier, so it is mid-graph rather than a chain head. */
@@ -493,11 +491,6 @@ function findIssues(
           `Jumps ${prereq.tier} straight to ${u.tier}, skipping ${TIER_ORDER.slice(prereq.tierIndex + 1, node.tierIndex).join(', ')}.`);
       }
 
-      if (!u.ascensionOnly && prereq.upgrade.ascensionOnly) {
-        add('ascension-gate', 'error', [node.id, prereqId],
-          `A normal-run upgrade behind ascension-only "${prereqId}", so it is unreachable outside Ascension.`);
-      }
-
       const level = u.unlockLevel ?? 1;
       const prereqLevel = prereq.upgrade.unlockLevel ?? 1;
       if (level < prereqLevel) {
@@ -590,7 +583,7 @@ function tenureIssues(upgrades: UpgradeConfig[], nodes: GraphNode[]): GraphIssue
   const issues: GraphIssue[] = [];
 
   for (const [name, members] of familiesByName(nodes)) {
-    const normal = members.filter(n => !n.upgrade.ascensionOnly);
+    const normal = members;
     if (!normal.some(n => n.tierIndex === TIER_INDEX.Junior)) continue;
     if (!normal.some(n => n.tierIndex >= TIER_INDEX.Principal)) continue;
     if (normal.some(n => heads.has(n.id))) continue;

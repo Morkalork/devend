@@ -1,8 +1,7 @@
 /**
  * Shared draw logic for the curse+blessing loadout drafts.
  *
- * The same draw backs two screens: the post-final-level Ascension draft
- * (AscensionDraftScreen) and the run-start loadout draft (RunDraftScreen).
+ * Backs the run-start loadout draft (RunDraftScreen), on hold for now.
  * Unlock filtering for the run-start draft lives in loadoutUnlock.ts.
  */
 import { LoadoutConfig } from '@/types/loadout';

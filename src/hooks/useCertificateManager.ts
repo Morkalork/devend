@@ -341,7 +341,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     prevHoursRef.current = 0;
   }, []);
 
-  /** Ascension levels count more: pass weight = 1 + ascensionDepth. */
+  /** One map cleared (a weight, should a map ever count for more). */
   const incrementRunLevel = useCallback((weight: number = 1) => {
     setRunLevelsCompleted(prev => prev + weight);
   }, []);

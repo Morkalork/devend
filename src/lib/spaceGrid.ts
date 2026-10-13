@@ -224,7 +224,7 @@ export function markCellRemoved(grid: SpaceGrid, index: number): void {
 }
 
 /**
- * Restore previously removed cells to ACTIVE (Ascension fence breaks).
+ * Restore previously removed cells to ACTIVE (worn-out fence breaks).
  * Only flips cells that are currently REMOVED, keeping activeCount exact.
  */
 export function restoreCells(grid: SpaceGrid, indices: number[]): void {

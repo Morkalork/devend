@@ -6,7 +6,7 @@
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
  *   - useLoadoutManager      curse/blessing loadouts from public/loadouts.yml
- *                            (run-start loadout draft + Ascension draft)
+ *                            (run-start loadout draft; parked while on hold)
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
  *   - useCheckpointSnapshots saved per-level snapshots for the level picker
@@ -56,22 +56,21 @@ import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
-import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth, debugMutatorId, forcedTilts } from '@/lib/devFlags';
+import { baseStartingLives, isInfiniteLivesEnabled, debugMutatorId, forcedTilts } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
-import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 import { fenceSlotsFrom } from "@/lib/fenceOwnership";
 import { devFenceSlots } from "@/lib/devFlags";
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
 import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish';
+import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
 
 /**
- * Drop one debug query param, keeping the rest. The old code replaced the whole
- * search string, which meant ?ascension=3&level=12 lost the ascension jump the
- * moment the level jump consumed its own param.
+ * Drop one debug query param, keeping the rest. Replacing the whole search
+ * string would also drop any other param riding along with the level jump.
  */
 function stripQueryParam(name: string): void {
   try {
@@ -98,8 +97,7 @@ const WARM_CACHE_RAMP_CAP = 10;
  *  offer), earn one via certificates / the Insurance Policy set bonus, or
  *  complete level FREE_CONTINUE_LEVEL. */
 const BASE_CONTINUES = 0;
-/** Completing this level grants 1 free Continue (once per pass; an ascension
- *  loop that reaches it again grants another). */
+/** Completing this level grants 1 free Continue (once per run). */
 const FREE_CONTINUE_LEVEL = 20;
 /** War Chest ceiling: banked overtime never slows balls by more than this. */
 const MAX_BANKED_SLOW = 0.08;
@@ -143,7 +141,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
     loadouts,
     loadoutLookup,
-    ascensionConfig,
     loadLoadouts,
   } = useLoadoutManager();
 
@@ -222,8 +219,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   } | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
-  // at the first map end at/past the trigger level. Permanent for the run
-  // (survives ascension); cleared only on run resets.
+  // at the first map end at/past the trigger level. Permanent for the run;
+  // cleared only on run resets.
   const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
   // What this store visit put on its shelf, kept for the run save (a run
   // resumed in the store reopens the same shelf). Cleared per visit.
@@ -254,10 +251,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Locks made this round vs. required (for the closed-store "X/Y" banner, #67).
   const [storeLockProgress, setStoreLockProgress] = useState<{ have: number; need: number }>({ have: 0, need: 1 });
 
-  // Ascension mode: after the final level the player may loop back to level 1
-  // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
-  // draftedLoadoutIds is always the run-start loadout; ascension appends more.
-  const [ascensionDepth, setAscensionDepth] = useState(0);
+  // The run-start loadout, when Sprint Planning drafts one (on hold: loadouts
+  // are parked, so this stays empty in play).
   const [draftedLoadoutIds, setDraftedLoadoutIds] = useState<string[]>([]);
 
   // Snapshot of the just-finalized run for the result screen (finalizeRun
@@ -318,7 +313,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowMover,
     shouldShowTopBar,
     shouldShowBottomBar,
-    shouldShowAscension,
     shouldShowDaily,
     shouldShowTimeLimit,
     markOnboardingSeen,
@@ -328,7 +322,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markMoverSeen,
     markTopBarSeen,
     markBottomBarSeen,
-    markAscensionSeen,
     markDailySeen,
     markTimeLimitSeen,
     resetAllTutorials,
@@ -412,7 +405,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    recordAscensionDepth,
     recordPushBonusBanked,
     recordLoadoutWin,
     recordMapHighscore,
@@ -427,8 +419,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Loadouts are gated behind the general feature-unlock system: earned by
   // beating the game for the first time (completing the final level; see the
   // isLastLevel win path below). Until then the menu Loadouts entry stays
-  // hidden. (The Sprint Planning draft this used to gate is on hold outright;
-  // the ascension draft is not gated on this flag and still runs.)
+  // hidden. (Loadouts are parked for now: Sprint Planning is on hold and the
+  // Ascension draft was removed, so the menu entry stays hidden regardless.)
   const loadoutsIntroduced = isFeatureUnlocked('loadouts');
 
   // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
@@ -471,50 +463,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  /**
-   * Every ladder rung in force at the current depth, folded into one rule set.
-   * Read by the shop, the Promotion, fence durability,
-   * the mutator roll and the forced curse, so a rung is authored once in
-   * loadouts.yml and applies everywhere without a second switch statement.
-   */
-  const ascRules = useMemo(
-    () => (ascensionDepth > 0 ? ascensionRules(ascensionDepth, ascensionConfig.ladder) : NO_ASCENSION_RULES),
-    [ascensionDepth, ascensionConfig.ladder],
-  );
-
-  /**
-   * Drafted loadouts, the ladder's own modifier rungs, and the forced curse,
-   * folded into the same bonus map the achievements/certificates use.
-   *
-   * Ball speed used to be speedRampPerDepth ^ depth at EVERY depth, which was
-   * the whole of what an ascension meant. It is now one rung among ten, and the
-   * ramp only takes over past the ladder's end so deep ascensions still
-   * escalate once the named rungs run out.
-   */
+  /** Drafted loadouts, folded into the same bonus map the achievements/certificates use. */
   const loadoutBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     for (const id of draftedLoadoutIds) {
       const loadout = loadoutLookup.get(id);
       if (loadout) bonuses = mergeBonuses(bonuses, loadout.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
-    if (ascensionDepth > 0) {
-      bonuses = mergeBonuses(bonuses, ascRules.modifiers as Partial<Record<keyof GameModifiers, number>>);
-      // The imposed curse is a normal loadout the player never drafted.
-      const forced = ascRules.forcedCurseLoadoutId
-        ? loadoutLookup.get(ascRules.forcedCurseLoadoutId)
-        : undefined;
-      if (forced && !draftedLoadoutIds.includes(forced.id)) {
-        bonuses = mergeBonuses(bonuses, forced.modifiers as Partial<Record<keyof GameModifiers, number>>);
-      }
-      const past = ascensionDepth - LADDER_LENGTH;
-      if (past > 0) {
-        bonuses = mergeBonuses(bonuses, {
-          ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, past),
-        });
-      }
-    }
     return bonuses;
-  }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascRules, ascensionConfig.speedRampPerDepth]);
+  }, [draftedLoadoutIds, loadoutLookup]);
 
   // Set bonuses: free modifier bundles active while the player owns enough
   // upgrades of a tag (tagSets block in upgrades.yml).
@@ -599,9 +556,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     level: currentLevelIndex + 1,
     lives: livesAtLevelStart,
     banked: totalScore,
-    depth: ascensionDepth,
     map: mapContextOf(currentLevel),
-  }), [currentLevelIndex, livesAtLevelStart, totalScore, ascensionDepth, currentLevel]);
+  }), [currentLevelIndex, livesAtLevelStart, totalScore, currentLevel]);
 
   /**
    * The run as it will stand on the NEXT map, for the shop.
@@ -621,10 +577,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       level: currentLevelIndex + 2,
       lives: currentLives,
       banked: totalScore,
-      depth: ascensionDepth,
       map: mapContextOf(next),
     };
-  }, [levels, currentLevelIndex, currentLives, totalScore, ascensionDepth]);
+  }, [levels, currentLevelIndex, currentLives, totalScore]);
 
   const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses, runContext);
   const dynamicBonuses = useMemo(() => {
@@ -688,8 +643,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   // Per-source breakdown of what feeds activeModifiers, so the bottom-bar panel
-  // can attribute each active modifier to the upgrade/cert/achievement/loadout/
-  // ascension that produced it.
+  // can attribute each active modifier to the upgrade/cert/achievement/loadout
+  // that produced it.
   const modifierSources = useMemo<ModifierSource[]>(() => {
     const sources: ModifierSource[] = [];
 
@@ -728,41 +683,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'capstone', id: capstone.id, name: capstone.name, modifiers: capstone.modifiers });
     }
 
-    if (ascensionDepth > 0) {
-      sources.push({
-        kind: 'ascension',
-        id: 'ascension',
-        name: String(ascensionDepth),
-        modifiers: { ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, ascensionDepth) },
-      });
-    }
-
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, capstone]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
-  // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
+  // enough unique wins (see loadoutUnlock).
   const availableLoadouts = useMemo(
     () => unlockedForStart(loadouts, wonLoadoutIds.length),
     [loadouts, wonLoadoutIds]
   );
-
-  // Ascension rule: fences wear out after a number of ball hits — generous on
-  // early levels, brutal late, plus the Defensive Programming upgrade bonus.
-  // null = indestructible fences (the normal game). Gated on the "Technical
-  // Debt" rung rather than on depth > 0, so the first three ascensions have a
-  // character of their own and Defensive Programming is a considered buy at
-  // depth 4 instead of mandatory from the very first ascension.
-  const fenceDurability = useMemo(() => {
-    if (!ascRules.fencesWearOut) return null;
-    const levelNumber = currentLevelIndex + 1;
-    const t = totalLevels > 1 ? Math.min(1, (levelNumber - 1) / (totalLevels - 1)) : 0;
-    const base = Math.round(
-      ascensionConfig.fenceDurabilityBase +
-      (ascensionConfig.fenceDurabilityAtFinal - ascensionConfig.fenceDurabilityBase) * t
-    );
-    return Math.max(1, base + activeModifiers.fenceDurabilityBonus);
-  }, [ascRules.fencesWearOut, currentLevelIndex, totalLevels, ascensionConfig, activeModifiers.fenceDurabilityBonus]);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -770,22 +699,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   /**
-   * Clear every piece of run-scoped state. Shared by all five run-reset paths
-   * (start, play-again, restart, back-to-welcome, ASCEND) so a newly added
-   * field can never be forgotten in one of them again. Lives, continues, level
-   * index and navigation stay with the call sites - they legitimately differ
-   * per path.
-   *
-   * `keepAscension` is what makes ascending a reset at all. An ascension is a
-   * fresh run at a harder rung, so it clears the same list as any other run
-   * start; what it must NOT clear is the three things that are the POINT of
-   * ascending - the depth, the loadouts stacked on the way up, and
-   * runLevelsCompleted, which is the certificate-hours accumulator and the only
-   * meta progress a run carries while it is still being played. Sharing the
-   * list rather than keeping a second one beside it is deliberate: two lists of
-   * "everything run-scoped" is how one of them goes stale.
+   * Clear every piece of run-scoped state. Shared by every run-reset path
+   * (start, play-again, restart, back-to-welcome) so a newly added field can
+   * never be forgotten in one of them again. Lives, continues, level index and
+   * navigation stay with the call sites - they legitimately differ per path.
    */
-  const resetRunScopedState = useCallback((opts?: { keepAscension?: boolean }) => {
+  const resetRunScopedState = useCallback(() => {
     // Signing Bonus: the run opens with hours already banked. Set here rather
     // than at one of the run-start handlers so every path gets it, the Daily
     // included: certs already apply to a seeded run (Equity Grant, Head Start
@@ -813,10 +732,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setStoreClosed(false);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
-    if (!opts?.keepAscension) {
-      setAscensionDepth(0);
-      setDraftedLoadoutIds([]);
-    }
+    setDraftedLoadoutIds([]);
     setLastRunSummary(null);
     setLastRunLoadoutUnlocks([]);
     runTrajectoryRef.current = [];
@@ -824,11 +740,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     pbCelebratedRef.current = false;
     setLevelPace(null);
     setLastRunRank(null);
-    // Certificate hours accrue across the whole session of play, ascensions
-    // included, and are banked when the run finally ends. Zeroing this on an
-    // ascension would quietly delete the meta progress the player ascended to
-    // keep earning.
-    if (!opts?.keepAscension) resetRunProgress();
+    resetRunProgress();
   }, [resetRunProgress]);
 
   // Latest run snapshot, refreshed every render, so the save effect can fire
@@ -861,7 +773,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendCapture,
     carryFreeShopItems,
     capstoneId: capstone?.id ?? null,
-    ascensionDepth,
     draftedLoadoutIds,
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
@@ -1025,19 +936,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         recordEligibleRef.current = false;
       }
 
-      // ?ascension=N: start this run already at that depth, so the ladder's
-      // later rungs can be looked at without clearing the map list N times.
-      // Applied after resetRunScopedState (which zeroes the depth) and before
-      // the level jump, so ?ascension=3&level=12 works as one instruction.
-      // The param is consumed here, matching ?level=, so a later Play Again is
-      // an ordinary depth-0 run rather than silently staying ascended.
-      const debugAscension = debugAscensionDepth();
-      if (debugAscension > 0) {
-        setAscensionDepth(debugAscension);
-        recordEligibleRef.current = false; // debug jump: never files on the ledger
-        stripQueryParam('ascension');
-      }
-
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);
         recordEligibleRef.current = false; // debug jump: never files on the ledger
@@ -1187,7 +1085,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     spentThisShopVisitRef.current = 0;
-    setAscensionDepth(save.ascensionDepth);
     setDraftedLoadoutIds(save.draftedLoadoutIds);
     setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
 
@@ -1310,7 +1207,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const info = recordRun({
       score: finalScore,
       levelsCompleted: trajectory.length,
-      ascensionDepth,
       primaryTag: identity.primary,
       secondaryTag: identity.secondary,
       capstoneId: capstone?.id ?? null,
@@ -1319,7 +1215,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       savedAt: Date.now(),
     }, trajectory, dailyKeyRef.current);
     setLastRunRank({ ...info, aheadThroughMaps: epitaph });
-  }, [bestRunTrajectory, bestScore, tagCounts, ascensionDepth, capstone, draftedLoadoutIds, recordRun]);
+  }, [bestRunTrajectory, bestScore, tagCounts, capstone, draftedLoadoutIds, recordRun]);
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
@@ -1327,7 +1223,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       isWin: result.isWin,
       levelsCompleted,
       totalScore,
-      ascensionDepth,
       daily: dailyKeyRef.current !== null,
     });
     // Tenure (issue #75): the depth this run ENDED at decides the next
@@ -1347,13 +1242,29 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // The run is over: no Continue on the welcome screen. A pair run never
     // held that slot, and the solo run parked in it is not the one that ended.
     if (!pairRunRef.current) clearRun();
-    nav.endGame({
-      ...result,
+    nav.endGame({ ...result, totalScore });
+  }, [nav.endGame, totalScore, finalizeRun, runLevelsCompleted, activeModifiers.extraCertificateHours, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
+
+  /**
+   * The last map is won: the run is over, as a win. Banked and filed through
+   * the same path a loss takes (Tenure, certificate hours, the ledger), with
+   * the final map's results on the result screen.
+   */
+  const handleFinishRun = useCallback(() => {
+    finalizeAndShowResult({
+      isWin: true,
+      remainingPercent: pendingLevelScore?.remainingPercent || 0,
+      levelId: currentLevel?.id || '',
+      levelNumber: currentLevelIndex + 1,
+      completedAllLevels: true,
       totalScore,
-      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
+      levelScore: pendingLevelScore?.levelScore,
+      cutCount: pendingLevelScore?.cutCount,
+      expectedCuts: pendingLevelScore?.expectedCuts,
+      basePoints: pendingLevelScore?.basePoints,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
+    setPendingLevelScore(null);
+  }, [finalizeAndShowResult, pendingLevelScore, currentLevel, currentLevelIndex, totalScore]);
 
   /**
    * Tenure pick confirmed (issue #75): grant every upgrade in the chosen
@@ -1465,12 +1376,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (isOnboardingMap(currentLevel)) markOnboardingSeen();
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
-    // Levels completed while ascended count more toward Certificate Hours
-    incrementRunLevel(1 + ascensionDepth);
+    incrementRunLevel(1);
 
     // Loyalty bonus: completing level FREE_CONTINUE_LEVEL awards a free
     // Continue (runs start with none; the dedupe ref above keeps this to one
-    // grant per pass, and an ascension loop can earn it again).
+    // grant per run).
     if (currentLevelNum === FREE_CONTINUE_LEVEL) setContinuesRemaining(c => c + 1);
 
     if (currentLives >= livesAtLevelStart) recordPerfectLevel();
@@ -1504,7 +1414,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
           ? metaStats.totalLevelsCompletedWithoutLoss + 1
           : metaStats.totalLevelsCompletedWithoutLoss,
       totalLivesLost: metaStats.totalLivesLost,
-      deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
       pushBonusesBanked: metaStats.pushBonusesBanked + (bankedPush ? 1 : 0),
       // Only written when a run ENDS, so these are carried through unchanged.
       lastRunDepth: metaStats.lastRunDepth,
@@ -1512,15 +1421,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     };
     checkAndCompleteAchievements(projectedStats);
 
-    // Feature unlocks (features.ts): completing certain levels, on the real
-    // first run (depth 0), reveals a new system. Level 5 unlocks achievements.
-    // armFeatureUnlock queues the "Feature Unlocked" modal (surfaced when
-    // leaving the level-complete overlay). (Certificates and loadouts unlock on
-    // an event, not a level - see below and handleCertificateHourEarned.)
-    if (ascensionDepth === 0) {
-      for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
-        armFeatureUnlock(feature.id);
-      }
+    // Feature unlocks (features.ts): completing certain levels reveals a new
+    // system. Level 5 unlocks achievements. armFeatureUnlock queues the
+    // "Feature Unlocked" modal (surfaced when leaving the level-complete
+    // overlay). (Certificates unlock on an event, not a level - see
+    // handleCertificateHourEarned.)
+    for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
+      armFeatureUnlock(feature.id);
     }
 
     // Beating the final level = a win. Credit the run-start loadout (index 0)
@@ -1528,17 +1435,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // result screen can celebrate them. Skipped runs (no drafted loadout) and
     // repeat wins with the same loadout do not advance the count.
     if (isLastLevel) {
-      // First full completion unlocks the Loadouts feature: the "Feature
-      // Unlocked" modal surfaces over the ascension draft that follows, right as
-      // the player first meets loadouts (the ascension pick). Idempotent, so
-      // later wins are no-ops.
-      armFeatureUnlock('loadouts');
-      // Legacy bookkeeping flag (loadouts now unlock via the feature system).
-      introduceLoadouts();
-      // Index 0 is the RUN-START loadout, which is what the unique-win count
-      // is specified against. With Sprint Planning on hold no run starts with
-      // one, so index 0 would be the depth-1 ascension pick instead: credit
-      // nothing rather than credit the wrong loadout.
+      // Loadouts are parked (Sprint Planning on hold, Ascension removed), so
+      // a full completion no longer announces them: the "Loadouts unlocked"
+      // modal would point at a menu entry that is hidden. The unique-win
+      // count below only runs with Sprint Planning on, so it is parked too.
       const startLoadoutId = SPRINT_PLANNING_ENABLED ? draftedLoadoutIds[0] : undefined;
       if (startLoadoutId) {
         const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
@@ -1574,7 +1474,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       level: currentLevelNum,
       overtime: levelOvertime,
       perfect: currentLives >= livesAtLevelStart,
-      ascensionDepth,
       daily: dailyKeyRef.current !== null,
     });
 
@@ -1621,7 +1520,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1630,8 +1529,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const finishShopPhase = useCallback(() => {
     const nextLevelNumber = currentLevelIndex + 2;
-    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
-    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
+    if (nextLevelNumber % 5 === 0) {
       saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
     }
     const pendingUnlocks = takePendingUnlocks();
@@ -1641,7 +1539,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setStoreDealt(null);
     advanceToNextLevel();
     nav.goToGame();
-  }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
+  }, [currentLevelIndex, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
 
   /**
    * Open this level's shop (or skip past it), the ordinary end of an ordinary
@@ -1658,7 +1556,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Pulling them out satisfies the rule with no extra re-creation, and CI
   // lints with --max-warnings, so a new warning is a broken build rather than
   // a note.
-  const { goToUpgradeShop, goToCapstoneDraft, goToGame, goToAscensionDraft } = nav;
+  const { goToUpgradeShop, goToCapstoneDraft, goToGame } = nav;
 
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
@@ -1671,12 +1569,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // two waives it entirely and the shop is simply always open.
     const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
     const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
-    // Hiring Freeze (ascension rung 1): on the levels the store skips there is
-    // nothing to show, so go straight on.
-    if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
-      finishShopPhase();
-      return;
-    }
     const closed = locksThisRound < locksRequired;
     setStoreDealt(null); // a new visit: the shelf is dealt fresh
     setStoreClosed(closed);
@@ -1693,7 +1585,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         currentLevelIndex + 1,
         getRunRng(`shop:${currentLevelIndex + 1}:freeAbility`),
         held,
-        ascRules.abilitySlots,
+        MAX_ABILITY_SLOTS,
       );
       if (rolled) {
         setAbilityCharges(prev => ({ ...prev, [rolled]: (prev[rolled] ?? 0) + 1 }));
@@ -1704,7 +1596,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setFreeAbilityGrant(null);
     }
     goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, abilityCharges, currentLevelIndex, ascRules, finishShopPhase, goToUpgradeShop]);
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, abilityCharges, currentLevelIndex, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1714,15 +1606,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * fourth in a queue of five reward screens. Returns true when it took the wheel.
    */
   const offerCapstoneIfDue = useCallback((): boolean => {
-    // Promotion Freeze (ascension rung 2): no capstone is awarded at all.
-    if (ascRules.noCapstone || capstone) return false;
+    if (capstone) return false;
     const pool = getCapstones();
     if (pool.length === 0) return false;
     if (!capstoneDueAfter(currentLevelIndex + 1)) return false;
     setCapstoneOffers(drawCapstoneOffers(pool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
     goToCapstoneDraft();
     return true;
-  }, [ascRules.noCapstone, capstone, currentLevelIndex, goToCapstoneDraft]);
+  }, [capstone, currentLevelIndex, goToCapstoneDraft]);
 
   /**
    * What stands between the map just won and the next (UI_REDO_PLAN.md, the
@@ -1736,10 +1627,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const liveBetweenMapPlan = useMemo<BetweenMapPlan>(() => ({
     clearedLevel: currentLevelIndex + 1,
-    promotion: !ascRules.noCapstone && !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
-    store: shopOpensAfter(currentLevelIndex + 1, ascRules),
+    promotion: !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
+    store: true,
     last: isLastLevel,
-  }), [currentLevelIndex, ascRules, capstone, isLastLevel]);
+  }), [currentLevelIndex, capstone, isLastLevel]);
   const [frozenBetweenMapPlan, setFrozenBetweenMapPlan] = useState<BetweenMapPlan | null>(null);
   useEffect(() => {
     if (showLevelComplete) {
@@ -1792,13 +1683,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: go STRAIGHT to the finale. The pending level
-      // score is kept so handleRetire can put it on the result screen.
-      nav.goToAscensionDraft();
+      // Beat the final level: the run is won, and that is the end of it.
+      handleFinishRun();
     } else if (!offerCapstoneIfDue()) {
       proceedToShop();
     }
-  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, nav.goToAscensionDraft]);
+  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
 
   /**
    * A run saved between maps, routed back to the stage it was saved on once
@@ -1833,9 +1723,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         return;
       }
     }
-    if (isLastLevel) goToAscensionDraft();
+    if (isLastLevel) handleFinishRun();
     else if (!offerCapstoneIfDue()) proceedToShop();
-  }, [resumeBetween, pendingLevelScore, levels.length, currentLevelIndex, isLastLevel, offerCapstoneIfDue, proceedToShop, goToUpgradeShop, goToCapstoneDraft, goToAscensionDraft]);
+  }, [resumeBetween, pendingLevelScore, levels.length, currentLevelIndex, isLastLevel, offerCapstoneIfDue, proceedToShop, goToUpgradeShop, goToCapstoneDraft, handleFinishRun]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -1843,58 +1733,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, []);
 
   /**
-   * Ascend: start a FRESH run at depth + 1, keeping only what ascending is for.
-   *
-   * It used to carry the whole run across - score, every upgrade owned, the
-   * capstone - which made the loop pointless: you
-   * re-entered level 1 with a build assembled over thirty-five maps, and the
-   * ladder's rung was the only thing that had changed. The harder rules landed
-   * on a player who could already buy everything back on the first shop, so
-   * ascending was easier than the run that earned it.
-   *
-   * So it resets exactly like any other run start, through the same shared
-   * list, and keeps three things:
-   *
-   *   - the DEPTH, and with it the ladder rung now in force;
-   *   - the LOADOUTS drafted on the way up, which stack and are the reason to
-   *     ascend at all;
-   *   - runLevelsCompleted, the certificate-hours accumulator, so meta progress
-   *     keeps building across loops and banks when the run finally ends.
-   *
-   * Upgrades, overtime and the Promotion all go. Lives and continues refill to a run's starting values, because that
-   * is what starting a run means.
-   */
-  const handleAscend = useCallback((loadoutId: string) => {
-    const newDepth = ascensionDepth + 1;
-    analytics.ascensionStarted({ depth: newDepth, loadoutId });
-
-    // Clear the run first, then re-establish what survives. Ordering matters:
-    // the shared reset is told to leave the ascension state alone, so the
-    // append below cannot be clobbered by it.
-    resetRunScopedState({ keepAscension: true });
-    setDraftedLoadoutIds(prev => [...prev, loadoutId]);
-    setAscensionDepth(newDepth);
-    recordAscensionDepth(newDepth);
-
-    // A fresh run's lives and continues, plus the drafted loadout's life delta
-    // once - the same arithmetic a run start does, not a carry-over of whatever
-    // the last loop happened to end on.
-    const certs = getLoadedCertBonuses();
-    const startingLives = baseLives() + ((certs.extraLives as number | undefined) ?? 0);
-    const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-    const lives = Math.max(1, startingLives + livesDelta);
-    setCurrentLives(lives);
-    setLivesAtLevelStart(lives);
-    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
-
-    resetToFirstLevel(); // also re-randomizes the level variants for the new loop
-    goToGame();
-  }, [ascensionDepth, recordAscensionDepth, resetRunScopedState, loadoutLookup, resetToFirstLevel, goToGame]);
-
-  /**
    * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
-   * skip) at depth 0, then enter the game. Applies the loadout's extraLives
-   * delta once, mirroring handleAscend.
+   * skip), then enter the game. Applies the loadout's extraLives delta once.
    */
   const handleConfirmLoadout = useCallback((loadoutId: string | null) => {
     analytics.loadoutSelected({ loadoutId });
@@ -1910,38 +1750,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     nav.startGame();
   }, [certBonuses, loadoutLookup, nav.startGame]);
-
-  /** Retire: bank the run and show the result screen. */
-  const handleRetire = useCallback(() => {
-    const levelsCompleted = runLevelsCompleted;
-    analytics.runEnded({
-      isWin: true,
-      levelsCompleted,
-      totalScore,
-      ascensionDepth,
-      daily: dailyKeyRef.current !== null,
-    });
-    const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
-    setLastRunSummary({ levelsCompleted, hoursAwarded });
-    captureRunRecap(totalScore);
-    fileRunOnLedger(totalScore);
-    if (!pairRunRef.current) clearRun(); // retiring banks and ends the run
-    nav.endGame({
-      isWin: true,
-      remainingPercent: pendingLevelScore?.remainingPercent || 0,
-      levelId: currentLevel?.id || '',
-      levelNumber: currentLevelIndex + 1,
-      completedAllLevels: true,
-      totalScore,
-      levelScore: pendingLevelScore?.levelScore,
-      cutCount: pendingLevelScore?.cutCount,
-      expectedCuts: pendingLevelScore?.expectedCuts,
-      basePoints: pendingLevelScore?.basePoints,
-      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
-    });
-    setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
@@ -2149,13 +1957,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [completedAchievementIds, checkAchievementUnlocks]);
 
-  // Auto-start when a ?level= or ?ascension= debug jump is present. Either one
-  // alone is enough, so ?ascension=6 drops straight into a depth-6 run.
+  // Auto-start when a ?level= debug jump is present.
   const levelQueryHandled = useRef(false);
   useEffect(() => {
     if (levelQueryHandled.current) return;
     const levelParam = new URLSearchParams(window.location.search).get('level');
-    const wantsJump = (levelParam != null && parseInt(levelParam, 10) > 0) || debugAscensionDepth() > 0;
+    const wantsJump = levelParam != null && parseInt(levelParam, 10) > 0;
     if (wantsJump) {
       levelQueryHandled.current = true;
       handleStartGame(undefined, true); // debug jump skips the loadout draft
@@ -2193,7 +2000,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     showMoverTutorial: shouldShowMover,
     showTopBarTutorial: shouldShowTopBar,
     showBottomBarTutorial: shouldShowBottomBar,
-    shouldShowAscension,
     shouldShowDaily,
     shouldShowTimeLimit,
     markFenceSeen,
@@ -2202,7 +2008,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markMoverSeen,
     markTopBarSeen,
     markBottomBarSeen,
-    markAscensionSeen,
     markDailySeen,
     markTimeLimitSeen,
     // Certificates
@@ -2233,13 +2038,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Head Start certificates: the level a fresh run begins at (1 = none).
     // The result screen uses it to label Play Again as "Continue from level N".
     certStartingLevel: getCertStartingLevel(),
-    // Loadouts + Ascension mode
-    ascensionDepth,
+    // Loadouts (parked)
     /** What build scaling is paying right now, per upgrade (upgradeScaling.ts). */
     scalingReadouts: scalingDetail,
-    /** The ladder rungs in force at the current depth (ascensionLadder.ts). */
-    ascensionRules: ascRules,
-    ascensionLadder: ascensionConfig.ladder,
     loadouts,
     availableLoadouts,
     draftedLoadoutIds,
@@ -2248,7 +2049,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     loadoutsIntroduced,
     isFeatureUnlocked,
     unlockedFeature,
-    fenceDurability,
     // Continue (per-run revive)
     continuesRemaining,
     gameInstanceKey,
@@ -2281,7 +2081,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleSelectCapstone,
     // Run persistence (Continue / New Game on the welcome screen)
     hasSavedRun,
-    /** The saved run's ascension depth, for the menu's Continue button. */
     savedRun,
     handleContinueRun,
     /** Resume a run from a record (the pair save; see TWO_PLAYER_PLAN step 6b). */
@@ -2330,8 +2129,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleLevelComplete,
     handleContinueFromOverlay,
     handleDismissFeatureUnlocked,
-    handleAscend,
-    handleRetire,
     handlePurchaseUpgrade,
     handlePurchaseAbility,
     retainedAbilityIds,
@@ -2340,7 +2137,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // render so the shop can roll against it on mount; nothing re-reads it
     // mid-visit, which is what keeps the shelf still.
     heldAbilityIdsNow: heldAbilityIds(abilityCharges, everHeldAbilityIdsRef.current),
-    abilitySlots: ascRules.abilitySlots,
+    abilitySlots: MAX_ABILITY_SLOTS,
     mapsRemaining: Math.max(0, totalLevels - (currentLevelIndex + 1)),
     handleContinueFromShop,
     handlePurchaseCertLevel,

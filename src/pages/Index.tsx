@@ -31,13 +31,13 @@ import { startScreenSlide } from '@/ui/screenSlide';
 import { CRTBackground } from '@/components/game/CRTBackground';
 import { ResultScreen } from '@/ui/screens/ResultScreen';
 import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
+import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
 import { TenureDraftScreen } from '@/ui/screens/TenureDraftScreen';
 import { ContinuePrompt } from '@/ui/screens/ContinuePrompt';
-import { AscensionDraftScreen } from '@/ui/screens/AscensionDraftScreen';
 import { CertificateStore } from '@/ui/screens/CertificateStore';
 import { LoadoutGalleryScreen } from '@/ui/screens/LoadoutGalleryScreen';
 import { FeatureUnlockedModal } from '@/ui/game/FeatureUnlockedModal';
@@ -375,7 +375,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     // tenureDraft sits just before runDraft: it is picked first so a free
     // upgrade chain can steer the loadout choice.
     tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
-    ascensionDraft: 3, result: 4,
+    result: 4,
   };
   // The slide to the new screen happens on the interface canvas (ui/screenSlide):
   // deeper into a run comes in from the right, back towards the menu from the
@@ -434,13 +434,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <WelcomeScreen
                   onStartGame={() => session.handleStartGame()}
                   onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
-                  savedRunAscension={session.savedRun?.ascensionDepth ?? 0}
                   onTutorial={navigation.goToTutorial}
                   onOptions={navigation.goToOptions}
                   onOpenCertificateStore={
                     session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
                   }
-                  onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
+                  // Loadouts are parked: nothing hands them out while Sprint
+                  // Planning is on hold, so the entry comes back with it.
+                  onLoadouts={SPRINT_PLANNING_ENABLED && session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                   onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                   onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
                   onTwoPlayer={navigation.goToPairLobby}
@@ -539,7 +540,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onGrantAbility={session.handleGrantAbility}
                 onSpendAbility={session.handleSpendAbility}
                 abilityCharges={session.abilityCharges}
-                abilitySlots={session.ascensionRules.abilitySlots}
+                abilitySlots={session.abilitySlots}
                 fenceSlotIds={session.fenceSlotIds}
                 onGameEnd={session.handleGameEnd}
                 onMapTimedOut={session.handleMapTimedOut}
@@ -564,15 +565,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 modifierSources={session.modifierSources}
                 tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
-                ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
                 capstone={session.capstone}
                 activeLoadouts={session.activeLoadouts}
-                fenceDurability={session.fenceDurability}
-                ascensionLadder={session.ascensionLadder}
                 scalingReadouts={session.scalingReadouts}
-                everyMapMutated={session.ascensionRules.everyMapMutated}
-                pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
                 runStartIntro={session.runStartIntroPending}
               />
               </GameErrorBoundary>
@@ -604,7 +600,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 <UpgradeShop
                   runContext={session.nextRunContext}
                   playerPoints={session.totalScore}
-                  upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
+                  upgrades={session.upgrades}
                   ownedUpgradeIds={session.ownedUpgradeIds}
                   completedLevel={session.currentLevelIndex + 1}
                   isLocked={session.isUpgradeLocked}
@@ -656,22 +652,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onSelect={session.handleSelectCapstone}
                   accentColor={accentHex}
                   pipeline={session.betweenMapPlan}
-                />
-              </CanvasLayer>
-            )}
-            {navigation.currentScreen === 'ascensionDraft' && (
-              <CanvasLayer id="screen-AscensionDraftScreen" z={10}>
-                <AscensionDraftScreen
-                  loadouts={session.loadouts}
-                  draftedLoadoutIds={session.draftedLoadoutIds}
-                  ascensionDepth={session.ascensionDepth}
-                  ladder={session.ascensionLadder}
-                  totalScore={session.totalScore}
-                  onAscend={session.handleAscend}
-                  onRetire={session.handleRetire}
-                  accentColor={accentHex}
-                  showTutorial={session.shouldShowAscension}
-                  onTutorialDismiss={session.markAscensionSeen}
                 />
               </CanvasLayer>
             )}
