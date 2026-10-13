@@ -64,7 +64,10 @@ interface: the whole game interface except Admin, moved from React DOM onto
 one full-screen Pixi canvas over the board (built), and
 **UI_REDO_PLAN.md** for the redo of the menus and between-map screens
 (direction B, "Pipeline": one between-map screen of stages on a rail; Oxanium
-for display, Michroma for the logo only; built), and
+for display, Michroma for the logo only; built), **SPRINT_PLANNING_PLAN.md**
+for the plan to redo the run-start draft as a Slay-the-Spire style offer (a
+boon, a Specialisation that leans the shop toward one archetype, a gamble with
+a jackpot; planned, not built), and
 **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions
