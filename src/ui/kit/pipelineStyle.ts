@@ -53,6 +53,13 @@ export interface LedgerRow {
    * note: no mark, muted.
    */
   tone?: "pass" | "fail" | "total" | "note";
+  /** A smaller line under the label (the map's id under "Failed at level 14"). */
+  detail?: string;
+}
+
+/** Whether any row draws a mark: only then does the ledger keep a column for them. */
+export function ledgerHasMarks(rows: readonly LedgerRow[]): boolean {
+  return rows.some(r => r.tone === "pass" || r.tone === "fail" || r.tone === "total");
 }
 
 /** The mark and colours a ledger row is drawn with. */

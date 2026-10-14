@@ -510,7 +510,8 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
   // max-w-md inside the page's 16px padding.
   const columnWidth = Math.min(448, screen.width - 32);
   // The phase body fills what the header leaves (36px row + 24px gap) and
-  // centres in it; on a short screen it scrolls instead (the DOM page did).
+  // starts right under it, like every screen in the redo (it used to centre,
+  // which left a screen-high gap under the header); a long phase scrolls.
   const bodyHeight = Math.max(0, screen.height - 32 - 60);
   const qrSize = Math.min(320, columnWidth);
   const napChip = (state: NapState) => <ServerNapChip state={state} onExplain={() => setNapExplained(true)} />;
@@ -527,7 +528,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
         </View>
 
         <ScrollView layout={{ flex: 1 }}>
-          <View layout={{ minHeight: bodyHeight, justifyContent: "center" }}>
+          <View layout={{ minHeight: bodyHeight, justifyContent: "flex-start" }}>
             {phase === "choose" && (
               <View layout={{ gap: 16 }}>
                 <Label text={t("pair.intro")} size={TEXT.sm} color={COLOR.mutedForeground} wrap />

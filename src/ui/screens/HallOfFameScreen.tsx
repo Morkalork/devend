@@ -67,7 +67,7 @@ export function HallOfFameScreen({
           <View layout={{ alignItems: "center", gap: 24, paddingBottom: 96 }}>
             {/* Header */}
             <MenuHeading icon={Medal} iconColor={GOLD} text={t("hallOfFame.title")} size={wide ? TEXT["4xl"] : TEXT["2xl"]}
-              letterSpacing={1.2} maxWidth={contentWidth} />
+              maxWidth={contentWidth} />
 
             {/* All-time Top 10 */}
             <HallSection title={t("hallOfFame.topRuns")}>

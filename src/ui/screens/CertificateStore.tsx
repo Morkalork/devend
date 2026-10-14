@@ -21,7 +21,7 @@ import type { UpgradeConfig } from "@/types/upgrade";
 import { contentText } from "@/i18n/content";
 import { certEffectLabel } from "@/lib/certEffectLabel";
 import {
-  Appear, COLOR, Icon, Label, Pressable, ProgressBar, RADIUS, ScrollView, TEXT, View, tint, useUiScreen,
+  Appear, COLOR, Icon, Label, Pressable, ProgressBar, RADIUS, ROLE, ScrollView, TEXT, View, tint, useUiScreen,
 } from "../kit/ui";
 import { TutorialOverlay } from "../game/TutorialOverlay";
 import { MenuHeading } from "./welcomeParts";
@@ -116,39 +116,39 @@ export function CertificateStore({
   return (
     // The padding is on an inner box, so the tutorial overlay (absolute at
     // 0,0) is laid out against the whole screen rather than the padded content.
-    <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(COLOR.background, 0.9) }}>
+    <View layout={{ width: screen.width, height: screen.height, backgroundColor: tint(ROLE.surface, 0.96) }}>
       <View layout={{ flex: 1, padding: pad }}>
         <Appear fromY={20} duration={0.5} layout={{ flex: 1, width: contentWidth, alignSelf: "center" }}>
-          <View layout={{ flex: 1, alignItems: "center", gap: 24 }}>
+          <View layout={{ flex: 1, gap: 20 }}>
             {/* Header. The subtitle is the one thing that separates this screen from
                 the upgrade shop, and it used to be said only in the first-visit
                 tutorial - which a returning player has long since dismissed. */}
-            <View layout={{ alignItems: "center", gap: 4 }}>
-              <MenuHeading icon={Medal} iconColor={COLOR.primary} text={t("certificateStore.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]}
-                letterSpacing={1.2} maxWidth={contentWidth} />
+            <View layout={{ gap: 6 }}>
+              <MenuHeading icon={Medal} iconColor={COLOR.primary} text={t("certificateStore.title")} size={wide ? TEXT["3xl"] : TEXT["2xl"]}
+                maxWidth={contentWidth} />
               <View layout={{ alignSelf: "stretch" }}>
-                <Label text={t("certificateStore.subtitle")} size={TEXT.xs} color={COLOR.mutedForeground} wrap />
+                <Label text={t("certificateStore.subtitle")} size={TEXT.sm} color={ROLE.muted} wrap />
               </View>
             </View>
 
             {/* Balance */}
-            <Appear fromScale={0.9} delay={0.1}>
+            {/* The balance: a flat panel like the Sprint panel, the figure as a headline. */}
+            <Appear fromY={-6} delay={0.1}>
               <View layout={{
-                width: Math.min(contentWidth, 360), alignItems: "center",
-                paddingLeft: 24, paddingRight: 24, paddingTop: 12, paddingBottom: 12, borderRadius: RADIUS.xl,
-                backgroundColor: tint(COLOR.primary, 0.1), borderWidth: 1, borderColor: tint(COLOR.primary, 0.4),
+                alignSelf: "stretch", flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden",
+                backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge,
               }}>
-                <Label text={t("certificateStore.certificateHours")} size={TEXT.xs} upper letterSpacing={0.6}
-                  color={COLOR.mutedForeground} align="center" wrap layout={{ marginBottom: 4 }} />
-                <View layout={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Icon icon={Hexagon} size={24} color={COLOR.primary} />
-                  <Label text={String(projectedBalance)} size={TEXT["4xl"]} font="display" weight="700" color={COLOR.primary} />
-                </View>
-                <Label text={t("certificateStore.earnRate")} size={TEXT.xs} color={COLOR.mutedForeground} align="center" wrap layout={{ marginTop: 4 }} />
-                {/* Both currencies are called "hours" and both render as "5h", so the
-                    store reads as if it spends the same wallet as the upgrade shop. */}
-                <View layout={{ width: Math.min(256, contentWidth - 48), marginTop: 2 }}>
-                  <Label text={t("certificateStore.walletNote")} size={TINY} color={COLOR.mutedForeground} alpha={0.7} align="center" wrap />
+                <View layout={{ width: 4, backgroundColor: COLOR.primary }} />
+                <View layout={{ flex: 1, padding: 14, gap: 4 }}>
+                  <Label text={t("certificateStore.certificateHours")} size={TEXT.xs} weight="600" color={ROLE.muted} wrap />
+                  <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Icon icon={Hexagon} size={22} color={COLOR.primary} />
+                    <Label text={String(projectedBalance)} size={TEXT["3xl"]} font="display" weight="700" color={ROLE.ink} />
+                  </View>
+                  <Label text={t("certificateStore.earnRate")} size={TEXT.xs} color={ROLE.muted} wrap />
+                  {/* Both currencies are called "hours" and both render as "5h", so the
+                      store reads as if it spends the same wallet as the upgrade shop. */}
+                  <Label text={t("certificateStore.walletNote")} size={TINY} color={ROLE.muted} alpha={0.8} wrap />
                 </View>
               </View>
             </Appear>
@@ -208,7 +208,8 @@ export function CertificateStore({
 
             {/* Back */}
             <Appear fromY={20} delay={0.4} layout={{ marginTop: -12 }}>
-              <ArcadeButton variant="secondary" text={t("certificateStore.continue")} icon={ArrowLeft} onTap={onBack} />
+              {/* "Back", not "Continue": the arrow points back, and so does the button. */}
+              <ArcadeButton variant="secondary" text={t("common.back")} icon={ArrowLeft} onTap={onBack} />
             </Appear>
           </View>
         </Appear>
@@ -230,8 +231,8 @@ export function CertificateStore({
 function CertSection({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <View>
-      <Label text={title} size={TEXT.xs} font="display" weight="700" upper letterSpacing={1.2} color={COLOR.mutedForeground}
-        layout={{ marginBottom: 8, marginLeft: 4 }} />
+      <Label text={title} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted}
+        layout={{ marginBottom: 8 }} />
       <View layout={{ gap: 12 }}>{children}</View>
     </View>
   );
@@ -256,9 +257,9 @@ function CertAvailableCard({
     // The header is the toggle and the body is not inside it: purchases happen
     // in the body, and a tap there must not collapse the card.
     <View layout={{
-      borderRadius: RADIUS.lg, borderWidth: 2, backgroundColor: COLOR.card,
-      // A pending selection lights the card up (the DOM's stronger glow).
-      borderColor: tint(COLOR.primary, selectedTarget != null ? 0.85 : 0.4),
+      borderRadius: RADIUS.sm, borderWidth: 2, backgroundColor: selectedTarget != null ? tint(COLOR.primary, 0.06) : ROLE.raised,
+      // A pending selection takes the accent edge, as a committed ticket does.
+      borderColor: selectedTarget != null ? COLOR.primary : ROLE.edge,
     }}>
       <Pressable onTap={onToggle} pressedAlpha={0.85} label={contentText.certName(t, cert)} layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16 }}>
         <View layout={{ flex: 1 }}>
@@ -345,7 +346,7 @@ function CertLevelRow({ levelNum, state, effect, cost, onTap }: {
   const inkAlpha = owned ? 0.6 : 1;
   const layout = {
     flexDirection: "row" as const, alignItems: "center" as const, gap: 10,
-    paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.lg, borderWidth: 1,
+    paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: RADIUS.sm, borderWidth: 1,
     borderColor: owned ? tint(ink, 0.25) : state === "selected" ? ink : tint(ink, 0.4),
     backgroundColor: owned ? tint(ink, 0.1) : state === "selected" ? tint(ink, 0.25) : tint(ink, 0.05),
   };
@@ -374,8 +375,8 @@ function CertLockedCard({ cert, ctx, expanded, onToggle }: { cert: Certificate; 
   return (
     // Nothing in a locked card is interactive, so the whole card is the toggle.
     <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 0.85 : 0.6} label={contentText.certName(t, cert)} layout={{
-      padding: 16, borderRadius: RADIUS.lg, borderWidth: 1,
-      borderColor: tint(COLOR.muted, 0.3), backgroundColor: tint(COLOR.muted, 0.05),
+      padding: 16, borderRadius: RADIUS.sm, borderWidth: 1,
+      borderColor: ROLE.edge, backgroundColor: ROLE.raised,
     }}>
       <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
         <Icon icon={Lock} size={16} color={COLOR.mutedForeground} layout={{ marginTop: 2 }} />
@@ -401,7 +402,7 @@ function CertLockedCard({ cert, ctx, expanded, onToggle }: { cert: Certificate; 
         <Appear duration={0.2} layout={{ marginTop: 12 }}>
           <CertDivider color={tint(COLOR.white, 0.1)} />
           <View layout={{ gap: 6 }}>
-            <Label text={t("certificateStore.howToUnlock")} size={TEXT.xs} font="display" weight="700" upper letterSpacing={0.6} color={COLOR.white} />
+            <Label text={t("certificateStore.howToUnlock")} size={TEXT.xs} weight="700" upper letterSpacing={0.6} color={ROLE.muted} />
             <Label text={unlock.requirementText} size={TEXT.xs} lineHeight={RELAXED} color={COLOR.foreground} alpha={0.85} wrap />
             <Label
               text={t("certificateStore.progress", {
@@ -423,8 +424,8 @@ function CertMaxedCard({ cert, expanded, onToggle }: { cert: Certificate; expand
   const { t } = useTranslation();
   return (
     <Pressable onTap={onToggle} pressedAlpha={0.85} alpha={expanded ? 1 : 0.85} label={contentText.certName(t, cert)} layout={{
-      padding: 16, borderRadius: RADIUS.lg, borderWidth: 1,
-      borderColor: tint(COLOR.primary, 0.3), backgroundColor: tint(COLOR.primary, 0.05),
+      padding: 16, borderRadius: RADIUS.sm, borderWidth: 1,
+      borderColor: ROLE.edge, backgroundColor: ROLE.raised,
     }}>
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <Icon icon={Check} size={20} color={COLOR.primary} />

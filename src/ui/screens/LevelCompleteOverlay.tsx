@@ -11,17 +11,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Clock, Medal, Info, ChevronDown, ChevronUp, Users, CodeXml,
+  ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Clock, Info, ChevronDown, ChevronUp, Users, CodeXml,
 } from "lucide-react";
 import type { LevelScoreData } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
-import { contentText } from "@/i18n/content";
 import type { PressHandlers } from "../kit/ui";
 import { Appear, COLOR, Icon, Label, Pressable, RADIUS, ROLE, TEXT, View, hex, tint, useUiScreen } from "../kit/ui";
 import { PerformanceReviewAxes } from "./PerformanceReviewAxes";
 import { ArcadeButton } from "../kit/ui";
 import { Between, StatInfoModal, StatRow } from "./levelCompleteParts";
 import { RichParagraph } from "./draftParts";
+import { CertUnlockedRow } from "./shopParts";
 import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
 import { useCountUp } from "./resultMotion";
 import { PipelineFrame } from "./PipelineFrame";
@@ -101,20 +101,16 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const continueButton = renderContinueButton(false);
   const certificates = newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
     <Appear delay={0.32} duration={0.22} layout={{ gap: 8 }}>
-      {newlyUnlockedCerts.map(cert => (
-        <View key={cert.id} layout={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: tint(TW.yellow500, 0.4), backgroundColor: tint(TW.yellow500, 0.1) }}>
-          <Icon icon={Medal} size={16} color={TW.yellow400} />
-          <View layout={{ flex: 1 }}>
-            <Label text={t("levelComplete.certificateUnlocked")} size={TEXT.xs} weight="700" color={TW.yellow400} upper letterSpacing={0.6} />
-            <Label text={contentText.certName(t, cert)} size={TEXT.sm} weight="600" wrap />
-          </View>
-        </View>
-      ))}
+      {/* The same row the store shows: one look for "a certificate unlocked". */}
+      {newlyUnlockedCerts.map(cert => <CertUnlockedRow key={cert.id} cert={cert} />)}
     </Appear>
   );
   const pushFailed = m.pushFailedText && (
-    <View layout={{ padding: 12, borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.amber, 0.1), borderColor: tint(COLOR.amber, 0.3), borderWidth: 1 }}>
-      <Label text={m.pushFailedText} size={TEXT.sm} weight="500" color={COLOR.amber} align="center" wrap />
+    <View layout={{ flexDirection: "row", borderRadius: RADIUS.sm, overflow: "hidden", backgroundColor: ROLE.raised, borderColor: ROLE.edge, borderWidth: 1 }}>
+      <View layout={{ width: 4, backgroundColor: COLOR.amber }} />
+      <View layout={{ flex: 1, padding: 12 }}>
+        <Label text={m.pushFailedText} size={TEXT.sm} weight="500" color={COLOR.amber} wrap />
+      </View>
     </View>
   );
 
@@ -392,11 +388,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             <Between
               left={<Label text={t("levelComplete.overtimeEarned")} size={fs} weight="600" />}
               right={<>
-                <Label text={String(displayLevelScore)} size={sm ? TEXT["2xl"] : TEXT.xl} weight="700" color={ROLE.hours} />
+                {/* A row, not a second headline: the big figure above already says it. */}
+                <Label text={String(displayLevelScore)} size={fs} weight="700" color={ROLE.hours} />
                 {m.overtimeSuffix && (
-                  <Label text={` ${m.overtimeSuffix}`} size={sm ? TEXT.lg : TEXT.base} color={COLOR.mutedForeground} layout={{ marginBottom: 2 }} />
+                  <Label text={` ${m.overtimeSuffix}`} size={fs} color={COLOR.mutedForeground} />
                 )}
-                <Label text="h" size={sm ? TEXT["2xl"] : TEXT.xl} weight="700" color={ROLE.hours} />
+                <Label text="h" size={fs} weight="700" color={ROLE.hours} />
               </>} />
           </StatRow>
 

@@ -12,7 +12,7 @@ import { ROLE, RADIUS, TEXT } from "../theme";
 import { Label, Pressable, View } from "./core";
 import { tint } from "./style";
 import { useCountTo } from "./motion";
-import { formatHours, ledgerLook, splitLedger, stageMark, type LedgerRow, type Stage } from "./pipelineStyle";
+import { formatHours, ledgerHasMarks, ledgerLook, splitLedger, stageMark, type LedgerRow, type Stage } from "./pipelineStyle";
 
 // ── Stage rail ─────────────────────────────────────────────────────────────
 
@@ -138,15 +138,19 @@ export interface LedgerProps {
   accent: number;
 }
 
-function LedgerLine({ row, accent }: { row: LedgerRow; accent: number }) {
+function LedgerLine({ row, accent, marks }: { row: LedgerRow; accent: number; marks: boolean }) {
   const look = ledgerLook(row.tone, accent);
   return (
-    <View layout={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "stretch" }}>
-      <View layout={{ width: 12 }}>
-        {look.mark && <Label text={look.mark} font="mono" size={TEXT.sm} color={look.markColor} />}
-      </View>
+    <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 8, alignSelf: "stretch" }}>
+      {/* The mark column only when some row has a mark; otherwise it was an empty indent. */}
+      {marks && (
+        <View layout={{ width: 12 }}>
+          {look.mark && <Label text={look.mark} font="mono" size={TEXT.sm} color={look.markColor} />}
+        </View>
+      )}
       <View layout={{ flex: 1 }}>
         <Label text={row.label} font="mono" size={TEXT.sm} color={look.textColor} truncate />
+        {row.detail && <Label text={row.detail} font="mono" size={TEXT.xs} color={ROLE.muted} truncate />}
       </View>
       {row.value && (
         <Label text={row.value} font="mono" size={TEXT.sm}
@@ -163,13 +167,14 @@ function LedgerLine({ row, accent }: { row: LedgerRow; accent: number }) {
  */
 export function Ledger({ rows, accent }: LedgerProps) {
   const { body, totals } = splitLedger(rows);
+  const marks = ledgerHasMarks(rows);
   return (
     <View layout={{ alignSelf: "stretch", gap: 6, padding: 12, borderRadius: RADIUS.sm, backgroundColor: ROLE.raised }}>
-      {body.map((r, i) => <LedgerLine key={`b${i}`} row={r} accent={accent} />)}
+      {body.map((r, i) => <LedgerLine key={`b${i}`} row={r} accent={accent} marks={marks} />)}
       {body.length > 0 && totals.length > 0 && (
         <View layout={{ height: 1, alignSelf: "stretch", backgroundColor: ROLE.edge, marginTop: 2, marginBottom: 2 }} />
       )}
-      {totals.map((r, i) => <LedgerLine key={`t${i}`} row={r} accent={accent} />)}
+      {totals.map((r, i) => <LedgerLine key={`t${i}`} row={r} accent={accent} marks={marks} />)}
     </View>
   );
 }

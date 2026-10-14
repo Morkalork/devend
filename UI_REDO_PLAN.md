@@ -159,6 +159,21 @@ shortfall matters more. And the shared explainer card (`TutorialOverlay`) is
 flat and left-aligned: no glow, no capitals, the body in the body face.
 Gallery: `UpgradeDetailModal`, `ChoiceChooserModal`.
 
+**The sweep.** The screens still in the old look were brought over.
+Achievements is a list of tickets: a stripe and a status lozenge per section
+(gold for ready, the accent for active, grey with a percentage for in
+progress), the description in the body face, and "Activate" as the kit's
+button instead of a breathing outlined one. Certificates is left-aligned, its
+balance a flat panel with the figure as the headline, its cards flat with the
+accent edge on a pending selection, and its way out is "Back". The Debrief uses
+the store's certificate-unlocked row and a flat push-failed note, and its
+Overtime Earned row is a row again rather than a second headline. The run
+result's ledger puts the map id under "Failed at level N" (`LedgerRow.detail`)
+and drops the empty mark column when no row has a mark. The Records and
+Sprint Planning headings lost their extra-wide tracking, and the pair lobby
+starts under its header instead of centring in the screen.
+Tests: src/test/canvas/redoSweep.test.ts.
+
 **The pre-map Acceptance Criteria** are the map's own ticket
 (`AcceptanceCriteriaModal`, src/ui/game): the store's ticket look with the band's
 accent as the stripe, a key hashed from the map's id, "Level N" as the title and

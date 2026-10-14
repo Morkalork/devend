@@ -52,7 +52,7 @@ export function OffersScreen({ catalogue, unlock, onBack, accentColor = "#00ff88
       <Appear fromY={20} duration={0.5} layout={{ flex: 1, width: contentWidth, alignSelf: "center" }}>
         <View layout={{ flex: 1, alignItems: "center", gap: 24 }}>
           <MenuHeading icon={ClipboardList} iconColor={accent} text={t("offers.title")} size={wide ? TEXT["4xl"] : TEXT["3xl"]}
-            letterSpacing={1.2} maxWidth={contentWidth} />
+            maxWidth={contentWidth} />
 
           <View layout={{
             alignItems: "center", paddingLeft: 24, paddingRight: 24, paddingTop: 12, paddingBottom: 12, borderRadius: RADIUS.xl,

@@ -186,8 +186,8 @@ export function ResultScreen({
   // how many maps it cleared. Arena remaining is only meaningful on a win; on
   // a loss the number says nothing about the run, so the row is dropped.
   const facts: LedgerRow[] = [
-    { label: isWin ? t("result.completedLevel") : t("result.failedAtLevel"), value: String(levelNumber), tone: "note" },
-    { label: levelId, tone: "note" },
+    // The map's id rides under the row it belongs to, not as a fact of its own.
+    { label: isWin ? t("result.completedLevel") : t("result.failedAtLevel"), value: String(levelNumber), tone: "note", detail: levelId },
     ...(isWin ? [{ label: t("result.arenaRemaining"), value: `${remainingPercent}%`, tone: "note" as const }] : []),
     ...(runLevelsCompleted > 0 ? [{ label: t("result.levelsCompleted"), value: String(runLevelsCompleted), tone: "note" as const }] : []),
   ];
