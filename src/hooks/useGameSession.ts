@@ -24,6 +24,7 @@ import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useRunSave, RunSave, type BetweenMapsSave } from './useRunSave';
 import type { StoreDealt } from '@/ui/screens/shopModel';
 import { useHallOfFame } from './useHallOfFame';
+import { creditExtraContinues, type ExtraContinuesMark } from '@/lib/extraContinues';
 import { aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
 import { useCertificateManager, getLoadedCertBonuses, getLoadedCertStartingLevel } from './useCertificateManager';
@@ -632,17 +633,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, finalBonuses, runContext);
 
   // Mid-run extraContinues grants (Insurance Policy set bonus): when the
-  // aggregated value rises, credit the difference to the live counter. Drops
-  // (run reset clearing owned upgrades) just re-baseline without deducting.
-  const extraContinuesSeen = useRef<number | null>(null);
+  // aggregated value rises past what this run was already paid, credit the
+  // difference to the live counter (lib/extraContinues.ts has the rule and
+  // the bug it fixes). A run start or a restored save re-baselines: the
+  // mark goes back to null and the epoch makes the effect run even when the
+  // value itself did not change.
+  const extraContinuesSeen = useRef<ExtraContinuesMark>(null);
+  const [extraContinuesEpoch, setExtraContinuesEpoch] = useState(0);
   useEffect(() => {
-    const now = activeModifiers.extraContinues;
-    const prev = extraContinuesSeen.current;
-    extraContinuesSeen.current = now;
-    if (prev !== null && now > prev) {
-      setContinuesRemaining(c => c + (now - prev));
+    const { credit, mark } = creditExtraContinues(extraContinuesSeen.current, activeModifiers.extraContinues);
+    extraContinuesSeen.current = mark;
+    if (credit > 0) {
+      setContinuesRemaining(c => c + credit);
     }
-  }, [activeModifiers.extraContinues]);
+  }, [activeModifiers.extraContinues, extraContinuesEpoch]);
 
   // Owned-tag tally for the build readout (HUD + shop chips).
   const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
@@ -935,6 +939,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
+      // A fresh run: whatever extraContinues reads now is the baseline, not a grant.
+      extraContinuesSeen.current = null;
+      setExtraContinuesEpoch(e => e + 1);
       setPendingDeathResult(null);
 
       // Admin "Infinite lives" and live map tuning both make a run
@@ -1027,6 +1034,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
+    // A fresh run: whatever extraContinues reads now is the baseline, not a grant.
+    extraContinuesSeen.current = null;
+    setExtraContinuesEpoch(e => e + 1);
     setPendingDeathResult(null);
 
     resetToFirstLevel(); // same seeded lineup for everyone, from level 1
@@ -1078,6 +1088,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(save.currentLives);
     setLivesAtLevelStart(save.livesAtLevelStart);
     setContinuesRemaining(save.continuesRemaining);
+    // The save's count already includes every Continue its upgrades granted;
+    // restoring those upgrades must not credit them a second time.
+    extraContinuesSeen.current = null;
+    setExtraContinuesEpoch(e => e + 1);
     setCumulativeLockedBalls(save.cumulativeLockedBalls);
     setCarryInstantFences(save.carryInstantFences);
     setAbilityCharges(save.abilityCharges ?? {});
@@ -1796,6 +1810,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
+    // A fresh run: whatever extraContinues reads now is the baseline, not a grant.
+    extraContinuesSeen.current = null;
+    setExtraContinuesEpoch(e => e + 1);
     setPendingDeathResult(null);
 
     if (startLevel !== undefined) {
@@ -1826,6 +1843,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
+    // A fresh run: whatever extraContinues reads now is the baseline, not a grant.
+    extraContinuesSeen.current = null;
+    setExtraContinuesEpoch(e => e + 1);
     setPendingDeathResult(null);
 
     resetToFirstLevel();
