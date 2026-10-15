@@ -94,6 +94,9 @@ describe("the crossfade-loop still does its job when it fires", () => {
     await loadMusic();
     const first = audible()[0];
     first.advanceTo(99);
+    // The handover waits for the new element's play() to resolve (gameMusic:
+    // "hand over only once the new track is actually playing").
+    await Promise.resolve(); await Promise.resolve();
     const now = audible();
     expect(now).toHaveLength(1);
     expect(now[0], "the crossfade did not hand over").not.toBe(first);
@@ -105,6 +108,7 @@ describe("the crossfade-loop still does its job when it fires", () => {
     await loadMusic();
     const first = audible()[0];
     first.advanceTo(99);
+    await Promise.resolve(); await Promise.resolve();
     vi.advanceTimersByTime(5000);
     expect(first.paused, "the old element is still playing under the new one").toBe(true);
     expect(audible()).toHaveLength(1);
@@ -150,5 +154,62 @@ describe("and when the crossfade window is missed, it still does not stop", () =
     first.currentTime = 0;
     first.advanceTo(99);
     expect(audible()[0], "the crossfade never came back").not.toBe(first);
+  });
+});
+
+/**
+ * "The music turns off when you start a new game." Starting a map switches to
+ * its band track, which is not fetched until then (2-11 MB). The menu track
+ * used to fade out at once, so the map opened in silence until the new track
+ * arrived, or for good if the browser refused to start it outside a tap.
+ */
+describe("a track switch never leaves silence", () => {
+  /** Load the module with play() under the test's control. */
+  async function loadWithPendingPlay() {
+    const music = await loadMusic();
+    const pending: { el: FakeAudio; resolve: () => void; reject: () => void }[] = [];
+    for (const el of made) {
+      el.play = function (this: FakeAudio) {
+        this.paused = false;
+        return new Promise<void>((resolve, reject) => { pending.push({ el: this, resolve, reject }); });
+      };
+    }
+    return { music, pending };
+  }
+
+  it("keeps the menu track playing until the map's track has started", async () => {
+    vi.useFakeTimers();
+    const { music, pending } = await loadWithPendingPlay();
+    const menu = audible()[0];
+    music.playMusicForLevel(1);
+    vi.advanceTimersByTime(5000);
+    expect(menu.paused, "the menu track stopped before the new one started").toBe(false);
+    expect(pending).toHaveLength(1);
+  });
+
+  it("hands over once the new track's play() resolves", async () => {
+    vi.useFakeTimers();
+    const { music, pending } = await loadWithPendingPlay();
+    const menu = audible()[0];
+    music.playMusicForLevel(1);
+    pending[0].resolve();
+    await Promise.resolve(); await Promise.resolve();
+    vi.advanceTimersByTime(5000);
+    expect(menu.paused, "the menu track is still playing under the band track").toBe(true);
+  });
+
+  it("keeps the old track when the browser blocks the new one, and hands over when it finally plays", async () => {
+    vi.useFakeTimers();
+    const { music, pending } = await loadWithPendingPlay();
+    const menu = audible()[0];
+    music.playMusicForLevel(1);
+    pending[0].reject();
+    await Promise.resolve(); await Promise.resolve();
+    vi.advanceTimersByTime(5000);
+    expect(menu.paused, "a blocked start silenced the music").toBe(false);
+    // A later tap gets it going: the browser fires "playing".
+    pending[0].el.fire("playing");
+    vi.advanceTimersByTime(5000);
+    expect(menu.paused).toBe(true);
   });
 });
