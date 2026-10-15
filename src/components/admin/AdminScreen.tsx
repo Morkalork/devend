@@ -390,8 +390,9 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Tap to cycle. Auto picks by device and steps down a tier between maps
-                when frames run slow; the others pin a tier, for comparing.
+                Tap to cycle. Auto picks by device, steps down a tier when frames run
+                slow and remembers it on this device (see 3D on this device below);
+                the others pin a tier, for comparing. Minimal draws no shadows.
               </div>
             </div>
           </button>

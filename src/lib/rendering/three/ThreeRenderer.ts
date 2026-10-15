@@ -37,10 +37,11 @@ import { SleekRenderer, type HybridFrame, type HybridHost } from "@/lib/renderin
 import { boardAngleFor } from "@/lib/boardTilt";
 import { fitScale } from "@/lib/boardConstants";
 import {
-  autoTier, getFov, getHeightScale, getLean, getQualitySetting, type QualityTier,
+  autoStartTier, autoTier, getFov, getHeightScale, getLean, getLearnedLimit, getQualitySetting, setLearnedLimit,
+  type QualityTier,
 } from "@/lib/rendering/render3dSettings";
 import { boardTiltElements, eyeDistance, floorCamera, leanProjection } from "./floorCamera";
-import { QUALITY_PRESETS, QualityGovernor, stepDown, type QualityPreset } from "./quality";
+import { QUALITY_PRESETS, QualityGovernor, SEVERE_FRAME_MS, stepDown, type QualityPreset } from "./quality";
 import { createSurfaceShared, makeSurfaceMaterial } from "./surfaceMaterial";
 import { createCodeTexture, createUnderlayUniforms, syncUnderlay } from "./codeUnderlay";
 import { pixiGlTexture, releasePixiWrap, threeViewOf, wrapForPixi } from "./textureBridge";
@@ -58,7 +59,7 @@ import {
   CircuitSparks, POCKET_GOLD, bombLights, chargeLights, phaseCasters, pocketHeat, powerLevel,
 } from "./lightMechanics";
 import { getLightLook } from "@/lib/lightLook";
-import { recordShaderError } from "@/lib/rendering/rendererDiag";
+import { recordQualityStep, recordShaderError } from "@/lib/rendering/rendererDiag";
 
 /**
  * How much of a solid's own colour shows unlit, on top of the board-wide
@@ -113,6 +114,16 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private governor = new QualityGovernor();
   /** A step down the governor asked for, applied between maps. */
   private pendingTier: QualityTier | null = null;
+  /**
+   * Set when the cheapest tier still ran slow: the 2D board is learned for
+   * this device, and takes over at the next board (GameCanvas reads it).
+   */
+  private exhausted = false;
+  /**
+   * A cap on the 3D frame's pixels per CSS pixel, under the tier's own, put on
+   * mid-map when frames are badly slow (resizeScene). Cleared with a rebuild.
+   */
+  private emergencyRatio = Number.POSITIVE_INFINITY;
   private heightScale = 1;
   private fov = 26;
   /** The three-quarter view's lean (floorCamera.leanProjection). */
@@ -192,12 +203,14 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private readSettings(): void {
     const q = getQualitySetting();
     this.auto = q === "auto";
+    // Auto starts at the device's guess, but never above what an earlier
+    // board on this device learned it cannot hold (getLearnedLimit).
     this.tier = q === "auto"
-      ? autoTier({
+      ? autoStartTier(autoTier({
           coarsePointer: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
           dpr: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
           cores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 0 : 0,
-        })
+        }), getLearnedLimit())
       : q;
     this.heightScale = getHeightScale();
     this.fov = getFov();
@@ -237,6 +250,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       materials: [floorMat, wallMat, solidMat, plateMat, phaseMat],
     };
     this.governor.reset(performance.now());
+    this.emergencyRatio = Number.POSITIVE_INFINITY;
     // The frame's resolution and MSAA are part of the tier. Through sleek, so
     // its sprite and surface texture are re-made with the frame.
     if (this.pixi) this.sleek.resize(this.size.w, this.size.h, true);
@@ -275,7 +289,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const preset = this.rig?.preset ?? QUALITY_PRESETS[this.tier];
     // The 3D frame's resolution: no more than the tier's pixels per CSS pixel.
     const css = this.canvas?.clientWidth || 0;
-    const scale = css > 0 ? Math.min(1, (preset.maxPixelRatio * css) / Math.max(1, widthPx)) : 1;
+    const ratio = Math.min(preset.maxPixelRatio, this.emergencyRatio);
+    const scale = css > 0 ? Math.min(1, (ratio * css) / Math.max(1, widthPx)) : 1;
     const w = Math.max(1, Math.round(widthPx * scale));
     const h = Math.max(1, Math.round(heightPx * scale));
     this.size = { w: widthPx, h: heightPx, scale: w / Math.max(1, widthPx) };
@@ -313,10 +328,13 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const { game, now } = frame;
 
     // Too slow for this tier? Step down at the next map (auto only, and
-    // never up again). Not now: a rebuild compiles shaders, which is a hitch,
-    // and a hitch mid-map is the thing this is trying to remove.
-    if (this.auto && !this.pendingTier && this.governor.frame(performance.now())) {
-      this.pendingTier = stepDown(this.tier);
+    // never up again), and remember it for every board after this one. Not
+    // now: a rebuild compiles shaders, which is a hitch, and a hitch mid-map
+    // is the thing this is trying to remove. Badly slow, though, and the 3D
+    // frame's resolution drops at once: that is only a render target, no
+    // shader, and the rest of the map is worth more than its sharpness.
+    if (this.auto && !this.pendingTier && !this.exhausted && this.governor.frame(performance.now())) {
+      this.stepDownForSlowFrames(this.governor.lastMedianMs);
     }
 
     // The surface texture, seen from three. A resize re-allocates its GL
@@ -433,6 +451,27 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
 
   markStaticDirty(): void {
     this.sleek.markStaticDirty();
+  }
+
+  /** The governor said this tier is too slow on this device (see renderScene). */
+  private stepDownForSlowFrames(medianMs: number): void {
+    const next = stepDown(this.tier);
+    if (next) {
+      this.pendingTier = next;
+      setLearnedLimit(next);
+      recordQualityStep(this.tier, next, medianMs);
+    } else {
+      // Already the cheapest 3D tier: the 2D board, from the next board on.
+      this.exhausted = true;
+      setLearnedLimit("2d");
+      recordQualityStep(this.tier, "2d", medianMs);
+    }
+    const ratioNow = Math.min(this.rig?.preset.maxPixelRatio ?? 1, this.emergencyRatio);
+    if (medianMs > SEVERE_FRAME_MS && ratioNow > 1) {
+      this.emergencyRatio = 1;
+      recordQualityStep(this.tier, "res", medianMs);
+      if (this.pixi) this.sleek.resize(this.size.w, this.size.h, true);
+    }
   }
 
   presentEmpty(): void {
