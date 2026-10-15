@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Clock, Info, ChevronDown, ChevronUp, Users, CodeXml,
+  ArrowRight, ChevronsRight, Sparkles, TrendingUp, TrendingDown, Target, Clock, Info, ChevronDown, ChevronUp, Users, CodeXml,
 } from "lucide-react";
 import type { LevelScoreData } from "@/types/game";
 import type { Certificate } from "@/types/certificate";
@@ -25,7 +25,7 @@ import { CertUnlockedRow } from "./shopParts";
 import { SUCCESS, TW, levelCompleteModel } from "./levelCompleteModel";
 import { useCountUp } from "./resultMotion";
 import { PipelineFrame } from "./PipelineFrame";
-import { continueLabel, samplePlan, type BetweenMapPlan } from "./pipelineModel";
+import { continueLabel, nextStage, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 import { AcceptanceTicket } from "../game/AcceptanceTicket";
 import { useFillIn } from "../game/fillIn";
 import { tutorialCardWidth } from "../game/TutorialOverlayModel";
@@ -35,6 +35,12 @@ interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
   totalScore: number;
   onContinue: () => void;
+  /**
+   * Straight on to the next map, past the store. Offered only when the next
+   * stage IS the store: a Promotion still has to be picked, and the last map
+   * has no next map.
+   */
+  onSkipStore?: () => void;
   accentColor?: string;
   /** ms to wait before enabling the Continue button (lets the dissolve animation finish) */
   buttonDelay?: number;
@@ -46,7 +52,7 @@ interface LevelCompleteOverlayProps {
   full?: boolean;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pipeline, full }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, onSkipStore, accentColor, buttonDelay = 900, newlyUnlockedCerts, pipeline, full }: LevelCompleteOverlayProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   // Tailwind's `sm:` breakpoint: the card and its type grow a step on a wide screen.
@@ -81,9 +87,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const plan = pipeline ?? samplePlan(levelNumber);
   const gold = TW.gold;
 
-  // `waiting` holds the button disabled while something above it still plays out.
+  // The store is optional: under "Open the store", a way straight on to the next map.
+  const canSkipStore = !!onSkipStore && nextStage(plan, "debrief") === "store";
+  // `waiting` holds the buttons disabled while something above them still plays out.
   const renderContinueButton = (waiting: boolean) => (
-    <Appear fromY={10} delay={0.38} duration={0.22}>
+    <Appear fromY={10} delay={0.38} duration={0.22} layout={{ gap: 8 }}>
       <ArcadeButton
         text={continueLabel(plan, "debrief", t)}
         iconAfter={ArrowRight}
@@ -96,6 +104,21 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           onContinue();
         }}
       />
+      {canSkipStore && (
+        <ArcadeButton
+          variant="secondary"
+          text={t("pipeline.skipStore", { level: plan.clearedLevel + 1 })}
+          iconAfter={ChevronsRight}
+          iconSize={sm ? 18 : 14}
+          textSize={sm ? TEXT.sm : TEXT.xs}
+          contentLayout={{ paddingTop: sm ? 10 : 6, paddingBottom: sm ? 10 : 6 }}
+          disabled={chosen || !buttonReady || waiting}
+          onTap={() => {
+            setChosen(true);
+            onSkipStore?.();
+          }}
+        />
+      )}
     </Appear>
   );
   const continueButton = renderContinueButton(false);

@@ -1381,6 +1381,7 @@
     "finish": "Finish",
     "toPromotion": "Choose your promotion",
     "toStore": "Open the store",
+    "skipStore": "Skip the store, start level {{level}}",
     "toLevel": "Start level {{level}}",
     "toFinish": "Finish the run",
     "ofPossible": "of {{hours}}h this map could pay",
