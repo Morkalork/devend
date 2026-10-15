@@ -76,7 +76,7 @@ describe("when a message goes away", () => {
  * which is worse than the silence it replaced.
  */
 describe("every message has words", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   const load = (loc: string) => JSON.parse(
     readFileSync(resolve(__dirname, `../i18n/locales/${loc}.json`), "utf8"),
   ) as { gameMessages?: Record<string, string> };

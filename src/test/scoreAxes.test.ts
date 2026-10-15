@@ -347,7 +347,7 @@ describe("upgrades buy a lane, not a payout", () => {
  * three locales, or a player sees a raw key where the tactic's name should be.
  */
 describe("the axes are named in every locale", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   const load = (loc: string) => JSON.parse(
     readFileSync(resolve(__dirname, `../i18n/locales/${loc}.json`), "utf8"),
   ) as { levelComplete: Record<string, Record<string, unknown>> };

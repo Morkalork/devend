@@ -126,7 +126,7 @@ describe("the ticket's marks", () => {
 
   it("say a failure was avoided when every one was, in every language", () => {
     expect(read("src/ui/game/AcceptanceTicket.tsx")).toContain('group === "fail" && failsAvoided ? t("winConditions.groupFailAvoided")');
-    for (const l of ["en", "es", "sv"]) {
+    for (const l of ["en", "es", "sv", "bn"]) {
       const v = JSON.parse(read(`src/i18n/locales/${l}.json`)).winConditions.groupFailAvoided as string;
       expect(v).toBeTruthy();
       expect(v).not.toContain("—");

@@ -150,7 +150,7 @@ describe("Sprint Planning can be left", () => {
   const SCREEN = read("../ui/screens/RunDraftScreen.tsx");
   const BACK = read("../lib/screenBack.ts");
   const INDEX = read("../pages/Index.tsx");
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
 
   it("offers a back button", () => {
     expect(SCREEN).toMatch(/onBack\?: \(\) => void;/);

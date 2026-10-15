@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { MANUAL_ENTRIES } from "@/lib/manual";
 
-const LOCALES = ["en", "es", "sv"] as const;
+const LOCALES = ["en", "es", "sv", "bn"] as const;
 const load = (loc: string) =>
   JSON.parse(readFileSync(resolve(__dirname, `../i18n/locales/${loc}.json`), "utf8"));
 

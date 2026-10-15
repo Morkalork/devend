@@ -65,7 +65,7 @@ describe("sealing the win's zone", () => {
   it("is wired into applyCut with a message of its own, in every locale", () => {
     const src = readFileSync(resolve(process.cwd(), "src/lib/physics/applyCut.ts"), "utf8");
     expect(src).toContain('onGameMessage?.("cutWouldBuryArea")');
-    for (const loc of ["en", "es", "sv"]) {
+    for (const loc of ["en", "es", "sv", "bn"]) {
       const json = JSON.parse(readFileSync(resolve(process.cwd(), `src/i18n/locales/${loc}.json`), "utf8"));
       expect(JSON.stringify(json), loc).toContain('"cutWouldBuryArea"');
     }

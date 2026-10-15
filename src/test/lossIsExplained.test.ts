@@ -89,7 +89,7 @@ describe("a life lost mid-map is explained without stopping play", () => {
 });
 
 describe("every reason renders", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   const block = (lang: string) =>
     JSON.parse(read(`src/i18n/locales/${lang}.json`)).mapFailure as Record<string, string>;
 

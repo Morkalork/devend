@@ -21,7 +21,7 @@ describe("the pair guest gate (canvas)", () => {
   it("says which decision is being made and who is making it", () => {
     expect(src).toContain("t(`pair.host.${what}`, { name: remoteName })");
     expect(src).toContain('t("pair.waitingFor", { name: remoteName })');
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const pair = JSON.parse(read(`src/i18n/locales/${lang}.json`)).pair;
       for (const what of ["shopping", "deciding", "pushing", "continuing"]) {
         expect(pair.host[what], `${lang} pair.host.${what}`).toBeTruthy();

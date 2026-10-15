@@ -26,7 +26,7 @@ import {
   FENCE_TYPES_SEEN_KEY,
 } from "@/lib/fenceSeen";
 
-const LOCALES = ["en", "es", "sv"] as const;
+const LOCALES = ["en", "es", "sv", "bn"] as const;
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const locale = (loc: string) =>
   JSON.parse(read(`src/i18n/locales/${loc}.json`)) as Record<string, Record<string, string>>;

@@ -50,7 +50,7 @@ describe("capacity", () => {
 
 describe("the board's words", () => {
   it("has every status and the sprint's labels in every locale", () => {
-    for (const lng of ["en", "es", "sv"]) {
+    for (const lng of ["en", "es", "sv", "bn"]) {
       const t = i18n.getFixedT(lng);
       for (const status of Object.keys(STATUS_KEY) as TicketStatus[]) {
         expect(t(STATUS_KEY[status]), `${lng} ${status}`).not.toBe(STATUS_KEY[status]);
@@ -173,8 +173,10 @@ describe("the store's follow-up tweaks", () => {
   });
 
   it("says nothing in capitals on the explainer card", () => {
-    for (const lng of ["en", "es", "sv"]) {
+    for (const lng of ["en", "es", "sv", "bn"]) {
       const v = i18n.getFixedT(lng)("tutorialOverlay.tapToContinue");
+      // Bengali has no letter case, so the check has nothing to look at there.
+      if (v.toUpperCase() === v.toLowerCase()) continue;
       expect(v, lng).not.toBe(v.toUpperCase());
     }
     expect(read("src/ui/game/TutorialOverlay.tsx")).not.toContain("GlowFrame");

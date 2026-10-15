@@ -391,7 +391,7 @@ describe("every gap is a seam or a neck, never in between", () => {
  * the only place it would ever be caught.
  */
 describe("every telegraph resolves in every language", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   const load = (loc: string) =>
     JSON.parse(readFileSync(resolve(__dirname, `../i18n/locales/${loc}.json`), "utf8"));
 

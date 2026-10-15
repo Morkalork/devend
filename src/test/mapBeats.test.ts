@@ -445,7 +445,7 @@ describe("a beat says what it is about to do", () => {
 /** Every key the banner can render must exist in every locale, or a player on
  *  Spanish or Swedish reads a raw i18n key at the moment of the ambush. */
 describe("the beat copy exists in every language", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   const KEYS = [
     "beatEffectBalls_one", "beatEffectBalls_other", "beatEffectSpeed", "beatEffectBreak",
     "beatReorg", "beatCrunchTime",

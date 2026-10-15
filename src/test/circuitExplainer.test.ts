@@ -66,7 +66,7 @@ describe("the circuit explainer interrupts rather than filing quietly", () => {
   });
 
   it("has words in every language", () => {
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const game = JSON.parse(
         readFileSync(resolve(process.cwd(), `src/i18n/locales/${lang}.json`), "utf8"),
       ).game as Record<string, string>;

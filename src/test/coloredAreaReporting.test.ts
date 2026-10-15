@@ -394,7 +394,7 @@ describe("dormant opacity stays below live, for every element", () => {
 describe("the explainer quotes the multipliers the code actually pays", () => {
   const KINDS: AreaKind[] = ["light", "dark"];
 
-  for (const locale of ["en", "es", "sv"] as const) {
+  for (const locale of ["en", "es", "sv", "bn"] as const) {
     it(`matches in ${locale}`, () => {
       const bundle = JSON.parse(
         readFileSync(resolve(process.cwd(), `src/i18n/locales/${locale}.json`), "utf8"),

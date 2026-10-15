@@ -12,6 +12,46 @@
   font-display: swap;
 }
 
+/* Bangla (src/i18n/locales/bn.json). None of the Latin faces has Bengali
+   glyphs, so every font stack in src/ui/theme.ts names this face after its
+   Latin one; the unicode-range means it is only downloaded when Bengali text
+   is actually drawn (Bengali subset of Noto Sans Bengali, OFL). */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('/assets/fonts/NotoSansBengali-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('/assets/fonts/NotoSansBengali-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('/assets/fonts/NotoSansBengali-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('/assets/fonts/NotoSansBengali-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
 /* The interface's display face (src/ui/theme.ts FONT.display); Michroma is the logo only. */
 @font-face {
   font-family: 'Oxanium';

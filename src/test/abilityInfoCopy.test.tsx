@@ -31,7 +31,7 @@ import "@/i18n";
 import { getAllAbilities, getAbility } from "@/lib/abilities";
 import { LOOT_TTL_SECONDS } from "@/lib/chests";
 
-const LOCALES = ["en", "es", "sv"] as const;
+const LOCALES = ["en", "es", "sv", "bn"] as const;
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const locale = (loc: string) => JSON.parse(read(`src/i18n/locales/${loc}.json`));
 

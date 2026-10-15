@@ -21,7 +21,7 @@ describe("the board steps", () => {
   });
 
   it("has copy for every step in every locale", () => {
-    for (const loc of ["en", "es", "sv"]) {
+    for (const loc of ["en", "es", "sv", "bn"]) {
       const steps = locale(loc).tutorial.steps;
       for (const s of [...tutorialSteps, ...lifeCycleSteps]) {
         expect(steps[s.key]?.title, `${loc} ${s.key} title`).toBeTruthy();

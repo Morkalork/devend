@@ -226,7 +226,7 @@ describe("the map is failed, and named", () => {
   });
 
   it("has words for the new kind in all three locales", () => {
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const node = JSON.parse(readFileSync(
         resolve(process.cwd(), `src/i18n/locales/${lang}.json`), "utf8"),
       ).mapFailure as Record<string, string>;

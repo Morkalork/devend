@@ -37,7 +37,7 @@ describe("the card", () => {
   });
 
   it("has words in all three locales for every key it reads", () => {
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const d = JSON.parse(read(`src/i18n/locales/${lang}.json`));
       for (const key of ["fenceTypes.buildsSlower", "fenceTypes.buildsFaster", FENCE_INFO_FOOTER_KEY, HOW_TO_USE_KEY]) {
         const v = key.split(".").reduce((o: Record<string, unknown> | undefined, k) => o?.[k] as Record<string, unknown> | undefined, d);

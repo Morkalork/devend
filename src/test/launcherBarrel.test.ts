@@ -349,7 +349,7 @@ describe("the preview is the shot", () => {
     // path itself cannot show.
     expect(overlay).toContain("loadedCount");
     expect(read("src/components/game/GameCanvas.tsx")).toContain("loadedCount={loaded.length}");
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const locale = JSON.parse(read(`src/i18n/locales/${lang}.json`));
       expect(locale.launcher.ballsOnTheLine, `${lang} has no words for it`).toBeTruthy();
     }

@@ -448,7 +448,7 @@ describe("the Bug Squash family", () => {
   });
 
   it("has its Specs-panel strings in every locale", () => {
-    for (const loc of ["en", "es", "sv"]) {
+    for (const loc of ["en", "es", "sv", "bn"]) {
       const d = JSON.parse(readFileSync(resolve(process.cwd(), `src/i18n/locales/${loc}.json`), "utf8"));
       for (const k of ["bugSquash", "bugSquashActive", "bugSquashInactive"]) {
         expect(typeof d.bottomBarDetails?.[k], `${loc} ${k}`).toBe("string");

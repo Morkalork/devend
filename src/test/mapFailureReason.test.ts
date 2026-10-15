@@ -180,7 +180,7 @@ describe("the reason itself", () => {
  * as a raw key ("mapFailure.timeUp") is the silent loss again with extra steps.
  */
 describe("every reason has words in every language", () => {
-  const LOCALES = ["en", "es", "sv"] as const;
+  const LOCALES = ["en", "es", "sv", "bn"] as const;
   // Derived, not hand-listed. The hand-written version had drifted three kinds
   // behind the union, so launcherPrematureLock could have shipped with no
   // words in any language and nothing would have said so.

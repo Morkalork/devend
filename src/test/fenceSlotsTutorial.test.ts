@@ -22,7 +22,7 @@ import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { FENCE_TYPES_SEEN_KEY, hasSeenFenceType, markFenceTypeSeen } from "@/lib/fenceSeen";
 import { ABILITIES_SEEN_KEY, hasSeenAbility, markAbilitySeen } from "@/lib/abilitySeen";
 
-const LOCALES = ["en", "es", "sv"] as const;
+const LOCALES = ["en", "es", "sv", "bn"] as const;
 const locale = (loc: string) =>
   JSON.parse(readFileSync(resolve(__dirname, `../i18n/locales/${loc}.json`), "utf8"));
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");

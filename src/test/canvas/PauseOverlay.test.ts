@@ -18,7 +18,7 @@ describe("the pause overlay (canvas)", () => {
   });
 
   it("has words for it in every language", () => {
-    for (const lang of ["en", "es", "sv"]) {
+    for (const lang of ["en", "es", "sv", "bn"]) {
       const locale = JSON.parse(read(`src/i18n/locales/${lang}.json`));
       expect(locale.game.pausedZoom, `${lang} has no words for it`).toBeTruthy();
       expect(locale.game.paused).toBeTruthy();

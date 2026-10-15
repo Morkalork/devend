@@ -74,6 +74,14 @@ export const ROLE = {
   pass: 0x4fd67f,
 } as const;
 
+/**
+ * The Bangla face (src/index.css): last before the generic family in every
+ * stack, so Latin text keeps its own face and only Bengali glyphs, which no
+ * Latin face has, fall through to it. Canvas text falls back per glyph along
+ * the stack, the same as the DOM.
+ */
+export const BENGALI = "'Noto Sans Bengali'";
+
 export const FONT = {
   /**
    * The game's logo, and nothing else. Michroma is the face players know the
@@ -81,17 +89,17 @@ export const FONT = {
    * it wrapped ("+7h Certificate Hours" took two lines on a phone) and slowed
    * reading in upper case. Those moved to `display`.
    */
-  logo: "Michroma, sans-serif",
+  logo: `Michroma, ${BENGALI}, sans-serif`,
   /**
    * Headings, buttons, card titles, headline numbers and the HUD: Oxanium, a
    * squared technical face like Michroma at ordinary width. Bundled at 500,
    * 600 and 700 (public/assets/fonts); textStyle defaults it to 600.
    */
-  display: "Oxanium, Michroma, sans-serif",
+  display: `Oxanium, Michroma, ${BENGALI}, sans-serif`,
   /** Body text. */
-  body: "'Space Grotesk', sans-serif",
+  body: `'Space Grotesk', ${BENGALI}, sans-serif`,
   /** Code and figures. */
-  mono: "'JetBrains Mono', 'Fira Code', monospace",
+  mono: `'JetBrains Mono', 'Fira Code', ${BENGALI}, monospace`,
 } as const;
 
 export type FontRole = keyof typeof FONT;

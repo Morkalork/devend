@@ -123,7 +123,7 @@ describe("an unmet condition contributes nothing", () => {
 });
 
 describe("every condition has words, in every language", () => {
-  const locales = ["en", "sv", "es"] as const;
+  const locales = ["en", "sv", "es", "bn"] as const;
 
   it("translates each kind and each map feature", () => {
     const keys = [

@@ -24,6 +24,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import sv from './locales/sv.json';
 import es from './locales/es.json';
+import bn from './locales/bn.json';
 
 export const defaultNS = 'translation';
 
@@ -31,10 +32,11 @@ export const resources = {
   en: { translation: en },
   sv: { translation: sv },
   es: { translation: es },
+  bn: { translation: bn },
 } as const;
 
 /** Languages the app ships translations for. */
-export const supportedLanguages = ['en', 'sv', 'es'] as const;
+export const supportedLanguages = ['en', 'sv', 'es', 'bn'] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 /** Endonyms shown in the language picker (each in its own language). */
@@ -42,6 +44,7 @@ export const languageNames: Record<SupportedLanguage, string> = {
   en: 'English',
   sv: 'Svenska',
   es: 'Español',
+  bn: 'বাংলা',
 };
 
 /** localStorage key holding the player's explicit language choice. */
@@ -69,14 +72,34 @@ function detectInitialLanguage(): SupportedLanguage {
   return 'en';
 }
 
-/** Switch the active language and persist the choice for next launch. */
-export function changeLanguage(lang: SupportedLanguage): Promise<unknown> {
+/**
+ * Languages whose script none of the bundled Latin faces covers, and the
+ * loader for the face that does (src/ui/fonts.ts). Registered by the
+ * interface so this module stays free of it.
+ */
+let scriptFontLoader: ((lang: SupportedLanguage) => Promise<void>) | null = null;
+export function setScriptFontLoader(load: ((lang: SupportedLanguage) => Promise<void>) | null): void {
+  scriptFontLoader = load;
+}
+
+/**
+ * Switch the active language and persist the choice for next launch. Bangla
+ * waits for its face first: canvas text is rasterised once, and a label drawn
+ * before the face arrived would keep the system fallback.
+ */
+export async function changeLanguage(lang: SupportedLanguage): Promise<unknown> {
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   } catch {
     /* localStorage unavailable — language still changes for this session */
   }
+  if (scriptFontLoader) await scriptFontLoader(lang).catch(() => undefined);
   return i18n.changeLanguage(lang);
+}
+
+/** The document's language, for the browser's own text shaping and font picks. */
+function syncHtmlLang(lang: string): void {
+  if (typeof document !== 'undefined') document.documentElement.lang = lang;
 }
 
 i18n.use(initReactI18next).init({
@@ -89,5 +112,8 @@ i18n.use(initReactI18next).init({
   },
   returnNull: false,
 });
+
+syncHtmlLang(i18n.language);
+i18n.on('languageChanged', syncHtmlLang);
 
 export default i18n;

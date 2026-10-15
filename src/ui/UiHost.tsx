@@ -21,6 +21,7 @@ import { Application, useApplication } from "@pixi/react";
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import type { Application as PixiApplication, Container } from "pixi.js";
 import { loadUiFonts } from "./fonts";
+import i18n from "@/i18n";
 import { setUiHitTester } from "./hitGate";
 
 /** The parts of Pixi's EventSystem the pointer-up override reaches into. */
@@ -151,7 +152,7 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
 
   useEffect(() => {
     let live = true;
-    loadUiFonts().then(() => { if (live) setFontsReady(true); });
+    loadUiFonts(i18n.language).then(() => { if (live) setFontsReady(true); });
     return () => { live = false; };
   }, []);
 

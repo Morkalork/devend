@@ -36,7 +36,7 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
 - `src/hooks/` — game-loop, input, level-manager and related hooks.
 - `src/lib/` — game logic: `physics/`, `rendering/`, `scoring.ts`, `initGame.ts`.
 - `src/types/` — shared TypeScript types.
-- `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv}.json`.
+- `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv,bn}.json` (Bangla draws in the bundled Noto Sans Bengali; see `src/ui/fonts.ts`).
 - `src/test/` — Vitest tests.
 - `public/*.yml` — runtime game config (`map.yml`, `upgrades.yml`,
   `scoring-config.yml`, `offers.yml`, `certificates.yml`, `balls.yml`,
