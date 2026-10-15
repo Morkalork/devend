@@ -32,6 +32,7 @@ import { GlowRing } from "./bottomParts";
 import {
   fenceSlotLook, fenceSlotPress, fenceSlotRoster, fenceSlotViews, firstUnseenFence, shouldFileFenceManual, TOUCH_TARGET,
 } from "./bottomModel";
+import { contentText } from "@/i18n/content";
 
 interface FenceSlotBarProps {
   /**
@@ -128,7 +129,7 @@ export function FenceSlotBar({
             return (
               <Pressable
                 key={f.id}
-                label={f.name}
+                label={contentText.fenceName(t, f)}
                 onTap={press.onTap}
                 onHold={press.onHold}
                 pressedAlpha={0.8}
@@ -145,7 +146,7 @@ export function FenceSlotBar({
                     appear on the board, so the bar and the cut agree without the
                     player having to remember a name. */}
                 <View layout={{ width: 3, height: 18, borderRadius: 1.5, backgroundColor: color }} />
-                <Label text={f.name} size={SLOT_TEXT} weight="700" font="mono" color={color} />
+                <Label text={contentText.fenceName(t, f)} size={SLOT_TEXT} weight="700" font="mono" color={color} />
                 {shield === "spent" && <Icon icon={ShieldOff} size={14} color={color} alpha={0.5} />}
                 {shield === "ready" && <Icon icon={Shield} size={14} color={color} />}
                 {/* The hold hint, per CLAUDE.md: a holdable element has to look holdable. */}

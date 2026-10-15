@@ -261,7 +261,7 @@ export function TicketCard({
   const UpgradeIcon = getUpgradeIcon(displayUpgrade, upgrades);
   const Priority = PRIORITY_GLYPH[priorityRank(upgrade.tier)];
   const inert = owned || locked;
-  const name = inv ? upgrade.name : contentText.upgradeName(t, upgrade);
+  const name = contentText.upgradeName(t, upgrade);
   const priceColor = (purchasable && !unfunded) || selected ? ROLE.hours : ROLE.muted;
 
   return (
@@ -499,7 +499,7 @@ export function SprintPanel({
               layout={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 6, paddingBottom: 6 }}>
               <Label text={ticketKey(line.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
               <View layout={{ flex: 1 }}>
-                <Label text={line.ability ? line.upgrade.name : contentText.upgradeName(t, line.upgrade)} size={TEXT.sm} color={ROLE.ink} truncate />
+                <Label text={contentText.upgradeName(t, line.upgrade)} size={TEXT.sm} color={ROLE.ink} truncate />
               </View>
               <Label text={t("upgradeShop.hoursValue", { hours: line.price })} size={TEXT.sm} weight="700" font="display" color={ROLE.hours} />
               <Icon icon={X} size={14} color={ROLE.muted} />

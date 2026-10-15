@@ -89,8 +89,8 @@ describe("a bug shard's card (canvas)", () => {
     // old card because the port hardcoded a sentence.
     const model = read("src/ui/game/BoardEntityInfoModalModel.ts");
     expect(model).toContain("getBug(");
-    expect(model).toMatch(/bug\.description/);
-    expect(model).toMatch(/bug\.cost/);
+    expect(model).toMatch(/contentText\.bugDesc\(t, bug\)/);
+    expect(model).toMatch(/contentText\.bugCost\(t, bug\)/);
   });
 
   it("keeps the close button outside the scrolling body", () => {

@@ -11,6 +11,8 @@
  * it is handed and never mutates game state.
  */
 
+import i18next from "i18next";
+import { contentText } from "@/i18n/content";
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
@@ -752,7 +754,9 @@ export class FxLayer {
       }
 
       if (def) {
-        this.drawSplatName(def.name, p.x, p.y - r * 2.6, color, alpha, scale, burst);
+        // The renderer has no hook of its own, so the shared i18next instance
+        // (initialised in src/i18n) names the bug in the current language.
+        this.drawSplatName(contentText.bugName(i18next.t, def), p.x, p.y - r * 2.6, color, alpha, scale, burst);
       }
     }
   }

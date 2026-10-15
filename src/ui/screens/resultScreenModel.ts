@@ -2,6 +2,7 @@
  * What the end-of-run screen shows and which buttons it offers (canvas port of
  * components/game/ResultScreen.tsx; the drawing is in ResultScreen.tsx).
  */
+import { contentText } from "@/i18n/content";
 import type { TFunction } from "i18next";
 import type { GameResult } from "@/types/game";
 import type { RunRecap } from "@/lib/buildRecap";
@@ -129,6 +130,12 @@ export function recapBlock(runRecap: RunRecap | null, t: TFunction): RecapBlock 
       .sort((a, b) => b[1] - a[1])
       .filter(([, count]) => count > 0)
       .map(([tag, count]) => ({ tag: tag as UpgradeTag, count })),
-    capstoneText: runRecap.capstoneName ? t("buildRecap.capstoneLine", { name: runRecap.capstoneName }) : null,
+    capstoneText: runRecap.capstoneName
+      ? t("buildRecap.capstoneLine", {
+        name: runRecap.capstoneId
+          ? contentText.capstoneName(t, { id: runRecap.capstoneId, name: runRecap.capstoneName })
+          : runRecap.capstoneName,
+      })
+      : null,
   };
 }

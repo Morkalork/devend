@@ -14,6 +14,7 @@
  * its description, which is wrong-looking but never WRONG.
  */
 import type { TFunction } from 'i18next';
+import { contentText } from '@/i18n/content';
 import type { CertEffect } from '@/types/certificate';
 import { getFenceType } from '@/lib/fences';
 import { MULTIPLICATIVE_KEYS, type GameModifiers } from '@/hooks/useActiveModifiers';
@@ -67,7 +68,7 @@ export function certEffectLabel(t: TFunction, effect: CertEffect): string {
   // the bar does not use.
   if (effect.type === 'grantsFenceType') {
     const fence = getFenceType(effect.fenceType);
-    return t('certificateEffects.grantsFenceType', { fence: fence.name }) as string;
+    return t('certificateEffects.grantsFenceType', { fence: contentText.fenceName(t, fence) }) as string;
   }
 
   const special = SPECIAL[effect.type];

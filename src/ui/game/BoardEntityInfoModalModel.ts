@@ -5,6 +5,7 @@
 import type { TFunction } from "i18next";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { getBug } from "@/lib/bugs";
+import { contentText } from "@/i18n/content";
 
 export interface BoardEntityCopy {
   title: string;
@@ -43,17 +44,18 @@ export function boardEntityCopy(t: TFunction, hit: BoardEntityHit, accent: strin
   // Two labelled blocks, what it GIVES and what it COSTS: every bug in the pool
   // is double-edged, and run together into one paragraph the same words read
   // as a list of gifts. Copy from public/bugs.yml, beside the tuning it
-  // describes, so a rebalanced bug cannot outlive its explanation.
+  // describes, so a rebalanced bug cannot outlive its explanation (the
+  // translations are keyed on the bug id and fall back to that copy).
   return {
-    title: bug.name,
+    title: contentText.bugName(t, bug),
     titleColor: bug.color,
     body: t("boardInfo.bugShard.body") as string,
     bug: {
       color: bug.color,
       givesLabel: t("boardInfo.bugShard.gives") as string,
-      gives: bug.description,
+      gives: contentText.bugDesc(t, bug),
       costsLabel: t("boardInfo.bugShard.costs") as string,
-      costs: bug.cost,
+      costs: contentText.bugCost(t, bug),
       danger: bug.danger ? t("boardInfo.bugShard.danger") as string : undefined,
     },
     hint,

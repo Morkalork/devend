@@ -19,6 +19,7 @@ import { STANDARD_FENCE_ID } from "@/lib/fences";
  */
 import { useRef, useEffect, useState, useCallback, useMemo, useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { contentText } from "@/i18n/content";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { pendingLauncher, fireLauncher, type LauncherState } from "@/lib/physics/launcher";
 import { launchAim, type LaunchAim } from "@/lib/launcher";
@@ -2384,13 +2385,13 @@ export function GameCanvas({
     if (def && def.durationSeconds && def.durationSeconds > 0) {
       const durationMs = def.durationSeconds * 1000;
       const endMs = now + durationMs;
-      const timer: AbilityTimer = { kind: def.kind, name: def.name, color: def.color, endMs, durationMs };
+      const timer: AbilityTimer = { kind: def.kind, name: contentText.abilityName(t, def), color: def.color, endMs, durationMs };
       setAbilityTimers(prev => [...prev.filter(t => t.kind !== def.kind), timer]);
       window.setTimeout(() => {
         setAbilityTimers(prev => prev.filter(t => !(t.kind === def.kind && t.endMs === endMs)));
       }, durationMs);
     }
-  }, [onSpendAbility]);
+  }, [onSpendAbility, t]);
   // Read through a ref by the loop's command deps, so a new callback identity
   // cannot rebuild the loop in the middle of a map.
   abilityFiredRef.current = handleAbilityFired;
@@ -2435,10 +2436,10 @@ export function GameCanvas({
     (gameRef.current.chestRewardsLog ??= []).push(rewardId);
     onGrantAbility?.(rewardId);
     const def = getAbility(rewardId);
-    setChestToast({ key: simNow(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
+    setChestToast({ key: simNow(), label: def ? contentText.abilityName(t, def) : rewardId, color: def?.color ?? '#ffd76b' });
     if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
     chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
-  }, [onGrantAbility]);
+  }, [onGrantAbility, t]);
   useEffect(() => { handleLootCollectRef.current = handleLootCollect; }, [handleLootCollect]);
 
   // A white "tappable" ball was tapped away (#57): the input layer already

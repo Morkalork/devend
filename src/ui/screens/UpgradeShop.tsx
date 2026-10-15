@@ -17,6 +17,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { contentText } from "@/i18n/content";
 import { ColorMatrixFilter } from "pixi.js";
 import { ArrowRight, Clock, Lock, RefreshCw, ShoppingCart, Vault } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
@@ -563,7 +564,7 @@ export function UpgradeShop({
               {/* Open Source Contribution: say what turned up, or the new button is a mystery. */}
               {freeAbilityGrant && (
                 <View layout={{ width: column, marginBottom: 8 }}>
-                  <RichParagraph align="left" runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant?.name ?? freeAbilityGrant }) }]}
+                  <RichParagraph align="left" runs={[{ text: t("upgradeShop.freeAbilityGranted", { name: freeGrant ? contentText.abilityName(t, freeGrant) : freeAbilityGrant }) }]}
                     size={TEXT.sm} color={freeGrantColor}
                     lead={<AbilityIcon kind={freeGrant?.kind ?? ""} size={16} color={freeGrantColor} />} leadGap={8} />
                 </View>

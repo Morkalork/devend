@@ -1,6 +1,7 @@
 /**
- * Localized accessors for YAML-authored game content — upgrades, certificates,
- * achievements, capstones and Sprint Planning offers (public/*.yml).
+ * Localized accessors for YAML-authored game content: upgrades, certificates,
+ * achievements, capstones, Sprint Planning offers, abilities, fence types,
+ * balls, bugs, map mutators, map objectives and bosses (public/*.yml).
  *
  * The YAML files stay the **English source of truth**. Each translated
  * language fills in `content.<kind>.<id>.<field>` keys in its locale file
@@ -29,9 +30,16 @@ function field(
 }
 
 export const contentText = {
-  upgradeName: (t: TFunction, u: WithId & { name?: string }) => field(t, 'upgrades', u.id, 'name', u.name),
-  upgradeDesc: (t: TFunction, u: WithId & { description?: string }) =>
-    field(t, 'upgrades', u.id, 'description', u.description),
+  // A store retainer card (abilityOffer.ts) is an upgrade dressed around an
+  // ability, so its copy is the ability's.
+  upgradeName: (t: TFunction, u: WithId & { name?: string; grantsAbility?: string }) =>
+    u.grantsAbility
+      ? field(t, 'abilities', u.grantsAbility, 'name', u.name)
+      : field(t, 'upgrades', u.id, 'name', u.name),
+  upgradeDesc: (t: TFunction, u: WithId & { description?: string; grantsAbility?: string }) =>
+    u.grantsAbility
+      ? field(t, 'abilities', u.grantsAbility, 'description', u.description)
+      : field(t, 'upgrades', u.id, 'description', u.description),
 
   /** Job-title tier (Junior, Senior, …) shared across all upgrades. */
   tier: (t: TFunction, tier?: string): string =>
@@ -69,6 +77,23 @@ export const contentText = {
     if (!id) return '';
     return t(`content.balls.${id}.name`, { defaultValue: getBallType(id)?.name ?? id }) as string;
   },
+
+  ballDesc: (t: TFunction, b: WithId & { description?: string }) => field(t, 'balls', b.id, 'description', b.description),
+
+  /** Ability (abilities.yml): the one-shot powers on the ability bar. */
+  abilityName: (t: TFunction, a: WithId & { name?: string }) => field(t, 'abilities', a.id, 'name', a.name),
+  abilityDesc: (t: TFunction, a: WithId & { description?: string }) => field(t, 'abilities', a.id, 'description', a.description),
+  abilityHowTo: (t: TFunction, a: WithId & { howTo?: string }) => field(t, 'abilities', a.id, 'howTo', a.howTo),
+
+  /** Fence type (fences.yml): the slots under the board. */
+  fenceName: (t: TFunction, f: WithId & { name?: string }) => field(t, 'fences', f.id, 'name', f.name),
+  fenceDesc: (t: TFunction, f: WithId & { description?: string }) => field(t, 'fences', f.id, 'description', f.description),
+  fenceHowTo: (t: TFunction, f: WithId & { howTo?: string }) => field(t, 'fences', f.id, 'howTo', f.howTo),
+
+  /** Bug (bugs.yml): what squashing one gives, and what it costs. */
+  bugName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bugs', b.id, 'name', b.name),
+  bugDesc: (t: TFunction, b: WithId & { description?: string }) => field(t, 'bugs', b.id, 'description', b.description),
+  bugCost: (t: TFunction, b: WithId & { cost?: string }) => field(t, 'bugs', b.id, 'cost', b.cost),
 
   /** Boss (map.yml boss block, issue #56): keyed on the level id. */
   bossName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bosses', b.id, 'name', b.name),

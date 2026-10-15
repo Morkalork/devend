@@ -14,6 +14,7 @@ import type { FenceTypeDef } from "@/lib/fences";
 import { COLOR, Icon, Label, RADIUS, TEXT, View, tint, useUiScreen } from "../kit/ui";
 import { InfoCardModal } from "./modalParts";
 import { cssColor, fenceSpeedLine, FENCE_INFO_FOOTER_KEY, HOW_TO_USE_KEY } from "./bottomModel";
+import { contentText } from "@/i18n/content";
 
 interface Props {
   fence: FenceTypeDef;
@@ -36,9 +37,9 @@ export function FenceTypeInfoModal({ fence, onClose }: Props) {
     backgroundColor: tint(color, 0x14 / 255), borderColor: tint(color, 0x33 / 255), borderWidth: 1,
   };
   return (
-    <InfoCardModal screen={screen} onClose={onClose} title={fence.name} color={color}>
+    <InfoCardModal screen={screen} onClose={onClose} title={contentText.fenceName(t, fence)} color={color}>
       {fence.description && (
-        <Label text={fence.description} size={TEXT.sm} lineHeight={SNUG} color={COLOR.foreground} wrap />
+        <Label text={contentText.fenceDesc(t, fence)} size={TEXT.sm} lineHeight={SNUG} color={COLOR.foreground} wrap />
       )}
       {speed && (
         <View layout={box}>
@@ -48,7 +49,7 @@ export function FenceTypeInfoModal({ fence, onClose }: Props) {
       {fence.howTo && (
         <View layout={{ gap: 4 }}>
           <Label text={t(HOW_TO_USE_KEY)} size={10} weight="700" letterSpacing={0.5} color={color} alpha={0.8} />
-          <Label text={fence.howTo} size={TEXT.sm} lineHeight={SNUG} color={COLOR.mutedForeground} wrap />
+          <Label text={contentText.fenceHowTo(t, fence)} size={TEXT.sm} lineHeight={SNUG} color={COLOR.mutedForeground} wrap />
         </View>
       )}
       <View layout={{ ...box, flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
