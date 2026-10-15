@@ -1,8 +1,12 @@
 /**
  * useGameInput — attaches pointer event listeners to the game canvas.
  *
- * All three handlers operate directly on the mutable CanvasGameState ref;
- * they produce no React state changes except for the two UI setters.
+ * The handlers operate directly on the mutable CanvasGameState ref; they
+ * produce no React state changes except for the two UI setters.
+ *
+ * Every lift and every second touch is matched to the pointer it belongs to.
+ * A phone held in one hand puts more than one finger on the glass, and the
+ * board used to let any of them call off, or end, the fence being drawn.
  */
 
 import { useEffect, RefObject } from "react";
@@ -35,6 +39,7 @@ import {
   screenToWorld,
   isPointInBoard,
   getDevicePixelRatio,
+  VISIBLE_BOARD_FRACTION,
 } from "@/lib/boardConstants";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
@@ -47,6 +52,7 @@ import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
 import { enqueueCommand, freezeTargetAt, getLocalPlayer } from "@/lib/net/commands";
 import { simNow } from "@/lib/simClock";
+import { traceTouch } from "@/lib/touchTrace";
 
 /**
  * The board's current rotation (issue #77), recomputed rather than cached.
@@ -63,6 +69,19 @@ import { simNow } from "@/lib/simClock";
  */
 const SWIPE_SAMPLE_SPACING = 12;
 const MAX_SWIPE_SAMPLES = 256;
+
+/**
+ * Telling a deliberate second finger from the hand holding the phone, in CSS
+ * px (see strayReason). The edge band is where wrapped fingertips and a
+ * curved screen's rim land; a contact wider than the palm limit is not a
+ * fingertip; and a swipe that has not travelled the hand-off slop is not yet a
+ * fence anyone is drawing.
+ */
+export const EDGE_GRIP_CSS = 24;
+export const PALM_CSS = 48;
+export const HANDOFF_SLOP_CSS = 16;
+/** World units of invisible margin round the drawn board, each side. */
+const VISIBLE_INSET = (BOARD_WIDTH * (1 - VISIBLE_BOARD_FRACTION)) / 2;
 
 function boardTilt(game: CanvasGameState): number {
   return boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
@@ -163,6 +182,79 @@ export function useGameInput(
       return false;
     };
 
+    /**
+     * The fence finger, as this device sees it: where it came down (client
+     * px), how far it has wandered from there, and whether it came down where
+     * a grip lands. Mirrors game.swipePointerId; the game state holds world
+     * points and no idea how far a finger travelled on the glass.
+     */
+    let swipe: { pointerId: number; startClient: Vector2; travel: number; fromGrip: boolean } | null = null;
+
+    /**
+     * A finger that was holding a swipe it never moved, set aside when another
+     * finger came down. Whichever of the two moves first is the one drawing;
+     * the other was resting (a thumb on the board while holding the phone).
+     * See the second-finger block in handlePointerDown.
+     */
+    let standby: {
+      pointerId: number; startClient: Vector2; lastClient: Vector2;
+      start: Vector2; current: Vector2; regionId: string; fromGrip: boolean;
+    } | null = null;
+
+    const trace = (line: () => string) => traceTouch(line);
+    const clientDist = (a: Vector2, b: { clientX: number; clientY: number }) =>
+      Math.hypot(b.clientX - a.x, b.clientY - a.y);
+
+    /**
+     * Why a touch looks like the hand holding the phone rather than a finger
+     * meant for the board, or null if it looks meant.
+     *
+     * Only ever asked about a SECOND touch: the first one on the glass always
+     * counts, because a fence may legitimately start at the very edge (the
+     * board runs to within a few px of the side of a portrait phone). It is
+     * the second that used to be trusted blindly, and on a phone held in one
+     * hand the second touch is usually the grip: the fingertips wrapped round
+     * the edge, a curved screen's rim, the heel of the palm. Each of them
+     * called off the fence being drawn, with a 30ms buzz the player never
+     * noticed, which is exactly "a perfect fence, and nothing happened".
+     */
+    const strayReason = (e: PointerEvent, game: CanvasGameState): string | null => {
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      if (e.clientX < EDGE_GRIP_CSS || e.clientX > vw - EDGE_GRIP_CSS) return "screen edge";
+      if (e.pointerType === "touch" && Math.max(e.width, e.height) > PALM_CSS) return "palm-sized";
+      const c = getCanvasCoords(e);
+      const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
+      if (w.x < VISIBLE_INSET || w.x > BOARD_WIDTH - VISIBLE_INSET || w.y < VISIBLE_INSET || w.y > BOARD_HEIGHT - VISIBLE_INSET) {
+        return "off the board";
+      }
+      return null;
+    };
+
+    const clearSwipeState = (game: CanvasGameState) => {
+      game.swipeStart       = null;
+      game.swipeRegionId    = null;
+      game.currentSwipePos  = null;
+      game.swipePointerId   = null;
+      swipe = null;
+    };
+
+    /** Make a set-aside finger the fence finger again, where it now is. */
+    const activateStandby = (game: CanvasGameState) => {
+      const s = standby;
+      if (!s) return;
+      standby = null;
+      game.swipeStart       = s.start;
+      game.swipeRegionId    = s.regionId;
+      game.currentSwipePos  = s.current;
+      game.swipePath        = [{ ...s.start }];
+      game.swipePointerId   = s.pointerId;
+      swipe = {
+        pointerId: s.pointerId, startClient: s.startClient,
+        travel: Math.hypot(s.lastClient.x - s.startClient.x, s.lastClient.y - s.startClient.y), fromGrip: s.fromGrip,
+      };
+      setIsPlayerDragging(true);
+    };
+
     const handlePointerDown = (e: PointerEvent) => {
       initAudio();
 
@@ -170,7 +262,25 @@ export function useGameInput(
       if (!game) return;
       // A touch on a canvas-interface widget that sits over the board (a
       // banner, an overlay's handle) is the widget's, not a cut (ui/hitGate).
-      if (uiCovers(e.clientX, e.clientY)) return;
+      if (uiCovers(e.clientX, e.clientY)) {
+        trace(() => `#${e.pointerId} down: on an interface widget, not the board`);
+        return;
+      }
+
+      // Another finger already owns a gesture. A touch that looks like the
+      // grip is ignored outright: it neither cancels that gesture nor starts
+      // anything of its own (and its eventual lift is ignored too, below).
+      const busy = gesture !== null || standby !== null ||
+        (game.swipeStart !== null && game.swipePointerId !== null) || holdPointerId !== null;
+      if (busy) {
+        const stray = strayReason(e, game);
+        if (stray) {
+          trace(() => `#${e.pointerId} down: second touch at the ${stray}, ignored`);
+          return;
+        }
+        // Two fingers down is not someone holding a thing to read about it.
+        if (holdPointerId !== null && holdPointerId !== e.pointerId) clearHold();
+      }
 
       // Second-finger cancel, for a Redeploy pull. The same meaning the second
       // finger already has for a cut, and it must come first: a throw that
@@ -181,6 +291,7 @@ export function useGameInput(
         game.slingDrag = null;
         gesture = null;
         if (navigator.vibrate) navigator.vibrate(30);
+        trace(() => `#${e.pointerId} down: second finger, pull cancelled`);
         return;
       }
 
@@ -193,20 +304,54 @@ export function useGameInput(
         enqueueCommand(game, { kind: "moverRelease", player: getLocalPlayer(), cancel: true });
         gesture = null;
         if (navigator.vibrate) navigator.vibrate(30);
+        trace(() => `#${e.pointerId} down: second finger, mover let go`);
         return;
       }
 
-      // Second-finger cancel: if a swipe is in progress and a different pointer comes down, cancel it
+      // A second finger while a swipe is held. It cancels a fence that is
+      // really being drawn, as it always has. But a swipe that has not moved
+      // yet is not a fence anyone is drawing: it is a thumb resting on the
+      // board, or a grip that got there first. Calling it off and then
+      // swallowing the finger that came to draw left the board dead under a
+      // perfectly good swipe. So the new finger takes over, and the old one is
+      // set aside in case it turns out to be the one that moves.
       if (game.swipeStart && game.swipePointerId !== null && e.pointerId !== game.swipePointerId) {
-        game.swipeStart       = null;
-        game.swipeRegionId    = null;
-        game.currentSwipePos  = null;
-        game.swipePointerId   = null;
-        setIsPlayerDragging(false);
-        if (navigator.vibrate) navigator.vibrate(30);
-        return;
+        const travel = swipe?.travel ?? 0;
+        if (travel >= HANDOFF_SLOP_CSS && !swipe?.fromGrip) {
+          clearSwipeState(game);
+          standby = null;
+          setIsPlayerDragging(false);
+          if (navigator.vibrate) navigator.vibrate(30);
+          // Said, not only buzzed: when it was not meant (a palm that slipped
+          // past the grip test), this is the one clue to what happened.
+          onMessageRef?.current?.("secondFingerCancel");
+          trace(() => `#${e.pointerId} down: second finger, fence cancelled`);
+          return;
+        }
+        const prev = swipe;
+        standby = prev && travel < HANDOFF_SLOP_CSS && game.swipeRegionId ? {
+          pointerId: prev.pointerId, startClient: prev.startClient,
+          lastClient: { x: prev.startClient.x, y: prev.startClient.y },
+          start: game.swipeStart, current: game.currentSwipePos ?? game.swipeStart,
+          regionId: game.swipeRegionId, fromGrip: prev.fromGrip,
+        } : null;
+        const from = game.swipePointerId;
+        clearSwipeState(game);
+        trace(() => `#${e.pointerId} down: takes the swipe from #${from}, which had not moved`);
       }
 
+      press(game, e);
+
+      // The new finger did not get a swipe of its own (refused, or a star):
+      // the finger that was set aside for it gets its swipe back.
+      // A press that became a grab ends the question of which finger draws.
+      if (gesture) standby = null;
+      else if (!game.swipeStart && standby) activateStandby(game);
+      if (!game.swipeStart) setIsPlayerDragging(false);
+    };
+
+    /** Everything a press can start, once it is clear whose press it is. */
+    const press = (game: CanvasGameState, e: PointerEvent) => {
       // Targeted ability armed (Magnet): consume this tap as the target point.
       // A tap outside the board cancels. Handled before the cut/guard logic so
       // it works during normal play regardless of active cell / region.
@@ -217,13 +362,18 @@ export function useGameInput(
         } else {
           onAbilityTargetRef.current(null, null);
         }
+        trace(() => `#${e.pointerId} down: aimed the armed ability`);
         return;
       }
 
       // game.dissolve also covers the run-intro assemble: no cuts while the
       // board is still flying together (physics is held until it lands).
-      if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
+      if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering) {
+        trace(() => `#${e.pointerId} down: not now (${
+          game.gameOver ? "game over" : game.levelComplete ? "map complete" : game.dissolve ? "board moving"
+            : game.isRecovering ? "recovering from a lost life" : "push prompt"})`);
         return;
+      }
 
       // No fence until every barrel has finished ejecting. A cut during the
       // drain would seal balls the shot is mid-way through firing, which is the
@@ -232,7 +382,7 @@ export function useGameInput(
       // paused; this also covers the drain window, when it is not.)
       if (fencesBlockedByLauncher(game)) {
         onMessageRef?.current?.("launcherLoaded");
-        return;
+        return trace(() => `#${e.pointerId} down: refused, launcher still firing`);
       }
 
       // No loot-collect branch here any more. A smashed chest grants its reward
@@ -268,7 +418,10 @@ export function useGameInput(
             // and that is the common case. The fence begins as usual below; the
             // first movement past the slop cancels the hold. Only the star
             // returns early, because a star is never a place you start a cut.
-            if (star) return;
+            if (star) {
+              trace(() => `#${e.pointerId} down: on a lock star, hold to read`);
+              return;
+            }
           }
         }
       }
@@ -280,6 +433,7 @@ export function useGameInput(
       // playing. The message only when that is not what the press is for.
       if (game.pairTurn && game.pairTurn.player !== getLocalPlayer()) {
         if (holdTimer === null) onMessageRef?.current?.("partnersTurn");
+        trace(() => `#${e.pointerId} down: partner's turn`);
         return;
       }
 
@@ -302,6 +456,7 @@ export function useGameInput(
               wallId: sling.id, start: w, current: w, pointerId: e.pointerId,
             };
             gesture = { kind: "sling", pointerId: e.pointerId };
+            trace(() => `#${e.pointerId} down: grabbed a Redeploy fence`);
             return;
           }
         }
@@ -337,6 +492,7 @@ export function useGameInput(
               canDerail: activeModifiers.moverDerailPerMap > 0 && game.moverDerailsRemaining > 0,
               canBand: activeModifiers.moverBandPerMap > 0 && game.moverBandsRemaining > 0,
             });
+            trace(() => `#${e.pointerId} down: grabbed a mover`);
             return;
           }
         }
@@ -345,18 +501,26 @@ export function useGameInput(
       // At the concurrent-fence limit, no new cut can start.
       if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) {
         onMessageRef?.current?.("fenceLimit");
+        trace(() => `#${e.pointerId} down: refused, fence limit`);
         return;
       }
 
       const { screenX, screenY } = getCanvasCoords(e);
 
-      if (!isPointInBoard(screenX, screenY, game.boardRect)) return;
+      // Outside the world rectangle, which already runs past the visible
+      // board on every side (computeBoardRect), so this is a press in the
+      // empty band above or below it: nothing there to refuse in words.
+      if (!isPointInBoard(screenX, screenY, game.boardRect)) {
+        trace(() => `#${e.pointerId} down: outside the board`);
+        return;
+      }
 
       const worldPos = screenToWorld(screenX, screenY, game.boardRect, boardTilt(game));
 
       if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) {
         if (import.meta.env.DEV) console.warn(`[cut-refused] start cell not active at (${worldPos.x | 0},${worldPos.y | 0}) - wrongly-captured cell?`);
         onMessageRef?.current?.("capturedStart");
+        trace(() => `#${e.pointerId} down: refused, captured ground at (${worldPos.x | 0},${worldPos.y | 0})`);
         return;
       }
 
@@ -367,6 +531,7 @@ export function useGameInput(
         // there is nothing here to cut. Naming the internal difference would
         // explain the code rather than the game.
         onMessageRef?.current?.("capturedStart");
+        trace(() => `#${e.pointerId} down: refused, no region at (${worldPos.x | 0},${worldPos.y | 0})`);
         return;
       }
 
@@ -377,6 +542,7 @@ export function useGameInput(
         if (wallBlocksCutStart(worldPos, w, game.spaceGrid)) {
           if (import.meta.env.DEV) console.warn(`[cut-refused] blocked by wall "${w.id}" at (${worldPos.x | 0},${worldPos.y | 0})`);
           onMessageRef?.current?.("wallInTheWay");
+          trace(() => `#${e.pointerId} down: refused, wall in the way`);
           return;
         }
       }
@@ -386,7 +552,21 @@ export function useGameInput(
       game.currentSwipePos  = worldPos;
       game.swipePath        = [{ ...worldPos }];
       game.swipePointerId   = e.pointerId;
+      swipe = {
+        pointerId: e.pointerId, startClient: { x: e.clientX, y: e.clientY }, travel: 0,
+        fromGrip: strayReason(e, game) !== null,
+      };
       setIsPlayerDragging(true);
+      trace(() => `#${e.pointerId} down: swipe started at (${worldPos.x | 0},${worldPos.y | 0})`);
+    };
+
+    /** A world point under the pointer, kept on the board, as a swipe end. */
+    const swipePointAt = (game: CanvasGameState, e: PointerEvent): Vector2 => {
+      const { screenX, screenY } = getCanvasCoords(e);
+      const worldPos = screenToWorld(screenX, screenY, game.boardRect, boardTilt(game));
+      worldPos.x = Math.max(0, Math.min(BOARD_WIDTH, worldPos.x));
+      worldPos.y = Math.max(0, Math.min(BOARD_HEIGHT, worldPos.y));
+      return worldPos;
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -423,14 +603,30 @@ export function useGameInput(
         return;
       }
 
+      // The finger that was set aside. If it is the one that starts moving
+      // while the other is still resting, it was the drawing finger all along:
+      // it gets the swipe back and the resting one is forgotten.
+      if (standby && e.pointerId === standby.pointerId) {
+        standby.lastClient = { x: e.clientX, y: e.clientY };
+        standby.current = swipePointAt(game, e);
+        if (clientDist(standby.startClient, e) < HANDOFF_SLOP_CSS) return;
+        if (swipe && swipe.travel >= HANDOFF_SLOP_CSS) { standby = null; return; }
+        const resting = game.swipePointerId;
+        clearSwipeState(game);
+        activateStandby(game);
+        trace(() => `#${e.pointerId} move: the set-aside finger is drawing, #${resting} was resting`);
+      }
+
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
       if (e.pointerId !== game.swipePointerId) return;
 
-      const { screenX, screenY } = getCanvasCoords(e);
-      const worldPos = screenToWorld(screenX, screenY, game.boardRect, boardTilt(game));
-      worldPos.x = Math.max(0, Math.min(BOARD_WIDTH, worldPos.x));
-      worldPos.y = Math.max(0, Math.min(BOARD_HEIGHT, worldPos.y));
+      if (swipe) {
+        swipe.travel = Math.max(swipe.travel, clientDist(swipe.startClient, e));
+        // Drawing for real now: the finger set aside was resting after all.
+        if (swipe.travel >= HANDOFF_SLOP_CSS) standby = null;
+      }
 
+      const worldPos = swipePointAt(game, e);
       game.currentSwipePos = worldPos;
       // Sample the path for bent fences (#66). Thinned by distance rather than
       // by frame: a slow drag emits a point per frame and would fill the buffer
@@ -443,28 +639,39 @@ export function useGameInput(
       }
     };
 
-    const handlePointerUp = () => {
+    /**
+     * A finger left the glass: an up, a mouse leaving the canvas, or (with
+     * `cancelled`) the system taking the touch away.
+     *
+     * Every branch is keyed on WHICH pointer it was. It used to be any
+     * pointer at all, so lifting a resting thumb or a gripping finger ended
+     * the fence someone else was drawing, at whatever length it had reached.
+     */
+    const release = (e: PointerEvent, cancelled: boolean) => {
       const game = gameRef.current;
       if (!game) return;
 
-      // Releasing before the hold fires cancels the star explainer (a star press
+      // Releasing before the hold fires cancels the explainer (a star press
       // never set swipeStart, so the cut block below is a no-op for it).
-      clearHold();
+      if (e.pointerId === holdPointerId) clearHold();
 
       // Let go of a mover. With a bumper fitted this fires the snap; without
       // one the mover simply stays where it was parked and resumes patrolling
-      // from there.
-      if (gesture?.kind === "mover") {
+      // from there. A cancelled touch lets go without firing.
+      if (gesture?.kind === "mover" && e.pointerId === gesture.pointerId) {
         gesture = null;
-        enqueueCommand(game, { kind: "moverRelease", player: getLocalPlayer() });
+        enqueueCommand(game, { kind: "moverRelease", player: getLocalPlayer(), ...(cancelled ? { cancel: true } : {}) });
         return;
       }
 
-      // Let go of a Redeploy fence: it snaps forward and throws.
+      // Let go of a Redeploy fence: it snaps forward and throws. Not when the
+      // system took the touch: a throw's power is in where the finger let go,
+      // and a cancelled touch never let go anywhere.
       const drag = game.slingDrag;
-      if (drag && gesture?.kind === "sling") {
+      if (drag && gesture?.kind === "sling" && e.pointerId === gesture.pointerId) {
         game.slingDrag = null;
         gesture = null;
+        if (cancelled) { trace(() => `#${e.pointerId} cancelled by the system: pull dropped`); return; }
         enqueueCommand(game, {
           kind: "slingRelease",
           player: getLocalPlayer(),
@@ -472,6 +679,29 @@ export function useGameInput(
           pull: { x: drag.current.x - drag.start.x, y: drag.current.y - drag.start.y },
         });
         return;
+      }
+
+      if (standby && e.pointerId === standby.pointerId) {
+        standby = null;
+        trace(() => `#${e.pointerId} up: the set-aside finger lifted`);
+        return;
+      }
+
+      if (game.swipePointerId === null || e.pointerId !== game.swipePointerId) {
+        if (e.type !== "pointerleave") trace(() => `#${e.pointerId} ${cancelled ? "cancel" : "up"}: not the fence finger, ignored`);
+        return;
+      }
+
+      // Where the finger actually left the glass. On a slow phone the last
+      // move can be a frame behind the lift; a cancel has no position worth
+      // trusting, so it keeps the last move.
+      if (!cancelled && game.swipeStart) {
+        game.currentSwipePos = swipePointAt(game, e);
+        const path = game.swipePath;
+        const last = path[path.length - 1];
+        if (path.length < MAX_SWIPE_SAMPLES && (!last || last.x !== game.currentSwipePos.x || last.y !== game.currentSwipePos.y)) {
+          path.push({ ...game.currentSwipePos });
+        }
       }
 
       if (
@@ -487,6 +717,9 @@ export function useGameInput(
       ) {
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist  = vec2Length(delta);
+        // A touch the system took away is not a tap, whatever its length: a
+        // freeze or a squash nobody tapped for would be worse than nothing.
+        const tap = dist < BASE_SWIPE_MIN_DISTANCE && !cancelled;
 
         // A tap on a BUG squashes it, killing it for no reward.
         //
@@ -500,15 +733,14 @@ export function useGameInput(
         // resting thumb drifts past. Reported as "press and hold doesn't work",
         // which it did not. A tap has to land once, on a target the same size,
         // and that is a gesture a moving thing can actually carry.
-        if (dist < BASE_SWIPE_MIN_DISTANCE) {
+        if (tap) {
           const bug = bugAtTap(game, game.swipeStart);
           if (bug) {
             // Named, not described - see the tapBug command for why a point
             // would be the wrong thing to send about something that moves.
             enqueueCommand(game, { kind: "tapBug", player: getLocalPlayer(), bugId: bug.id });
-            game.swipeStart = null; game.swipeRegionId = null;
-            game.currentSwipePos = null; game.swipePointerId = null;
-            setIsPlayerDragging(false);
+            trace(() => `#${e.pointerId} up: tap, squashed a bug`);
+            endSwipe(game);
             return;
           }
         }
@@ -518,15 +750,15 @@ export function useGameInput(
         // Checked BEFORE the freeze block (which skips white balls) and
         // regardless of freeze charges: tap-to-remove is the white ball's own
         // interaction, decided by ball type.
-        if (dist < BASE_SWIPE_MIN_DISTANCE && onTapRemoveRef?.current) {
-          const tap = game.swipeStart;
+        if (tap && onTapRemoveRef?.current) {
+          const at = game.swipeStart;
           let target: Ball | null = null;
           let bestDist = Infinity;
           for (const ball of game.balls) {
             if (ball.state !== "active") continue;
             if (ball.regionId !== game.swipeRegionId) continue;
             if (!isTappableBall(ball.ability)) continue;
-            const d = vec2Length(vec2Sub(ball.position, tap));
+            const d = vec2Length(vec2Sub(ball.position, at));
             if (d <= ball.radius + FREEZE_TAP_SLOP && d < bestDist) { bestDist = d; target = ball; }
           }
           if (target) {
@@ -534,9 +766,8 @@ export function useGameInput(
             // applied the board has moved on a frame, and "the ball nearest
             // this point" would no longer be the ball the player tapped.
             enqueueCommand(game, { kind: "tapRemove", player: getLocalPlayer(), ballId: target.id });
-            game.swipeStart = null; game.swipeRegionId = null;
-            game.currentSwipePos = null; game.swipePointerId = null;
-            setIsPlayerDragging(false);
+            trace(() => `#${e.pointerId} up: tap, removed a white ball`);
+            endSwipe(game);
             return;
           }
         }
@@ -547,7 +778,7 @@ export function useGameInput(
         // fallback. The cut path below is unreachable for taps, so no conflict.
         const featureFreeze = activeModifiers.ballFreezeDuration > 0 && (game.freezeUsesRemaining ?? 0) > 0;
         const hasFreezeCharge = (game.freezeCharges ?? 0) > 0;
-        if (dist < BASE_SWIPE_MIN_DISTANCE && (featureFreeze || hasFreezeCharge)) {
+        if (tap && (featureFreeze || hasFreezeCharge)) {
           // Only worth sending if it would land on something. Which ball, and
           // which of its neighbours go with it, is settled when the command is
           // applied, off state both devices share.
@@ -562,11 +793,15 @@ export function useGameInput(
               // map and the charge does not.
               useCharge: !featureFreeze,
             });
+            trace(() => `#${e.pointerId} up: tap, freeze`);
+          } else {
+            trace(() => `#${e.pointerId} up: tap on no ball`);
           }
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE && game.pairTurn?.spent) {
           // One fence a turn in a pair. Taps above still work, since guarding
           // the fence that is building is still this player's turn.
           onMessageRef?.current?.("oneFenceATurn");
+          trace(() => `#${e.pointerId} up: refused, one fence a turn`);
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE) {
           // Bent fences (#66): keep the SHAPE of the drag and project only its
           // two loose ends. `bent` is null without the loadout, for a drag that
@@ -576,6 +811,11 @@ export function useGameInput(
           // The rays are cast where the command is applied, not here: both
           // devices hold the same walls at that tick and will land the fence in
           // the same place. What travels is the drag itself.
+          //
+          // Kept when the system cancels the touch, as it was when a cancel
+          // reached here through pointerleave: the drag already said what it
+          // was, and dropping a drawn fence is the very complaint this layer
+          // keeps answering.
           const bent = bentDrawnPath(game);
           enqueueCommand(game, {
             kind: "cut",
@@ -586,20 +826,38 @@ export function useGameInput(
             regionId: game.swipeRegionId,
             fenceTypeId: game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
           });
+          trace(() => `#${e.pointerId} ${cancelled ? "cancelled by the system" : "up"}: fence, ${dist | 0} units`);
+        } else {
+          trace(() => `#${e.pointerId} ${cancelled ? "cancelled by the system" : "up"}: too short for a fence (${dist.toFixed(1)} units)`);
         }
+      } else if (game.swipeStart) {
+        trace(() => `#${e.pointerId} up: swipe dropped, the board stopped taking fences`);
       }
 
-      game.swipeStart       = null;
-      game.swipeRegionId    = null;
-      game.currentSwipePos  = null;
-      game.swipePointerId   = null;
-      setIsPlayerDragging(false);
+      endSwipe(game);
     };
+
+    /** The fence finger is done. A finger that was set aside gets its turn. */
+    const endSwipe = (game: CanvasGameState) => {
+      clearSwipeState(game);
+      if (standby) activateStandby(game);
+      else setIsPlayerDragging(false);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => release(e, false);
+
+    /**
+     * The system took a touch away (an edge gesture, a notification, palm
+     * rejection). Never listened for here before: the cancel only arrived by
+     * way of the pointerleave that follows it, as an ordinary lift.
+     */
+    const handlePointerCancel = (e: PointerEvent) => release(e, true);
 
     canvas.addEventListener("pointerdown",  handlePointerDown);
     canvas.addEventListener("pointermove",  handlePointerMove);
     canvas.addEventListener("pointerup",    handlePointerUp);
     canvas.addEventListener("pointerleave", handlePointerUp);
+    canvas.addEventListener("pointercancel", handlePointerCancel);
 
     return () => {
       clearHold();
@@ -607,6 +865,7 @@ export function useGameInput(
       canvas.removeEventListener("pointermove",  handlePointerMove);
       canvas.removeEventListener("pointerup",    handlePointerUp);
       canvas.removeEventListener("pointerleave", handlePointerUp);
+      canvas.removeEventListener("pointercancel", handlePointerCancel);
     };
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.

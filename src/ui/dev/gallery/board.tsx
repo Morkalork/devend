@@ -23,6 +23,7 @@ import { PairLinkBanner } from "../../game/PairLinkBanner";
 import { PairMismatchNotice } from "../../game/PairMismatchNotice";
 import { PairTurnOverlay } from "../../game/PairTurnOverlay";
 import { PerfOverlay } from "../../game/PerfOverlay";
+import { TouchTraceOverlay } from "../../game/TouchTraceOverlay";
 import { RubberBandOverlay, type BandTarget } from "../../game/RubberBandOverlay";
 import { ScreenFx } from "../../game/ScreenFx";
 import { WinGateFrame } from "../../game/WinGateFrame";
@@ -91,6 +92,17 @@ const toastsBase = (b: FakeBoard) => ({
   origin: b.origin, width: b.size.width, height: b.size.height, boardTopPct: b.boardTopPct, boardFrame: b.frame,
   chestToast: null, beatBanner: null, abilityIconFx: null, armedPrompt: null, bonusPulseKey: 0, screenFlash: "none" as const,
 });
+
+/** A grip that used to cancel the fence, now ignored, then the fence landing. */
+const TOUCH_TRACE_SAMPLE = [
+  "12.4 #3 down: swipe started at (212,388)",
+  "12.6 #4 down: second touch at the screen edge, ignored",
+  "13.1 #4 up: not the fence finger, ignored",
+  "13.2 #3 up: fence, 431 units",
+  "15.0 #5 down: swipe started at (640,702)",
+  "15.2 #6 down: takes the swipe from #5, which had not moved",
+  "15.9 #6 up: fence, 288 units",
+];
 
 export const entries: GalleryEntry[] = [
   { id: "BoardAlert", group: "board", render: () => (
@@ -164,6 +176,9 @@ export const entries: GalleryEntry[] = [
   ) },
   { id: "PerfOverlay", group: "board", render: () => (
     <Stage>{b => <PerfOverlay visible origin={b.origin} />}</Stage>
+  ) },
+  { id: "TouchTraceOverlay", group: "board", render: () => (
+    <Stage>{b => <TouchTraceOverlay visible origin={b.origin} height={b.size.height} lines={TOUCH_TRACE_SAMPLE} />}</Stage>
   ) },
   { id: "InteractiveTutorialOverlay", group: "board", render: () => (
     <Stage>{b => <InteractiveTutorialOverlay tutorialStep="showingHint" isPlayerDragging={false} {...b.canvas} origin={b.origin} />}</Stage>

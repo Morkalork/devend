@@ -62,7 +62,13 @@ export type GameMessageId =
   /** In a pair, it is the partner's turn: this player is watching (net/pairTurn.ts). */
   | "partnersTurn"
   /** In a pair, this turn's one fence is drawn; the next is the partner's. */
-  | "oneFenceATurn";
+  | "oneFenceATurn"
+  /**
+   * A second finger came down on the board and called off the fence being
+   * drawn. On purpose that is a cancel; by accident (a palm the grip test let
+   * through) it was the last silent way for a drawn fence to vanish.
+   */
+  | "secondFingerCancel";
 
 export interface GameMessage {
   id: GameMessageId;
@@ -129,6 +135,7 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   cutWouldBuryArea: true,
   partnersTurn: true,
   oneFenceATurn: true,
+  secondFingerCancel: true,
 };
 
 export const GAME_MESSAGE_IDS = Object.keys(ALL_MESSAGE_IDS) as GameMessageId[];

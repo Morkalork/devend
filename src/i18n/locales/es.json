@@ -1691,7 +1691,8 @@
     "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
     "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
     "partnersTurn": "Le toca a tu compañero. Mira su valla, la siguiente es tuya.",
-    "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida."
+    "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida.",
+    "secondFingerCancel": "Un segundo dedo tocó el tablero, así que esa valla se canceló. Dibuja con un solo dedo."
   },
   "mapFailure": {
     "title": "Mapa fallido",

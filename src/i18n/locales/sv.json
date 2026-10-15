@@ -1691,7 +1691,8 @@
     "cutWouldBurySlabs": "Det snittet hade satt det du fortfarande måste krossa utom räckhåll, så det gick inte igenom.",
     "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom.",
     "partnersTurn": "Det är din partners tur. Titta på deras staket, ditt är nästa.",
-    "oneFenceATurn": "Ett staket per tur. Din partner är på tur när det här är byggt."
+    "oneFenceATurn": "Ett staket per tur. Din partner är på tur när det här är byggt.",
+    "secondFingerCancel": "Ett andra finger rörde brädet, så det staketet avbröts. Rita med ett finger."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",

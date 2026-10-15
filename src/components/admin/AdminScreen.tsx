@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList, Hand } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
@@ -11,6 +11,7 @@ import {
   isSprintAlwaysOn, setSprintAlwaysOn,
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
+import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -35,6 +36,7 @@ interface AdminScreenProps {
 export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas, onPairLoopback, onNearbyDiagnostics }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
+  const [touchTrace, setTouchTrace] = useState(isTouchTraceEnabled);
   const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
@@ -297,6 +299,33 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="text-sm text-muted-foreground">
                 Pair through the server even when the phones could link directly, as on
                 public Wi-Fi. Set it on the phone that shows the code.
+              </div>
+            </div>
+          </button>
+
+          {/* What the board did with each touch, on the board itself. Built
+              for "she drew a perfect fence and nothing happened": on someone
+              else's phone there is no console, and this is the reason. */}
+          <button
+            onClick={() => { const next = !touchTrace; setTouchTraceEnabled(next); setTouchTrace(next); }}
+            aria-pressed={touchTrace}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              touchTrace ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${touchTrace ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Hand className={`w-6 h-6 ${touchTrace ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Touch trace{' '}
+                <span className={`text-xs ${touchTrace ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {touchTrace ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Lists what the board did with the last few touches, bottom left of the board:
+                started, refused and why, ignored as a grip, handed over, cancelled.
               </div>
             </div>
           </button>

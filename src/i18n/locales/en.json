@@ -1168,7 +1168,8 @@
     "cutWouldBurySlabs": "That cut would have put what you still need to break out of reach, so it did not land.",
     "cutWouldBuryArea": "That cut would have left no ball that can still get into the zone, so it did not land.",
     "partnersTurn": "It's your partner's turn. Watch their fence, yours is next.",
-    "oneFenceATurn": "One fence a turn. Your partner is up once this one is built."
+    "oneFenceATurn": "One fence a turn. Your partner is up once this one is built.",
+    "secondFingerCancel": "A second finger touched the board, so that fence was cancelled. Draw with one finger."
   },
   "mapFailure": {
     "title": "Map failed",

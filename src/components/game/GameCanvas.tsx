@@ -42,6 +42,8 @@ import { RubberBandOverlay, type BandTarget } from "@/ui/game/RubberBandOverlay"
 import type { BandShape } from "@/lib/rubberBand";
 import { drawPerfOverlay, recordSurface, isPerfHudEnabled, recordLoopHealth } from "@/lib/rendering/perfStats";
 import { PerfOverlay } from "@/ui/game/PerfOverlay";
+import { TouchTraceOverlay } from "@/ui/game/TouchTraceOverlay";
+import { isTouchTraceEnabled } from "@/lib/touchTrace";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent, DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 import { raiseMessage, type GameMessage, type GameMessageId } from "@/lib/gameMessages";
@@ -586,6 +588,7 @@ export function GameCanvas({
   // Read once per mount: flipped in the admin screen, which can only be reached
   // by leaving the game, so it cannot change mid-map.
   const [perfHudPersisted] = useState(isPerfHudEnabled);
+  const [touchTraceOn] = useState(isTouchTraceEnabled);
   const showPerfOverlayRef = useRef(showPerfOverlay);
   useEffect(() => { showPerfOverlayRef.current = showPerfOverlay; }, [showPerfOverlay]);
   // Keep the lock-rule config live on the game state (initGame also seeds it),
@@ -2670,6 +2673,8 @@ export function GameCanvas({
         {/* Frame-timing HUD, off the board's canvas so it costs the renderer
             nothing and can never land inside the render time it reports. */}
         <PerfOverlay visible={showPerfOverlay || perfHudPersisted} origin={origin} />
+        {/* Admin: what the input layer did with each touch (lib/touchTrace). */}
+        <TouchTraceOverlay visible={touchTraceOn} origin={origin} height={containerBox.height} />
         <BoardToasts
           origin={origin}
           width={containerBox.width}
