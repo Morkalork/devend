@@ -15,6 +15,7 @@ import {
 import { ArcadeButton } from "../kit/ui";
 import { BallSwatch, BugSwatch } from "./tutorialScreenParts";
 import { ballRoster, bugRoster, controlRows, lifeCycleSteps, tutorialSteps, type TutorialStep } from "./tutorialScreenModel";
+import { contentText } from "@/i18n/content";
 
 interface TutorialScreenProps {
   onBack: () => void;
@@ -107,9 +108,9 @@ export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: Tutorial
                       <BallSwatch color={ball.color} ability={ball.ability} size={48} />
                     </View>
                     <View layout={{ flex: 1, gap: 4 }}>
-                      <Label text={ball.name} size={TEXT.base} font="display" weight="600" wrap />
+                      <Label text={contentText.ballName(t, ball.id)} size={TEXT.base} font="display" weight="600" wrap />
                       <Label
-                        text={revealed ? ball.description : t("tutorial.ballTypes.notEncounteredYet")}
+                        text={revealed ? contentText.ballDesc(t, ball) : t("tutorial.ballTypes.notEncounteredYet")}
                         size={TEXT.sm} color={COLOR.mutedForeground} lineHeight={RELAXED} wrap
                         alpha={revealed ? 1 : 0.5}
                         layout={{ marginBottom: 4 }}
@@ -140,8 +141,8 @@ export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: Tutorial
                         <BugSwatch color={bug.color} size={40} />
                       </View>
                       <View layout={{ flex: 1, gap: 4 }}>
-                        <Label text={bug.name} size={TEXT.base} font="display" weight="600" color={color} wrap />
-                        <Label text={bug.description} size={TEXT.sm} color={COLOR.mutedForeground} lineHeight={RELAXED} wrap />
+                        <Label text={contentText.bugName(t, bug)} size={TEXT.base} font="display" weight="600" color={color} wrap />
+                        <Label text={contentText.bugDesc(t, bug)} size={TEXT.sm} color={COLOR.mutedForeground} lineHeight={RELAXED} wrap />
                         {/* The cost gets its own line and its own label, for the
                             reason the explainer card splits them: run the two
                             together and a pool of trade-offs reads as a pool of
@@ -149,7 +150,7 @@ export function TutorialScreen({ onBack, encounteredBallTypeIds = [] }: Tutorial
                         <View layout={{ flexDirection: "row", gap: 4 }}>
                           <Label text={t("tutorial.bugs.cost")} size={TEXT.sm} weight="600" color={COLOR.foreground} alpha={0.7} lineHeight={RELAXED} />
                           <View layout={{ flex: 1 }}>
-                            <Label text={bug.cost} size={TEXT.sm} color={COLOR.mutedForeground} alpha={0.8} lineHeight={RELAXED} wrap />
+                            <Label text={contentText.bugCost(t, bug)} size={TEXT.sm} color={COLOR.mutedForeground} alpha={0.8} lineHeight={RELAXED} wrap />
                           </View>
                         </View>
                         {bug.danger && (

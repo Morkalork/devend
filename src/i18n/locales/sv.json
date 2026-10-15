@@ -1234,6 +1234,350 @@
       "scrum_master_6": {
         "name": "SCRUM Master",
         "description": "Visa banförhandsvisning för alla bollar samtidigt."
+      },
+      "memory_footprint_principal_b": {
+        "name": "Minnesavtryck",
+        "description": "På banor med rörliga hinder är bollarna 5% mindre, och låströskeln vidgas med 8."
+      },
+      "fast_compile_principal_b": {
+        "name": "Snabb kompilering",
+        "description": "Inkrementellt bygge: staket startar 10% snabbare, +5% per färdigt staket på banan."
+      },
+      "hot_start_architect_b": {
+        "name": "Varmstart",
+        "description": "Från nivå 20: två direktstaket varje bana, och ett till kan växa samtidigt."
+      },
+      "padded_estimate_junior": {
+        "name": "Vadderad estimering",
+        "description": "Varje bana bedöms mot ett extra staket i par."
+      },
+      "padded_estimate_senior": {
+        "name": "Vadderad estimering",
+        "description": "Varje bana bedöms mot två extra staket i par."
+      },
+      "padded_estimate_principal": {
+        "name": "Vadderad estimering",
+        "description": "Sandbagging: +3 staket i par, 4 vid 4 andra Tempo-uppgraderingar."
+      },
+      "padded_estimate_principal_b": {
+        "name": "Vadderad estimering",
+        "description": "Överleverans: par stannar på två extra staket, men att slå par betalar dubbelt."
+      },
+      "fault_tolerance_architect_b": {
+        "name": "Feltolerans",
+        "description": "Så länge du har 2 liv eller färre: 4 staketsköldar varje bana."
+      },
+      "golden_parachute": {
+        "name": "Golden Parachute",
+        "description": "Börja varje omgång med en extra Fortsättning, och en till vid sex andra Säkerhet-uppgraderingar."
+      },
+      "performance_bonus_principal_b": {
+        "name": "Prestationsbonus",
+        "description": "Optioner: bara 5% mer övertid, men Ytbonusar betalar dubbelt."
+      },
+      "venture_capital_architect_b": {
+        "name": "Landningsbana",
+        "description": "Så länge du har 38h eller mer ger varje utgiftsblock 2 direktstaket."
+      },
+      "code_review": {
+        "name": "Kodgranskning",
+        "description": "En ficka upp till 3% över låsgränsen låser ändå in sin boll."
+      },
+      "severance_package_junior": {
+        "name": "Avgångsvederlag",
+        "description": "Varje lås ger 1 bonustimme, räknat under banans tak."
+      },
+      "severance_package_senior": {
+        "name": "Avgångsvederlag",
+        "description": "Låsta bollar ger nu 2 bonustimmar övertid var."
+      },
+      "severance_package_principal_a": {
+        "name": "Avgångsvederlag",
+        "description": "Golden Handshake: varje boll du låser in ger 3 bonustimmar övertid."
+      },
+      "severance_package_principal_b": {
+        "name": "Avgångsvederlag",
+        "description": "På banor med ett syntaxområde: +11 övertid för varje överlägset lås."
+      },
+      "knowledge_transfer_senior": {
+        "name": "Kunskapsöverföring",
+        "description": "Varje lås snabbar upp staketbygget 4% resten av banan."
+      },
+      "frozen_assets_senior": {
+        "name": "Frysta tillgångar",
+        "description": "Att låsa in en boll medan den är frusen ger dubbel låsbonus."
+      },
+      "frozen_assets_principal": {
+        "name": "Frysta tillgångar",
+        "description": "En frusen boll ger 3x låsbonus vid låsning. +0,25x per annan Lås-uppgradering (max 4)."
+      },
+      "frozen_assets_principal_b": {
+        "name": "Frysta tillgångar",
+        "description": "Kylförvaring: frusna lås betalar fortfarande dubbelt, och varje frysning varar 1s längre."
+      },
+      "free_fall_junior": {
+        "name": "Fritt fall",
+        "description": "Under gravitation, i en aktiv brunn eller på en gravitationsbana: lås betalar dubbelt."
+      },
+      "free_fall_senior": {
+        "name": "Fritt fall",
+        "description": "Gravitationslås betalar nu tredubbelt."
+      },
+      "free_fall_principal": {
+        "name": "Fritt fall",
+        "description": "Terminalhastighet: gravitationslås betalar 4x. +0,25x per annan Lås-uppgradering (max 4)."
+      },
+      "free_fall_principal_b": {
+        "name": "Fritt fall",
+        "description": "På banor med en gravitationsbrunn böjer dragningen din boll hälften så mycket."
+      },
+      "expense_account": {
+        "name": "Representationskonto",
+        "description": "Butikspriserna 10% lägre, och 3% lägre till per annan Bank-uppgradering (max 4)."
+      },
+      "war_chest": {
+        "name": "Krigskassa",
+        "description": "Bollarna startar 2% långsammare per 13h säkrade, upp till 8%. +0,5% per annan Bank-uppgradering (max 4)."
+      },
+      "budget_cycle_principal_a": {
+        "name": "Budgetcykel",
+        "description": "Balanserade vinstmedel: varje utgiftsblock gör nästa bana 5% erövrad från start."
+      },
+      "budget_cycle_principal_b": {
+        "name": "Budgetcykel",
+        "description": "Leveraged Buyout: utgifter räknas upp till 5 block per besök, i stället för 3."
+      },
+      "clean_release": {
+        "name": "Ren release",
+        "description": "Klara under par: nästa bana börjar med 1 direktstaket, 2 vid 4 andra Tempo-uppgraderingar."
+      },
+      "continuous_delivery": {
+        "name": "Continuous Delivery",
+        "description": "Varje staket du gör färdigt snabbar upp nästa med 4% resten av banan."
+      },
+      "deadline_extension_junior": {
+        "name": "Förlängd deadline",
+        "description": "Varje Ship Early-bonusfönster varar 2s längre per boll på banan."
+      },
+      "deadline_extension_senior": {
+        "name": "Förlängd deadline",
+        "description": "Ship Early-fönstren varar nu 4s längre per boll."
+      },
+      "deadline_extension_principal": {
+        "name": "Förlängd deadline",
+        "description": "Ship Early-fönstren varar nu 6s längre per boll."
+      },
+      "deadline_extension_principal_b": {
+        "name": "Förlängd deadline",
+        "description": "På banor med 3+ bollar: +1s per boll på Ship Early-fönstren, och 2,2x Tempo."
+      },
+      "moonshot": {
+        "name": "Moonshot",
+        "description": "Pressutbetalningarna är 25% större."
+      },
+      "risk_appetite": {
+        "name": "Riskaptit",
+        "description": "Pressutbetalningarna är 50% större."
+      },
+      "tech_evangelist": {
+        "name": "Teknikevangelist",
+        "description": "Ytbonusar betalar dubbelt. +8% per annan Risk-uppgradering (max 5)."
+      },
+      "procurement_principal_b": {
+        "name": "Inköp",
+        "description": "Mängdrabatt: ingen påfyllning, men ett erbjudande till och det billigaste är gratis."
+      },
+      "talent_scout": {
+        "name": "Talangscout",
+        "description": "Butiken erbjuder två förmågor att välja mellan i stället för en."
+      },
+      "open_source_contribution": {
+        "name": "Open source-bidrag",
+        "description": "Inga förmågor till salu, men varje öppen butik ger dig en slumpmässig gratis."
+      },
+      "technical_debt_architect_b": {
+        "name": "Teknisk skuld",
+        "description": "Så länge du är på ditt sista liv: 2,6x Tempo-utbetalning, och bollarna 15% större."
+      },
+      "defensive_programming_architect_a": {
+        "name": "Defensiv programmering",
+        "description": "Bunker: två sköldar till vid varje banstart."
+      },
+      "defensive_programming_architect_b": {
+        "name": "Defensiv programmering",
+        "description": "Nanobotar: på banor med 3 eller fler bollar är bollarna 25% mindre."
+      },
+      "scrum_master_6_b": {
+        "name": "SCRUM Master",
+        "description": "Deep Dive: 3 studsar till förutsägs. +1 per 4 andra Säkerhet-uppgraderingar (max 8)."
+      },
+      "bug_squash_junior": {
+        "name": "Buggkross",
+        "description": "Varje väggträff har 5% chans att mosa bollen platt och klistra fast den i 2s."
+      },
+      "bug_squash_senior": {
+        "name": "Buggkross",
+        "description": "Chansen att mosa stiger till 8%, och en fastklistrad boll sitter kvar i 3s."
+      },
+      "bug_squash_principal_a": {
+        "name": "Buggkross",
+        "description": "Splat Rate: chansen att mosa stiger till 12%, och en fastklistrad boll sitter kvar i 3,5s."
+      },
+      "bug_squash_principal_b": {
+        "name": "Buggkross",
+        "description": "Klibbigt läge: chansen stannar på 8%, men en fastklistrad boll sitter kvar i 6s."
+      },
+      "cold_boot": {
+        "name": "Kallstart",
+        "description": "Varje bana börjar frusen i 2s, varje boll pekar dit den ska. +0,25s per annan frysning (max 4)."
+      },
+      "feature_freeze_junior": {
+        "name": "Feature Freeze",
+        "description": "Tryck på en boll för att frysa den i 1s. En frysning per bana."
+      },
+      "feature_freeze_senior": {
+        "name": "Feature Freeze",
+        "description": "Din frysning håller nu en boll i 2s."
+      },
+      "feature_freeze_principal_a": {
+        "name": "Feature Freeze",
+        "description": "Snabbfrys: två frysningar per bana, 1s var."
+      },
+      "feature_freeze_principal_b": {
+        "name": "Feature Freeze",
+        "description": "Djupfrys: en frysning per bana, som håller i 3s."
+      },
+      "control_freak_junior": {
+        "name": "Kontrollfreak",
+        "description": "Håll in ett rörligt objekt för att stoppa det där det är."
+      },
+      "control_freak_senior": {
+        "name": "Kontrollfreak",
+        "description": "Dra ett fasthållet objekt längs sitt eget spår, lika fort som det patrullerar."
+      },
+      "control_freak_principal_a": {
+        "name": "Kontrollfreak",
+        "description": "Urspårning: håll ett objekt mot slutet av sitt spår för att krossa det. En gång per bana."
+      },
+      "control_freak_principal_b": {
+        "name": "Kontrollfreak",
+        "description": "Studsare: ett fasthållet objekt är fjäderladdat. Dra bakåt, släpp, och det slungar det det träffar."
+      },
+      "cascade_freeze_junior": {
+        "name": "Kaskadfrysning",
+        "description": "Ett enda frystryck fryser nu de 2 närmaste bollarna."
+      },
+      "cascade_freeze_senior": {
+        "name": "Kaskadfrysning",
+        "description": "Ett enda frystryck fryser nu de 3 närmaste bollarna."
+      },
+      "cascade_freeze_principal": {
+        "name": "Kaskadfrysning",
+        "description": "Frystryck håller bollarna 2s längre. +0,5s per annan Frysning-uppgradering (max 4)."
+      },
+      "cascade_freeze_principal_b": {
+        "name": "Kaskadfrysning",
+        "description": "Rullande strömavbrott: frysningarna är lika långa, men du får två tryck till per bana."
+      },
+      "cron_job_architect_b": {
+        "name": "Schemalagt jobb",
+        "description": "Watchdog-timer: schemalagda frysningar håller 4s, och varje boll fryses kort när den dyker upp."
+      },
+      "benefits_package_principal_b": {
+        "name": "Förmånspaket",
+        "description": "Friskvårdsprogram: symbolerna bara lite vanligare, men du får ett extra liv."
+      },
+      "total_compensation_principal_b": {
+        "name": "Totalersättning",
+        "description": "Vinstdelning: förmånerna stannar en nivå lägre, men symbolerna dyker upp mycket oftare."
+      },
+      "breaking_change_junior": {
+        "name": "Breaking Change",
+        "description": "Förstörbara objekt går sönder på en träff mindre."
+      },
+      "breaking_change_senior": {
+        "name": "Breaking Change",
+        "description": "Förstörbara objekt kräver en träff mindre till, så de flesta går sönder vid första rejäla kontakt."
+      },
+      "breaking_change_principal": {
+        "name": "Breaking Change",
+        "description": "Avskrivning: varje objekt du krossar ökar rivningsutbetalningen med 30%, inte 15%."
+      },
+      "breaking_change_principal_b": {
+        "name": "Breaking Change",
+        "description": "På banor med krossbart kostar krossande ingen låsmultiplikator, och varje kross betalar 15% mer."
+      },
+      "ghost_protocol_junior": {
+        "name": "Ghost Protocol",
+        "description": "Ett nytt staket passerar genom bollar under sina första 0,1s av växandet."
+      },
+      "ghost_protocol_senior": {
+        "name": "Ghost Protocol",
+        "description": "Dina staket passerar nu genom bollar under sina första 0,15s."
+      },
+      "ghost_protocol_principal_a": {
+        "name": "Ghost Protocol",
+        "description": "Dina staket passerar nu genom bollar under sina första 0,2s."
+      },
+      "ghost_protocol_principal_b": {
+        "name": "Ghost Protocol",
+        "description": "På banor med 3+ bollar passerar staket genom bollar i 0,25s. Annars 0,15s."
+      },
+      "onboarding_junior": {
+        "name": "Onboarding",
+        "description": "Varje bana börjar med 8% av brädet redan erövrat."
+      },
+      "onboarding_senior": {
+        "name": "Onboarding",
+        "description": "Börja med 12% av brädet erövrat i stället för 8%."
+      },
+      "onboarding_principal_a": {
+        "name": "Onboarding",
+        "description": "Ingen provanställning: börja med 16% av brädet erövrat i stället för 12%."
+      },
+      "onboarding_principal_b": {
+        "name": "Onboarding",
+        "description": "Snabbspår: 13% erövrat, och 1% till per 2 andra Tempo-uppgraderingar (max 5)."
+      },
+      "load_balancer_senior": {
+        "name": "Lastbalanserare",
+        "description": "Banans snabbaste boll rör sig 10% långsammare. Bara den."
+      },
+      "load_balancer_principal": {
+        "name": "Lastbalanserare",
+        "description": "Den snabbaste bollen saktas ner 15% i stället för 10%."
+      },
+      "load_balancer_architect_a": {
+        "name": "Lastbalanserare",
+        "description": "Round Robin: den snabbaste bollen saktas ner 20% i stället för 15%."
+      },
+      "load_balancer_architect_b": {
+        "name": "Lastbalanserare",
+        "description": "Autoskalning: 16%, och 1% till per 2 andra Säkerhet-uppgraderingar (max 4)."
+      },
+      "cold_storage_ice": {
+        "name": "Kylförvaring",
+        "description": "Ger Is-staketet: bollar som studsar mot det tappar fart. Det byggs 30% långsammare."
+      },
+      "rolling_redeploy": {
+        "name": "Rolling Redeploy",
+        "description": "Ger Redeploy-staketet: grip det en gång och slunga bollarna framför det. Byggs 40% långsammare."
+      },
+      "incident_flare": {
+        "name": "Incidentbloss",
+        "description": "Ger Bloss-staketet: bollar som studsar mot det får upp farten. Det byggs 30% långsammare."
+      },
+      "acquire_the_mutex": {
+        "name": "Ta mutexen",
+        "description": "Ger Mutex-staketet: låser en ficka bara med en boll i, och betalar extra när det gör det."
+      },
+      "raise_the_semaphore": {
+        "name": "Hissa semaforen",
+        "description": "Ger Semafor-staketet: låser bara två eller fler bollar på en gång, och betalar över banans tak."
+      },
+      "hotfix_tripwire": {
+        "name": "Hotfix-snubbeltråd",
+        "description": "Ger Snubbeltråd-staketet: byggs 40% snabbare, och första bollen som nuddar det har sönder det."
       }
     },
     "tiers": {
@@ -1307,6 +1651,18 @@
       "risk-assessment-certified": {
         "name": "Riskbedömningscertifierad",
         "description": "Push-Your-Luck-bonusar betalar ut mer. Granskat, stämplat och garanterat."
+      },
+      "signing-bonus": {
+        "name": "Påskrivningsbonus",
+        "description": "Börja varje omgång med övertidstimmar redan säkrade."
+      },
+      "corporate-card": {
+        "name": "Företagskort",
+        "description": "Butiken säljer till dig hur få bollar du än har låst in."
+      },
+      "demolition-certified": {
+        "name": "Rivningscertifierad",
+        "description": "Lägger till Borr-staketet i varje omgång. Det kan förankras i något krossbart och äter sig igenom det."
       }
     },
     "achievements": {
@@ -1529,6 +1885,311 @@
         "name": "Arkitekturgranskning",
         "description": "Rita ett böjt snitt. Ett stängsel behåller upp till två hörn av linjen du ritade, och bara dess två lösa ändar projiceras mot väggarna.",
         "priceText": "Stängsel växer 25% långsammare hela omgången."
+      }
+    },
+    "abilities": {
+      "freezeAll": {
+        "name": "Frys alla",
+        "description": "Fryser alla bollar på banan på stället i några sekunder.",
+        "howTo": "Tryck för att frysa alla bollar och snitta sedan fritt medan de står still."
+      },
+      "slowAll": {
+        "name": "Sakta ner alla",
+        "description": "Saktar ner alla bollar i några sekunder så att de blir lättare att fånga.",
+        "howTo": "Tryck för att sakta ner alla bollar och lägg sedan dina snitt."
+      },
+      "slowArea": {
+        "name": "Långsam yta",
+        "description": "Markerar en yta där bollarna rör sig i halv fart, resten av banan.",
+        "howTo": "Tryck för att aktivera och tryck sedan på planen för att lägga ut den. Lägg den där du vill låsa, inte där bollarna är."
+      },
+      "descope": {
+        "name": "Descope",
+        "description": "Raderar ett hinder för gott och gör det till yta du kan erövra.",
+        "howTo": "Tryck för att aktivera och tryck sedan på hindret. Mål och skattkistor kan inte descopas."
+      },
+      "clearFences": {
+        "name": "Riv staketen",
+        "description": "Krossar alla staket som inte stänger ett lås och öppnar ytan igen. Låsta fickor står kvar.",
+        "howTo": "Tryck när en bana glider dig ur händerna. Staket som håller dina lås står kvar."
+      },
+      "magnet": {
+        "name": "Magnet",
+        "description": "Drar alla bollar mot en punkt du väljer.",
+        "howTo": "Tryck för att aktivera och tryck sedan på planen där du vill dra bollarna."
+      },
+      "shockwave": {
+        "name": "Chockvåg",
+        "description": "Slungar alla bollar utåt från mitten. Kommer tillbaka varje bana.",
+        "howTo": "Tryck för att skjuta isär bollarna och frigöra yta. Du börjar alltid en bana med en."
+      },
+      "rubberBand": {
+        "name": "Gummiband",
+        "description": "Slungar iväg bollarna det fångar och krossar det det träffar.",
+        "howTo": "Aktivera, dra på planen och släpp. Dra längre för hårdare kast; ett fullt drag krossar det det fångar."
+      },
+      "fenceOverclock": {
+        "name": "Staket-overclock",
+        "description": "Dina staket byggs nästan direkt i några sekunder.",
+        "howTo": "Tryck och rita snitt snabbt medan det varar (perfekt efter en frysning)."
+      },
+      "fenceShield": {
+        "name": "Staketsköld",
+        "description": "Ditt växande staket ignorerar bollträffar i några sekunder.",
+        "howTo": "Tryck och rita ett snitt genom ett livligt område utan att det går sönder."
+      }
+    },
+    "balls": {
+      "red": {
+        "name": "Röd",
+        "description": "En vanlig boll. Inget speciellt beteende."
+      },
+      "blue": {
+        "name": "Blå",
+        "description": "En vanlig boll, en aning snabbare än den röda."
+      },
+      "yellow": {
+        "name": "Gul",
+        "description": "Varierande fart: varje yta den nuddar ändrar farten mellan 200 och 400."
+      },
+      "purple": {
+        "name": "Lila",
+        "description": "Suger fart: varje boll den träffar tappar fart, ner till sitt minimum."
+      },
+      "green": {
+        "name": "Grön",
+        "description": "Pengaboll: lås in den så tredubblas varje senare lås den här rundan."
+      },
+      "grey": {
+        "name": "Grå",
+        "description": "Varvar ner: tappar 10 i fart var 5:e sekund, ner till sitt minimum."
+      },
+      "compass": {
+        "name": "Kompass",
+        "description": "Svänger ett kvarts varv med några sekunders mellanrum. Ringen räknar ner och lutar åt det håll den svänger."
+      },
+      "lodestone": {
+        "name": "Magnetsten",
+        "description": "Drar andra bollar till sig: samla dem för ett flerlås, eller förlora fickan du höll ren."
+      },
+      "black": {
+        "name": "Svart",
+        "description": "Rivningskula: krossar hinder och spräcker dina egna staket på tre träffar."
+      },
+      "rainbow": {
+        "name": "Regnbåge",
+        "description": "Prismaboll: snabb och instabil. Spottar ut en ny boll var 10:e sekund."
+      },
+      "white": {
+        "name": "Vit",
+        "description": "Tryck på den för att kasta den utan utdelning, eller lås in den för spelets största bonus."
+      }
+    },
+    "bugs": {
+      "bitRot": {
+        "name": "Bitröta",
+        "description": "Saktar ner bollen som mosar den, resten av banan.",
+        "cost": "En långsam boll är lätt att stängsla in och en dålig slägga: skadan ökar med farten, så en långsammare boll tar mycket längre tid på sig att krossa något."
+      },
+      "caffeine": {
+        "name": "Koffein",
+        "description": "Gör bollen hälften så snabb till, och den betalar hälften så mycket till när du väl låser in den.",
+        "cost": "En snabb boll är det svåraste att fånga på brädet, och den kommer att vara lös länge."
+      },
+      "deadlock": {
+        "name": "Deadlock",
+        "description": "Håller den mosande bollen stilla i några sekunder, precis som en tryckfrysning. Stängsla runt den medan den väntar.",
+        "cost": "En boll som står still krossar ingenting, och klockan stannar inte med den."
+      },
+      "featureBloat": {
+        "name": "Feature Bloat",
+        "description": "Gör bollen hälften så stor till eller mer, och låset betalar exakt så mycket mer som den växte.",
+        "cost": "En större boll kräver en större ficka, så varje stängning härifrån blir svårare att rita."
+      },
+      "branch": {
+        "name": "Branch",
+        "description": "Delar den mosande bollen i två. Båda är av samma typ, och båda betalar ett lås.",
+        "cost": "Två bollar att fånga där det var en, på ett bräde du redan hade fullt upp med."
+      },
+      "autoMerge": {
+        "name": "Auto Merge",
+        "description": "Ett staket sluter sig i en ring runt bollen där den står och låser in den. Det kostar inget staket och inget par.",
+        "cost": "En rund, öppen ficka är den sämst betalda stängningen som finns, och bollen den tar bort var en av dina släggor."
+      },
+      "bigBang": {
+        "name": "Big Bang Release",
+        "description": "Gör det Auto Merge gör, med alla fria bollar på en gång. Den kan avsluta en bana på stället.",
+        "cost": "Den kan också sänka en: när alla bollar är borta når du inte det banan fortfarande vill ha krossat. Kör inte över den här medan ett krossvillkor återstår."
+      },
+      "forcePush": {
+        "name": "Force Push",
+        "description": "Tredubbel skada i några sekunder: tegel och plattor går på en träff.",
+        "cost": "Den spräcker dina egna staket vid kontakt, som den svarta bollen. Bollen som äntligen öppnar väggen river fickan du ritade åt den."
+      },
+      "allHands": {
+        "name": "All Hands",
+        "description": "Den mosande bollen drar alla andra bollar mot sig i några sekunder.",
+        "cost": "Den samlar brädet på ett ställe, vilket förstör all separation du lagt staket på att bygga."
+      }
+    },
+    "fences": {
+      "standard": {
+        "name": "Standard",
+        "description": "Det vanliga staketet. Byggs snabbast och kostar ingenting.",
+        "howTo": "Alltid tillgängligt. Dra för att snitta."
+      },
+      "ice": {
+        "name": "Is",
+        "description": "Bollar som studsar mot det tappar fart, ner till sitt golv.",
+        "howTo": "Bygg det där bollarna studsar mest. Det växer långsammare, så välj ditt ögonblick."
+      },
+      "flare": {
+        "name": "Bloss",
+        "description": "Bollar som studsar mot det får upp farten. Snabbare bollar är värda mer, och farligare.",
+        "howTo": "Lägg det där du vill ha fart på en boll, och håll dig ur vägen."
+      },
+      "redeploy": {
+        "name": "Redeploy",
+        "description": "Ett färdigt staket är en slangbella, en gång: dra tillbaka, sikta, så slungar det bollarna framför sig.",
+        "howTo": "Bygg det tvärs över en fil, tryck sedan på det och dra bakåt. Det som fångas flyger iväg i upp till 3x fart."
+      },
+      "guardrail": {
+        "name": "Guardrail",
+        "description": "Kommer med en sköld: första gången en boll skär igenom ett växande Guardrail förlorar du staketet, inte ett liv. En gång per bana.",
+        "howTo": "Använd det för det riskabla snittet. När skölden är förbrukad är det ett långsammare Standard tills nästa bana."
+      },
+      "mutex": {
+        "name": "Mutex",
+        "description": "Låser en ficka bara när exakt en boll är i den, och varje sådant lås betalar lite extra.",
+        "howTo": "Stäng dem en i taget. Små fickor, korta snitt, stadig betalning."
+      },
+      "semaphore": {
+        "name": "Semafor",
+        "description": "Låser en ficka bara när två eller fler bollar är i den, och betalar rejält för dem som är det.",
+        "howTo": "Valla ihop två bollar innan du snittar. Fyra på en gång är hela banan i en stängning."
+      },
+      "tripwire": {
+        "name": "Snubbeltråd",
+        "description": "Byggs mycket snabbare, och första bollen som nuddar det har sönder det.",
+        "howTo": "För ett snitt du behöver klart NU, i en fil som inget är på väg att korsa."
+      },
+      "drill": {
+        "name": "Borr",
+        "description": "Det enda staketet som får förankras i något krossbart. Det tuggar sig igenom det det nuddar.",
+        "howTo": "Börja snittet PÅ en platta. Det äter sig igenom och fortsätter sedan till nästa vägg."
+      }
+    },
+    "capstones": {
+      "stock_options": {
+        "name": "Optioner",
+        "description": "Övertidstaket per bana höjs med 5h resten av omgången. Stora multiplikatorbyggen betalar äntligen.",
+        "clarify": "Övertiden har ett tak per bana, så multiplikatorer över taket går till spillo. Detta höjer taket med 5h varje bana. Värdelöst i ett bygge med låg multiplikator, avgörande i ett staplat."
+      },
+      "company_card": {
+        "name": "Företagskort",
+        "description": "Det billigaste erbjudandet i varje butik är gratis.",
+        "clarify": "Den billigaste uppgraderingen i varje butik är gratis. Över en omgång sparar det mycket övertid till de dyra valen. Bäst om du handlar varje nivå."
+      },
+      "second_wind": {
+        "name": "Andra andning",
+        "description": "En gång per bana överlever ett staket en bollträff utan att kosta ett liv.",
+        "clarify": "Varje bana börjar med en staketsköld: första bollen som skulle krossa ett växande staket fångas upp, inget liv förloras. Fylls på varje bana."
+      },
+      "cryo_protocol": {
+        "name": "Kryoprotokoll",
+        "description": "Power-up-symboler fryser till och går aldrig ut, utan väntar på brädet tills du tar dem.",
+        "clarify": "Power-up-symboler ises över och slutar gå ut, så du kan förbereda den perfekta stängningen i stället för att tävla mot klockan."
+      },
+      "golden_handshake": {
+        "name": "Golden Handshake",
+        "description": "Varje låst boll ger +1 övertid och räknas som en boll större för fångstmultiplikatorn.",
+        "clarify": "Två låsbelöningar samtidigt: +1 övertid per lås, och varje lås räknas en boll större för flerfångstmultiplikatorn. Rullar på som en snöboll på banor med flerlås."
+      }
+    },
+    "mapMutators": {
+      "crunch": {
+        "name": "Slutspurt",
+        "description": "Allt går snabbare för varje boll du låser in.",
+        "clarify": "Varje lås gör bollar och hinder lite snabbare, upp till ett tak. Att låsa lönar sig, men höjer tempot."
+      },
+      "overclock": {
+        "name": "Overclock",
+        "description": "Hela brädet går varmt. Bollar och rörliga hinder är snabbare hela banan.",
+        "clarify": "En jämn fartökning för hela banan, från första sekunden."
+      },
+      "tipping": {
+        "name": "Full gravitation",
+        "description": "Allt på brädet faller. Var 10:e sekund vrids dragningen ett kvarts varv, och bollarna faller åt det nya hållet.",
+        "clarify": "Stapeln längst upp räknar ner till varje vridning, och den bärnstensfärgade kanten visar vart dragningen går härnäst. Färdiga staket är säkra; din plan är det inte."
+      }
+    },
+    "mapObjectives": {
+      "lockdown": {
+        "name": "Lockdown",
+        "description": "Lås in minst 2 bollar på banan.",
+        "clarify": "Stäng in 2 bollar i fickor innan du rensar. Ger en bonus utöver den vanliga låsövertiden."
+      },
+      "vault": {
+        "name": "Valvet",
+        "description": "Lås in minst 4 bollar på banan.",
+        "clarify": "Ett girigt mål: fånga 4 bollar innan du rensar. Stor bonus, men det kräver ordentligt fickarbete."
+      },
+      "precision": {
+        "name": "Precision",
+        "description": "Klara ett överlägset lås (en trång ficka).",
+        "clarify": "Lås in en boll i en tajt ficka som räknas som överlägsen. Tränar låsförmågan."
+      },
+      "surgical": {
+        "name": "Kirurgisk",
+        "description": "Klara 2 överlägsna lås på banan.",
+        "clarify": "Två lås i trånga fickor på en bana. Precision under press."
+      },
+      "under-budget": {
+        "name": "Under budget",
+        "description": "Rensa på eller under parantalet snitt.",
+        "clarify": "Avsluta banan utan fler snitt än par. Effektivt spel lönar sig."
+      },
+      "speed-run": {
+        "name": "Speedrun",
+        "description": "Rensa banan inom 35 sekunders spel.",
+        "clarify": "Slå klockan: uppfyll rensningsvillkoret inom 35 aktiva sekunder. Pauser räknas inte."
+      },
+      "defeat-rc": {
+        "name": "Besegra Release Candidate",
+        "description": "Stängsla in bossen i syntaxområdet för att leverera den.",
+        "clarify": "Fånga Release Candidate i det ljusa syntaxområdet för att besegra den. Fångar du den utanför området misslyckas banan (du förlorar ett liv och banan börjar om). Att tiden tar slut misslyckas också."
+      }
+    },
+    "tagSets": {
+      "lock": {
+        "name": "Kedjereaktion",
+        "description": "Varje lås räknas som en boll större för multiplikatorn för samtidiga fångster."
+      },
+      "freeze": {
+        "name": "Absoluta nollpunkten",
+        "description": "Frusna bollar kan frysas igen direkt, ingen nedkylning."
+      },
+      "bank": {
+        "name": "Ramavtal",
+        "description": "Alla butikspriser sjunker med 10%."
+      },
+      "tempo": {
+        "name": "Ship It",
+        "description": "Dra ett staket till samtidigt."
+      },
+      "risk": {
+        "name": "Dubbelt eller kvitt",
+        "description": "Pressutbetalningarna fördubblas."
+      },
+      "safety": {
+        "name": "Försäkring",
+        "description": "Få 1 extra Fortsättning."
+      }
+    },
+    "bosses": {
+      "level-10": {
+        "name": "Release-deadline",
+        "intro": "Din första boss. Release Candidate är lös: en stor, snabb boll, med scope creep på full gas från första sekunden. Att rensa brädet räcker inte: stängsla in den i det ljusa syntaxområdet (uppe till höger) för att leverera den. Fångar du den någon annanstans förlorar du ett liv. Slå deadlinen."
       }
     }
   },

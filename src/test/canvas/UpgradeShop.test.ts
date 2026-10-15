@@ -148,7 +148,7 @@ describe("the ability slot (upgradeShopAbilitySlot)", () => {
 
   it("announces the ability the free grant handed over", () => {
     expect(t("upgradeShop.freeAbilityGranted", { name: "Freeze All" })).toMatch(/Freeze All added to your bar/);
-    expect(SHOP).toMatch(/freeAbilityGranted", \{ name: freeGrant\?\.name \?\? freeAbilityGrant \}/);
+    expect(SHOP).toMatch(/freeAbilityGranted", \{ name: freeGrant \? contentText\.abilityName\(t, freeGrant\) : freeAbilityGrant \}/);
   });
 
   it("offers two to choose between when Talent Scout is owned", () => {

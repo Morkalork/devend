@@ -182,13 +182,15 @@ describe("the three explanations cannot drift", () => {
     const tutorial = read("src/ui/screens/TutorialScreen.tsx");
     const fx = read("src/lib/rendering/sleek/fxLayer.ts");
     expect(modal).toContain("getBug(");
-    expect(modal).toMatch(/bug\.description/);
-    expect(modal).toMatch(/bug\.cost/);
+    // Through contentText, which keys the translation on the bug id and
+    // falls back to the catalogue's own copy.
+    expect(modal).toMatch(/contentText\.bugDesc\(t, bug\)/);
+    expect(modal).toMatch(/contentText\.bugCost\(t, bug\)/);
     expect(tutorial).toContain("getAllBugs()");
-    expect(tutorial).toMatch(/bug\.description/);
-    expect(tutorial).toMatch(/bug\.cost/);
+    expect(tutorial).toMatch(/contentText\.bugDesc\(t, bug\)/);
+    expect(tutorial).toMatch(/contentText\.bugCost\(t, bug\)/);
     // The splat's label is the catalogue's name, not a lookup table beside it.
-    expect(fx).toMatch(/drawSplatName\(def\.name/);
+    expect(fx).toMatch(/drawSplatName\(contentText\.bugName\(i18next\.t, def\)/);
   });
 
   it("has its framing strings in every locale", () => {

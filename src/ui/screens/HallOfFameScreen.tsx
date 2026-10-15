@@ -12,6 +12,7 @@
  */
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { contentText } from "@/i18n/content";
 import { Medal, ArrowLeft, Award, CalendarDays, Flame } from "lucide-react";
 import type { RunLedgerEntry } from "@/types/hallOfFame";
 import type { MetaProgressionStats } from "@/types/metaProgression";
@@ -213,7 +214,7 @@ function HallLadderRow({ run, rank, lang }: { run: RunLedgerEntry; rank: number;
         {!!run.capstoneName && (
           <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <Icon icon={Award} size={12} color={COLOR.primary} />
-            <Label text={run.capstoneName} size={TEXT.xs} color={COLOR.mutedForeground} />
+            <Label text={run.capstoneId ? contentText.capstoneName(t, { id: run.capstoneId, name: run.capstoneName }) : run.capstoneName} size={TEXT.xs} color={COLOR.mutedForeground} />
           </View>
         )}
       </View>

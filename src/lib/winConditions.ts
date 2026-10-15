@@ -38,7 +38,7 @@ import { evaluateWinCondition, resolveWinSpec, type RunWinRules } from "@/lib/wi
 import type { WinSnapshot } from "@/types/winSpec";
 import type { MapFailKind } from "@/lib/mapFailure";
 import type { WinCondition } from "@/types/winSpec";
-import { getBallType } from "@/lib/ballTypes";
+import { contentText } from "@/i18n/content";
 
 /**
  * The clauses of a map's win conditions, plus whether any of them says
@@ -55,8 +55,8 @@ import { getBallType } from "@/lib/ballTypes";
  */
 /** A ball type's display name, falling back to its id for an unknown one so a
  *  typo in an authored win reads as the typo rather than as nothing. */
-function ballName(id: string): string {
-  return getBallType(id)?.name ?? id;
+function ballName(t: TFunction, id: string): string {
+  return contentText.ballName(t, id) || id;
 }
 
 /**
@@ -181,7 +181,7 @@ function winConditionParts(
       }
       case "lockType":
         must(t("winConditions.lockType", {
-          count: c.count, ball: ballName(c.ballType),
+          count: c.count, ball: ballName(t, c.ballType),
         }), clause(c));
         break;
       case "splitLocks":
@@ -333,7 +333,7 @@ export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): s
     case "superiorLocks": return t("winConditions.shortSuperior", { count: c.count });
     case "area": return t("winConditions.shortArea", { count: c.count });
     case "lockType": return t("winConditions.shortLockType", {
-      count: c.count, ball: ballName(c.ballType) });
+      count: c.count, ball: ballName(t, c.ballType) });
     case "splitLocks": return t(c.axis === "horizontal"
       ? "winConditions.shortSplitLocksHorizontal"
       : "winConditions.shortSplitLocks", { count: c.count });

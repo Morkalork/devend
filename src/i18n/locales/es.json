@@ -1234,6 +1234,350 @@
       "defensive_programming_principal": {
         "name": "Programación Defensiva",
         "description": "Reduce todas las bolas un 8% adicional."
+      },
+      "memory_footprint_principal_b": {
+        "name": "Huella de Memoria",
+        "description": "En mapas con un obstáculo móvil, bolas un 5% más pequeñas y el umbral de encierro se amplía 8."
+      },
+      "fast_compile_principal_b": {
+        "name": "Compilación Rápida",
+        "description": "Compilación Incremental: vallas un 10% más rápidas, +5% por valla terminada en este mapa."
+      },
+      "hot_start_architect_b": {
+        "name": "Arranque en Caliente",
+        "description": "Desde el nivel 20: dos vallas instantáneas por mapa, y una más creciendo a la vez."
+      },
+      "padded_estimate_junior": {
+        "name": "Estimación Inflada",
+        "description": "Cada mapa se puntúa con una valla extra de par."
+      },
+      "padded_estimate_senior": {
+        "name": "Estimación Inflada",
+        "description": "Cada mapa se puntúa con dos vallas extra de par."
+      },
+      "padded_estimate_principal": {
+        "name": "Estimación Inflada",
+        "description": "Sandbagging: +3 vallas de par, 4 con 4 mejoras de Ritmo más."
+      },
+      "padded_estimate_principal_b": {
+        "name": "Estimación Inflada",
+        "description": "Sobreentrega: el par sigue en dos vallas extra, pero batirlo paga el doble."
+      },
+      "fault_tolerance_architect_b": {
+        "name": "Tolerancia a Fallos",
+        "description": "Mientras te queden 2 vidas o menos, 4 escudos de valla cada mapa."
+      },
+      "golden_parachute": {
+        "name": "Paracaídas Dorado",
+        "description": "Empieza cada partida con una Continuación extra, y otra con seis mejoras de Seguridad más."
+      },
+      "performance_bonus_principal_b": {
+        "name": "Bonificación por Rendimiento",
+        "description": "Stock Options: solo un 5% más de horas extra, pero el Bono de Espacio paga el doble."
+      },
+      "venture_capital_architect_b": {
+        "name": "Pista de Despegue",
+        "description": "Mientras tengas 38h o más, cada bloque de gasto da 2 vallas instantáneas."
+      },
+      "code_review": {
+        "name": "Revisión de Código",
+        "description": "Un hueco hasta un 3% por encima del límite de encierro aún encierra su bola."
+      },
+      "severance_package_junior": {
+        "name": "Indemnización",
+        "description": "Cada encierro paga 1 hora de bono, dentro del tope del mapa."
+      },
+      "severance_package_senior": {
+        "name": "Indemnización",
+        "description": "Las bolas encerradas ahora pagan 2 horas extra de bono cada una."
+      },
+      "severance_package_principal_a": {
+        "name": "Indemnización",
+        "description": "Apretón de Oro: cada bola que encierras paga 3 horas extra de bono."
+      },
+      "severance_package_principal_b": {
+        "name": "Indemnización",
+        "description": "En mapas con área de resaltado de sintaxis, +11 horas extra por cada Encierro Superior."
+      },
+      "knowledge_transfer_senior": {
+        "name": "Transferencia de Conocimiento",
+        "description": "Cada encierro acelera un 4% la generación de vallas el resto del mapa."
+      },
+      "frozen_assets_senior": {
+        "name": "Activos Congelados",
+        "description": "Encerrar una bola mientras está congelada paga el doble del bono de encierro."
+      },
+      "frozen_assets_principal": {
+        "name": "Activos Congelados",
+        "description": "Encerrar una bola congelada paga 3x el bono. +0,25x por cada otra mejora de Bloqueo (máx. 4)."
+      },
+      "frozen_assets_principal_b": {
+        "name": "Activos Congelados",
+        "description": "Almacén Frío: los encierros congelados siguen pagando el doble, y cada congelación dura 1s más."
+      },
+      "free_fall_junior": {
+        "name": "Caída Libre",
+        "description": "Bajo gravedad, en un pozo activo o en un mapa con gravedad: los encierros pagan el doble."
+      },
+      "free_fall_senior": {
+        "name": "Caída Libre",
+        "description": "Los encierros con gravedad pagan el triple."
+      },
+      "free_fall_principal": {
+        "name": "Caída Libre",
+        "description": "Velocidad Terminal: encierros con gravedad pagan 4x. +0,25x por cada otra mejora de Bloqueo (máx. 4)."
+      },
+      "free_fall_principal_b": {
+        "name": "Caída Libre",
+        "description": "En mapas con pozo de gravedad, la atracción curva tu bola la mitad."
+      },
+      "expense_account": {
+        "name": "Cuenta de Gastos",
+        "description": "Precios de la tienda un 10% más bajos, y un 3% menos por cada otra mejora de Banca (máx. 4)."
+      },
+      "war_chest": {
+        "name": "Fondo de Guerra",
+        "description": "Las bolas aparecen un 2% más lentas cada 13h en el banco, hasta 8%. +0,5% por otra mejora de Banca (máx. 4)."
+      },
+      "budget_cycle_principal_a": {
+        "name": "Ciclo Presupuestario",
+        "description": "Beneficios Retenidos: cada bloque de gasto hace que el siguiente mapa empiece un 5% capturado."
+      },
+      "budget_cycle_principal_b": {
+        "name": "Ciclo Presupuestario",
+        "description": "Compra Apalancada: el gasto cuenta hasta 5 bloques por visita, en vez de 3."
+      },
+      "clean_release": {
+        "name": "Release Limpia",
+        "description": "Termina bajo par: el siguiente mapa empieza con 1 valla instantánea, 2 con 4 mejoras de Ritmo más."
+      },
+      "continuous_delivery": {
+        "name": "Entrega Continua",
+        "description": "Cada valla que completas acelera la siguiente un 4% durante el resto del mapa."
+      },
+      "deadline_extension_junior": {
+        "name": "Prórroga del Plazo",
+        "description": "Cada ventana de bono Ship Early dura 2s más por bola en el mapa."
+      },
+      "deadline_extension_senior": {
+        "name": "Prórroga del Plazo",
+        "description": "Las ventanas de Ship Early ahora duran 4s más por bola."
+      },
+      "deadline_extension_principal": {
+        "name": "Prórroga del Plazo",
+        "description": "Las ventanas de Ship Early ahora duran 6s más por bola."
+      },
+      "deadline_extension_principal_b": {
+        "name": "Prórroga del Plazo",
+        "description": "En mapas con 3+ bolas: +1s por bola en las ventanas de Ship Early, y Ritmo 2,2x."
+      },
+      "moonshot": {
+        "name": "Moonshot",
+        "description": "Los pagos por arriesgar son un 25% mayores."
+      },
+      "risk_appetite": {
+        "name": "Apetito de Riesgo",
+        "description": "Los pagos por arriesgar son un 50% mayores."
+      },
+      "tech_evangelist": {
+        "name": "Evangelista Tecnológico",
+        "description": "El Bono de Espacio paga el doble. +8% por cada otra mejora de Riesgo (máx. 5)."
+      },
+      "procurement_principal_b": {
+        "name": "Aprovisionamiento",
+        "description": "Descuento por Volumen: sin reposiciones, pero una oferta más y la más barata es gratis."
+      },
+      "talent_scout": {
+        "name": "Cazatalentos",
+        "description": "La tienda ofrece dos habilidades para elegir en vez de una."
+      },
+      "open_source_contribution": {
+        "name": "Contribución Open Source",
+        "description": "No se venden habilidades, pero cada tienda abierta te regala una al azar."
+      },
+      "technical_debt_architect_b": {
+        "name": "Deuda Técnica",
+        "description": "Mientras estés en tu última vida, pago de Ritmo 2,6x y bolas un 15% más grandes."
+      },
+      "defensive_programming_architect_a": {
+        "name": "Programación Defensiva",
+        "description": "Búnker: dos escudos más al empezar cada mapa."
+      },
+      "defensive_programming_architect_b": {
+        "name": "Programación Defensiva",
+        "description": "Nanobots: en mapas con 3 o más bolas, las bolas son un 25% más pequeñas."
+      },
+      "scrum_master_6_b": {
+        "name": "SCRUM Master",
+        "description": "Inmersión Profunda: 3 rebotes más trazados. +1 por cada 4 mejoras de Seguridad más (máx. 8)."
+      },
+      "bug_squash_junior": {
+        "name": "Aplasta Bichos",
+        "description": "Cada golpe en una pared tiene un 5% de aplastar la bola y pegarla 2s."
+      },
+      "bug_squash_senior": {
+        "name": "Aplasta Bichos",
+        "description": "La probabilidad sube al 8%, y una bola pegada se queda quieta 3s."
+      },
+      "bug_squash_principal_a": {
+        "name": "Aplasta Bichos",
+        "description": "Tasa de Plaf: la probabilidad sube al 12%, y una bola pegada se queda quieta 3,5s."
+      },
+      "bug_squash_principal_b": {
+        "name": "Aplasta Bichos",
+        "description": "Situación Pegajosa: la probabilidad sigue en 8%, pero una bola pegada se queda quieta 6s."
+      },
+      "cold_boot": {
+        "name": "Arranque en Frío",
+        "description": "Cada mapa empieza congelado 2s, con cada bola señalando su rumbo. +0,25s por otra congelación (máx. 4)."
+      },
+      "feature_freeze_junior": {
+        "name": "Feature Freeze",
+        "description": "Toca una bola para congelarla 1s. Una congelación por mapa."
+      },
+      "feature_freeze_senior": {
+        "name": "Feature Freeze",
+        "description": "Tu congelación ahora retiene una bola 2s."
+      },
+      "feature_freeze_principal_a": {
+        "name": "Feature Freeze",
+        "description": "Rápida: dos congelaciones por mapa, de 1s cada una."
+      },
+      "feature_freeze_principal_b": {
+        "name": "Feature Freeze",
+        "description": "Ultracongelación: una congelación por mapa, de 3s."
+      },
+      "control_freak_junior": {
+        "name": "Obseso del Control",
+        "description": "Mantén pulsado un objeto móvil para detenerlo donde está."
+      },
+      "control_freak_senior": {
+        "name": "Obseso del Control",
+        "description": "Arrastra un objeto retenido por su propio recorrido, tan rápido como patrulla."
+      },
+      "control_freak_principal_a": {
+        "name": "Obseso del Control",
+        "description": "Descarrilar: empuja un objeto contra el final de su recorrido para romperlo. Una vez por mapa."
+      },
+      "control_freak_principal_b": {
+        "name": "Obseso del Control",
+        "description": "Parachoques: un objeto retenido lleva muelle. Tira hacia atrás, suelta y lanza lo que golpee."
+      },
+      "cascade_freeze_junior": {
+        "name": "Congelación en Cascada",
+        "description": "Un solo toque de congelación ahora congela las 2 bolas más cercanas."
+      },
+      "cascade_freeze_senior": {
+        "name": "Congelación en Cascada",
+        "description": "Un solo toque de congelación ahora congela las 3 bolas más cercanas."
+      },
+      "cascade_freeze_principal": {
+        "name": "Congelación en Cascada",
+        "description": "Las congelaciones retienen 2s más. +0,5s por cada otra mejora de Congelación (máx. 4)."
+      },
+      "cascade_freeze_principal_b": {
+        "name": "Congelación en Cascada",
+        "description": "Apagón en Cadena: las congelaciones duran lo mismo, pero tienes dos toques más por mapa."
+      },
+      "cron_job_architect_b": {
+        "name": "Tarea Programada",
+        "description": "Watchdog: las congelaciones programadas siguen en 4s, y cada bola se congela un instante al aparecer."
+      },
+      "benefits_package_principal_b": {
+        "name": "Paquete de Beneficios",
+        "description": "Programa de Bienestar: fichas solo algo más frecuentes, pero ganas una vida extra."
+      },
+      "total_compensation_principal_b": {
+        "name": "Compensación Total",
+        "description": "Reparto de Beneficios: las ventajas quedan un nivel por debajo, pero las fichas salen mucho más."
+      },
+      "breaking_change_junior": {
+        "name": "Breaking Change",
+        "description": "Los destructibles necesitan un golpe menos para romperse."
+      },
+      "breaking_change_senior": {
+        "name": "Breaking Change",
+        "description": "Los destructibles necesitan un golpe menos, así que casi todos ceden al primer golpe firme."
+      },
+      "breaking_change_principal": {
+        "name": "Breaking Change",
+        "description": "Amortización: cada objeto que rompes compone el pago de demolición un 30%, no un 15%."
+      },
+      "breaking_change_principal_b": {
+        "name": "Breaking Change",
+        "description": "En mapas rompibles, romper no cuesta multiplicador de encierro y cada rotura paga un 15% más."
+      },
+      "ghost_protocol_junior": {
+        "name": "Protocolo Fantasma",
+        "description": "Una valla nueva atraviesa las bolas durante sus primeros 0,1s de crecimiento."
+      },
+      "ghost_protocol_senior": {
+        "name": "Protocolo Fantasma",
+        "description": "Tus vallas ahora atraviesan las bolas durante sus primeros 0,15s."
+      },
+      "ghost_protocol_principal_a": {
+        "name": "Protocolo Fantasma",
+        "description": "Tus vallas ahora atraviesan las bolas durante sus primeros 0,2s."
+      },
+      "ghost_protocol_principal_b": {
+        "name": "Protocolo Fantasma",
+        "description": "En mapas con 3+ bolas, las vallas atraviesan las bolas 0,25s. En los demás, 0,15s."
+      },
+      "onboarding_junior": {
+        "name": "Incorporación",
+        "description": "Cada mapa empieza con el 8% del tablero ya capturado."
+      },
+      "onboarding_senior": {
+        "name": "Incorporación",
+        "description": "Empieza con el 12% del tablero capturado en vez del 8%."
+      },
+      "onboarding_principal_a": {
+        "name": "Incorporación",
+        "description": "Sin Periodo de Prueba: empieza con el 16% del tablero capturado en vez del 12%."
+      },
+      "onboarding_principal_b": {
+        "name": "Incorporación",
+        "description": "Vía Rápida: 13% capturado, y un 1% más por cada 2 mejoras de Ritmo más (máx. 5)."
+      },
+      "load_balancer_senior": {
+        "name": "Balanceador de Carga",
+        "description": "La bola más rápida del mapa va un 10% más lenta. Solo esa."
+      },
+      "load_balancer_principal": {
+        "name": "Balanceador de Carga",
+        "description": "La bola más rápida se frena un 15% en vez de un 10%."
+      },
+      "load_balancer_architect_a": {
+        "name": "Balanceador de Carga",
+        "description": "Round Robin: la bola más rápida se frena un 20% en vez de un 15%."
+      },
+      "load_balancer_architect_b": {
+        "name": "Balanceador de Carga",
+        "description": "Autoescalado: 16%, y un 1% más por cada 2 mejoras de Seguridad más (máx. 4)."
+      },
+      "cold_storage_ice": {
+        "name": "Almacén Frío",
+        "description": "Añade la valla Hielo: las bolas que rebotan en ella se frenan. Un 30% más lenta."
+      },
+      "rolling_redeploy": {
+        "name": "Redeploy Progresivo",
+        "description": "Añade la valla Redeploy: agárrala una vez y lanza las bolas que tiene delante. Un 40% más lenta."
+      },
+      "incident_flare": {
+        "name": "Bengala de Incidente",
+        "description": "Añade la valla Bengala: las bolas que rebotan en ella se aceleran. Un 30% más lenta."
+      },
+      "acquire_the_mutex": {
+        "name": "Adquiere el Mutex",
+        "description": "Añade la valla Mutex: encierra un hueco solo con una bola dentro, y paga extra cuando lo hace."
+      },
+      "raise_the_semaphore": {
+        "name": "Levanta el Semáforo",
+        "description": "Añade la valla Semáforo: solo encierra dos o más bolas a la vez, y paga por encima del tope."
+      },
+      "hotfix_tripwire": {
+        "name": "Hotfix Tripwire",
+        "description": "Añade la valla Tripwire: se construye un 40% más rápido, y la primera bola que la toca la rompe."
       }
     },
     "tiers": {
@@ -1307,6 +1651,18 @@
       "risk-assessment-certified": {
         "name": "Evaluación de Riesgos Certificada",
         "description": "Las bonificaciones de Tienta tu Suerte pagan más. Auditado, sellado y avalado."
+      },
+      "signing-bonus": {
+        "name": "Prima de Fichaje",
+        "description": "Empieza cada partida con horas extra ya en el banco."
+      },
+      "corporate-card": {
+        "name": "Tarjeta Corporativa",
+        "description": "La tienda te vende tengas las bolas encerradas que tengas."
+      },
+      "demolition-certified": {
+        "name": "Demolición Certificada",
+        "description": "Añade la valla Taladro a cada partida. Puede anclarse en un rompible y lo perfora."
       }
     },
     "achievements": {
@@ -1529,6 +1885,311 @@
         "name": "Revisión de arquitectura",
         "description": "Dibuja un corte doblado. Una valla conserva hasta dos esquinas de la línea que dibujaste, y solo sus dos extremos sueltos se proyectan hasta las paredes.",
         "priceText": "Las vallas crecen un 25% más despacio toda la partida."
+      }
+    },
+    "abilities": {
+      "freezeAll": {
+        "name": "Congelar Todo",
+        "description": "Congela en el sitio todas las bolas del mapa durante unos segundos.",
+        "howTo": "Toca para congelar todas las bolas y corta libremente mientras están quietas."
+      },
+      "slowAll": {
+        "name": "Ralentizar Todo",
+        "description": "Ralentiza todas las bolas unos segundos, para que sea más fácil atraparlas.",
+        "howTo": "Toca para ralentizar todas las bolas y prepara tus cortes."
+      },
+      "slowArea": {
+        "name": "Zona Lenta",
+        "description": "Marca una zona donde las bolas van a media velocidad, el resto del mapa.",
+        "howTo": "Toca para armarla y luego toca el tablero para colocarla. Ponla donde quieras encerrar, no donde estén las bolas."
+      },
+      "descope": {
+        "name": "Descope",
+        "description": "Borra un obstáculo para siempre y lo convierte en espacio que puedes capturar.",
+        "howTo": "Toca para armarlo y luego toca el obstáculo. Los objetivos y los cofres no se pueden borrar."
+      },
+      "clearFences": {
+        "name": "Borrar Vallas",
+        "description": "Rompe toda valla que no selle un encierro y reabre su espacio. Los huecos encerrados se quedan.",
+        "howTo": "Tócalo cuando un mapa se te vaya de las manos. Las vallas que sostienen tus encierros siguen en pie."
+      },
+      "magnet": {
+        "name": "Imán",
+        "description": "Atrae todas las bolas hacia el punto que elijas.",
+        "howTo": "Toca para activarlo y luego toca el tablero donde quieras atraer las bolas."
+      },
+      "shockwave": {
+        "name": "Onda de Choque",
+        "description": "Lanza todas las bolas hacia fuera desde el centro. Vuelve en cada mapa.",
+        "howTo": "Toca para separar las bolas y despejar espacio. Siempre empiezas un mapa con una."
+      },
+      "rubberBand": {
+        "name": "Goma Elástica",
+        "description": "Lanza las bolas que atrapa y rompe lo que golpea.",
+        "howTo": "Ármala, arrastra por el tablero y suelta. Cuanto más tires, más fuerte lanza; un tirón completo rompe lo que atrapa."
+      },
+      "fenceOverclock": {
+        "name": "Overclock de Vallas",
+        "description": "Tus vallas se construyen casi al instante durante unos segundos.",
+        "howTo": "Toca y traza cortes rápido mientras dure (genial tras una Congelación)."
+      },
+      "fenceShield": {
+        "name": "Escudo de Valla",
+        "description": "Tu valla en crecimiento ignora los golpes de bola durante unos segundos.",
+        "howTo": "Toca y traza un corte por una zona concurrida sin que se rompa."
+      }
+    },
+    "balls": {
+      "red": {
+        "name": "Roja",
+        "description": "Una bola estándar. Sin comportamiento especial."
+      },
+      "blue": {
+        "name": "Azul",
+        "description": "Una bola estándar, algo más rápida que la roja."
+      },
+      "yellow": {
+        "name": "Amarilla",
+        "description": "Velocidad variable: cada superficie que toca la cambia entre 200 y 400."
+      },
+      "purple": {
+        "name": "Morada",
+        "description": "Roba impulso: cada bola que golpea pierde velocidad, hasta su mínimo."
+      },
+      "green": {
+        "name": "Verde",
+        "description": "Bola de dinero: encerrarla triplica cada encierro posterior de esta ronda."
+      },
+      "grey": {
+        "name": "Gris",
+        "description": "Se agota: pierde 10 de velocidad cada 5 segundos, hasta su mínimo."
+      },
+      "compass": {
+        "name": "Brújula",
+        "description": "Gira un cuarto de vuelta cada pocos segundos. El anillo cuenta atrás y se inclina hacia donde girará."
+      },
+      "lodestone": {
+        "name": "Piedra Imán",
+        "description": "Atrae a las demás bolas: júntalas para un encierro múltiple, o pierde el hueco que mantenías despejado."
+      },
+      "black": {
+        "name": "Negra",
+        "description": "Bola de demolición: destroza obstáculos y agrieta tus propias vallas en tres golpes."
+      },
+      "rainbow": {
+        "name": "Arcoíris",
+        "description": "Bola prisma: rápida e inestable. Suelta una bola nueva cada 10 segundos."
+      },
+      "white": {
+        "name": "Blanca",
+        "description": "Tócala para descartarla sin nada a cambio, o enciérrala por el mayor bono del juego."
+      }
+    },
+    "bugs": {
+      "bitRot": {
+        "name": "Bit Rot",
+        "description": "Ralentiza la bola que lo aplasta durante el resto del mapa.",
+        "cost": "Una bola lenta es fácil de vallar, y un mal martillo: el daño sube con la velocidad, así que una bola lenta tarda mucho más en romper nada."
+      },
+      "caffeine": {
+        "name": "Cafeína",
+        "description": "Acelera la bola a la mitad más, y paga la mitad más cuando por fin la encierras.",
+        "cost": "Una bola rápida es lo más difícil de atrapar del tablero, y estará suelta mucho tiempo."
+      },
+      "deadlock": {
+        "name": "Deadlock",
+        "description": "Deja quieta la bola que lo aplasta unos segundos, igual que una congelación al tocar. Vállala mientras espera.",
+        "cost": "Una bola quieta no rompe nada, y el reloj no se para con ella."
+      },
+      "featureBloat": {
+        "name": "Feature Bloat",
+        "description": "Hace crecer la bola la mitad o más, y el encierro paga exactamente lo que creció.",
+        "cost": "Una bola más grande necesita un hueco más grande, así que cada sellado a partir de ahora cuesta más trazarlo."
+      },
+      "branch": {
+        "name": "Branch",
+        "description": "Divide en dos la bola que lo aplasta. Ambas son del mismo tipo y ambas pagan encierro.",
+        "cost": "Dos bolas que atrapar donde había una, en un tablero que ya te costaba manejar."
+      },
+      "autoMerge": {
+        "name": "Auto Merge",
+        "description": "Una valla se cierra en anillo alrededor de la bola donde está y la encierra. No te cuesta valla ni par.",
+        "cost": "Un hueco redondo y amplio es el sellado que menos paga, y la bola que saca del tablero era uno de tus martillos."
+      },
+      "bigBang": {
+        "name": "Big Bang Release",
+        "description": "Hace lo mismo que Auto Merge, con todas las bolas libres a la vez. Puede terminar un mapa en el acto.",
+        "cost": "También puede arruinarlo: sin bolas, lo que el mapa aún pida romper queda fuera de alcance. No lo pises si queda una cláusula de romper pendiente."
+      },
+      "forcePush": {
+        "name": "Force Push",
+        "description": "Triple daño durante unos segundos: ladrillos y bloques caen de un golpe.",
+        "cost": "Agrieta tus propias vallas al contacto, como la bola negra. La bola que por fin abre el muro desmonta el hueco que trazaste para ella."
+      },
+      "allHands": {
+        "name": "All Hands",
+        "description": "La bola que lo aplasta arrastra a todas las demás hacia ella durante unos segundos.",
+        "cost": "Junta el tablero en un solo sitio, lo que arruina cualquier separación que te costara vallas construir."
+      }
+    },
+    "fences": {
+      "standard": {
+        "name": "Estándar",
+        "description": "La valla normal. Es la que más rápido se construye y no cuesta nada.",
+        "howTo": "Siempre disponible. Arrastra para cortar."
+      },
+      "ice": {
+        "name": "Hielo",
+        "description": "Las bolas que rebotan en ella pierden velocidad, hasta su mínimo.",
+        "howTo": "Constrúyela donde más rebotan las bolas. Crece más lenta, así que elige el momento."
+      },
+      "flare": {
+        "name": "Bengala",
+        "description": "Las bolas que rebotan en ella se aceleran. Las bolas rápidas valen más, y son más peligrosas.",
+        "howTo": "Colócala donde quieras una bola en movimiento, y apártate de su camino."
+      },
+      "redeploy": {
+        "name": "Redeploy",
+        "description": "Una valla terminada es un tirachinas, una vez: tira hacia atrás, apunta y lanza las bolas que tiene delante.",
+        "howTo": "Constrúyela atravesando un carril, mantén pulsado y arrastra hacia atrás. Lo que atrapa sale a hasta 3x de velocidad."
+      },
+      "guardrail": {
+        "name": "Guardrail",
+        "description": "Trae un escudo: la primera vez que una bola corta una Guardrail en crecimiento, pierdes la valla, no una vida. Una vez por mapa.",
+        "howTo": "Úsala para el corte arriesgado. Gastado el escudo, es una Estándar más lenta hasta el siguiente mapa."
+      },
+      "mutex": {
+        "name": "Mutex",
+        "description": "Encierra un hueco solo cuando hay exactamente una bola dentro, y cada encierro así paga un poco más.",
+        "howTo": "Séllalas de una en una. Huecos pequeños, cortes cortos, pago constante."
+      },
+      "semaphore": {
+        "name": "Semáforo",
+        "description": "Encierra un hueco solo cuando hay dos o más bolas dentro, y paga muchísimo por ellas.",
+        "howTo": "Junta dos bolas antes de cortar. Cuatro a la vez es el mapa entero en un sellado."
+      },
+      "tripwire": {
+        "name": "Tripwire",
+        "description": "Se construye mucho más rápido, y la primera bola que la toca la rompe.",
+        "howTo": "Para un corte que necesitas YA, en un carril que nada va a cruzar."
+      },
+      "drill": {
+        "name": "Taladro",
+        "description": "La única valla que puede anclarse en un rompible. Perfora lo que toca.",
+        "howTo": "Empieza el corte SOBRE un bloque. Lo atraviesa y sigue hasta el siguiente muro."
+      }
+    },
+    "capstones": {
+      "stock_options": {
+        "name": "Stock Options",
+        "description": "El tope de horas extra por mapa sube 5h el resto de la partida. Por fin rinden los multiplicadores grandes.",
+        "clarify": "Las horas extra tienen tope por mapa, así que el multiplicador que lo supera se pierde. Esto sube el tope 5h cada mapa. Inútil con poco multiplicador, decisivo con uno apilado."
+      },
+      "company_card": {
+        "name": "Tarjeta de Empresa",
+        "description": "La oferta más barata de cada tienda es gratis.",
+        "clarify": "La mejora más barata de cada tienda es gratis. En una partida eso ahorra muchas horas extra para lo caro. Mejor si compras en cada nivel."
+      },
+      "second_wind": {
+        "name": "Segundo Aire",
+        "description": "Una vez por mapa, una valla aguanta un golpe de bola sin costarte una vida.",
+        "clarify": "Cada mapa empieza con un escudo de valla: la primera bola que rompería una valla en crecimiento se absorbe, sin perder vida. Se renueva cada mapa."
+      },
+      "cryo_protocol": {
+        "name": "Protocolo Criogénico",
+        "description": "Las fichas potenciadoras se congelan y nunca caducan: esperan en el tablero hasta que las recojas.",
+        "clarify": "Las fichas se congelan y dejan de caducar, así que puedes preparar el sellado perfecto en vez de correr contra el reloj."
+      },
+      "golden_handshake": {
+        "name": "Apretón de Oro",
+        "description": "Cada bola encerrada paga +1 hora extra y cuenta como una bola más para el multiplicador de captura.",
+        "clarify": "Dos premios por encierro: +1 hora extra por encierro, y cada uno cuenta una bola más para el multiplicador de captura múltiple. Se dispara con encierros múltiples."
+      }
+    },
+    "mapMutators": {
+      "crunch": {
+        "name": "Recta Final",
+        "description": "Todo se acelera con cada bola que encierras.",
+        "clarify": "Cada encierro acelera un poco más bolas y obstáculos, hasta un tope. Encerrar paga, pero sube el ritmo."
+      },
+      "overclock": {
+        "name": "Overclock",
+        "description": "Todo el tablero va a tope. Bolas y obstáculos móviles van más rápido todo el mapa.",
+        "clarify": "Un aumento fijo de velocidad para todo el mapa, desde el primer segundo."
+      },
+      "tipping": {
+        "name": "Gravedad Total",
+        "description": "Todo en el tablero cae. Cada 10 segundos la atracción gira un cuarto, y las bolas caen hacia el nuevo lado.",
+        "clarify": "La barra de arriba cuenta atrás hasta cada giro, y el borde ámbar muestra hacia dónde irá la atracción. Las vallas terminadas están a salvo; tu plan no."
+      }
+    },
+    "mapObjectives": {
+      "lockdown": {
+        "name": "Confinamiento",
+        "description": "Encierra al menos 2 bolas en este mapa.",
+        "clarify": "Sella 2 bolas en huecos antes de limpiar. Paga un bono además de las horas extra normales por encierro."
+      },
+      "vault": {
+        "name": "La Cámara",
+        "description": "Encierra al menos 4 bolas en este mapa.",
+        "clarify": "Un objetivo codicioso: atrapa 4 bolas antes de limpiar. Gran bono, pero exige trabajar bien los huecos."
+      },
+      "precision": {
+        "name": "Precisión",
+        "description": "Consigue un Encierro Superior (un hueco ajustado).",
+        "clarify": "Encierra una bola en un hueco ajustado que cuente como superior. Refuerza la técnica de encierro."
+      },
+      "surgical": {
+        "name": "Quirúrgico",
+        "description": "Consigue 2 Encierros Superiores en este mapa.",
+        "clarify": "Dos encierros en hueco ajustado en un mapa. Precisión bajo presión."
+      },
+      "under-budget": {
+        "name": "Bajo Presupuesto",
+        "description": "Limpia con el par de cortes o menos.",
+        "clarify": "Termina el mapa sin usar más cortes que el par. Jugar eficiente paga."
+      },
+      "speed-run": {
+        "name": "Speedrun",
+        "description": "Limpia el mapa en 35 segundos de juego.",
+        "clarify": "Vence al reloj: cumple la condición de limpieza en 35 segundos activos. Las pausas no cuentan."
+      },
+      "defeat-rc": {
+        "name": "Derrota a la Release Candidate",
+        "description": "Valla al jefe dentro del área de sintaxis para lanzarlo.",
+        "clarify": "Atrapa a la Release Candidate dentro del área de sintaxis clara para derrotarla. Atraparla fuera falla el mapa (pierdes una vida y se reinicia). Quedarte sin tiempo también falla."
+      }
+    },
+    "tagSets": {
+      "lock": {
+        "name": "Reacción en Cadena",
+        "description": "Cada encierro cuenta como una bola más para el multiplicador de captura simultánea."
+      },
+      "freeze": {
+        "name": "Cero Absoluto",
+        "description": "Las bolas congeladas se pueden recongelar al instante, sin enfriamiento."
+      },
+      "bank": {
+        "name": "Acuerdo Marco",
+        "description": "Precios de la tienda un 10% más bajos."
+      },
+      "tempo": {
+        "name": "Ship It",
+        "description": "Dibuja una valla adicional a la vez."
+      },
+      "risk": {
+        "name": "Doble o Nada",
+        "description": "Los pagos por arriesgar se duplican."
+      },
+      "safety": {
+        "name": "Póliza de Seguro",
+        "description": "Obtén 1 Continuación extra."
+      }
+    },
+    "bosses": {
+      "level-10": {
+        "name": "Fecha de Release",
+        "intro": "Tu primer jefe. La Release Candidate anda suelta: una bola grande y rápida, con Scope Creep a tope desde el primer segundo. Limpiar el tablero no basta: vállala dentro del área de sintaxis clara (arriba a la derecha) para lanzarla. Atrápala en otro sitio y pierdes una vida. Vence al plazo."
       }
     }
   },

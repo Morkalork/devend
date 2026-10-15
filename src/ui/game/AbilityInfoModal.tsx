@@ -15,6 +15,7 @@ import type { AbilityDef } from "@/lib/abilities";
 import { COLOR, Label, TEXT, View, useUiScreen } from "../kit/ui";
 import { InfoCardModal } from "./modalParts";
 import { abilityInfoLines, cssColor, HOW_TO_USE_KEY } from "./bottomModel";
+import { contentText } from "@/i18n/content";
 
 interface AbilityInfoModalProps {
   ability: AbilityDef;
@@ -28,9 +29,9 @@ export function AbilityInfoModal({ ability, onClose }: AbilityInfoModalProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
   const color = cssColor(ability.color, 0xffffff);
-  const { description, howTo } = abilityInfoLines(ability);
+  const { description, howTo } = abilityInfoLines(ability, t);
   return (
-    <InfoCardModal screen={screen} onClose={onClose} title={ability.name} color={color}>
+    <InfoCardModal screen={screen} onClose={onClose} title={contentText.abilityName(t, ability)} color={color}>
       {description && <Label text={description} size={TEXT.sm} lineHeight={SNUG} color={COLOR.foreground} wrap />}
       {howTo && (
         <View layout={{ gap: 4 }}>

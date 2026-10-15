@@ -18,6 +18,8 @@ import type { AbilityTimer } from "@/components/game/GameCanvas";
 import type { GameMessage } from "@/lib/gameMessages";
 import type { IconSource } from "../kit/ui";
 import { hsl } from "../theme";
+import { contentText } from "@/i18n/content";
+import type { TFunction } from "i18next";
 
 // ── Colour ─────────────────────────────────────────────────────────────────
 
@@ -175,8 +177,11 @@ export function abilityPress(
 export const ABILITY_BLINK = { duration: 0.85, keyframes: [0, 1, 0.3, 1, 0], times: [0, 0.15, 0.4, 0.65, 1] } as const;
 
 /** What the ability card shows. No acquisition footer: it opens off an ability already held. */
-export function abilityInfoLines(ability: AbilityDef): { description?: string; howTo?: string } {
-  return { description: ability.description || undefined, howTo: ability.howTo || undefined };
+export function abilityInfoLines(ability: AbilityDef, t?: TFunction): { description?: string; howTo?: string } {
+  // Through the content locales when a `t` is given (the English YAML is the fallback).
+  const description = t ? contentText.abilityDesc(t, ability) : ability.description;
+  const howTo = t ? contentText.abilityHowTo(t, ability) : ability.howTo;
+  return { description: description || undefined, howTo: howTo || undefined };
 }
 
 // ── Ability glyphs ─────────────────────────────────────────────────────────

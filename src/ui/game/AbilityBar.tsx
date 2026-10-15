@@ -27,6 +27,8 @@ import { BlinkRing, GlowRing } from "./bottomParts";
 import {
   abilityBarShape, abilityButtonLook, abilityPress, cssColor, gainedAbilityIds, ownedAbilities, TOUCH_TARGET,
 } from "./bottomModel";
+import { useTranslation } from "react-i18next";
+import { contentText } from "@/i18n/content";
 
 interface AbilityBarProps {
   /** Run-wide banked charges: { abilityId -> count }. */
@@ -41,6 +43,7 @@ interface AbilityBarProps {
 }
 
 export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfoOpenChange }: AbilityBarProps) {
+  const { t } = useTranslation();
   const owned = ownedAbilities(charges);
 
   // Blink an ability's button when its charge count RISES (a fresh grant or a
@@ -95,7 +98,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
               return (
                 <Pressable
                   key={a.id}
-                  label={a.name}
+                  label={contentText.abilityName(t, a)}
                   onTap={press.onTap}
                   onHold={press.onHold}
                   pressedAlpha={0.8}
@@ -108,7 +111,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
                   {look.ring && <GlowRing color={color} />}
                   {blink[a.id] ? <BlinkRing key={`blink-${a.id}-${blink[a.id]}`} color={color} /> : null}
                   <AbilityIcon kind={a.kind} size={16} color={color} />
-                  <Label text={a.name} size={TEXT.xs} weight="700" font="mono" color={color} />
+                  <Label text={contentText.abilityName(t, a)} size={TEXT.xs} weight="700" font="mono" color={color} />
                   <Label text={`x${count}`} size={TEXT.xs} weight="700" font="mono" color={color} alpha={0.75} />
                 </Pressable>
               );
