@@ -1904,6 +1904,7 @@
     "finish": "Avslut",
     "toPromotion": "Välj din befordran",
     "toStore": "Öppna butiken",
+    "skipStore": "Hoppa över butiken, starta nivå {{level}}",
     "toLevel": "Starta nivå {{level}}",
     "toFinish": "Avsluta omgången",
     "ofPossible": "av {{hours}} h som banan kunde ge",

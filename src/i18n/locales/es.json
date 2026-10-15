@@ -1904,6 +1904,7 @@
     "finish": "Final",
     "toPromotion": "Elige tu ascenso",
     "toStore": "Abrir la tienda",
+    "skipStore": "Saltar la tienda y empezar el nivel {{level}}",
     "toLevel": "Empezar el nivel {{level}}",
     "toFinish": "Terminar la partida",
     "ofPossible": "de {{hours}} h que podía pagar este mapa",

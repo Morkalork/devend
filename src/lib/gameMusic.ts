@@ -229,26 +229,50 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
 
   activeIndex = (1 - activeIndex) as 0 | 1;
 
-  fadeTo(incoming, musicVolume, crossfadeMs, gen);
-  if (crossfade) {
-    fadeTo(outgoing, 0, crossfadeMs, gen, () => outgoing.pause());
-    // HARD BACKSTOP on the pause, because the fade's own onDone is not
-    // guaranteed to run: fadeTo bails the moment a newer switch bumps fadeGen,
-    // and it bails BEFORE calling onDone. That used to be harmless - an
-    // unpaused outgoing element would reach the end of its track and stop by
-    // itself. Now that the deck loops natively it would instead play forever
-    // underneath the new track, so the pause has to be owned by something the
-    // generation guard cannot cancel.
-    //
-    // Guarded on the element not having become the foreground again in the
-    // meantime, which is exactly what a quick switch back to the same track
-    // would do.
-    const stale = outgoing;
-    setTimeout(() => {
-      if (deck && deck[activeIndex] !== stale) stale.pause();
-    }, crossfadeMs + 250);
-  } else {
+  // HAND OVER ONLY ONCE THE NEW TRACK IS ACTUALLY PLAYING. The outgoing track
+  // used to fade out the moment the switch was asked for, while the incoming
+  // one had only just been given its src. A band track is 2-11 MB and is not
+  // fetched until the switch, so on a phone the map opened in silence until it
+  // arrived, and if the browser refused play() outside a gesture it stayed
+  // silent: "the music turns off when you start a new game". Now the old track
+  // keeps playing until the new one has started (its play() resolved, or a
+  // later gesture got it going), and then they crossfade.
+  let handedOver = false;
+  const handOver = () => {
+    incoming.removeEventListener("playing", handOver);
+    if (handedOver || gen !== fadeGen) {
+      return;
+    }
+    handedOver = true;
+    fadeTo(incoming, musicVolume, crossfadeMs, gen);
+    if (crossfade) {
+      fadeTo(outgoing, 0, crossfadeMs, gen, () => outgoing.pause());
+      // HARD BACKSTOP on the pause, because the fade's own onDone is not
+      // guaranteed to run: fadeTo bails the moment a newer switch bumps fadeGen,
+      // and it bails BEFORE calling onDone. That used to be harmless - an
+      // unpaused outgoing element would reach the end of its track and stop by
+      // itself. Now that the deck loops natively it would instead play forever
+      // underneath the new track, so the pause has to be owned by something the
+      // generation guard cannot cancel.
+      //
+      // Guarded on the element not having become the foreground again in the
+      // meantime, which is exactly what a quick switch back to the same track
+      // would do.
+      const stale = outgoing;
+      setTimeout(() => {
+        if (deck && deck[activeIndex] !== stale) stale.pause();
+      }, crossfadeMs + 250);
+    }
+  };
+  if (!crossfade) {
+    // Nothing audible to keep: the outgoing element was already silent.
     outgoing.pause();
+  }
+  incoming.addEventListener("playing", handOver);
+  if (p && typeof p.then === "function") {
+    p.then(handOver, () => { /* blocked: the "playing" event hands over once a gesture starts it */ });
+  } else {
+    handOver();
   }
 
   // Near-end crossfade loop. When the active element is ~(crossfadeMs + 500ms)
