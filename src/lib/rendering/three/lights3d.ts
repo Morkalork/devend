@@ -221,7 +221,7 @@ export class Lights3D {
     // Wide enough to take in every corner of the board, plus the penumbra's
     // soft edge, so the cone's falloff never shows on the board itself.
     this.monitor.angle = Math.min(1.4, monitorConeAngle(at) / (1 - MONITOR_PENUMBRA) + 0.02);
-    this.monitor.castShadow = true;
+    this.monitor.castShadow = preset.keyShadow;
     this.monitor.shadow.mapSize.set(preset.keyShadowSize, preset.keyShadowSize);
     this.monitor.shadow.camera.near = Math.max(50, at.y * 0.5);
     this.monitor.shadow.camera.far = Math.hypot(at.x, at.y, at.z) + 400;

@@ -161,9 +161,12 @@ describe("every board renderer setting has an Admin control", () => {
     ]));
   });
 
+  // The renderer's own card (what 3D did on this device, and what auto quality
+  // has learned) is part of the Admin screen.
+  const RENDERER_ADMIN = ADMIN + read("src/components/admin/RendererDiagCard.tsx");
   for (const setter of setters) {
     it(`${setter} is called from Admin`, () => {
-      expect(ADMIN).toMatch(new RegExp(`${setter}\\(`));
+      expect(RENDERER_ADMIN).toMatch(new RegExp(`${setter}\\(`));
     });
   }
 });

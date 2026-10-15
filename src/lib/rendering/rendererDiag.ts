@@ -67,6 +67,50 @@ export function clearRendererDiag(): void {
   try { localStorage.removeItem(DIAG_KEY); } catch { /* private mode */ }
 }
 
+/**
+ * Every time `auto` quality stepped down on this device, and why: the median
+ * frame gap it measured. Its own key, because a board start rewrites the
+ * record above, and the steps are exactly the history worth keeping across
+ * boards ("it lagged on her phone": did auto notice, and how far did it go?).
+ */
+export const STEPS_KEY = "devend:render3d:steps";
+const MAX_STEPS = 8;
+
+export interface QualityStep {
+  /** ISO time. */
+  at: string;
+  from: string;
+  /** A cheaper tier, "2d" for the 2D board, or "res" for the in-map resolution drop. */
+  to: string;
+  /** The median frame gap that triggered it (ms). */
+  medianMs: number;
+}
+
+export function getQualitySteps(): QualityStep[] {
+  try {
+    const raw = localStorage.getItem(STEPS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list as QualityStep[] : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordQualityStep(from: string, to: string, medianMs: number): void {
+  const list = [...getQualitySteps(), { at: new Date().toISOString(), from, to, medianMs: Math.round(medianMs * 10) / 10 }];
+  try { localStorage.setItem(STEPS_KEY, JSON.stringify(list.slice(-MAX_STEPS))); } catch { /* private mode */ }
+}
+
+export function clearQualitySteps(): void {
+  try { localStorage.removeItem(STEPS_KEY); } catch { /* private mode */ }
+}
+
+/** "medium -> low at 41.2ms (24 fps)": one step, readable. */
+export function qualityStepText(step: QualityStep): string {
+  const fps = step.medianMs > 0 ? Math.round(1000 / step.medianMs) : 0;
+  return `${step.from} -> ${step.to} at ${step.medianMs}ms (${fps} fps), ${step.at}`;
+}
+
 /** What this device's WebGL can do, read from a throwaway context. */
 export interface WebGLProbe {
   webgl2: boolean;
@@ -132,8 +176,12 @@ export function probeWebGL(): WebGLProbe {
 }
 
 /** Everything above as plain text, for pasting into a message. */
-export function diagText(choice: string, diag: RendererDiag | null, probe: WebGLProbe | null): string {
-  const lines = [`renderer setting: ${choice}`];
+export function diagText(
+  choice: string, diag: RendererDiag | null, probe: WebGLProbe | null,
+  steps: readonly QualityStep[] = [], learned: string | null = null,
+): string {
+  const lines = [`renderer setting: ${choice}`, `auto has learned: ${learned ?? "nothing yet"}`];
+  for (const s of steps) lines.push(`quality step: ${qualityStepText(s)}`);
   if (diag) {
     lines.push(`last 3D start: ${diag.outcome} at ${diag.at}${diag.build ? ` (build ${diag.build})` : ""}`);
     if (diag.message) lines.push(`error: ${diag.message}`);

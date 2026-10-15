@@ -28,7 +28,7 @@ import {
 } from "@/lib/rendering/three/lights3d";
 import { Explosions3D, blastEnvelope, BLAST_MS } from "@/lib/rendering/three/explosions3d";
 import { shoulder, SHOULDER_KNEE } from "@/lib/rendering/three/outputPass";
-import { QualityGovernor, QUALITY_PRESETS, stepDown } from "@/lib/rendering/three/quality";
+import { QualityGovernor, QUALITY_PRESETS, SEVERE_FRAME_MS, stepDown } from "@/lib/rendering/three/quality";
 import { poolLightsChunk } from "@/lib/rendering/three/surfaceMaterial";
 import {
   autoTier, getFov, getHeightScale, getQualitySetting, getRendererChoice, setFov, setHeightScale,
@@ -365,7 +365,11 @@ describe("the lights keep light.ts's rules", () => {
 
   it("keeps the light pool a fixed size, so no shader recompiles mid-map", () => {
     for (const p of Object.values(QUALITY_PRESETS)) {
-      expect(p.shadowedLights).toBeGreaterThanOrEqual(1);
+      // Minimal draws no shadow at all (the phone that cannot hold "low");
+      // every other tier keeps one for the lamp.
+      if (p.tier !== "minimal") expect(p.shadowedLights).toBeGreaterThanOrEqual(1);
+      // The pool never shrinks below five, minimal included: on a dark map a
+      // light is how a ball is seen at all.
       expect(p.shadowedLights + p.plainLights).toBeGreaterThanOrEqual(5);
     }
     const src = read("src/lib/rendering/three/lights3d.ts");
@@ -468,7 +472,64 @@ describe("quality", () => {
     g2.reset(0, 0);
     expect([g2.frame(10), g2.frame(500), g2.frame(1000), g2.frame(1600)]).toEqual([false, false, false, false]);
     expect(stepDown("high")).toBe("medium");
-    expect(stepDown("low")).toBeNull();
+    expect(stepDown("low")).toBe("minimal");
+    expect(stepDown("minimal")).toBeNull();
+  });
+
+  it("steps down a device that is slow on every frame, not only a little slow", () => {
+    // 5 fps: every gap is 200ms, past the pause threshold. One such gap is a
+    // pause; a run of them is the device. These were never counted before.
+    const gov = new QualityGovernor();
+    gov.reset(0, 0);
+    let t = 0;
+    let asked = false;
+    for (let i = 0; i < 40 && !asked; i++) { t += 200; asked = gov.frame(t); }
+    expect(asked).toBe(true);
+    expect(gov.lastMedianMs).toBe(200);
+  });
+
+  it("still never counts a pause, however long, or a few long gaps among fast frames", () => {
+    const gov = new QualityGovernor();
+    gov.reset(0, 0);
+    let t = 0;
+    let asked = false;
+    for (let i = 0; i < 400; i++) {
+      t += i % 50 === 0 ? 3000 : i % 37 === 0 ? 250 : 16; // pauses, and the odd hitch
+      asked = gov.frame(t) || asked;
+    }
+    expect(asked).toBe(false);
+  });
+
+  it("judges after about four seconds of frames, not only after 120 of them", () => {
+    const gov = new QualityGovernor();
+    gov.reset(0, 0);
+    let t = 0;
+    let frames = 0;
+    let asked = false;
+    while (!asked && frames < 120) { t += 60; frames++; asked = gov.frame(t); }
+    expect(asked).toBe(true);
+    expect(frames).toBeLessThan(120); // 4000ms / 60ms, about 67 frames
+  });
+
+  it("reports the median it judged by, for the step log", () => {
+    const gov = new QualityGovernor(21, 5, 120);
+    gov.reset(0, 0);
+    let t = 0;
+    for (let i = 0; i < 6; i++) { t += 40; gov.frame(t); }
+    expect(gov.lastMedianMs).toBe(40);
+    expect(40).toBeGreaterThan(SEVERE_FRAME_MS);
+  });
+
+  it("has a minimal tier that renders no shadow and costs least", () => {
+    const m = QUALITY_PRESETS.minimal;
+    expect(m.shadowedLights).toBe(0);
+    expect(m.keyShadow).toBe(false);
+    expect(m.samples).toBe(0);
+    expect(m.maxPixelRatio).toBe(1);
+    expect(m.maxPixelRatio).toBeLessThan(QUALITY_PRESETS.low.maxPixelRatio);
+    expect(m.sphereSegments).toBeLessThan(QUALITY_PRESETS.low.sphereSegments);
+    expect(read("src/lib/rendering/three/lights3d.ts")).toContain("this.monitor.castShadow = preset.keyShadow;");
+    expect(read("src/lib/rendering/three/surfaceMaterial.ts")).toContain('opts.tier === "low" || opts.tier === "minimal"');
   });
 
   it("guesses by device, and spends less on a phone", () => {
@@ -543,7 +604,7 @@ describe("the wiring", () => {
   const sleek = read("src/lib/rendering/sleek/SleekRenderer.ts");
 
   it("starts the chosen renderer and falls back 3D, then 2D, then the emergency board", () => {
-    expect(canvas).toMatch(/useState<RendererChoice>\(getRendererChoice\)/);
+    expect(canvas).toMatch(/useState<RendererChoice>\(getBoardRenderer\)/);
     expect(canvas).toMatch(/import\("@\/lib\/rendering\/three\/ThreeRenderer"\)/);
     const fb = canvas.slice(canvas.indexOf("const fallback = (err: unknown) =>"));
     expect(fb.slice(0, 900)).toMatch(/if \(glKind === "three"\) \{[\s\S]*?setGlKind\("sleek"\);[\s\S]*?return;/);

@@ -15,7 +15,7 @@
  * Unused lights sit in the pool at zero intensity, and an idle shadowed light
  * stops re-rendering its shadow map (lights3d.ts).
  */
-import type { QualityTier } from "@/lib/rendering/render3dSettings";
+import { TIER_ORDER, type QualityTier } from "@/lib/rendering/render3dSettings";
 
 export interface QualityPreset {
   tier: QualityTier;
@@ -23,6 +23,8 @@ export interface QualityPreset {
   maxPixelRatio: number;
   /** MSAA samples on the 3D frame. */
   samples: number;
+  /** Whether the monitor (the key light) casts shadows at all. */
+  keyShadow: boolean;
   /** The monitor's (key light's) shadow map, square. */
   keyShadowSize: number;
   /** Point lights that cast shadows (balls first, then explosions). */
@@ -39,26 +41,42 @@ export interface QualityPreset {
 
 export const QUALITY_PRESETS: Record<QualityTier, QualityPreset> = {
   high: {
-    tier: "high", maxPixelRatio: 2.5, samples: 4, keyShadowSize: 2048,
+    tier: "high", maxPixelRatio: 2.5, samples: 4, keyShadow: true, keyShadowSize: 2048,
     shadowedLights: 4, pointShadowSize: 512, plainLights: 8, maxShards: 320, sphereSegments: 40,
   },
   medium: {
-    tier: "medium", maxPixelRatio: 2, samples: 4, keyShadowSize: 1024,
+    tier: "medium", maxPixelRatio: 2, samples: 4, keyShadow: true, keyShadowSize: 1024,
     shadowedLights: 2, pointShadowSize: 256, plainLights: 6, maxShards: 200, sphereSegments: 32,
   },
   low: {
-    tier: "low", maxPixelRatio: 1.5, samples: 2, keyShadowSize: 1024,
+    tier: "low", maxPixelRatio: 1.5, samples: 2, keyShadow: true, keyShadowSize: 1024,
     shadowedLights: 1, pointShadowSize: 256, plainLights: 4, maxShards: 120, sphereSegments: 24,
+  },
+  // For a phone that cannot hold "low": no shadow is rendered at all (each
+  // shadowed point light is six extra scene passes, the key light one more),
+  // no MSAA, the 3D frame at one pixel per CSS pixel, and coarser spheres and
+  // fewer shards. The light POOL keeps its five: on a dark map, and in a light
+  // syntax area, a light is how the player sees a ball or an area at all, so
+  // the balls still light the floor and the code under it. Nothing the game
+  // reads goes away, only how rich it looks.
+  minimal: {
+    tier: "minimal", maxPixelRatio: 1, samples: 0, keyShadow: false, keyShadowSize: 512,
+    shadowedLights: 0, pointShadowSize: 256, plainLights: 5, maxShards: 60, sphereSegments: 16,
   },
 };
 
-const ORDER: readonly QualityTier[] = ["low", "medium", "high"];
-
 /** One tier cheaper, or null at the bottom. */
 export function stepDown(tier: QualityTier): QualityTier | null {
-  const i = ORDER.indexOf(tier);
-  return i > 0 ? ORDER[i - 1] : null;
+  const i = TIER_ORDER.indexOf(tier);
+  return i > 0 ? TIER_ORDER[i - 1] : null;
 }
+
+/**
+ * Past this median frame gap (ms) the map is not merely over budget but
+ * visibly struggling (under ~30 fps), and the renderer drops the 3D frame's
+ * resolution at once rather than waiting out the map (ThreeRenderer).
+ */
+export const SEVERE_FRAME_MS = 34;
 
 /**
  * Watches the gap between presented frames and asks for a cheaper tier when
@@ -69,24 +87,42 @@ export function stepDown(tier: QualityTier): QualityTier | null {
  * a little plainer than it could be, which nobody files a bug about; one that
  * stutters, everybody does.
  *
- * Frames further apart than `maxGapMs` are not samples (a paused map, a tab in
- * the background, the level-clear hold) and are skipped, so a pause never
- * counts as slowness.
+ * A single frame further apart than `maxGapMs` is not a sample: that is a
+ * pause (a paused map, a tab in the background, the level-clear hold), and a
+ * pause must never count as slowness. But a RUN of them is the device itself:
+ * on a phone drawing 5 fps every gap is 200ms, and skipping them all left the
+ * slowest devices the only ones never stepped down. So `longRun` long gaps in
+ * a row count, each, up to `pauseMs`; a gap past that is always a pause.
+ *
+ * It judges after `window` frames or `windowMs` of them, whichever comes
+ * first (at least `minSamples`), so a slow device is not left waiting through
+ * 120 slow frames for a verdict.
  */
 export class QualityGovernor {
   private samples: number[] = [];
+  private sampledMs = 0;
   private last = 0;
   private settleUntil = 0;
+  /** Long gaps in a row, and the ones held back until the run proves real. */
+  private longGaps: number[] = [];
+  /** The median frame gap (ms) of the last full window, 0 before the first. */
+  lastMedianMs = 0;
 
   constructor(
     private readonly budgetMs = 21,
     private readonly window = 120,
     private readonly maxGapMs = 120,
+    private readonly windowMs = 4000,
+    private readonly minSamples = 20,
+    private readonly longRun = 5,
+    private readonly pauseMs = 1500,
   ) {}
 
   /** Forget everything, and ignore the next `settleMs` (a tier just changed). */
   reset(now: number, settleMs = 1500): void {
     this.samples.length = 0;
+    this.sampledMs = 0;
+    this.longGaps.length = 0;
     this.last = 0;
     this.settleUntil = now + settleMs;
   }
@@ -95,12 +131,34 @@ export class QualityGovernor {
   frame(now: number): boolean {
     const gap = this.last > 0 ? now - this.last : 0;
     this.last = now;
-    if (now < this.settleUntil || gap <= 0 || gap > this.maxGapMs) return false;
-    this.samples.push(gap);
-    if (this.samples.length < this.window) return false;
+    if (now < this.settleUntil || gap <= 0) return false;
+    if (gap > this.pauseMs) {
+      this.longGaps.length = 0;
+      return false;
+    }
+    if (gap > this.maxGapMs) {
+      // Held back until enough follow in a row to be the device, not a pause.
+      this.longGaps.push(gap);
+      if (this.longGaps.length < this.longRun) return false;
+      for (const g of this.longGaps) this.add(g);
+      this.longGaps.length = 0;
+    } else {
+      this.longGaps.length = 0;
+      this.add(gap);
+    }
+    const enough = this.samples.length >= this.window
+      || (this.samples.length >= this.minSamples && this.sampledMs >= this.windowMs);
+    if (!enough) return false;
     const sorted = [...this.samples].sort((a, b) => a - b);
     const median = sorted[sorted.length >> 1];
     this.samples.length = 0;
+    this.sampledMs = 0;
+    this.lastMedianMs = median;
     return median > this.budgetMs;
+  }
+
+  private add(gap: number): void {
+    this.samples.push(gap);
+    this.sampledMs += gap;
   }
 }

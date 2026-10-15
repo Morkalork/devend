@@ -19,7 +19,7 @@
  */
 
 export type RendererChoice = "three" | "sleek";
-export type QualityTier = "low" | "medium" | "high";
+export type QualityTier = "minimal" | "low" | "medium" | "high";
 export type QualitySetting = QualityTier | "auto";
 
 /**
@@ -35,8 +35,18 @@ export const QUALITY_KEY = "devend:render3d:quality";
 export const FOV_KEY = "devend:render3d:fov";
 export const HEIGHT_KEY = "devend:render3d:height";
 export const LEAN_KEY = "devend:render3d:lean";
+/** The cheapest tier `auto` has had to fall to on this device (see getLearnedLimit). */
+export const LEARNED_KEY = "devend:render3d:learned";
 
-export const QUALITY_SETTINGS: readonly QualitySetting[] = ["auto", "low", "medium", "high"];
+export const QUALITY_SETTINGS: readonly QualitySetting[] = ["auto", "minimal", "low", "medium", "high"];
+
+/** Cheapest first. */
+export const TIER_ORDER: readonly QualityTier[] = ["minimal", "low", "medium", "high"];
+
+/** The cheaper of two tiers. */
+export function cheaperTier(a: QualityTier, b: QualityTier): QualityTier {
+  return TIER_ORDER.indexOf(a) <= TIER_ORDER.indexOf(b) ? a : b;
+}
 
 /** Field of view across the board's height, degrees (floorCamera.ts). */
 export const DEFAULT_FOV = 26;
@@ -148,4 +158,45 @@ export function autoTier(env: { coarsePointer: boolean; dpr: number; cores: numb
   if (!env.coarsePointer) return "high";
   if (env.cores > 0 && env.cores <= 4) return "low";
   return "medium";
+}
+
+/**
+ * What `auto` has learned this device can hold: the tier the frame-time
+ * governor last stepped down to, or "2d" when even the cheapest 3D tier ran
+ * slow. Null until it has had to step down at all.
+ *
+ * Remembered because the renderer is not: the board is torn down every time
+ * the store opens, and a fresh renderer used to start again from the guess.
+ * A phone that could not hold the guess (a Samsung A33 guesses "medium") lagged
+ * through the opening of every single map, stepped down at its end, and forgot
+ * it in the store. A device does not get faster between maps.
+ */
+export type LearnedLimit = QualityTier | "2d";
+
+export function getLearnedLimit(): LearnedLimit | null {
+  const v = read(LEARNED_KEY);
+  return v === "2d" || (TIER_ORDER as readonly string[]).includes(v ?? "") ? v as LearnedLimit : null;
+}
+
+export function setLearnedLimit(limit: LearnedLimit | null): void {
+  write(LEARNED_KEY, limit);
+}
+
+/** The tier `auto` starts a board at: the device's guess, never above what it has learned. */
+export function autoStartTier(guess: QualityTier, learned: LearnedLimit | null): QualityTier {
+  if (learned === null) return guess;
+  if (learned === "2d") return "minimal";
+  return cheaperTier(guess, learned);
+}
+
+/**
+ * The renderer the next board actually starts with: the player's (or Admin's)
+ * choice, except that `auto` quality on a device that has learned it cannot
+ * hold even the cheapest 3D tier gets the 2D board. Pinning a tier, or picking
+ * 2D outright, always wins over what was learned.
+ */
+export function getBoardRenderer(): RendererChoice {
+  const choice = getRendererChoice();
+  if (choice === "three" && getQualitySetting() === "auto" && getLearnedLimit() === "2d") return "sleek";
+  return choice;
 }

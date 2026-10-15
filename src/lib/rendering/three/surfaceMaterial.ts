@@ -243,7 +243,7 @@ export function makeSurfaceMaterial(shared: SurfaceShared, opts: SurfaceMaterial
   const squash = new Vector3(...(opts.sampleSquash ?? [1, 1, 1]));
   const sideShade = opts.sideShade ?? 0.78;
   const selfLitExtra = opts.selfLitExtra ?? 0;
-  const base = opts.tier === "low"
+  const base = opts.tier === "low" || opts.tier === "minimal"
     ? new MeshLambertMaterial({ color: 0xffffff })
     : new MeshStandardMaterial({ color: 0xffffff, roughness: opts.roughness ?? 0.82, metalness: 0 });
   if (opts.translucent) {

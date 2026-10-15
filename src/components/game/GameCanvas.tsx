@@ -141,7 +141,7 @@ import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
-import { getRendererChoice, type RendererChoice } from "@/lib/rendering/render3dSettings";
+import { getBoardRenderer, type RendererChoice } from "@/lib/rendering/render3dSettings";
 import { recordRendererStart } from "@/lib/rendering/rendererDiag";
 import { recordZoomEvent } from "@/lib/zoomRecorder";
 import { BUILD_SHA } from "@/lib/buildInfo";
@@ -528,7 +528,9 @@ export function GameCanvas({
   // Which WebGL renderer this board starts with (render3dSettings.ts): the 3D
   // one unless Admin chose the 2D one. A 3D renderer that will not start drops
   // to the 2D one, and that one to the emergency board below.
-  const [glKind, setGlKind] = useState<RendererChoice>(getRendererChoice);
+  // The choice in Admin, or the 2D board on a device whose auto quality
+  // learned it cannot hold even the cheapest 3D tier (render3dSettings).
+  const [glKind, setGlKind] = useState<RendererChoice>(getBoardRenderer);
   // The map clock, for the 3D board's power drain (RenderContext.deadlineLimit).
   // Refs, because the render closure is built once per map.
   const deadlineSecondsLeftRef = useRef(deadlineSecondsLeft);

@@ -444,6 +444,26 @@ relative: S is one session, M is a few, L is many.
    applied between maps, because a rebuild compiles shaders and a hitch
    mid-map is what it exists to prevent. The light pool is a fixed size per
    tier for the same reason. The perf HUD does not show the tier yet.
+
+   **[CHANGED again]** after "lagging something awful" on a Samsung A33.
+   The step was forgotten: the board (and its renderer) is torn down every
+   time the store opens, so each new board started from the guess and lagged
+   through the opening of every map. Now:
+   - the tier `auto` steps down to is stored on the device
+     (`devend:render3d:learned`), and every later board starts no higher;
+   - a fourth tier below `low`, `minimal`: no shadows at all, no MSAA, the 3D
+     frame at 1x, coarser spheres and fewer shards; the light pool keeps its
+     five, because a light is how a ball is seen on a dark map;
+   - under ~30 fps (median past `SEVERE_FRAME_MS`) the 3D frame's resolution
+     drops to 1x at once, mid-map: a render target, no shader compile;
+   - past `minimal` the device learns "2d", and later boards on `auto` start
+     the 2D renderer (`getBoardRenderer`);
+   - the governor counts a RUN of long gaps as slowness (one long gap is still
+     a pause), and judges after about 4s of frames, not only after 120: at
+     5 fps every gap was being discarded as a pause, so the slowest devices
+     were the only ones never stepped down;
+   - every step, with the frame time that caused it, is logged and shown in
+     Admin's "3D on this device" card, with a reset.
    - Validate in the Android build (Capacitor WebView), including a cold
      start and a context loss.
    - Admin gets a tier override.
