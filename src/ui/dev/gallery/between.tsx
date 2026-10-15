@@ -173,34 +173,40 @@ export const entries: GalleryEntry[] = [
   { id: "Pipeline-store", group: "screen", render: () => <PipelineStoreSample /> },
   {
     id: "LevelCompleteOverlay", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT}
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT}
       newlyUnlockedCerts={[certs[0]]} />,
   },
   {
     id: "LevelCompleteOverlay-rough", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={roughScore} totalScore={402} onContinue={noop} accentColor={ACCENT} />,
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={roughScore} totalScore={402} onContinue={noop} accentColor={ACCENT} />,
   },
   {
     // The ticket Debrief: the pre-map Acceptance Criteria card, filled in.
     id: "LevelCompleteOverlay-ticket", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={ticketScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={ticketScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       full={false} newlyUnlockedCerts={[certs[0]]} />,
   },
   {
     id: "LevelCompleteOverlay-ticketMissed", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={ticketMissedScore} totalScore={402} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={ticketMissedScore} totalScore={402} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       full={false} />,
   },
   {
     // A map with no Promotion due: the strip skips that stage and Continue says "Open the store".
     id: "LevelCompleteOverlay-storeOnly", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={fullScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       pipeline={{ clearedLevel: 10, promotion: false, store: true, last: false }} />,
+  },
+  {
+    // The ticket with the store next: "Open the store", and under it the way past it.
+    id: "LevelCompleteOverlay-ticketSkipStore", group: "screen",
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={ticketScore} totalScore={1284} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+      full={false} pipeline={{ clearedLevel: 10, promotion: false, store: true, last: false }} />,
   },
   {
     // The last map: no store, and the strip ends with the run's finish.
     id: "LevelCompleteOverlay-last", group: "screen",
-    render: () => <LevelCompleteOverlay scoreData={fullScore} totalScore={4120} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
+    render: () => <LevelCompleteOverlay onSkipStore={noop} scoreData={fullScore} totalScore={4120} onContinue={noop} accentColor={ACCENT} buttonDelay={0}
       pipeline={{ clearedLevel: 35, promotion: false, store: false, last: true }} />,
   },
   {

@@ -821,6 +821,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             scoreData={session.pendingLevelScore}
             totalScore={session.totalScore}
             onContinue={session.handleContinueFromOverlay}
+            onSkipStore={session.handleSkipStoreFromOverlay}
             accentColor={accentHex}
             newlyUnlockedCerts={session.pendingCertUnlocks}
             pipeline={session.betweenMapPlan}

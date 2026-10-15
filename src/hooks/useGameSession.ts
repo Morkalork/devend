@@ -1507,11 +1507,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * Post-shop bookkeeping shared by the shop's Continue button and the
    * lock-gated skip: save the level-picker checkpoint on 5th levels, surface
    * any pending cert unlocks, clear the pending score, then advance and play.
+   * `bankedThisTick` is hours added to the bank in the same handler (the
+   * store's interest on a skipped visit), which `totalScore` cannot see yet.
    */
-  const finishShopPhase = useCallback(() => {
+  const finishShopPhase = useCallback((bankedThisTick = 0) => {
     const nextLevelNumber = currentLevelIndex + 2;
     if (nextLevelNumber % 5 === 0) {
-      saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
+      saveRunCheckpoint({ level: nextLevelNumber, totalScore: totalScore + bankedThisTick, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
     }
     const pendingUnlocks = takePendingUnlocks();
     if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
@@ -1539,7 +1541,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // a note.
   const { goToUpgradeShop, goToCapstoneDraft, goToGame } = nav;
 
-  const proceedToShop = useCallback(() => {
+  /**
+   * Everything that happens on arriving at the store, whether or not the
+   * player then looks at the shelf: the lock toll decides open or closed, the
+   * bank's interest is paid, and a free ability arrives. A skipped store is an
+   * arrival with nothing bought, so it keeps the interest and the ability; it
+   * would be a strange perk that paid only those who window-shop. Returns the
+   * interest, which the bank shows only on the next render.
+   */
+  const arriveAtStore = useCallback((): number => {
     // The shop is only earned by locking balls this round: at least one lock,
     // or two when the map offered three or more balls. We still OPEN the shop
     // when short, but it opens "closed" (no purchases) so the player sees what
@@ -1581,8 +1591,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     } else {
       setFreeAbilityGrant(null);
     }
+    return interest;
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, activeModifiers.shopInterestPercent, totalScore, abilityCharges, currentLevelIndex]);
+
+  const proceedToShop = useCallback(() => {
+    arriveAtStore();
     goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, activeModifiers.shopInterestPercent, totalScore, abilityCharges, currentLevelIndex, goToUpgradeShop]);
+  }, [arriveAtStore, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1658,7 +1673,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     saveRun(snap);
   }, [betweenStage, storeDealt, capstoneOffers, saveRun, currentRunSave]);
 
-  const handleContinueFromOverlay = useCallback(() => {
+  /** Closing the map's card, whichever way the player goes on from it. */
+  const leaveDebrief = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
     // Features unlocked this round; show the first "Feature Unlocked" modal now
@@ -1668,13 +1684,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (pendingFeatureUnlocksRef.current.length > 0) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
+  }, []);
+
+  const handleContinueFromOverlay = useCallback(() => {
+    leaveDebrief();
     if (isLastLevel) {
       // Beat the final level: the run is won, and that is the end of it.
       handleFinishRun();
     } else if (!offerCapstoneIfDue()) {
       proceedToShop();
     }
-  }, [isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
+  }, [leaveDebrief, isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
 
   /**
    * A run saved between maps, routed back to the stage it was saved on once
@@ -1762,7 +1782,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     everHeldAbilityIdsRef.current = heldAbilityIds({ [abilityId]: 1 }, everHeldAbilityIdsRef.current);
   }, []);
 
-  const handleContinueFromShop = useCallback(() => {
+  /**
+   * Out of the store and on to the next map. `sawShelf` is false for a store
+   * skipped from the map's card: nothing was bought, and a free-item voucher
+   * is kept, since the free offer it pays for was never on screen.
+   */
+  const leaveStore = useCallback((sawShelf: boolean, bankedThisTick = 0) => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
     // expired at the next level completion. The chunk scales with the same
     // market-rate inflation as prices (see upgradePricing.inflationForLevel).
@@ -1776,12 +1801,36 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     // Free-store-item pickup (issue #48): an OPEN store visit consumes one
     // voucher (the shop showed its cheapest offer free). Closed stores keep it.
-    if (!storeClosed && carryFreeShopItems > 0) {
+    if (sawShelf && !storeClosed && carryFreeShopItems > 0) {
       setCarryFreeShopItems(n => Math.max(0, n - 1));
     }
 
-    finishShopPhase();
+    finishShopPhase(bankedThisTick);
   }, [currentLevelIndex, activeModifiers, finishShopPhase, storeClosed, carryFreeShopItems]);
+
+  const handleContinueFromShop = useCallback(() => {
+    leaveStore(true);
+  }, [leaveStore]);
+
+  /**
+   * The map's card, straight on to the next map: the store is optional.
+   *
+   * Only offered when the store is the next stage (the card hides the button
+   * otherwise); should it be reached anyway, a due Promotion or the run's end
+   * still comes first, exactly as Continue would have it.
+   */
+  const handleSkipStoreFromOverlay = useCallback(() => {
+    leaveDebrief();
+    if (isLastLevel) {
+      handleFinishRun();
+      return;
+    }
+    if (offerCapstoneIfDue()) {
+      return;
+    }
+    const interest = arriveAtStore();
+    leaveStore(false, interest);
+  }, [leaveDebrief, isLastLevel, handleFinishRun, offerCapstoneIfDue, arriveAtStore, leaveStore]);
 
   /** Capstone draft pick: permanent for the run, then on to the shop. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
@@ -2098,6 +2147,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     abilityCharges,
     handleLevelComplete,
     handleContinueFromOverlay,
+    handleSkipStoreFromOverlay,
     handleDismissFeatureUnlocked,
     handlePurchaseUpgrade,
     handlePurchaseAbility,
