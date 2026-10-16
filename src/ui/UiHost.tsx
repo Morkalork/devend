@@ -121,10 +121,24 @@ function EventBridge(): null {
       }
     };
     window.addEventListener("pointercancel", onPointerCancel, true);
+    // The long press. On Android a finger held still raises `contextmenu`
+    // and, unless it is refused, the browser takes the touch for its menu and
+    // cancels it: a held card loses its explainer, a held scroll view stops
+    // scrolling, a held-then-dragged fence never draws. There is no menu
+    // anywhere in the canvas interface, so it is refused while that interface
+    // owns the page; a text field (Admin's) keeps its own.
+    const onContextMenu = (e: Event) => {
+      if (!document.documentElement.classList.contains("canvas-ui")) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, [contenteditable]")) return;
+      e.preventDefault();
+    };
+    window.addEventListener("contextmenu", onContextMenu, true);
     setUiHitTester((x, y) => interactiveAt(app, x, y));
     if (import.meta.env.DEV) (window as unknown as { __uiApp?: PixiApplication }).__uiApp = app;
     return () => {
       window.removeEventListener("pointercancel", onPointerCancel, true);
+      window.removeEventListener("contextmenu", onContextMenu, true);
       setUiHitTester(null);
       try { events.setTargetElement(null as unknown as HTMLElement); } catch { /* torn down */ }
       internal._onPointerUp = originalUp;
