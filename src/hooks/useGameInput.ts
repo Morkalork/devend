@@ -74,11 +74,11 @@ const MAX_SWIPE_SAMPLES = 256;
  * Telling a deliberate second finger from the hand holding the phone, in CSS
  * px (see strayReason). The edge band is where wrapped fingertips and a
  * curved screen's rim land; a contact wider than the palm limit is not a
- * fingertip; and a swipe that has not travelled the hand-off slop is not yet a
+ * fingertip, even pressed hard; and a swipe that has not travelled the hand-off slop is not yet a
  * fence anyone is drawing.
  */
 export const EDGE_GRIP_CSS = 24;
-export const PALM_CSS = 48;
+export const PALM_CSS = 64;
 export const HANDOFF_SLOP_CSS = 16;
 /** World units of invisible margin round the drawn board, each side. */
 const VISIBLE_INSET = (BOARD_WIDTH * (1 - VISIBLE_BOARD_FRACTION)) / 2;
@@ -188,7 +188,7 @@ export function useGameInput(
      * a grip lands. Mirrors game.swipePointerId; the game state holds world
      * points and no idea how far a finger travelled on the glass.
      */
-    let swipe: { pointerId: number; startClient: Vector2; travel: number; fromGrip: boolean } | null = null;
+    let swipe: { pointerId: number; startClient: Vector2; travel: number; fromGrip: boolean; downAt: number } | null = null;
 
     /**
      * A finger that was holding a swipe it never moved, set aside when another
@@ -251,6 +251,7 @@ export function useGameInput(
       swipe = {
         pointerId: s.pointerId, startClient: s.startClient,
         travel: Math.hypot(s.lastClient.x - s.startClient.x, s.lastClient.y - s.startClient.y), fromGrip: s.fromGrip,
+        downAt: performance.now(),
       };
       setIsPlayerDragging(true);
     };
@@ -265,6 +266,15 @@ export function useGameInput(
       if (uiCovers(e.clientX, e.clientY)) {
         trace(() => `#${e.pointerId} down: on an interface widget, not the board`);
         return;
+      }
+
+      // A swipe this listener never saw start (the listeners were re-attached
+      // mid-gesture, so its lift may never arrive here) belongs to no finger
+      // this device is tracking. Left in place it would make every press a
+      // "second" touch, and a hard press a palm.
+      if (game.swipeStart && !swipe && standby === null) {
+        trace(() => `#${e.pointerId} down: dropped a stale swipe from #${game.swipePointerId}`);
+        clearSwipeState(game);
       }
 
       // Another finger already owns a gesture. A touch that looks like the
@@ -554,7 +564,7 @@ export function useGameInput(
       game.swipePointerId   = e.pointerId;
       swipe = {
         pointerId: e.pointerId, startClient: { x: e.clientX, y: e.clientY }, travel: 0,
-        fromGrip: strayReason(e, game) !== null,
+        fromGrip: strayReason(e, game) !== null, downAt: performance.now(),
       };
       setIsPlayerDragging(true);
       trace(() => `#${e.pointerId} down: swipe started at (${worldPos.x | 0},${worldPos.y | 0})`);
@@ -704,6 +714,11 @@ export function useGameInput(
         }
       }
 
+      // How long the finger had been down says what took it: a cancel at about
+      // half a second on a still finger is the long press (see contextmenu).
+      const heldMs = swipe ? Math.round(performance.now() - swipe.downAt) : 0;
+      const how = cancelled ? `cancelled by the system after ${heldMs}ms` : "up";
+
       if (
         game.swipeStart &&
         game.swipeRegionId &&
@@ -826,9 +841,9 @@ export function useGameInput(
             regionId: game.swipeRegionId,
             fenceTypeId: game.selectedFenceTypeId ?? STANDARD_FENCE_ID,
           });
-          trace(() => `#${e.pointerId} ${cancelled ? "cancelled by the system" : "up"}: fence, ${dist | 0} units`);
+          trace(() => `#${e.pointerId} ${how}: fence, ${dist | 0} units`);
         } else {
-          trace(() => `#${e.pointerId} ${cancelled ? "cancelled by the system" : "up"}: too short for a fence (${dist.toFixed(1)} units)`);
+          trace(() => `#${e.pointerId} ${how}: too short for a fence (${dist.toFixed(1)} units)`);
         }
       } else if (game.swipeStart) {
         trace(() => `#${e.pointerId} up: swipe dropped, the board stopped taking fences`);
@@ -853,19 +868,50 @@ export function useGameInput(
      */
     const handlePointerCancel = (e: PointerEvent) => release(e, true);
 
+    /**
+     * A finger held still on Android raises the long press: a `contextmenu`
+     * at the touch-and-hold delay (500ms by default, 400ms on the "short"
+     * accessibility setting). Left alone, the browser takes the touch for its
+     * menu and CANCELS it, and every move after that goes nowhere. So a player
+     * who puts a finger down, presses, and then draws (the careful way to
+     * draw) got nothing at all. The board never has a menu; refused here.
+     */
+    const handleContextMenu = (e: Event) => {
+      e.preventDefault();
+      trace(() => "long press: the browser's context menu refused");
+    };
+
+    /**
+     * Trace only: a press inside the board's box that some OTHER element
+     * received. The board never hears those, so without this the trace would
+     * show nothing at all for exactly the touches nobody can explain.
+     */
+    const handleAnyDown = (e: PointerEvent) => {
+      if (e.target === canvas) return;
+      const r = canvas.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+      const el = e.target as Element | null;
+      trace(() => `#${e.pointerId} down: over the board, but taken by <${el?.tagName?.toLowerCase() ?? "?"}${
+        el?.className && typeof el.className === "string" ? ` .${el.className.trim().split(/\s+/).slice(0, 3).join(".")}` : ""}>`);
+    };
+
     canvas.addEventListener("pointerdown",  handlePointerDown);
+    window.addEventListener("pointerdown",  handleAnyDown, true);
     canvas.addEventListener("pointermove",  handlePointerMove);
     canvas.addEventListener("pointerup",    handlePointerUp);
     canvas.addEventListener("pointerleave", handlePointerUp);
     canvas.addEventListener("pointercancel", handlePointerCancel);
+    canvas.addEventListener("contextmenu",  handleContextMenu);
 
     return () => {
       clearHold();
       canvas.removeEventListener("pointerdown",  handlePointerDown);
+      window.removeEventListener("pointerdown",  handleAnyDown, true);
       canvas.removeEventListener("pointermove",  handlePointerMove);
       canvas.removeEventListener("pointerup",    handlePointerUp);
       canvas.removeEventListener("pointerleave", handlePointerUp);
       canvas.removeEventListener("pointercancel", handlePointerCancel);
+      canvas.removeEventListener("contextmenu",  handleContextMenu);
     };
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.

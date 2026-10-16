@@ -234,3 +234,61 @@ describe("the touch trace", () => {
     expect(lines).toMatch(/#1 up: fence/);
   });
 });
+
+describe("the long press", () => {
+  // Android raises `contextmenu` on a finger held still and, unless it is
+  // refused, cancels the touch for its menu: put a finger down, press, then
+  // draw, and nothing at all happens. Headless Chromium has no long-press
+  // gesture to replay, so this pins the refusal itself.
+  it("is refused on the board, so the browser never takes the touch", () => {
+    const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    canvas.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+  });
+
+  it("is refused across the canvas interface too, except in a text field", async () => {
+    const { readFileSync } = await import("node:fs");
+    const host = readFileSync("src/ui/UiHost.tsx", "utf8");
+    expect(host).toMatch(/window\.addEventListener\("contextmenu", onContextMenu, true\)/);
+    expect(host).toMatch(/window\.removeEventListener\("contextmenu", onContextMenu, true\)/);
+    expect(host).toMatch(/closest\?\.\("input, textarea, select, \[contenteditable\]"\)/);
+  });
+
+  it("leaves a trace saying how long the finger was down when a touch is taken", () => {
+    setTouchTraceEnabled(true);
+    fire("pointerdown", 1, ...open(300, 450));
+    fire("pointercancel", 1, 0, 0);
+    expect(touchTraceLines().join("\n")).toMatch(/#1 cancelled by the system after \d+ms: too short/);
+  });
+});
+
+describe("a swipe nobody is holding", () => {
+  it("is dropped by the next press, which draws normally even pressed hard", () => {
+    // Left behind when the listeners were re-attached mid-gesture.
+    const stale = open(500, 700);
+    game.swipeStart = { x: stale[0], y: stale[1] };
+    game.swipeRegionId = findRegionContainingPoint(game.regions, stale[0], stale[1])!.id;
+    game.currentSwipePos = { ...game.swipeStart };
+    game.swipePointerId = 99;
+    const a = open(300, 300), b: [number, number] = [650, 300];
+    fire("pointerdown", 1, ...a, PALM_CSS - 4);
+    drag(1, a, b);
+    fire("pointerup", 1, ...b);
+    expect(cuts()).toHaveLength(1);
+    expect(cuts()[0].start).toEqual({ x: a[0], y: a[1] });
+  });
+});
+
+describe("a press something else took", () => {
+  it("is named in the trace, since the board itself never hears it", () => {
+    setTouchTraceEnabled(true);
+    const cover = document.createElement("div");
+    cover.className = "absolute inset-0 backdrop";
+    document.body.appendChild(cover);
+    const e = new MouseEvent("pointerdown", { clientX: 400, clientY: 400, bubbles: true });
+    Object.defineProperty(e, "pointerId", { value: 7 });
+    cover.dispatchEvent(e);
+    cover.remove();
+    expect(touchTraceLines().join("\n")).toMatch(/#7 down: over the board, but taken by <div \.absolute\.inset-0\.backdrop>/);
+  });
+});

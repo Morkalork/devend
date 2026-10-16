@@ -78,6 +78,10 @@ const WALL_CLOCK_READS: Record<string, { count: number; why: string }> = {
     count: 8,
     why: "the performance counters (recordBg/recordFrame/recordCut). They measure how long a real frame took, which is the one thing sim time cannot tell them.",
   },
+  "src/hooks/useGameInput.ts": {
+    count: 3,
+    why: "the touch trace's hold time: how long a finger was really down before the system cancelled it (the long-press tell). Written to the Admin trace only, never to game state or a command.",
+  },
 };
 
 /**
