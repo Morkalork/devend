@@ -71,6 +71,12 @@ export interface SpaceGrid {
    * nothing protected (normal recapture).
    */
   keepActive?: Uint8Array;
+  /**
+   * The cells as the map started, after the obstacles were sealed in: what was
+   * never playable (obstacle footprints, outside the board) as opposed to what
+   * the player took. Drawing only (filledGround.ts); physics never reads it.
+   */
+  startCells?: Uint8Array;
 }
 
 export interface GridRegion {
@@ -163,6 +169,7 @@ export function createSpaceGrid(
   // obstacle's own footprint and not a fence-style band.
   for (const obstacle of obstacles) sealPolygonToGrid(grid, obstacle);
   grid.initialActiveCount = grid.activeCount;
+  grid.startCells = Uint8Array.from(grid.cells);
 
   return grid;
 }

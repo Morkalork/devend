@@ -255,6 +255,8 @@ export class SleekRenderer {
       this.props.container,
       this.entities.container,
       this.objects.container,
+      // Fenced-off ground, filled over whatever stands in it (filledGround.ts).
+      this.board.cover,
       this.walls.container,
       // Directional shading: a wall's face answering the light in front of it
       // (faceLightLayer.ts). Above the walls for the same reason the bounce
@@ -331,9 +333,13 @@ export class SleekRenderer {
       this.shadowPlane,
       this.props.container,
       this.balls.trails,
-      this.fx.under,
       this.entities.container,
       this.objects.container,
+      // Fenced-off ground, filled over whatever stands in it (filledGround.ts);
+      // the 3D board raises it into a block. The floor effects go over it, so
+      // a claim flash and a sealed pocket's badges still land on the fill.
+      this.board.cover,
+      this.fx.under,
       this.walls.container,
     );
     this.surfaceScope.mask = this.surfaceMask;

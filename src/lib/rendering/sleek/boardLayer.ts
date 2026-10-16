@@ -14,7 +14,8 @@
 
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { traceActiveContours, snapOutlineToWalls, traceLockContours } from "@/lib/rendering/regionContour";
+import { traceActiveContours, snapOutlineToWalls, traceLockContours, traceContours } from "@/lib/rendering/regionContour";
+import { filledGround } from "@/lib/rendering/filledGround";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
 import { washSpriteAlpha, washStops } from "./boardWash";
@@ -71,7 +72,6 @@ export class BoardLayer {
   /** Surface fills, held together so one alpha covers the whole surface. */
   private surface = new Container();
   private captured = new Graphics();  // fenced-off territory (the substrate)
-  private locked = new Graphics();    // territory earned by trapping a ball
   private active = new Graphics();    // still-playable space, punched on top
   private lattice = new Graphics();   // the faint grid inside live space
   private latticeMask = new Graphics();
@@ -88,6 +88,17 @@ export class BoardLayer {
    * layer to remember.
    */
   readonly shadowMask = new Graphics();
+  /**
+   * Fenced-off ground, FILLED (filledGround.ts): an opaque cover drawn above
+   * everything standing on the floor and below the fences and the balls, so
+   * whatever is left inside a captured pocket is buried rather than looking
+   * like something still to play with. The renderer files it in the draw
+   * order; the lock tints ride on top of it, because a sealed pocket's record
+   * is the one thing in there still worth reading.
+   */
+  readonly cover = new Container();
+  private coverFill = new Graphics();
+  private coverLocked = new Graphics();
   private wash: Sprite | null = null; // baked ambient falloff, multiplied over
   /** Off under the 3D renderer, whose lights do the falloff for real. */
   showWash = true;
@@ -99,16 +110,16 @@ export class BoardLayer {
 
   constructor() {
     this.lattice.mask = this.latticeMask;
-    // Locked sits between the substrate and live space: it tints territory that
-    // has been captured, and live space is painted opaque on top, which also
-    // means a pocket that later REOPENS (a destructible breaking) hides its
-    // stale tint for free rather than needing the array cleaned up.
-    this.surface.addChild(this.captured, this.locked, this.active, this.lattice, this.latticeMask);
+    // The lock tints live on the cover (drawCover), traced from filled cells
+    // only, so a pocket that later REOPENS (a destructible breaking) loses its
+    // tint with its fill rather than needing the array cleaned up.
+    this.surface.addChild(this.captured, this.active, this.lattice, this.latticeMask);
     // One alpha on the group, rather than per-fill: the captured and live fills
     // overlap, so per-fill alpha would make the overlap less transparent than
     // the rest and show as a visible seam along every region boundary.
     this.surface.alpha = SURFACE_ALPHA;
     this.container.addChild(this.surface);
+    this.cover.addChild(this.coverFill, this.coverLocked);
   }
 
   /**
@@ -244,9 +255,10 @@ export class BoardLayer {
       .fill({ color: PALETTE.captured, alpha: 1 });
 
     this.active.clear();
-    this.locked.clear();
     this.latticeMask.clear();
     this.lattice.clear();
+    this.coverFill.clear();
+    this.coverLocked.clear();
 
     // Shadows are allowed over the whole board until drawLocked subtracts the
     // pockets. Rebuilt here (not per frame) because it changes only when the
@@ -261,6 +273,7 @@ export class BoardLayer {
     // Before the live-space trace, because a fully captured board returns early
     // below and the locked tint is exactly what you want to see on that frame.
     this.drawLocked(game, w2s);
+    this.drawCover(game, w2s);
 
     // ── Live space: one traced contour set, drawn OPAQUE over the captured fill.
     // Drawing on top (rather than compositing a hole) keeps the edge a single
@@ -367,21 +380,67 @@ export class BoardLayer {
     }
     this.shadowMask.fill({ color: 0xffffff, alpha: 1 });
 
-    for (let tier = 1; tier <= LOCK_TIERS; tier++) {
-      let present = false;
-      for (let i = 0; i < lock.length; i++) {
-        if (lock[i] >= tier) { present = true; break; }
-      }
-      if (!present) break; // tiers are cumulative, so nothing above this exists
+    // The tints themselves are drawn over the fill (drawCover): this layer
+    // would only ever be painted underneath it.
+  }
 
-      const loops = traceLockContours(grid, game.walls, tier);
+  /**
+   * The fill over fenced-off ground, then the lock tints again on top of it,
+   * limited to filled cells so a pocket that reopened carries no stale tint.
+   */
+  private drawCover(game: CanvasGameState, w2s: W2S): void {
+    const ground = filledGround(game);
+    const grid = game.spaceGrid;
+    if (!ground || !grid) {
+      return;
+    }
+    const project = (loop: { x: number; y: number }[]) => loop.map(p => w2s(p.x, p.y));
+    if (ground.strip) {
+      this.coverFill.poly(project(ground.strip.outer));
+      for (const hole of ground.strip.holes) {
+        this.coverFill.poly(project(hole));
+      }
+      this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
+    }
+    const loops = ground.loops.filter(l => l.length >= 3).map(project);
+    if (loops.length === 0) {
+      return;
+    }
+    for (const loop of loops) {
+      this.coverFill.poly(loop);
+    }
+    this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
+    // The edge of the fill: where the player's ground ends.
+    for (const loop of loops) {
+      this.coverFill.poly(loop);
+    }
+    this.coverFill.stroke({ width: hairline(), color: PALETTE.accentDim, alpha: 0.55 });
+
+    const lock = grid.lockCaptured;
+    if (!lock) {
+      return;
+    }
+    const gw = grid.width;
+    for (let tier = 1; tier <= LOCK_TIERS; tier++) {
+      const inside = (col: number, row: number) => {
+        const i = row * gw + col;
+        return lock[i] >= tier && ground.mask[i] === 1;
+      };
+      const raw = traceContours(grid, inside);
+      if (raw.length === 0) {
+        break; // tiers are cumulative, so nothing above this exists
+      }
       let drew = false;
-      for (const loop of loops) {
-        if (loop.length < 3) continue;
-        this.locked.poly(loop.map(p => w2s(p.x, p.y)));
+      for (const loop of snapOutlineToWalls(raw, game.walls, grid.cellSize)) {
+        if (loop.length < 3) {
+          continue;
+        }
+        this.coverLocked.poly(project(loop));
         drew = true;
       }
-      if (drew) this.locked.fill({ color: PALETTE.accent, alpha: LOCK_TIER_ALPHA });
+      if (drew) {
+        this.coverLocked.fill({ color: PALETTE.accent, alpha: LOCK_TIER_ALPHA });
+      }
     }
   }
 

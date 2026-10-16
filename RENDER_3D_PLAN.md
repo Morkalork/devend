@@ -598,6 +598,20 @@ portals pass on), the brightest twelve when there are more, and caps a pool's
 spread so a lamp lights a patch rather than the whole listing. Two Playground
 dials: "Light through the floor" (0 is the solid sheet) and its reach.
 
+## 12. Filled ground (built after the plan)
+
+Fenced-off ground is FILLED rather than painted a shade lighter: read from
+play, a captured pocket with its obstacles, props and areas still standing in
+it looked like a pocket with something left to do. `filledGround.ts` decides
+which cells are filled (ground the player took, plus any obstacle footprint no
+live cell touches any more) and traces one outline, shared by both renderers:
+the 2D surface draws it as an opaque cover above everything on the floor and
+below the fences and balls (`BoardLayer.cover`), and the 3D board raises it
+into a block just under fence height (`fill3d.ts`), whose top carries the lock
+tints and a pocket's badges. Props resting on filled ground are not drawn;
+bugs, in the air, still are. An obstacle live space still touches stays
+standing, because it still matters to play.
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the

@@ -23,6 +23,7 @@ import {
 import type { CanvasGameState } from "@/types/gameState";
 import { PALETTE, PICKUP_COLORS, mix } from "@/lib/rendering/sleek/palette";
 import { getBug } from "@/lib/bugs";
+import { filledGround, isFilledAt } from "@/lib/rendering/filledGround";
 import { BUG_EXPIRY_WARN_SECONDS, BUG_RADIUS } from "@/lib/physics/bugs";
 
 export type PropKind = "pickup" | "loot" | "bug" | "charge" | "terminal";
@@ -253,7 +254,13 @@ export class Props3D {
   sync(game: CanvasGameState, now: number): void {
     const poses = propPoses(game, now, this.poses);
     const used: Record<PropKind, number> = { pickup: 0, loot: 0, bug: 0, charge: 0, terminal: 0 };
+    // Anything resting on fenced-off ground is buried under the fill
+    // (fill3d.ts). A bug is in the air, so it still shows.
+    const ground = filledGround(game);
     for (const p of poses) {
+      if (p.kind !== "bug" && isFilledAt(game, ground, p.x, p.z)) {
+        continue;
+      }
       const pool = this.pools[p.kind];
       const slot = pool[used[p.kind]] ?? (pool[used[p.kind]] = this.build(p.kind));
       used[p.kind]++;

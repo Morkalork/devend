@@ -48,6 +48,7 @@ import { pixiGlTexture, releasePixiWrap, threeViewOf, wrapForPixi } from "./text
 import { Floor3D } from "./floor3d";
 import { Walls3D } from "./walls3d";
 import { Solids3D } from "./solids3d";
+import { Fill3D } from "./fill3d";
 import { Balls3D } from "./balls3d";
 import { LAMP_HEIGHT, Lights3D, monitorPlacement, roomLevel, wantedLights, type BallTone } from "./lights3d";
 import { Explosions3D } from "./explosions3d";
@@ -86,6 +87,8 @@ interface Rig {
   floor: Floor3D;
   walls: Walls3D;
   solids: Solids3D;
+  /** Fenced-off ground as a raised block (fill3d.ts). */
+  fill: Fill3D;
   balls: Balls3D;
   explosions: Explosions3D;
   props: Props3D;
@@ -233,7 +236,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const floor = new Floor3D(floorMat);
     const walls = new Walls3D(wallMat);
     const solids = new Solids3D(solidMat);
-    this.board.add(floor.mesh, walls.mesh, solids.mesh);
+    const fill = new Fill3D(solidMat);
+    this.board.add(floor.mesh, walls.mesh, solids.mesh, fill.mesh);
     const balls = new Balls3D(this.board, preset.sphereSegments);
     const explosions = new Explosions3D(this.board, preset.maxShards);
     const props = new Props3D(this.board, preset.sphereSegments);
@@ -245,7 +249,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     phaseShadows.mesh.receiveShadow = false;
     this.board.add(phaseShadows.mesh);
     this.rig = {
-      preset, floor, walls, solids, balls, explosions, props, zones, lights,
+      preset, floor, walls, solids, fill, balls, explosions, props, zones, lights,
       preview, phaseShadows, sparks: new CircuitSparks(),
       materials: [floorMat, wallMat, solidMat, plateMat, phaseMat],
     };
@@ -259,10 +263,11 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private disposeRig(): void {
     const rig = this.rig;
     if (!rig) return;
-    this.board.remove(rig.floor.mesh, rig.walls.mesh, rig.solids.mesh);
+    this.board.remove(rig.floor.mesh, rig.walls.mesh, rig.solids.mesh, rig.fill.mesh);
     rig.floor.dispose();
     rig.walls.dispose();
     rig.solids.dispose();
+    rig.fill.dispose();
     rig.balls.dispose();
     rig.explosions.dispose();
     rig.props.dispose();
@@ -360,6 +365,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const wallMesh = rig.walls.sync(game, this.heightScale);
     if (wallMesh.parent !== this.board) this.board.add(wallMesh);
     rig.solids.sync(game, this.heightScale);
+    rig.fill.sync(game, this.heightScale);
     // The key light the balls' glint faces: the lamp over its ball, else the
     // monitor, in the scene's (tilted) space.
     if (frame.lamp) this.keyLight.set(frame.lamp.x, LAMP_HEIGHT, frame.lamp.y).applyMatrix4(this.board.matrix);
