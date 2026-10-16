@@ -3,9 +3,16 @@
  *
  * The 2D surface already paints a captured pocket as an opaque cover; on the
  * 3D board a cover on the floor would still leave every obstacle and prop in
- * the pocket standing up out of it. So the fill rises, to just under a fence's
- * height: the pocket reads as poured full, whatever was in it is buried, and
- * the fences around it stand a hair proud of it as the seams of the cuts.
+ * the pocket standing up out of it. So the fill rises, flush with the fences'
+ * tops: the pocket reads as poured full, whatever was in it is buried, and a
+ * fence bounding it is the lip of the fill rather than a band half sunk into
+ * it. The outline runs along the fence's centre line, so the fill's own edge
+ * would split every fence top in two; its material is pushed back in depth
+ * (ThreeRenderer) so wherever the two share a height the fence wins.
+ *
+ * It casts no shadow. Its sides stand inside the fences that bound it, which
+ * already cast, and a block flush with a fence's top shadowing that top is the
+ * striping a diagonal fence showed.
  *
  * The top samples the surface texture like every other surface here, so the
  * lock tints and a pocket's badges painted on the 2D cover land on the top of
@@ -20,8 +27,8 @@ import type { Vector2 } from "@/lib/polygon";
 import { filledGround, type FilledShape } from "@/lib/rendering/filledGround";
 import { HEIGHTS } from "./heights3d";
 
-/** The fill's height as a share of a fence's: fences stay just proud of it. */
-export const FILL_RISE = 0.92;
+/** The fill's height as a share of a fence's: flush with the fence tops. */
+export const FILL_RISE = 1;
 /** How far inside an edge a side face samples its colour, world units. */
 const SIDE_INSET = 2.2;
 
@@ -128,7 +135,7 @@ export class Fill3D {
 
   constructor(material: Material) {
     this.mesh = new Mesh(new BufferGeometry(), material);
-    this.mesh.castShadow = true;
+    this.mesh.castShadow = false;
     this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
   }

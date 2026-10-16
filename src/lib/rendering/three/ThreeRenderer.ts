@@ -236,7 +236,13 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const floor = new Floor3D(floorMat);
     const walls = new Walls3D(wallMat);
     const solids = new Solids3D(solidMat);
-    const fill = new Fill3D(solidMat);
+    // The furniture's material, pushed back in depth: the fill is flush with
+    // the fence tops and buried slabs, and where they meet those must win.
+    const fillMat = makeSurfaceMaterial(this.shared, { tier, inset: true, roughness: 0.75, selfLitExtra: SOLID_SELF_LIT });
+    fillMat.polygonOffset = true;
+    fillMat.polygonOffsetFactor = 1;
+    fillMat.polygonOffsetUnits = 4;
+    const fill = new Fill3D(fillMat);
     this.board.add(floor.mesh, walls.mesh, solids.mesh, fill.mesh);
     const balls = new Balls3D(this.board, preset.sphereSegments);
     const explosions = new Explosions3D(this.board, preset.maxShards);
@@ -251,7 +257,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.rig = {
       preset, floor, walls, solids, fill, balls, explosions, props, zones, lights,
       preview, phaseShadows, sparks: new CircuitSparks(),
-      materials: [floorMat, wallMat, solidMat, plateMat, phaseMat],
+      materials: [floorMat, wallMat, solidMat, fillMat, plateMat, phaseMat],
     };
     this.governor.reset(performance.now());
     this.emergencyRatio = Number.POSITIVE_INFINITY;
