@@ -2,13 +2,14 @@
  * Fenced-off ground as a raised block (filledGround.ts).
  *
  * The 2D surface already paints a captured pocket as an opaque cover; on the
- * 3D board a cover on the floor would still leave every obstacle and prop in
- * the pocket standing up out of it. So the fill rises, flush with the fences'
- * tops: the pocket reads as poured full, whatever was in it is buried, and a
- * fence bounding it is the lip of the fill rather than a band half sunk into
- * it. The outline runs along the fence's centre line, so the fill's own edge
- * would split every fence top in two; its material is pushed back in depth
- * (ThreeRenderer) so wherever the two share a height the fence wins.
+ * 3D board a cover on the floor would still read as floor. So the fill rises,
+ * to a little under the fences' tops: the pocket reads as poured full, and the
+ * fences and walls that were in it stand just proud of it (solids3d raises
+ * anything standing on the fill to at least a fence's height), so the pocket
+ * keeps the lines that made it rather than becoming one lump. Only the loose
+ * things go under: props and tokens. The fill's material is pushed back in
+ * depth (ThreeRenderer) so wherever it meets something at its own height the
+ * other thing wins.
  *
  * It casts no shadow. Its sides stand inside the fences that bound it, which
  * already cast, and a block flush with a fence's top shadowing that top is the
@@ -27,8 +28,8 @@ import type { Vector2 } from "@/lib/polygon";
 import { filledGround, type FilledShape } from "@/lib/rendering/filledGround";
 import { HEIGHTS } from "./heights3d";
 
-/** The fill's height as a share of a fence's: flush with the fence tops. */
-export const FILL_RISE = 1;
+/** The fill's height as a share of a fence's: the fences stand just proud. */
+export const FILL_RISE = 0.7;
 /** How far inside an edge a side face samples its colour, world units. */
 const SIDE_INSET = 2.2;
 

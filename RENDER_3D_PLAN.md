@@ -608,11 +608,13 @@ obstacle once stood on; BURIED footprints no live cell reaches; FOOTING, the
 part of an edge obstacle's footprint nearer taken ground than live) and traces
 one outline, shared by both renderers. The 2D surface draws it as an opaque
 cover above everything on the floor and below the fences and balls
-(`BoardLayer.cover`), cut away by an inverse mask wherever something still
-stands on it; the 3D board raises it into a block flush with the fence tops
-(`fill3d.ts`), skips the solids it buried and raises whatever stands on it to
-at least its height. Movers are never buried: a rotor sweeping across a pocket
-is still a hazard at its edge. The lock tints and a pocket's badges sit on top.
+(`BoardLayer.cover`), then puts every wall and mover that meets it back on
+top through an inverse mask, with the fences drawn above it anyway; the 3D
+board raises it into a block a little under fence height (`fill3d.ts`) and
+stands every wall and mover on it at least a fence tall, so they show in
+relief. Painted over and then re-applied, a pocket keeps the lines that made
+it instead of becoming one lump of green; only loose things (props, tokens)
+stay under. The lock tints and a pocket's badges sit on top.
 
 ## What is still open
 

@@ -6,7 +6,9 @@
  * nobody can reach any more. Read from play, a pocket you could do nothing in
  * looked like a pocket with things to do in it. So the fenced-off ground is
  * FILLED instead, the way the classic game fills it: an opaque cover in the 2D
- * surface, and a raised block on the 3D board, over everything inside it.
+ * surface, and a raised block on the 3D board. The walls and fences inside it
+ * are then put back on top, so a pocket keeps its lines; only the loose
+ * things (props, tokens) stay under.
  *
  * What counts as filled, per grid cell (CellFill):
  *   - TAKEN: not playable now (REMOVED), and playable at some point in the map
@@ -14,8 +16,8 @@
  *     reserved ground is released). A brick column knocked out and then fenced
  *     off is the player's ground like any other.
  *   - BURIED: the footprint of something never playable (an obstacle) that no
- *     live cell touches any more. It goes under the fill, and the renderers
- *     stop drawing what stood there.
+ *     live cell touches any more. The fill runs under it, and the obstacle is
+ *     drawn back on top (standingOnFill): a pocket keeps its walls.
  *   - FOOTING: the footprint of an obstacle that still touches live ground but
  *     is bordered more by taken ground than by live. The fill runs under it, so
  *     there is no pit round an obstacle on the edge of a pocket, and the
@@ -23,8 +25,9 @@
  * Cells outside the board are never filled, and an obstacle out in live space
  * (bordered mostly by live ground) is left exactly as it was.
  *
- * Something that MOVES is never buried: a rotor sweeping across a pocket is
- * still a hazard at the pocket's edge, so it is drawn over the fill.
+ * Fences are drawn over the fill too (they sit above the cover in both
+ * renderers), so a pocket reads as filled ground with its cuts and walls still
+ * on it. A mover sweeping across a pocket is drawn over it the same way.
  *
  * The head-start strip (headStartStrip.ts) is captured ground too, outside the
  * shrunk grid, so it is returned as its own shape.
@@ -57,7 +60,9 @@ export interface FilledGround {
   mask: Uint8Array;
   /** CellFill per cell, for the renderers that need to know why. */
   kind: Uint8Array;
-  /** Obstacles under the fill: not drawn by either renderer. */
+  /** Obstacles inside a pocket that no live ground reaches any more. Still
+   *  drawn over the fill (standingOnFill); told apart for the tests and for
+   *  anything that wants to treat them as out of play. */
   buried: Set<Polygon>;
   /** Every outline of the filled cells (fill even-odd), world units. */
   loops: Vector2[][];
@@ -362,10 +367,11 @@ export function touchesFill(game: CanvasGameState, ground: FilledGround | null, 
 const DISC_SEGMENTS = 24;
 
 /**
- * Everything that still STANDS where it meets the fill: obstacles that are
- * not buried, and every mover (a moving thing is never buried). The 2D cover
- * is cut away at these outlines so they show over it; the 3D board raises
- * them to at least the fill's height.
+ * Every wall that meets the fill, buried or not, and every mover over it. The
+ * fill paints a pocket over, then these go back on top: the 2D cover is cut
+ * away at their outlines so they show through it, and the 3D board stands
+ * them proud of the fill. Without them a pocket is one lump of green that has
+ * lost the lines that made it. Only loose things (props, tokens) stay under.
  */
 export function standingOnFill(game: CanvasGameState, ground: FilledGround | null): Vector2[][] {
   if (!ground) {
@@ -374,7 +380,7 @@ export function standingOnFill(game: CanvasGameState, ground: FilledGround | nul
   const out: Vector2[][] = [];
   const polys = new Set<Polygon>([...game.obstaclePolygons, ...(game.mirrorPolygons ?? [])]);
   for (const poly of polys) {
-    if (!ground.buried.has(poly) && touchesFill(game, ground, poly.vertices)) {
+    if (touchesFill(game, ground, poly.vertices)) {
       out.push(poly.vertices);
     }
   }

@@ -63,6 +63,18 @@ describe("which ground is filled", () => {
     expect(ground.buried.has(standing)).toBe(false);
   });
 
+  it("puts every wall in a pocket back on top of the fill, buried or not", () => {
+    const buried = rect(30, 30, 75, 75);
+    const standing = rect(200, 200, 245, 245);
+    const grid = createSpaceGrid(BOARD, [buried, standing], 15);
+    captureLeftOf(grid, 120);
+    const game = gameOf(grid, [buried, standing]);
+    const back = standingOnFill(game, filledGround(game));
+    expect(back).toContain(buried.vertices);
+    // Out in live space it never met the fill, so there is nothing to put back.
+    expect(back).not.toContain(standing.vertices);
+  });
+
   it("runs the fill under an obstacle on a pocket's edge, and keeps it standing", () => {
     // Taken ground to its left, live ground to its right.
     const edge = rect(100, 100, 160, 160);

@@ -24,7 +24,6 @@ import { simNow } from "@/lib/simClock";
 import { HEIGHTS } from "./heights3d";
 import { ROLE_RISE } from "@/lib/objectRise";
 import { filledGround, touchesFill } from "@/lib/rendering/filledGround";
-import { FILL_RISE } from "./fill3d";
 
 export interface Solid {
   vertices: Vector2[];
@@ -104,17 +103,16 @@ export function collectSolids(game: CanvasGameState, heightScale: number, now = 
   const phasing = new Map<Polygon, number>();
   for (const p of game.phasingObjects ?? []) phasing.set(p.polygon, p.alpha);
   const roles = roleRises(game);
-  // Fenced-off ground is a block at fence height (fill3d.ts). What it buried
-  // is not drawn; what still stands on it is at least as tall, or the block
-  // would swallow a brick or a rotor that still matters to play.
+  // Fenced-off ground is a block a little under fence height (fill3d.ts).
+  // Every wall and mover on it stands at least a fence's height, so it stays
+  // proud of the fill and a pocket keeps its walls in relief.
   const ground = filledGround(game);
-  const fillTop = HEIGHTS.fence * FILL_RISE * heightScale;
+  const proud = HEIGHTS.fence * heightScale;
   const onFill = (vertices: Vector2[], height: number) =>
-    touchesFill(game, ground, vertices) ? Math.max(height, fillTop) : height;
+    touchesFill(game, ground, vertices) ? Math.max(height, proud) : height;
 
   for (const poly of game.obstaclePolygons) {
     if (portals.has(poly)) continue;
-    if (ground?.buried.has(poly)) continue;
     const presence = phasing.get(poly) ?? 1;
     if (presence < 0.03) continue;
     const rise = obstacleRiseOf(game, poly, roles);
