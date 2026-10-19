@@ -3,8 +3,10 @@
  * board fills over, and the outline the 2D cover and the 3D block share.
  */
 import { describe, it, expect } from "vitest";
-import { createSpaceGrid, markCellRemoved, worldToGridIndex, CellState, type SpaceGrid } from "@/lib/spaceGrid";
-import { filledCellMask, filledGround, isFilledAt, nestLoops } from "@/lib/rendering/filledGround";
+import { createSpaceGrid, markCellRemoved, restoreCells, worldToGridIndex, CellState, type SpaceGrid } from "@/lib/spaceGrid";
+import {
+  CellFill, filledCellKinds, filledCellMask, filledGround, isFilledAt, nestLoops, standingOnFill,
+} from "@/lib/rendering/filledGround";
 import { extrudeFill } from "@/lib/rendering/three/fill3d";
 import type { Polygon } from "@/lib/polygon";
 import type { CanvasGameState } from "@/types/gameState";
@@ -26,8 +28,8 @@ function captureLeftOf(grid: SpaceGrid, x: number): void {
   }
 }
 
-function gameOf(grid: SpaceGrid): CanvasGameState {
-  return { spaceGrid: grid, walls: [], boardPolygon: BOARD } as unknown as CanvasGameState;
+function gameOf(grid: SpaceGrid, obstaclePolygons: Polygon[] = []): CanvasGameState {
+  return { spaceGrid: grid, walls: [], boardPolygon: BOARD, obstaclePolygons, mirrorPolygons: [], movers: [] } as unknown as CanvasGameState;
 }
 
 describe("which ground is filled", () => {
@@ -48,22 +50,53 @@ describe("which ground is filled", () => {
     expect(mask[0]).toBe(0);
   });
 
-  it("buries an obstacle inside captured ground, but not one live space still touches", () => {
+  it("buries an obstacle inside captured ground, but not one out in live space", () => {
     const buried = rect(30, 30, 75, 75);
     const standing = rect(200, 200, 245, 245);
     const grid = createSpaceGrid(BOARD, [buried, standing], 15);
     captureLeftOf(grid, 120);
-    const mask = filledCellMask(grid, BOARD);
-    expect(mask[worldToGridIndex(grid, 52, 52)]).toBe(1);
-    expect(mask[worldToGridIndex(grid, 222, 222)]).toBe(0);
+    const kind = filledCellKinds(grid, BOARD);
+    expect(kind[worldToGridIndex(grid, 52, 52)]).toBe(CellFill.BURIED);
+    expect(kind[worldToGridIndex(grid, 222, 222)]).toBe(CellFill.NONE);
+    const ground = filledGround(gameOf(grid, [buried, standing]))!;
+    expect(ground.buried.has(buried)).toBe(true);
+    expect(ground.buried.has(standing)).toBe(false);
   });
 
-  it("keeps an obstacle on the fence line standing", () => {
-    // Straddles the cut, so its right half still faces live ground.
-    const grid = createSpaceGrid(BOARD, [rect(100, 100, 150, 150)], 15);
+  it("runs the fill under an obstacle on a pocket's edge, and keeps it standing", () => {
+    // Taken ground to its left, live ground to its right.
+    const edge = rect(100, 100, 160, 160);
+    const grid = createSpaceGrid(BOARD, [edge], 15);
+    captureLeftOf(grid, 150);
+    const game = gameOf(grid, [edge]);
+    const kind = filledCellKinds(grid, BOARD);
+    expect(kind[worldToGridIndex(grid, 112, 130)]).toBe(CellFill.FOOTING);
+    // The live side stays live: no fill reaching out past the obstacle.
+    expect(kind[worldToGridIndex(grid, 157, 130)]).toBe(CellFill.NONE);
+    const ground = filledGround(game)!;
+    expect(ground.buried.has(edge)).toBe(false);
+    expect(standingOnFill(game, ground)).toContain(edge.vertices);
+  });
+
+  it("fills ground an obstacle stood on once it broke and was taken", () => {
+    const brick = rect(30, 30, 75, 75);
+    const grid = createSpaceGrid(BOARD, [brick], 15);
+    const footprint = [...grid.cells.keys()].filter(i => {
+      const col = i % grid.width, row = (i - col) / grid.width;
+      const x = grid.originX + col * 15 + 7.5, y = grid.originY + row * 15 + 7.5;
+      return grid.cells[i] === CellState.REMOVED && x > 20 && x < 85 && y > 20 && y < 85;
+    });
+    restoreCells(grid, footprint);
     captureLeftOf(grid, 120);
-    const mask = filledCellMask(grid, BOARD);
-    expect(mask[worldToGridIndex(grid, 125, 125)]).toBe(0);
+    expect(filledCellKinds(grid, BOARD)[worldToGridIndex(grid, 52, 52)]).toBe(CellFill.TAKEN);
+  });
+
+  it("does not let a restore on a probe's copy of the grid touch the real one", () => {
+    const grid = createSpaceGrid(BOARD, [rect(30, 30, 75, 75)], 15);
+    const i = worldToGridIndex(grid, 52, 52);
+    const probe: SpaceGrid = { ...grid, cells: Uint8Array.from(grid.cells) };
+    restoreCells(probe, [i]);
+    expect(grid.startCells![i]).toBe(CellState.REMOVED);
   });
 
   it("fills nothing for a grid without a start snapshot", () => {

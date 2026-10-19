@@ -23,6 +23,8 @@ import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffec
 import { simNow } from "@/lib/simClock";
 import { HEIGHTS } from "./heights3d";
 import { ROLE_RISE } from "@/lib/objectRise";
+import { filledGround, touchesFill } from "@/lib/rendering/filledGround";
+import { FILL_RISE } from "./fill3d";
 
 export interface Solid {
   vertices: Vector2[];
@@ -102,13 +104,21 @@ export function collectSolids(game: CanvasGameState, heightScale: number, now = 
   const phasing = new Map<Polygon, number>();
   for (const p of game.phasingObjects ?? []) phasing.set(p.polygon, p.alpha);
   const roles = roleRises(game);
+  // Fenced-off ground is a block at fence height (fill3d.ts). What it buried
+  // is not drawn; what still stands on it is at least as tall, or the block
+  // would swallow a brick or a rotor that still matters to play.
+  const ground = filledGround(game);
+  const fillTop = HEIGHTS.fence * FILL_RISE * heightScale;
+  const onFill = (vertices: Vector2[], height: number) =>
+    touchesFill(game, ground, vertices) ? Math.max(height, fillTop) : height;
 
   for (const poly of game.obstaclePolygons) {
     if (portals.has(poly)) continue;
+    if (ground?.buried.has(poly)) continue;
     const presence = phasing.get(poly) ?? 1;
     if (presence < 0.03) continue;
     const rise = obstacleRiseOf(game, poly, roles);
-    out.push({ vertices: dented(poly.vertices), height: HEIGHTS.slab * rise * heightScale * presence });
+    out.push({ vertices: dented(poly.vertices), height: onFill(poly.vertices, HEIGHTS.slab * rise * heightScale * presence) });
   }
 
   // A launcher shell standing in for its slabs until each section lets go.
@@ -123,11 +133,12 @@ export function collectSolids(game: CanvasGameState, heightScale: number, now = 
   for (const m of game.movers) {
     const height = (m.rise !== undefined ? HEIGHTS.slab * m.rise : HEIGHTS.mover) * heightScale;
     if (m.shape === "rect") {
-      out.push({ vertices: dented(m.polygon.vertices), height });
+      out.push({ vertices: dented(m.polygon.vertices), height: onFill(m.polygon.vertices, height) });
     } else {
       const cx = m.homeX + (m.axis === "horizontal" ? m.offset : 0);
       const cy = m.homeY + (m.axis === "vertical" ? m.offset : 0);
-      out.push({ vertices: disc(cx, cy, m.radius ?? 18), height });
+      const footprint = disc(cx, cy, m.radius ?? 18);
+      out.push({ vertices: footprint, height: onFill(footprint, height) });
     }
   }
   return out;

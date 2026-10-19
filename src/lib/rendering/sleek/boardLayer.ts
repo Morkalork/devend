@@ -15,7 +15,7 @@
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapOutlineToWalls, traceLockContours, traceContours } from "@/lib/rendering/regionContour";
-import { filledGround } from "@/lib/rendering/filledGround";
+import { filledGround, standingOnFill } from "@/lib/rendering/filledGround";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
 import { washSpriteAlpha, washStops } from "./boardWash";
@@ -99,6 +99,13 @@ export class BoardLayer {
   readonly cover = new Container();
   private coverFill = new Graphics();
   private coverLocked = new Graphics();
+  /**
+   * What still stands on the fill (standingOnFill), cut out of the cover by an
+   * inverse mask, so an obstacle on a pocket's edge or a rotor sweeping across
+   * one is drawn whole over it. Per frame, because movers move.
+   */
+  private coverCut = new Graphics();
+  private coverCutOn = false;
   private wash: Sprite | null = null; // baked ambient falloff, multiplied over
   /** Off under the 3D renderer, whose lights do the falloff for real. */
   showWash = true;
@@ -119,7 +126,7 @@ export class BoardLayer {
     // the rest and show as a visible seam along every region boundary.
     this.surface.alpha = SURFACE_ALPHA;
     this.container.addChild(this.surface);
-    this.cover.addChild(this.coverFill, this.coverLocked);
+    this.cover.addChild(this.coverFill, this.coverLocked, this.coverCut);
   }
 
   /**
@@ -147,6 +154,7 @@ export class BoardLayer {
    */
   sync(game: CanvasGameState, room: LightScope, w2s: W2S, dirty: boolean): void {
     this.syncGeometry(game, w2s, dirty);
+    this.syncCoverCut(game, w2s);
     this.syncWash(game, room);
     this.syncDrop(game, room);
   }
@@ -382,6 +390,28 @@ export class BoardLayer {
 
     // The tints themselves are drawn over the fill (drawCover): this layer
     // would only ever be painted underneath it.
+  }
+
+  private syncCoverCut(game: CanvasGameState, w2s: W2S): void {
+    this.coverCut.clear();
+    const standing = standingOnFill(game, filledGround(game));
+    for (const outline of standing) {
+      if (outline.length >= 3) {
+        this.coverCut.poly(outline.map(p => w2s(p.x, p.y))).fill({ color: 0xffffff, alpha: 1 });
+      }
+    }
+    // Masked only while something stands on the fill, so the many frames with
+    // nothing there cost no stencil pass.
+    const cut = standing.length > 0;
+    if (cut !== this.coverCutOn) {
+      this.coverCutOn = cut;
+      if (cut) {
+        this.cover.setMask({ mask: this.coverCut, inverse: true });
+      } else {
+        this.cover.mask = null;
+      }
+    }
+    this.coverCut.visible = cut;
   }
 
   /**

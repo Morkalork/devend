@@ -602,15 +602,17 @@ dials: "Light through the floor" (0 is the solid sheet) and its reach.
 
 Fenced-off ground is FILLED rather than painted a shade lighter: read from
 play, a captured pocket with its obstacles, props and areas still standing in
-it looked like a pocket with something left to do. `filledGround.ts` decides
-which cells are filled (ground the player took, plus any obstacle footprint no
-live cell touches any more) and traces one outline, shared by both renderers:
-the 2D surface draws it as an opaque cover above everything on the floor and
-below the fences and balls (`BoardLayer.cover`), and the 3D board raises it
-into a block just under fence height (`fill3d.ts`), whose top carries the lock
-tints and a pocket's badges. Props resting on filled ground are not drawn;
-bugs, in the air, still are. An obstacle live space still touches stays
-standing, because it still matters to play.
+it looked like a pocket with something left to do. `filledGround.ts` sorts
+every cell (TAKEN ground the player fenced off, including ground a broken
+obstacle once stood on; BURIED footprints no live cell reaches; FOOTING, the
+part of an edge obstacle's footprint nearer taken ground than live) and traces
+one outline, shared by both renderers. The 2D surface draws it as an opaque
+cover above everything on the floor and below the fences and balls
+(`BoardLayer.cover`), cut away by an inverse mask wherever something still
+stands on it; the 3D board raises it into a block flush with the fence tops
+(`fill3d.ts`), skips the solids it buried and raises whatever stands on it to
+at least its height. Movers are never buried: a rotor sweeping across a pocket
+is still a hazard at its edge. The lock tints and a pocket's badges sit on top.
 
 ## What is still open
 

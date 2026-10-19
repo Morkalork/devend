@@ -72,11 +72,18 @@ export interface SpaceGrid {
    */
   keepActive?: Uint8Array;
   /**
-   * The cells as the map started, after the obstacles were sealed in: what was
-   * never playable (obstacle footprints, outside the board) as opposed to what
-   * the player took. Drawing only (filledGround.ts); physics never reads it.
+   * The cells as the map started, after the obstacles were sealed in, marked
+   * ACTIVE again as anything is restored: what has never been playable
+   * (standing obstacle footprints, outside the board) as opposed to what the
+   * player took. Drawing only (filledGround.ts); physics never reads it.
    */
   startCells?: Uint8Array;
+  /**
+   * The `cells` array `startCells` belongs to. Probes copy a grid with fresh
+   * cells and the same startCells (`{ ...grid, cells: Uint8Array.from(...) }`);
+   * a restore on such a copy must not mark the real board's ground as played.
+   */
+  startCellsOf?: Uint8Array;
 }
 
 export interface GridRegion {
@@ -170,6 +177,7 @@ export function createSpaceGrid(
   for (const obstacle of obstacles) sealPolygonToGrid(grid, obstacle);
   grid.initialActiveCount = grid.activeCount;
   grid.startCells = Uint8Array.from(grid.cells);
+  grid.startCellsOf = grid.cells;
 
   return grid;
 }
@@ -239,6 +247,11 @@ export function restoreCells(grid: SpaceGrid, indices: number[]): void {
     if (index >= 0 && index < grid.cells.length && grid.cells[index] === CellState.REMOVED) {
       grid.cells[index] = CellState.ACTIVE;
       grid.activeCount++;
+    }
+    // Playable now, so ground the player can take (filledGround.ts): a brick
+    // knocked out and later fenced off is filled like any other ground.
+    if (grid.startCells && grid.startCellsOf === grid.cells && index >= 0 && index < grid.startCells.length) {
+      grid.startCells[index] = CellState.ACTIVE;
     }
   }
 }
