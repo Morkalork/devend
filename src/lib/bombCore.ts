@@ -120,7 +120,7 @@ export interface ShardBombConfig {
 }
 
 export const DEFAULT_SHARD_BOMB_CONFIG: ShardBombConfig = {
-  chance: 0.1, startLevel: 17, boxStartLevel: 11, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
+  chance: 0.1, startLevel: 5, boxStartLevel: 11, blastRadius: 100, blastDamage: 1.5, ballBoost: 1.5,
   box: { radius: 150, damage: 2, ballBoost: 1.8 },
   boostSeconds: 2.5,
 };
@@ -249,17 +249,43 @@ export function authoredShardBombs(level: Pick<LevelConfig, "entities">): Map<st
  * shard, so a Daily run and both halves of a lockstep pair carry the same
  * bricks. A shard already carrying a bug is skipped: a brick holding two
  * things is a brick nobody can read. Authored pins win both ways.
+ *
+ * `minimum` (Chaos Engineering's Game Day, `shardBombsPerMap`): when the roll
+ * leaves fewer bombs than that, more shards are armed until there are that
+ * many, or no eligible shard is left. Picked by a seeded draw of their own, so
+ * the top-up is as deterministic as the roll. Never fewer than the roll gave:
+ * it is a floor, not a count.
  */
 export function assignShardBombs(
-  destructibles: DestructibleState[], chance: number, authored: Map<string, boolean>,
+  destructibles: DestructibleState[], chance: number, authored: Map<string, boolean>, minimum = 0,
 ): void {
+  const spare: DestructibleState[] = [];
+  let armed = 0;
   for (const d of destructibles) {
     if (d.kind !== "breakable" || !d.brittle || d.fenceStyle) continue;
     const want = authored.get(d.id);
     if (want === false) continue;
-    if (want === true) { d.shardBomb = true; continue; }
-    if (d.bug || chance <= 0) continue;
-    if (getRunRng(`shardBomb:${d.id}`)() < chance) d.shardBomb = true;
+    if (want === true) {
+      d.shardBomb = true;
+      armed++;
+      continue;
+    }
+    if (d.bug) continue;
+    if (chance > 0 && getRunRng(`shardBomb:${d.id}`)() < chance) {
+      d.shardBomb = true;
+      armed++;
+    } else {
+      spare.push(d);
+    }
+  }
+  const short = Math.floor(minimum) - armed;
+  if (short <= 0 || spare.length === 0) {
+    return;
+  }
+  const draw = new Map(spare.map(d => [d.id, getRunRng(`shardBombFloor:${d.id}`)()]));
+  spare.sort((a, b) => draw.get(a.id)! - draw.get(b.id)!);
+  for (const d of spare.slice(0, short)) {
+    d.shardBomb = true;
   }
 }
 

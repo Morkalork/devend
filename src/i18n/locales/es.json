@@ -1507,6 +1507,22 @@
         "name": "Breaking Change",
         "description": "En mapas rompibles, romper no cuesta multiplicador de encierro y cada rotura paga un 15% más."
       },
+      "chaos_engineering_junior": {
+        "name": "Chaos Engineering",
+        "description": "Los fragmentos tienen un 10% más de probabilidad de llevar una bomba."
+      },
+      "chaos_engineering_senior": {
+        "name": "Chaos Engineering",
+        "description": "Los fragmentos tienen un 20% más de probabilidad de llevar una bomba."
+      },
+      "chaos_engineering_principal_a": {
+        "name": "Chaos Engineering",
+        "description": "Inyección de fallos: los fragmentos tienen un 40% más de probabilidad de llevar una bomba."
+      },
+      "chaos_engineering_principal_b": {
+        "name": "Chaos Engineering",
+        "description": "Game Day: cada mapa con fragmentos tiene al menos 2 fragmentos bomba, además del 20%."
+      },
       "ghost_protocol_junior": {
         "name": "Protocolo Fantasma",
         "description": "Una valla nueva atraviesa las bolas durante sus primeros 0,1s de crecimiento."

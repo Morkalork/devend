@@ -1967,6 +1967,66 @@ upgrades:
     condition: { kind: mapHas, feature: breakable }
 
   # ===============================
+  # CHAOS ENGINEERING (Shard Bombs)
+  # More of the bricks carry a bomb. Shard bombs roll from level 5 at
+  # game-config.yml's shard_bombs.chance (10%); this adds to that roll
+  # (shardBombChanceBonus, clamped to every shard) and, at Game Day, puts a
+  # floor under it (shardBombsPerMap). A randomizer the player opts into: a
+  # blast clears bricks round it and throws the balls, which helps or hurts.
+  #
+  # shardBombChanceBonus is ADDITIVE and every owned tier counts, so the values
+  # below are INCREMENTS and the descriptions state the running total. The
+  # fork: more bombs on average (Fault Injection), or a promise that every
+  # brick map has some (Game Day), which is the one that pays on a map with
+  # only a handful of shards, where a percentage rolls nothing.
+  # ===============================
+
+  - id: chaos_engineering_junior
+    name: Chaos Engineering
+    tier: Junior
+    description: "Shards are 10% more likely to carry a bomb."
+    unlockLevel: 4
+    icon: bomb
+    tags: [risk]
+    modifiers:
+      shardBombChanceBonus: 0.1
+
+  - id: chaos_engineering_senior
+    name: Chaos Engineering
+    tier: Senior
+    description: "Shards are 20% more likely to carry a bomb."
+    unlockLevel: 9
+    prerequisites:
+      - chaos_engineering_junior
+    tags: [risk]
+    modifiers:
+      shardBombChanceBonus: 0.1
+
+  - id: chaos_engineering_principal_a
+    name: Chaos Engineering
+    tier: Principal
+    description: "Fault Injection: shards are 40% more likely to carry a bomb."
+    unlockLevel: 14
+    prerequisites:
+      - chaos_engineering_senior
+    choiceGroup: chaos_engineering_principal
+    tags: [risk]
+    modifiers:
+      shardBombChanceBonus: 0.2
+
+  - id: chaos_engineering_principal_b
+    name: Chaos Engineering
+    tier: Principal
+    description: "Game Day: every map with shards has at least 2 shard bombs, on top of the 20%."
+    unlockLevel: 14
+    prerequisites:
+      - chaos_engineering_senior
+    choiceGroup: chaos_engineering_principal
+    tags: [risk, tempo]
+    modifiers:
+      shardBombsPerMap: 2
+
+  # ===============================
   # GHOST PROTOCOL (Fence Grace)
   # ===============================
   #

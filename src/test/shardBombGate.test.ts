@@ -1,12 +1,13 @@
 /**
- * Shard bombs wait for their map (lib/bombCore.ts `effectiveShardBombChance`).
+ * When shards carry bombs (lib/bombCore.ts `effectiveShardBombChance`), and
+ * Chaos Engineering, the upgrade line that raises it.
  *
- * They used to roll on every brick on every map, so the maps that teach bricks
- * (5 and 6 first) dealt explosions nobody had introduced: a blast that reopens
- * claimed ground on the map whose whole job is "a ball breaks this". Now the
- * roll starts at game-config.yml's `start_level` (17, the Demolition map), a
- * map can say otherwise with `shardBombChance`, and the Playground's bonus can
- * still force one onto any map.
+ * They once rolled on every brick on every map, then waited for 17 (the
+ * Demolition map) so the brick could be taught plain first. The owner moved
+ * them back to 5, the first brick map, as a randomizer worth having early:
+ * the roll starts at game-config.yml's `start_level`, a map can say otherwise
+ * with `shardBombChance`, Chaos Engineering adds to the chance, its Game Day
+ * fork puts a floor under the count, and the Playground can force either.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
@@ -62,21 +63,19 @@ describe("the chance a map's shards carry a bomb", () => {
 });
 
 describe("the ladder", () => {
-  it("keeps every brick map before 17 free of bombs, and gives 17 them", () => {
+  it("lets every brick map from 5 on roll bombs, the first one included", () => {
+    expect(CFG.startLevel).toBe(5);
     const withShards = LADDER.filter(l => (l.entities ?? []).some(e => e.kind === "wall" && "brittle" in e && e.brittle));
     expect(withShards.map(l => l.level)).toEqual(expect.arrayContaining([5, 6, 17]));
     const bombed = withShards.filter(l => mapCanHaveShardBombs(l)).map(l => l.level);
-    expect(bombed).toEqual([17]);
+    expect(bombed).toEqual(withShards.map(l => l.level));
   });
 });
 
 describe("a dealt board", () => {
-  it("deals level 5 and 6 plain bricks", () => {
-    for (const n of [5, 6]) {
-      const s = shards(n, { bombs: CFG });
-      expect(s.length).toBeGreaterThan(0);
-      expect(s.filter(d => d.shardBomb), `level ${n}`).toEqual([]);
-    }
+  it("rolls level 5's bricks at the base chance", () => {
+    expect(effectiveShardBombChance(CFG, 5, level(5).shardBombChance)).toBe(CFG.chance);
+    expect(effectiveShardBombChance(CFG, 4, undefined)).toBe(0);
   });
 
   it("deals level 17 some bombs, seeded", () => {
@@ -98,6 +97,78 @@ describe("a dealt board", () => {
     const ctx = createBotGame(level(17), 17);
     expect(ctx.game.shardBombBlast).toBeNull();
     expect(ctx.game.boxBombBlast).toBeNull();
+  });
+});
+
+describe("Game Day: a floor under the count", () => {
+  const plain = (n: number) => shards(n, { bombs: { ...CFG, chance: 0 } });
+  const floored = (n: number, floor: number, chance = 0) => {
+    setRunSeedText(`shard-bomb-floor-${n}`);
+    const ctx = createBotGame(level(n), n, plainModifiers({ shardBombsPerMap: floor }), { bombs: { ...CFG, chance } });
+    return ctx.game.destructibles.filter(d => d.kind === "breakable" && d.brittle && !d.fenceStyle);
+  };
+
+  it("arms at least that many shards on a map that rolled none", () => {
+    expect(plain(5).filter(d => d.shardBomb)).toEqual([]);
+    const s = floored(5, 2);
+    expect(s.length).toBeGreaterThanOrEqual(2);
+    expect(s.filter(d => d.shardBomb)).toHaveLength(2);
+  });
+
+  it("never takes away what the roll gave: a floor, not a count", () => {
+    const rolled = floored(17, 0, 1).filter(d => d.shardBomb).length;
+    expect(rolled).toBeGreaterThan(2);
+    expect(floored(17, 2, 1).filter(d => d.shardBomb).length).toBe(rolled);
+  });
+
+  it("is seeded, so a Daily and both phones of a pair arm the same shards", () => {
+    const a = floored(6, 2).filter(d => d.shardBomb).map(d => d.id);
+    const b = floored(6, 2).filter(d => d.shardBomb).map(d => d.id);
+    expect(a).toHaveLength(2);
+    expect(b).toEqual(a);
+  });
+
+  it("stops at the shards there are", () => {
+    const s = floored(5, 999);
+    expect(s.filter(d => d.shardBomb).length).toBe(s.filter(d => !d.bug).length);
+  });
+});
+
+describe("Chaos Engineering", () => {
+  type Up = { id: string; tier: string; choiceGroup?: string; prerequisites?: string[]; modifiers: Record<string, number>; unlockLevel?: number };
+  const doc = yaml.load(readFileSync("public/upgrades.yml", "utf8")) as { upgrades: Up[] };
+  const line = doc.upgrades.filter(u => u.id.startsWith("chaos_engineering_"));
+  const by = (id: string) => line.find(u => u.id === id)!;
+
+  it("is a Junior, a Senior and a Principal fork", () => {
+    expect(line.map(u => u.id).sort()).toEqual([
+      "chaos_engineering_junior", "chaos_engineering_principal_a", "chaos_engineering_principal_b", "chaos_engineering_senior",
+    ]);
+    expect(by("chaos_engineering_principal_a").choiceGroup).toBe("chaos_engineering_principal");
+    expect(by("chaos_engineering_principal_b").choiceGroup).toBe("chaos_engineering_principal");
+    // On the shelf before the first brick map, so it can be bought for it.
+    expect(by("chaos_engineering_junior").unlockLevel).toBeLessThan(CFG.startLevel);
+  });
+
+  it("raises the chance tier by tier, and the forks pay as described", () => {
+    const sum = (ids: string[], key: string) => ids.reduce((t, id) => t + (by(id).modifiers[key] ?? 0), 0);
+    const base = ["chaos_engineering_junior", "chaos_engineering_senior"];
+    expect(sum(["chaos_engineering_junior"], "shardBombChanceBonus")).toBeCloseTo(0.1);
+    expect(sum(base, "shardBombChanceBonus")).toBeCloseTo(0.2);
+    // Fault Injection: 40% in all. Game Day: the 20%, and a floor of 2.
+    expect(sum([...base, "chaos_engineering_principal_a"], "shardBombChanceBonus")).toBeCloseTo(0.4);
+    expect(sum([...base, "chaos_engineering_principal_b"], "shardBombChanceBonus")).toBeCloseTo(0.2);
+    expect(by("chaos_engineering_principal_b").modifiers.shardBombsPerMap).toBe(2);
+  });
+
+  it("is in every language", () => {
+    for (const lang of ["es", "sv", "bn"]) {
+      const loc = JSON.parse(readFileSync(`src/i18n/locales/${lang}.json`, "utf8")) as { content: { upgrades: Record<string, { name: string; description: string }> } };
+      for (const u of line) {
+        expect(loc.content.upgrades[u.id]?.description, `${lang} ${u.id}`).toBeTruthy();
+        expect(loc.content.upgrades[u.id].description).not.toContain("\u2014");
+      }
+    }
   });
 });
 

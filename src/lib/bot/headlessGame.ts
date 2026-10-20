@@ -363,7 +363,7 @@ export function createBotGame(
     const chance = cfg
       ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, modifiers.shardBombChanceBonus ?? 0)
       : 0;
-    assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
+    assignShardBombs(game.destructibles, chance, authoredShardBombs(level), modifiers.shardBombsPerMap ?? 0);
   }
   return {
     game, level, levelNumber, modifiers,

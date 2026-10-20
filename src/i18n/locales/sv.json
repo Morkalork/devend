@@ -1507,6 +1507,22 @@
         "name": "Breaking Change",
         "description": "På banor med krossbart kostar krossande ingen låsmultiplikator, och varje kross betalar 15% mer."
       },
+      "chaos_engineering_junior": {
+        "name": "Chaos Engineering",
+        "description": "Skärvor har 10% större chans att bära en bomb."
+      },
+      "chaos_engineering_senior": {
+        "name": "Chaos Engineering",
+        "description": "Skärvor har 20% större chans att bära en bomb."
+      },
+      "chaos_engineering_principal_a": {
+        "name": "Chaos Engineering",
+        "description": "Felinjicering: skärvor har 40% större chans att bära en bomb."
+      },
+      "chaos_engineering_principal_b": {
+        "name": "Chaos Engineering",
+        "description": "Game Day: varje bana med skärvor har minst 2 bombskärvor, utöver de 20%."
+      },
       "ghost_protocol_junior": {
         "name": "Ghost Protocol",
         "description": "Ett nytt staket passerar genom bollar under sina första 0,1s av växandet."

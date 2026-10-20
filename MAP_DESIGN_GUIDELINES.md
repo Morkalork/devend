@@ -386,7 +386,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | deformable | A | Compressed | 16 | - | - |
 | phasing | A | Meet | 16 | - | - |
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
-| shard bomb | A | Seasoning | 17 | - | - |
+| shard bomb | A | Seasoning | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | box blast | A | Seasoning | 11 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
@@ -1886,6 +1886,11 @@ bomb", seasoning on brittle). They used to roll on 5 and 6, the maps that
 teach the brick, so a blast that reopens claimed ground was arriving before
 anything had introduced it. A map overrides the gate either way with
 `shardBombChance`.
+
+**Reversed on 2026-10-20: shard bombs start at 5 again**, the owner's call:
+they are a good randomizer, and the Chaos Engineering upgrade line now raises
+their chance (and, at its Game Day fork, guarantees at least two per brick
+map). The ledger row moved with it. The sweep below predates the change.
 
 **Sweep, 8 seeds, 60s, armed against disarmed** (wins, mean bot cuts, mean
 detonations per run). Maps with neither a box nor a shard are identical in both

@@ -51,6 +51,7 @@ import {
   Spline,
   Pause,
   Grab,
+  Bomb,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -101,6 +102,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   spline: Spline,
   pause: Pause,
   grab: Grab,
+  bomb: Bomb,
 };
 
 /**

@@ -379,6 +379,10 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
+    // 21/18/17: Chaos Engineering arrived as a complete Junior->Senior->Principal
+    // ladder with an ungated head (its Principal is a fork too), so, like Bug
+    // Squash before it, every threshold gained one.
+    //
     // 19/16/15: Bug Squash arrived as a complete Junior->Senior->Principal
     // ladder with an ungated head (its Principal is a fork, which Tenure walks
     // like Onboarding's), so every threshold gained one.
@@ -445,7 +449,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // so the family is no longer a Tenure head - the same reading that keeps
     // Budget Cycle, Procurement and Total Compensation out. It is still buyable
     // in the shop; it is just not a whole chain Tenure will hand over.
-    expect(counts).toEqual([20, 17, 16]);
+    expect(counts).toEqual([21, 18, 17]);
   });
 });
 

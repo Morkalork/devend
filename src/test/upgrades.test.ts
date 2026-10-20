@@ -70,6 +70,7 @@ const EXPECTED_ROOTS = [
   // tap and no charge spent, so it sits beside Cold Boot rather than behind
   // Feature Freeze.
   "bug_squash_junior",
+  "chaos_engineering_junior",
   // The two ways to relate to the store's ability slot. Roots, and deliberately
   // NOT a chain: Open Source Contribution removes the slot that Talent Scout
   // widens, so gating one behind the other would sell a player an upgrade and

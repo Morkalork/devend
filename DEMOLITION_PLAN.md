@@ -444,13 +444,17 @@ waiting in the wall rather than a last hit to aim for.
   clear with `bomb: false`; Admin's map editor has a "Shard bomb" select on
   every brittle shard, and the Playground's Shard Bomb Chance knob forces every
   shard to be one.
-- **Where.** From `shard_bombs.start_level` (17, this map) on, and nowhere
-  before it. They first rolled on every brick on every map, so levels 5 and 6,
-  which exist to teach "a ball breaks this", dealt blasts that reopen claimed
-  ground before anything had introduced them. A map overrides the gate either
-  way with `shardBombChance` (Admin: Level panel, "Shard Bomb Chance %"), as
+- **Where.** From `shard_bombs.start_level` on, and nowhere before it. Since
+  2026-10-20 that is 5, the first brick map: the owner wanted them early, as a
+  randomizer, and the Chaos Engineering upgrade line raises the chance (its
+  Game Day fork guarantees at least two per brick map,
+  `shardBombsPerMap`). Before that it was 17, this map, because levels 5 and
+  6 exist to teach "a ball breaks this" and a blast that reopens claimed
+  ground arrived before anything had introduced it; that trade was judged
+  worth making for the variety. A map overrides the gate either way with
+  `shardBombChance` (Admin: Level panel, "Shard Bomb Chance %"), as
   `pickupChance` and `bugChance` do. In the ledger they are seasoning on
-  brittle, met here (`mapCanHaveShardBombs`, which the ledger test reads).
+  brittle, met at 5 (`mapCanHaveShardBombs`, which the ledger test reads).
 - **How it reads.** Drawn as a bomb from the start, fuse blinking, so a wall's
   bombs can be seen and a chain planned. Holding one explains it.
 - **Going up.** It gets the blast the bomb boxes have (the hot second burst,

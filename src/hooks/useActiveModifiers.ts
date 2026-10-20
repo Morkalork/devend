@@ -176,9 +176,13 @@ export interface GameModifiers {
   // copy ("slightly more often"); only applies where pickups are enabled.
   pickupChanceBonus: number;
   // Additive (sum) - extra chance a brittle shard carries a bomb (lib/bombCore.ts),
-  // on top of game-config.yml's shard_bombs.chance. No upgrade grants it yet;
-  // it is how Admin forces shard bombs to 100% (the Playground knob).
+  // on top of game-config.yml's shard_bombs.chance. Granted by Chaos
+  // Engineering; also how Admin forces shard bombs to 100% (the Playground knob).
   shardBombChanceBonus: number;
+  // Additive (sum) - Chaos Engineering's Game Day: every map with shards has
+  // at least this many shard bombs, topped up after the chance has rolled
+  // (lib/bombCore.ts assignShardBombs). 0 = no floor.
+  shardBombsPerMap: number;
   // Additive (sum) — Total Compensation: each level enhances every pickup
   // payout (+1h on overtime/cap tokens, +1s on freeze charges, split balls
   // 5% slower per level; at level 3 the Fork splits a ball into THREE).
@@ -426,6 +430,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   bugSquashSeconds: 0,
   pickupChanceBonus: 0,
   shardBombChanceBonus: 0,
+  shardBombsPerMap: 0,
   pickupPayoutLevel: 0,
   destructibleHitsReduction: 0,
   startingOvertime: 0,

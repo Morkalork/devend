@@ -1524,7 +1524,7 @@ export function GameCanvas({
         const chance = cfg
           ? effectiveShardBombChance(cfg, levelNumber, level.shardBombChance, activeModifiers.shardBombChanceBonus ?? 0)
           : 0;
-        assignShardBombs(game.destructibles, chance, authoredShardBombs(level));
+        assignShardBombs(game.destructibles, chance, authoredShardBombs(level), activeModifiers.shardBombsPerMap ?? 0);
       }
       game.stackObjects       = data.stackObjects;
       // What the win actually needs, for the map-open announcement. Computed
