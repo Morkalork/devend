@@ -3,6 +3,7 @@ import { useGameConfig } from '../../hooks/useGameConfig';
 import { pulseMonitor } from '@/lib/rendering/sleek/monitorSignal';
 import { sampleVisibleWords } from '@/lib/crtWordSampling';
 import { CODE_SNIPPETS } from '@/lib/crtCode';
+import { markStartupReady } from '@/lib/startupReadiness';
 
 /**
  * CRT Terminal Background
@@ -74,8 +75,17 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
   const [glitchOffset, setGlitchOffset] = useState(0);
 
   // Word highlight state — array so multiple can show simultaneously
-  const { config } = useGameConfig();
+  const { config, loading: configLoading } = useGameConfig();
   const hlCfg = config.crt_word_highlight;
+  // Drawn with the defaults until its config arrives, then redrawn: the startup
+  // splash waits for that redraw to have been painted (startupReadiness.ts).
+  useEffect(() => {
+    if (configLoading) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => markStartupReady('background'));
+    return () => cancelAnimationFrame(frame);
+  }, [configLoading]);
   type Phase = 'box' | 'horiz' | 'vert' | 'callout';
   const [highlights, setHighlights] = useState<Array<WordHighlight & { id: number; phase: Phase }>>([]);
   const highlightIdRef = useRef(0);

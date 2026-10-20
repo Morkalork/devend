@@ -104,10 +104,12 @@ export const entries: GalleryEntry[] = [
       <WelcomeScreen {...welcome} onContinue={noop} onDaily={noop} onTwoPlayer={noop} onAchievements={noop} isLoading />
     ),
   },
-  // Shows only while the browser is waiting for a gesture to unlock audio
-  // (isAwaitingUserGesture), which props cannot force: once sound is unlocked
-  // this entry draws nothing.
-  { id: "TapToStartGate", group: "screen", render: () => <TapToStartGate accentColor={ACCENT} /> },
+  // The startup splash, pinned: live it shows "Tap to start" only once the
+  // first screen has loaded and the browser is waiting for a gesture to unlock
+  // audio, neither of which props can force.
+  { id: "TapToStartGate", group: "screen", render: () => <TapToStartGate accentColor={ACCENT} preview="tap" /> },
+  // The startup splash while the first screen is still loading: no prompt, no tap.
+  { id: "TapToStartGate-loading", group: "screen", render: () => <TapToStartGate accentColor={ACCENT} preview="loading" /> },
   { id: "NotFoundScreen", group: "screen", render: () => <NotFoundScreen onHome={() => {}} /> },
   {
     id: "OptionsScreen", group: "screen", render: () => (

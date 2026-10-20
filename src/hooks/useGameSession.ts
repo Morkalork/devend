@@ -300,6 +300,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     checkAchievementUnlocks,
     takePendingUnlocks,
     resetAllData: resetCertData,
+    isLoaded: certsLoaded,
   } = useCertificateManager({ onHourEarned: handleCertificateHourEarned });
 
   const {
@@ -424,9 +425,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // queue push). Runs once, after meta progression has loaded. New players
   // unlock live via armFeatureUnlock (which does show the modal).
   const featureReconcileDoneRef = useRef(false);
+  /**
+   * The welcome menu has everything it reads at startup: the lifetime stats
+   * and unlocks, the certificate store, and the back-fill below, which can
+   * add buttons a render after the stats arrive. Until then the menu is still
+   * changing shape, so the startup splash holds (TapToStartGate). Set in the
+   * same effect as the back-fill's unlocks, so the render that reports ready
+   * is the render that already shows them.
+   */
+  const [menuDataReady, setMenuDataReady] = useState(false);
   useEffect(() => {
-    if (featureReconcileDoneRef.current || !metaLoaded) return;
+    if (featureReconcileDoneRef.current || !metaLoaded || !certsLoaded) return;
     featureReconcileDoneRef.current = true;
+    setMenuDataReady(true);
     // Reached level 5+ => cleared level 5 => achievements were available.
     if (metaStats.highestLevelReached >= 5) unlockFeature('achievements');
     // Already past Sprint Planning's unlock level: no modal for something the
@@ -438,7 +449,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       unlockedCertIds.length > 0 ||
       Object.keys(certLevelsOwned).length > 0;
     if (hadCertificates) unlockFeature('certificates');
-  }, [metaLoaded, metaStats.highestLevelReached, totalCertificateHours, unlockedCertIds, certLevelsOwned, unlockFeature]);
+  }, [metaLoaded, certsLoaded, metaStats.highestLevelReached, totalCertificateHours, unlockedCertIds, certLevelsOwned, unlockFeature]);
 
   const {
     achievements,
@@ -2001,6 +2012,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runOffer,
     shopLean,
     sprintUnlocked,
+    menuDataReady,
     metArchetypes,
     // Level state
     currentLevel,

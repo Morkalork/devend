@@ -49,6 +49,7 @@ import { AchievementsScreen } from '@/ui/screens/AchievementsScreen';
 import { HallOfFameScreen } from '@/ui/screens/HallOfFameScreen';
 import { JukeboxScreen } from '@/ui/screens/JukeboxScreen';
 import { TapToStartGate } from '@/ui/screens/TapToStartGate';
+import { markStartupReady } from '@/lib/startupReadiness';
 import { playMainMusic, stopMusic } from '@/lib/gameMusic';
 import { loadMusicCatalogue, getMusicCatalogue } from '@/lib/musicCatalogue';
 import type { MusicCatalogue } from '@/types/music';
@@ -272,13 +273,38 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   // load leaves it null, which hides the button rather than opening an empty
   // screen.
   const [musicCatalogue, setMusicCatalogue] = useState<MusicCatalogue | null>(null);
+  // Loaded or failed: either way the Jukebox button has decided.
+  const [musicSettled, setMusicSettled] = useState(false);
   useEffect(() => {
     let cancelled = false;
     loadMusicCatalogue().then((ok) => {
       if (ok && !cancelled) setMusicCatalogue(getMusicCatalogue());
+    }).finally(() => {
+      if (!cancelled) setMusicSettled(true);
     });
     return () => { cancelled = true; };
   }, []);
+
+  // The startup splash holds until the first screen has stopped changing
+  // (startupReadiness.ts). Reported from effects, so the render that shows
+  // each piece has been committed before the splash may lift.
+  useEffect(() => {
+    if (musicSettled) {
+      markStartupReady('music');
+    }
+  }, [musicSettled]);
+  useEffect(() => {
+    if (session.menuDataReady) {
+      markStartupReady('menu');
+    }
+  }, [session.menuDataReady]);
+  // A first screen with a background of its own (a ?level= jump straight to
+  // the board) has no CRT background to wait for.
+  useEffect(() => {
+    if (OWN_BACKGROUND_SCREENS.includes(navigation.currentScreen)) {
+      markStartupReady('background');
+    }
+  }, [navigation.currentScreen]);
 
   // Play the main-menu loop on menu screens. Blocked by autoplay on the very
   // first screen until a gesture, which gameMusic resumes automatically.
