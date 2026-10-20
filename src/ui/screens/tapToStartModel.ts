@@ -20,6 +20,12 @@ export const MAX_WAIT_MS = 10000;
  */
 export const AUDIO_DECISION_MS = 2500;
 
+/**
+ * Where the label sits: this far below the screen's centre (px), under the
+ * logo, which alone is centred so the label can never move it.
+ */
+export const LABEL_BELOW_CENTRE = 56;
+
 export type SplashPhase = "loading" | "tap" | "gone";
 
 /**

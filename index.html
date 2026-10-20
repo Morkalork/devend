@@ -18,19 +18,30 @@
 
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- The boot splash: painted with the page's very first frame, before any
-         script, font or background has loaded, so the first thing on screen is
-         the splash and never the code background behind it. The canvas splash
-         (TapToStartGate) draws the same thing in the same place and fades this
-         one out once it has been painted; the timer below is only a backstop
-         for a canvas that never comes up. Colours and sizes are the canvas
-         splash's own (ROLE.surface, COLOR.primary, GameTitle at 48). -->
+    <!-- The startup splash, as plain HTML: painted with the page's very first
+         frame, before any script, font or background has loaded, so the first
+         thing on screen is the splash and never the code background behind it.
+         It stays the ONLY visible splash until it is dismissed: the canvas
+         splash (TapToStartGate) runs underneath it, decides what it says
+         ("Loading...", then "Tap to start") through src/lib/bootSplash.ts, and
+         takes the tap, which reaches it because the game listens on the whole
+         page. One rendering of the logo from first frame to last, so nothing
+         can move when one hands over to another. Colours and sizes are the
+         canvas splash's (ROLE.surface, COLOR.primary, ROLE.muted, GameTitle at
+         48, the label in Oxanium 600 at 18). -->
     <link rel="preload" href="/assets/fonts/Michroma-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/assets/fonts/Oxanium-600.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       @font-face {
         font-family: 'BootLogo';
         src: url('/assets/fonts/Michroma-Regular.ttf') format('truetype');
         /* Invisible until loaded rather than a stand-in face that then swaps. */
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'BootDisplay';
+        src: url('/assets/fonts/Oxanium-600.woff2') format('woff2');
+        font-weight: 600;
         font-display: block;
       }
       html, body { background: #0d1012; }
@@ -40,35 +51,69 @@
         z-index: 2147483647;
         background: #0d1012;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 40px;
-        transition: opacity 250ms ease-out;
+        transition: opacity 200ms ease-out;
+        /* Taps go through to the page, where the game hears them. */
         pointer-events: auto;
         touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
       #boot-splash .title {
         font-family: 'BootLogo', sans-serif;
         font-size: 48px;
         font-weight: 900;
         letter-spacing: 2.4px;
-        color: #0fff73;
-        text-shadow: 0 0 15px rgba(15, 255, 115, 0.4), 0 0 30px rgba(15, 255, 115, 0.5);
         line-height: 1.2;
+        background: linear-gradient(135deg, #0fff73, #14b858);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 0 7px rgba(15, 255, 115, 0.55));
+        animation: boot-glow 2s ease-in-out infinite alternate;
       }
-      /* Holds the label's place, so the title sits where the canvas splash puts it. */
-      #boot-splash .label { height: 23px; }
+      /* The logo's halo breathes, as GameTitle's back layer does. */
+      @keyframes boot-glow {
+        from { filter: drop-shadow(0 0 7px rgba(15, 255, 115, 0.35)); }
+        to { filter: drop-shadow(0 0 12px rgba(15, 255, 115, 0.7)); }
+      }
+      /* Under the logo, out of the centring, so its text never moves the logo. */
+      #boot-splash .label {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(50% + 56px);
+        text-align: center;
+        /* Bangla has no glyphs in Oxanium: the bundled Noto face, as on the canvas. */
+        font-family: 'BootDisplay', 'Noto Sans Bengali', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        letter-spacing: 1px;
+        color: #8b968f;
+        opacity: 0.6;
+      }
+      #boot-splash .label.tap {
+        color: var(--boot-accent, #00ff88);
+        opacity: 1;
+        animation: boot-breathe 1.6s ease-in-out infinite;
+      }
+      @keyframes boot-breathe {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.35; }
+      }
     </style>
   </head>
 
   <body>
     <div id="boot-splash" aria-label="Dev/End"><div class="title">Dev/End</div><div class="label"></div></div>
     <script>
-      // Backstop only: the canvas splash removes this as soon as it is drawn.
+      // Backstop only, for a page whose app never starts: once the canvas
+      // splash has taken the splash over (bootSplash.ts), this does nothing.
       setTimeout(function () {
         var el = document.getElementById('boot-splash');
-        if (el) { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }
+        if (el && !el.dataset.owned) { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }
       }, 15000);
     </script>
     <div id="root"></div>

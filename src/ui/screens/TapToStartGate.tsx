@@ -26,10 +26,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isAudioUnlocked, isAwaitingUserGesture, startMenuMusic } from "@/lib/gameMusic";
 import { useStartupReady } from "@/lib/startupReadiness";
-import { dismissBootSplash } from "@/lib/bootSplash";
-import { Appear, Label, Pressable, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
+import { dismissBootSplash, setBootSplashLabel, takeOverBootSplash } from "@/lib/bootSplash";
+import { Label, Pressable, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { GameTitle } from "./welcomeParts";
-import { AUDIO_DECISION_MS, MAX_WAIT_MS, SETTLE_MS, splashPhase, type SplashPhase } from "./tapToStartModel";
+import { AUDIO_DECISION_MS, LABEL_BELOW_CENTRE, MAX_WAIT_MS, SETTLE_MS, splashPhase, type SplashPhase } from "./tapToStartModel";
 
 /**
  * The DOM gate unlocked on CLICK, not pointerdown: some browsers (notably iOS
@@ -68,22 +68,10 @@ export function TapToStartGate({ accentColor, preview }: {
   }));
   const mountedAt = useRef(performance.now());
 
-  // The HTML boot splash (index.html) has covered everything until now. Hand
-  // over once this one has been painted: two frames, so the canvas has drawn
-  // it at least once before the copy over it starts to fade.
-  useEffect(() => {
-    if (preview) {
-      return;
-    }
-    let second = 0;
-    const first = requestAnimationFrame(() => {
-      second = requestAnimationFrame(() => dismissBootSplash());
-    });
-    return () => {
-      cancelAnimationFrame(first);
-      cancelAnimationFrame(second);
-    };
-  }, [preview]);
+  // The HTML splash (index.html) is what the player sees, from the first
+  // frame to the last: this one runs underneath it, says what it says and
+  // takes its tap (bootSplash.ts). Taken over once, at mount.
+  const [htmlSplash] = useState(() => !preview && takeOverBootSplash());
 
   // Ready, and still ready SETTLE_MS later (a part could only ever turn ready,
   // never back, but the menu's entrance needs the time). Or the hard cap.
@@ -140,7 +128,20 @@ export function TapToStartGate({ accentColor, preview }: {
 
   const accent = hex(accentColor || "#00ff88");
   // The prompt breathes from full to 35% opacity every 1.6s.
-  const pulse = usePulse(1600, phase === "tap");
+  const pulse = usePulse(1600, phase === "tap" && !htmlSplash);
+  const labelText = phase === "tap" ? t("welcome.tapToStart") : t("welcome.loading");
+
+  // Keep the HTML splash saying what this one would, and let it go with it.
+  useEffect(() => {
+    if (!htmlSplash) {
+      return;
+    }
+    if (phase === "gone") {
+      dismissBootSplash();
+      return;
+    }
+    setBootSplashLabel(labelText, phase, accentColor || "#00ff88");
+  }, [htmlSplash, phase, labelText, accentColor]);
 
   if (phase === "gone") return null;
   return (
@@ -149,27 +150,32 @@ export function TapToStartGate({ accentColor, preview }: {
       <Pressable
         onTap={handleTap}
         pressedAlpha={1}
-        label={phase === "tap" ? t("welcome.tapToStart") : t("welcome.loading")}
+        label={labelText}
         layout={{
-          width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center", gap: 40,
+          width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center",
           backgroundColor: ROLE.surface,
         }}
       >
-        <Appear fromScale={0.92} duration={0.5}>
-          <GameTitle text="Dev/End" />
-        </Appear>
+        {/* Seen only without the HTML splash over it (the Admin gallery, or a
+            page whose HTML splash already went): there the HTML one is what
+            the player sees, and this is the tap target under it. The logo
+            alone is centred, at full size, as the HTML splash draws it. */}
+        <GameTitle text="Dev/End" />
         {/* Sentence case in the display face, like every label in the redo;
             the breathing is what says "tap", not shouting. While loading it is
-            dim and still, so it does not read as a prompt. */}
-        <Label
-          text={phase === "tap" ? t("welcome.tapToStart") : t("welcome.loading")}
-          font="display"
-          size={TEXT.lg}
-          weight="600"
-          letterSpacing={1}
-          color={phase === "tap" ? accent : ROLE.muted}
-          alpha={phase === "tap" ? 1 - 0.65 * pulse : 0.6}
-        />
+            dim and still, so it does not read as a prompt. Pinned under the
+            logo, out of the centring, so its text changing never moves it. */}
+        <View layout={{ position: "absolute", left: 0, top: screen.height / 2 + LABEL_BELOW_CENTRE, width: screen.width, alignItems: "center" }}>
+          <Label
+            text={labelText}
+            font="display"
+            size={TEXT.lg}
+            weight="600"
+            letterSpacing={1}
+            color={phase === "tap" ? accent : ROLE.muted}
+            alpha={phase === "tap" ? 1 - 0.65 * pulse : 0.6}
+          />
+        </View>
       </Pressable>
     </View>
   );

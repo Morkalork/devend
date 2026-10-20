@@ -14,7 +14,7 @@ import path from "path";
 import {
   STARTUP_PARTS, isStartupReady, markStartupReady, pendingStartupParts, resetStartupReadiness,
 } from "@/lib/startupReadiness";
-import { MAX_WAIT_MS, SETTLE_MS, splashPhase } from "@/ui/screens/tapToStartModel";
+import { LABEL_BELOW_CENTRE, MAX_WAIT_MS, SETTLE_MS, splashPhase } from "@/ui/screens/tapToStartModel";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
 
@@ -106,10 +106,15 @@ describe("the session reports the menu ready by itself", () => {
   });
 });
 
-describe("the boot splash covers everything before the canvas splash", () => {
-  // Reported: "I still see the code background briefly before the splash".
-  // The canvas splash can only draw once the scripts, fonts and Pixi are up;
-  // until then the DOM code background was the first thing on screen.
+describe("the HTML splash is the only splash anyone sees", () => {
+  // Reported twice: "I still see the code background briefly before the
+  // splash", then "a slight twitch at the end... the title header moves". The
+  // canvas splash can only draw once scripts, fonts and Pixi are up, so the
+  // splash is plain HTML in the page, painted with its first frame. It used to
+  // hand over to the canvas splash's own copy of the logo, and browser and
+  // canvas text never landed on the same pixel (0 to 3px, by screen), so now
+  // the HTML splash stays up until it is dismissed and the canvas one only
+  // runs underneath it.
   const html = read("index.html");
 
   it("is in the page itself, before the app's root, so it paints with the first frame", () => {
@@ -118,28 +123,54 @@ describe("the boot splash covers everything before the canvas splash", () => {
     expect(html).toMatch(/#boot-splash \{[\s\S]*?position: fixed;[\s\S]*?background: #0d1012;/);
   });
 
-  it("matches the canvas splash's surface, so the hand-over is invisible", async () => {
+  it("matches the canvas splash's surface", async () => {
     const { ROLE } = await import("@/ui/theme");
     expect(`#${ROLE.surface.toString(16).padStart(6, "0")}`).toBe("#0d1012");
   });
 
-  it("never shows a stand-in font, and has a backstop if the canvas never comes", () => {
-    expect(html).toContain("font-display: block;");
-    expect(html).toMatch(/setTimeout\(function \(\) \{\s*var el = document\.getElementById\('boot-splash'\);/);
+  it("centres the logo alone, with the label pinned under it, so the label cannot move it", () => {
+    expect(html).toMatch(/#boot-splash \.label \{[\s\S]*?position: absolute;[\s\S]*?top: calc\(50% \+ 56px\);/);
+    expect(LABEL_BELOW_CENTRE).toBe(56);
+    // No scale-in, no gap that centres logo and label together.
+    const gate = read("src/ui/screens/TapToStartGate.tsx");
+    expect(gate).not.toContain("<Appear fromScale");
+    expect(gate).not.toMatch(/justifyContent: "center", gap: 40/);
   });
 
-  it("is faded out by the canvas splash once that has been painted, and only then", async () => {
-    const gate = read("src/ui/screens/TapToStartGate.tsx");
-    expect(gate).toContain("second = requestAnimationFrame(() => dismissBootSplash());");
-    const { dismissBootSplash } = await import("@/lib/bootSplash");
-    document.body.innerHTML = '<div id="boot-splash"></div>';
+  it("never shows a stand-in font, and has a backstop only for an app that never starts", () => {
+    expect(html.match(/font-display: block;/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(html).toContain("if (el && !el.dataset.owned) {");
+  });
+
+  it("is driven by the canvas splash: taken over, labelled, then dismissed with it", async () => {
+    const { takeOverBootSplash, setBootSplashLabel, dismissBootSplash } = await import("@/lib/bootSplash");
+    document.body.innerHTML = '<div id="boot-splash"><div class="title">Dev/End</div><div class="label"></div></div>';
+    const el = document.getElementById("boot-splash")!;
+    expect(takeOverBootSplash()).toBe(true);
+    expect(el.dataset.owned).toBe("1");
+    setBootSplashLabel("Loading...", "loading");
+    const label = el.querySelector(".label")!;
+    expect(label.textContent).toBe("Loading...");
+    expect(label.classList.contains("tap")).toBe(false);
+    setBootSplashLabel("Tap to start", "tap", "#00ff88");
+    expect(label.classList.contains("tap")).toBe(true);
+    expect(el.style.getPropertyValue("--boot-accent")).toBe("#00ff88");
     vi.useFakeTimers();
     dismissBootSplash();
-    const el = document.getElementById("boot-splash")!;
     expect(el.style.opacity).toBe("0");
     vi.advanceTimersByTime(400);
     expect(document.getElementById("boot-splash")).toBeNull();
     vi.useRealTimers();
-    dismissBootSplash(); // already gone: a no-op
+    // Gone: everything is a no-op, and there is nothing to take over.
+    dismissBootSplash();
+    setBootSplashLabel("x", "tap");
+    expect(takeOverBootSplash()).toBe(false);
+  });
+
+  it("is wired that way in the gate", () => {
+    const gate = read("src/ui/screens/TapToStartGate.tsx");
+    expect(gate).toContain("const [htmlSplash] = useState(() => !preview && takeOverBootSplash());");
+    expect(gate).toContain("setBootSplashLabel(labelText, phase, accentColor || \"#00ff88\");");
+    expect(gate).toMatch(/if \(phase === "gone"\) \{\s*dismissBootSplash\(\);/);
   });
 });
