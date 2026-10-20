@@ -17,9 +17,60 @@
     <meta property="og:type" content="website" />
 
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The boot splash: painted with the page's very first frame, before any
+         script, font or background has loaded, so the first thing on screen is
+         the splash and never the code background behind it. The canvas splash
+         (TapToStartGate) draws the same thing in the same place and fades this
+         one out once it has been painted; the timer below is only a backstop
+         for a canvas that never comes up. Colours and sizes are the canvas
+         splash's own (ROLE.surface, COLOR.primary, GameTitle at 48). -->
+    <link rel="preload" href="/assets/fonts/Michroma-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'BootLogo';
+        src: url('/assets/fonts/Michroma-Regular.ttf') format('truetype');
+        /* Invisible until loaded rather than a stand-in face that then swaps. */
+        font-display: block;
+      }
+      html, body { background: #0d1012; }
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: #0d1012;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        transition: opacity 250ms ease-out;
+        pointer-events: auto;
+        touch-action: none;
+      }
+      #boot-splash .title {
+        font-family: 'BootLogo', sans-serif;
+        font-size: 48px;
+        font-weight: 900;
+        letter-spacing: 2.4px;
+        color: #0fff73;
+        text-shadow: 0 0 15px rgba(15, 255, 115, 0.4), 0 0 30px rgba(15, 255, 115, 0.5);
+        line-height: 1.2;
+      }
+      /* Holds the label's place, so the title sits where the canvas splash puts it. */
+      #boot-splash .label { height: 23px; }
+    </style>
   </head>
 
   <body>
+    <div id="boot-splash" aria-label="Dev/End"><div class="title">Dev/End</div><div class="label"></div></div>
+    <script>
+      // Backstop only: the canvas splash removes this as soon as it is drawn.
+      setTimeout(function () {
+        var el = document.getElementById('boot-splash');
+        if (el) { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }
+      }, 15000);
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

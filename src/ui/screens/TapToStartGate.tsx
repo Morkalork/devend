@@ -26,6 +26,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isAudioUnlocked, isAwaitingUserGesture, startMenuMusic } from "@/lib/gameMusic";
 import { useStartupReady } from "@/lib/startupReadiness";
+import { dismissBootSplash } from "@/lib/bootSplash";
 import { Appear, Label, Pressable, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { GameTitle } from "./welcomeParts";
 import { AUDIO_DECISION_MS, MAX_WAIT_MS, SETTLE_MS, splashPhase, type SplashPhase } from "./tapToStartModel";
@@ -66,6 +67,23 @@ export function TapToStartGate({ accentColor, preview }: {
     unlocked: isAudioUnlocked(), awaiting: isAwaitingUserGesture(), timedOut: false,
   }));
   const mountedAt = useRef(performance.now());
+
+  // The HTML boot splash (index.html) has covered everything until now. Hand
+  // over once this one has been painted: two frames, so the canvas has drawn
+  // it at least once before the copy over it starts to fade.
+  useEffect(() => {
+    if (preview) {
+      return;
+    }
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => dismissBootSplash());
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [preview]);
 
   // Ready, and still ready SETTLE_MS later (a part could only ever turn ready,
   // never back, but the menu's entrance needs the time). Or the hard cap.

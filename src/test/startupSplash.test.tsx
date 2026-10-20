@@ -105,3 +105,41 @@ describe("the session reports the menu ready by itself", () => {
     await waitFor(() => expect(result.current.menuDataReady).toBe(true));
   });
 });
+
+describe("the boot splash covers everything before the canvas splash", () => {
+  // Reported: "I still see the code background briefly before the splash".
+  // The canvas splash can only draw once the scripts, fonts and Pixi are up;
+  // until then the DOM code background was the first thing on screen.
+  const html = read("index.html");
+
+  it("is in the page itself, before the app's root, so it paints with the first frame", () => {
+    expect(html.indexOf('<div id="boot-splash"')).toBeGreaterThan(-1);
+    expect(html.indexOf('<div id="boot-splash"')).toBeLessThan(html.indexOf('<div id="root">'));
+    expect(html).toMatch(/#boot-splash \{[\s\S]*?position: fixed;[\s\S]*?background: #0d1012;/);
+  });
+
+  it("matches the canvas splash's surface, so the hand-over is invisible", async () => {
+    const { ROLE } = await import("@/ui/theme");
+    expect(`#${ROLE.surface.toString(16).padStart(6, "0")}`).toBe("#0d1012");
+  });
+
+  it("never shows a stand-in font, and has a backstop if the canvas never comes", () => {
+    expect(html).toContain("font-display: block;");
+    expect(html).toMatch(/setTimeout\(function \(\) \{\s*var el = document\.getElementById\('boot-splash'\);/);
+  });
+
+  it("is faded out by the canvas splash once that has been painted, and only then", async () => {
+    const gate = read("src/ui/screens/TapToStartGate.tsx");
+    expect(gate).toContain("second = requestAnimationFrame(() => dismissBootSplash());");
+    const { dismissBootSplash } = await import("@/lib/bootSplash");
+    document.body.innerHTML = '<div id="boot-splash"></div>';
+    vi.useFakeTimers();
+    dismissBootSplash();
+    const el = document.getElementById("boot-splash")!;
+    expect(el.style.opacity).toBe("0");
+    vi.advanceTimersByTime(400);
+    expect(document.getElementById("boot-splash")).toBeNull();
+    vi.useRealTimers();
+    dismissBootSplash(); // already gone: a no-op
+  });
+});
