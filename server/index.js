@@ -26,6 +26,7 @@ import { putAnswer, takeAnswer, dropRoom } from "./pairRooms.js";
 import { handleRelayUpgrade } from "./relay.js";
 import { healthReport } from "./health.js";
 import { pickEncoding, isCompressible, compressedBody, warmCompressedCache } from "./compress.js";
+import { cacheControlFor } from "./cacheControl.js";
 
 const PORT = process.env.PORT || 8080;
 const DIST = resolve(process.cwd(), "dist");
@@ -137,12 +138,9 @@ async function sendFile(req, res, filePath) {
     }
     const headers = {
       "Content-Type": TYPES[extname(filePath).toLowerCase()] || "application/octet-stream",
-      // The built assets are content-hashed, so they can be cached hard. The
-      // HTML and the YAML are not, and map.yml in particular has to be re-read
-      // after a save or the builder loads a stale ladder.
-      "Cache-Control": filePath.includes("/assets/")
-        ? "public, max-age=31536000, immutable"
-        : "no-cache",
+      // Hashed build files for a year, fixed-name assets for a day, the HTML
+      // and the YAML never without asking (cacheControl.js).
+      "Cache-Control": cacheControlFor(filePath),
       "Content-Length": body.length,
     };
     // Vary on every compressible file, sent compressed or not, so a cache in
