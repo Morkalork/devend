@@ -15,6 +15,7 @@
  */
 import yaml from "js-yaml";
 import abilitiesYamlRaw from "../../public/abilities.yml?raw";
+import { fetchConfig } from "@/lib/configFetch";
 
 /** The coded effect an ability triggers. A new kind needs code in abilityEffects.ts. */
 export type AbilityKind = "freeze" | "slow" | "slowArea" | "descope" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield" | "rubberBand";
@@ -211,7 +212,7 @@ export function rollAbilityReward(pool: string[] | undefined, level: number, rng
  */
 export async function loadAbilities(): Promise<boolean> {
   try {
-    const response = await fetch("/abilities.yml", { cache: "no-store" });
+    const response = await fetchConfig("/abilities.yml");
     if (!response.ok) throw new Error(`Failed to load abilities.yml: ${response.status}`);
     const parsed = parseCatalogue(await response.text());
     if (parsed.length === 0) throw new Error("abilities.yml contained no valid abilities");

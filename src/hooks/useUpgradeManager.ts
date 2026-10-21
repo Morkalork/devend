@@ -12,6 +12,7 @@ import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { prerequisitesMet, choiceGroups } from '@/lib/upgradeUnlock';
 import { LevelData } from '@/types/level';
 import { mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
+import { fetchConfig } from '@/lib/configFetch';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -77,11 +78,11 @@ export function useUpgradeManager() {
       // Fetch the catalogue and the level curve together: upgrade costs are
       // derived from the base points of the level each one unlocks at.
       const [yamlText, mapText] = await Promise.all([
-        fetch('/upgrades.yml').then((res) => {
+        fetchConfig('/upgrades.yml').then((res) => {
           if (!res.ok) throw new Error(`Failed to load upgrades.yml: ${res.status}`);
           return res.text();
         }),
-        fetch('/map.yml', { cache: 'no-store' }).then((res) => {
+        fetchConfig('/map.yml').then((res) => {
           if (!res.ok) throw new Error(`Failed to load map.yml for upgrade pricing: ${res.status}`);
           return res.text();
         }),

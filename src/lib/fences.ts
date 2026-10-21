@@ -16,6 +16,7 @@
  */
 import yaml from "js-yaml";
 import fencesYamlRaw from "../../public/fences.yml?raw";
+import { fetchConfig } from "@/lib/configFetch";
 
 /** Where a fence type comes from. Documentation until step 7 wires acquisition. */
 /**
@@ -284,7 +285,7 @@ export function applyFenceCatalogue(text: string): boolean {
  */
 export async function loadFenceTypes(): Promise<boolean> {
   try {
-    const response = await fetch("/fences.yml", { cache: "no-store" });
+    const response = await fetchConfig("/fences.yml");
     if (!response.ok) throw new Error(`Failed to load fences.yml: ${response.status}`);
     if (!applyFenceCatalogue(await response.text())) {
       throw new Error("fences.yml contained no valid fence types");

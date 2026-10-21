@@ -31,6 +31,7 @@
  * so a secret compiled into it would gate nothing. It is asked for once, on the
  * first save that gets a 401, and kept in localStorage.
  */
+import { invalidateConfig } from "@/lib/configFetch";
 
 export type MapSaveFailure =
   /** No dev endpoint: a static host answered (or rewrote) the request. */
@@ -158,6 +159,9 @@ export async function saveMapYaml(
   } catch {
     return { ok: false, reason: "network" };
   }
+  // The game reads map.yml once per page load (configFetch.ts). Whatever the
+  // server made of this write, the next run reads the file afresh.
+  invalidateConfig("/map.yml");
 
   // 401 means the endpoint IS there and configured and did not like the secret.
   // Distinguished from every other refusal because it is the only one the

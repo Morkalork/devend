@@ -92,7 +92,8 @@ describe("the fence catalogue is actually reloaded at runtime", () => {
 
   it("fetches the file the game actually serves", () => {
     const src = read("src/lib/fences.ts");
-    expect(src).toMatch(/fetch\("\/fences\.yml"/);
+    // Through the once-per-page-load config fetch (configFetch.ts).
+    expect(src).toMatch(/fetchConfig\("\/fences\.yml"\)/);
     // A malformed file must leave the build-time catalogue standing: the
     // alternative is every fence silently becoming standard, with nothing on
     // screen to say why.

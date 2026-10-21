@@ -14,6 +14,7 @@
 import yaml from "js-yaml";
 import bugsYamlRaw from "../../public/bugs.yml?raw";
 import type { BugDef } from "@/types/bugs";
+import { fetchConfig } from "@/lib/configFetch";
 
 interface RawBug {
   id?: unknown;
@@ -147,7 +148,7 @@ export function applyBugCatalogue(text: string): boolean {
 /** Re-fetch bugs.yml at runtime, exactly as loadFenceTypes does. */
 export async function loadBugs(): Promise<boolean> {
   try {
-    const response = await fetch("/bugs.yml", { cache: "no-store" });
+    const response = await fetchConfig("/bugs.yml");
     if (!response.ok) throw new Error(`Failed to load bugs.yml: ${response.status}`);
     if (!applyBugCatalogue(await response.text())) {
       throw new Error("bugs.yml contained no valid bugs");

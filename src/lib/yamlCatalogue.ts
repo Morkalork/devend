@@ -5,6 +5,7 @@
  * semantics; this only removes the copy-pasted mechanics.
  */
 import yaml from 'js-yaml';
+import { fetchConfig } from '@/lib/configFetch';
 
 /**
  * Fetch a YAML file and coerce `doc[listKey]` through `parseEntry`, dropping
@@ -18,7 +19,7 @@ export async function fetchYamlCatalogue<T>(
   listKey: string,
   parseEntry: (raw: unknown) => T | null,
 ): Promise<{ entries: T[]; doc: Record<string, unknown> }> {
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetchConfig(url);
   if (!response.ok) throw new Error(`Failed to load ${url}: ${response.status}`);
   const doc = yaml.load(await response.text()) as Record<string, unknown> | null;
   const list = doc?.[listKey];

@@ -22,6 +22,7 @@ import {
 } from '@/types/certificate';
 import { GameModifiers, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 import { migrateTierCounts } from '@/lib/upgradeMigration';
+import { fetchConfig } from '@/lib/configFetch';
 
 const LEVELS_PER_HOUR = 5;
 
@@ -160,7 +161,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/certificates.yml');
+      const response = await fetchConfig('/certificates.yml');
       if (!response.ok) throw new Error(`Failed to load certificates: ${response.status}`);
       const config = yaml.load(await response.text()) as CertConfig;
       if (!config?.certificates || !Array.isArray(config.certificates)) {

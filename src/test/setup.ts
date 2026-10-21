@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
+import { beforeEach } from "vitest";
 import { loadAllLanguages } from "@/i18n";
+import { invalidateConfig } from "@/lib/configFetch";
+
+// The runtime YAML is fetched once per page load (configFetch.ts); a test
+// that stubs fetch with its own files must not be handed the last test's.
+beforeEach(() => invalidateConfig());
 
 // Every language, up front: the app fetches one on demand (i18n/index.ts),
 // and the tests read all four synchronously.

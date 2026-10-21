@@ -8,6 +8,7 @@ import yaml from 'js-yaml';
 import { PickupConfig, PickupEffect, DEFAULT_PICKUP_CONFIG } from '@/types/pickups';
 import { BugConfig, DEFAULT_BUG_CONFIG } from '@/types/bugs';
 import { DEFAULT_SHARD_BOMB_CONFIG, type ShardBombConfig } from '@/lib/bombCore';
+import { fetchConfig } from '@/lib/configFetch';
 
 /** Raw `pickups:` block shape as written in the YAML (snake_case, keyed effects). */
 interface RawPickupConfig {
@@ -220,7 +221,7 @@ export function useGameConfig() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/game-config.yml')
+    fetchConfig('/game-config.yml')
       .then((res) => res.text())
       .then((text) => {
         const parsed = yaml.load(text) as Partial<GameConfig> & { pickups?: RawPickupConfig; bugs?: RawBugConfig; shard_bombs?: RawShardBombConfig; box_bombs?: RawBoxBombConfig };

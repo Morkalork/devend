@@ -19,6 +19,7 @@ import offersYamlRaw from "../../public/offers.yml?raw";
 import type { UpgradeConfig, UpgradeTag } from "@/types/upgrade";
 import type { OfferCatalogue, OfferPool, OfferPrize, OfferUnlock, RunOffer, ShopLean } from "@/types/offer";
 import { eligibleTenureChains, TENURE_THRESHOLDS, type TenureOffer } from "@/lib/tenure";
+import { fetchConfig } from "@/lib/configFetch";
 
 const TAGS: readonly UpgradeTag[] = ["lock", "freeze", "bank", "tempo", "risk", "safety"];
 
@@ -121,7 +122,7 @@ export function getOffer(id: string | null | undefined, catalogue: OfferCatalogu
 /** Re-fetch offers.yml; on any failure the baked catalogue stays. */
 export async function loadOffers(): Promise<boolean> {
   try {
-    const response = await fetch("/offers.yml", { cache: "no-store" });
+    const response = await fetchConfig("/offers.yml");
     if (!response.ok) throw new Error(`Failed to load offers.yml: ${response.status}`);
     const parsed = parseOfferCatalogue(await response.text());
     if (allOffers(parsed).length === 0) return false;

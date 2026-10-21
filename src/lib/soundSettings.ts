@@ -6,6 +6,7 @@
 import yaml from "js-yaml";
 import { setMusicVolume, setCrossfadeMs } from "@/lib/gameMusic";
 import { setSfxVolume } from "@/lib/gameAudio";
+import { fetchConfig } from "@/lib/configFetch";
 
 const LS_MUSIC = "devend:musicVolume";
 const LS_SFX = "devend:sfxVolume";
@@ -77,7 +78,7 @@ function storeBool(key: string, value: boolean): void {
  */
 export async function loadSoundSettings(): Promise<void> {
   try {
-    const res = await fetch("/game-config.yml");
+    const res = await fetchConfig("/game-config.yml");
     const cfg = yaml.load(await res.text()) as { sound?: SoundConfig } | undefined;
     const s = cfg?.sound ?? {};
     defaultMusicVolume = clamp01(num(s.music_volume, FALLBACK_MUSIC));

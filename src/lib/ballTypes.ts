@@ -23,6 +23,7 @@
 
 import yaml from 'js-yaml';
 import ballsYamlRaw from '../../public/balls.yml?raw';
+import { fetchConfig } from '@/lib/configFetch';
 
 /**
  * Hard floor on how slow the upgrade/lock stack may make a ball: its effective
@@ -297,7 +298,7 @@ export function getSpawnableBallTypes(level: number): BallTypeDef[] {
  */
 export async function loadBallTypes(): Promise<boolean> {
   try {
-    const response = await fetch('/balls.yml', { cache: 'no-store' });
+    const response = await fetchConfig('/balls.yml');
     if (!response.ok) throw new Error(`Failed to load balls.yml: ${response.status}`);
     const parsed = parseCatalogue(await response.text());
     if (parsed.length === 0) throw new Error('balls.yml contained no valid ball types');

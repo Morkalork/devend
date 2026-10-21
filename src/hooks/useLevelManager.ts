@@ -16,6 +16,7 @@ import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
 import { getRunRng, getRunSeedText } from '@/lib/runRng';
 import { ONBOARDING_MAP, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
 import { hasSeenOnboarding } from './useTutorialManager';
+import { fetchConfig } from '@/lib/configFetch';
 
 interface LevelManagerState {
   allMaps: LevelConfig[]; // all maps from YAML
@@ -98,7 +99,7 @@ export function useLevelManager() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch('/map.yml', { cache: 'no-store' });
+      const response = await fetchConfig('/map.yml');
       if (!response.ok) {
         throw new Error(`Failed to load map.yml: ${response.status}`);
       }

@@ -20,6 +20,7 @@
  */
 import yaml from "js-yaml";
 import featuresYamlRaw from "../../public/features.yml?raw";
+import { fetchConfig } from "@/lib/configFetch";
 
 export interface GameFeature {
   /** Stable id; also the i18n namespace (`features.<id>.name` / `.body`). */
@@ -107,7 +108,7 @@ export function seedLegacyFeatureUnlocks(ids: string[], loadoutsIntroduced: bool
  */
 export async function loadFeatures(): Promise<boolean> {
   try {
-    const response = await fetch("/features.yml", { cache: "no-store" });
+    const response = await fetchConfig("/features.yml");
     if (!response.ok) throw new Error(`Failed to load features.yml: ${response.status}`);
     const parsed = parseCatalogue(await response.text());
     if (parsed.length === 0) throw new Error("features.yml contained no valid features");
