@@ -236,6 +236,14 @@ export interface LiveTimer {
   /** Share of the duration left, 0..1. */
   frac: number;
   secsLeft: number;
+  /** When it runs out, and how long it ran, on the sim clock: the bar drains off these. */
+  endMs: number;
+  durationMs: number;
+}
+
+/** A timer's share left at `now`, 0..1. */
+export function timerFrac(endMs: number, durationMs: number, now: number): number {
+  return durationMs > 0 ? Math.max(0, Math.min(1, (endMs - now) / durationMs)) : 0;
 }
 
 /**
@@ -249,8 +257,10 @@ export function liveTimers(timers: readonly AbilityTimer[], now: number): LiveTi
       kind: tmr.kind,
       name: tmr.name,
       color: cssColor(tmr.color),
-      frac: Math.max(0, Math.min(1, remainingMs / tmr.durationMs)),
+      frac: timerFrac(tmr.endMs, tmr.durationMs, now),
       secsLeft: Math.max(0, Math.ceil(remainingMs / 1000)),
+      endMs: tmr.endMs,
+      durationMs: tmr.durationMs,
     };
   });
 }

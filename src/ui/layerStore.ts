@@ -32,6 +32,10 @@ function emit(): void {
 }
 
 export function setUiLayer(id: string, z: number, node: ReactNode, lock = true): void {
+  // Re-filed unchanged (a parent re-rendered and handed over the very same
+  // element): nothing to sort and nothing for the root to re-render.
+  const was = layers.get(id);
+  if (was && was.node === node && was.z === z && was.lock === lock) return;
   layers.set(id, { id, z, node, lock });
   emit();
 }

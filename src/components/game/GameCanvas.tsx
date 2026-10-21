@@ -18,6 +18,7 @@ import { STANDARD_FENCE_ID } from "@/lib/fences";
  *   - rendering: src/lib/rendering/sleek/SleekRenderer.ts
  */
 import { useRef, useEffect, useState, useCallback, useMemo, useContext } from "react";
+import { setActiveClock, useActiveSeconds } from "@/lib/activeClock";
 import { useTranslation } from "react-i18next";
 import { contentText } from "@/i18n/content";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
@@ -220,8 +221,6 @@ export interface GameStateInfo {
   pushMode: "none" | "prompt" | "pushing";
   /** Current Scope Creep speed boost in percent (0 = not yet active). */
   creepPercent: number;
-  /** Whole active-play seconds this map (1Hz; drives the Ship Early bar). */
-  activeSeconds: number;
   /** Balls spawned on this map (scales the Ship Early windows). */
   ballCount: number;
   /** True once a power-up has appeared this map, for the one-time explainer (#59). */
@@ -952,7 +951,6 @@ export function GameCanvas({
   // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
   const [creepPercent, setCreepPercent] = useState(0);
   // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
-  const [activeSeconds, setActiveSeconds] = useState(0);
   // Balls spawned this map; scales the Ship Early windows (15s per ball).
   const [ballCount, setBallCount] = useState(1);
   // True once a power-up has appeared on the board this map (#59): drives the
@@ -1635,7 +1633,7 @@ export function GameCanvas({
       lastTimeTierRef.current = 0; // fresh map: re-arm the time-tier toasts
       setPickupPresent(false);
       setCreepPercent(0);
-      setActiveSeconds(0);
+      setActiveClock(0);
       setAbilityTimers([]);
       setArmedAbility(null);
       game.armedAbility = null;
@@ -2008,7 +2006,7 @@ export function GameCanvas({
       },
       onCreepStep: setCreepPercent,
       onActiveSecond: (s: number) => {
-        setActiveSeconds(s);
+        setActiveClock(s);
         // Latch "a power-up appeared" for the one-time explainer (#59). Setting
         // the same `true` again is a no-op, so this is cheap at 1Hz.
         if (game.pickups && game.pickups.length > 0) setPickupPresent(true);
@@ -2475,7 +2473,11 @@ export function GameCanvas({
   // effect fire every render: it set the parent's state, the parent re-rendered
   // this, and round it went ("Maximum update depth exceeded" from the first
   // frame of every map, solo and paired).
-  const freshGoals = mapGoals(resolveWinSpec(level, activeModifiers), readWinSnapshot(gameRef.current, level));
+  const winSpec = resolveWinSpec(level, activeModifiers);
+  // A speed-clear clause counts seconds, so its goal has to be re-read each
+  // second; any other map has no reason to re-render on the clock.
+  useActiveSeconds([...winSpec.require, ...winSpec.alsoWinIf].some(c => c.kind === "speedClear"));
+  const freshGoals = mapGoals(winSpec, readWinSnapshot(gameRef.current, level));
   const goalsRef = useRef(freshGoals);
   if (JSON.stringify(goalsRef.current) !== JSON.stringify(freshGoals)) {
     goalsRef.current = freshGoals;
@@ -2504,7 +2506,6 @@ export function GameCanvas({
         moverBandsRemaining,
         pushMode,
         creepPercent,
-        activeSeconds,
         ballCount,
         pickupPresent,
         onBankAndContinue: handleBankAndContinue,
@@ -2523,7 +2524,7 @@ export function GameCanvas({
         onPassTurn: handlePassTurn,
       });
     }
-  }, [pairTurn, handlePassTurn, cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType, guardrailSpent]);
+  }, [pairTurn, handlePassTurn, cutCount, completedCuts, remainingPercent, pushMode, creepPercent, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, goals, ballsInPlay, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, moverDerailsRemaining, moverBandsRemaining, bossHud, abilityTimers, armedAbility, gameMessage, selectedFenceTypeId, fenceSlotIds, handleSelectFenceType, guardrailSpent]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -3,14 +3,14 @@
  * entry and entrance animation. Built on core.tsx.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Ticker, type FederatedPointerEvent, type FederatedWheelEvent } from "pixi.js";
+import { Ticker, type FederatedPointerEvent, type FederatedWheelEvent, type Graphics } from "pixi.js";
 import { useTick } from "@pixi/react";
 import { animate } from "motion";
 import type { LayoutContainer } from "@pixi/layout/components";
 import { X, Info } from "lucide-react";
 import { COLOR, RADIUS, ROLE, TEXT } from "../theme";
 import { Icon, Label, Pressable, View, type Layout } from "./core";
-import { tint } from "./style";
+import { RESOLUTION, tint } from "./style";
 import { usePulse } from "./motion";
 import { beginPointer, claimPointer, claimedByOther, releasePointer } from "./gesture";
 import {
@@ -396,6 +396,72 @@ export function ProgressBar({ value, color = COLOR.primary, track = tint(COLOR.f
     <View layout={{ height, borderRadius: height / 2, backgroundColor: track, overflow: "hidden", flexDirection: "row", ...(layout ?? {}) }}>
       <View layout={{ width: `${v * 100}%`, height, borderRadius: height / 2, backgroundColor: color }} />
     </View>
+  );
+}
+
+// ── DrainBar ───────────────────────────────────────────────────────────────
+
+export interface DrainBarProps {
+  /** The fill now, 0..1. Read every frame while `active`, once otherwise. */
+  read: () => number;
+  /** Keep reading every frame (the bar is moving). */
+  active: boolean;
+  color: number;
+  track?: number | string;
+  height?: number;
+  layout?: Layout;
+  /** Drawn over the fill (tick marks). */
+  children?: ReactNode;
+}
+
+/**
+ * A bar that drains by itself, without React or layout.
+ *
+ * ProgressBar takes its fill as a prop and sets it as a % width, so a bar that
+ * moves every frame re-rendered its owner every frame AND re-ran the layout of
+ * the whole interface, every frame, for a width that changed by a fraction of
+ * a pixel. This reads the fill in its own frame loop and redraws the fill
+ * shape only when it crosses a whole device pixel (or changes colour), so a
+ * 90-second drain draws a few times a second, and the interface canvas, which
+ * draws only on change (ui/onDemand.ts), stays still in between.
+ */
+const noDraw = () => {};
+
+export function DrainBar({ read, active, color, track = tint(COLOR.foreground, 0.1), height = 6, layout, children }: DrainBarProps) {
+  const fill = useRef<Graphics | null>(null);
+  const box = useRef<LayoutContainer | null>(null);
+  const latest = useRef({ read, color, height });
+  useEffect(() => { latest.current = { read, color, height }; });
+
+  useEffect(() => {
+    let raf = 0;
+    let drawn = "";
+    const step = () => {
+      const g = fill.current;
+      const width = box.current?.layout?.computedLayout?.width ?? 0;
+      if (g && !g.destroyed && width > 0) {
+        const { read: r, color: c, height: h } = latest.current;
+        const px = Math.round(Math.max(0, Math.min(1, r())) * width * RESOLUTION);
+        const key = `${px}|${c}|${h}`;
+        if (key !== drawn) {
+          drawn = key;
+          g.clear();
+          if (px > 0) g.roundRect(0, 0, px / RESOLUTION, h, Math.min(h / 2, px / RESOLUTION / 2)).fill(c);
+        }
+      }
+      if (active || width === 0) raf = requestAnimationFrame(step);
+    };
+    step();
+    return () => cancelAnimationFrame(raf);
+  }, [active, color, height]);
+
+  return (
+    <layoutContainer ref={box} eventMode="passive"
+      layout={{ height, borderRadius: height / 2, backgroundColor: track, flexDirection: "row", ...(layout ?? {}) }}>
+      {/* Drawn by the loop above, never by React. */}
+      <pixiGraphics ref={fill} draw={noDraw} layout={false} />
+      {children}
+    </layoutContainer>
   );
 }
 

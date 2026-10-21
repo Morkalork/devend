@@ -13,12 +13,13 @@
  * never moves. One timer is a single line; several sit side by side
  * (countdownLayout), where the DOM stacked extra rows the lane has no room for.
  */
+import { useCallback } from "react";
 import type { AbilityTimer } from "@/components/game/GameCanvas";
 import { simNow } from "@/lib/simClock";
-import { Label, ProgressBar, View, tint, COLOR } from "../kit/ui";
+import { DrainBar, Label, View, tint, COLOR } from "../kit/ui";
 import { HUD } from "./hudMetrics";
-import { useFrameTick } from "./bottomHooks";
-import { countdownLayout, liveTimers, type LiveTimer } from "./bottomModel";
+import { useTickEvery } from "./bottomHooks";
+import { countdownLayout, liveTimers, timerFrac, type LiveTimer } from "./bottomModel";
 
 interface AbilityCountdownBarProps {
   timers: AbilityTimer[];
@@ -29,7 +30,8 @@ const TRACK = tint(COLOR.white, 0.12);
 
 export function AbilityCountdownBar({ timers, visible }: AbilityCountdownBarProps) {
   const active = visible && timers.length > 0;
-  useFrameTick(active);
+  // Four times a second for the seconds readout; the bars drain themselves.
+  useTickEvery(active, 250);
   const live = active ? liveTimers(timers, simNow()) : [];
 
   if (live.length === 0) return <View layout={{ height: HUD.contextLane, alignSelf: "stretch" }} />;
@@ -51,7 +53,7 @@ function TimerLine({ tmr }: { tmr: LiveTimer }) {
   return (
     <View layout={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Label text={tmr.name} font="display" size={10} weight="700" color={tmr.color} />
-      <ProgressBar value={tmr.frac} color={tmr.color} track={TRACK} height={6} layout={{ flex: 1 }} />
+      <TimerBar tmr={tmr} height={6} layout={{ flex: 1 }} />
       <Label text={`${tmr.secsLeft}s`} font="display" size={12} weight="700" color={tmr.color} glow={8} />
     </View>
   );
@@ -68,7 +70,14 @@ function TimerCell({ tmr }: { tmr: LiveTimer }) {
         </View>
         <Label text={`${tmr.secsLeft}s`} font="display" size={10} weight="700" color={tmr.color} />
       </View>
-      <ProgressBar value={tmr.frac} color={tmr.color} track={TRACK} height={4} />
+      <TimerBar tmr={tmr} height={4} />
     </View>
   );
+}
+
+/** A timer's bar, draining against the sim clock by itself (DrainBar). */
+function TimerBar({ tmr, height, layout }: { tmr: LiveTimer; height: number; layout?: { flex: number } }) {
+  const { endMs, durationMs } = tmr;
+  const read = useCallback(() => timerFrac(endMs, durationMs, simNow()), [endMs, durationMs]);
+  return <DrainBar read={read} active color={tmr.color} track={TRACK} height={height} layout={layout} />;
 }

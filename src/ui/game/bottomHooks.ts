@@ -38,14 +38,17 @@ export function useScreenOrigin(ref: RefObject<LayoutContainer | null>, enabled:
   return origin ?? fallback;
 }
 
-/** Re-render every animation frame while `active` (the ability timers drain against the sim clock). */
-export function useFrameTick(active: boolean): void {
+/**
+ * Re-render every `ms` while `active`. The ability timers' seconds readout
+ * and their drop-out at zero; the bars themselves drain on their own frame
+ * loop (DrainBar). This used to re-render the lane every animation frame,
+ * and with it the layout of the whole interface.
+ */
+export function useTickEvery(active: boolean, ms: number): void {
   const [, tick] = useState(0);
   useEffect(() => {
     if (!active) return;
-    let raf = 0;
-    const loop = () => { tick(n => (n + 1) & 0xffff); raf = requestAnimationFrame(loop); };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [active]);
+    const id = setInterval(() => tick(n => (n + 1) & 0xffff), ms);
+    return () => clearInterval(id);
+  }, [active, ms]);
 }

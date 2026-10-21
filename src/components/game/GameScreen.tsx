@@ -83,6 +83,7 @@ import { ControlsRow } from '@/ui/game/ControlsRow';
 import { PlayChips } from '@/ui/game/PlayChips';
 import { ScreenFx } from '@/ui/game/ScreenFx';
 import { PauseOverlay } from '@/ui/game/PauseOverlay';
+import { useActiveSeconds } from '@/lib/activeClock';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -398,7 +399,6 @@ export function GameScreen({
     moverBandsRemaining: 0,
     pushMode: "none",
     creepPercent: 0,
-    activeSeconds: 0,
     ballCount: 1,
     pickupPresent: false,
     onBankAndContinue: undefined,
@@ -531,6 +531,8 @@ export function GameScreen({
     () => level.boss?.objective ?? selectMapObjective(levelNumber, getRunRng(`objective:${level.id}`)),
     [levelNumber, level.id, level.boss],
   );
+  // The clock, read only on a map that shows time (lib/activeClock.ts).
+  const activeSeconds = useActiveSeconds(mapTimeLimit != null || !!level.boss || mapObjective?.kind === "speedClear");
   const objectiveProgress = useMemo(
     () => mapObjective
       ? evaluateObjective(mapObjective, {
@@ -538,11 +540,11 @@ export function GameScreen({
           superiorLocks: gameState.superiorLocks,
           cuts: gameState.cutsUsed,
           par: level.expectedCuts,
-          activeSeconds: gameState.activeSeconds,
+          activeSeconds: activeSeconds,
           bossDefeated: gameState.bossDefeated,
         })
       : null,
-    [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts, gameState.bossDefeated],
+    [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, activeSeconds, level.expectedCuts, gameState.bossDefeated],
   );
 
   
@@ -667,7 +669,7 @@ export function GameScreen({
   });
 
   const deadlineRemaining = mapTimeLimit != null
-    ? Math.max(0, Math.ceil(mapTimeLimit - gameState.activeSeconds))
+    ? Math.max(0, Math.ceil(mapTimeLimit - activeSeconds))
     : null;
   const deadlineUrgent = deadlineRemaining != null && deadlineRemaining > 0 && deadlineRemaining <= 10
     && !gameState.bossDefeated && !mapComplete;
@@ -1035,7 +1037,7 @@ export function GameScreen({
                   <BossBanner
                     name={contentText.bossName(t, { id: level.id, name: level.boss.name })}
                     timeLimit={mapTimeLimit}
-                    activeSeconds={gameState.activeSeconds}
+                    activeSeconds={activeSeconds}
                     hp={gameState.bossHp}
                     maxHp={gameState.bossMaxHp}
                     defeated={gameState.bossDefeated}
@@ -1091,7 +1093,7 @@ export function GameScreen({
                   <GameMessageBar message={gameState.gameMessage ?? null} accentColor={accentColor} visible />
                 ) : contextLane === 'shipEarly' ? (
                   <ShipEarlyBar
-                    seconds={gameState.activeSeconds}
+                    seconds={activeSeconds}
                     ballCount={gameState.ballCount}
                     timeLimit={mapTimeLimit ?? 0}
                     extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
