@@ -12,6 +12,7 @@ import {
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
+import { isUiOnDemandEnabled, setUiOnDemandEnabled } from '@/ui/onDemand';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -38,6 +39,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
   const [touchTrace, setTouchTrace] = useState(isTouchTraceEnabled);
+  const [uiOnDemand, setUiOnDemand] = useState(isUiOnDemandEnabled);
   const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
@@ -301,6 +303,33 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="text-sm text-muted-foreground">
                 Pair through the server even when the phones could link directly, as on
                 public Wi-Fi. Set it on the phone that shows the code.
+              </div>
+            </div>
+          </button>
+
+          {/* The interface canvas draws only when something on it changed
+              (ui/onDemand.ts). Off draws every frame, as it used to: the way
+              to tell "did not update" from "nothing changed" on a device. */}
+          <button
+            onClick={() => { const next = !uiOnDemand; setUiOnDemandEnabled(next); setUiOnDemand(next); }}
+            aria-pressed={uiOnDemand}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              !uiOnDemand ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${!uiOnDemand ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Layers className={`w-6 h-6 ${!uiOnDemand ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Interface draws on demand{' '}
+                <span className={`text-xs ${!uiOnDemand ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {uiOnDemand ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                The menus and HUD redraw only when something on them changes. Turn off to
+                redraw every frame, if anything on screen ever fails to update. Reload to apply.
               </div>
             </div>
           </button>

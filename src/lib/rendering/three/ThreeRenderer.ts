@@ -37,7 +37,7 @@ import { SleekRenderer, type HybridFrame, type HybridHost } from "@/lib/renderin
 import { boardAngleFor } from "@/lib/boardTilt";
 import { fitScale } from "@/lib/boardConstants";
 import {
-  autoStartTier, autoTier, getFov, getHeightScale, getLean, getLearnedLimit, getQualitySetting, setLearnedLimit,
+  getFov, getHeightScale, getLean, getQualitySetting, resolvedTier, setLearnedLimit,
   type QualityTier,
 } from "@/lib/rendering/render3dSettings";
 import { boardTiltElements, eyeDistance, floorCamera, leanProjection } from "./floorCamera";
@@ -208,13 +208,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.auto = q === "auto";
     // Auto starts at the device's guess, but never above what an earlier
     // board on this device learned it cannot hold (getLearnedLimit).
-    this.tier = q === "auto"
-      ? autoStartTier(autoTier({
-          coarsePointer: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
-          dpr: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
-          cores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 0 : 0,
-        }), getLearnedLimit())
-      : q;
+    this.tier = resolvedTier();
     this.heightScale = getHeightScale();
     this.fov = getFov();
     this.leanNow = getLean();

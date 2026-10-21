@@ -80,7 +80,11 @@ describe("the renderer", () => {
   const step = src.slice(src.indexOf("private stepDownForSlowFrames"), src.indexOf("presentEmpty(): void"));
 
   it("starts auto at the guess capped by what was learned", () => {
-    expect(src).toMatch(/autoStartTier\(autoTier\(\{[\s\S]*?\}\), getLearnedLimit\(\)\)/);
+    // Resolved in the settings, where the board canvas's resolution cap reads
+    // the same tier (boardPixelRatioCap), so the two can never disagree.
+    expect(src).toContain("this.tier = resolvedTier();");
+    const settings = readFileSync(resolve(process.cwd(), "src/lib/rendering/render3dSettings.ts"), "utf8");
+    expect(settings).toMatch(/autoStartTier\(autoTier\(\{[\s\S]*?\}\), getLearnedLimit\(\)\)/);
   });
 
   it("stores each step down the moment it decides it, and logs why", () => {

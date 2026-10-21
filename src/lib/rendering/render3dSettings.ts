@@ -224,3 +224,28 @@ export function getBoardRenderer(): RendererChoice {
   if (choice === "three" && getQualitySetting() === "auto" && getLearnedLimit() === "2d") return "sleek";
   return choice;
 }
+
+/**
+ * The tier the next 3D board runs at: the pinned one, or auto's guess for
+ * this device held under what it has learned (ThreeRenderer reads it here).
+ */
+export function resolvedTier(): QualityTier {
+  const q = getQualitySetting();
+  if (q !== "auto") return q;
+  return autoStartTier(autoTier({
+    coarsePointer: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
+    dpr: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+    cores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 0 : 0,
+  }), getLearnedLimit());
+}
+
+/**
+ * The most board-canvas pixels per CSS pixel. The 3D frame inside it already
+ * draws at its tier's ratio (2 on medium); the canvas around it, where the
+ * flat marks and effects are composited over that frame, drew at the screen's
+ * native ratio whatever the tier, 2.6-3x on a phone, so the final composite
+ * cost up to twice what the frame under it did. High keeps native.
+ */
+export function boardPixelRatioCap(): number {
+  return resolvedTier() === "high" ? 3 : 2;
+}

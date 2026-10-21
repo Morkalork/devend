@@ -132,14 +132,14 @@ describe("every persisted dev switch has an admin control", () => {
   // simulated nap, whose setter takes a state rather than a boolean.
   // The touch trace keeps its switch beside its log (lib/touchTrace.ts), but
   // it is the same class of thing: stored, no URL form, Admin or nothing.
-  const SWITCHES = DEV_FLAGS + read("src/lib/touchTrace.ts");
+  const SWITCHES = DEV_FLAGS + read("src/lib/touchTrace.ts") + read("src/ui/onDemand.ts");
   const setters = [
     ...[...SWITCHES.matchAll(/export function (set\w+Enabled)\(/g)].map(m => m[1]),
     ...[...SWITCHES.matchAll(/export function (setSimulated\w+)\(/g)].map(m => m[1]),
   ];
 
   it("is checking a real set of switches", () => {
-    expect(setters).toEqual(expect.arrayContaining(["setInfiniteLivesEnabled", "setForceRelayEnabled", "setSimulatedNap", "setTouchTraceEnabled"]));
+    expect(setters).toEqual(expect.arrayContaining(["setInfiniteLivesEnabled", "setForceRelayEnabled", "setSimulatedNap", "setTouchTraceEnabled", "setUiOnDemandEnabled"]));
   });
 
   for (const setter of setters) {

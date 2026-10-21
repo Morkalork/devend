@@ -144,7 +144,7 @@ import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
-import { getBoardRenderer, type RendererChoice } from "@/lib/rendering/render3dSettings";
+import { boardPixelRatioCap, getBoardRenderer, type RendererChoice } from "@/lib/rendering/render3dSettings";
 import { recordRendererStart } from "@/lib/rendering/rendererDiag";
 import { recordZoomEvent } from "@/lib/zoomRecorder";
 import { BUILD_SHA } from "@/lib/buildInfo";
@@ -1680,7 +1680,8 @@ export function GameCanvas({
       // nativeDevicePixelRatio, not window.devicePixelRatio: on iOS the latter
       // moves with the page zoom, so a resize during a pinch would rebuild the
       // backing store and every scale-keyed bake around the gesture.
-      const dpr = !useFallback2d ? Math.min(nativeDevicePixelRatio(), 3) : getDevicePixelRatio();
+      // Native up to the tier's cap (boardPixelRatioCap): 2 below high.
+      const dpr = !useFallback2d ? Math.min(nativeDevicePixelRatio(), boardPixelRatioCap()) : getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       pixiSizeRef.current = { w: physW, h: physH };

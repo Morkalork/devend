@@ -27,6 +27,9 @@ interface Props {
   children?: ReactNode;
 }
 
+/** Steps a second for a perpetual breath (see the breathing effect below). */
+export const BREATH_FPS = 20;
+
 export function StatFlash({ flashKey = 0, breatheMs, layout, children }: Props) {
   const ref = useRef<LayoutContainer | null>(null);
   const frame = useRef<FlashFrame>(FLASH_REST);
@@ -52,14 +55,22 @@ export function StatFlash({ flashKey = 0, breatheMs, layout, children }: Props) 
     const node = ref.current;
     if (!breatheMs || !node) return;
     let raf = 0;
+    let last = 0;
     const start = performance.now();
     const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      // At BREATH_FPS, not every refresh. The heart breathes for the whole
+      // map, and the interface canvas draws only when something on it changed
+      // (ui/onDemand.ts): stepped every frame, this one slow pulse alone kept
+      // the whole HUD redrawing 60 times a second. A 1.2s breath reads the
+      // same in 20 steps a second.
+      if (now - last < 1000 / BREATH_FPS) return;
+      last = now;
       // 0..1 and back, like usePulse, without a React render per frame.
       const p = heartPulse(0.5 - 0.5 * Math.cos(((now - start) / breatheMs) * Math.PI * 2));
       breath.current = p.scale;
       if (!node.destroyed) node.alpha = p.alpha;
       apply();
-      raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => {
