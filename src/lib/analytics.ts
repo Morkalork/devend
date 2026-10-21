@@ -16,14 +16,26 @@
  * VITE_POSTHOG_HOST (defaults to the EU cloud). Dev builds stay silent even
  * with a key unless VITE_POSTHOG_DEV=1, so local play never pollutes the data.
  */
-import posthog from 'posthog-js';
+type PostHog = typeof import('posthog-js').default;
 
-let enabled = false;
+/**
+ * The client, once loaded. posthog-js is fetched only when a key is set: it
+ * was imported at the top of this file, so every build shipped it in the main
+ * bundle, the keyless ones included. Events raised before it arrives (the
+ * first moments after boot, before any run has started) are dropped.
+ */
+let client: PostHog | null = null;
 
 export function initAnalytics(): void {
   const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
   const devOptIn = import.meta.env.VITE_POSTHOG_DEV === '1';
   if (!key || (import.meta.env.DEV && !devOptIn)) return;
+  import('posthog-js').then(({ default: posthog }) => start(posthog, key)).catch(() => {
+    // Offline, or blocked: analytics must never break the game.
+  });
+}
+
+function start(posthog: PostHog, key: string): void {
   try {
     posthog.init(key, {
       api_host: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://eu.i.posthog.com',
@@ -35,16 +47,16 @@ export function initAnalytics(): void {
       // $exception events (crash visibility in the wild, e.g. renderer rollout).
       capture_exceptions: true,
     });
-    enabled = true;
+    client = posthog;
   } catch {
     // Analytics must never break the game.
   }
 }
 
 function track(event: string, props?: Record<string, unknown>): void {
-  if (!enabled) return;
+  if (!client) return;
   try {
-    posthog.capture(event, props);
+    client.capture(event, props);
   } catch {
     // ignore — see header
   }

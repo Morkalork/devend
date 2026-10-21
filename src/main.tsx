@@ -4,7 +4,7 @@ import { StrictMode } from "react";
 import "@/lib/net/pairInvite";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import "./i18n";
+import { i18nReady } from "./i18n";
 import "./index.css";
 import { loadSoundSettings } from "@/lib/soundSettings";
 import { initAnalytics } from "@/lib/analytics";
@@ -17,8 +17,12 @@ initAnalytics();
 // What the board's zoom and resizes actually were, for Admin (CANVAS_UI_PLAN.md stage 0).
 installZoomRecorder(window);
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+// After the player's language has arrived (a separate chunk unless it is
+// English), so nothing is ever drawn in the wrong one first.
+i18nReady.finally(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+});

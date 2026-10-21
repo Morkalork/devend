@@ -21,7 +21,6 @@ import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorConte
 import { WelcomeScreen } from '@/ui/screens/WelcomeScreen';
 import { TutorialScreen } from '@/ui/screens/TutorialScreen';
 import { OptionsScreen } from '@/ui/screens/OptionsScreen';
-import { GameScreen } from '@/components/game/GameScreen';
 import { GameErrorBoundary } from '@/components/GameErrorBoundary';
 import { flushRunSave } from '@/lib/runSaveFlush';
 import { adminOnHere } from '@/lib/adminAccess';
@@ -75,6 +74,13 @@ const DOM_ONLY_SCREENS: GameScreenName[] = ['admin', 'mapBuilder', 'upgradeAtlas
  */
 const OWN_BACKGROUND_SCREENS: GameScreenName[] = [...DOM_ONLY_SCREENS, 'game', 'animationTest', 'pairLobby'];
 
+/**
+ * The game screen, and with it the board, the physics and the level builder,
+ * is its own chunk: the menu needs none of it to draw. Fetched as soon as the
+ * menu is idle (below), so by the time Start is pressed it is already here.
+ */
+const loadGameScreen = () => import('@/components/game/GameScreen');
+const GameScreen = lazy(() => loadGameScreen().then(m => ({ default: m.GameScreen })));
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
@@ -297,6 +303,15 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     if (session.menuDataReady) {
       markStartupReady('menu');
     }
+  }, [session.menuDataReady]);
+  // The game screen's chunk, fetched once the menu is up and the page is idle,
+  // so Start never waits on it.
+  useEffect(() => {
+    if (!session.menuDataReady) return;
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const fetch = () => { void loadGameScreen(); };
+    if (idle) idle(fetch);
+    else setTimeout(fetch, 1500);
   }, [session.menuDataReady]);
   // A first screen with a background of its own (a ?level= jump straight to
   // the board) has no CRT background to wait for.
@@ -528,6 +543,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onCrash={flushRunSave}
                 onRecover={navigation.goToWelcome}
               >
+              {/* Nothing in the fallback: the chunk is prefetched while the menu
+                  sits idle, so this only shows on a straight ?level= jump. */}
+              <Suspense fallback={null}>
               <GameScreen
                 viewportZoomStuck={viewportZoomStuck}
                 lockstep={pair.lockstep}
@@ -595,6 +613,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 scalingReadouts={session.scalingReadouts}
                 runStartIntro={session.runStartIntroPending}
               />
+              </Suspense>
               </GameErrorBoundary>
             )}
             {navigation.currentScreen === 'runDraft' && session.pendingSprint && (
