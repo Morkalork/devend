@@ -44,6 +44,14 @@
         font-weight: 600;
         font-display: block;
       }
+      @font-face {
+        font-family: 'BootBengali';
+        src: url('/assets/fonts/NotoSansBengali-600.woff2') format('woff2');
+        font-weight: 600;
+        font-display: block;
+        /* Fetched only for Bangla text: the Latin labels never need it. */
+        unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+25CC;
+      }
       html, body { background: #0d1012; }
       #boot-splash {
         position: fixed;
@@ -87,7 +95,7 @@
         top: calc(50% + 56px);
         text-align: center;
         /* Bangla has no glyphs in Oxanium: the bundled Noto face, as on the canvas. */
-        font-family: 'BootDisplay', 'Noto Sans Bengali', sans-serif;
+        font-family: 'BootDisplay', 'BootBengali', sans-serif;
         font-weight: 600;
         font-size: 18px;
         letter-spacing: 1px;
@@ -108,6 +116,22 @@
 
   <body>
     <div id="boot-splash" aria-label="Dev/End"><div class="title">Dev/End</div><div class="label"></div></div>
+    <script>
+      // "Loading..." from the first frame: it is, from the player's side. In
+      // the language the game will pick (src/i18n: the saved choice, then the
+      // device's, then English), with the strings of each locale's
+      // welcome.loading (pinned by startupSplash.test.tsx).
+      (function () {
+        var loading = { en: 'Loading...', es: 'Cargando...', sv: 'Laddar...', bn: 'লোড হচ্ছে...' };
+        var lang = null;
+        try { lang = localStorage.getItem('jezzball_language'); } catch (e) { /* private mode */ }
+        if (!loading[lang]) lang = (navigator.language || 'en').split('-')[0];
+        if (!loading[lang]) lang = 'en';
+        var el = document.getElementById('boot-splash');
+        el.querySelector('.label').textContent = loading[lang];
+        el.setAttribute('aria-label', loading[lang]);
+      })();
+    </script>
     <script>
       // Backstop only, for a page whose app never starts: once the canvas
       // splash has taken the splash over (bootSplash.ts), this does nothing.

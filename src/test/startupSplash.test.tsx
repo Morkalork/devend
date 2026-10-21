@@ -174,3 +174,33 @@ describe("the HTML splash is the only splash anyone sees", () => {
     expect(gate).toMatch(/if \(phase === "gone"\) \{\s*dismissBootSplash\(\);/);
   });
 });
+
+describe("the HTML splash says Loading from its first frame", () => {
+  // "The splash screen can say Loading from the beginning, since it
+  // technically is." The label used to stay empty until the canvas splash
+  // took over and filled it.
+  const html = read("index.html");
+  const script = html.slice(html.indexOf("var loading = {"), html.indexOf("})();", html.indexOf("var loading = {")));
+
+  it("has every locale's own welcome.loading, so the hand-over changes nothing", () => {
+    const table = JSON.parse(script.slice(script.indexOf("{"), script.indexOf("}") + 1).replace(/'/g, '"').replace(/(\w+):/g, '"$1":')) as Record<string, string>;
+    const langs = fs.readdirSync(path.resolve(process.cwd(), "src/i18n/locales")).map(f => f.replace(".json", "")).sort();
+    expect(Object.keys(table).sort()).toEqual(langs);
+    for (const lang of langs) {
+      const loc = JSON.parse(read(`src/i18n/locales/${lang}.json`)) as { welcome: { loading: string } };
+      expect(table[lang], lang).toBe(loc.welcome.loading);
+    }
+  });
+
+  it("picks the language the game will: saved choice, then the device, then English", () => {
+    expect(read("src/i18n/index.ts")).toContain("export const LANGUAGE_STORAGE_KEY = 'jezzball_language';");
+    expect(script).toContain("localStorage.getItem('jezzball_language')");
+    expect(script).toContain("(navigator.language || 'en').split('-')[0]");
+    expect(script).toContain("lang = 'en'");
+  });
+
+  it("runs right after the splash, before the app's root", () => {
+    expect(html.indexOf("var loading = {")).toBeGreaterThan(html.indexOf('<div id="boot-splash"'));
+    expect(html.indexOf("var loading = {")).toBeLessThan(html.indexOf('<div id="root">'));
+  });
+});
