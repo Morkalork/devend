@@ -201,7 +201,9 @@ describe("the board's outer wall", () => {
   });
 
   it("stops the masked pass drawing board edges twice", () => {
-    expect(SRC).toMatch(/if \(isEdge\) continue;/);
+    // The fence passes draw only what isFence admits, and it turns edges away.
+    expect(SRC).toMatch(/function isFence\(w: Wall\): boolean \{\s*return !\(w\.isBoardEdge \?\? w\.id\.startsWith\("board-"\)\) && !w\.isObstacleBoundary;/);
+    expect(SRC).toContain("if (isFence(w) && !live.has(w)) this.drawFence(w, game, light, w2s, scale);");
   });
 
   it("fits inside the board's margin instead of overhanging the page", () => {
@@ -361,7 +363,10 @@ describe("the outer wall is rigid", () => {
     // matching - it would have failed on a change that has nothing to do with
     // the rule, which is the second time a syntax pin in this suite has cost a
     // green build.
-    const fences = SRC.slice(SRC.indexOf("for (const w of game.walls)"), SRC.indexOf("for (const g of game.activeWalls)"));
+    // A finished fence is drawn by drawFence, into the kept drawing or, while
+    // it is bending, live with the growing fences.
+    const fromStatic = SRC.slice(SRC.indexOf("private drawFence"));
+    const fences = fromStatic.slice(0, fromStatic.indexOf("\n  private ", 1));
     expect(fences, "the fence pass stopped drawing segments at all")
       .toMatch(/this\.drawSegment\(seg\.start, seg\.end/);
     expect(fences, "the fence pass went rigid, which is where the bulge lives")

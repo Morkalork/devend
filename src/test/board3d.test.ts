@@ -632,7 +632,7 @@ describe("the wiring", () => {
   it("draws the flat marks under a flat light, so nothing is lit twice", () => {
     const frame = sleek.slice(sleek.indexOf("private renderHybrid("), sleek.indexOf("private drawSplitWarn("));
     expect(frame).toMatch(/const flat: LightScope = \{ \.\.\.light, level: 1, reach: 1e7 \}/);
-    expect(frame).toMatch(/this\.walls\.sync\(game, flat, sink, w2s, scale\)/);
+    expect(frame).toMatch(/this\.walls\.sync\(game, flat, sink, w2s, scale, HYBRID_LIGHT_STEP\)/);
     expect(sleek).toMatch(/this\.board\.showWash = false;/);
   });
 });

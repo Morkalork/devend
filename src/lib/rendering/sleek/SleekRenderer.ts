@@ -137,6 +137,12 @@ export interface HybridFrame {
   deadlineLimit: number | null;
 }
 
+/**
+ * Under the 3D board, how far (px) the light may move before the kept fence
+ * drawing is relit (WallLayer.sync): the 3D scene does the visible lighting.
+ */
+const HYBRID_LIGHT_STEP = 32;
+
 export class SleekRenderer {
   private app = new Application();
   private ready = false;
@@ -551,7 +557,7 @@ export class SleekRenderer {
     this.props.sync(game, flat, sink, w2s, scale, now);
     this.entities.sync(game, flat, sink, w2s, scale, now);
     this.objects.sync(game, flat, sink, w2s, scale);
-    this.walls.sync(game, flat, sink, w2s, scale);
+    this.walls.sync(game, flat, sink, w2s, scale, HYBRID_LIGHT_STEP);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
     this.balls.sync(game, flat, sink, w2s, scale, now);
     this.chrome.sync(game, light, w2s, scale, now, rctx.spaceThreshold);

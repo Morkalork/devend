@@ -151,13 +151,30 @@ export class WallLayer {
   private rims = new Graphics();
   private outerBodies = new Graphics();
   private outerRims = new Graphics();
+  /** The fences still growing, redrawn every frame over the finished ones. */
+  private growBodies = new Graphics();
+  private growRims = new Graphics();
+
+  /**
+   * The finished fences and the frame are drawn once and kept while nothing
+   * they depend on changes (staticKey): they used to be cleared and rebuilt,
+   * and re-triangulated, every frame for walls that had not moved. Their
+   * shadow runs are kept with them, since the shared floor plane they flush
+   * into is cleared every frame.
+   */
+  private staticKey = "";
+  private staticRuns = new Map<number, Pt[][]>();
+  private wallTags = new WeakMap<Wall, number>();
+  private nextWallTag = 1;
 
   constructor() {
     // Shadows first so every wall body sits on top of every shadow: a wall must
     // never be dimmed by its neighbour's shadow falling across it.
     // Shadows are NOT in the fence scope: they belong to the shared floor
     // plane, below everything that stands on the board.
-    this.fenceScope.addChild(this.bodies, this.rims);
+    // Growing bodies sit with the bodies and under every rim, as when they
+    // shared one Graphics.
+    this.fenceScope.addChild(this.bodies, this.growBodies, this.rims, this.growRims);
     this.fenceScope.mask = this.fenceMask;
     this.outer.addChild(this.outerBodies, this.outerRims);
     // The mask must be a sibling in the display list, not a detached Graphics.
@@ -212,37 +229,100 @@ export class WallLayer {
     shadows: Graphics,
     w2s: W2S,
     scale: number,
+    /**
+     * Px the light may move before the kept fences are relit. 0 (the 2D
+     * board) relights on any move, since there their shadows swing with it.
+     * Under the 3D board these marks only colour the surface texture, their
+     * shadows are thrown away and the 3D scene does the real lighting, so a
+     * lamp carried round the board need not redraw every fence every frame.
+     */
+    lightStep = 0,
   ): void {
     this.shadows = shadows;
+    this.syncMask(game, w2s, scale);
+
+    // A fence a ball has just hit bends for half a second (wallImpactEffects),
+    // and a hit lands somewhere on most frames. So the split is per fence: the
+    // ones bending right now are drawn live with the growing fences, and
+    // every other finished fence stays in the kept drawing, which is redrawn
+    // only when a fence starts or stops bending, or anything else it depends
+    // on changes.
+    const live = new Set<Wall>();
+    for (const w of game.walls) {
+      if (isFence(w) && hasNearbyImpacts(w.start, w.end)) live.add(w);
+    }
+
+    const key = this.staticKeyFor(game, light, w2s, scale, live, lightStep);
+    if (key !== this.staticKey) {
+      this.staticKey = key;
+      this.drawStatic(game, light, w2s, scale, live);
+      this.staticRuns = cloneRuns(this.shadowRuns);
+    } else {
+      this.shadowRuns = cloneRuns(this.staticRuns);
+    }
+
+    // The bending and the growing fences, into their own Graphics (drawSegment
+    // and friends draw into this.bodies/this.rims, pointed there for the call).
+    this.growBodies.clear();
+    this.growRims.clear();
+    const bodies = this.bodies, rims = this.rims;
+    this.bodies = this.growBodies;
+    this.rims = this.growRims;
+    try {
+      for (const w of live) this.drawFence(w, game, light, w2s, scale);
+      for (const g of game.activeWalls) this.drawGrowing(g, light, w2s, scale);
+    } finally {
+      this.bodies = bodies;
+      this.rims = rims;
+    }
+
+    this.flushShadows();
+  }
+
+  /**
+   * Everything the kept drawing depends on: the transform and the light, the
+   * obstacles the fences are clipped against, and which finished fences it
+   * holds (every one not bending this frame).
+   */
+  private staticKeyFor(
+    game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, live: Set<Wall>, lightStep: number,
+  ): string {
+    const step = Math.max(1, lightStep);
+    let walls = "";
+    for (const w of game.walls) {
+      if (live.has(w)) continue;
+      let tag = this.wallTags.get(w);
+      if (tag === undefined) { tag = this.nextWallTag++; this.wallTags.set(w, tag); }
+      walls += `${tag},`;
+    }
+    const phasedOut = (game.phasingObjects ?? []).filter(p => p.phase === "out").length;
+    return `${transformKey(w2s)}|${Math.round(scale * 10000)}|${Math.round(light.x / step)},${Math.round(light.y / step)}`
+      + `|${light.level.toFixed(3)}|${Math.round(light.reach)}|${game.obstaclePolygons.length}|${game.obstacleVersion ?? 0}`
+      + `|${phasedOut}|${game.boardPolygon?.vertices.length ?? 0}|${walls}`;
+  }
+
+  /** The finished fences and the board's frame, with their shadow runs. */
+  private drawStatic(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, live: Set<Wall>): void {
     this.bodies.clear();
     this.rims.clear();
     this.outerBodies.clear();
     this.outerRims.clear();
     this.shadowRuns.clear();
-    this.syncMask(game, w2s, scale);
     this.drawOuterWall(game, light, w2s, scale);
 
     for (const w of game.walls) {
-      const isEdge = w.isBoardEdge ?? w.id.startsWith("board-");
-      // Board edges are drawn by drawOuterWall, outside the mask that was
-      // eating their bulge. Drawing them here as well would double the rim.
-      if (isEdge) continue;
-      const isObstacle = !!w.isObstacleBoundary;
-      // Obstacle boundaries are drawn by the entity layer with their bodies;
-      // drawing them here too would double their rim and shadow.
-      if (isObstacle) continue;
-
-      // Split the wall around any obstacle it passes through, so no fence is
-      // ever painted across a slab it should be interrupted by.
-      for (const seg of this.clippedSegments(w, game)) {
-        this.drawSegment(seg.start, seg.end, w.thickness, isEdge, light, w2s, scale,
-          false, this.tintOf(w.fenceTypeId, w.player));
-      }
+      if (isFence(w) && !live.has(w)) this.drawFence(w, game, light, w2s, scale);
     }
+  }
 
-    for (const g of game.activeWalls) this.drawGrowing(g, light, w2s, scale);
-
-    this.flushShadows();
+  /** One finished fence, split around any obstacle it passes through. */
+  private drawFence(w: Wall, game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
+    // Split the wall around any obstacle it passes through, so no fence is
+    // ever painted across a slab it should be interrupted by.
+    for (const seg of this.clippedSegments(w, game)) {
+      this.drawSegment(seg.start, seg.end, w.thickness, false, light, w2s, scale,
+        false, this.tintOf(w.fenceTypeId, w.player));
+    }
   }
 
   /**
@@ -750,4 +830,21 @@ export class WallLayer {
   destroy(): void {
     this.container.destroy({ children: true });
   }
+}
+
+/** A shallow copy of a set of shadow runs: new lists, the same point arrays. */
+function cloneRuns(runs: Map<number, Pt[][]>): Map<number, Pt[][]> {
+  const out = new Map<number, Pt[][]>();
+  for (const [k, v] of runs) out.set(k, v.slice());
+  return out;
+}
+
+/**
+ * A wall this layer draws as a fence. Board edges are drawn by drawOuterWall,
+ * outside the mask that was eating their bulge, and obstacle boundaries by the
+ * entity layer with their bodies; drawing either here too would double their
+ * rim and shadow.
+ */
+function isFence(w: Wall): boolean {
+  return !(w.isBoardEdge ?? w.id.startsWith("board-")) && !w.isObstacleBoundary;
 }
