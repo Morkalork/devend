@@ -20,6 +20,7 @@ import {
   getRendererChoice, setRendererChoice, getQualitySetting, setQualitySetting, QUALITY_SETTINGS,
   getFov, setFov, FOV_RANGE, DEFAULT_FOV, getHeightScale, setHeightScale, HEIGHT_RANGE,
   DEFAULT_HEIGHT_SCALE, getLean, setLean, LEAN_RANGE, DEFAULT_LEAN,
+  getFrameCap, setFrameCap, FRAME_CAPS, DEFAULT_FRAME_CAP,
   type QualitySetting, type RendererChoice,
 } from '@/lib/rendering/render3dSettings';
 import { isFullDebrief, setFullDebrief } from '@/ui/screens/debriefMode';
@@ -47,6 +48,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [fov, setFovState] = useState(getFov);
   const [heightScale, setHeightState] = useState(getHeightScale);
   const [lean, setLeanState] = useState(getLean);
+  const [frameCap, setFrameCapState] = useState(getFrameCap);
   const [kitOpen, setKitOpen] = useState(false);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
@@ -422,6 +424,35 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 Tap to cycle. Auto picks by device, steps down a tier when frames run
                 slow and remembers it on this device (see 3D on this device below);
                 the others pin a tier, for comparing. Minimal draws no shadows.
+              </div>
+            </div>
+          </button>
+
+          {/* Frames a second. 60 unless changed: a 120Hz phone drew everything
+              twice as often for nothing, and ran hot doing it. */}
+          <button
+            onClick={() => {
+              const next = FRAME_CAPS[(FRAME_CAPS.indexOf(frameCap) + 1) % FRAME_CAPS.length];
+              setFrameCap(next);
+              setFrameCapState(next);
+            }}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              frameCap !== DEFAULT_FRAME_CAP ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${frameCap !== DEFAULT_FRAME_CAP ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Gauge className={`w-6 h-6 ${frameCap !== DEFAULT_FRAME_CAP ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Frame cap{' '}
+                <span className={`text-xs ${frameCap !== DEFAULT_FRAME_CAP ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {frameCap === 0 ? 'OFF' : `${frameCap} FPS`}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Tap to cycle 60, 30 and off. Caps how often the board draws on a fast
+                display; 30 runs cooler, off draws every refresh. Takes effect on the next board.
               </div>
             </div>
           </button>

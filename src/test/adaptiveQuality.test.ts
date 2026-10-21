@@ -90,8 +90,10 @@ describe("the renderer", () => {
   });
 
   it("drops the 3D resolution at once when frames are badly slow, without a rebuild", () => {
-    expect(step).toContain("medianMs > SEVERE_FRAME_MS && ratioNow > 1");
-    expect(step).toContain("this.emergencyRatio = 1;");
+    // Badly slow: straight to one pixel per CSS pixel. Merely over budget: a
+    // quarter off, also at once, so the rest of the map is not spent slow.
+    expect(step).toContain("const ratioNext = medianMs > SEVERE_FRAME_MS ? 1 : Math.max(1, ratioNow * 0.75);");
+    expect(step).toContain("this.emergencyRatio = ratioNext;");
     expect(src).toContain("const ratio = Math.min(preset.maxPixelRatio, this.emergencyRatio);");
     // A rebuild lifts the cap, so the next tier is measured on its own.
     expect(src).toMatch(/this\.governor\.reset\(performance\.now\(\)\);\s*this\.emergencyRatio = Number\.POSITIVE_INFINITY;/);

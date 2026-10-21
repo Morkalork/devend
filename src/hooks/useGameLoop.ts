@@ -45,6 +45,8 @@ import { anyLockFlashActive, lockFlashEnd } from "@/lib/lockFlash";
 import { drainCommands, type CommandDeps } from "@/lib/net/commands";
 import { startPairTurns } from "@/lib/net/pairTurn";
 import { runStream } from "@/lib/runRng";
+import { createFrameGate } from "@/lib/frameGate";
+import { getFrameCap } from "@/lib/rendering/render3dSettings";
 
 /**
  * The longest stretch a single frame may hand the simulation, in milliseconds.
@@ -53,6 +55,21 @@ import { runStream } from "@/lib/runRng";
  * sim clock's hold frames use the same ceiling so the two cannot disagree.
  */
 const MAX_FRAME_MS = 50;
+
+/**
+ * The most physics steps one frame may run. Four is 33ms of sim time, so a
+ * phone holding a steady 30fps keeps real time; only a frame slower than that
+ * leaves the rest of its time unspent, and the game slows a little rather than
+ * spending the next frame catching up on the last one, which made the next one
+ * slower still.
+ */
+export const MAX_STEPS_PER_FRAME = 4;
+
+/**
+ * While a launcher is loaded the board is still (physics is held) and only
+ * its lights flicker, so it is drawn at this rate, not every refresh.
+ */
+const HOLD_FPS = 30;
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -178,6 +195,9 @@ export function createGameLoop(
   // catches, logs once, and reschedules, so a render/physics bug degrades to a
   // bad frame plus a console error instead of freezing the whole game.
   let loopErrorLogged = false;
+  // The frame cap (render3dSettings.getFrameCap), read once per board.
+  const gate = createFrameGate(getFrameCap());
+  const holdGate = createFrameGate(HOLD_FPS);
   /**
    * Scratch surface list for chest-loot gravity, reused frame to frame.
    *
@@ -301,7 +321,7 @@ export function createGameLoop(
       //
       // The boot hold is the same: the board is being revealed, not covered.
       if (launchPending(game) || game.bootHold) {
-        callbacks.render();
+        if (game.bootHold || holdGate.due(timestamp)) callbacks.render();
         schedule();
       }
       return;
@@ -456,6 +476,12 @@ export function createGameLoop(
     let _physSteps = 0;
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
+      if (_physSteps >= MAX_STEPS_PER_FRAME) {
+        // A frame slower than the cap allows: drop the backlog, keep the
+        // fraction the interpolation below reads.
+        game.accumulator %= PHYSICS_STEP;
+        break;
+      }
       // In a pair, a tick runs only when both devices' commands for it are in.
       // Refused means the partner's phone has not been heard from yet: leave
       // the accumulator where it is and draw; the tick will run next frame.
@@ -767,6 +793,8 @@ export function createGameLoop(
   };
 
   const gameLoop = (timestamp: number): void => {
+    // Not due yet under the frame cap: wait for the next refresh.
+    if (!gate.due(timestamp)) { schedule(); return; }
     try {
       gameLoopBody(timestamp);
     } catch (err) {

@@ -158,7 +158,9 @@ describe("the map waits for it", () => {
 
   it("keeps drawing under the hold, so the reveal uncovers a drawn board", () => {
     expect(canvas).toContain("game.bootHold = !revealed;");
-    expect(loop).toMatch(/if \(launchPending\(game\) \|\| game\.bootHold\) \{\s*callbacks\.render\(\);/);
+    // The boot hold draws every frame; a loaded launcher, whose board is
+    // still, at the hold rate.
+    expect(loop).toMatch(/if \(launchPending\(game\) \|\| game\.bootHold\) \{\s*if \(game\.bootHold \|\| holdGate\.due\(timestamp\)\) callbacks\.render\(\);/);
   });
 
   it("does not reveal behind an explainer card", () => {

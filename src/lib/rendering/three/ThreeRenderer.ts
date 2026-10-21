@@ -478,9 +478,14 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       setLearnedLimit("2d");
       recordQualityStep(this.tier, "2d", medianMs);
     }
+    // Something now, not only at the next map: the 3D frame's resolution is
+    // a render target, no shader, so it can change mid-map for the price of
+    // one reallocation. A quarter off when over budget, straight to one pixel
+    // per CSS pixel when badly slow.
     const ratioNow = Math.min(this.rig?.preset.maxPixelRatio ?? 1, this.emergencyRatio);
-    if (medianMs > SEVERE_FRAME_MS && ratioNow > 1) {
-      this.emergencyRatio = 1;
+    const ratioNext = medianMs > SEVERE_FRAME_MS ? 1 : Math.max(1, ratioNow * 0.75);
+    if (ratioNext < ratioNow) {
+      this.emergencyRatio = ratioNext;
       recordQualityStep(this.tier, "res", medianMs);
       if (this.pixi) this.sleek.resize(this.size.w, this.size.h, true);
     }

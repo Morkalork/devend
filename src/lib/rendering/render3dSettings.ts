@@ -37,6 +37,7 @@ export const HEIGHT_KEY = "devend:render3d:height";
 export const LEAN_KEY = "devend:render3d:lean";
 /** The cheapest tier `auto` has had to fall to on this device (see getLearnedLimit). */
 export const LEARNED_KEY = "devend:render3d:learned";
+export const FRAME_CAP_KEY = "devend:frameCap";
 
 export const QUALITY_SETTINGS: readonly QualitySetting[] = ["auto", "minimal", "low", "medium", "high"];
 
@@ -143,6 +144,29 @@ export function getLean(): number {
 export function setLean(k: number): void {
   const v = Math.min(LEAN_RANGE[1], Math.max(LEAN_RANGE[0], k));
   write(LEAN_KEY, v === DEFAULT_LEAN ? null : String(v));
+}
+
+/**
+ * The most frames a second the board draws: 60, 30, or 0 for "as fast as the
+ * display refreshes".
+ *
+ * Uncapped was the only behaviour, and a 90 or 120Hz phone ran the whole
+ * pipeline, shadows and all, 90-120 times a second for motion no slower than
+ * at 60, and ran hot doing it. It also hid a struggling phone from the quality
+ * governor, whose 21ms budget sits above a 120Hz frame. 60 by default; 30 is
+ * there for a phone that runs warm, and off for comparing.
+ */
+export type FrameCap = 0 | 30 | 60;
+export const FRAME_CAPS: readonly FrameCap[] = [60, 30, 0];
+export const DEFAULT_FRAME_CAP: FrameCap = 60;
+
+export function getFrameCap(): FrameCap {
+  const v = Number(read(FRAME_CAP_KEY));
+  return read(FRAME_CAP_KEY) !== null && (FRAME_CAPS as readonly number[]).includes(v) ? v as FrameCap : DEFAULT_FRAME_CAP;
+}
+
+export function setFrameCap(cap: FrameCap): void {
+  write(FRAME_CAP_KEY, cap === DEFAULT_FRAME_CAP ? null : String(cap));
 }
 
 /**
