@@ -33,6 +33,15 @@ export interface QualityPreset {
   pointShadowSize: number;
   /** Point lights that light but do not cast. */
   plainLights: number;
+  /**
+   * Cube shadow maps redrawn per frame, shared out in turn among the shadowed
+   * lights (lights3d.ts). Each is six scene renders, and redrawing every one
+   * every frame was the single largest cost on a phone: two shadowed lights
+   * plus the monitor made 13 scene renders a frame before the board itself.
+   */
+  shadowRefreshPerFrame: number;
+  /** The monitor's shadow is redrawn every this many frames. */
+  keyShadowEvery: number;
   /** Explosion shards alive at once. */
   maxShards: number;
   /** Sphere tessellation. */
@@ -43,14 +52,19 @@ export const QUALITY_PRESETS: Record<QualityTier, QualityPreset> = {
   high: {
     tier: "high", maxPixelRatio: 2.5, samples: 4, keyShadow: true, keyShadowSize: 2048,
     shadowedLights: 4, pointShadowSize: 512, plainLights: 8, maxShards: 320, sphereSegments: 40,
+    shadowRefreshPerFrame: 2, keyShadowEvery: 1,
   },
   medium: {
-    tier: "medium", maxPixelRatio: 2, samples: 4, keyShadow: true, keyShadowSize: 1024,
+    // 2x MSAA, not 4x: the frame is half-float, so every sample is 8 bytes,
+    // and at a phone's 2x the 4x buffer alone was ~48MB of bandwidth a frame.
+    tier: "medium", maxPixelRatio: 2, samples: 2, keyShadow: true, keyShadowSize: 1024,
     shadowedLights: 2, pointShadowSize: 256, plainLights: 6, maxShards: 200, sphereSegments: 32,
+    shadowRefreshPerFrame: 1, keyShadowEvery: 2,
   },
   low: {
     tier: "low", maxPixelRatio: 1.5, samples: 2, keyShadow: true, keyShadowSize: 1024,
     shadowedLights: 1, pointShadowSize: 256, plainLights: 4, maxShards: 120, sphereSegments: 24,
+    shadowRefreshPerFrame: 1, keyShadowEvery: 2,
   },
   // For a phone that cannot hold "low": no shadow is rendered at all (each
   // shadowed point light is six extra scene passes, the key light one more),
@@ -62,6 +76,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualityPreset> = {
   minimal: {
     tier: "minimal", maxPixelRatio: 1, samples: 0, keyShadow: false, keyShadowSize: 512,
     shadowedLights: 0, pointShadowSize: 256, plainLights: 5, maxShards: 60, sphereSegments: 16,
+    shadowRefreshPerFrame: 0, keyShadowEvery: 1,
   },
 };
 

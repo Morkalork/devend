@@ -108,6 +108,13 @@ const SHADOW_BIAS_WORLD = -0.5;
  */
 const POINT_DECAY = 1.3;
 const POINT_GAIN = 1300;
+/**
+ * World units a shadowed light may move from where its cube map was drawn
+ * before that map is redrawn at once rather than in its turn: well past a
+ * fast ball's travel between turns, well short of a hand-over to another ball.
+ */
+export const SHADOW_JUMP = 60;
+
 /** A cut-off light's falloff and gain (WantedLight.cutoff). */
 const CUTOFF_DECAY = 0.35;
 const CUTOFF_GAIN = 18;
@@ -208,8 +215,17 @@ export class Lights3D {
   private target = new Object3D();
   private c = new Color();
   private room = 1;
+  /** Where each shadowed light stood when its cube map was last drawn. */
+  private shadowAt: ({ x: number; y: number; z: number } | null)[] = [];
+  /** The next shadowed light due a redraw (round robin). */
+  private shadowCursor = 0;
+  private frameNo = 0;
+  private readonly shadowBudget: number;
+  private readonly keyEvery: number;
 
   constructor(scene: Scene, private board: Group, preset: QualityPreset) {
+    this.shadowBudget = preset.shadowRefreshPerFrame;
+    this.keyEvery = Math.max(1, preset.keyShadowEvery);
     const at = monitorPlacement();
     // The monitor's cold blue, mostly whitened: in 2D its colour only tinted
     // rims, and a fully blue key light would turn the whole green board grey.
@@ -278,7 +294,6 @@ export class Lights3D {
       l.distance = 0;
       l.intensity = w.intensity * LAMP_GAIN * Math.PI * KEY * this.room;
       if (l.castShadow) {
-        l.shadow.autoUpdate = true;
         l.shadow.camera.far = 3000;
         l.shadow.bias = SHADOW_BIAS_WORLD / 3000;
       }
@@ -296,7 +311,6 @@ export class Lights3D {
       l.intensity = w.intensity * POINT_GAIN * Math.pow(Math.max(30, w.reach) / 97, POINT_DECAY);
     }
     if (l.castShadow) {
-      l.shadow.autoUpdate = true;
       l.shadow.camera.far = l.distance;
       l.shadow.bias = SHADOW_BIAS_WORLD / l.distance;
     }
@@ -317,10 +331,53 @@ export class Lights3D {
     // lamp's about where the light is. Faded with the lamp, and not re-rendered
     // at all while the lamp is fully in charge, which saves a whole pass.
     this.monitor.shadow.intensity = 1 - lampLevel;
-    this.monitor.shadow.autoUpdate = lampLevel < 0.999;
+    this.frameNo++;
+    this.monitor.shadow.autoUpdate = false;
+    if (lampLevel < 0.999 && this.frameNo % this.keyEvery === 0) this.monitor.shadow.needsUpdate = true;
     let i = 0;
     for (const l of this.shadowed) this.place(l, wanted[i++]);
     for (const l of this.plain) this.place(l, wanted[i++]);
+    this.scheduleShadows();
+  }
+
+  /**
+   * Which shadowed lights redraw their cube map this frame.
+   *
+   * They used to redraw every frame, every one: six scene renders each. Now a
+   * tier's budget is shared out in turn, so a moving ball's shadow is at most
+   * a frame or two old, which nobody can see. The exception is a light that
+   * has JUMPED - handed to another ball, or newly lit - since a map drawn from
+   * somewhere else casts shadows the wrong way; that one is redrawn at once,
+   * budget or not.
+   */
+  private scheduleShadows(): void {
+    const n = this.shadowed.length;
+    let budget = this.shadowBudget;
+    for (let k = 0; k < n; k++) {
+      const l = this.shadowed[k];
+      l.shadow.autoUpdate = false;
+      if (l.intensity <= 0) { this.shadowAt[k] = null; continue; }
+      const at = this.shadowAt[k];
+      const p = l.position;
+      if (!at || (p.x - at.x) ** 2 + (p.y - at.y) ** 2 + (p.z - at.z) ** 2 > SHADOW_JUMP * SHADOW_JUMP) {
+        this.redraw(k);
+        budget--;
+      }
+    }
+    for (let tries = 0; tries < n && budget > 0; tries++) {
+      const k = this.shadowCursor;
+      this.shadowCursor = (this.shadowCursor + 1) % n;
+      const l = this.shadowed[k];
+      if (l.intensity <= 0 || l.shadow.needsUpdate) continue;
+      this.redraw(k);
+      budget--;
+    }
+  }
+
+  private redraw(k: number): void {
+    const l = this.shadowed[k];
+    l.shadow.needsUpdate = true;
+    this.shadowAt[k] = { x: l.position.x, y: l.position.y, z: l.position.z };
   }
 
   dispose(): void {
