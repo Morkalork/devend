@@ -77,6 +77,9 @@ import { recordQualityStep, recordShaderError } from "@/lib/rendering/rendererDi
  */
 export const SOLID_SELF_LIT = 0.42;
 
+/** The longest the board's reveal waits on shader compilation (warmShaders). */
+const SHADER_WARM_CAP_MS = 2000;
+
 /** The live scene for one quality tier. Rebuilt whole when the tier changes. */
 interface Rig {
   preset: QualityPreset;
@@ -189,8 +192,39 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.readSettings();
     this.buildRig(this.tier);
     await this.sleek.init(canvas, width, height);
+    await this.warmShaders();
     // A handle for poking at the live scene from the console, dev builds only.
     if (import.meta.env.DEV) (window as unknown as { __board3d?: ThreeRenderer }).__board3d = this;
+  }
+
+  /**
+   * Compile the scene's shaders before the board is shown, not on its first
+   * frame.
+   *
+   * three compiles a material's program the first time it draws it, so the
+   * board's opening frame compiled them all at once, one after another on the
+   * main thread. compileAsync hands the scene's materials to the driver up
+   * front (in parallel where KHR_parallel_shader_compile is there; measured:
+   * the floor, wall, solid and plate materials, 8 programs) and init waits
+   * for them, so they are done before the first frame. What only exists once
+   * the board is drawn (ball and shard programs, shadow depth) still compiles
+   * on that frame, which the loading reveal covers. Capped, so a driver that
+   * never reports done cannot hold the board back.
+   */
+  private async warmShaders(): Promise<void> {
+    const renderer = this.renderer;
+    if (!renderer) return;
+    try {
+      await Promise.race([
+        renderer.compileAsync(this.scene, this.camera),
+        new Promise(resolve => setTimeout(resolve, SHADER_WARM_CAP_MS)),
+      ]);
+    } catch {
+      /* not fatal: anything left compiles on first draw, as it always did */
+    }
+    // Pixi shares the context and must not trust its state cache after this.
+    renderer.resetState();
+    this.pixi?.resetState();
   }
 
   private onLost = (): void => { this.lost = true; };

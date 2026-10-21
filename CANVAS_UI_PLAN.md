@@ -373,8 +373,13 @@ What was left after the build, and where it went:
 
 - The real-phone checkpoint of stage 2: whether the zoom reports stop. The
   recorder in Admin is how to tell.
-- The interface canvas renders every frame, on top of the board. Cheap on a
-  desktop GPU; to be measured on a low-end phone with the perf overlay.
+- The interface canvas draws only when something on it changed
+  (`ui/onDemand.ts`, Admin: Interface draws on demand): Pixi's own render
+  group marks say so. A perpetual animation defeats it, so the lives heart
+  breathes at 20fps, draining bars use `DrainBar` (redrawn on a whole-pixel
+  change, outside React and layout), and the HUD reads the clock from
+  `lib/activeClock.ts` only on a map that shows time. The menus animate every
+  frame by design (title, ball, badges), so they still draw every frame.
 - Swiping the shop's card strip, and a drag that starts on a card and must
   not count as a hold, could not be exercised headless (it runs at about two
   frames a second); check them on a phone.

@@ -82,3 +82,13 @@ describe("the shadow budget", () => {
     expect(lights.monitor.shadow.autoUpdate).toBe(false);
   });
 });
+
+describe("shader warm-up", () => {
+  it("compiles the scene before init resolves, capped so it cannot hold the board", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/lib/rendering/three/ThreeRenderer.ts", "utf8");
+    expect(src).toMatch(/await this\.sleek\.init\(canvas, width, height\);\s*await this\.warmShaders\(\);/);
+    expect(src).toContain("renderer.compileAsync(this.scene, this.camera),");
+    expect(src).toContain("new Promise(resolve => setTimeout(resolve, SHADER_WARM_CAP_MS)),");
+  });
+});

@@ -616,6 +616,32 @@ relief. Painted over and then re-applied, a pocket keeps the lines that made
 it instead of becoming one lump of green; only loose things (props, tokens)
 stay under. The lock tints and a pocket's badges sit on top.
 
+## 13. Performance pass (built after the plan)
+
+From an audit of what a mid-range phone pays per frame, measured where the
+sandbox allows (per-layer CPU time, CPU profiles; the GPU here is software):
+
+- **Shadow budget** (`lights3d.ts scheduleShadows`, `quality.ts`). Every
+  shadowed point light redrew its cube map every frame, six scene renders
+  each: 13 scene renders a frame on medium before the board itself. Each tier
+  now redraws `shadowRefreshPerFrame` cube maps a frame in turn; a light that
+  jumps to another ball is redrawn at once. The monitor's map redraws every
+  `keyShadowEvery` frames.
+- **Medium is 2x MSAA**, not 4x (half-float samples are 8 bytes). The frame
+  stays half-float: 8-bit linear bands the dark board and clips highlights.
+- **Frame cap** (`frameGate.ts`, Admin: 60/30/off, default 60). A 120Hz phone
+  drew everything twice as often for nothing and hid from the governor. A
+  loaded launcher's still board draws at 30fps. Physics runs at most 4 steps a
+  frame.
+- **Governor** drops the 3D frame's resolution by a quarter mid-map when over
+  budget (straight to 1x when badly slow), not only at the next map.
+- **Board canvas at 2x below high** (`boardPixelRatioCap`): the composite
+  over the 3D frame ran at native 2.6-3x whatever the tier.
+- **Kept fences** (`wallLayer.ts`): finished fences and the frame are drawn
+  once and kept with their shadow runs; a fence bending under a hit is drawn
+  live. Under the 3D board the light may move 32px before they are relit.
+- **Shader warm-up**: init waits on `compileAsync` (capped 2s).
+
 ## What is still open
 
 - **A phone.** Nothing here has run on real GPU hardware. In this sandbox the
@@ -627,3 +653,7 @@ stay under. The lock tints and a pocket's badges sit on top.
 - **Context loss** is handled (both libraries restore, and the shared
   textures are re-made and re-wrapped) but was not provoked on a device.
 - **The perf HUD** does not report the 3D tier.
+- **The renderer is rebuilt on most map changes** (the game screen unmounts
+  for the shop and results). Keeping it alive means moving the board canvas
+  and its context out of GameCanvas's lifetime; not done in the performance
+  pass.
