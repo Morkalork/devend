@@ -12,7 +12,7 @@ import {
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
-import { isUiOnDemandEnabled, setUiOnDemandEnabled } from '@/ui/onDemand';
+import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -328,8 +328,17 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                The menus and HUD redraw only when something on them changes. Turn off to
-                redraw every frame, if anything on screen ever fails to update. Reload to apply.
+                The menus and HUD redraw when something on them changes, and a few times a
+                second regardless. Turn off to redraw every frame, if anything on screen ever
+                fails to update. Reload to apply.
+              </div>
+              {/* Since this page loaded: drawn frames, and the GPU dropping the
+                  interface's context (the layers are rebuilt when it returns). */}
+              <div className="text-xs text-muted-foreground font-mono mt-1">
+                {(() => {
+                  const st = uiRenderStats();
+                  return `drawn ${st.draws} frames, context lost ${st.contextLosses}x, restored ${st.contextRestores}x`;
+                })()}
               </div>
             </div>
           </button>

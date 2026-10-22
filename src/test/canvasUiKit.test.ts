@@ -50,8 +50,9 @@ describe("the host", () => {
   const host = read("src/ui/UiHost.tsx");
 
   it("waits for the app's init (Yoga) before rendering the tree", () => {
-    expect(host).toMatch(/onInit=\{\(\) => setAppReady\(true\)\}/);
-    expect(host).toMatch(/\{appReady && children\}/);
+    expect(host).toMatch(/onInit=\{\(app\) => \{[\s\S]*?setAppReady\(true\);/);
+    // Keyed by the context epoch: a restored GPU context rebuilds every layer.
+    expect(host).toMatch(/\{appReady && <Fragment key=\{epoch\}>\{children\}<\/Fragment>\}/);
   });
 
   it("listens on the page, maps from its own canvas, and keeps taps from cancelling", () => {

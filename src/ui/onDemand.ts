@@ -11,6 +11,15 @@
  *
  * Admin can turn it off (Interface draws on demand), so "something did not
  * update" can be told apart from "this changed nothing" on a real device.
+ *
+ * Not ONLY on change, though. The marks see what the scene does; they cannot
+ * see the browser or the GPU clearing the canvas under it (a phone's GPU
+ * dropping a buffer, the page coming back from the background, a rotation, a
+ * context restored), and then the canvas stays blank until something on it
+ * happens to move. Reported as "after the loading splash all I see is the code
+ * background", on a phone this could not be reproduced on. So it also draws
+ * on a slow heartbeat (HEARTBEAT_MS, a few frames a second against the old
+ * sixty), and at once whenever the page is shown, focused, resized or turned.
  */
 import { UPDATE_PRIORITY, type Application, type Container } from "pixi.js";
 
@@ -46,12 +55,37 @@ export function renderGroupChanged(rg: RenderGroupMarks | null | undefined): boo
 
 let forced = 0;
 let draws = 0;
+let lastDrawAt = 0;
+
+/** The most an idle interface waits between draws (ms). */
+export const HEARTBEAT_MS = 250;
+
+/** Draw on change, or when the heartbeat is due. Pure, for the tests. */
+export function shouldDraw(changed: boolean, forcedFrames: number, now: number, last: number): boolean {
+  return changed || forcedFrames > 0 || now - last >= HEARTBEAT_MS;
+}
+
+/** Page events after which the canvas may have been cleared under the scene. */
+export const REDRAW_EVENTS = ["pageshow", "focus", "resize", "orientationchange"] as const;
 
 /** Draw the next frame or two whatever the marks say (a change Pixi cannot see). */
 export function requestUiRender(): void { forced = Math.max(forced, 2); }
 
 /** Frames actually drawn since load: for the perf readout and the tests. */
 export function uiDrawCount(): number { return draws; }
+
+let contextLosses = 0;
+let contextRestores = 0;
+
+/** The interface canvas's GPU context went (UiHost listens). */
+export function noteUiContextLost(): void { contextLosses++; }
+/** ...and came back: the interface is rebuilt, and drawn at once. */
+export function noteUiContextRestored(): void { contextRestores++; requestUiRender(); }
+
+/** What the interface canvas has done since load, for Admin. */
+export function uiRenderStats(): { draws: number; contextLosses: number; contextRestores: number; onDemand: boolean } {
+  return { draws, contextLosses, contextRestores, onDemand: isUiOnDemandEnabled() };
+}
 if (import.meta.env.DEV) (window as unknown as { __uiDraws?: () => number }).__uiDraws = () => draws;
 
 /** Swap the application's every-frame draw for the on-demand one. Returns the undo. */
@@ -61,10 +95,17 @@ export function installOnDemandRender(app: Application): () => void {
   forced = 2;
   const onResize = () => requestUiRender();
   app.renderer.on("resize", onResize);
+  const onVisible = () => {
+    if (document.visibilityState === "visible") requestUiRender();
+  };
+  for (const type of REDRAW_EVENTS) window.addEventListener(type, onResize);
+  document.addEventListener("visibilitychange", onVisible);
   const draw = () => {
-    if (forced > 0 || renderGroupChanged(stage.renderGroup)) {
+    const now = performance.now();
+    if (shouldDraw(renderGroupChanged(stage.renderGroup), forced, now, lastDrawAt)) {
       if (forced > 0) forced--;
       draws++;
+      lastDrawAt = now;
       app.render();
     }
   };
@@ -73,6 +114,8 @@ export function installOnDemandRender(app: Application): () => void {
   return () => {
     ticker.remove(draw, null);
     app.renderer.off("resize", onResize);
+    for (const type of REDRAW_EVENTS) window.removeEventListener(type, onResize);
+    document.removeEventListener("visibilitychange", onVisible);
     ticker.add(app.render, app, UPDATE_PRIORITY.LOW);
   };
 }

@@ -18,12 +18,12 @@
  */
 import "./setup";
 import { Application, useApplication } from "@pixi/react";
-import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import type { Application as PixiApplication, Container } from "pixi.js";
 import { loadUiFonts } from "./fonts";
 import i18n from "@/i18n";
 import { setUiHitTester } from "./hitGate";
-import { installOnDemandRender, isUiOnDemandEnabled } from "./onDemand";
+import { installOnDemandRender, isUiOnDemandEnabled, noteUiContextLost, noteUiContextRestored } from "./onDemand";
 
 /** The parts of Pixi's EventSystem the pointer-up override reaches into. */
 interface PixiEventInternals {
@@ -166,12 +166,35 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
   // running straight into the tree (StrictMode's double mount is one), and a
   // layout box made before Yoga exists throws.
   const [appReady, setAppReady] = useState(false);
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  // Bumped when the GPU context comes back: every layer is rebuilt. Pixi
+  // restores what it can on its own, but text it rasterised before the loss is
+  // gone and is not redrawn until it changes (a menu came back with every label
+  // missing), and a phone drops contexts under memory pressure.
+  const [epoch, setEpoch] = useState(0);
 
   useEffect(() => {
     let live = true;
     loadUiFonts(i18n.language).then(() => { if (live) setFontsReady(true); });
     return () => { live = false; };
   }, []);
+
+  useEffect(() => {
+    if (!canvas) {
+      return;
+    }
+    const onLost = () => noteUiContextLost();
+    const onRestored = () => {
+      noteUiContextRestored();
+      setEpoch(e => e + 1);
+    };
+    canvas.addEventListener("webglcontextlost", onLost);
+    canvas.addEventListener("webglcontextrestored", onRestored);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", onLost);
+      canvas.removeEventListener("webglcontextrestored", onRestored);
+    };
+  }, [canvas]);
 
   useEffect(() => {
     if (!lockPage) return;
@@ -193,10 +216,13 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
       // or high-performance GPU path.
       powerPreference="low-power"
       preference="webgl"
-      onInit={() => setAppReady(true)}
+      onInit={(app) => {
+        setCanvas(app.canvas as HTMLCanvasElement);
+        setAppReady(true);
+      }}
     >
       {appReady && <EventBridge />}
-      {appReady && children}
+      {appReady && <Fragment key={epoch}>{children}</Fragment>}
     </Application>
   );
 }

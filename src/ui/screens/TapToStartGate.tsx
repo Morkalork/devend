@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { isAudioUnlocked, isAwaitingUserGesture, startMenuMusic } from "@/lib/gameMusic";
 import { useStartupReady } from "@/lib/startupReadiness";
 import { dismissBootSplash, setBootSplashLabel, takeOverBootSplash } from "@/lib/bootSplash";
+import { requestUiRender } from "../onDemand";
 import { Label, Pressable, ROLE, TEXT, View, hex, usePulse, useUiScreen } from "../kit/ui";
 import { GameTitle } from "./welcomeParts";
 import { AUDIO_DECISION_MS, LABEL_BELOW_CENTRE, MAX_WAIT_MS, SETTLE_MS, splashPhase, type SplashPhase } from "./tapToStartModel";
@@ -51,6 +52,12 @@ function unlockOnFollowingClick(): void {
   const timer = window.setTimeout(() => window.removeEventListener("click", onClick, true), 1000);
   window.addEventListener("click", onClick, true);
 }
+
+/**
+ * Once the splash has gone it stays gone: the interface's layers are rebuilt
+ * when its GPU context comes back (UiHost), and the splash is one of them.
+ */
+let splashDone = false;
 
 export function TapToStartGate({ accentColor, preview }: {
   accentColor?: string;
@@ -110,10 +117,12 @@ export function TapToStartGate({ accentColor, preview }: {
     return () => clearInterval(id);
   }, [live]);
 
-  const phase = preview ?? splashPhase({
+  // Remounted after it had already gone (the interface rebuilt): stay gone.
+  const [alreadyDone] = useState(() => splashDone && !preview);
+  const phase = preview ?? (alreadyDone ? "gone" : splashPhase({
     settled, tapped,
     audioUnlocked: audio.unlocked, awaitingGesture: audio.awaiting, audioDecisionTimedOut: audio.timedOut,
-  });
+  }));
 
   const handleTap = () => {
     // Still loading: the tap is swallowed (nothing behind the splash may take
@@ -130,6 +139,15 @@ export function TapToStartGate({ accentColor, preview }: {
   // The prompt breathes from full to 35% opacity every 1.6s.
   const pulse = usePulse(1600, phase === "tap" && !htmlSplash);
   const labelText = phase === "tap" ? t("welcome.tapToStart") : t("welcome.loading");
+
+  // Gone: remembered for a rebuild, and the interface drawn at once, so what
+  // the splash uncovers is never whatever the canvas last held.
+  useEffect(() => {
+    if (phase === "gone" && !preview) {
+      splashDone = true;
+      requestUiRender();
+    }
+  }, [phase, preview]);
 
   // Keep the HTML splash saying what this one would, and let it go with it.
   useEffect(() => {
