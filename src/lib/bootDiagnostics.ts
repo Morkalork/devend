@@ -21,7 +21,7 @@ import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from "@/ui/o
 import { uiLayerIds } from "@/ui/layerStore";
 import { pendingStartupParts } from "@/lib/startupReadiness";
 import { uiProbeLines } from "@/ui/uiProbe";
-import { CANVAS_COMPAT_FLAGS, canvasCompatText, getCanvasCompat, setCanvasCompat } from "@/ui/canvasCompat";
+import { CANVAS_COMPAT_FLAGS, canvasAntialiasText, canvasCompatText, getCanvasCompat, setCanvasCompat } from "@/lib/rendering/canvasCompat";
 
 interface BootRecord {
   start: number;
@@ -89,6 +89,7 @@ export function diagnosticsText(): string {
     `language: ${document.documentElement.lang || "?"} / ${navigator.language}`,
     `interface: drawn ${stats.draws} frames, on demand ${stats.onDemand}, context lost ${stats.contextLosses}x, restored ${stats.contextRestores}x`,
     `canvas switches on: ${canvasCompatText()}`,
+    `antialias: ${canvasAntialiasText()}`,
     `layers: ${uiLayerIds().join(", ") || "none"}`,
     `startup still waiting on: ${pendingStartupParts().join(", ") || "nothing"}`,
     `splash: ${document.getElementById("boot-splash") ? "still up" : "gone"}`,

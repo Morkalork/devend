@@ -14,7 +14,7 @@ import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import { showDiagnostics } from '@/lib/bootDiagnostics';
-import { CANVAS_COMPAT_FLAGS, getCanvasCompat, setCanvasCompat } from '@/ui/canvasCompat';
+import { CANVAS_COMPAT_FLAGS, canvasAntialiasText, getCanvasCompat, setCanvasCompat } from '@/lib/rendering/canvasCompat';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -367,14 +367,18 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             </div>
           </button>
 
-          {/* The interface canvas's compatibility switches (ui/canvasCompat.ts),
-              for a browser that draws the canvas and never shows it. Applied
-              on the next load: the canvas is made once. */}
+          {/* The game canvases' compatibility switches (lib/rendering/canvasCompat.ts),
+              for a browser that draws a canvas and never shows it. Applied on
+              the next load: a canvas is made once. */}
           <div className="w-full p-4 rounded-lg bg-card border border-border">
-            <div className="font-semibold">Interface canvas switches</div>
-            <div className="text-sm text-muted-foreground mb-3">
-              For a browser that shows only the code background where the menu should be. Each
-              takes effect on reload.
+            <div className="font-semibold">Canvas switches</div>
+            <div className="text-sm text-muted-foreground">
+              For a browser that shows only the code background where the menu should be (Opera
+              on a PowerVR phone, fixed by antialias off, now automatic there). Each takes effect
+              on reload.
+            </div>
+            <div className="text-xs text-muted-foreground font-mono mt-1 mb-3">
+              antialias: {canvasAntialiasText()}
             </div>
             <div className="flex flex-col gap-2">
               {CANVAS_COMPAT_FLAGS.map(({ flag, label, hint }) => (

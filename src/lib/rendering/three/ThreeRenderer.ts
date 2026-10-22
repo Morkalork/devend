@@ -25,6 +25,7 @@
  * shard in flight) live in this object, so two-player lockstep cannot see them.
  */
 import { simNow } from "@/lib/simClock";
+import { canvasAntialias } from "@/lib/rendering/canvasCompat";
 import {
   Group, HalfFloatType, Matrix4, PCFShadowMap, Vector3, PerspectiveCamera, Scene, UnsignedByteType,
   WebGLRenderTarget, WebGLRenderer, type ExternalTexture, type Material,
@@ -173,7 +174,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     // Stencil, because Pixi's masks need it; alpha, because the board's
     // surface is translucent over the page.
     this.renderer = new WebGLRenderer({
-      canvas, antialias: true, alpha: true, premultipliedAlpha: true, stencil: true,
+      // MSAA, except where the GPU cannot show a multisampled canvas (canvasCompat.ts).
+      canvas, antialias: canvasAntialias(), alpha: true, premultipliedAlpha: true, stencil: true,
       depth: true, powerPreference: "high-performance", preserveDrawingBuffer: false,
     });
     this.renderer.autoClear = true;

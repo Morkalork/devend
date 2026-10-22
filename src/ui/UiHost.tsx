@@ -25,7 +25,7 @@ import i18n from "@/i18n";
 import { setUiHitTester } from "./hitGate";
 import { installOnDemandRender, isUiOnDemandEnabled, noteUiContextLost, noteUiContextRestored } from "./onDemand";
 import { setUiProbeApp } from "./uiProbe";
-import { getCanvasCompat } from "./canvasCompat";
+import { canvasAntialias, getCanvasCompat } from "@/lib/rendering/canvasCompat";
 import { ROLE } from "./theme";
 
 /** The parts of Pixi's EventSystem the pointer-up override reaches into. */
@@ -217,7 +217,8 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
       resizeTo={window}
       backgroundAlpha={compat.opaque ? 1 : 0}
       background={ROLE.surface}
-      antialias={!compat.noAntialias}
+      // Off on a GPU that cannot show a multisampled canvas (canvasCompat.ts).
+      antialias={canvasAntialias(compat)}
       preserveDrawingBuffer={compat.preserveBuffer}
       autoDensity
       resolution={Math.min(3, window.devicePixelRatio || 1)}

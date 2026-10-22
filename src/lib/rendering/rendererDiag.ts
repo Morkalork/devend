@@ -11,6 +11,7 @@
  *
  * Device-local, in localStorage, like the renderer setting itself.
  */
+import { canvasAntialias } from "@/lib/rendering/canvasCompat";
 export const DIAG_KEY = "devend:render3d:diag";
 
 export interface RendererDiag {
@@ -128,7 +129,7 @@ export interface WebGLProbe {
   userAgent: string;
 }
 
-/** The context attributes the 3D board asks for (ThreeRenderer.init). */
+/** The context attributes the 3D board asks for (ThreeRenderer.init); antialias as canvasAntialias() decides. */
 export const BOARD_CONTEXT_ATTRIBUTES: WebGLContextAttributes = {
   antialias: true, alpha: true, premultipliedAlpha: true, stencil: true, depth: true,
   powerPreference: "high-performance", preserveDrawingBuffer: false,
@@ -159,7 +160,7 @@ export function probeWebGL(): WebGLProbe {
       out.halfFloatTargets = !!gl.getExtension("EXT_color_buffer_half_float") || out.floatTargets;
     }
     lose(gl);
-    const board = document.createElement("canvas").getContext("webgl2", BOARD_CONTEXT_ATTRIBUTES);
+    const board = document.createElement("canvas").getContext("webgl2", { ...BOARD_CONTEXT_ATTRIBUTES, antialias: canvasAntialias() });
     out.boardAttributes = !!board;
     lose(board);
     if (!out.webgl2) {

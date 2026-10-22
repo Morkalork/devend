@@ -41,6 +41,7 @@
  */
 
 import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from "pixi.js";
+import { canvasAntialias } from "@/lib/rendering/canvasCompat";
 import type { WebGLRenderer, Texture as PixiTexture } from "pixi.js";
 import type { MoteLight } from "@/lib/rendering/motes";
 import { boardAngleFor, tiltWorldPoint } from "@/lib/boardTilt";
@@ -210,8 +211,9 @@ export class SleekRenderer {
       width,
       height,
       // The whole point: MSAA is what resolves a diagonal fence into one clean
-      // edge instead of a staircase. Non-negotiable for this renderer.
-      antialias: true,
+      // edge instead of a staircase. Given up only where the GPU cannot show a
+      // multisampled canvas at all (canvasCompat.ts): a staircase beats nothing.
+      antialias: canvasAntialias(),
       backgroundAlpha: 0,
       // 1:1 with the physical canvas, so renderer coordinates ARE device pixels
       // and `Math.round` is an exact hardware-pixel snap.
