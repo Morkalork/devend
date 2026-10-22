@@ -13,6 +13,7 @@ import {
 import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
+import { showDiagnostics } from '@/lib/bootDiagnostics';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -339,6 +340,26 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                   const st = uiRenderStats();
                   return `drawn ${st.draws} frames, context lost ${st.contextLosses}x, restored ${st.contextRestores}x`;
                 })()}
+              </div>
+            </div>
+          </button>
+
+          {/* The on-device report (lib/bootDiagnostics.ts): the same one two
+              fingers held still on any screen opens, for a phone where the
+              game itself does not show and Admin cannot be reached. */}
+          <button
+            id="admin-diagnostics-report"
+            onClick={() => showDiagnostics()}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Layers className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">Diagnostics report</div>
+              <div className="text-sm text-muted-foreground">
+                Errors since load, the interface canvas and its GPU state, the mounted layers and
+                the browser, with Copy. Anywhere in the game: hold two fingers still for two seconds.
               </div>
             </div>
           </button>

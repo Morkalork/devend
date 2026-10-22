@@ -9,7 +9,10 @@ import "./index.css";
 import { loadSoundSettings } from "@/lib/soundSettings";
 import { initAnalytics } from "@/lib/analytics";
 import { installZoomRecorder } from "@/lib/zoomRecorder";
+import { installBootDiagnostics } from "@/lib/bootDiagnostics";
 
+// First: the on-device report (two fingers held still), for a phone with no console.
+installBootDiagnostics();
 // Apply persisted music/effects volumes before the first sound plays.
 loadSoundSettings();
 // Player-pattern telemetry (no-op without a VITE_POSTHOG_KEY at build time).

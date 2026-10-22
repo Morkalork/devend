@@ -18,6 +18,49 @@
 
     <meta name="twitter:card" content="summary_large_image" />
 
+    <!-- Diagnostics, from the page's first moment (src/lib/bootDiagnostics.ts):
+         errors are collected before any script of the game loads, so a chunk
+         that fails or a crash during startup is on the record, and holding two
+         fingers still on the screen for two seconds opens the report, which
+         is plain HTML and so shows even when the game's canvas shows nothing.
+         Two fingers, because one finger held still is something the game uses. -->
+    <script>
+      (function () {
+        var rec = window.__devendBoot = { start: performance.now(), errors: [] };
+        function push(s) { rec.errors.push(String(s).slice(0, 400)); if (rec.errors.length > 30) rec.errors.shift(); }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t !== window && (t.src || t.href)) { push('failed to load: ' + (t.src || t.href)); return; }
+          push('error: ' + (e.message || 'unknown') + (e.filename ? ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno : ''));
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          push('rejection: ' + (r && r.message ? (r.name || 'Error') + ': ' + r.message : String(r)));
+        });
+        var down = {}, timer = 0;
+        function count() { return Object.keys(down).length; }
+        function cancel() { clearTimeout(timer); timer = 0; }
+        window.addEventListener('pointerdown', function (e) {
+          down[e.pointerId] = { x: e.clientX, y: e.clientY };
+          cancel();
+          if (count() === 2) {
+            timer = setTimeout(function () {
+              timer = 0;
+              if (window.__devendDiag) { window.__devendDiag(); return; }
+              alert('Dev/End did not start.\n\n' + navigator.userAgent + '\n\n' + rec.errors.join('\n'));
+            }, 2000);
+          }
+        }, true);
+        window.addEventListener('pointermove', function (e) {
+          var d = down[e.pointerId];
+          if (d && timer && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 30) cancel();
+        }, true);
+        function up(e) { delete down[e.pointerId]; cancel(); }
+        window.addEventListener('pointerup', up, true);
+        window.addEventListener('pointercancel', up, true);
+      })();
+    </script>
+
     <!-- The startup splash, as plain HTML: painted with the page's very first
          frame, before any script, font or background has loaded, so the first
          thing on screen is the splash and never the code background behind it.
