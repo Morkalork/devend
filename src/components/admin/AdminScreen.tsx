@@ -14,6 +14,7 @@ import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import { showDiagnostics } from '@/lib/bootDiagnostics';
+import { CANVAS_COMPAT_FLAGS, getCanvasCompat, setCanvasCompat } from '@/ui/canvasCompat';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
   type UpdateCheck,
@@ -41,6 +42,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [forceRelay, setForceRelay] = useState(isForceRelayEnabled);
   const [touchTrace, setTouchTrace] = useState(isTouchTraceEnabled);
   const [uiOnDemand, setUiOnDemand] = useState(isUiOnDemandEnabled);
+  const [canvasCompat, setCanvasCompatState] = useState(getCanvasCompat);
   const [fullDebrief, setFullDebriefState] = useState(isFullDebrief);
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
@@ -359,10 +361,51 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <div className="font-semibold">Diagnostics report</div>
               <div className="text-sm text-muted-foreground">
                 Errors since load, the interface canvas and its GPU state, the mounted layers and
-                the browser, with Copy. Anywhere in the game: hold two fingers still for two seconds.
+                the browser, with Copy. Anywhere in the game: hold two fingers still for two seconds,
+                or tap the top-left corner five times quickly.
               </div>
             </div>
           </button>
+
+          {/* The interface canvas's compatibility switches (ui/canvasCompat.ts),
+              for a browser that draws the canvas and never shows it. Applied
+              on the next load: the canvas is made once. */}
+          <div className="w-full p-4 rounded-lg bg-card border border-border">
+            <div className="font-semibold">Interface canvas switches</div>
+            <div className="text-sm text-muted-foreground mb-3">
+              For a browser that shows only the code background where the menu should be. Each
+              takes effect on reload.
+            </div>
+            <div className="flex flex-col gap-2">
+              {CANVAS_COMPAT_FLAGS.map(({ flag, label, hint }) => (
+                <button
+                  key={flag}
+                  onClick={() => {
+                    setCanvasCompat(flag, !canvasCompat[flag]);
+                    setCanvasCompatState(getCanvasCompat());
+                  }}
+                  aria-pressed={canvasCompat[flag]}
+                  className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                    canvasCompat[flag] ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="font-medium">
+                    {label}{' '}
+                    <span className={`text-xs ${canvasCompat[flag] ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {canvasCompat[flag] ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{hint}</div>
+                </button>
+              ))}
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full p-3 rounded-lg border border-border hover:border-primary/50 text-left"
+              >
+                Reload to apply
+              </button>
+            </div>
+          </div>
 
           {/* What the board did with each touch, on the board itself. Built
               for "she drew a perfect fence and nothing happened": on someone

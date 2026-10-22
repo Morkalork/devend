@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { diagnosticsText, installBootDiagnostics, showDiagnostics } from "@/lib/bootDiagnostics";
+import { CANVAS_COMPAT_FLAGS, canvasCompatText, getCanvasCompat, setCanvasCompat } from "@/ui/canvasCompat";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 
@@ -36,7 +37,10 @@ describe("the report", () => {
     expect(overlay).not.toBeNull();
     expect(overlay.querySelector("pre")!.textContent).toContain("errors (1):");
     const buttons = [...overlay.querySelectorAll("button")].map(b => b.textContent);
-    expect(buttons).toEqual(["Copy", "Draw every frame + reload", "Close"]);
+    expect(buttons).toEqual([
+      "Copy", "Draw every frame + reload", "Close",
+      "[off] Antialias off + reload", "[off] Keep drawing buffer + reload", "[off] Opaque canvas (test only) + reload",
+    ]);
     // The tap that opened it is not taken as a press on a button.
     overlay.querySelectorAll("button")[2].dispatchEvent(new MouseEvent("click"));
     expect(document.getElementById("devend-diagnostics")).not.toBeNull();
@@ -146,5 +150,41 @@ describe("the wiring", () => {
     const main = read("src/main.tsx");
     expect(main.indexOf("installBootDiagnostics();")).toBeLessThan(main.indexOf("loadSoundSettings();"));
     expect(read("src/components/admin/AdminScreen.tsx")).toContain("onClick={() => showDiagnostics()}");
+  });
+});
+
+describe("the interface canvas's compatibility switches", () => {
+  // Opera for Android on a PowerVR phone drew the menu (every pixel read back)
+  // and never showed it; Chrome on the same phone did.
+  beforeEach(() => {
+    localStorage.removeItem("devend:uiCanvasCompat");
+  });
+
+  it("are all off as shipped, and each one sticks on its own", () => {
+    expect(getCanvasCompat()).toEqual({ noAntialias: false, preserveBuffer: false, opaque: false });
+    expect(canvasCompatText()).toBe("none");
+    setCanvasCompat("noAntialias", true);
+    setCanvasCompat("opaque", true);
+    expect(getCanvasCompat()).toEqual({ noAntialias: true, preserveBuffer: false, opaque: true });
+    expect(canvasCompatText()).toBe("noAntialias, opaque");
+    setCanvasCompat("noAntialias", false);
+    setCanvasCompat("opaque", false);
+    expect(localStorage.getItem("devend:uiCanvasCompat")).toBeNull();
+  });
+
+  it("are what the interface canvas is made with", () => {
+    const host = read("src/ui/UiHost.tsx");
+    expect(host).toContain("backgroundAlpha={compat.opaque ? 1 : 0}");
+    expect(host).toContain("antialias={!compat.noAntialias}");
+    expect(host).toContain("preserveDrawingBuffer={compat.preserveBuffer}");
+  });
+
+  it("are in the report, which says which are on, and in Admin", () => {
+    setCanvasCompat("preserveBuffer", true);
+    expect(diagnosticsText()).toContain("canvas switches on: preserveBuffer");
+    setCanvasCompat("preserveBuffer", false);
+    const admin = read("src/components/admin/AdminScreen.tsx");
+    expect(admin).toContain("CANVAS_COMPAT_FLAGS.map(");
+    expect(CANVAS_COMPAT_FLAGS.map(f => f.flag)).toEqual(["noAntialias", "preserveBuffer", "opaque"]);
   });
 });

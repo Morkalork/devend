@@ -21,6 +21,7 @@ import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from "@/ui/o
 import { uiLayerIds } from "@/ui/layerStore";
 import { pendingStartupParts } from "@/lib/startupReadiness";
 import { uiProbeLines } from "@/ui/uiProbe";
+import { CANVAS_COMPAT_FLAGS, canvasCompatText, getCanvasCompat, setCanvasCompat } from "@/ui/canvasCompat";
 
 interface BootRecord {
   start: number;
@@ -87,6 +88,7 @@ export function diagnosticsText(): string {
       + (vv ? ` visual ${Math.round(vv.width)}x${Math.round(vv.height)} scale ${vv.scale}` : ""),
     `language: ${document.documentElement.lang || "?"} / ${navigator.language}`,
     `interface: drawn ${stats.draws} frames, on demand ${stats.onDemand}, context lost ${stats.contextLosses}x, restored ${stats.contextRestores}x`,
+    `canvas switches on: ${canvasCompatText()}`,
     `layers: ${uiLayerIds().join(", ") || "none"}`,
     `startup still waiting on: ${pendingStartupParts().join(", ") || "nothing"}`,
     `splash: ${document.getElementById("boot-splash") ? "still up" : "gone"}`,
@@ -139,7 +141,17 @@ export function showDiagnostics(): void {
     window.location.reload();
   });
   bar.append(copy, toggle, button("Close", () => wrap.remove()));
-  wrap.append(bar, pre);
+  // The canvas's compatibility switches (canvasCompat.ts), each applied by a reload.
+  const switches = document.createElement("div");
+  switches.setAttribute("style", "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px");
+  const compat = getCanvasCompat();
+  for (const { flag, label } of CANVAS_COMPAT_FLAGS) {
+    switches.append(button(`${compat[flag] ? "[on]" : "[off]"} ${label} + reload`, () => {
+      setCanvasCompat(flag, !compat[flag]);
+      window.location.reload();
+    }));
+  }
+  wrap.append(bar, switches, pre);
   document.body.appendChild(wrap);
 }
 

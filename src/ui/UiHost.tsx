@@ -25,6 +25,8 @@ import i18n from "@/i18n";
 import { setUiHitTester } from "./hitGate";
 import { installOnDemandRender, isUiOnDemandEnabled, noteUiContextLost, noteUiContextRestored } from "./onDemand";
 import { setUiProbeApp } from "./uiProbe";
+import { getCanvasCompat } from "./canvasCompat";
+import { ROLE } from "./theme";
 
 /** The parts of Pixi's EventSystem the pointer-up override reaches into. */
 interface PixiEventInternals {
@@ -175,6 +177,8 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
   // gone and is not redrawn until it changes (a menu came back with every label
   // missing), and a phone drops contexts under memory pressure.
   const [epoch, setEpoch] = useState(0);
+  // Read once: each switch is applied by reloading (canvasCompat.ts).
+  const [compat] = useState(getCanvasCompat);
 
   useEffect(() => {
     let live = true;
@@ -211,8 +215,10 @@ export function UiHost({ children, lockPage = true }: { children: ReactNode; loc
     <Application
       className="canvas-ui-surface"
       resizeTo={window}
-      backgroundAlpha={0}
-      antialias
+      backgroundAlpha={compat.opaque ? 1 : 0}
+      background={ROLE.surface}
+      antialias={!compat.noAntialias}
+      preserveDrawingBuffer={compat.preserveBuffer}
       autoDensity
       resolution={Math.min(3, window.devicePixelRatio || 1)}
       // The board has its own context; this one never needs a stencil-heavy
