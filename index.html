@@ -20,10 +20,11 @@
 
     <!-- Diagnostics, from the page's first moment (src/lib/bootDiagnostics.ts):
          errors are collected before any script of the game loads, so a chunk
-         that fails or a crash during startup is on the record, and holding two
-         fingers still on the screen for two seconds opens the report, which
-         is plain HTML and so shows even when the game's canvas shows nothing.
-         Two fingers, because one finger held still is something the game uses. -->
+         that fails or a crash during startup is on the record. Two fingers
+         held still for two seconds, or five quick taps in the top-left
+         corner, open the report, which is plain HTML and so shows even when
+         the game's canvas shows nothing. Not one finger held: the game uses
+         that. -->
     <script>
       (function () {
         var rec = window.__devendBoot = { start: performance.now(), errors: [] };
@@ -37,27 +38,62 @@
           var r = e.reason;
           push('rejection: ' + (r && r.message ? (r.name || 'Error') + ': ' + r.message : String(r)));
         });
-        var down = {}, timer = 0;
-        function count() { return Object.keys(down).length; }
-        function cancel() { clearTimeout(timer); timer = 0; }
-        window.addEventListener('pointerdown', function (e) {
-          down[e.pointerId] = { x: e.clientX, y: e.clientY };
+        function openReport() {
+          if (window.__devendDiag) {
+            window.__devendDiag();
+            return;
+          }
+          alert('Dev/End did not start.\n\n' + navigator.userAgent + '\n\n' + rec.errors.join('\n'));
+        }
+        // Two fingers held still for two seconds. Touch events, not pointer
+        // events: a phone that takes two fingers for a pinch cancels the
+        // pointers (pointercancel) but still reports the touches.
+        var timer = 0, startAt = null;
+        function cancel() {
+          clearTimeout(timer);
+          timer = 0;
+        }
+        window.addEventListener('touchstart', function (e) {
           cancel();
-          if (count() === 2) {
+          if (e.touches.length === 2) {
+            startAt = [e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY];
             timer = setTimeout(function () {
               timer = 0;
-              if (window.__devendDiag) { window.__devendDiag(); return; }
-              alert('Dev/End did not start.\n\n' + navigator.userAgent + '\n\n' + rec.errors.join('\n'));
+              openReport();
             }, 2000);
           }
+        }, { capture: true, passive: true });
+        window.addEventListener('touchmove', function (e) {
+          if (!timer || !startAt || e.touches.length < 2) {
+            return;
+          }
+          var moved = Math.abs(e.touches[0].clientX - startAt[0]) + Math.abs(e.touches[0].clientY - startAt[1])
+            + Math.abs(e.touches[1].clientX - startAt[2]) + Math.abs(e.touches[1].clientY - startAt[3]);
+          if (moved > 60) {
+            cancel();
+          }
+        }, { capture: true, passive: true });
+        window.addEventListener('touchend', cancel, true);
+        window.addEventListener('touchcancel', cancel, true);
+        // Or five quick taps in the top-left corner, which needs no second finger.
+        var taps = [];
+        window.addEventListener('pointerdown', function (e) {
+          if (e.clientX > 90 || e.clientY > 90) {
+            taps = [];
+            return;
+          }
+          // Quick: each tap within two seconds of the one before (a phone in
+          // trouble may be slow to deliver them).
+          var now = Date.now();
+          if (taps.length && now - taps[taps.length - 1] > 2000) {
+            taps = [];
+          }
+          taps.push(now);
+          if (taps.length >= 5) {
+            taps = [];
+            openReport();
+          }
         }, true);
-        window.addEventListener('pointermove', function (e) {
-          var d = down[e.pointerId];
-          if (d && timer && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 30) cancel();
-        }, true);
-        function up(e) { delete down[e.pointerId]; cancel(); }
-        window.addEventListener('pointerup', up, true);
-        window.addEventListener('pointercancel', up, true);
       })();
     </script>
 

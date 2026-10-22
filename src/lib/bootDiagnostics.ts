@@ -10,10 +10,14 @@
  * waiting on, and the browser itself. It is plain DOM, so it shows even when
  * the canvas shows nothing.
  *
- * Open it by holding a finger anywhere for three seconds (index.html listens),
- * or from Admin. Copy sends the text to the clipboard, to paste into a message.
+ * Open it with two fingers held still for two seconds, or five quick taps in
+ * the top-left corner (index.html listens), or from Admin. Copy sends the text
+ * to the clipboard, to paste into a message. The on-demand switch is Admin's
+ * "Interface draws on demand", here too because a phone that shows nothing
+ * cannot reach Admin: flipping it reloads, and tells "the canvas draws too
+ * rarely" apart from "the canvas draws and still shows nothing".
  */
-import { uiRenderStats } from "@/ui/onDemand";
+import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from "@/ui/onDemand";
 import { uiLayerIds } from "@/ui/layerStore";
 import { pendingStartupParts } from "@/lib/startupReadiness";
 
@@ -30,6 +34,8 @@ declare global {
 }
 
 const OVERLAY_ID = "devend-diagnostics";
+/** Button taps ignored this long after opening. */
+const OPENING_TAP_MS = 500;
 
 function boot(): BootRecord {
   if (!window.__devendBoot) {
@@ -103,12 +109,20 @@ export function showDiagnostics(): void {
     "-webkit-user-select:text", "user-select:text",
   ].join(";"));
   const bar = document.createElement("div");
-  bar.setAttribute("style", "display:flex;gap:8px;margin-bottom:12px");
+  bar.setAttribute("style", "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px");
+  // The tap that opened it (the fifth in the corner) lands on Copy as a click.
+  const openedAt = performance.now();
   const button = (label: string, onClick: () => void) => {
     const b = document.createElement("button");
     b.textContent = label;
     b.setAttribute("style", "padding:8px 14px;border:1px solid #00ff88;background:#0d1012;color:#00ff88;font:14px monospace;border-radius:6px");
-    b.addEventListener("click", e => { e.stopPropagation(); onClick(); });
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      if (performance.now() - openedAt < OPENING_TAP_MS) {
+        return;
+      }
+      onClick();
+    });
     return b;
   };
   const pre = document.createElement("pre");
@@ -117,7 +131,12 @@ export function showDiagnostics(): void {
   const copy = button("Copy", () => {
     navigator.clipboard?.writeText(text).then(() => { copy.textContent = "Copied"; }, () => window.prompt("Copy this", text));
   });
-  bar.append(copy, button("Close", () => wrap.remove()));
+  const onDemand = isUiOnDemandEnabled();
+  const toggle = button(onDemand ? "Draw every frame + reload" : "Draw on demand + reload", () => {
+    setUiOnDemandEnabled(!onDemand);
+    window.location.reload();
+  });
+  bar.append(copy, toggle, button("Close", () => wrap.remove()));
   wrap.append(bar, pre);
   document.body.appendChild(wrap);
 }
