@@ -24,6 +24,8 @@ describe("the report", () => {
     expect(text).toContain("startup still waiting on: ");
     expect(text).toContain("errors (1):");
     expect(text).toContain("error: boom @ chunk.js:1:2");
+    // The canvas's own contents, or why they cannot be read.
+    expect(text).toContain("probe: no interface application");
   });
 
   it("shows itself as plain DOM, over everything, with Copy, the on-demand switch and Close", () => {
@@ -129,6 +131,15 @@ describe("the wiring", () => {
       vi.advanceTimersByTime(2500);
     }
     expect(opened).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads the interface canvas through the application UiHost hands over", () => {
+    const host = read("src/ui/UiHost.tsx");
+    expect(host).toContain("setUiProbeApp(app);");
+    expect(host).toContain("setUiProbeApp(null);");
+    const probe = read("src/ui/uiProbe.ts");
+    // Drawn and read back in one go, before the browser can clear the buffer.
+    expect(probe).toMatch(/a\.render\(\);[\s\S]*gl\.readPixels\(/);
   });
 
   it("is installed first in main.tsx, and has an Admin button", () => {

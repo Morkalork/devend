@@ -20,6 +20,7 @@
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from "@/ui/onDemand";
 import { uiLayerIds } from "@/ui/layerStore";
 import { pendingStartupParts } from "@/lib/startupReadiness";
+import { uiProbeLines } from "@/ui/uiProbe";
 
 interface BootRecord {
   start: number;
@@ -91,6 +92,7 @@ export function diagnosticsText(): string {
     `splash: ${document.getElementById("boot-splash") ? "still up" : "gone"}`,
     `html class: ${document.documentElement.className}`,
     ...[...document.querySelectorAll("canvas")].map(c => describeCanvas(c)),
+    ...uiProbeLines(),
     `errors (${record.errors.length}):`,
     ...record.errors.map(e => `  ${e}`),
   ];

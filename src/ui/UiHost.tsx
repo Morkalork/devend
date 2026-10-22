@@ -24,6 +24,7 @@ import { loadUiFonts } from "./fonts";
 import i18n from "@/i18n";
 import { setUiHitTester } from "./hitGate";
 import { installOnDemandRender, isUiOnDemandEnabled, noteUiContextLost, noteUiContextRestored } from "./onDemand";
+import { setUiProbeApp } from "./uiProbe";
 
 /** The parts of Pixi's EventSystem the pointer-up override reaches into. */
 interface PixiEventInternals {
@@ -137,12 +138,14 @@ function EventBridge(): null {
     window.addEventListener("contextmenu", onContextMenu, true);
     const undoOnDemand = isUiOnDemandEnabled() ? installOnDemandRender(app) : null;
     setUiHitTester((x, y) => interactiveAt(app, x, y));
+    setUiProbeApp(app);
     if (import.meta.env.DEV) (window as unknown as { __uiApp?: PixiApplication }).__uiApp = app;
     return () => {
       window.removeEventListener("pointercancel", onPointerCancel, true);
       window.removeEventListener("contextmenu", onContextMenu, true);
       undoOnDemand?.();
       setUiHitTester(null);
+      setUiProbeApp(null);
       try { events.setTargetElement(null as unknown as HTMLElement); } catch { /* torn down */ }
       internal._onPointerUp = originalUp;
       events.mapPositionToPoint = original;
