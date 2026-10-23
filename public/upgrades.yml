@@ -179,7 +179,7 @@ upgrades:
     # single normal lock on map 1.
     cost: 25
     unlockLevel: 1
-    icon: memory
+    icon: memory-stick
     tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.95
@@ -292,7 +292,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - fast_compile_senior
-    icon: flame
+    icon: sunrise
     tags: [tempo]
     modifiers:
       instantFencesPerMap: 1
@@ -781,7 +781,7 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - feature_freeze_junior
-    icon: gem
+    icon: thermometer-snowflake
     tags: [freeze, lock]
     modifiers:
       frozenLockBonus: 1
@@ -840,7 +840,7 @@ upgrades:
     tier: Junior
     description: "Under gravity, in a live well, or on a gravity map: locks pay double."
     unlockLevel: 12
-    icon: gem
+    icon: arrow-down-to-dot
     tags: [lock, risk]
     modifiers:
       gravityLockBonus: 1
@@ -1198,7 +1198,7 @@ upgrades:
     tier: Principal
     description: "The store offers two abilities to choose between instead of one."
     unlockLevel: 8
-    icon: gem
+    icon: binoculars
     tags: [bank]
     modifiers:
       extraAbilityOffers: 1
@@ -1322,7 +1322,7 @@ upgrades:
     tier: Junior
     description: "Each map starts with a shield that absorbs one ball hit for free."
     unlockLevel: 5
-    icon: shield
+    icon: shield-check
     tags: [safety]
     modifiers:
       wallShieldsPerMap: 1
@@ -1555,7 +1555,7 @@ upgrades:
     tier: Junior
     description: Tap a ball to freeze it for 1s. One freeze per map.
     unlockLevel: 4
-    icon: snowflake
+    icon: mouse-pointer-click
     tags: [freeze]
     modifiers:
       ballFreezeDuration: 1
@@ -1797,7 +1797,7 @@ upgrades:
     tier: Junior
     description: Power-up tokens appear slightly more often.
     unlockLevel: 8
-    icon: gift
+    icon: coins
     tags: [risk]
     modifiers:
       pickupChanceBonus: 0.03
@@ -2156,7 +2156,7 @@ upgrades:
     # 30 so the first shop is affordable at all, and a new arrival on that shelf
     # has to join them or it is simply the expensive one for no stated reason.
     cost: 25
-    icon: rocket
+    icon: land-plot
     tags: [tempo]
     modifiers:
       startingCapturePercent: 8
@@ -2166,7 +2166,7 @@ upgrades:
     tier: Senior
     description: "Start with 12% of the board captured instead of 8%."
     unlockLevel: 4
-    icon: rocket
+    icon: land-plot
     prerequisites:
       - onboarding_junior
     tags: [tempo]
@@ -2180,7 +2180,7 @@ upgrades:
     tier: Principal
     description: "Probation Waived: start with 16% of the board captured instead of 12%."
     unlockLevel: 9
-    icon: rocket
+    icon: land-plot
     prerequisites:
       - onboarding_senior
     choiceGroup: onboarding_principal
@@ -2193,7 +2193,7 @@ upgrades:
     tier: Principal
     description: "Fast Track: 13% captured, and 1% more per 2 other tempo upgrades (max 5)."
     unlockLevel: 9
-    icon: rocket
+    icon: land-plot
     prerequisites:
       - onboarding_senior
     choiceGroup: onboarding_principal
@@ -2331,7 +2331,7 @@ upgrades:
     tier: Junior
     description: "Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. 15% slower."
     unlockLevel: 4
-    icon: shield
+    icon: fence
     tags: [safety]
     grantsFenceType: guardrail
     modifiers: {}
@@ -2341,7 +2341,7 @@ upgrades:
     tier: Principal
     description: "Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower."
     unlockLevel: 14
-    icon: snowflake
+    icon: refrigerator
     unlockAfterChoice: feature_freeze_principal
     tags: [freeze]
     grantsFenceType: ice
@@ -2356,7 +2356,7 @@ upgrades:
     tier: Architect
     description: "Adds the Redeploy fence: grab it once and fling the balls in front of it. Builds 40% slower."
     unlockLevel: 18
-    icon: spline
+    icon: rotate-ccw
     unlockAfterChoice: severance_package_principal
     tags: [risk, lock]
     grantsFenceType: redeploy
@@ -2367,7 +2367,7 @@ upgrades:
     tier: Principal
     description: "Adds the Flare fence: balls bouncing off it speed up. It builds 30% slower."
     unlockLevel: 14
-    icon: flame
+    icon: flame-kindling
     unlockAfterChoice: technical_debt_architect
     tags: [risk]
     grantsFenceType: flare
@@ -2388,7 +2388,7 @@ upgrades:
     tier: Architect
     description: "Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does."
     unlockLevel: 15
-    icon: shield
+    icon: lock-keyhole
     unlockAfterChoice: fault_tolerance_architect
     tags: [safety, lock]
     grantsFenceType: mutex
@@ -2399,7 +2399,7 @@ upgrades:
     tier: Architect
     description: "Adds the Semaphore fence: it locks only two or more balls at once, and pays past the map cap."
     unlockLevel: 16
-    icon: dices
+    icon: flag
     unlockAfterChoice: budget_cycle_principal
     tags: [risk, lock]
     grantsFenceType: semaphore

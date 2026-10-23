@@ -106,7 +106,7 @@ const up = (u: Partial<UpgradeConfig> & Pick<UpgradeConfig, "id" | "name" | "tie
 const shopUpgrades: UpgradeConfig[] = [
   up({ id: "fast_compile_junior", name: "Fast Compile", tier: "Junior", cost: 25, tags: ["tempo"], icon: "fast-forward", description: "Increase fence generation speed by 10%." }),
   up({ id: "fast_compile_senior", name: "Fast Compile", tier: "Senior", cost: 34, prerequisites: ["fast_compile_junior"], tags: ["tempo"], description: "Increase fence generation speed by 20%." }),
-  up({ id: "memory_footprint_senior", name: "Memory Footprint", tier: "Senior", cost: 34, tags: ["safety"], icon: "memory", description: "Reduce ball size by 10%." }),
+  up({ id: "memory_footprint_senior", name: "Memory Footprint", tier: "Senior", cost: 34, tags: ["safety"], icon: "memory-stick", description: "Reduce ball size by 10%." }),
   up({ id: "performance_bonus_junior", name: "Performance Bonus", tier: "Junior", cost: 34, tags: ["bank"], icon: "trending-up", description: "Gain 5% more overtime per map." }),
   up({ id: "code_review", name: "Code Review", tier: "Junior", cost: 34, tags: ["lock"], icon: "clipboard-check", description: "A pocket up to 3% over the lock limit still locks its ball." }),
   up({ id: "memory_footprint_principal", name: "Memory Footprint", tier: "Principal", cost: 70, prerequisites: ["memory_footprint_senior"], choiceGroup: "memory_footprint_principal", tags: ["safety"], description: "Reduce ball size by 15%." }),

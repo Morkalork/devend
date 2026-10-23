@@ -1,10 +1,39 @@
 /**
- * Upgrade icon registry.
+ * Upgrade icon registry: the glyph each upgrade PACKAGE (a family of tiers
+ * sharing a name) wears in its type square on the store ticket, in the detail
+ * modal and in the Specs panel.
  *
- * Each upgrade family carries a single icon, defined on its first tier in
- * upgrades.yml (via the `icon` field). Higher tiers omit it and inherit the
- * family's icon by shared `name`. Icons are plain lucide-react glyphs to match
- * the rest of the game's UI.
+ * THE RULES (pinned by src/test/upgradeIcons.test.ts; the Admin gallery's
+ * "UpgradeIcons" sheet shows every package beside its glyph):
+ *
+ *  1. ONE GLYPH PER PACKAGE, and no two packages share one. The glyph says
+ *     WHICH upgrade this is; the tier is already said twice beside it (the
+ *     colour, the priority glyph), so the tiers of a package share its glyph.
+ *     It is set on the package's first tier in upgrades.yml (`icon`); higher
+ *     tiers inherit by name.
+ *  2. UNIQUE ACROSS THE SHELF, not just across upgrades: an ability ticket's
+ *     square shows its effect kind's glyph (bottomModel.ts, abilityGlyph) and
+ *     a tier's priority glyph sits two words to the right, so neither may be
+ *     an upgrade's glyph either. Snowflake is the freeze ability's, shield the
+ *     fence shield's, flame the Wizard priority's.
+ *  3. THE GLYPH SHOWS WHAT THE UPGRADE DOES on the board, not the pun in its
+ *     name: a slower fastest ball is a gauge, ground captured at map start is
+ *     a plot of land. The name is allowed to win only when it IS the picture
+ *     (Ghost Protocol, Chaos Engineering).
+ *  4. A FENCE-TYPE GRANT shows the fence, not the mechanic: the thing the
+ *     player gets is a slot on the fence bar, and the glyph is how they will
+ *     know it there. (The bar shows the fence's colour and name; its glyph
+ *     is the natural next step, and it must then be this one.)
+ *  5. PACKAGES IN A LINE share a motif and differ at a glance: Multithreading
+ *     is a split, Ultrathreading is layers; Feature Freeze is the tap,
+ *     Cascade Freeze the cloud of snow it sets off.
+ *  6. LUCIDE ONLY, LEGIBLE AT 14 PX: one object, no lettering, no inner
+ *     detail finer than a stroke. The key is lucide's own kebab-case name, so
+ *     a reader can look it up.
+ *
+ * To add a package: pick a glyph by the rules, import it here under its
+ * lucide name, and set `icon` on the package's first tier. The test fails on
+ * a missing, unregistered or shared key.
  */
 import {
   Clock,
@@ -52,14 +81,31 @@ import {
   Pause,
   Grab,
   Bomb,
+  Ruler,
+  Gauge,
+  Zap,
+  FlameKindling,
+  ThermometerSnowflake,
+  ArrowDownToDot,
+  Binoculars,
+  LandPlot,
+  Flag,
+  Coins,
+  Fence,
+  LockKeyhole,
+  Refrigerator,
+  ShieldCheck,
+  RotateCcw,
+  MousePointerClick,
+  Sunrise,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 
 /** Maps the `icon` string used in upgrades.yml to a lucide icon component. */
-const UPGRADE_ICONS: Record<string, LucideIcon> = {
+export const UPGRADE_ICONS: Record<string, LucideIcon> = {
   clock: Clock,
-  memory: MemoryStick,
+  'memory-stick': MemoryStick,
   'fast-forward': FastForward,
   flame: Flame,
   split: Split,
@@ -103,7 +149,29 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   pause: Pause,
   grab: Grab,
   bomb: Bomb,
+  ruler: Ruler,
+  gauge: Gauge,
+  zap: Zap,
+  'flame-kindling': FlameKindling,
+  'thermometer-snowflake': ThermometerSnowflake,
+  'arrow-down-to-dot': ArrowDownToDot,
+  binoculars: Binoculars,
+  'land-plot': LandPlot,
+  flag: Flag,
+  coins: Coins,
+  fence: Fence,
+  'lock-keyhole': LockKeyhole,
+  refrigerator: Refrigerator,
+  'shield-check': ShieldCheck,
+  'rotate-ccw': RotateCcw,
+  'mouse-pointer-click': MousePointerClick,
+  sunrise: Sunrise,
 };
+
+/** The icon key a package carries (on whichever tier declares it). */
+export function upgradeIconKey(upgrade: UpgradeConfig, family: UpgradeConfig[]): string | undefined {
+  return upgrade.icon ?? family.find(u => u.name === upgrade.name && u.icon)?.icon;
+}
 
 /**
  * Resolve the lucide icon for an upgrade. Icons live on the first tier of each
@@ -114,6 +182,6 @@ export function getUpgradeIcon(
   upgrade: UpgradeConfig,
   family: UpgradeConfig[],
 ): LucideIcon | null {
-  const key = upgrade.icon ?? family.find(u => u.name === upgrade.name && u.icon)?.icon;
+  const key = upgradeIconKey(upgrade, family);
   return key ? UPGRADE_ICONS[key] ?? null : null;
 }

@@ -26,6 +26,7 @@ import { HallOfFameScreen } from "../../screens/HallOfFameScreen";
 import { CertificateStore } from "../../screens/CertificateStore";
 import { OffersScreen } from "../../screens/OffersScreen";
 import { PairLobby } from "../../screens/PairLobby";
+import { UpgradeIconSheet } from "./upgradeIconSheet";
 
 const ACCENT = "#00ff88";
 const noop = () => {};
@@ -71,6 +72,8 @@ const welcome = {
 };
 
 export const entries: GalleryEntry[] = [
+  // Every upgrade package beside its glyph (the rules are in upgradeIcons.ts).
+  { id: "UpgradeIcons", group: "screen", render: () => <UpgradeIconSheet /> },
   {
     id: "WelcomeScreen", group: "screen", render: () => (
       <WelcomeScreen {...welcome} onContinue={noop} onOpenCertificateStore={noop}
