@@ -30,6 +30,11 @@
  *  6. LUCIDE ONLY, LEGIBLE AT 14 PX: one object, no lettering, no inner
  *     detail finer than a stroke. The key is lucide's own kebab-case name, so
  *     a reader can look it up.
+ *  7. THE COLOUR IS THE SCHOOL'S, never the glyph's own. The type square and
+ *     the ticket's stripe take the package's first tag (shopModel.schoolColor:
+ *     lock green, freeze cyan, bank yellow, tempo orange, risk red, safety
+ *     blue), so a shelf sorts by school at a glance; the tier keeps its colour
+ *     on the priority glyph and the tier word. A glyph is a shape only.
  *
  * To add a package: pick a glyph by the rules, import it here under its
  * lucide name, and set `icon` on the package's first tier. The test fails on

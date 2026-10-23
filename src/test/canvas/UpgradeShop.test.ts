@@ -114,7 +114,7 @@ describe("the ability slot (upgradeShopAbilitySlot)", () => {
   });
 
   it("is a ticket of its own type, coloured by the ability, never a fourth upgrade", () => {
-    expect(PARTS).toMatch(/const typeColor = inv \? \(upgrade\.abilityColor \? hex\(upgrade\.abilityColor\) : COLOR\.primary\) : tier\.text;/);
+    expect(PARTS).toMatch(/const typeColor = inv \? \(upgrade\.abilityColor \? hex\(upgrade\.abilityColor\) : COLOR\.primary\) : schoolColor\(upgrade\);/);
     expect(PARTS).toMatch(/inv \? t\("upgradeShop\.abilityKicker"\)/);
   });
 

@@ -138,8 +138,8 @@ describe("the store's follow-up tweaks", () => {
   const parts = read("src/ui/screens/shopParts.tsx");
 
   it("opens a held ticket and a choice ticket as ticket views (a striped modal)", () => {
-    expect(parts).toMatch(/<Modal screen=\{screen\} maxWidth=\{MODAL_W\} onClose=\{onClose\} accent=\{accent\} stripe=\{tc\.text\} heading=/);
-    expect(parts).toMatch(/stripe=\{tc\.text\} title=\{contentText\.upgradeName\(t, options\[0\]\)\}/);
+    expect(parts).toMatch(/<Modal screen=\{screen\} maxWidth=\{MODAL_W\} onClose=\{onClose\} accent=\{accent\} stripe=\{school\} heading=/);
+    expect(parts).toMatch(/stripe=\{school\} title=\{contentText\.upgradeName\(t, options\[0\]\)\}/);
   });
 
   it("puts the rates, restocks, budget cycle, runway and set counts inside the Sprint panel", () => {

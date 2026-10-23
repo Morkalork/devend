@@ -26,7 +26,7 @@ import type { IconSource } from "../kit/icons";
 import { TagChip } from "../game/TagChip";
 import { ConditionChip } from "../game/ConditionChip";
 import { AbilityIcon } from "../game/AbilityIcon";
-import { lockedReasonParts, tierPalette, type CardModel, type CertChase } from "./shopModel";
+import { lockedReasonParts, schoolColor, tierPalette, type CardModel, type CertChase } from "./shopModel";
 import {
   STATUS_KEY, capacityShare, fundedShare, priorityRank, shortfall, ticketKey, ticketStatus, unavailable, type TicketStatus,
 } from "./storeBoardModel";
@@ -225,7 +225,7 @@ const PRIORITY_GLYPH = [ChevronDown, Equal, ChevronUp, ChevronsUp, Flame] as con
 
 /**
  * One offer, drawn as a ticket on a sprint board (the store as Jira, the way
- * the owner asked for it): a stripe in the tier's colour down its left edge,
+ * the owner asked for it): a stripe in the school's colour down its left edge,
  * the ticket's type square, key and priority across the top, the title, the
  * description, the labels, then the status lozenge and the estimate in hours.
  *
@@ -241,7 +241,9 @@ export function TicketCard({
   const { t } = useTranslation();
   const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, certChase, certShown } = model;
   const tier = tierPalette(upgrade.tier);
-  const typeColor = inv ? (upgrade.abilityColor ? hex(upgrade.abilityColor) : COLOR.primary) : tier.text;
+  // The square and stripe are the school's colour; the tier keeps its own on
+  // the priority glyph and the tier word (schoolColor).
+  const typeColor = inv ? (upgrade.abilityColor ? hex(upgrade.abilityColor) : COLOR.primary) : schoolColor(upgrade);
   const status = ticketStatus(model);
   const lozenge = statusLook(status, accent);
   // Out of reach right now, for either reason: the ticket loses its colour,
@@ -250,6 +252,7 @@ export function TicketCard({
   const blocked = status === "blocked";
   const unfunded = status === "unfunded";
   const identity = out ? ROLE.muted : typeColor;
+  const tierInk = out ? ROLE.muted : inv ? identity : tier.text;
   const stripe = blocked ? RED : out ? ROLE.edge : typeColor;
   const short = unfunded ? shortfall(shownPrice, remainingBudget) : 0;
   const grey = useMemo(() => {
@@ -293,8 +296,8 @@ export function TicketCard({
               </View>
               <Label text={ticketKey(upgrade.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
               <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={identity} />}
-                <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={identity} />
+                {!inv && <Icon icon={Priority} size={14} strokeWidth={2.5} color={tierInk} />}
+                <Label text={inv ? t("upgradeShop.abilityKicker") : contentText.tier(t, upgrade.tier)} size={TEXT.xs} weight="600" color={tierInk} />
               </View>
               {/* A restock: new to this backlog. */}
               {fresh && (
@@ -552,6 +555,7 @@ export function UpgradeDetailModal({ upgrade: u, upgrades, dependents, has, cert
   const screen = useUiScreen();
   const DetailIcon = getUpgradeIcon(u, upgrades);
   const tc = tierPalette(u.tier);
+  const school = schoolColor(u);
   const Priority = PRIORITY_GLYPH[priorityRank(u.tier)];
   // Both gates: "Nothing required" over a card the shop refuses to sell is a lie.
   const need = unlockRequirements(u, upgrades);
@@ -577,12 +581,12 @@ export function UpgradeDetailModal({ upgrade: u, upgrades, dependents, has, cert
   const rule = <View layout={{ height: 1, alignSelf: "stretch", backgroundColor: ROLE.edge }} />;
 
   return (
-    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={tc.text} heading={
+    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={school} heading={
       <>
           {/* The ticket's header: type square, key and priority. */}
           <View layout={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 26 }}>
-            <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(tc.text, 0.2) }}>
-              {DetailIcon && <Icon icon={DetailIcon} size={14} strokeWidth={2} color={tc.text} />}
+            <View layout={{ width: 22, height: 22, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: tint(school, 0.2) }}>
+              {DetailIcon && <Icon icon={DetailIcon} size={14} strokeWidth={2} color={school} />}
             </View>
             <Label text={ticketKey(u.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
             <View layout={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
@@ -694,9 +698,9 @@ interface ChooserProps {
 export function ChoiceChooserModal({ options, selectedIds, price, budget, accent, onChoose, onClose }: ChooserProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
-  const tc = tierPalette(options[0].tier);
+  const school = schoolColor(options[0]);
   return (
-    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={tc.text} title={contentText.upgradeName(t, options[0])}>
+    <Modal screen={screen} maxWidth={MODAL_W} onClose={onClose} accent={accent} stripe={school} title={contentText.upgradeName(t, options[0])}>
       <ScrollView layout={{ maxHeight: screen.height - 200 }}>
         <Label text={t("upgradeShop.choiceModalHint")} size={TEXT.xs} color={ROLE.muted} wrap layout={{ marginBottom: 12 }} />
         <View layout={{ gap: 8 }}>
@@ -705,7 +709,7 @@ export function ChoiceChooserModal({ options, selectedIds, price, budget, accent
             const isSel = selectedIds.includes(opt.id);
             const affordable = p <= budget;
             const short = isSel ? 0 : shortfall(p, budget);
-            const optTc = tierPalette(opt.tier);
+            const optSchool = schoolColor(opt);
             return (
               <Pressable
                 key={opt.id}
@@ -718,7 +722,7 @@ export function ChoiceChooserModal({ options, selectedIds, price, budget, accent
                   borderWidth: 2, borderColor: isSel ? accent : ROLE.edge,
                 }}
               >
-                <View layout={{ width: 4, backgroundColor: affordable || isSel ? optTc.text : ROLE.edge }} />
+                <View layout={{ width: 4, backgroundColor: affordable || isSel ? optSchool : ROLE.edge }} />
                 <View layout={{ flex: 1, padding: 12, gap: 8 }}>
                   <Label text={ticketKey(opt.id)} size={TEXT.xs} font="mono" color={ROLE.muted} />
                   <Label text={contentText.upgradeDesc(t, opt)} size={TEXT.base} lineHeight={22} color={affordable || isSel ? ROLE.ink : ROLE.muted} wrap />

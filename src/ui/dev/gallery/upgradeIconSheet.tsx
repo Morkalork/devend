@@ -17,7 +17,7 @@ import abilitiesYamlRaw from "../../../../public/abilities.yml?raw";
 import type { UpgradeConfig } from "@/types/upgrade";
 import { UPGRADE_ICONS, getUpgradeIcon, upgradeIconKey } from "@/components/game/upgradeIcons";
 import { abilityGlyph } from "../../game/bottomModel";
-import { tierPalette } from "../../screens/shopModel";
+import { schoolColor } from "../../screens/shopModel";
 import { COLOR, Icon, Label, ROLE, ScrollView, TEXT, View, tint, type IconSource } from "../../kit/ui";
 
 const upgrades = (yaml.load(upgradesYamlRaw) as { upgrades: UpgradeConfig[] }).upgrades;
@@ -92,7 +92,7 @@ export function UpgradeIconSheet() {
             const shared = key ? (users.get(key)?.length ?? 0) > 1 : false;
             const bad = !icon || shared || taken.has(icon);
             const note = `${key ?? "none"}${shared ? " shared" : ""}${icon && taken.has(icon) ? " reserved" : ""} ${(u.tags ?? []).join("/")}`;
-            return <Row key={u.id} icon={icon} color={tierPalette(u.tier).text} title={u.name} note={note} bad={bad} />;
+            return <Row key={u.id} icon={icon} color={schoolColor(u)} title={u.name} note={note} bad={bad} />;
           })}
           <Heading text="Ability glyphs (reserved)" />
           {abilities.map(a => <Row key={a.id} icon={abilityGlyph(a.kind)} color={COLOR.primary} title={a.name} note={a.kind} />)}

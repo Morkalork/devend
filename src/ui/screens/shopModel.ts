@@ -15,6 +15,7 @@ import { getRunRng } from "@/lib/runRng";
 import { contentText } from "@/i18n/content";
 import { COLOR } from "../theme";
 import { tint } from "../kit/style";
+import { tagChipLook } from "../game/tagChipModel";
 
 type IsLocked = (upgradeId: string, ownedIds: string[]) => boolean;
 
@@ -451,4 +452,17 @@ const TIER_PALETTE: Record<UpgradeTier, { text: number; border: string }> = {
 
 export function tierPalette(tier: UpgradeTier): { text: number; border: string } {
   return TIER_PALETTE[tier] ?? TIER_PALETTE.Junior;
+}
+
+/**
+ * The colour a ticket's type square and stripe wear: its SCHOOL's (the first
+ * tag), so a glance down the shelf sorts the cards by what they build toward,
+ * which is the choice the draft asks for. The tier keeps its own colour on the
+ * priority glyph and the tier word beside the square. A package with no tag
+ * (none today) falls back to its tier's.
+ */
+export function schoolColor(u: Pick<UpgradeConfig, "tags" | "tier">): number {
+  const tag = u.tags?.[0];
+  const look = tag ? tagChipLook(tag) : null;
+  return look ? look.text : tierPalette(u.tier).text;
 }
