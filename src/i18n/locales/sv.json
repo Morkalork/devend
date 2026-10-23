@@ -14,7 +14,7 @@
       "highestLevelReached": "Högsta nivå",
       "totalLevelsCompletedWithoutLoss": "Felfria nivåer",
       "totalLivesLost": "Förlorade liv",
-      "pushBonusesBanked": "Säkrade pressbonusar"
+      "pushBonusesBanked": "Säkrade bonusar från att pressa lyckan"
     }
   },
   "bottomBar": {
@@ -111,9 +111,9 @@
     "pickupPayout": "Power-up-utdelning",
     "pickupPayoutActive": "Inlösta polletter betalar mer och delade bollar flyger långsammare (Total Compensation nivå {{level}}).",
     "pickupPayoutInactive": "Power-up-symboler ger sina grundbelöningar.",
-    "pushBonus": "Pressutbetalningar",
-    "pushBonusActive": "Pressutbetalningarna multipliceras med x{{mult}}.",
-    "pushBonusInactive": "Standardpressutbetalningar.",
+    "pushBonus": "Pressa lyckan-bonus",
+    "pushBonusActive": "Bonusen när du pressar lyckan multipliceras med x{{mult}}.",
+    "pushBonusInactive": "Vanlig bonus när du pressar lyckan.",
     "fenceSpeedPerLock": "Staketfart per infångning",
     "fenceSpeedPerLockActive": "Varje lås på banan snabbar upp staketen med {{percent}}% (Knowledge Transfer).",
     "fenceSpeedPerLockInactive": "Ingen staketfartsbonus per infångning.",
@@ -325,7 +325,7 @@
   },
   "levelComplete": {
     "title": "Nivå klar!",
-    "pushFailed": "Pressningen misslyckades!",
+    "pushFailed": "Du pressade lyckan för långt!",
     "pushFailedBonus": " Men du tjänade +{{bonus}}h bonus.",
     "pushFailedNoBonus": " Ingen extra bonus intjänad.",
     "level": "Nivå",
@@ -348,7 +348,7 @@
     "zoneLocks": "Zonlås ({{count}})",
     "multiLocks": "Multilås (x{{count}} samtidigt)",
     "bouncerHours": "Studstimmar",
-    "pushBonus": "Pressbonus",
+    "pushBonus": "Pressa lyckan-bonus",
     "pickupBonus": "Power-up-bonus",
     "breakBonus": "Rivningsbonus",
     "chestBonus": "Skatt bärgad",
@@ -422,9 +422,9 @@
         "tip": "Öppna med stora, säkra snitt. Fart och precision är separata bonusar; jaga båda."
       },
       "pushBonus": {
-        "title": "Pressbonus",
+        "title": "Pressa lyckan-bonus",
         "body": "Belöningen för att chansa. Efter att målet är nått, fortsätt skära istället för att banka; varje extra bit betalar.",
-        "tip": "Att pressa är gratis pengar: misslyckas du mitt i förlorar du bara extrabonusen, aldrig din säkrade poäng."
+        "tip": "Att pressa lyckan är gratis pengar: misslyckas du mitt i förlorar du bara extrabonusen, aldrig din säkrade poäng."
       },
       "pickupBonus": {
         "title": "Power-up-bonus",
@@ -467,7 +467,7 @@
       },
       "totalBonus": {
         "title": "Total bonus",
-        "body": "Alla nivåns bonusar sammanlagda: par, utrymme, lås, rivning, tempo och press.",
+        "body": "Alla nivåns bonusar sammanlagda: par, utrymme, lås, rivning, tempo och pressa lyckan.",
         "tip": "Bonusar delar ett tak på dubbla basen, så att sprida över flera slår att maxa en."
       },
       "overtimeEarned": {
@@ -1373,11 +1373,11 @@
       },
       "moonshot": {
         "name": "Moonshot",
-        "description": "Pressutbetalningarna är 25% större."
+        "description": "Bonusen när du pressar lyckan är 25% större."
       },
       "risk_appetite": {
         "name": "Riskaptit",
-        "description": "Pressutbetalningarna är 50% större."
+        "description": "Bonusen när du pressar lyckan är 50% större."
       },
       "tech_evangelist": {
         "name": "Teknikevangelist",
@@ -2195,7 +2195,7 @@
       },
       "risk": {
         "name": "Dubbelt eller kvitt",
-        "description": "Pressutbetalningarna fördubblas."
+        "description": "Bonusen när du pressar lyckan fördubblas."
       },
       "safety": {
         "name": "Försäkring",
@@ -2260,7 +2260,7 @@
     "fenceGenerationSpeedMultiplier": "Stängselhastighet {{percent}}%",
     "scoreMultiplier": "Övertid {{percent}}%",
     "shopDiscountMultiplier": "Butikspriser {{percent}}%",
-    "pushBonusMultiplier": "Riskbonus {{percent}}%",
+    "pushBonusMultiplier": "Pressa lyckan-bonus {{percent}}%",
     "extraLives": "Liv vid start {{value}}",
     "instantFencesPerMap": "Direkta stängsel per bana {{value}}",
     "additionalConcurrentFences": "Samtidiga stängsel {{value}}",
@@ -2571,7 +2571,7 @@
     "winBonus": "Vinstbonus",
     "objective": "Mål",
     "hazardPay": "Risktillägg",
-    "push": "Pressbonus"
+    "push": "Pressa lyckan-bonus"
   },
   "pipeline": {
     "afterLevel": "Efter nivå {{level}}",
