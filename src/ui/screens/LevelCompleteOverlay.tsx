@@ -158,7 +158,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, onSkip
             <View label="map-ticket" layout={{ width: cardWidth, gap: 12 }}>
               {pushFailed}
               <Appear fromY={12} duration={0.25}>
-                <AcceptanceTicket rows={scoreData.acceptance} levelNumber={levelNumber} levelId={levelId}
+                <AcceptanceTicket rows={scoreData.acceptance} levelNumber={levelNumber} levelId={levelId} levelName={scoreData.levelName} levelPremise={scoreData.levelPremise}
                   accent={accent} width={cardWidth} filled={fill.filled}
                   estimate={fill.done ? `+${displayLevelScore}h` : undefined} />
               </Appear>

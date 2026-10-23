@@ -2207,6 +2207,84 @@
         "name": "Fecha de Release",
         "intro": "Tu primer jefe. La Release Candidate anda suelta: una bola grande y rápida, con Scope Creep a tope desde el primer segundo. Limpiar el tablero no basta: vállala dentro del área de sintaxis clara (arriba a la derecha) para lanzarla. Atrápala en otro sitio y pierdes una vida. Vence al plazo."
       }
+    },
+    "levels": {
+      "level-1": {
+        "name": "Hello World",
+        "premise": "En la que encerrar la única bola gana de golpe, así que el rincón de la esquina es un botón que dice terminar ya."
+      },
+      "level-2": {
+        "name": "Pull Request",
+        "premise": "En la que la puerta separa dos bolas, y para ganar hay que sellar una a cada lado."
+      },
+      "level-3": {
+        "name": "Definición de Hecho",
+        "premise": "En la que la caja de sintaxis clara es la victoria: limpia el tablero y encierra una bola dentro."
+      },
+      "level-4": {
+        "name": "Code Owner",
+        "premise": "En la que un guardia patrulla la puerta de la caja, así que cerrarla es cuestión de cuándo."
+      },
+      "level-5": {
+        "name": "Test Inestable",
+        "premise": "En la que un solo toque abre un hueco en una columna corta de fragmentos, y nada más es nuevo."
+      },
+      "level-6": {
+        "name": "Refactor",
+        "premise": "En la que los mejores huecos de cada sala están tapiados con los fragmentos que tienes que romper."
+      },
+      "level-7": {
+        "name": "Easter Egg",
+        "premise": "En la que vale la pena romper el cofre, y el mejor de los dos está detrás de la patrulla."
+      },
+      "level-8": {
+        "name": "Caja Negra",
+        "premise": "En la que solo una bola en la sala de la cortina puede abrir la caja, y una puerta corredera decide quién entra."
+      },
+      "level-9": {
+        "name": "Regression Suite",
+        "premise": "En la que todo lo que enseñó el acto I entra en la victoria a la vez: la caja, los fragmentos y un monolito."
+      },
+      "level-10": {
+        "name": "Fecha de Release",
+        "premise": "En la que hay que vallar la Release Candidate dentro de la caja de sintaxis antes de que salga."
+      },
+      "level-11": {
+        "name": "Kickoff",
+        "premise": "En la que el disparo fija la velocidad de todo el mapa antes de que exista una valla, y dos parachoques te la devuelven."
+      },
+      "level-12": {
+        "name": "Velocity",
+        "premise": "En la que los parachoques pagan por frenarte hasta que se les acaba el banco, y luego lanzan las bolas más rápido."
+      },
+      "level-13": {
+        "name": "Code Review",
+        "premise": "En la que la caja está donde ninguna valla recta la cierra, y el espejo dobla tu corte para rodearla."
+      },
+      "level-14": {
+        "name": "Caída",
+        "premise": "En la que la sala gira un cuarto cada diez segundos y el abajo gira con ella."
+      },
+      "level-15": {
+        "name": "Standup",
+        "premise": "En la que un pozo de gravedad deja caer bolas en la copa que pide la victoria, si cierras la tapa a tiempo."
+      },
+      "level-16": {
+        "name": "Tech Debt",
+        "premise": "En la que los pilares del tabique desaparecen por ciclos, y para ganar hay que sellar una bola a cada lado."
+      },
+      "level-17": {
+        "name": "Deprecation",
+        "premise": "En la que las bolas son tu martillo, y el muro de fragmentos se abre allí donde golpean."
+      },
+      "level-18": {
+        "name": "On Call",
+        "premise": "En la que un molino gira dentro de la sala que paga el triple, y cada corte que la cruza es una apuesta contra el aspa."
+      },
+      "level-19": {
+        "name": "Hotfix",
+        "premise": "En la que cuatro barras patrullan un tablero cuyo suelo gira cada diez segundos, y dos de los cuatro cofres son la victoria."
+      }
     }
   },
   "features": {

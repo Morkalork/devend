@@ -45,6 +45,7 @@ levels:
   # and get paid, which teaches pocket size better than any explanation.
   # Heights (3D board, objectRise.ts): the doorway is the map, so its jambs stand tall; the nook's lip sits low, the invitation to seal.
   - id: level-1
+    name: Hello World
     level: 1
     premise: "The one where locking the only ball wins outright, so the corner nook is a button marked finish now."
     sizeThreshold: 40
@@ -100,6 +101,7 @@ levels:
   # which one to spend a ball on and not whether a pocket qualifies.
   # Heights (3D board, objectRise.ts): tall jambs for the doorway that keeps the balls apart, low lips on the two nooks.
   - id: level-2
+    name: Pull Request
     level: 2
     premise: "The one where the doorway keeps two balls apart, and the win wants one sealed on each side of it."
     sizeThreshold: 37
@@ -181,6 +183,7 @@ levels:
   # passage, and adding a ball is the axis of last resort.
   # Heights (3D board, objectRise.ts): tall jambs, a low lip; the syntax box is an inlaid plate, ground rather than a room.
   - id: level-3
+    name: Definition of Done
     level: 3
     premise: "The one where the light syntax box is the win: clear the board and lock a ball inside it."
     sizeThreshold: 34
@@ -266,6 +269,7 @@ levels:
   # - it was in the first draft of this map and mapBeats.test.ts caught it.
   # Heights (3D board, objectRise.ts): tall jambs, a low lip; the guard stands at a mover's height, prouder than the lip it walks past.
   - id: level-4
+    name: Code Owner
     level: 4
     premise: "The one where a guard walks across the box's door, so closing the box is a question of when."
     sizeThreshold: 31
@@ -364,6 +368,7 @@ levels:
   # variety 0; see the note at the top of act I.
   # Heights (3D board, objectRise.ts): tall jambs; the shards take the shard default (low), so the column visibly drops where one touch opens it.
   - id: level-5
+    name: Flaky Test
     level: 5
     premise: "The one where a single touch opens a slot in a short column of shards, and nothing else is new."
     sizeThreshold: 28
@@ -486,6 +491,7 @@ levels:
   # was saving that pair loses it.
   # Heights (3D board, objectRise.ts): the spine and its anchors stand tall as the building; the teeth are low shards, plainly the part that goes.
   - id: level-6
+    name: Refactor
     level: 6
     premise: "The one where each room's best pockets are walled with the shards you have to break."
     sizeThreshold: 25
@@ -718,6 +724,7 @@ levels:
   # new line.
   # Heights (3D board, objectRise.ts): the vault lip sits low; the chests are squat and the partition is a low run of shards, so nothing on this board reads as permanent but the frame.
   - id: level-7
+    name: Easter Egg
     level: 7
     premise: "The one where the chest is worth breaking, and the better of the two sits behind the patrol."
     # Bugs (public/bugs.yml). Act I's first map with a real brick wall AND a
@@ -962,6 +969,7 @@ levels:
   # rather than an ambush.
   # Heights (3D board, objectRise.ts): the sliding door stands as tall as the jambs it sits between, flush in the wall; the curtain stands at fence height.
   - id: level-8
+    name: Black Box
     level: 8
     premise: "The one where only a ball in the curtain's room can open the box, and a sliding door decides who gets in."
     sizeThreshold: 19
@@ -1081,6 +1089,7 @@ levels:
   # for it when there is the least room left to absorb it.
   # Heights (3D board, objectRise.ts): tall jambs with the patrol filling the doorway at their height; low lips on the pay nook and the vault.
   - id: level-9
+    name: Regression Suite
     level: 9
     premise: "The one where everything act I taught is in the win at once: the box, the shards and a monolith."
     # Bugs. The act I map that teaches both claim rules already (chest on the
@@ -1278,6 +1287,7 @@ levels:
 
   # Heights (3D board, objectRise.ts): the pillar is the one object on the board, and stands like a monument the release candidate circles.
   - id: level-10
+    name: Release Deadline
     level: 10
     premise: "The one where the release candidate has to be fenced into the syntax box before it ships."
     sizeThreshold: 15
@@ -1384,6 +1394,7 @@ levels:
   # hand, the next lever is the pull's ceiling, not more bumpers.
   # Heights (3D board, objectRise.ts): the rafter and the curtain's jamb stand tall as structure; the slab is a proud monolith and the grit low shards.
   - id: level-11
+    name: Kickoff
     level: 11
     premise: "The one where the launch sets the whole map's speed before any fence exists, and two bumpers let you spend it back."
     sizeThreshold: 16
@@ -1527,6 +1538,7 @@ levels:
   # whole machine: green while its bank lasts, a red pop bumper once spent.
   # Heights (3D board, objectRise.ts): nothing authored; the roles say it: bumpers sit sprung and low, the strut and sump stand proud as monoliths, the grit low as shards.
   - id: level-12
+    name: Velocity
     level: 12
     premise: "The one where bumpers pay to brake your speed until their bank runs dry, then start throwing balls faster."
     sizeThreshold: 15
@@ -1654,6 +1666,7 @@ levels:
   # long to plan it.
   # Heights (3D board, objectRise.ts): the mirror stands tall and thin, a pane on its edge rather than another slab.
   - id: level-13
+    name: Code Review
     level: 13
     premise: "The one where the box sits where no straight fence can close it, and the mirror bends your cut around it."
     sizeThreshold: 14
@@ -1699,6 +1712,7 @@ levels:
   # 14 "Downtime" - MEET gravity. The floor is alive and the walls throw you back.
   # Heights (3D board, objectRise.ts): nothing stands on this board but the frame; the turning room is the mechanic.
   - id: level-14
+    name: Downtime
     level: 14
     premise: "The one where the room turns a quarter every ten seconds and down goes with it."
     # The board where you MEET real gravity, so the board shows you nothing but
@@ -1769,6 +1783,7 @@ levels:
 
   # Heights (3D board, objectRise.ts): the cup's walls stand tall, so the cup reads as a vessel the well pours into.
   - id: level-15
+    name: Standup
     level: 15
     premise: "The one where a gravity well drops balls into the cup the win needs, if you close the lid in time."
     # MEET the gravity well, and nothing else.
@@ -1850,6 +1865,7 @@ levels:
 
   # Heights (3D board, objectRise.ts): the phasing pillars stand tall, so they visibly sink and rise; the deformable stands proud between them and the backlog slabs sit low.
   - id: level-16
+    name: Tech Debt
     level: 16
     premise: "The one where the pillars in the divider vanish on a cycle, and the win wants a ball sealed on each side."
     # THREE OBJECTS THAT DISAGREE ABOUT HOW FAST THE BALLS ARE.
@@ -2049,6 +2065,7 @@ levels:
   # bottom. Every strip you seal from the bottom shortens the bounce.
   # Heights (3D board, objectRise.ts): the wall of bricks is low shards under the vault's squat chest; the corner shelf sits low.
   - id: level-17
+    name: Deprecation
     level: 17
     premise: "The one where the balls are your hammer, and the wall of shards opens wherever they hit it."
     # Bugs, at the archetype's set piece. The highest share on the ladder:
@@ -2428,6 +2445,7 @@ levels:
   # Freak is aimed at: braking the arm turns the bet into a decision.
   # Heights (3D board, objectRise.ts): the windmill's room stands taller than anything else, its breakable side matching the rest of the room.
   - id: level-18
+    name: On Call
     level: 18
     premise: "The one where a windmill turns inside the room that pays triple, and every cut across it is a bet on the arm."
     # Bugs. Slabs rather than bricks, so a carrier takes real force to open
@@ -2563,6 +2581,7 @@ levels:
   # bar. Four bouncy sides at 1.05, like 14, so nothing pools dead on a floor.
   # Heights (3D board, objectRise.ts): nothing authored; four patrol bars at a mover's height sweep over four squat chests.
   - id: level-19
+    name: Hotfix
     level: 19
     premise: "The one where four patrol bars sweep a board whose floor turns every ten seconds, and two of four chests are the win."
     sizeThreshold: 10

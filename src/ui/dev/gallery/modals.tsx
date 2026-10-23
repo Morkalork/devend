@@ -142,7 +142,7 @@ export const entries: GalleryEntry[] = [
   // The pre-map Acceptance Criteria as the map's ticket: every group at once, then a plain map's.
   {
     id: "AcceptanceCriteriaModal", group: "modal",
-    render: () => <AcceptanceCriteriaModal criteria={RICH_CRITERIA} levelNumber={14} levelId="lvl-14-gatekeeper" accentColor={ACCENT} onDismiss={noop} />,
+    render: () => <AcceptanceCriteriaModal criteria={RICH_CRITERIA} levelNumber={14} levelId="lvl-14-gatekeeper" levelName="Downtime" levelPremise="The one where the room turns a quarter every ten seconds and down goes with it." accentColor={ACCENT} onDismiss={noop} />,
   },
   {
     id: "AcceptanceCriteriaModal-plain", group: "modal",
@@ -168,7 +168,7 @@ export const entries: GalleryEntry[] = [
 
   { id: "MapFailedOverlay", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-runOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
-  { id: "MapFailedOverlay-ticket", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
+  { id: "MapFailedOverlay-ticket", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" levelName="Regression Suite" levelPremise="The one where every toy in act I is back, and the win names each one." full={false} livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-ticketRunOver", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} levelNumber={9} levelId="level-9" full={false} livesLeft={0} runOver accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-full", group: "modal", render: () => <MapFailedOverlay failure={FAILURE} acceptance={FAILED_TICKET} full livesLeft={2} accentColor="#ff2244" onDismiss={noop} /> },
   { id: "MapFailedOverlay-noLines", group: "modal", render: () => <MapFailedOverlay failure={{ kind: "areaUnreachable", unmet: [] }} livesLeft={1} onDismiss={noop} /> },

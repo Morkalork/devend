@@ -1,8 +1,13 @@
 /**
  * The map's Acceptance Criteria as its ticket (UI_REDO_PLAN.md): a type
- * stripe in the band's accent, a key hashed from the map id, "Level N" with
+ * stripe in the band's accent, a key hashed from the map id, the map's NAME
+ * as the title with its premise under it ("the one where..."), "Level N" and
  * the map id as its branch, then each criterion a checklist row under its
- * group.
+ * group. A map without a name (a draft in the builder) is titled "Level N".
+ *
+ * The name and premise are what the play review of act II asked for without
+ * naming it: the maps each had an idea, and the player was never told it, so
+ * ten maps read as "fence off a percentage and lock a ball".
  *
  * Drawn twice for every map: before it, as the explainer (AcceptanceCriteria-
  * Modal), and after it as the Debrief, where the same rows come back marked.
@@ -17,11 +22,15 @@ import { criteriaSections } from "@/lib/winConditions";
 import { Appear, Icon, Label, RADIUS, ROLE, TEXT, View, tint } from "../kit/ui";
 import { rowLook, type TicketRow } from "./AcceptanceTicketModel";
 import { ticketKey } from "../screens/storeBoardModel";
+import { contentText } from "@/i18n/content";
 
 interface AcceptanceTicketProps {
   rows: TicketRow[];
   levelNumber: number;
   levelId: string;
+  /** The map's name and premise (map.yml), English; translated here by the id. */
+  levelName?: string;
+  levelPremise?: string;
   accent: number;
   width: number;
   /** Under the criteria, inside the card ("Tap anywhere to continue"). */
@@ -41,8 +50,11 @@ interface AcceptanceTicketProps {
   estimate?: string;
 }
 
-export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, footer, sayAvoided = true, filled, estimate }: AcceptanceTicketProps) {
+export function AcceptanceTicket({ rows, levelNumber, levelId, levelName, levelPremise, accent, width, footer, sayAvoided = true, filled, estimate }: AcceptanceTicketProps) {
   const { t } = useTranslation();
+  const name = levelName ? contentText.levelName(t, { id: levelId, name: levelName }) : "";
+  const premise = levelPremise ? contentText.levelPremise(t, { id: levelId, premise: levelPremise }) : "";
+  const levelWord = t("pipeline.level", { level: levelNumber });
   // Marked, a failure row's green check means it did NOT happen; the heading
   // says so, or "Failure" over a check reads as "yes, the timer ran out".
   const failsAvoided = sayAvoided && (filled == null || filled >= rows.length) && rows.some(r => r.group === "fail") && rows.every(r => r.group !== "fail" || r.met === true);
@@ -78,12 +90,15 @@ export function AcceptanceTicket({ rows, levelNumber, levelId, accent, width, fo
           )}
         </View>
 
-        {/* Title and branch. */}
+        {/* Title, premise and branch. */}
         <View layout={{ gap: 4 }}>
-          <Label text={t("pipeline.level", { level: levelNumber })} size={TEXT["2xl"]} font="display" weight="700" color={ROLE.ink} wrap />
+          <Label text={name || levelWord} size={TEXT["2xl"]} font="display" weight="700" color={ROLE.ink} wrap />
+          {premise !== "" && (
+            <Label text={premise} size={TEXT.sm} lineHeight={20} color={ROLE.muted} wrap layout={{ marginBottom: 2 }} />
+          )}
           <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Icon icon={GitBranch} size={13} color={ROLE.muted} />
-            <Label text={levelId} size={TEXT.xs} font="mono" color={ROLE.muted} />
+            <Label text={name ? `${levelWord} · ${levelId}` : levelId} size={TEXT.xs} font="mono" color={ROLE.muted} />
           </View>
         </View>
 

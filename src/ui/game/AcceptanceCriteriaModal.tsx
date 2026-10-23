@@ -21,11 +21,13 @@ interface AcceptanceCriteriaModalProps {
   criteria: Criterion[];
   levelNumber: number;
   levelId: string;
+  levelName?: string;
+  levelPremise?: string;
   accentColor?: string;
   onDismiss: () => void;
 }
 
-export function AcceptanceCriteriaModal({ criteria, levelNumber, levelId, accentColor = "#00ff88", onDismiss }: AcceptanceCriteriaModalProps) {
+export function AcceptanceCriteriaModal({ criteria, levelNumber, levelId, levelName, levelPremise, accentColor = "#00ff88", onDismiss }: AcceptanceCriteriaModalProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
 
@@ -36,7 +38,7 @@ export function AcceptanceCriteriaModal({ criteria, levelNumber, levelId, accent
         <Pressable onTap={onDismiss} pressedAlpha={1} label="criteria-dismiss"
           layout={{ width: screen.width, height: screen.height, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: tint(0x000000, 0.75) }}>
           <Appear fromY={12} duration={0.25}>
-            <AcceptanceTicket rows={criteria} levelNumber={levelNumber} levelId={levelId}
+            <AcceptanceTicket rows={criteria} levelNumber={levelNumber} levelId={levelId} levelName={levelName} levelPremise={levelPremise}
               accent={hex(accentColor)} width={tutorialCardWidth(screen.width)}
               footer={<Label text={t("tutorialOverlay.tapToContinue")} size={TEXT.xs} color={ROLE.muted} layout={{ marginTop: 4 }} />} />
           </Appear>

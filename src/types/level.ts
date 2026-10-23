@@ -358,9 +358,17 @@ export type LevelMoverEntity  = MoverRectEntity | MoverCircleEntity;
 export interface LevelConfig {
   id: string;
   /**
-   * What this map is ABOUT, in one sentence: "the one where...". For the
-   * designer, never shown to a player, so it is plain English in map.yml and
-   * not a locale string.
+   * The map's name, as its ticket's title ("Downtime", "On Call"): a dev-team
+   * word for what the map is about. English source text in map.yml, translated
+   * under `content.levels.<id>.name` (i18n/content.ts).
+   */
+  name?: string;
+  /**
+   * What this map is ABOUT, in one sentence: "the one where...". Written for
+   * the designer, and since the act II review shown to the player too, as the
+   * summary under the ticket's title: a map whose idea the player was never
+   * told read as "fence off a percentage and lock a ball". English source text
+   * in map.yml, translated under `content.levels.<id>.premise`.
    *
    * A premise is written before anything is placed, and a map that cannot
    * state one does not have one yet. That is the whole reason for the field:

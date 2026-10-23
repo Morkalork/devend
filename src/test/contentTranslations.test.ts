@@ -69,6 +69,7 @@ function sources(): Source[] {
       kind: "offers", items: [...offers.boons, ...offers.specialisations, ...offers.gambles],
       fields: f("name", "description", "priceText"),
     },
+    { kind: "levels", items: levels, fields: f("name", "premise") },
     // Bosses are keyed on their level's id (GameScreen passes level.id).
     { kind: "bosses", items: bossLevels.map(l => ({ ...(l.boss as Item), id: l.id })), fields: f("name", "intro") },
   ];

@@ -95,6 +95,10 @@ export const contentText = {
   bugDesc: (t: TFunction, b: WithId & { description?: string }) => field(t, 'bugs', b.id, 'description', b.description),
   bugCost: (t: TFunction, b: WithId & { cost?: string }) => field(t, 'bugs', b.id, 'cost', b.cost),
 
+  /** A map (map.yml): its ticket's title and the one-sentence premise under it. */
+  levelName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'levels', l.id, 'name', l.name),
+  levelPremise: (t: TFunction, l: WithId & { premise?: string }) => field(t, 'levels', l.id, 'premise', l.premise),
+
   /** Boss (map.yml boss block, issue #56): keyed on the level id. */
   bossName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bosses', b.id, 'name', b.name),
   bossIntro: (t: TFunction, b: WithId & { intro?: string }) => field(t, 'bosses', b.id, 'intro', b.intro),

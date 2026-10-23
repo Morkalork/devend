@@ -630,6 +630,9 @@ export interface AcceptanceRow {
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
+  /** The map's name and premise (LevelConfig), for the Debrief's ticket. */
+  levelName?: string;
+  levelPremise?: string;
   cutCount: number;
   expectedCuts: number;
   basePoints: number;

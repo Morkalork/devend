@@ -37,6 +37,8 @@ interface Props {
   acceptance?: AcceptanceRow[];
   levelNumber?: number;
   levelId?: string;
+  levelName?: string;
+  levelPremise?: string;
   /** Force the "still needed" lines (true) or the ticket (false); default: Admin's choice. */
   full?: boolean;
   /** Lives left after this one was docked, so the stakes are stated too. */
@@ -54,7 +56,7 @@ interface Props {
 }
 
 export function MapFailedOverlay({
-  failure, acceptance, levelNumber = 0, levelId = "", full, livesLeft, runOver = false, accentColor = '#ff2244', onDismiss,
+  failure, acceptance, levelNumber = 0, levelId = "", levelName, levelPremise, full, livesLeft, runOver = false, accentColor = '#ff2244', onDismiss,
 }: Props) {
   const { t } = useTranslation();
   const screen = useUiScreen();
@@ -99,7 +101,7 @@ export function MapFailedOverlay({
                 letterSpacing={(rows ? TEXT.xl : TEXT["2xl"]) * 0.1} color={accent} glow={22} align="center" wrap />
 
               {rows && (
-                <AcceptanceTicket rows={rows} levelNumber={levelNumber} levelId={levelId} accent={accent}
+                <AcceptanceTicket rows={rows} levelNumber={levelNumber} levelId={levelId} levelName={levelName} levelPremise={levelPremise} accent={accent}
                   width={cardWidth} sayAvoided={false} filled={fill.filled} />
               )}
 

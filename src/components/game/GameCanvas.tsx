@@ -2218,7 +2218,7 @@ export function GameCanvas({
     setTimeout(() => {
       const deliver = () => {
         deliverLevelCompleteRef.current?.({
-          levelNumber, levelId: level.id, cutCount: game.wallCount,
+          levelNumber, levelId: level.id, levelName: level.name, levelPremise: level.premise, cutCount: game.wallCount,
           // Who drew what, for a pair. Counted off the fences themselves so
           // it cannot drift from the board; undefined solo, which hides the
           // row rather than showing everything under one name.

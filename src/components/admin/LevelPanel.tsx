@@ -119,7 +119,24 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
 
           <PocketReadout level={level} />
 
-          {/* The map's idea in one sentence, for the designer only. Blank is
+          {/* The ticket's title. */}
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Name (the ticket's title)</span>
+            <input
+              type="text"
+              value={level.name ?? ''}
+              maxLength={40}
+              onChange={(e) => {
+                const next = { ...level };
+                if (e.target.value.trim() === '') delete next.name;
+                else next.name = e.target.value;
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+            />
+          </label>
+
+          {/* The map's idea in one sentence, shown under the ticket's title. Blank is
               allowed while a map is being drafted; the ladder lint refuses a
               shipped map without one (mapPremise.test.ts). */}
           <label className="space-y-1 col-span-2">

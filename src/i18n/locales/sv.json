@@ -2207,6 +2207,84 @@
         "name": "Release-deadline",
         "intro": "Din första boss. Release Candidate är lös: en stor, snabb boll, med scope creep på full gas från första sekunden. Att rensa brädet räcker inte: stängsla in den i det ljusa syntaxområdet (uppe till höger) för att leverera den. Fångar du den någon annanstans förlorar du ett liv. Slå deadlinen."
       }
+    },
+    "levels": {
+      "level-1": {
+        "name": "Hello World",
+        "premise": "Den där du vinner direkt genom att låsa in den enda bollen, så hörnvrån är en knapp märkt klart nu."
+      },
+      "level-2": {
+        "name": "Pull Request",
+        "premise": "Den där dörröppningen håller isär två bollar, och vinsten vill ha en inlåst på var sin sida om den."
+      },
+      "level-3": {
+        "name": "Definition of Done",
+        "premise": "Den där den ljusa syntaxrutan är vinsten: rensa brädet och lås in en boll inuti den."
+      },
+      "level-4": {
+        "name": "Code Owner",
+        "premise": "Den där en vakt patrullerar framför lådans dörr, så att stänga lådan blir en fråga om när."
+      },
+      "level-5": {
+        "name": "Flaky test",
+        "premise": "Den där en enda beröring öppnar en lucka i en kort kolumn av skärvor, och inget annat är nytt."
+      },
+      "level-6": {
+        "name": "Refactor",
+        "premise": "Den där varje rums bästa fickor är murade med skärvor som du måste krossa."
+      },
+      "level-7": {
+        "name": "Easter Egg",
+        "premise": "Den där kistan är värd att krossa, och den bättre av de två står bakom patrullen."
+      },
+      "level-8": {
+        "name": "Svart låda",
+        "premise": "Den där bara en boll i ridåns rum kan öppna lådan, och en skjutdörr avgör vem som kommer in."
+      },
+      "level-9": {
+        "name": "Regressionssvit",
+        "premise": "Den där allt akt I lärde dig ingår i vinsten på en gång: lådan, skärvorna och en monolit."
+      },
+      "level-10": {
+        "name": "Release-deadline",
+        "premise": "Den där release candidate måste stängslas in i syntaxrutan innan den skeppas."
+      },
+      "level-11": {
+        "name": "Kickoff",
+        "premise": "Den där skottet sätter hela banans fart innan ett enda staket finns, och två stötfångare låter dig växla ner den igen."
+      },
+      "level-12": {
+        "name": "Velocity",
+        "premise": "Den där stötfångarna betalar för att bromsa din fart tills deras bank sinar, och sedan börjar kasta bollarna snabbare."
+      },
+      "level-13": {
+        "name": "Code Review",
+        "premise": "Den där lådan står där inget rakt staket kan stänga den, och spegeln böjer ditt snitt runt den."
+      },
+      "level-14": {
+        "name": "Driftstopp",
+        "premise": "Den där rummet vrids ett kvarts varv var tionde sekund, och nedåt följer med."
+      },
+      "level-15": {
+        "name": "Standup",
+        "premise": "Den där en gravitationsbrunn släpper bollar ner i koppen som vinsten kräver, om du stänger locket i tid."
+      },
+      "level-16": {
+        "name": "Tech Debt",
+        "premise": "Den där pelarna i avdelaren försvinner i en cykel, och vinsten vill ha en boll inlåst på var sida."
+      },
+      "level-17": {
+        "name": "Deprecation",
+        "premise": "Den där bollarna är din hammare, och skärvväggen öppnas där de träffar den."
+      },
+      "level-18": {
+        "name": "On Call",
+        "premise": "Den där en väderkvarn snurrar i rummet som betalar tredubbelt, och varje snitt genom det är en satsning på armen."
+      },
+      "level-19": {
+        "name": "Hotfix",
+        "premise": "Den där fyra patrullbommar sveper över ett bräde vars golv vrids var tionde sekund, och två av fyra kistor är vinsten."
+      }
     }
   },
   "features": {

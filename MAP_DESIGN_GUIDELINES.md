@@ -824,6 +824,16 @@ ground is the expensive ground.
 
 **Bot sweep, 8 seeds: 7 wins**, average 22 cuts against par 8.
 
+**A split lock was tried here and taken back** (act II review, "fence off a
+percentage and lock a ball"): `splitLocks: 1, axis: horizontal`, one ball
+high and one low under the pull. It sweeps 5 of 8 against 8 of 8, and four
+pinned tests hold this map at `locks: 1` on purpose (`botBanksTheWin`: a
+prompted map is won on every seed; `splitLockWin`: the clause is spent across
+the ladder, not twice in three maps; `level14`: a map with nothing operable
+asks only what it honestly can). What the review was asking for turned out to
+be the map's IDEA, which the player was never told: the premise is now the
+ticket's summary (AcceptanceTicket).
+
 **These rows describe the maps that shipped BEFORE the rebuild.** They used to describe
 a plan - mirror at 11, WIP limit at 13, portal at 14, launcher at 16 - and the
 act was built to a different order. Both tables read as authoritative and

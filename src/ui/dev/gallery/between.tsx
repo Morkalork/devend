@@ -31,7 +31,7 @@ const certs: Certificate[] = [
 
 /** A map that paid well and pushed every row of the breakdown onto the card. */
 const fullScore: LevelScoreData = {
-  levelNumber: 10, levelId: "lvl-10-pipeline", cutCount: 5, expectedCuts: 6, basePoints: 20, levelScore: 96, remainingPercent: 18,
+  levelNumber: 10, levelId: "lvl-10-pipeline", levelName: "Release Deadline", levelPremise: "The one where the release candidate has to be fenced into the syntax box before it ships.", cutCount: 5, expectedCuts: 6, basePoints: 20, levelScore: 96, remainingPercent: 18,
   multipliedBase: 22, mapCeiling: 110, performanceMultiplier: 1, fencesUnderPar: 1, underParBonus: 4, extraPercent: 0.12, spaceBonus: 6, spaceBonusRaw: 6,
   axes: {
     delivery: 18, craft: 14, tempo: 6, thrift: 4, greed: 6, engagement: 5, total: 53,

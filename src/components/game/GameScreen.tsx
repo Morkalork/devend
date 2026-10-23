@@ -1258,6 +1258,8 @@ export function GameScreen({
                 criteria={active.criteria}
                 levelNumber={levelNumber}
                 levelId={level.id}
+                levelName={level.name}
+                levelPremise={level.premise}
                 accentColor={active.accentColor}
                 onDismiss={active.onDismiss}
               />
@@ -1319,6 +1321,8 @@ export function GameScreen({
                     acceptance={ticketRows(runEndingLoss.failure.criteriaMet)}
                     levelNumber={levelNumber}
                     levelId={level.id}
+                    levelName={level.name}
+                    levelPremise={level.premise}
                     livesLeft={0}
                     runOver
                     accentColor={accentColor}
@@ -1330,6 +1334,8 @@ export function GameScreen({
                     acceptance={ticketRows(mapFailure.criteriaMet)}
                     levelNumber={levelNumber}
                     levelId={level.id}
+                    levelName={level.name}
+                    levelPremise={level.premise}
                     livesLeft={lives}
                     accentColor={accentColor}
                     onDismiss={dismissMapFailure}
