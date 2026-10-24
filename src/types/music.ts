@@ -1,6 +1,6 @@
 /** One entry in the music catalogue (public/music.yml). */
 export interface MusicTrack {
-  /** File name under public/assets/music, e.g. "maps_1-5.mp3". */
+  /** File name under public/assets/music, e.g. "maps_1-5.ogg". */
   file: string;
   /** Served path, derived: "/assets/music/<file>". */
   src: string;

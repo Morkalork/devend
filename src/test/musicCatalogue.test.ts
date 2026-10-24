@@ -15,7 +15,7 @@ import sv from "@/i18n/locales/sv.json";
 const MUSIC_DIR = resolve(__dirname, "../../public/assets/music");
 const doc = yaml.load(readFileSync(resolve(__dirname, "../../public/music.yml"), "utf8")) as Record<string, unknown>;
 const catalogue = parseMusicDoc(doc);
-const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => f.endsWith(".mp3")).sort();
+const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => f.endsWith(".ogg")).sort();
 
 /**
  * The one track whose provenance was never written down (MUSIC.md jumps from
@@ -23,10 +23,10 @@ const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => f.endsWith(".mp3")).sor
  * hidden or guessed at. This list may SHRINK, never grow: a second undocumented
  * track means somebody added music without recording where it came from.
  */
-const CREDIT_MISSING = ["maps_36-40.mp3"];
+const CREDIT_MISSING = ["maps_36-40.ogg"];
 
 describe("music catalogue", () => {
-  it("lists every mp3 that ships, and only those", () => {
+  it("lists every track that ships, and only those", () => {
     expect(catalogue.tracks.map((t) => t.file).sort()).toEqual(filesOnDisk);
   });
 
@@ -64,7 +64,7 @@ describe("music catalogue", () => {
       // so a row cannot claim a range the player will never hear it in.
       expect(band.bandFrom).toBe(expected);
       expect(band.bandTo).toBe(expected + 4);
-      expect(band.file).toBe(`maps_${band.bandFrom}-${band.bandTo}.mp3`);
+      expect(band.file).toBe(`maps_${band.bandFrom}-${band.bandTo}.ogg`);
       expected += 5;
     }
     expect(catalogue.tracks.filter((t) => t.usedFor === "menu")).toHaveLength(1);

@@ -184,5 +184,22 @@ export default defineConfig(({ mode }) => {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // The libraries the whole game stands on, in chunks of their own. They
+        // change only when a dependency is bumped, while the main chunk changes
+        // on every deploy, so a returning web player downloads one of the
+        // two; and a smaller main chunk is parsed sooner on a phone.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/node_modules\/(pixi\.js|@pixi\/|yoga-layout|earcut)/.test(id)) return "pixi";
+          if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run)\//.test(id)) return "react";
+          if (/node_modules\/(i18next|react-i18next)\//.test(id)) return "i18n";
+          return undefined;
+        },
+      },
+    },
+  },
   };
 });

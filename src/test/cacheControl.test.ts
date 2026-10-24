@@ -10,7 +10,7 @@ describe("cache lifetimes", () => {
   });
 
   it("keeps fixed-name music and fonts for a day, so a replaced file reaches players", () => {
-    for (const f of ["/app/dist/assets/music/maps_16-20.mp3", "/app/dist/assets/music/main.mp3", "/app/dist/assets/fonts/Michroma-Regular.woff2", "/app/dist/assets/fonts/NotoSansBengali-400.woff2"]) {
+    for (const f of ["/app/dist/assets/music/maps_16-20.ogg", "/app/dist/assets/music/main.ogg", "/app/dist/assets/fonts/Michroma-Regular.woff2", "/app/dist/assets/fonts/NotoSansBengali-400.woff2"]) {
       expect(cacheControlFor(f)).toBe("public, max-age=86400");
     }
   });

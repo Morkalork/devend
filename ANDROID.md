@@ -58,6 +58,22 @@ since that file is committed and the path is per-developer.)
 `android/local.properties` (gitignored) must contain the SDK path, e.g.
 `sdk.dir=C:/Users/<you>/AppData/Local/Android/Sdk`.
 
+## What the APK weighs, and why
+
+Everything in `dist/` ships inside the APK (`webDir: dist`), so a build's size
+is the install's size. Measured after the perf pass of 2026-10-24:
+
+| | before | after |
+|---|---|---|
+| music (`public/assets/music`) | 24 MB of 128 kbps MP3 | 13 MB of 64 kbps Ogg Opus |
+| JavaScript, main chunk | 1.8 MB (574 KB gzipped) | 0.9 MB, with pixi (0.9 MB) and react (0.2 MB) in chunks of their own |
+| `dist/` in all | 29 MB | 18 MB |
+
+The music is the one that matters for the install; the chunking matters for
+the web build's caching and for how soon the first screen is parsed. Keep new
+music in Opus (`public/assets/music/MUSIC.md` has the ffmpeg line) and keep
+anything that is not needed before the first frame behind a dynamic import.
+
 ## Everyday workflow
 
 After any change to the web app:

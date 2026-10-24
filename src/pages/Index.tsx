@@ -90,7 +90,7 @@ const PairLobby = lazy(() => import('@/ui/screens/PairLobby').then(m => ({ defau
 const PairDecision = lazy(() => import('@/ui/screens/PairDecision').then(m => ({ default: m.PairDecision })));
 const NearbyDiagnosticsPanel = lazy(() => import('@/components/admin/NearbyDiagnosticsPanel').then(m => ({ default: m.NearbyDiagnosticsPanel })));
 
-// Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
+// Top-level menu screens that play the shared main.ogg loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
 // intentionally left out so the current band track keeps playing through them.
 const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'offers', 'hallOfFame']);

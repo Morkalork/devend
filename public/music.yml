@@ -15,14 +15,14 @@ license:
   url: https://pixabay.com/service/license-summary/
 
 tracks:
-  - file: main.mp3
+  - file: main.ogg
     title: 80's Energy
     artist: Playasound
     source: Pixabay
     url: https://pixabay.com/music/synthwave-80s-energy-176577/
     usedFor: menu
 
-  - file: maps_1-5.mp3
+  - file: maps_1-5.ogg
     title: 80s Retrowave Synthwave Retro Synthpop
     artist: REDproductions
     source: Pixabay
@@ -31,7 +31,7 @@ tracks:
     bandFrom: 1
     bandTo: 5
 
-  - file: maps_6-10.mp3
+  - file: maps_6-10.ogg
     title: Neon Odyssey
     artist: Grand Project
     source: Pixabay
@@ -40,7 +40,7 @@ tracks:
     bandFrom: 6
     bandTo: 10
 
-  - file: maps_11-15.mp3
+  - file: maps_11-15.ogg
     title: Lady of the 80's
     artist: Grand Project
     source: Pixabay
@@ -49,7 +49,7 @@ tracks:
     bandFrom: 11
     bandTo: 15
 
-  - file: maps_16-20.mp3
+  - file: maps_16-20.ogg
     title: Machiavellian Nightmare
     artist: melodyayresgriffiths
     source: Pixabay
@@ -58,7 +58,7 @@ tracks:
     bandFrom: 16
     bandTo: 20
 
-  - file: maps_21-25.mp3
+  - file: maps_21-25.ogg
     title: No Copyright Cyberpunk
     artist: HumanStudioEDM
     source: Pixabay
@@ -67,7 +67,7 @@ tracks:
     bandFrom: 21
     bandTo: 25
 
-  - file: maps_26-30.mp3
+  - file: maps_26-30.ogg
     title: Cyberpunk Futuristic Music
     artist: Poradovskyi
     source: Pixabay
@@ -76,7 +76,7 @@ tracks:
     bandFrom: 26
     bandTo: 30
 
-  - file: maps_31-35.mp3
+  - file: maps_31-35.ogg
     title: Cyber Sport
     artist: MiroMaxMusic
     source: Pixabay
@@ -91,14 +91,14 @@ tracks:
   # omitted deliberately - the screen renders "Artist not recorded" for it, and
   # `src/test/musicCatalogue.test.ts` allows exactly this one file to be missing
   # its credit, so a second undocumented track fails the build.
-  - file: maps_36-40.mp3
+  - file: maps_36-40.ogg
     title: Unknown
     source: Pixabay
     usedFor: band
     bandFrom: 36
     bandTo: 40
 
-  - file: end-credits.mp3
+  - file: end-credits.ogg
     title: Fun 8-Bit Video Game Music
     artist: Keyframe Audio
     source: Pixabay

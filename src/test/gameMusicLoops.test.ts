@@ -48,7 +48,7 @@ class FakeAudio {
     }
     this.currentTime = t;
   }
-  isMain() { return this._src.includes("main.mp3"); }
+  isMain() { return this._src.includes("main.ogg"); }
 }
 
 async function loadMusic() {

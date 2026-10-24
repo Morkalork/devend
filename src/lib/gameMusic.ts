@@ -3,9 +3,9 @@
 // Two looping <audio> elements (module singletons, so they survive the per-round
 // GameScreen remount and keep playing). Track selection is driven by the current
 // level: a shared "main" loop plus one track per 5-level band (levels 1-5 ->
-// maps_1-5.mp3, 6-10 -> maps_6-10.mp3, ...). Switching crossfades between the two
+// maps_1-5.ogg, 6-10 -> maps_6-10.ogg, ...). Switching crossfades between the two
 // elements so track changes are smooth, not abrupt. A missing/broken band track
-// falls back to main.mp3.
+// falls back to main.ogg.
 //
 // LOOPING IS IN TWO LAYERS, and the order matters. Each element has native
 // `loop` set, which is the floor and cannot fail. On top of that, a timeupdate
@@ -21,10 +21,10 @@
 import { isAudioMuted } from "@/lib/gameAudio";
 
 const MUSIC_DIR = "/assets/music";
-const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
+const MAIN_TRACK = `${MUSIC_DIR}/main.ogg`;
 // ~25ms of 8-bit silence. Used to prime (unlock) the idle crossfade element on
 // the first gesture WITHOUT loading a real track: priming with the actual
-// main.mp3 made a second element fetch the same file concurrently with the
+// main.ogg made a second element fetch the same file concurrently with the
 // audible one, which silenced playback on that first tap.
 const SILENT_AUDIO =
   "data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YcgAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
@@ -32,13 +32,13 @@ const DEFAULT_VOLUME = 0.2; // default music level; user-adjustable in Options
 const LEVELS_PER_BAND = 5;
 let crossfadeMs = 900; // default; overridden from game-config.yml via setCrossfadeMs
 
-/** Path of the band track for a level (levels 1-5 -> maps_1-5.mp3, etc.). */
+/** Path of the band track for a level (levels 1-5 -> maps_1-5.ogg, etc.). */
 export function musicFileForLevel(levelNumber: number): string {
   const level = Math.max(1, Math.floor(levelNumber) || 1);
   const band = Math.floor((level - 1) / LEVELS_PER_BAND);
   const lo = band * LEVELS_PER_BAND + 1;
   const hi = lo + LEVELS_PER_BAND - 1;
-  return `${MUSIC_DIR}/maps_${lo}-${hi}.mp3`;
+  return `${MUSIC_DIR}/maps_${lo}-${hi}.ogg`;
 }
 
 /** Band key for a level, used to avoid restarting music within the same band. */
@@ -189,7 +189,7 @@ function fadeTo(a: HTMLAudioElement, target: number, durationMs: number, gen: nu
 /**
  * Crossfade to `src` (logical `key`). No-op if that track is already current, so
  * calling it every level only switches at band boundaries. When `withFallback`,
- * a load error swaps the incoming element to main.mp3 without changing the key
+ * a load error swaps the incoming element to main.ogg without changing the key
  * (so a missing band file isn't re-attempted on every level in the band).
  */
 function switchTo(src: string, key: string, withFallback: boolean): void {
@@ -301,7 +301,7 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
  * Play the track for the given level. Idempotent within a band, so calling it
  * every level (including across GameScreen remounts) crossfades only at band
  * boundaries and runs continuously through a 5-level stretch. Missing/broken band
- * files fall back to main.mp3.
+ * files fall back to main.ogg.
  */
 export function playMusicForLevel(levelNumber: number): void {
   switchTo(musicFileForLevel(levelNumber), bandKey(levelNumber), true);

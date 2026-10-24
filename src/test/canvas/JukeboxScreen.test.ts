@@ -18,16 +18,16 @@ const catalogue: MusicCatalogue = {
   license: { name: "Pixabay Content License", url: "https://pixabay.com/service/license-summary/" },
   tracks: [
     {
-      file: "main.mp3", src: "/assets/music/main.mp3", title: "80's Energy",
+      file: "main.ogg", src: "/assets/music/main.ogg", title: "80's Energy",
       artist: "Playasound", source: "Pixabay", url: "https://pixabay.com/music/x-1/", usedFor: "menu",
     },
     {
-      file: "maps_1-5.mp3", src: "/assets/music/maps_1-5.mp3", title: "Retrowave",
+      file: "maps_1-5.ogg", src: "/assets/music/maps_1-5.ogg", title: "Retrowave",
       artist: "REDproductions", source: "Pixabay", url: "https://pixabay.com/music/x-2/",
       usedFor: "band", bandFrom: 1, bandTo: 5,
     },
     {
-      file: "maps_36-40.mp3", src: "/assets/music/maps_36-40.mp3", title: "Unknown",
+      file: "maps_36-40.ogg", src: "/assets/music/maps_36-40.ogg", title: "Unknown",
       source: "Pixabay", usedFor: "band", bandFrom: 36, bandTo: 40,
     },
   ],
@@ -87,7 +87,7 @@ describe("playback", () => {
     const { result } = renderHook(() => useJukeboxPlayer());
     act(() => result.current.toggle(retro.file, retro.src));
     expect(played).toHaveLength(1);
-    expect(played[0]).toContain("/assets/music/maps_1-5.mp3");
+    expect(played[0]).toContain("/assets/music/maps_1-5.ogg");
     expect(result.current.playing).toBe(retro.file);
   });
 
@@ -104,7 +104,7 @@ describe("playback", () => {
     act(() => result.current.toggle(retro.file, retro.src));
     act(() => result.current.toggle(energy.file, energy.src));
     expect(played).toHaveLength(2);
-    expect(played[1]).toContain("/assets/music/main.mp3");
+    expect(played[1]).toContain("/assets/music/main.ogg");
     expect(paused).toBeGreaterThan(0);
   });
 

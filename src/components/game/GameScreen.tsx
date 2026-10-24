@@ -271,7 +271,7 @@ export function GameScreen({
 
   // Background music, selected by 5-level band. Idempotent within a band, so it
   // plays continuously across levels and the per-round remount, switching only at
-  // band boundaries. A missing band track falls back to main.mp3 (see gameMusic).
+  // band boundaries. A missing band track falls back to main.ogg (see gameMusic).
   useEffect(() => {
     playMusicForLevel(levelNumber);
   }, [levelNumber]);
