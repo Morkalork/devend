@@ -1408,7 +1408,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 >
                   <span className="text-xs font-semibold text-left" style={{ color: staticBg ? accent : 'hsl(var(--foreground))' }}>
                     Freeze background
-                    <span className="block text-[10px] font-normal opacity-60">Persists; watch "other" in the perf HUD</span>
+                    <span className="block text-[10px] font-normal opacity-60">Default on for touch devices. Persists; watch "bg" and "other" in the perf HUD</span>
                   </span>
                   <span
                     className="relative inline-flex items-center rounded-full transition-colors flex-shrink-0"

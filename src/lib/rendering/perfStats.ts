@@ -390,10 +390,26 @@ export function resetPerfHudCache(): void {
 export const STATIC_BG_KEY = "devend:staticBg";
 let _staticBg: boolean | null = null;
 
+/**
+ * Default: frozen on a touch device, live on a desktop. During play a phone
+ * was compositing three or four full-screen layers under the board: the CRT
+ * text scrolling with a text-shadow and a blur filter, the memory parallax
+ * canvas cleared and redrawn every frame, and the translucent GL board over
+ * both. A desktop composites that for free; a phone pays for it every frame,
+ * and it is the one cost the quality tiers cannot touch. The setting is
+ * stored explicitly ("1"/"0") so a tester can turn it either way on either
+ * kind of device.
+ */
+export function staticBgDefault(coarsePointer: boolean): boolean {
+  return coarsePointer;
+}
+
 export function isStaticBgEnabled(): boolean {
   if (_staticBg === null) {
     try {
-      _staticBg = typeof localStorage !== "undefined" && localStorage.getItem(STATIC_BG_KEY) === "1";
+      const v = typeof localStorage !== "undefined" ? localStorage.getItem(STATIC_BG_KEY) : null;
+      _staticBg = v === "1" ? true : v === "0" ? false
+        : staticBgDefault(typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
     } catch {
       _staticBg = false;
     }
@@ -404,8 +420,7 @@ export function isStaticBgEnabled(): boolean {
 export function setStaticBgEnabled(on: boolean): void {
   _staticBg = on;
   try {
-    if (on) localStorage.setItem(STATIC_BG_KEY, "1");
-    else localStorage.removeItem(STATIC_BG_KEY);
+    localStorage.setItem(STATIC_BG_KEY, on ? "1" : "0");
   } catch {
     /* blocked storage */
   }

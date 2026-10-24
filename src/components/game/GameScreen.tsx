@@ -894,8 +894,10 @@ export function GameScreen({
       {/* CRT Terminal Background */}
       <CRTBackground accentColor={accentColor} paused={mapComplete || staticBg} />
 
-      {/* Memory Parallax Layer - between CRT and game */}
-      <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
+      {/* Memory Parallax Layer - between CRT and game. Not mounted at all on a
+          frozen background: unmounted, its tick ref stays null and the game
+          loop skips the bg step, so a phone draws one background, not three. */}
+      {!staticBg && <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />}
 
       <div ref={paneRef} className="absolute inset-0 flex flex-col z-10">
         <div style={{ height: topHeight, flexShrink: 0 }} />
