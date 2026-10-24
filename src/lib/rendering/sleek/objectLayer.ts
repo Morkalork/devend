@@ -22,6 +22,7 @@ import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
+import { transformKey } from "./transformKey";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import type { ImpactDent } from "@/types/game";
 import { getBug } from "@/lib/bugs";
@@ -128,10 +129,48 @@ export class ObjectLayer {
   /** This map's blast radii, world units; null where that kind does not blast. */
   private shardReach: number | null = null;
   private boxReach: number | null = null;
+  /**
+   * The KEPT drawing (see entityLayer for the reasoning): on a quiet board
+   * every breakable, mirror and settled pillar is tessellated once and kept
+   * until its state changes. A board is quiet when nothing on it animates:
+   * no live dent, no carrier breathing, no exposed bomb blinking, no pillar
+   * fading. Then the whole layer is drawn live, as it always was.
+   */
+  private keptReach = new Graphics();
+  private keptBodies = new Graphics();
+  private keptRims = new Graphics();
+  private keptShadows: { pts: Pt[]; alpha: number }[] = [];
+  private keptKey = "";
+  private recordShadows = false;
 
   constructor() {
     // No shadow child: cast shadows go to the shared floor plane.
-    this.container.addChild(this.reach, this.bodies, this.rims);
+    this.container.addChild(this.keptReach, this.reach, this.keptBodies, this.bodies, this.keptRims, this.rims);
+  }
+
+  /** True while something in this layer changes shape or colour every frame. */
+  private animating(game: CanvasGameState): boolean {
+    if (anyObstacleImpactsActive()) return true;
+    for (const d of game.destructibles) {
+      if (!d.destroyed && (d.bug || d.bombExposed)) return true;
+    }
+    for (const p of game.phasingObjects ?? []) {
+      if (p.alpha > 0.02 && p.alpha < 0.98) return true;
+    }
+    return false;
+  }
+
+  private keptKeyFor(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): string {
+    let state = "";
+    for (const d of game.destructibles) {
+      state += `${d.id}:${d.hits}:${d.destroyed ? 1 : 0}:${d.dents?.length ?? 0},`;
+    }
+    for (const p of game.phasingObjects ?? []) {
+      state += `p${p.phase}:${p.alpha > 0.5 ? 1 : 0},`;
+    }
+    return `${transformKey(w2s)}|${Math.round(scale * 10000)}`
+      + `|${Math.round(light.x / 2)},${Math.round(light.y / 2)}|${Math.round(light.level * 20)}|${Math.round(light.reach)}`
+      + `|${game.mirrorPolygons.length}|${this.shardReach}|${this.boxReach}|${state}`;
   }
 
   sync(
@@ -142,12 +181,58 @@ export class ObjectLayer {
     scale: number,
   ): void {
     this.shadows = shadows;
-    this.bodies.clear();
-    this.rims.clear();
-    this.reach.clear();
     this.shardReach = game.shardBombBlast?.radius ?? null;
     this.boxReach = game.boxBombBlast?.radius ?? null;
 
+    if (this.animating(game)) {
+      // Live: the kept drawing is emptied so nothing is drawn twice.
+      if (this.keptKey !== "") {
+        this.keptKey = "";
+        this.keptReach.clear();
+        this.keptBodies.clear();
+        this.keptRims.clear();
+        this.keptShadows = [];
+      }
+      this.bodies.clear();
+      this.rims.clear();
+      this.reach.clear();
+      this.drawAll(game, light, w2s, scale);
+      return;
+    }
+
+    if (this.bodies.context.instructions.length > 0) {
+      this.bodies.clear();
+      this.rims.clear();
+      this.reach.clear();
+    }
+    const key = this.keptKeyFor(game, light, w2s, scale);
+    if (key !== this.keptKey) {
+      this.keptKey = key;
+      const live = { reach: this.reach, bodies: this.bodies, rims: this.rims };
+      this.reach = this.keptReach;
+      this.bodies = this.keptBodies;
+      this.rims = this.keptRims;
+      this.reach.clear();
+      this.bodies.clear();
+      this.rims.clear();
+      this.keptShadows = [];
+      this.recordShadows = true;
+      try {
+        this.drawAll(game, light, w2s, scale);
+      } finally {
+        this.recordShadows = false;
+        this.reach = live.reach;
+        this.bodies = live.bodies;
+        this.rims = live.rims;
+      }
+    }
+    for (const sh of this.keptShadows) {
+      this.shadows.poly(sh.pts).fill({ color: PALETTE.shadow, alpha: sh.alpha });
+    }
+  }
+
+  /** Every object this layer owns, into whichever Graphics are current. */
+  private drawAll(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
     const phasingPolys = new Set((game.phasingObjects ?? []).map(p => p.polygon));
 
     for (const d of game.destructibles) {
@@ -324,21 +409,26 @@ export class ObjectLayer {
     const cast = shadowFor(light, cx, cy, slabHeight(scale));
     const ox = cast.dx * cast.length;
     const oy = cast.dy * cast.length;
-    this.shadows
-      .poly(pts.map(p => ({ x: p.x + ox, y: p.y + oy })))
-      .fill({ color: PALETTE.shadow, alpha: cast.alpha * alphaScale });
+    this.shadowPoly(pts.map(p => ({ x: p.x + ox, y: p.y + oy })), cast.alpha * alphaScale);
 
     // Contact band: short, dense, hard against the body. Balls, movers and
     // props have had this from the start and it is what stops an object looking
     // like it hovers; the slabs never got it, which is most of why they read as
     // painted on rather than standing up.
     const contact = contactFor(light, cx, cy, slabHeight(scale));
-    this.shadows
-      .poly(pts.map(p => ({
-        x: p.x + contact.dx * contact.length,
-        y: p.y + contact.dy * contact.length,
-      })))
-      .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.5 * alphaScale });
+    this.shadowPoly(pts.map(p => ({
+      x: p.x + contact.dx * contact.length,
+      y: p.y + contact.dy * contact.length,
+    })), contact.alpha * 0.5 * alphaScale);
+  }
+
+  /** Onto the floor plane now, or into the kept list to replay each frame. */
+  private shadowPoly(pts: Pt[], alpha: number): void {
+    if (this.recordShadows) {
+      this.keptShadows.push({ pts, alpha });
+    } else {
+      this.shadows.poly(pts).fill({ color: PALETTE.shadow, alpha });
+    }
   }
 
   /**

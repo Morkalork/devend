@@ -24,6 +24,7 @@ import type { PortalSpec } from "@/lib/physics/portal";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
+import { transformKey } from "./transformKey";
 import { dashedLine } from "./dashedLine";
 import { BEARING_VECTOR, type ObstacleRule } from "@/lib/physics/obstacleRules";
 import { getBallType } from "@/lib/ballTypes";
@@ -100,6 +101,12 @@ function dentedContour(vertices: Vector2[], w2s: W2S): Pt[] {
   return out;
 }
 
+/** A static slab's shadow, recorded once and replayed into the floor plane each frame. */
+interface KeptShadow {
+  pts: Pt[];
+  alpha: number;
+}
+
 export class EntityLayer {
   readonly container = new Container();
 
@@ -109,10 +116,59 @@ export class EntityLayer {
   private rails = new Graphics();
   private bodies = new Graphics();
   private rims = new Graphics();
+  /**
+   * The KEPT drawing: the static furniture (slabs, pass cues, portals, rails),
+   * tessellated once and redrawn only when something it depends on changes
+   * (keptKeyFor). Everything that moves or animates (movers, grips, bouncer
+   * flares, deformables, a shell letting go) is drawn live into the Graphics
+   * above, every frame, as before. Clearing and rebuilding every slab every
+   * frame was CPU tessellation plus a GPU buffer upload for a board that had
+   * not changed, which on a phone is the frame budget.
+   */
+  private keptRails = new Graphics();
+  private keptBodies = new Graphics();
+  private keptRims = new Graphics();
+  /** The kept slabs' shadows: the floor plane is cleared every frame, so these are replayed. */
+  private keptShadows: KeptShadow[] = [];
+  private keptKey = "";
+  /** Where drawSlab's shadows go: the plane (live) or the kept list. */
+  private recordShadows = false;
 
   constructor() {
-    // No shadow child: cast shadows go to the shared floor plane.
-    this.container.addChild(this.rails, this.bodies, this.rims);
+    // No shadow child: cast shadows go to the shared floor plane. Kept under
+    // live within each tier, so a mover is drawn over the rail it runs on and
+    // a bouncer's rings over the slab they sit on.
+    this.container.addChild(this.keptRails, this.rails, this.keptBodies, this.bodies, this.keptRims, this.rims);
+  }
+
+  /**
+   * Everything the kept drawing depends on. The light is quantised (the
+   * monitor flickers a little every frame on the plain board) so the drawing
+   * survives the flicker; in the hybrid path the light is flat anyway. While
+   * an obstacle is being dented the slabs are drawn live by including the
+   * clock, since the dent is a per-frame shape.
+   */
+  private keptKeyFor(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number): string {
+    let wear = 0;
+    for (const d of game.deformables?.values() ?? []) {
+      wear += deformWear(d);
+    }
+    return `${transformKey(w2s)}|${Math.round(scale * 10000)}`
+      + `|${Math.round(light.x / 2)},${Math.round(light.y / 2)}|${Math.round(light.level * 20)}|${Math.round(light.reach)}`
+      + `|${game.obstaclePolygons.length}|${game.obstacleVersion ?? 0}|${game.mirrorPolygons.length}`
+      + `|${game.destructibles.length}|${(game.phasingObjects ?? []).length}`
+      + `|${game.obstacleRules?.size ?? 0}|${game.portals?.size ?? 0}|${game.bouncers?.size ?? 0}`
+      + `|${Math.round(wear * 100)}|${game.movers.length}|${game.boardPolygon?.vertices.length ?? 0}`
+      + `|${anyObstacleImpactsActive() ? now : 0}`;
+  }
+
+  /** A slab's shadow: onto the plane now, or into the kept list to replay. */
+  private castSlabShadow(pts: Pt[], alpha: number): void {
+    if (this.recordShadows) {
+      this.keptShadows.push({ pts, alpha });
+    } else {
+      this.shadows.poly(pts).fill({ color: PALETTE.shadow, alpha });
+    }
   }
 
   sync(
@@ -124,46 +180,49 @@ export class EntityLayer {
     now: number,
   ): void {
     this.shadows = shadows;
-    this.rails.clear();
-    this.bodies.clear();
-    this.rims.clear();
 
     // Mirrors, breakables and phasing objects own their own look; this layer is
     // the plain static furniture plus the movers.
-    const skip = new Set<Polygon>([
-      ...game.mirrorPolygons,
-      ...game.destructibles.filter(d => d.obstaclePolygon).map(d => d.obstaclePolygon as Polygon),
-      ...(game.phasingObjects ?? []).map(p => p.polygon),
-    ]);
+    const skip = new Set<Polygon>(game.mirrorPolygons);
+    for (const d of game.destructibles) {
+      if (d.obstaclePolygon) skip.add(d.obstaclePolygon as Polygon);
+    }
+    for (const p of game.phasingObjects ?? []) {
+      skip.add(p.polygon);
+    }
+
+    const key = this.keptKeyFor(game, light, w2s, scale, now);
+    if (key !== this.keptKey) {
+      this.keptKey = key;
+      this.drawKept(game, light, w2s, scale, skip);
+    }
+    // The floor plane was cleared this frame: the kept slabs' shadows go back.
+    for (const sh of this.keptShadows) {
+      this.shadows.poly(sh.pts).fill({ color: PALETTE.shadow, alpha: sh.alpha });
+    }
+
+    this.rails.clear();
+    this.bodies.clear();
+    this.rims.clear();
 
     for (const poly of game.obstaclePolygons) {
       if (skip.has(poly as Polygon)) continue;
       // A deformable is made of different stuff, so it is not painted in the
       // furniture colour. Same value as an ordinary slab (it stands in the same
       // light and is furniture too); the hue is what says the material differs,
-      // exactly as the breakable's warmth does.
+      // exactly as the breakable's warmth does. Its wear changes with every
+      // hit, so it is drawn live rather than kept.
       const deform = game.deformables?.get(poly as Polygon);
-      this.drawSlab(
-        poly as Polygon, light, w2s, scale,
-        deform ? mix(PALETTE.deformable, PALETTE.deformableWorn, deformWear(deform)) : undefined,
-      );
-      if (deform) this.drawDeformSkin(poly as Polygon, deform, w2s, scale);
-      // A membrane or a gate that looks exactly like a wall is not a mechanic,
-      // it is a bug the player has to reverse-engineer by dying. Drawn after
-      // the slab so the cue sits on top of its own face.
-      const rule = game.obstacleRules?.get(poly as Polygon);
-      if (rule) this.drawPassCue(poly as Polygon, rule, w2s, scale);
-      // Same argument as the pass cue above: a bumper that looks like a pillar
+      if (deform) {
+        this.drawSlab(poly as Polygon, light, w2s, scale, mix(PALETTE.deformable, PALETTE.deformableWorn, deformWear(deform)));
+        this.drawDeformSkin(poly as Polygon, deform, w2s, scale);
+      }
+      // Same argument as the pass cue: a bumper that looks like a pillar
       // is a pillar the player finds out about by being surprised. Concentric
       // rings and a lit core, so it reads as sprung rather than solid, and it
-      // flares for a moment after it fires.
+      // flares for a moment after it fires, which is why its rings are live.
       const bouncer = game.bouncers?.get(poly as Polygon);
       if (bouncer) this.drawBouncer(poly as Polygon, bouncer, game, w2s, scale);
-      // A portal is the one obstacle balls go THROUGH, so it must not read as
-      // solid at all. Drawn as an open mouth over the slab rather than beside
-      // it: a player who reads it as a pillar will aim to bounce off it.
-      const portal = game.portals?.get(poly as Polygon);
-      if (portal) this.drawPortal(portal, w2s, scale);
     }
 
     // A launcher shell mid-dematerialization (physics/launcherShell.ts). The
@@ -180,9 +239,47 @@ export class EntityLayer {
     }
 
     for (const m of game.movers) {
-      this.drawRail(m, w2s, scale);
       this.drawMover(m, light, w2s, scale);
       this.drawGrip(game, m, w2s, scale);
+    }
+  }
+
+  /** The static furniture, into the kept Graphics, with its shadows recorded. */
+  private drawKept(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, skip: Set<Polygon>): void {
+    const live = { rails: this.rails, bodies: this.bodies, rims: this.rims };
+    this.rails = this.keptRails;
+    this.bodies = this.keptBodies;
+    this.rims = this.keptRims;
+    this.rails.clear();
+    this.bodies.clear();
+    this.rims.clear();
+    this.keptShadows = [];
+    this.recordShadows = true;
+    try {
+      for (const poly of game.obstaclePolygons) {
+        if (skip.has(poly as Polygon)) continue;
+        if (game.deformables?.get(poly as Polygon)) continue; // live, above
+        this.drawSlab(poly as Polygon, light, w2s, scale);
+        // A membrane or a gate that looks exactly like a wall is not a mechanic,
+        // it is a bug the player has to reverse-engineer by dying. Drawn after
+        // the slab so the cue sits on top of its own face.
+        const rule = game.obstacleRules?.get(poly as Polygon);
+        if (rule) this.drawPassCue(poly as Polygon, rule, w2s, scale);
+        // A portal is the one obstacle balls go THROUGH, so it must not read as
+        // solid at all. Drawn as an open mouth over the slab rather than beside
+        // it: a player who reads it as a pillar will aim to bounce off it.
+        const portal = game.portals?.get(poly as Polygon);
+        if (portal) this.drawPortal(portal, w2s, scale);
+      }
+      // A mover's rail is a fixed track; the mover itself is live.
+      for (const m of game.movers) {
+        this.drawRail(m, w2s, scale);
+      }
+    } finally {
+      this.recordShadows = false;
+      this.rails = live.rails;
+      this.bodies = live.bodies;
+      this.rims = live.rims;
     }
   }
 
@@ -484,20 +581,16 @@ export class EntityLayer {
     // Shadow = the silhouette, translated. Drawing the union of body and
     // translated body would be more correct, but the offset is short enough
     // that the simple translate reads identically and costs one poly.
-    this.shadows
-      .poly(pts.map(p => ({ x: p.x + ox, y: p.y + oy })))
-      .fill({ color: PALETTE.shadow, alpha: cast.alpha });
+    this.castSlabShadow(pts.map(p => ({ x: p.x + ox, y: p.y + oy })), cast.alpha);
 
     // Contact band, the same one the movers, props and balls get. The static
     // slabs were the only things standing on this board without it, which is
     // most of why they read as painted on rather than placed.
     const contact = contactFor(light, cx, cy, slabHeight(scale));
-    this.shadows
-      .poly(pts.map(p => ({
-        x: p.x + contact.dx * contact.length,
-        y: p.y + contact.dy * contact.length,
-      })))
-      .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.5 });
+    this.castSlabShadow(pts.map(p => ({
+      x: p.x + contact.dx * contact.length,
+      y: p.y + contact.dy * contact.length,
+    })), contact.alpha * 0.5);
 
     // Body, tinted by how much light reaches this part of the board.
     const amb = ambientAt(light, cx, cy);

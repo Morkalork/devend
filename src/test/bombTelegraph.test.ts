@@ -130,7 +130,8 @@ describe("the reach ring", () => {
 
   it("is drawn under the bricks, round a shard bomb always and a box bomb once exposed, at the armed radius", () => {
     const src = read("src/lib/rendering/sleek/objectLayer.ts");
-    expect(src).toContain("this.container.addChild(this.reach, this.bodies, this.rims);");
+    // The reach rings stay under the bricks in both the kept and the live drawing.
+    expect(src).toContain("this.container.addChild(this.keptReach, this.reach, this.keptBodies, this.bodies, this.keptRims, this.rims);");
     expect(src).toContain("const reach = alwaysShown ? this.shardReach : d.bombExposed ? this.boxReach : null;");
     expect(src).toContain("this.shardReach = game.shardBombBlast?.radius ?? null;");
     expect(src).toContain("this.boxReach = game.boxBombBlast?.radius ?? null;");

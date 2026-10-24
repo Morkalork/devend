@@ -24,7 +24,7 @@ import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { visibleOutline, outwardEdges, headStartFenceSegments } from "@/lib/headStartStrip";
 import { BOARD_FRAME_THICKNESS } from "@/lib/boardConstants";
-import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
+import { getActiveImpactCount, getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { HEIGHTS } from "./heights3d";
 
 /** One straight block: a footprint centreline, its thickness and its height. */
@@ -125,6 +125,8 @@ export class Walls3D {
   private runs: WallRun[] = [];
   private cache: ClipCache = new WeakMap();
   private cacheKey = "";
+  /** The board the uploaded matrices describe, while nothing on it moves. */
+  private frameKey = "";
   private m = new Matrix4();
   private q = new Quaternion();
   private p = new Vector3();
@@ -157,6 +159,17 @@ export class Walls3D {
       this.cache = new WeakMap();
       this.cacheKey = key;
     }
+    // Nothing standing changed since the last frame: the matrices already
+    // uploaded are right. A fence being drawn moves its tip every frame and a
+    // struck fence bulges for half a second, so those keep the rebuild.
+    const still = game.activeWalls.length === 0 && getActiveImpactCount() === 0;
+    const frameKey = still
+      ? `${key}|${game.walls.length}|${heightScale}|${game.boardPolygon?.vertices.length ?? 0}|${game.arenaPolygon?.vertices.length ?? 0}`
+      : "";
+    if (still && frameKey === this.frameKey) {
+      return this.mesh;
+    }
+    this.frameKey = frameKey;
     return this.syncRuns(collectWallRuns(game, heightScale, this.runs, this.cache));
   }
 

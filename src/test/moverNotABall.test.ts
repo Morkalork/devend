@@ -106,7 +106,9 @@ describe("a round mover does not read as a ball", () => {
     // The other half of the confusion: a mover appeared to roam the board, which
     // is what a ball does. The rail says it runs on a line, and how far.
     const layer = drawn(scene());
-    const rails = layerGraphics(layer, "rails");
+    // The rail is a fixed track, so it lives in the layer's KEPT drawing
+    // (entityLayer.drawKept); the mover itself is drawn live.
+    const rails = layerGraphics(layer, "keptRails");
     expect(shapeTypes(rails).length, "no rail was drawn at all").toBeGreaterThan(0);
   });
 
@@ -114,8 +116,8 @@ describe("a round mover does not read as a ball", () => {
     // A rail that understates where the hazard reaches is worse than none.
     const wide = drawn(scene({ movers: [mover({ range: 400 })] }));
     const narrow = drawn(scene({ movers: [mover({ range: 100 })] }));
-    expect(widthOf(layerGraphics(wide, "rails"))).toBeCloseTo(400, 0);
-    expect(widthOf(layerGraphics(narrow, "rails"))).toBeCloseTo(100, 0);
+    expect(widthOf(layerGraphics(wide, "keptRails"))).toBeCloseTo(400, 0);
+    expect(widthOf(layerGraphics(narrow, "keptRails"))).toBeCloseTo(100, 0);
   });
 
   it("turns as it travels, so it reads as a roller", () => {
