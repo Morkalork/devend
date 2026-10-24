@@ -9,6 +9,7 @@
  */
 
 const INFINITE_LIVES_KEY = "devend:infiniteLives";
+const LAUNCHER_HAND_ALWAYS_KEY = "devend:launcherHandAlways";
 const FENCE_SLOTS_KEY = "devend:fenceSlots";
 
 /** Lives handed out when the flag is on. Not truly infinite: a real number
@@ -35,6 +36,24 @@ export function setInfiniteLivesEnabled(on: boolean): void {
   try {
     if (on) localStorage.setItem(INFINITE_LIVES_KEY, "1");
     else localStorage.removeItem(INFINITE_LIVES_KEY);
+  } catch {
+    /* storage blocked: the in-memory flag still holds for this session */
+  }
+}
+
+let launcherHandAlways: boolean | null = null;
+
+/** The launcher hand (lib/launcherHand.ts) on EVERY launcher map, not only a run's first. */
+export function isLauncherHandAlwaysEnabled(): boolean {
+  if (launcherHandAlways === null) launcherHandAlways = readFlag(LAUNCHER_HAND_ALWAYS_KEY);
+  return launcherHandAlways;
+}
+
+export function setLauncherHandAlwaysEnabled(on: boolean): void {
+  launcherHandAlways = on;
+  try {
+    if (on) localStorage.setItem(LAUNCHER_HAND_ALWAYS_KEY, "1");
+    else localStorage.removeItem(LAUNCHER_HAND_ALWAYS_KEY);
   } catch {
     /* storage blocked: the in-memory flag still holds for this session */
   }

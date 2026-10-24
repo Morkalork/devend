@@ -9,6 +9,7 @@ import {
   SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
   getForcedSprintOffer, setForcedSprintOffer, getForcedJackpot, setForcedJackpot,
   isSprintAlwaysOn, setSprintAlwaysOn,
+  isLauncherHandAlwaysEnabled, setLauncherHandAlwaysEnabled,
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
@@ -47,6 +48,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
   const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
+  const [launcherHand, setLauncherHandState] = useState(isLauncherHandAlwaysEnabled);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
   const [quality, setQuality] = useState<QualitySetting>(getQualitySetting);
@@ -62,6 +64,12 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
     setChecking(true);
     setUpdate(await checkForUpdate('dev'));
     setChecking(false);
+  };
+
+  const toggleLauncherHand = () => {
+    const next = !launcherHand;
+    setLauncherHandAlwaysEnabled(next);
+    setLauncherHandState(next);
   };
 
   const toggleInfiniteLives = () => {
@@ -182,6 +190,32 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 Which permission is missing, what the radios are doing, and every
                 phone they can see. Two real devices only: Nearby does not run in
                 an emulator
+              </div>
+            </div>
+          </button>
+
+          {/* The launcher hand on every launcher map, not only a run's first,
+              so the gesture demo can be watched without starting a new game. */}
+          <button
+            onClick={toggleLauncherHand}
+            aria-pressed={launcherHand}
+            className={`w-full p-4 rounded-lg bg-card border transition-colors flex items-center gap-4 ${
+              launcherHand ? 'border-primary' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${launcherHand ? 'bg-primary/25' : 'bg-primary/10'}`}>
+              <Hand className={`w-6 h-6 ${launcherHand ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">
+                Launcher hand on every launcher map{' '}
+                <span className={`text-xs ${launcherHand ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {launcherHand ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Normally a run shows the pull-and-release hand once, on its first
+                launcher map. On, it plays on every launcher until the first pull.
               </div>
             </div>
           </button>

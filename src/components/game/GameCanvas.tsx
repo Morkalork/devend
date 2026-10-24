@@ -1,4 +1,5 @@
 import { engagementProgress } from '@/lib/scoreEngagement';
+import { launcherHandSeen, markLauncherHandSeen } from "@/lib/launcherHand";
 import { devFenceSlots } from "@/lib/devFlags";
 import { resolveSelection } from "@/lib/fenceOwnership";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
@@ -2759,6 +2760,9 @@ export function GameCanvas({
               inner={pendingLaunch.inner}
               angle={pendingLaunch.angle}
               facing={pendingLaunch.facing}
+              // A run's first launcher gets the pull-and-release hand (lib/launcherHand.ts).
+              hint={!launcherHandSeen()}
+              onHintDone={markLauncherHandSeen}
               predict={(aim: LaunchAim) => {
                 // The SAME predictor the Scrum Master preview uses, fed the
                 // velocity the ball is actually about to get. A hand-rolled ray

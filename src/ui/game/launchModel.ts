@@ -77,3 +77,20 @@ export function launchGeometry(p: BoardBox & {
 
   return { ball, lineEnd, bandA, bandB, bandMid };
 }
+
+/**
+ * The hand's gesture for the launcher hint (InteractiveTutorialOverlay): a
+ * press on the band's grip at rest, a pull back down the barrel, away from the
+ * muzzle, by what the band itself travels on a full pull, and the release at
+ * the end of it. In the container's CSS px, like the geometry it is read off.
+ */
+export function launchHintGesture(
+  box: BoardBox, geo: LaunchGeometry, facing: LaunchFacing, angle?: number,
+): { fromX: number; fromY: number; toX: number; toY: number } {
+  const bearing = muzzleVector(facing, angle);
+  const pull = LAUNCH_FULL_PULL * boardScale(box) * 0.5;
+  return {
+    fromX: geo.bandMid.x, fromY: geo.bandMid.y,
+    toX: geo.bandMid.x - bearing.x * pull, toY: geo.bandMid.y - bearing.y * pull,
+  };
+}

@@ -22,11 +22,13 @@ import { useTranslation } from "react-i18next";
 import { Zap } from "lucide-react";
 import type { LaunchAim, LaunchFacing } from "@/lib/launcher";
 import type { Vector2 } from "@/types/game";
-import { COLOR, Icon, Label, ProgressBar, TEXT, tint, View } from "../kit/ui";
+import { COLOR, Icon, Label, ProgressBar, RADIUS, TEXT, tint, View } from "../kit/ui";
 import { Inert } from "./boardParts";
+import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
+import { WrapText } from "./modalParts";
 import { dashedLine } from "./boardDraw";
 import { usePointerCancel } from "./boardDrag";
-import { LAUNCH_AMBER, launchGeometry, launchPowerT, readLaunchAim } from "./launchModel";
+import { LAUNCH_AMBER, launchGeometry, launchHintGesture, launchPowerT, readLaunchAim } from "./launchModel";
 import { worldToContainer, type BoardBox } from "./rubberBandModel";
 
 interface Props {
@@ -52,14 +54,25 @@ interface Props {
   origin: { x: number; y: number };
   /** The container's size in CSS px: the drag surface (see RubberBandOverlay's for the fallback). */
   size?: { width: number; height: number };
+  /**
+   * Play the draw-hint hand over the band, pulling it back down the barrel and
+   * letting go (lib/launcherHand.ts: a run's first launcher). It stops at the
+   * player's first pull, which `onHintDone` reports so the run remembers.
+   */
+  hint?: boolean;
+  onHintDone?: () => void;
 }
 
 export function LaunchOverlay({
   canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft,
-  ballPosition, inner, angle, facing, predict, onFire, loadedCount = 1, origin, size,
+  ballPosition, inner, angle, facing, predict, onFire, loadedCount = 1, origin, size, hint = false, onHintDone,
 }: Props) {
   const { t } = useTranslation();
   const [aim, setAim] = useState<LaunchAim | null>(null);
+  // A finger is on the band: the hand gets out of its way, and the hint is
+  // over for this run the moment the player has made the gesture themselves.
+  const [pulling, setPulling] = useState(false);
+  const [hintDone, setHintDone] = useState(false);
   // The pull in progress: where it began, which finger, and where that finger
   // was last seen (a cancelled touch ends there).
   const startRef = useRef<{ at: Vector2; pointer: number; last: Vector2 } | null>(null);
@@ -75,6 +88,11 @@ export function LaunchOverlay({
     if (startRef.current) return;
     const at = local(e);
     startRef.current = { at, pointer: e.pointerId, last: at };
+    setPulling(true);
+    if (hint && !hintDone) {
+      setHintDone(true);
+      onHintDone?.();
+    }
   };
   // Global, so the pull follows a finger that leaves the surface (the DOM
   // captured the pointer for the same reason).
@@ -90,6 +108,7 @@ export function LaunchOverlay({
     const finalAim = readLaunchAim(box, s.at, end, facing, angle);
     startRef.current = null;
     setAim(null);
+    setPulling(false);
     // A pull too short to register is not a weak launch, it is no launch: the
     // shot cannot be taken back, so a stray tap must not spend it.
     if (finalAim) onFire(finalAim);
@@ -106,6 +125,17 @@ export function LaunchOverlay({
 
   const geo = launchGeometry({ ...box, ballPosition, inner, angle, facing, aim });
   const path = useMemo(() => (aim ? predict(aim) : []), [aim, predict]);
+  const showHint = hint && !hintDone;
+  // Read off the band AT REST, so the hand's path does not chase the band it
+  // is demonstrating once a pull bows it back.
+  const restGeo = useMemo(
+    () => launchGeometry({ ...box, ballPosition, inner, angle, facing, aim: null }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft, ballPosition.x, ballPosition.y, inner, angle, facing],
+  );
+  const gesture = useMemo(() => launchHintGesture(box, restGeo, facing, angle),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [restGeo, facing, angle]);
   const powerT = launchPowerT(aim);
 
   const draw = useCallback((g: Graphics) => {
@@ -180,6 +210,36 @@ export function LaunchOverlay({
           </View>
         )}
       </Inert>
+
+      {/* The map-1 hand, aimed down the barrel: press the grip, pull it back,
+          let go. Inert, so it demonstrates the pull over the very surface
+          listening for it, the way the Rubber Band's does. */}
+      {showHint && (
+        <>
+          <InteractiveTutorialOverlay
+            tutorialStep="showingHint"
+            isPlayerDragging={pulling}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            canvasOffsetTop={canvasOffsetTop}
+            canvasOffsetLeft={canvasOffsetLeft}
+            gesture={gesture}
+            origin={{ x: 0, y: 0 }}
+          />
+          {/* On the half of the board the barrel is not in, so the caption
+              never sits on the band it is talking about. */}
+          {!pulling && (
+            <Inert layout={{ position: "absolute", left: 0, top: restGeo.ball.y > canvasOffsetTop + canvasHeight / 2 ? canvasOffsetTop + 40 : canvasOffsetTop + canvasHeight - 48, width, alignItems: "center" }}>
+              <View layout={{
+                width: Math.min(288, width - 32), paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6,
+                borderRadius: RADIUS.lg, backgroundColor: tint(COLOR.background, 0.85), borderWidth: 1, borderColor: COLOR.border,
+              }}>
+                <WrapText text={t("launcher.tutorial")} size={TEXT.xs} align="center" />
+              </View>
+            </Inert>
+          )}
+        </>
+      )}
     </layoutContainer>
   );
 }

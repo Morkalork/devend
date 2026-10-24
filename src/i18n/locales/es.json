@@ -2506,7 +2506,8 @@
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",
     "basePay": "Base x{{multiplier}}",
-    "ballsOnTheLine": "x{{count}} bolas"
+    "ballsOnTheLine": "x{{count}} bolas",
+    "tutorial": "Tira de la banda hacia atras por el cañon y suelta. Cuanto mas lejos, mas rapido."
   },
   "rubberBand": {
     "pullToFire": "Arrastra y suelta para lanzar",

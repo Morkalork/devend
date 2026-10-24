@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { resetLauncherHandSeen } from "@/lib/launcherHand";
 import { LAUNCHER_SEEN_KEY, BOX_SEEN_KEY, CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
 import { FENCE_TYPES_SEEN_KEY, FENCE_SWITCHING_SEEN_KEY } from '@/lib/fenceSeen';
 import { ABILITIES_SEEN_KEY } from '@/lib/abilitySeen';
@@ -128,6 +129,9 @@ export function useTutorialManager() {
       localStorage.removeItem('devend_creep_tutorial_seen');
       // One-time "how locks work" explainer (GameCanvas, zero-lock finish).
       localStorage.removeItem('devend_lock_tutorial_seen');
+      // The launcher hand is per RUN (lib/launcherHand.ts); this gives the
+      // current run its hand back.
+      resetLauncherHandSeen();
       // The circuit explainer is keyed PER MAP (devend_circuit_tutorial_seen:
       // level-15, :level-16, :level-31), so it cannot be removed by name.
       // Swept by prefix instead, and the retired single key goes with it.

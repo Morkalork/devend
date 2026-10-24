@@ -1228,7 +1228,8 @@
   "launcher": {
     "pullToLaunch": "ছুড়তে টেনে ছেড়ে দাও",
     "basePay": "বেস x{{multiplier}}",
-    "ballsOnTheLine": "x{{count}} বল"
+    "ballsOnTheLine": "x{{count}} বল",
+    "tutorial": "ব্যান্ডটা নলের ভেতর দিয়ে পেছনে টানো, তারপর ছেড়ে দাও। যত দূরে, তত দ্রুত।"
   },
   "rubberBand": {
     "pullToFire": "টেনে ছেড়ে দিয়ে ছোড়ো",

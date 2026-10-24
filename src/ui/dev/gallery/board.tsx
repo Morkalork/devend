@@ -204,6 +204,13 @@ export const entries: GalleryEntry[] = [
         inner={BARREL} facing="up" predict={predictUp} onFire={noop} />
     )}</Stage>
   ) },
+  // A run's first launcher: the hand pulls the band back down the barrel.
+  { id: "LaunchOverlay-hint", group: "board", render: () => (
+    <Stage>{b => (
+      <LaunchOverlay {...b.canvas} origin={b.origin} size={b.size} ballPosition={BARREL_BALL} loadedCount={3}
+        inner={BARREL} facing="up" predict={predictUp} onFire={noop} hint />
+    )}</Stage>
+  ) },
   { id: "PairLinkBanner-stalled", group: "board", render: () => (
     <Stage>{b => (
       <PairLinkBanner stalled dropped={false} remoteName="Ada" onRepair={noop} onContinueSolo={noop} region={b.region} />
