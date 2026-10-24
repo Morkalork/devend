@@ -86,6 +86,22 @@ export function stepDown(tier: QualityTier): QualityTier | null {
   return i > 0 ? TIER_ORDER[i - 1] : null;
 }
 
+/** One tier richer, or null at the top. */
+export function stepUp(tier: QualityTier): QualityTier | null {
+  const i = TIER_ORDER.indexOf(tier);
+  return i >= 0 && i < TIER_ORDER.length - 1 ? TIER_ORDER[i + 1] : null;
+}
+
+/**
+ * Under this median frame gap (ms) a tier is being held with room to spare,
+ * and after `FAST_WINDOWS` such windows in a row (about twelve seconds of
+ * play) the next map may try the tier above (ThreeRenderer). Well under the
+ * 16.7ms of 60Hz, so a device that merely keeps up does not climb into a tier
+ * it will then have to fall out of.
+ */
+export const FAST_FRAME_MS = 14;
+export const FAST_WINDOWS = 3;
+
 /**
  * Past this median frame gap (ms) the map is not merely over budget but
  * visibly struggling (under ~30 fps), and the renderer drops the 3D frame's
@@ -97,10 +113,15 @@ export const SEVERE_FRAME_MS = 34;
  * Watches the gap between presented frames and asks for a cheaper tier when
  * the median stays over budget.
  *
- * Down only. A governor that also stepped up would oscillate: drop a tier, run
- * fast, step back up, run slow. A device that was guessed too low simply stays
- * a little plainer than it could be, which nobody files a bug about; one that
- * stutters, everybody does.
+ * Its verdicts are per WINDOW: `frame` is true when the window's median says
+ * step down, and `windows` counts the windows judged so the renderer can also
+ * read a fast one (`lastMedianMs` under FAST_FRAME_MS) and step up at the next
+ * map. Stepping up used to be refused outright, for fear of oscillation: drop
+ * a tier, run fast, step back up, run slow. It is allowed now because the
+ * guess starts a phone LOW (render3dSettings.autoTier), so climbing is how a
+ * capable phone gets its shadows at all; the oscillation is closed from the
+ * other side, by the learned limit: a step down caps the device there, and
+ * nothing climbs past a cap.
  *
  * A single frame further apart than `maxGapMs` is not a sample: that is a
  * pause (a paused map, a tab in the background, the level-clear hold), and a
@@ -122,6 +143,8 @@ export class QualityGovernor {
   private longGaps: number[] = [];
   /** The median frame gap (ms) of the last full window, 0 before the first. */
   lastMedianMs = 0;
+  /** Windows judged since the last reset. */
+  windows = 0;
 
   constructor(
     private readonly budgetMs = 21,
@@ -139,6 +162,7 @@ export class QualityGovernor {
     this.sampledMs = 0;
     this.longGaps.length = 0;
     this.last = 0;
+    this.windows = 0;
     this.settleUntil = now + settleMs;
   }
 
@@ -169,6 +193,7 @@ export class QualityGovernor {
     this.samples.length = 0;
     this.sampledMs = 0;
     this.lastMedianMs = median;
+    this.windows++;
     return median > this.budgetMs;
   }
 

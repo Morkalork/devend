@@ -4,7 +4,7 @@ import {
   clearQualitySteps, clearRendererDiag, diagText, getQualitySteps, getRendererDiag, probeWebGL, qualityStepText,
   type WebGLProbe,
 } from '@/lib/rendering/rendererDiag';
-import { getLearnedLimit, getQualitySetting, setLearnedLimit, type RendererChoice } from '@/lib/rendering/render3dSettings';
+import { getEarnedTier, getLearnedLimit, getQualitySetting, setEarnedTier, setLearnedLimit, type RendererChoice } from '@/lib/rendering/render3dSettings';
 
 /**
  * "Did the 3D board start on this device, and if not, why?" (rendererDiag.ts).
@@ -16,6 +16,7 @@ export function RendererDiagCard({ choice }: { choice: RendererChoice }) {
   const [copied, setCopied] = useState(false);
   // What auto quality has learned this device can hold, and the steps that taught it.
   const [learned, setLearned] = useState(getLearnedLimit);
+  const [earned, setEarned] = useState(getEarnedTier);
   const [steps, setSteps] = useState(getQualitySteps);
 
   const failed = diag?.outcome === 'failed';
@@ -74,7 +75,13 @@ export function RendererDiagCard({ choice }: { choice: RendererChoice }) {
             {learned === '2d' ? 'the 2D board (even the cheapest 3D tier ran slow)' : learned ? learned.toUpperCase() : 'nothing yet'}
           </span>
         </div>
+        <div>
+          Earned by holding a map with room to spare:{' '}
+          <span className={earned ? 'text-primary font-semibold' : ''}>{earned ? earned.toUpperCase() : 'nothing yet'}</span>
+        </div>
         <div className="opacity-80">
+          A touch device starts every install at LOW. Three windows of fast frames in a row
+          and the next map tries the tier above, up to MEDIUM on a phone; that is remembered.
           When frames run slow on Auto, the board steps down a tier at the next map and this
           device starts every later board there. Under ~30 fps it also drops the 3D resolution
           at once. Reset to let it start from the device guess again.
@@ -109,10 +116,10 @@ export function RendererDiagCard({ choice }: { choice: RendererChoice }) {
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? 'Copied' : 'Copy report'}
         </button>
-        {(learned || steps.length > 0) && (
+        {(learned || earned || steps.length > 0) && (
           <button
             id="admin-renderer-reset-learned"
-            onClick={() => { setLearnedLimit(null); clearQualitySteps(); setLearned(null); setSteps([]); }}
+            onClick={() => { setLearnedLimit(null); setEarnedTier(null); clearQualitySteps(); setLearned(null); setEarned(null); setSteps([]); }}
             className="px-3 py-1.5 rounded border border-border text-xs hover:border-primary/50 flex items-center gap-1"
           >
             <RotateCcw className="w-3.5 h-3.5" />

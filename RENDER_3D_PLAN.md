@@ -464,6 +464,17 @@ relative: S is one session, M is a few, L is many.
      were the only ones never stepped down;
    - every step, with the frame time that caused it, is logged and shown in
      Admin's "3D on this device" card, with a reset.
+
+   **[CHANGED a third time]** for the Android build. Starting at "medium"
+   meant every install lagged through its first map and only THEN learned;
+   a safe guess is better than a right one. Now every touch device starts
+   at `low` (`autoTier`), and the governor also steps UP: three windows in a
+   row with a median under `FAST_FRAME_MS` (14ms) at a tier below the
+   device's ceiling (`autoCeiling`: medium on a phone, high on a desktop)
+   and the next map tries the tier above, remembered as the earned tier
+   (`devend:render3d:earned`). Oscillation is closed by the learned limit: a
+   step down caps the device and takes the earned tier with it, and nothing
+   climbs past a cap. The Admin card shows both and resets both.
    - Validate in the Android build (Capacitor WebView), including a cold
      start and a context loss.
    - Admin gets a tier override.

@@ -31,7 +31,7 @@ import { shoulder, SHOULDER_KNEE } from "@/lib/rendering/three/outputPass";
 import { QualityGovernor, QUALITY_PRESETS, SEVERE_FRAME_MS, stepDown } from "@/lib/rendering/three/quality";
 import { poolLightsChunk } from "@/lib/rendering/three/surfaceMaterial";
 import {
-  autoTier, getFov, getHeightScale, getQualitySetting, getRendererChoice, setFov, setHeightScale,
+  autoCeiling, autoTier, getFov, getHeightScale, getQualitySetting, getRendererChoice, setFov, setHeightScale,
   setQualitySetting, setRendererChoice, FOV_RANGE, HEIGHT_RANGE, RENDERER_KEY, LEGACY_RENDERER_KEY,
   DEFAULT_LEAN, LEAN_RANGE, getLean, setLean,
 } from "@/lib/rendering/render3dSettings";
@@ -534,8 +534,13 @@ describe("quality", () => {
 
   it("guesses by device, and spends less on a phone", () => {
     expect(autoTier({ coarsePointer: false, dpr: 1, cores: 8 })).toBe("high");
-    expect(autoTier({ coarsePointer: true, dpr: 3, cores: 8 })).toBe("medium");
+    // Every touch device starts low and earns its way up (autoCeiling): the
+    // guess only has to be safe. An 8-core phone used to guess "medium" and
+    // lag through its first map.
+    expect(autoTier({ coarsePointer: true, dpr: 3, cores: 8 })).toBe("low");
     expect(autoTier({ coarsePointer: true, dpr: 2, cores: 4 })).toBe("low");
+    expect(autoCeiling({ coarsePointer: true })).toBe("medium");
+    expect(autoCeiling({ coarsePointer: false })).toBe("high");
     expect(QUALITY_PRESETS.low.shadowedLights).toBeLessThan(QUALITY_PRESETS.high.shadowedLights);
     expect(QUALITY_PRESETS.low.maxPixelRatio).toBeLessThan(QUALITY_PRESETS.high.maxPixelRatio);
   });

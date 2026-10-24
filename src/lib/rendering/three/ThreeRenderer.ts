@@ -39,10 +39,11 @@ import { boardAngleFor } from "@/lib/boardTilt";
 import { fitScale } from "@/lib/boardConstants";
 import {
   getFov, getHeightScale, getLean, getQualitySetting, resolvedTier, setLearnedLimit,
+  autoCeiling, deviceEnv, getLearnedLimit, setEarnedTier, cheaperTier,
   type QualityTier,
 } from "@/lib/rendering/render3dSettings";
 import { boardTiltElements, eyeDistance, floorCamera, leanProjection } from "./floorCamera";
-import { QUALITY_PRESETS, QualityGovernor, SEVERE_FRAME_MS, stepDown, type QualityPreset } from "./quality";
+import { FAST_FRAME_MS, FAST_WINDOWS, QUALITY_PRESETS, QualityGovernor, SEVERE_FRAME_MS, stepDown, stepUp, type QualityPreset } from "./quality";
 import { createSurfaceShared, makeSurfaceMaterial } from "./surfaceMaterial";
 import { createCodeTexture, createUnderlayUniforms, syncUnderlay } from "./codeUnderlay";
 import { pixiGlTexture, releasePixiWrap, threeViewOf, wrapForPixi } from "./textureBridge";
@@ -119,8 +120,11 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private tier: QualityTier = "medium";
   private auto = true;
   private governor = new QualityGovernor();
-  /** A step down the governor asked for, applied between maps. */
+  /** A step the governor asked for (down, or up after fast windows), applied between maps. */
   private pendingTier: QualityTier | null = null;
+  /** Fast windows in a row at this tier (quality.ts FAST_WINDOWS). */
+  private fastWindows = 0;
+  private windowsSeen = 0;
   /**
    * Set when the cheapest tier still ran slow: the 2D board is learned for
    * this device, and takes over at the next board (GameCanvas reads it).
@@ -290,6 +294,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       materials: [floorMat, wallMat, solidMat, fillMat, plateMat, phaseMat],
     };
     this.governor.reset(performance.now());
+    this.fastWindows = 0;
+    this.windowsSeen = 0;
     this.emergencyRatio = Number.POSITIVE_INFINITY;
     // The frame's resolution and MSAA are part of the tier. Through sleek, so
     // its sprite and surface texture are re-made with the frame.
@@ -374,8 +380,14 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     // is the thing this is trying to remove. Badly slow, though, and the 3D
     // frame's resolution drops at once: that is only a render target, no
     // shader, and the rest of the map is worth more than its sharpness.
-    if (this.auto && !this.pendingTier && !this.exhausted && this.governor.frame(performance.now())) {
-      this.stepDownForSlowFrames(this.governor.lastMedianMs);
+    if (this.auto && !this.pendingTier && !this.exhausted) {
+      const slow = this.governor.frame(performance.now());
+      if (slow) {
+        this.stepDownForSlowFrames(this.governor.lastMedianMs);
+      } else if (this.governor.windows !== this.windowsSeen) {
+        this.windowsSeen = this.governor.windows;
+        this.judgeFastWindow(this.governor.lastMedianMs);
+      }
     }
 
     // The surface texture, seen from three. A resize re-allocates its GL
@@ -495,17 +507,46 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     this.sleek.markStaticDirty();
   }
 
+  /**
+   * A window closed under budget. FAST_WINDOWS of them in a row at a tier
+   * below the device's ceiling, and the next map tries the tier above; it is
+   * remembered (setEarnedTier) so the climb is made once per device, not once
+   * per map. Never past a learned limit: that cap is what keeps a device from
+   * oscillating between a tier it can hold and one it cannot.
+   */
+  private judgeFastWindow(medianMs: number): void {
+    if (medianMs > FAST_FRAME_MS) {
+      this.fastWindows = 0;
+      return;
+    }
+    this.fastWindows++;
+    if (this.fastWindows < FAST_WINDOWS) return;
+    this.fastWindows = 0;
+    const up = stepUp(this.tier);
+    if (!up) return;
+    const learned = getLearnedLimit();
+    const cap = learned === null ? autoCeiling(deviceEnv()) : learned === "2d" ? "minimal" : cheaperTier(autoCeiling(deviceEnv()), learned);
+    if (cheaperTier(up, cap) !== up) return;
+    this.pendingTier = up;
+    setEarnedTier(up);
+    recordQualityStep(this.tier, up, medianMs);
+  }
+
   /** The governor said this tier is too slow on this device (see renderScene). */
   private stepDownForSlowFrames(medianMs: number): void {
+    this.fastWindows = 0;
     const next = stepDown(this.tier);
     if (next) {
       this.pendingTier = next;
       setLearnedLimit(next);
+      // Whatever was earned above this is gone with it.
+      setEarnedTier(next);
       recordQualityStep(this.tier, next, medianMs);
     } else {
       // Already the cheapest 3D tier: the 2D board, from the next board on.
       this.exhausted = true;
       setLearnedLimit("2d");
+      setEarnedTier(null);
       recordQualityStep(this.tier, "2d", medianMs);
     }
     // Something now, not only at the next map: the 3D frame's resolution is

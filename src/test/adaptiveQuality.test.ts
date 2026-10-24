@@ -13,8 +13,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  LEARNED_KEY, QUALITY_SETTINGS, autoStartTier, cheaperTier, getBoardRenderer, getLearnedLimit,
-  setLearnedLimit, setQualitySetting, setRendererChoice,
+  EARNED_KEY, LEARNED_KEY, QUALITY_SETTINGS, autoStartTier, cheaperTier, getBoardRenderer, getEarnedTier, getLearnedLimit,
+  setEarnedTier, setLearnedLimit, setQualitySetting, setRendererChoice,
 } from "@/lib/rendering/render3dSettings";
 import {
   clearQualitySteps, diagText, getQualitySteps, qualityStepText, recordQualityStep,
@@ -42,12 +42,26 @@ describe("what auto has learned", () => {
     expect(getLearnedLimit()).toBeNull();
   });
 
-  it("caps where a board starts, never raises it", () => {
+  it("caps where a board starts, and raises it only to what was earned", () => {
     expect(autoStartTier("medium", null)).toBe("medium");
     expect(autoStartTier("medium", "low")).toBe("low");
     expect(autoStartTier("low", "high")).toBe("low"); // learned is a ceiling, not a target
     expect(autoStartTier("high", "2d")).toBe("minimal");
     expect(cheaperTier("minimal", "high")).toBe("minimal");
+    // Earned: a phone that held "low" with room to spare starts the next map
+    // at "medium"; a learned limit still caps it.
+    expect(autoStartTier("low", null, "medium")).toBe("medium");
+    expect(autoStartTier("low", "low", "medium")).toBe("low");
+    expect(autoStartTier("high", null, "low")).toBe("high"); // earned never lowers a guess
+  });
+
+  it("remembers the earned tier, and forgets it with the learned limit", () => {
+    expect(getEarnedTier()).toBeNull();
+    setEarnedTier("medium");
+    expect(getEarnedTier()).toBe("medium");
+    localStorage.setItem(EARNED_KEY, "ultra");
+    expect(getEarnedTier()).toBeNull();
+    expect(read("src/components/admin/RendererDiagCard.tsx")).toContain("setEarnedTier(null)");
   });
 
   it("offers the minimal tier in Admin's picker", () => {
@@ -84,7 +98,16 @@ describe("the renderer", () => {
     // the same tier (boardPixelRatioCap), so the two can never disagree.
     expect(src).toContain("this.tier = resolvedTier();");
     const settings = readFileSync(resolve(process.cwd(), "src/lib/rendering/render3dSettings.ts"), "utf8");
-    expect(settings).toMatch(/autoStartTier\(autoTier\(\{[\s\S]*?\}\), getLearnedLimit\(\)\)/);
+    expect(settings).toContain("autoStartTier(autoTier(deviceEnv()), getLearnedLimit(), getEarnedTier())");
+  });
+
+  it("steps up after fast windows, never past the ceiling or a learned limit", () => {
+    const up = src.slice(src.indexOf("private judgeFastWindow"), src.indexOf("private stepDownForSlowFrames"));
+    expect(up).toContain("if (this.fastWindows < FAST_WINDOWS) return;");
+    expect(up).toContain("setEarnedTier(up);");
+    expect(up).toContain("if (cheaperTier(up, cap) !== up) return;");
+    // A step down takes the earned tier with it, so a capped device cannot climb back.
+    expect(step).toContain("setEarnedTier(next);");
   });
 
   it("stores each step down the moment it decides it, and logs why", () => {
@@ -100,11 +123,12 @@ describe("the renderer", () => {
     expect(step).toContain("this.emergencyRatio = ratioNext;");
     expect(src).toContain("const ratio = Math.min(preset.maxPixelRatio, this.emergencyRatio);");
     // A rebuild lifts the cap, so the next tier is measured on its own.
-    expect(src).toMatch(/this\.governor\.reset\(performance\.now\(\)\);\s*this\.emergencyRatio = Number\.POSITIVE_INFINITY;/);
+    expect(src).toMatch(/this\.governor\.reset\(performance\.now\(\)\);\s*this\.fastWindows = 0;\s*this\.windowsSeen = 0;\s*this\.emergencyRatio = Number\.POSITIVE_INFINITY;/);
   });
 
   it("learns on auto only: a pinned tier is never second-guessed", () => {
-    expect(src).toContain("if (this.auto && !this.pendingTier && !this.exhausted && this.governor.frame(performance.now())) {");
+    expect(src).toContain("if (this.auto && !this.pendingTier && !this.exhausted) {");
+    expect(src).toContain("const slow = this.governor.frame(performance.now());");
   });
 });
 
@@ -128,7 +152,7 @@ describe("the step log", () => {
 
   it("is shown and resettable in Admin", () => {
     const card = read("src/components/admin/RendererDiagCard.tsx");
-    expect(card).toContain("setLearnedLimit(null); clearQualitySteps();");
+    expect(card).toContain("setLearnedLimit(null); setEarnedTier(null); clearQualitySteps();");
     expect(card).toContain("qualityStepText(s)");
   });
 });

@@ -37,6 +37,8 @@ export const HEIGHT_KEY = "devend:render3d:height";
 export const LEAN_KEY = "devend:render3d:lean";
 /** The cheapest tier `auto` has had to fall to on this device (see getLearnedLimit). */
 export const LEARNED_KEY = "devend:render3d:learned";
+/** The tier auto has EARNED on this device by holding a map comfortably (see autoStartTier). */
+export const EARNED_KEY = "devend:render3d:earned";
 export const FRAME_CAP_KEY = "devend:frameCap";
 
 export const QUALITY_SETTINGS: readonly QualitySetting[] = ["auto", "minimal", "low", "medium", "high"];
@@ -170,18 +172,36 @@ export function setFrameCap(cap: FrameCap): void {
 }
 
 /**
- * The tier `auto` starts at.
+ * The tier `auto` starts at, and the most it may climb to.
  *
  * A guess from what the device says about itself, refined by the renderer's
- * own frame timing (qualityGovernor.ts), which can only step DOWN: a phone
- * that guessed high and cannot hold it drops a tier, and one that guessed low
- * stays put rather than oscillating. Coarse pointer (a touch screen) is the
- * honest proxy for "a phone GPU at 2-3x DPR"; a desktop gets high.
+ * own frame timing (quality.ts): a board that runs over budget steps DOWN and
+ * remembers it (getLearnedLimit); a board that runs comfortably under budget
+ * for a while steps UP for the next map and remembers that too
+ * (getEarnedTier), never past the ceiling here and never past what was
+ * learned. So the guess only has to be SAFE, not right: a phone starts plain
+ * and earns its shadows, where it used to start at "medium" and lag through
+ * the first map of every install (a Samsung A33 did exactly that). Coarse
+ * pointer (a touch screen) is the honest proxy for "a phone GPU at 2-3x DPR";
+ * a desktop gets high and has nowhere to climb.
  */
 export function autoTier(env: { coarsePointer: boolean; dpr: number; cores: number }): QualityTier {
   if (!env.coarsePointer) return "high";
-  if (env.cores > 0 && env.cores <= 4) return "low";
-  return "medium";
+  return "low";
+}
+
+/** The most `auto` may earn its way up to on this device. */
+export function autoCeiling(env: { coarsePointer: boolean }): QualityTier {
+  return env.coarsePointer ? "medium" : "high";
+}
+
+/** What the device says about itself, read once per board. */
+export function deviceEnv(): { coarsePointer: boolean; dpr: number; cores: number } {
+  return {
+    coarsePointer: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
+    dpr: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+    cores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 0 : 0,
+  };
 }
 
 /**
@@ -206,11 +226,30 @@ export function setLearnedLimit(limit: LearnedLimit | null): void {
   write(LEARNED_KEY, limit);
 }
 
-/** The tier `auto` starts a board at: the device's guess, never above what it has learned. */
-export function autoStartTier(guess: QualityTier, learned: LearnedLimit | null): QualityTier {
-  if (learned === null) return guess;
+/** The tier auto has earned by holding a map comfortably, or null. Never a step above the ceiling. */
+export function getEarnedTier(): QualityTier | null {
+  const v = read(EARNED_KEY);
+  return (TIER_ORDER as readonly string[]).includes(v ?? "") ? v as QualityTier : null;
+}
+
+export function setEarnedTier(tier: QualityTier | null): void {
+  write(EARNED_KEY, tier);
+}
+
+/** The richer of two tiers. */
+export function richerTier(a: QualityTier, b: QualityTier): QualityTier {
+  return TIER_ORDER.indexOf(a) >= TIER_ORDER.indexOf(b) ? a : b;
+}
+
+/**
+ * The tier `auto` starts a board at: the device's guess, raised to what it
+ * has earned, never above what it has learned it cannot hold.
+ */
+export function autoStartTier(guess: QualityTier, learned: LearnedLimit | null, earned: QualityTier | null = null): QualityTier {
+  const start = earned ? richerTier(guess, earned) : guess;
+  if (learned === null) return start;
   if (learned === "2d") return "minimal";
-  return cheaperTier(guess, learned);
+  return cheaperTier(start, learned);
 }
 
 /**
@@ -232,11 +271,7 @@ export function getBoardRenderer(): RendererChoice {
 export function resolvedTier(): QualityTier {
   const q = getQualitySetting();
   if (q !== "auto") return q;
-  return autoStartTier(autoTier({
-    coarsePointer: typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches,
-    dpr: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
-    cores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 0 : 0,
-  }), getLearnedLimit());
+  return autoStartTier(autoTier(deviceEnv()), getLearnedLimit(), getEarnedTier());
 }
 
 /**
