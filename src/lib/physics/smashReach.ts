@@ -92,9 +92,11 @@ export type StrikeBoard = Pick<CanvasGameState, "spaceGrid" | "balls">;
 
 /** Smallest radius among the balls still in play; the game's default when none. */
 function strikingRadius(game: StrikeBoard): number {
-  const live = game.balls.filter(b => b.state !== "won");
-  if (live.length === 0) return 18;
-  return Math.min(...live.map(b => b.radius));
+  let r = Infinity;
+  for (const b of game.balls) {
+    if (b.state !== "won" && b.radius < r) r = b.radius;
+  }
+  return r === Infinity ? 18 : r;
 }
 
 /**
@@ -119,8 +121,20 @@ export function canStillStrike(
   // which failed a map that was still perfectly playable.
   if (!boundsOf(d)) return true;
   const radius = strikingRadius(game);
-  for (const i of strikeCells(grid, d, radius)) {
-    if (grid.cells[i] === CellState.ACTIVE) return true;
+  // The same ring strikeCells lists, walked in place: this is asked per brick
+  // whenever the board changes, and on a brick wall the list was a few
+  // thousand indices allocated and thrown away each time.
+  const b = boundsOf(d)!;
+  const reach = radius + grid.cellSize * STRIKE_MARGIN_CELLS;
+  const c0 = Math.max(0, Math.floor((b.x0 - reach - grid.originX) / grid.cellSize));
+  const c1 = Math.min(grid.width - 1, Math.ceil((b.x1 + reach - grid.originX) / grid.cellSize));
+  const r0 = Math.max(0, Math.floor((b.y0 - reach - grid.originY) / grid.cellSize));
+  const r1 = Math.min(grid.height - 1, Math.ceil((b.y1 + reach - grid.originY) / grid.cellSize));
+  for (let row = r0; row <= r1; row++) {
+    const base = row * grid.width;
+    for (let col = c0; col <= c1; col++) {
+      if (grid.cells[base + col] === CellState.ACTIVE) return true;
+    }
   }
   return false;
 }

@@ -1,4 +1,5 @@
 import { engagementProgress } from '@/lib/scoreEngagement';
+import { boardWinKey } from "@/lib/boardWinKey";
 import { launcherHandSeen, markLauncherHandSeen } from "@/lib/launcherHand";
 import { devFenceSlots } from "@/lib/devFlags";
 import { resolveSelection } from "@/lib/fenceOwnership";
@@ -1898,6 +1899,8 @@ export function GameCanvas({
     // every frame to get the same answer is work the loop does not need.
     const winSpec = resolveWinSpec(level, activeModifiers);
 
+    // The board the per-frame win check last saw (checkWinCondition below).
+    const winKeyRef = { current: "" };
     const gameLoopCallbacks: GameLoopCallbacks = {
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
@@ -1978,6 +1981,19 @@ export function GameCanvas({
       // finishes even if the space reached the goal by a path that didn't run
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () => {
+        // Only when the BOARD changed since the last frame. The evaluation
+        // below reads the whole board (reachability floods for an area or a
+        // smash clause, a strike ring per brick for the markers), and it was
+        // run every frame on a board that changes only on a cut, a break, a
+        // lock or a ball crossing a portal. Everything it can read is in this
+        // key; the clock is the one input that moves on its own, so the time
+        // limit is checked every frame regardless (evaluateWinConditions does
+        // that first). Reported as unattributed frame time on level 17.
+        const key = boardWinKey(game);
+        const timeLimit = getMapTimeLimit(level, levelNumber);
+        const outOfTime = timeLimit != null && game.activePlaySeconds >= timeLimit;
+        if (key === winKeyRef.current && !outOfTime) return null;
+        winKeyRef.current = key;
         // Refresh what the board is still pointing at. The set is what the win
         // REQUIRES and has not got yet, so it has to shrink as the map is
         // played: a marker breathing over a slab that is already rubble is

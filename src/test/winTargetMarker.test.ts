@@ -94,7 +94,7 @@ describe("the marker goes out when the job is done", () => {
     const canvas = read("src/components/game/GameCanvas.tsx");
     const at = canvas.indexOf("checkWinCondition: () =>");
     expect(at, "the per-frame win check is gone").toBeGreaterThan(-1);
-    expect(canvas.slice(at, at + 900), "the set is never refreshed during play")
+    expect(canvas.slice(at, at + 1800), "the set is never refreshed during play")
       .toContain("game.winHighlights = winHighlightRects(");
   });
 });
