@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ModifierInput } from '@/components/admin/ModifierInput';
 import { getBallLook, setBallLook, type BallLook } from '@/lib/ballLook';
 import { getLightLook, setLightLook, underReach } from '@/lib/lightLook';
@@ -1064,7 +1065,13 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         )}
       </button>
 
-      <AnimatePresence>
+      {/* The sheets and modals are portalled to <body>. Inside the page they
+          sit under the screen wrapper, which scrolls on this screen, and on
+          iOS a scrolling ancestor traps its fixed descendants' z-index: the
+          modifiers modal (z 70) then drew UNDER the interface canvas (z 40,
+          on <body>), with the fence bar and the HUD on top of it. On <body>
+          they share the canvas's stacking context and 70 beats 40. */}
+      {createPortal(<AnimatePresence>
         {devMenuOpen && (
           <motion.div
             key="dev-menu-backdrop"
@@ -1236,10 +1243,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
 
       {/* Level picker modal */}
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {levelPickerOpen && (
           <motion.div
             key="level-picker-backdrop"
@@ -1334,10 +1341,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
 
       {/* Ball picker modal */}
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {ballPickerOpen && (
           <motion.div
             key="ball-picker-backdrop"
@@ -2178,10 +2185,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
 
       {/* Modifiers modal */}
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {modalOpen && (
           <motion.div
             key="modifier-modal-backdrop"
@@ -2292,7 +2299,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
     </div>
   );
 }
