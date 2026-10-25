@@ -317,7 +317,8 @@
       "level": "Nivel {{n}}",
       "compiling": "compilando mapa",
       "newRun": "iniciando nueva partida"
-    }
+    },
+    "fullGravityStinger": "¡Gravedad Total!"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",

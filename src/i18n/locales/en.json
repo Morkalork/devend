@@ -317,7 +317,8 @@
       "level": "Level {{n}}",
       "compiling": "compiling map",
       "newRun": "booting new run"
-    }
+    },
+    "fullGravityStinger": "Full Gravity!"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",

@@ -317,7 +317,8 @@
       "level": "Nivå {{n}}",
       "compiling": "kompilerar karta",
       "newRun": "startar ny runda"
-    }
+    },
+    "fullGravityStinger": "Full gravitation!"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",

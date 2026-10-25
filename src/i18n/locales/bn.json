@@ -317,7 +317,8 @@
       "level": "লেভেল {{n}}",
       "compiling": "ম্যাপ কম্পাইল হচ্ছে",
       "newRun": "নতুন রান বুট হচ্ছে"
-    }
+    },
+    "fullGravityStinger": "পূর্ণ মাধ্যাকর্ষণ!"
   },
   "interactiveTutorial": {
     "drawAFence": "একটা বেড়া টানো",

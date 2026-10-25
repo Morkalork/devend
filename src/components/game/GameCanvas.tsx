@@ -60,6 +60,7 @@ import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { PushYourLuckOverlay } from "@/ui/game/PushYourLuckOverlay";
 import { BoardBoot } from "@/ui/game/BoardBoot";
+import { GravityStinger } from "@/ui/game/GravityStinger";
 import { ScoreDebrief } from "@/ui/game/ScoreDebrief";
 import { BoardSizeReadout } from "@/ui/game/BoardSizeReadout";
 import { buildScoreDebrief } from "@/lib/scoreDebrief";
@@ -699,6 +700,14 @@ export function GameCanvas({
   // tutorial hand, the launcher, the rubber band, the circuit hint) wait for it.
   const [revealed, setRevealed] = useState(false);
   const handleRevealed = useCallback(() => setRevealed(true), []);
+  // A full-map gravity map opens with "FULL GRAVITY!" over the board
+  // (GravityStinger) once the reveal is done, and the map is held under it.
+  const fullGravity = mapMutator?.behavior === "gravity";
+  const [stinger, setStinger] = useState(false);
+  useEffect(() => {
+    if (revealed && fullGravity) setStinger(true);
+  }, [revealed, fullGravity]);
+  const handleStingerDone = useCallback(() => setStinger(false), []);
 
   useEffect(() => {
     const game = gameRef.current;
@@ -709,8 +718,8 @@ export function GameCanvas({
     // rather than bolted on at the call site so there is ONE expression that
     // decides whether the map is running. The boot reveal holds it too, until
     // the scan line has left the board live (BoardBoot).
-    game.bootHold = !revealed;
-    game.paused = paused || !!pendingLaunch || !revealed;
+    game.bootHold = !revealed || stinger;
+    game.paused = paused || !!pendingLaunch || !revealed || stinger;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
     if (game.paused) {
       // A LAUNCHER hold keeps the loop turning; a modal stops it dead.
@@ -724,7 +733,7 @@ export function GameCanvas({
       // underneath them.
       // The boot hold keeps drawing too: the reveal uncovers the board's
       // first frame, which has to have been drawn.
-      if ((pendingLaunch || !revealed) && !paused) startGameLoop(game);
+      if ((pendingLaunch || !revealed || stinger) && !paused) startGameLoop(game);
       else stopGameLoop(game);
       // Drop any in-progress swipe so a drag can't resume mid-gesture
       game.swipeStart = null;
@@ -738,7 +747,7 @@ export function GameCanvas({
       game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
       startGameLoop(game);
     }
-  }, [paused, pendingLaunch, revealed]);
+  }, [paused, pendingLaunch, revealed, stinger]);
 
   /**
    * Watchdog: the loop is not allowed to stay dead.
@@ -2664,6 +2673,8 @@ export function GameCanvas({
           <BoardBoot ready={revealReady} runStart={runStartIntro} accentColor={accentColor}
             frame={boardFrameCss} origin={origin} levelNumber={levelNumber} onRevealed={handleRevealed} />
         )}
+        {/* Full-map gravity, shouted once the board is live and before it moves. */}
+        {stinger && <GravityStinger frame={boardFrameCss} origin={origin} onDone={handleStingerDone} />}
         {/* The map clock, on the board's own frame where the eyes already are. */}
         <DeadlineFrame
           frame={revealed ? boardFrameCss : null}

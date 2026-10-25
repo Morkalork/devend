@@ -13,6 +13,7 @@ import type { GalleryEntry } from "../galleryTypes";
 import { ACCENT, BootDemo, DebriefDemo, PARTNER, Replay, Stage, type FakeBoard } from "./boardStage";
 import { BoardAlert } from "../../game/BoardAlert";
 import { BoardBoot } from "../../game/BoardBoot";
+import { GravityStinger } from "../../game/GravityStinger";
 import { BoardToasts } from "../../game/BoardToasts";
 import { BoardSizeReadout } from "../../game/BoardSizeReadout";
 import { DeadlineFrame } from "../../game/DeadlineFrame";
@@ -151,6 +152,10 @@ export const entries: GalleryEntry[] = [
   { id: "BoardBoot-waiting", group: "board", render: () => (
     <Stage>{b => <BoardBoot ready={false} runStart={false} accentColor={ACCENT} frame={b.frame} origin={b.origin}
       levelNumber={7} onRevealed={() => {}} />}</Stage>
+  ) },
+  // A full-map gravity map going live: "FULL GRAVITY!" over the board, on a loop here.
+  { id: "GravityStinger", group: "board", render: () => (
+    <Stage>{b => <Replay everyMs={2600}>{k => <GravityStinger key={k} frame={b.frame} origin={b.origin} onDone={() => {}} />}</Replay>}</Stage>
   ) },
   { id: "BoardBoot", group: "board", render: () => (
     <Stage>{b => <Replay everyMs={4000}>{k => <BootDemo key={k} b={b} runStart={false} waitMs={1500} />}</Replay>}</Stage>

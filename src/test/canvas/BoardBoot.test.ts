@@ -152,12 +152,13 @@ describe("the map waits for it", () => {
   const loop = read("src/hooks/useGameLoop.ts");
 
   it("holds the map still until the reveal has finished", () => {
-    expect(canvas).toContain("game.paused = paused || !!pendingLaunch || !revealed;");
+    expect(canvas).toContain("game.paused = paused || !!pendingLaunch || !revealed || stinger;");
     expect(canvas).toContain("onRevealed={handleRevealed}");
   });
 
   it("keeps drawing under the hold, so the reveal uncovers a drawn board", () => {
-    expect(canvas).toContain("game.bootHold = !revealed;");
+    // The Full Gravity stinger holds the board the same way, after the reveal.
+    expect(canvas).toContain("game.bootHold = !revealed || stinger;");
     // The boot hold draws every frame; a loaded launcher, whose board is
     // still, at the hold rate.
     expect(loop).toMatch(/if \(launchPending\(game\) \|\| game\.bootHold\) \{\s*if \(game\.bootHold \|\| holdGate\.due\(timestamp\)\) callbacks\.render\(\);/);
