@@ -15,6 +15,7 @@ import { getAllAbilities, loadAbilities } from '@/lib/abilities';
 import { getAllFenceTypes, loadFenceTypes, STANDARD_FENCE_ID } from '@/lib/fences';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useBottomBarsHeight } from '@/hooks/useBottomBarsHeight';
+import { uiCovers } from '@/ui/hitGate';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
@@ -178,6 +179,24 @@ const PLAYGROUND_LEVEL: LevelConfig = {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
+
+
+/**
+ * The Playground's own DOM controls live UNDER the interface canvas (z 30,
+ * below the canvas's 40), so a popup or modal the game draws, the control
+ * row's menu with its sound and tuning entries or a fence explainer, is drawn
+ * over them rather than having a dev button sit on top of it. The canvas lets
+ * pointers through (hitGate.ts), so a tap on a popup item still lands on the
+ * DOM control beneath it: this swallows that tap, in the capture phase, when
+ * the interface has something interactive at that point. The interface's own
+ * listener on the page root still sees it, and the popup item fires alone.
+ */
+const DEV_CONTROL_Z = 30;
+function swallowTapOwnedByUi(e: React.MouseEvent): void {
+  if (uiCovers(e.clientX, e.clientY)) {
+    e.stopPropagation();
+  }
+}
 
 export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: PlaygroundScreenProps) {
   // `applied` drives the game — only changes on Apply / Reset
@@ -692,8 +711,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         {abilitiesReady && (
           <div
             className="absolute left-1/2 flex flex-col gap-1 px-3 py-2 rounded-lg shadow-lg"
+            onClickCapture={swallowTapOwnedByUi}
             style={{
-              bottom: bottomBars + 8, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
+              bottom: bottomBars + 8, transform: 'translateX(-50%)', zIndex: DEV_CONTROL_Z, maxWidth: '92%',
               backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
@@ -721,10 +741,11 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         {/* Dev: freeze-on-clear toggle (always visible) */}
         <button
           onClick={() => setFreezeOnClear(v => !v)}
+          onClickCapture={swallowTapOwnedByUi}
           title="On clear, play the desaturation drain then freeze; click the board to reload"
           className="hidden lg:flex absolute bottom-4 left-4 items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-opacity hover:opacity-90"
           style={{
-            zIndex: 50,
+            zIndex: DEV_CONTROL_Z,
             backgroundColor: freezeOnClear ? `${accent}1a` : '#1a1f1a',
             border: `1px solid ${freezeOnClear ? `${accent}55` : 'rgba(255,255,255,0.12)'}`,
           }}
@@ -762,7 +783,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             an unreadable pile. Everything here is in the controls sheet below. */}
         {selectedLevel && <div
           className="scrollbar-hide hidden lg:block"
-          style={{ position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 50, overflowX: 'auto' }}
+          onClickCapture={swallowTapOwnedByUi}
+          style={{ position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: DEV_CONTROL_Z, overflowX: 'auto' }}
         >
         <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: 8, width: 'max-content', marginLeft: 'auto' }}>
           {/* Mobile-only: open the level-edit drawer. */}
@@ -947,7 +969,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
       {/* ── Floating toolbar (only when in default playground mode, no level selected) ── */}
       {!selectedLevel && (
-        <div className="hidden lg:block fixed bottom-4 left-2 right-2 z-50 overflow-x-auto scrollbar-hide">
+        <div className="hidden lg:block fixed bottom-4 left-2 right-2 z-30 overflow-x-auto scrollbar-hide" onClickCapture={swallowTapOwnedByUi}>
         <div className="flex flex-nowrap items-center gap-2 w-max ml-auto pr-1">
           <button
             onClick={hardReset}
@@ -1018,11 +1040,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
           Deliberately not a second copy of the desktop bar. That layout leans
           on `title` tooltips and icon-only buttons, and a phone has no hover to
-          reveal either, so the sheet spells each control out. */}
+          reveal either, so the sheet spells each control out.
+
+          Under the interface canvas (DEV_CONTROL_Z): it used to float above it,
+          so it sat on top of whatever the game drew down here, the control
+          row's menu and every modal. */}
       <button
         onClick={() => setDevMenuOpen(true)}
+        onClickCapture={swallowTapOwnedByUi}
         aria-label="Playground controls"
-        className="lg:hidden fixed bottom-4 left-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-opacity hover:opacity-90"
+        className="lg:hidden fixed bottom-4 left-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-opacity hover:opacity-90"
         style={{ backgroundColor: accent, color: '#000', boxShadow: `0 0 16px ${accent}66` }}
       >
         <SlidersHorizontal className="w-5 h-5" />
