@@ -179,6 +179,13 @@ interface GameScreenProps {
   scalingReadouts?: ScalingReadout[];
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
+  /**
+   * Admin/Playground: no card opens on its own. The explainer queue (the map's
+   * ticket, the tutorials, the boss intro, the objective-met card) and the
+   * first-sight cards of the fence and ability bars all stay closed; a card
+   * the tester asks for by tap-and-hold still opens.
+   */
+  noAutoCards?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
@@ -254,6 +261,7 @@ export function GameScreen({
   runOffer = null,
   scalingReadouts = [],
   adminMode = false,
+  noAutoCards = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
   onGameStateChange,
@@ -779,10 +787,11 @@ export function GameScreen({
   // waiting - and, because its open flag is then never cleared, one that
   // ambushes a later map by jumping the queue in front of that map's own
   // explainer.
-  const anyExplainerModal =
+  const anyExplainerModal = !noAutoCards && (
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
     || fenceIntroOpen || showBoxIntro || showLauncherIntro
-    || showCircuitOverlay || fenceSwitchIntro;
+    || showCircuitOverlay || fenceSwitchIntro
+  );
 
   // Whether the board may be revealed yet. Ready is not enough: a reveal played
   // behind the opening explainer would be over before anyone saw it, so the
@@ -1077,7 +1086,7 @@ export function GameScreen({
                     onSelect={gameState.onSelectFenceType ?? (() => {})}
                     shieldSpent={gameState.guardrailSpent ?? false}
                     onInfoOpenChange={setFenceInfoOpen}
-                    deferAutoInfo={fenceSwitchIntro}
+                    deferAutoInfo={fenceSwitchIntro || noAutoCards}
                   />
                 )}
                 {!mapComplete && (
@@ -1087,6 +1096,7 @@ export function GameScreen({
                     onUse={gameState.onUseAbility ?? (() => {})}
                     armedAbilityId={gameState.armedAbility}
                     onInfoOpenChange={setAbilityInfoOpen}
+                    noAutoInfo={noAutoCards}
                   />
                 )}
                 {/* ONE lane for the three readouts (lib/hudContext); it holds its
