@@ -40,11 +40,11 @@ interface AbilityBarProps {
   armedAbilityId?: string | null;
   /** Signals when the info modal opens/closes, so the shell can pause the game. */
   onInfoOpenChange?: (open: boolean) => void;
-  /** Admin/Playground: never open the first-acquire card on its own (tap-and-hold still does). */
-  noAutoInfo?: boolean;
+  /** Admin/Playground: no ability card, neither the first-acquire one nor on hold. */
+  noInfo?: boolean;
 }
 
-export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfoOpenChange, noAutoInfo = false }: AbilityBarProps) {
+export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfoOpenChange, noInfo = false }: AbilityBarProps) {
   const { t } = useTranslation();
   const owned = ownedAbilities(charges);
 
@@ -67,7 +67,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
   // hasn't been shown yet. Keyed on the owned-id set so it fires on a new grant.
   const ownedKey = owned.map(a => a.id).join(",");
   useEffect(() => {
-    if (noAutoInfo) {
+    if (noInfo) {
       return;
     }
     const fresh = owned.find(a => !hasSeenAbility(a.id));
@@ -99,7 +99,12 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
               const count = charges[a.id] ?? 0;
               const color = cssColor(a.color || accentColor);
               const look = abilityButtonLook(armedAbilityId === a.id);
-              const press = abilityPress(a, onUse, ab => setInfoAbility(getAbility(ab.id) ?? ab));
+              const press = abilityPress(a, onUse, ab => {
+                if (noInfo) {
+                  return;
+                }
+                setInfoAbility(getAbility(ab.id) ?? ab);
+              });
               return (
                 <Pressable
                   key={a.id}

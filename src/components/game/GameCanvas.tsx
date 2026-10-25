@@ -364,6 +364,8 @@ interface GameCanvasProps {
    * starts has finished, the board stays behind its boot stand-in, held still.
    */
   revealReady?: boolean;
+  /** Admin/Playground: the one-time lock explainer never opens. */
+  noCards?: boolean;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
@@ -507,6 +509,7 @@ export function GameCanvas({
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   revealReady = true,
+  noCards = false,
   activeModifiers,
   cumulativeLockedBalls = 0,
   parallaxTickRef,
@@ -2853,7 +2856,7 @@ export function GameCanvas({
           )}
 
           {/* One-time lock explainer, over the push prompt, on the first zero-lock finish. */}
-          {lockExplainerOpen && (
+          {lockExplainerOpen && !noCards && (
             <LockExplainerModal
               onClose={() => {
                 try { localStorage.setItem("devend_lock_tutorial_seen", "1"); } catch { /* private mode */ }

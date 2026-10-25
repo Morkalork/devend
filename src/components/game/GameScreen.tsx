@@ -180,12 +180,14 @@ interface GameScreenProps {
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
   /**
-   * Admin/Playground: no card opens on its own. The explainer queue (the map's
-   * ticket, the tutorials, the boss intro, the objective-met card) and the
-   * first-sight cards of the fence and ability bars all stay closed; a card
-   * the tester asks for by tap-and-hold still opens.
+   * Admin/Playground: no card at all. The explainer queue (the map's ticket,
+   * the tutorials, the boss intro, the objective-met card), the first-sight
+   * cards of the fence and ability bars, and every tap-and-hold card (fence
+   * type, ability, superior lock, board entity, space detail, the lock
+   * explainer) stay closed. The admin map tuner is a tool, not a card, and
+   * still opens from the menu.
    */
-  noAutoCards?: boolean;
+  noCards?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
@@ -261,7 +263,7 @@ export function GameScreen({
   runOffer = null,
   scalingReadouts = [],
   adminMode = false,
-  noAutoCards = false,
+  noCards = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
   onGameStateChange,
@@ -787,7 +789,7 @@ export function GameScreen({
   // waiting - and, because its open flag is then never cleared, one that
   // ambushes a later map by jumping the queue in front of that map's own
   // explainer.
-  const anyExplainerModal = !noAutoCards && (
+  const anyExplainerModal = !noCards && (
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
     || fenceIntroOpen || showBoxIntro || showLauncherIntro
     || showCircuitOverlay || fenceSwitchIntro
@@ -937,6 +939,7 @@ export function GameScreen({
               onCanvasReady={handleCanvasReady}
               onBoardTopPct={handleBoardTopPct}
               revealReady={boardShown}
+              noCards={noCards}
               bottomInsetPx={bottomBarsPx}
               runStartIntro={runStartIntro}
               freezeOnComplete={freezeOnClear}
@@ -990,6 +993,7 @@ export function GameScreen({
             topHeight={topHeight}
             top={
               <GameTopBar
+                noInfo={noCards}
                 levelNumber={levelNumber}
                 cutsUsed={gameState.cutsUsed}
                 parCuts={level.expectedCuts}
@@ -1086,7 +1090,8 @@ export function GameScreen({
                     onSelect={gameState.onSelectFenceType ?? (() => {})}
                     shieldSpent={gameState.guardrailSpent ?? false}
                     onInfoOpenChange={setFenceInfoOpen}
-                    deferAutoInfo={fenceSwitchIntro || noAutoCards}
+                    deferAutoInfo={fenceSwitchIntro || noCards}
+                    noInfo={noCards}
                   />
                 )}
                 {!mapComplete && (
@@ -1096,7 +1101,7 @@ export function GameScreen({
                     onUse={gameState.onUseAbility ?? (() => {})}
                     armedAbilityId={gameState.armedAbility}
                     onInfoOpenChange={setAbilityInfoOpen}
-                    noAutoInfo={noAutoCards}
+                    noInfo={noCards}
                   />
                 )}
                 {/* ONE lane for the three readouts (lib/hudContext); it holds its
@@ -1159,8 +1164,8 @@ export function GameScreen({
                   shippedIt={!!shippedIt}
                 />
                 {/* Superior-lock explainer (opened by holding a superior lock's star) */}
-                {superiorInfoOpen && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
-                {entityInfo && (
+                {superiorInfoOpen && !noCards && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
+                {entityInfo && !noCards && (
                   <BoardEntityInfoModal hit={entityInfo} accentColor={accentColor} onClose={() => setEntityInfo(null)} />
                 )}
                 {isPaused && (

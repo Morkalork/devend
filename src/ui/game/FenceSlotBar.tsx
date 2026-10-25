@@ -63,6 +63,8 @@ interface FenceSlotBarProps {
    * queued: it opens the moment this goes false.
    */
   deferAutoInfo?: boolean;
+  /** Admin/Playground: no fence card, neither the first-sight one nor on hold. */
+  noInfo?: boolean;
 }
 
 /** The slots' face: the DOM bar set JetBrains Mono on its row. */
@@ -70,6 +72,7 @@ const SLOT_TEXT = 11;
 
 export function FenceSlotBar({
   slotIds, selectedId, accentColor, onSelect, shieldSpent = false, onInfoOpenChange, deferAutoInfo = false,
+  noInfo = false,
 }: FenceSlotBarProps) {
   const { t } = useTranslation();
   const [info, setInfo] = useState<FenceTypeDef | null>(null);
@@ -125,7 +128,12 @@ export function FenceSlotBar({
         }}>
           {views.map(({ fence: f, color, selected, shield }) => {
             const look = fenceSlotLook(selected);
-            const press = fenceSlotPress(f, onSelect, setInfo);
+            const press = fenceSlotPress(f, onSelect, fence => {
+              if (noInfo) {
+                return;
+              }
+              setInfo(fence);
+            });
             return (
               <Pressable
                 key={f.id}

@@ -95,9 +95,9 @@ describe("the order", () => {
   it("holds the type's card behind the overlay", () => {
     // The card is z-[80] and the overlay z-[60], so without this the card lands
     // on top of the thing explaining the bar the card belongs to.
-    // (The Playground's noAutoCards rides the same gate: it holds the card
-    // back for good, which is the point there.)
-    expect(gameScreen).toMatch(/deferAutoInfo=\{fenceSwitchIntro \|\| noAutoCards\}/);
+    // (The Playground's noCards rides the same gate: it holds the card back
+    // for good, which is the point there.)
+    expect(gameScreen).toMatch(/deferAutoInfo=\{fenceSwitchIntro \|\| noCards\}/);
   });
 
   it("QUEUES that card rather than dropping it", () => {

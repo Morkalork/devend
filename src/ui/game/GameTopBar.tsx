@@ -34,6 +34,8 @@ interface CertificateHourProgress {
 }
 
 interface GameTopBarProps {
+  /** Admin/Playground: the Space readout's hold-detail card never opens. */
+  noInfo?: boolean;
   levelNumber: number;
   cutsUsed: number;
   parCuts: number;
@@ -66,6 +68,7 @@ const BAR_BG = tint(0x000a05, 0.9);
 const SCOPE_CREEP = 0xff6b6b;
 
 export function GameTopBar({
+  noInfo = false,
   levelNumber,
   lives,
   continuesRemaining = 0,
@@ -227,7 +230,7 @@ export function GameTopBar({
           Its own layer over the whole screen: drawn inside the bar, the bottom
           stack (drawn after the bar) would cover its backdrop and stay
           tappable through it. */}
-      {spaceDetail && (
+      {spaceDetail && !noInfo && (
         <ScreenOverlay>
           <SpaceDetailModal
             accent={accent}
