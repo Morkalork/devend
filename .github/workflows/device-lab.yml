@@ -77,7 +77,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # The runner already has the SDK; this accepts its licences. Its default
+      # also installs "tools", a package that no longer exists, so ask for
+      # platform-tools only. Gradle fetches the platform it compiles against.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Build the APK
         working-directory: android
