@@ -105,6 +105,35 @@ function pixelLines(a: Application): string[] {
   return lines;
 }
 
+/**
+ * The interface canvas's pixels on a frame drawn now, for the device check
+ * (lib/deviceCheck): null when there is no interface or it cannot be read.
+ */
+export function uiCanvasLit(): { lit: number; total: number } | null {
+  if (!app) {
+    return null;
+  }
+  const gl = (app.renderer as unknown as { gl?: WebGLRenderingContext }).gl;
+  if (!gl) {
+    return null;
+  }
+  app.render();
+  const w = gl.drawingBufferWidth;
+  const h = gl.drawingBufferHeight;
+  const px = new Uint8Array(4);
+  const grid = 16;
+  let lit = 0;
+  for (let i = 0; i < grid; i++) {
+    for (let j = 0; j < grid; j++) {
+      gl.readPixels(Math.floor((i + 0.5) * w / grid), Math.floor((j + 0.5) * h / grid), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (px[3] > 0) {
+        lit++;
+      }
+    }
+  }
+  return { lit, total: grid * grid };
+}
+
 /** Everything above, as lines for the report. */
 export function uiProbeLines(): string[] {
   if (!app) {

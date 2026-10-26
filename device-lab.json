@@ -1,0 +1,12 @@
+{
+  "_about": "The phones Firebase Test Lab runs the device check on (DEVICE_LAB.md). Each wish names a 2022 phone by Test Lab model id or by a piece of its catalogue name; the first one the catalogue has is used, at the newest Android it offers. Ordered by priority: the free plan runs five physical devices a day, and `max` takes the first that many found. Spread across GPU makers on purpose: a driver bug (PowerVR under Opera) is what a frame-rate test alone never shows.",
+  "max": 4,
+  "min": 2,
+  "wishes": [
+    { "why": "budget 2022, Mali-G52", "match": ["a13", "Galaxy A13", "SM-A135"] },
+    { "why": "budget 2022, PowerVR GE8320", "match": ["hawao", "moto g22", "moto g(22)", "a04", "Galaxy A04"] },
+    { "why": "mid 2022, Mali-G68", "match": ["a33x", "Galaxy A33", "a53x", "Galaxy A53"] },
+    { "why": "upper-mid 2022, Mali-G78", "match": ["bluejay", "Pixel 6a", "oriole", "Pixel 6"] },
+    { "why": "flagship 2022, Adreno 730", "match": ["r0q", "Galaxy S22", "b0q", "Galaxy S22 Ultra"] }
+  ]
+}

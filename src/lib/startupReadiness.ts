@@ -25,6 +25,8 @@ export const STARTUP_PARTS: readonly StartupPart[] = ["menu", "music", "backgrou
 
 const ready = new Set<StartupPart>();
 const listeners = new Set<() => void>();
+/** performance.now() when the last part reported, for the device check's boot time. */
+let readyAt: number | null = null;
 
 function notify(): void {
   for (const l of listeners) l();
@@ -36,7 +38,15 @@ export function markStartupReady(part: StartupPart): void {
     return;
   }
   ready.add(part);
+  if (readyAt === null && isStartupReady()) {
+    readyAt = performance.now();
+  }
   notify();
+}
+
+/** When every part had reported (ms since the page started), or null while loading. */
+export function startupReadyAt(): number | null {
+  return readyAt;
 }
 
 /** Every part reported ready. */
@@ -64,5 +74,6 @@ export function useStartupReady(): boolean {
 /** Tests only: start over. */
 export function resetStartupReadiness(): void {
   ready.clear();
+  readyAt = null;
   notify();
 }

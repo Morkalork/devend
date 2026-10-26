@@ -1,0 +1,177 @@
+# The device check on real phones, in Firebase Test Lab (DEVICE_LAB.md).
+#
+# Builds the Android app and has Test Lab launch it as a "game loop" on 2022
+# phones from device-lab.json: the app runs the device check by itself (boot,
+# four maps, a fence on each, frame rates, pixels read back), writes its
+# report and closes. The report says, per phone, whether a player could see
+# and play the game, and at what frame rate. This is the part of testing an
+# emulator cannot do: a real GPU and its driver.
+#
+# When it runs:
+#   - every night, and by hand (Actions > Device lab > Run workflow): build and
+#     test on the phones;
+#   - on a push to dev that touches the app's native side or the check: build
+#     only, so a change that breaks the APK is caught without spending the day's
+#     Test Lab quota (five physical devices a day on the free plan); with
+#     "[device-lab]" in the commit message, on the phones too.
+#
+# GitHub runs scheduled and hand-started workflows only from the default
+# branch (main), so those two start once this file is on main. Until then the
+# commit-message route is the way onto the phones.
+#
+# Needs two repository secrets, GCP_SA_KEY and GCP_PROJECT_ID (DEVICE_LAB.md
+# says how to make them). Without them the build still runs and the job says
+# what is missing instead of failing.
+name: Device lab
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      max_devices:
+        description: "How many phones (each is one of the free plan's five a day)"
+        required: false
+        default: "4"
+  push:
+    branches: [dev]
+    paths:
+      - "android/**"
+      - "src/lib/deviceCheck/**"
+      - "src/components/admin/DeviceCheckScreen.tsx"
+      - "device-lab.json"
+      - "scripts/device-lab-*.mjs"
+      - ".github/workflows/device-lab.yml"
+
+concurrency:
+  group: device-lab-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  device-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The nightly run tests what is on dev, not the default branch.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the web app
+        run: npm run build
+
+      - name: Copy it into the Android project
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build the APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Keep the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: devend-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # A push only builds, unless its message asks for the phones.
+      - name: Are the phones configured?
+        id: lab
+        if: github.event_name != 'push' || contains(github.event.head_commit.message, '[device-lab]')
+        env:
+          KEY: ${{ secrets.GCP_SA_KEY }}
+          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          if [ -z "$KEY" ] || [ -z "$PROJECT" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Device lab: not configured"
+              echo
+              echo "The APK built. To run it on real phones, add the repository secrets"
+              echo "\`GCP_SA_KEY\` and \`GCP_PROJECT_ID\` (see DEVICE_LAB.md)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: google-github-actions/auth@v2
+        if: steps.lab.outputs.run == 'true'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: steps.lab.outputs.run == 'true'
+
+      - name: Pick the phones
+        id: pick
+        if: steps.lab.outputs.run == 'true'
+        env:
+          MAX: ${{ github.event.inputs.max_devices || '' }}
+        run: |
+          gcloud config set project "${{ secrets.GCP_PROJECT_ID }}"
+          gcloud firebase test android models list --format=json > catalogue.json
+          if [ -n "$MAX" ]; then
+            node -e "const f='device-lab.json',j=JSON.parse(require('fs').readFileSync(f));j.max=Number(process.env.MAX);require('fs').writeFileSync(f,JSON.stringify(j))"
+          fi
+          node scripts/device-lab-pick.mjs catalogue.json device-lab.json > devices.txt
+          cat devices.txt
+
+      - name: Run the device check on them
+        id: run
+        if: steps.lab.outputs.run == 'true'
+        run: |
+          DIR="device-lab/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          # The test's own outcome is not the verdict (a game loop "passes" by
+          # closing); the report below is. So a failed outcome does not stop
+          # the job before the report is read.
+          set +e
+          gcloud firebase test android run \
+            --type game-loop \
+            --app android/app/build/outputs/apk/debug/app-debug.apk \
+            --scenario-numbers 1 \
+            --timeout 10m \
+            --results-dir "$DIR" \
+            $(cat devices.txt) 2>&1 | tee run.log
+          set -e
+          BUCKET=$(grep -o 'storage/browser/[^/]*' run.log | head -1 | sed 's#storage/browser/##')
+          if [ -z "$BUCKET" ]; then
+            echo "Could not find where Test Lab stored the results" >&2
+            exit 1
+          fi
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the reports
+        if: steps.lab.outputs.run == 'true'
+        run: |
+          mkdir -p device-lab-results
+          gsutil -m cp -r "gs://${{ steps.run.outputs.bucket }}/${{ steps.run.outputs.dir }}/*" device-lab-results/ || true
+          # The videos stay in the bucket and the Test Lab console; the job keeps the rest.
+          find device-lab-results -name '*.mp4' -delete
+
+      - name: Keep the reports
+        if: always() && steps.lab.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-lab-results
+          path: device-lab-results/
+          if-no-files-found: ignore
+
+      - name: Judge
+        if: steps.lab.outputs.run == 'true'
+        run: node scripts/device-lab-report.mjs device-lab-results

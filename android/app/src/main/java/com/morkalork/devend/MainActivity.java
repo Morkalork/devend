@@ -12,6 +12,8 @@ public class MainActivity extends BridgeActivity {
         // bridge: a plugin added afterwards is a plugin the web layer cannot
         // see.
         registerPlugin(NearbyPlugin.class);
+        // Firebase Test Lab's game-loop launch, for the device check (DEVICE_LAB.md).
+        registerPlugin(TestLoopPlugin.class);
         super.onCreate(savedInstanceState);
         // Let the background music start on app launch (the main-menu screen)
         // instead of waiting for the first tap. The Android WebView otherwise

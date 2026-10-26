@@ -61,3 +61,46 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # The device check (DEVICE_LAB.md) on emulated 2022 phones: their screens,
+  # touch and user agents, with the CPU slowed to their class. It judges what a
+  # slow phone can break without a slow frame rate showing it: the boot, the
+  # menu and boards actually showing (pixels read back), the fences being
+  # taken, and no error. Frame rate is reported, not judged: Chromium here draws
+  # WebGL on a software GPU. Real phones and their rates are Firebase Test Lab's
+  # (device-lab.yml).
+  device-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [flagship-2022, mid-2022, budget-2022]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Chromium
+        run: npx playwright-core install --with-deps --no-shell chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Device check (${{ matrix.tier }})
+        run: node scripts/device-check-emulated.mjs ${{ matrix.tier }} --out device-check-results
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-check-${{ matrix.tier }}
+          path: device-check-results/
+          if-no-files-found: ignore

@@ -68,7 +68,9 @@ for display, Michroma for the logo only; built), **SPRINT_PLANNING_PLAN.md**
 for the plan to redo the run-start draft as a Slay-the-Spire style offer (a
 boon, a Specialisation that leans the shop toward one archetype, a gamble with
 a jackpot; built), and
-**ANDROID.md** for Capacitor/Play-Store packaging.
+**ANDROID.md** for Capacitor/Play-Store packaging, and **DEVICE_LAB.md** for
+the device check and where it runs: in the app (Admin > Device check), on
+emulated 2022 phones in CI, and on real phones in Firebase Test Lab.
 
 ## Conventions
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList, Hand } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList, Hand, Smartphone } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
   isForceRelayEnabled, setForceRelayEnabled,
@@ -15,6 +15,7 @@ import { allOffers } from '@/lib/sprintOffers';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import { showDiagnostics } from '@/lib/bootDiagnostics';
+import { requestDeviceCheck } from '@/lib/deviceCheck/launch';
 import { CANVAS_COMPAT_FLAGS, canvasAntialiasText, getCanvasCompat, setCanvasCompat } from '@/lib/rendering/canvasCompat';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
@@ -376,6 +377,30 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                   const st = uiRenderStats();
                   return `drawn ${st.draws} frames, context lost ${st.contextLosses}x, restored ${st.contextRestores}x`;
                 })()}
+              </div>
+            </div>
+          </button>
+
+          {/* The device check (DEVICE_LAB.md): the same run Firebase Test Lab
+              does on its phones, here on this one. Back to the menu first, so
+              the menu it measures is the one a player meets. */}
+          <button
+            id="admin-device-check"
+            onClick={() => {
+              onBack();
+              void requestDeviceCheck('admin');
+            }}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Smartphone className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold">Device check</div>
+              <div className="text-sm text-muted-foreground">
+                Plays four maps on this device (about a minute), draws a fence on each, and reports
+                whether the menu and boards show, the frame rate, and any error, with Copy. The
+                same run the Firebase Test Lab phones do.
               </div>
             </div>
           </button>

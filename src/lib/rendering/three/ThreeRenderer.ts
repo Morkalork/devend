@@ -122,6 +122,8 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
   private governor = new QualityGovernor();
   /** A step the governor asked for (down, or up after fast windows), applied between maps. */
   private pendingTier: QualityTier | null = null;
+  /** A resize is queued for the end of this frame (resizeAfterFrame). */
+  private resizeQueued = false;
   /** Fast windows in a row at this tier (quality.ts FAST_WINDOWS). */
   private fastWindows = 0;
   private windowsSeen = 0;
@@ -532,6 +534,29 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     recordQualityStep(this.tier, up, medianMs);
   }
 
+  /**
+   * Re-allocate the 3D frame once the frame being drawn is finished. Never
+   * now: this runs inside the 2D layer's render (SleekRenderer.render calls
+   * renderScene between syncing its sprites and drawing them), and a resize
+   * destroys the surface this frame was handed and the ball textures those
+   * sprites already hold. Drawn anyway, they threw "reading 'alphaMode'" on
+   * every slow phone the moment the governor stepped down, found by the
+   * device check. A microtask runs as soon as the game loop's frame returns,
+   * so the next frame is synced against the new targets.
+   */
+  private resizeAfterFrame(): void {
+    if (!this.pixi || this.resizeQueued) {
+      return;
+    }
+    this.resizeQueued = true;
+    queueMicrotask(() => {
+      this.resizeQueued = false;
+      if (this.pixi && this.renderer && !this.lost) {
+        this.sleek.resize(this.size.w, this.size.h, true);
+      }
+    });
+  }
+
   /** The governor said this tier is too slow on this device (see renderScene). */
   private stepDownForSlowFrames(medianMs: number): void {
     this.fastWindows = 0;
@@ -558,7 +583,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     if (ratioNext < ratioNow) {
       this.emergencyRatio = ratioNext;
       recordQualityStep(this.tier, "res", medianMs);
-      if (this.pixi) this.sleek.resize(this.size.w, this.size.h, true);
+      this.resizeAfterFrame();
     }
   }
 

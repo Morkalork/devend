@@ -41,3 +41,7 @@ devend-upload.keystore
 
 # PostHog setup-wizard cache (the usable skill lives in .claude/skills/)
 .posthog/
+
+# The device check's reports (scripts/device-check-emulated.mjs, DEVICE_LAB.md).
+device-check-results/
+device-lab-results/

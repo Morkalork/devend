@@ -47,6 +47,7 @@ import { startPairTurns } from "@/lib/net/pairTurn";
 import { runStream } from "@/lib/runRng";
 import { createFrameGate } from "@/lib/frameGate";
 import { getFrameCap } from "@/lib/rendering/render3dSettings";
+import { runBoardFrameHooks } from "@/lib/rendering/boardFrameHook";
 
 /**
  * The longest stretch a single frame may hand the simulation, in milliseconds.
@@ -769,6 +770,8 @@ export function createGameLoop(
 
     const _renderStart = performance.now();
     callbacks.render();
+    // The device check reads the board back here, the one moment it can (boardFrameHook.ts).
+    runBoardFrameHooks();
     // Feed the perf overlay (physics-loop time vs render time vs frame delta).
     // Cheap and allocation-free; the overlay only paints when toggled on.
     recordFrame(dt * 1000, _physMs, performance.now() - _renderStart, _physSteps, game.balls.length);

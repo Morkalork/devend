@@ -54,6 +54,7 @@ import { loadMusicCatalogue, getMusicCatalogue } from '@/lib/musicCatalogue';
 import type { MusicCatalogue } from '@/types/music';
 import { backActionForScreen } from '@/lib/screenBack';
 import { todayKey, previousDayKey } from '@/lib/runRng';
+import { closeDeviceCheck, useDeviceCheckRun } from '@/lib/deviceCheck/launch';
 /**
  * The screens that show a live board, and must not be resized under the player.
  *
@@ -84,6 +85,8 @@ const GameScreen = lazy(() => loadGameScreen().then(m => ({ default: m.GameScree
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
+// Not behind admin: a Firebase Test Lab launch of the store build runs it too (DEVICE_LAB.md).
+const DeviceCheckScreen = lazy(() => import('@/components/admin/DeviceCheckScreen').then(m => ({ default: m.DeviceCheckScreen })));
 const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScreen').then(m => ({ default: m.UpgradeAtlasScreen })));
 const PairLoopbackPanel = lazy(() => import('@/components/admin/PairLoopbackPanel').then(m => ({ default: m.PairLoopbackPanel })));
 const PairLobby = lazy(() => import('@/ui/screens/PairLobby').then(m => ({ default: m.PairLobby })));
@@ -264,6 +267,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   // the host - and for the Capacitor trap that makes "localhost" the wrong
   // question.
   const [adminUnlocked, setAdminUnlocked] = useState(adminOnHere);
+  // The device check (DEVICE_LAB.md) opens its own screen once it has measured the menu.
+  const deviceCheckRun = useDeviceCheckRun();
+  const navigateTo = navigation.navigateTo;
+  useEffect(() => {
+    if (deviceCheckRun) {
+      navigateTo('deviceCheck');
+    }
+  }, [deviceCheckRun, navigateTo]);
   const handleSecretAdminUnlock = useCallback(() => {
     setAdminUnlocked(true);
     navigation.goToAdmin();
@@ -797,6 +808,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   onUpgradeAtlas={navigation.goToUpgradeAtlas}
                   onPairLoopback={navigation.goToPairLoopback}
                   onNearbyDiagnostics={navigation.goToNearbyDiagnostics}
+                />
+              </Suspense>
+            )}
+            {deviceCheckRun && navigation.currentScreen === 'deviceCheck' && (
+              <Suspense fallback={null}>
+                <DeviceCheckScreen
+                  run={deviceCheckRun}
+                  onExit={() => {
+                    closeDeviceCheck();
+                    navigation.goToWelcome();
+                  }}
                 />
               </Suspense>
             )}

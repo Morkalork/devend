@@ -2657,7 +2657,7 @@ export function GameCanvas({
           the board is on the interface canvas (CANVAS_UI_PLAN.md), positioned
           from this container's box on screen. */}
       <div ref={containerRef} className="flex-1 min-h-0 relative overflow-visible" style={{ height: "70%" }}>
-        <canvas key={useFallback2d ? '2d' : glKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        <canvas key={useFallback2d ? '2d' : glKind} ref={canvasRef} data-board-canvas="" className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"
