@@ -88,7 +88,10 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Its own limit: the system libraries come through apt, and a stalled
+      # Ubuntu mirror once held this step until the whole job timed out.
       - name: Chromium
+        timeout-minutes: 6
         run: npx playwright-core install --with-deps chromium
 
       - name: Build
