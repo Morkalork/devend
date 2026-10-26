@@ -94,13 +94,14 @@ async function main() {
   mkdirSync(outDir, { recursive: true });
 
   const server = await serve();
-  const browser = await chromium.launch({
-    executablePath: process.env.CHROMIUM_PATH || undefined,
-    // The splash lifts by itself where sound needs no tap, as in the app.
-    args: ["--autoplay-policy=no-user-gesture-required"],
-  });
+  let browser = null;
   let result = null;
   try {
+    browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
+      // The splash lifts by itself where sound needs no tap, as in the app.
+      args: ["--autoplay-policy=no-user-gesture-required"],
+    });
     const context = await browser.newContext({
       viewport: tier.viewport, deviceScaleFactor: 1, isMobile: true, hasTouch: true, userAgent: tier.userAgent,
     });
@@ -131,7 +132,7 @@ async function main() {
     }
     await page.screenshot({ path: join(outDir, `${tierName}.png`) });
   } finally {
-    await browser.close();
+    await browser?.close();
     try {
       process.kill(-server.pid);
     } catch {
