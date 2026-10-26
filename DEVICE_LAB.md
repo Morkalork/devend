@@ -71,7 +71,10 @@ five physical-device tests a day, which is why the nightly run uses four.
 3. **Make a service account** for GitHub. In IAM & Admin > Service Accounts >
    Create:
    - name: `github-device-lab`;
-   - roles: **Firebase Test Lab Admin** and **Storage Object Viewer**.
+   - roles: **Firebase Test Lab Admin** and **Storage Object Admin**. Object
+     Admin, not Viewer: the run uploads the APK into Test Lab's bucket
+     (`test-lab-*`) before reading the results back, and a Viewer is refused
+     with `storage.objects.create` denied.
 
    Then open it, go to Keys > Add key > JSON, and keep the file that downloads.
 4. **Add two repository secrets** in GitHub: the repository's Settings >
