@@ -156,7 +156,16 @@ jobs:
           set -e
           BUCKET=$(grep -o 'storage/browser/[^/]*' run.log | head -1 | sed 's#storage/browser/##')
           if [ -z "$BUCKET" ]; then
-            echo "Could not find where Test Lab stored the results" >&2
+            # Test Lab refused the run before any phone started (an API not
+            # enabled, a missing permission): its own words, where they are read.
+            {
+              echo "## Device lab: Test Lab did not start the run"
+              echo
+              echo '```'
+              grep -E '^ERROR:|not enabled|PERMISSION|permission' run.log | head -5
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Test Lab did not start the run; its error is in the job summary" >&2
             exit 1
           fi
           echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
