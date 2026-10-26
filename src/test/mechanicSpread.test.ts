@@ -132,8 +132,17 @@ describe("no mechanic is introduced and then dropped", () => {
     // a windmill room around a second one. That is the rhythm this list exists
     // to measure - a name is on it for exactly one map - happening on purpose
     // for once rather than being noticed afterwards.
+    //
+    // ACT III LANDED, and the list turned over the way the rhythm predicts.
+    // DEFORMABLE came off on 25 (its Use beat), GRAVITY WELL on 21 and PHASING
+    // on 20 and 28. Seven names joined, every one on the map where it MEETS:
+    // portal on 21, circuit on 22, one-way and the delivery box on 23, charge
+    // on 25, latch on 26. Cage, fence ground and the data stream arrived and
+    // got their second map inside the act (22 and 29, 24 and 27, 26 and 27), so
+    // they never appear here at all. Mirror stays, still waiting on its second
+    // map. The seven come off as act IV develops them.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["deformable", "gravityWell", "mirror", "phasing"]);
+      .toEqual(["box", "charge", "circuit", "latch", "mirror", "oneWay", "portal"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -156,14 +165,18 @@ describe("no mechanic is introduced and then dropped", () => {
     // MUTATOR the fourth, on 14; GRAVITY WELL the fifth, on 15; DEFORMABLE and
     // PHASING the sixth and seventh, both on 16, which Meets one and
     // compresses the other; ROTOR the eighth, on 17, where the Demolition
-    // map's wiper sweeps the airspace over the barrel.
+    // map's wiper sweeps the airspace over the barrel. ACT III took nine at
+    // once: portal (21), terminals and cage (22), one-way and the delivery box
+    // (23), fence ground (24), charge (25), the data stream and the latch (26).
+    //
+    // The three left are act IV's: the ball gate was always 33's, and the WIP
+    // limit and the thread lock moved there from 21. The bot spends two to
+    // four times par on every map of this ladder, so a budget tight enough to
+    // teach reads as an unwinnable map in the sweep (level 18's record in
+    // MAP_DESIGN_GUIDELINES.md), and a Meet nobody can measure should not be
+    // the first thing an act does.
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
-      .toEqual([
-        "Ball gate", "Cage", "Charge", "Data stream",
-        "Delivery box", "Fence ground", "Latch",
-        "One-way", "Portal",
-        "Terminals", "Thread lock", "WIP limit",
-      ]);
+      .toEqual(["Ball gate", "Thread lock", "WIP limit"]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {

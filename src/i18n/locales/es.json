@@ -2175,6 +2175,11 @@
         "name": "Derrota a la Release Candidate",
         "description": "Valla al jefe dentro del área de sintaxis para lanzarlo.",
         "clarify": "Atrapa a la Release Candidate dentro del área de sintaxis clara para derrotarla. Atraparla fuera falla el mapa (pierdes una vida y se reinicia). Quedarte sin tiempo también falla."
+      },
+      "defeat-merge": {
+        "name": "Resolver el Merge Conflict",
+        "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja de sintaxis clara.",
+        "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier parte del tablero y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja de sintaxis clara, y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares; cuando un pilar se desvanece, empuja a la pareja y la libera. Quedarse sin tiempo hace fracasar el mapa."
       }
     },
     "tagSets": {
@@ -2207,6 +2212,10 @@
       "level-10": {
         "name": "Fecha de Release",
         "intro": "Tu primer jefe. La Release Candidate anda suelta: una bola grande y rápida, con Scope Creep a tope desde el primer segundo. Limpiar el tablero no basta: vállala dentro del área de sintaxis clara (arriba a la derecha) para lanzarla. Atrápala en otro sitio y pierdes una vida. Vence al plazo."
+      },
+      "level-20": {
+        "name": "Merge Conflict",
+        "intro": "Dos commits enredados por una cadena que destroza cada valla que barre. Ninguno se resuelve al primer intento: atrapa una mitad en cualquier sitio y se suelta, más rápida y más pequeña, llevándose una de tus vallas. Desgasta las dos mitades y luego enciérralas en la caja de sintaxis clara. La cadena se engancha en los pilares mientras están en pie, y una congelación compra una ventana limpia."
       }
     },
     "levels": {
@@ -2285,6 +2294,46 @@
       "level-19": {
         "name": "Hotfix",
         "premise": "En la que cuatro barras patrullan un tablero cuyo suelo gira cada diez segundos, y dos de los cuatro cofres son la victoria."
+      },
+      "level-20": {
+        "name": "Merge Conflict",
+        "premise": "En la que dos commits comparten una cadena que destroza vallas, y las dos mitades tienen que entregarse dentro de la caja."
+      },
+      "level-21": {
+        "name": "Cherry Pick",
+        "premise": "En la que un portal deja caer las bolas en la otra rama, y el pozo bajo su boca las lanza contra las losas."
+      },
+      "level-22": {
+        "name": "Cold Start",
+        "premise": "En la que tres bolas duermen en tres terminales, y una valla que pasa junto a un terminal arranca su bola para que puedas atraparla."
+      },
+      "level-23": {
+        "name": "Backlog",
+        "premise": "En la que las bolas caen por una membrana que no pueden volver a subir, y la victoria es una entregada en la caja de abajo."
+      },
+      "level-24": {
+        "name": "Cold Cache",
+        "premise": "En la que la caja es el bolsillo más barato del tablero, y el suelo bajo ella construye vallas a media velocidad."
+      },
+      "level-25": {
+        "name": "Blast Radius",
+        "premise": "En la que una valla sobre una mecha vuela un tapón que nadie podría romper a mano, y la explosión fractura tus propias vallas."
+      },
+      "level-26": {
+        "name": "Telemetry",
+        "premise": "En la que una valla trazada a lo largo de la veta la cosecha, y la cortina que cruza la veta se levanta tras tu primer cierre."
+      },
+      "level-27": {
+        "name": "Throughput",
+        "premise": "En la que la veta baja por una tubería de suelo frío, y la valla que la cosecha es la más lenta que trazarás."
+      },
+      "level-28": {
+        "name": "Race Condition",
+        "premise": "En la que la puerta ancha de la caja es un muro que no siempre está, y el pozo barre las bolas hacia él de todos modos."
+      },
+      "level-29": {
+        "name": "Postmortem",
+        "premise": "En la que todo lo que enseñó el acto III está en el tablero a la vez: un corral, dos escudos, una patrulla y una sala que gira."
       }
     }
   },

@@ -375,27 +375,27 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 18, 21, 22, 24, 26, 28, 29, 31, 33 |
-| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 18, 19, 22, 23, 29, 33 |
-| breakable | A | Meet | 8 | 11 | 12, 13, 18, 19, 25, 29, 32 |
+| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 31, 33 |
+| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29, 33 |
+| breakable | A | Meet | 8 | 11 | 12, 13, 18, 21, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
 | launcher | C | Meet | 11 | 12 | 17 |
 | bumper | C | Compressed | 11 | 12 | 16 |
-| deformable | A | Compressed | 16 | - | - |
-| phasing | A | Meet | 16 | - | - |
+| deformable | A | Compressed | 16 | 25 | - |
+| phasing | A | Meet | 16 | 28 | 20 (boss) |
 | brittle | A | Meet | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | shard bomb | A | Seasoning | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | box blast | A | Seasoning | 11 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 21 | - | 31 |
-| portal | B | Meet | 21 | - | - |
-| WIP limit | D | Meet | 21 | - | 32 |
-| cage | E | Compressed | 21 | 29 | - |
-| thread lock | D | Compressed | 21 | - | - |
-| gravity well | C | Meet | 15 | 21 | 22, 28, 29 |
+| terminals | E | Meet | 22 | - | 31 |
+| portal | B | Meet | 21 | - | 33 |
+| WIP limit | D | Meet | 32 | - | - |
+| cage | E | Compressed | 22 | 29 | - |
+| thread lock | D | Compressed | 31 | - | - |
+| gravity well | C | Meet | 15 | 21 | 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
 | delivery box | E | Meet | 23 | - | - |
 | fence ground | D | Meet | 24 | 27 | - |
@@ -405,7 +405,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | ball gate | B | Compressed | 33 | 34 | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 19 | - |
-| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 20 (boss), 34, 35 |
+| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 34, 35 |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |
@@ -595,7 +595,7 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 ## 5. The ladder
 
 > **Acts II, III and IV were deleted and are being rebuilt one map at a time.**
-> `public/map.yml` is ten maps. What follows still describes the whole plan,
+> `public/map.yml` is twenty-nine maps. What follows still describes the whole plan,
 > including three acts that currently have no maps in them, because the plan is
 > what the rebuild is being written against - but read every row below act I as
 > a **brief, not a description**. The tables for 11-35 are what those maps used
@@ -648,7 +648,7 @@ why, and change it back only once the runtime gap guard measures what ships.
 | 9 | - skill check | all of act I | No new toys, and the win names each one: the box, four shards of ten, one monolith of two, at 81%. |
 | 10 | BOSS | - | *(out of scope, taken separately)* |
 
-### Act II - The Sprint (11-20)  *(rebuilding: 11-19 built, 20 to come)*
+### Act II - The Sprint (11-20)  *(built)*
 
 *Owns: pressure, the machines that add speed, the redirectors.*
 Procedural slots unlock at 11. Rainbow 11, white 12, green 13.
@@ -862,8 +862,8 @@ now a summary of them rather than a rival to them.
 | 17 | **Compressed** brittle | Fight launcher, Use chest | The launcher fires the roster at a wall that breaks on touch, and the win wants eight of its fifteen bricks gone. Fire hard and the wall goes fast, and so does the map. *(built)* |
 | 18 | *(none)* | **Fight** rotor, **Use** const area | A windmill owns the middle of the board, and the room it turns in is the pocket that pays triple. Its two doors are corner necks the arm closes in turn, and a fence grown into a mover costs a life, so every cut across the centre is a bet on where the arm will be. *(built)* |
 | 19 | *(none: the skill check)* | **Fight** mover, **Use** pinned mutator, Use chest | A pinwheel of four patrol bars on a board that turns a quarter every ten seconds. The layout has the same symmetry as the tilt, so every turn deals the same room with a different floor, and the pull brings the balls to a chest every phase. *(built, ladder ends here)* |
-| - | *(displaced from 19)* **Compressed** cage, **Compressed** thread lock, and the WIP limit, terminals and portal Meets | - | Moved to act III (21+): act II's skill check is gravity with movers now, and a skill check introduces nothing. |
-| 20 | BOSS | - | *(the chained pair: both halves must be shipped)* |
+| - | *(displaced from 19)* **Compressed** cage, **Compressed** thread lock, and the WIP limit, terminals and portal Meets | - | Moved to act III (21+): act II's skill check is gravity with movers now, and a skill check introduces nothing. Portal landed on 21, terminals and the cage on 22; the WIP limit and the thread lock went on to act IV (see 21). |
+| 20 | BOSS | - | The chained pair: two commits on a chain that shreds fences, each taking two traps, and both halves shipped into the box. *(built)* |
 
 #### 15 "Standup" - Meet gravity well  *(built)*
 
@@ -1161,23 +1161,206 @@ It displaced the drafted 19 briefs (cage, thread lock, WIP limit, terminals,
 portal): those Meets moved to act III in the ledger, since a skill check
 introduces nothing.
 
-### Act III - Legacy Code (21-30)  *(deleted, to rebuild)*
+#### 20 "Merge Conflict" - BOSS  *(built)*
+
+**Two commits tangled by a chain that shreds every fence it sweeps across, and
+both halves have to be shipped into the box.** Each half takes two traps: the
+first can be anywhere and costs no life (the half tears free, faster and
+smaller, and reverts one of your fences), the second has to be inside the light
+syntax box, and both halves have to end up there. Nothing is new, which is the
+boss rule: phasing met on 16, the gate box on 8 and 10, and the chain is the
+boss's own weapon rather than a mechanic anyone has to learn. The two phasing
+pillars are the mitigation: the chain drapes over a standing pillar and snags
+the pair, which is the window to cut in, and when the pillar phases out it
+shoves the pair free again, so the window is on a clock the player can read.
+
+**Bot sweep, 8 seeds, 60s: 1 of 8** at hp 2, five `lockedOut` (the bot traps
+both halves outside the box) and two stalls. At hp 1 it reads **0 of 8**, so
+the second trap is not what costs the bot; the box is, twice over. Level 10
+reads 4 of 8 on the same harness with one boss, and a pair whose every half
+must be zoned compounds that. A boss sweep is a floor (section 8): the bot
+aims for a zone only when a ball is already inside it, and nothing on this
+board drives one there.
+
+### Act III - Legacy Code (21-30)  *(rebuilding: 21-29 built, 30 to come)*
 
 *Owns: the board acting on its own schedule.*
-Board tilt unlocks at 21. Lodestone 21, black 25.
+Board tilt unlocks at 21. Lodestone 21, black 25. Default clock 40s.
+
+**What moved on the way in.** The brief queued five Meets on 21 (portal,
+terminals, cage, WIP limit, thread lock), which rule 5 under the ledger already
+called a queue rather than a map. The portal took 21, terminals and the cage
+took 22, and the WIP limit and the thread lock went on to act IV (32 and 31):
+the bot spends two to four times par on every map of this ladder, so a budget
+tight enough to teach reads as an unwinnable map in the sweep (the level-18
+record), and a Meet nobody can measure should not be the first thing an act
+does. Wells sit on 21, 28 and 29 rather than 21, 22, 28 and 29, because the
+schedule caps a mechanic's spread at its owed count until its act is complete
+(`featureSchedule`: four maps, owed at 30), and 29 is the one that needs the
+well for the tilt. 22 lost its rotor to the same arithmetic the other way: a
+Meet with two family siblings beside it had no room for a third machine.
+
+Space demanded climbs **86 -> 93** (thresholds 14 -> 7), cuts 8 -> 9.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 21 | **Use** gravity well (first map past the random-tilt gate) | Use bonus pocket | The route between chambers is where your ball stops going where you aimed it. The well MEETS at 15 now; what 21 adds is the sporadic board tilt, which needs both a well and TILT_MIN_LEVEL to fire at all. |
-| 22 | - | Use gravity well + rotor | Slingshot: a paying pocket with a mouth no straight line reaches, and an arm sweeping the open half. |
-| 23 | **Meet** one-way + **Meet** delivery box | Fight mover | A membrane balls fall through and cannot climb, and a lock that only counts inside the box. |
-| 24 | **Meet** fence ground | Break syntax area | Ground that builds fences slowly. The cheapest pocket is the longest stand-still. |
-| 25 | **Meet** charge | Use deformable, Break breakable | A fuse, a delay, and a slab that will not be there in 1.4 seconds. Black ball unlocks here. |
-| 26 | **Meet** data stream + **Compressed** latch | Fight gravity well | The stream is behind a curtain that lifts on your first lock, so the harvest cannot be the opening move on the map that teaches harvesting. |
-| 27 | - | Use data stream + fence ground | Two seams to take, on ground that fights you for the fences to take them with. |
-| 28 | - | Use phasing, Fight gravity well | The one lane you must cross is the one that is not always solid. |
-| 29 | - | Use cage + breakable, Fight mover | Four balls, seven percent, a shield in the way and a pen in the far corner. |
+| 21 | **Meet** portal | **Use** gravity well | A portal drops balls on the other branch, and the well under its mouth throws them at the slabs. The breather after the boss, and the first map past the tilt gate. *(built)* |
+| 22 | **Meet** terminals, **Compressed** cage | - | Three balls asleep at three terminals; a fence past a terminal boots its ball so you can trap it, and the pen is where you put the one you just woke. *(built)* |
+| 23 | **Meet** one-way, **Meet** delivery box | Fight mover | Balls fall through a membrane they cannot climb back over, straight at the mouth of the box below, and the win is one delivered. *(built)* |
+| 24 | **Meet** fence ground | Break syntax area | The box is the cheapest pocket on the board, and the ground under it builds fences at half speed. *(built)* |
+| 25 | **Meet** charge | Use deformable, Break breakable | A fence over a fuse blows a plug nobody could break by hand, and the blast fractures your own fences. Black ball unlocks here. *(built)* |
+| 26 | **Meet** data stream, **Compressed** latch | - | A fence drawn along the seam harvests it, and the curtain across the seam lifts after your first lock. *(built)* |
+| 27 | - | Use data stream, Use fence ground | The seam runs down a pipe of cold ground, and the fence that harvests it is the slowest one you will draw. *(built)* |
+| 28 | - | Use phasing, Fight gravity well | The box's wide door is a wall that is not always there, and the well sweeps the balls at it either way. *(built)* |
+| 29 | *(none: the skill check)* | Use cage, Use breakable, Fight mover, the tilt | Everything act III taught at once: a pen, two shields, a patrol and a room that turns. *(built, ladder ends here)* |
 | 30 | BOSS | - | *(the fence wipe)* |
+
+#### 21 "Cherry Pick" - Meet portal, Use gravity well  *(built)*
+
+**A spine splits the board into two branches with one neck at the bottom, and
+a portal pair joins the two top corners.** A ball into the near mouth comes out
+of the far one, on the other branch, with no walk round the spine. The well
+sits under the far mouth and bends every arrival down, so what comes out does
+not go where it was aimed: it is thrown at the two slabs stacked under the
+well (the combination cell "gravity well under a portal mouth", spent as the
+portal's Meet because it makes the portal the fast way to the win). The slabs
+are the win, one of two, and the long way round the neck is the safe answer
+that costs tempo. A portal is solid to fences and open to balls, and a pocket
+holding one cannot lock, so the top of each branch is ground you cut around,
+which gives the map its order. Tilt chance 0.3: the first map past the gate.
+
+**Bot sweep, 8 seeds, 60s: 6 of 8**, 18 to 24 winning cuts against par 8; the
+two losses are the clock at 5% and 20% remaining, and one of those is the
+stall heuristic firing on a run that made 43 cuts.
+
+#### 22 "Cold Start" - Meet terminals, Compressed cage  *(built)*
+
+**Three balls are asleep, one at each terminal, and a sleeping ball holds its
+pocket shut.** A fence routed past a terminal lights it and boots its ball, so
+wiring is the verb, and the win asks for two of three. The cage is family E's
+compressed sibling and the answer to the question wiring creates - what do you
+do with a ball you just woke while you draw the next fence.
+
+**Slack is in lanes here, measured.** Drafted with both top terminals above
+their sleepers, the sweep stranded a seed at 77% remaining after five cuts:
+one horizontal fence across the top strip, with every sleeper below it,
+captured both terminals' ground at once. Each terminal now sits on a different
+side of its sleeper (above, below, to the right), so no single straight fence
+can separate two of them from every sleeper, and a cut costs at most one.
+
+**Bot sweep, 8 seeds, 60s: 6 of 8**, 14 to 32 cuts against par 8; one clock
+and one stranding, late, at 45% remaining after fourteen cuts.
+
+#### 23 "Backlog" - Meet one-way, Meet delivery box, Fight mover  *(built)*
+
+**One design, two halves, and not split across two rungs** (the level-14
+lesson): a divider across the middle with a membrane in its slot that balls
+fall through and cannot climb, and the box straight under the slot with its
+mouth facing up, so a ball that drops through the membrane is falling at the
+mouth. A delivery is not a lock - nobody sealed it, it was taken somewhere -
+which is the verb this map adds. The patrol sweeps the upper side of the slot.
+The box reserves its interior, so feeding it does not calm the map; the win
+wants one of its two deliveries, the second is the greed hook.
+
+**The box first sat off to one side and the sweep read 1 of 8**: three
+`lockedOut` and four clocks with the space already cleared. A mouth the
+traffic never crosses is a box nobody fills by accident, and the bot has no
+strategy for content, so that number was the layout and not the bot. Under
+the slot: **6 of 8**, 13 to 24 cuts against par 8, two clocks at 5% and 12%.
+
+#### 24 "Cold Cache" - Meet fence ground, Break syntax area  *(built)*
+
+**The dark box in the corner is the win, and it is the cheapest pocket on the
+board: two fences close it against the frame.** The ground under it builds
+fences at half speed, so the cheapest pocket is the longest stand-still, and a
+ball in the box while your fence crawls across is the whole read (cell "fence
+ground prices the cheapest chamber"). Two posts make the rest of the board a
+pair of chambers on ordinary ground, where the clear is done.
+
+**Bot sweep, 8 seeds, 60s: 6 of 8**, 19 to 35 cuts against par 8; two clocks.
+
+#### 25 "Blast Radius" - Meet charge, Use deformable, Break breakable  *(built)*
+
+**The divider is two deformable bars with two forty-hit plugs set into the
+middle: a breakable nobody breaks by hand**, which is the inversion of the slab
+the player has been smashing since level 8. Under each plug is a fuse; a fence
+over a fuse arms the charge, 1.4 seconds of telegraph, and the plug is blown
+out of the wall, flinging the balls nearby and fracturing your own fences
+inside the blast. One plug of two is the win, so there are two fuses and two
+answers, and the reach guard refuses a cut that would bury a plug like any
+other needed slab. The bars keep their dents and charge the balls for them
+(the deformable's Use). The black ball unlocks here and is the other answer:
+double damage against a plug. A `deadline` beat breaks plug-a at 22%.
+
+**Bot sweep, 8 seeds, 60s: 8 of 8**, 18 to 28 cuts against par 9, with a blast
+or two on every seed: the bomb inside each plug (lib/bombCore.ts) finishes it
+once the balls have chipped the hull, which is what makes a forty-hit slab
+survivable for a bot that cannot arm a fuse.
+
+#### 26 "Telemetry" - Meet data stream, Compressed latch  *(built)*
+
+**A seam runs down the middle of the board, and a fence drawn along it
+harvests the spans it covers.** The curtain sits across the seam's middle span
+and latches: it opens after the first lock and stays open, so before that a
+fence down the seam stops at the curtain and harvests what is above it, and
+after it the same fence takes the lot. That is the latch's whole lesson in one
+object: the wall you were cutting against leaves when you succeed.
+
+**Sized by the sweep.** At one span of two the bot stranded three seeds of
+eight (`requirementUnreachable`: a cut that claimed the middle took both
+spans). At one span of **three**, a cut costs a span and not the map:
+**6 of 8**, 11 to 25 cuts against par 8, two strandings.
+
+#### 27 "Throughput" - Use data stream, Use fence ground  *(built)*
+
+**The seam runs the length of a pipe down the middle, and the pipe is cold
+ground**: a fence along the seam builds at less than half speed for its whole
+length, exposed in the one lane every ball crosses. Two spans are the win, so
+a short trace in one half of the pipe and a second in the other is an answer,
+and a single full-length trace is the greedy one. The four racks make the
+halves chambers rather than open halls.
+
+**Slack in lanes, again, and it took two rounds.** A cut across the pipe above
+every ball claims every span above it. At two of three the bot stranded five
+seeds of eight; at two of four, three. The seam is five spans now and asks for
+two: **4 of 8**, 18 to 31 cuts against par 9, two clocks and two strandings at
+6% and 7% remaining, which is a player fencing badly rather than the layout
+(section 9: early and high is the map, late and low is the cut).
+
+#### 28 "Race Condition" - Use phasing, Fight gravity well  *(built)*
+
+**The dark box is the win and it sits in a room with a wide door that is not
+always there**: a phasing wall, solid for most of a nine second cycle, gone
+for the rest. The well in front of it pulls right, into the room, so the balls
+are swept at the wall whether it is there or not. A ball goes in when the door
+is down; the lid across the door is cut when it is up, since a fence
+terminates on a pillar whatever its phase (the level-16 asymmetry, used).
+
+**A room with no permanent way in is captured at load.** Drafted with the
+phasing door as the only opening, the sweep read **0 of 8**, every seed
+`areaUnreachable` on the first cut: section 7.6's rule, reached from a new
+direction - the reach guard reads a standing door as a wall, and a box no
+ball can reach is a box the first cut strands. A 60-unit slot beside the door
+stays open always; it is the slow answer, the door is the fast one. With it:
+**6 of 8**, 15 to 36 cuts against par 9, one clock, one `areaUnreachable`.
+
+#### 29 "Postmortem" - the skill check  *(built)*
+
+**Four balls, seven percent, two shields in the way and a pen in the far
+corner.** Nothing new: the cage from 22, the shields from 8, the patrol from 4,
+the well from 15, and the tilt the act unlocked (chance 0.35, so a third of
+the clear tiers turn the room a quarter, and down stays down, so the well
+lands on a different one of its four bearings each time). The vault in the
+bottom-right pays double and is the greed hook; its lip is the lane the patrol
+sweeps. One shield of two is the win.
+
+**Bot sweep, 8 seeds, 60s: 6 of 8**, 16 to 32 cuts against par 9; the two
+losses are the clock at 9% and 12% remaining.
+
+**Every number above was taken at the 40s default clock** the act's maps play
+at (mapTiming's ramp), on the corrected harness (section 8), with the bombs
+armed and the mutator rolled from the seed. The clocks in the loss columns are
+that clock, not the sweep's 60s budget.
 
 ### Act IV - Crunch (31-35)  *(deleted, to rebuild)*
 

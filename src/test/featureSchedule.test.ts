@@ -49,6 +49,12 @@ const ACTS = [
 /** Acts whose maps have been authored to the schedule. May only grow. */
 const MIGRATED_ACTS: string[] = [
   "I Onboarding",
+  // Act II was authored a map at a time through 19 and closed with its boss at
+  // 20; act III landed as one set, 21-29, built to the spine from the start.
+  // Both claimed the day their last map landed, which is the only time the
+  // list is allowed to grow.
+  "II The Sprint",
+  "III Legacy Code",
 ];
 
 const BOSS_LEVELS = [10, 20, 30, 35];

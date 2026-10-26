@@ -2701,3 +2701,982 @@ levels:
         breakable: true
         hitsToBreak: 3
     balls: []
+
+  # ===========================================================================
+  # ACT II closes: 20 "Merge Conflict", the second boss.
+  #
+  # Two commits tangled by a chain that shreds every fence it sweeps across.
+  # Each half takes two traps: the first can be anywhere and costs no life (the
+  # half tears free, faster and smaller, and reverts one of your fences); the
+  # second has to be inside the light syntax box, and BOTH halves have to end
+  # up there. Nothing is new: phasing met on 16, the gate box on 8 and 10, and
+  # the chain is the boss's own weapon rather than a mechanic. The two phasing
+  # pillars are the mitigation: the chain drapes over a solid pillar and snags
+  # the pair, which is the window to cut in, and when the pillar phases out it
+  # shoves the pair free again, so the window is on a clock the player can read.
+  # ===========================================================================
+  # Heights (3D board, objectRise.ts): the two phasing pillars stand tall, so they visibly sink and rise; nothing else stands but the frame.
+  - id: level-20
+    name: Merge Conflict
+    level: 20
+    premise: "The one where two commits share a chain that shreds fences, and both halves have to be shipped into the box."
+    sizeThreshold: 18
+    expectedCuts: 6
+    points: 5
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 95
+    pickupChance: 0
+    coloredAreas:
+      - kind: light
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    boss:
+      name: Merge Conflict
+      intro: "Two commits tangled by a chain that shreds every fence it sweeps. Neither resolves on the first try: trap a half anywhere and it tears free, faster and smaller, taking one of your fences with it. Wear both halves down, then fence them into the light syntax box. The chain snags on the pillars while they stand, and a freeze buys a clean window."
+      creepFromStart: true
+      objective:
+        id: defeat-merge
+        name: Resolve the Merge Conflict
+        description: Wear both chained halves down, then fence them into the light syntax box.
+        clarify: "Each half takes two traps. The first can be anywhere on the board and costs no life: the half breaks out faster and smaller, and one of your fences is reverted. The second must be inside the light syntax box, and both halves must end up there. Their chain breaks any fence it sweeps across and snags on the pillars; when a pillar phases out it shoves the pair free. Running out of time fails the map."
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        hp: 2
+        count: 2
+        chained: true
+        radiusScale: 1.6
+        speedScale: 1.1
+        color: '#ff7a3d'
+        spitIntervalSeconds: 0
+        maxMinions: 0
+    entities:
+      - id: pillar-l
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: pillar-r
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 12
+    balls: []
+
+  # ===========================================================================
+  # ACT III - LEGACY CODE (21-29): the board acting on its own schedule.
+  #
+  # Family E arrives here (terminals, cage, delivery box, charge, data stream),
+  # with the one redirector act II did not spend (the portal) and the one rule
+  # on the ground it did not spend (fence ground). Board tilt unlocks at 21 and
+  # needs a well to fire at all, so wells sit on 21, 28 and 29. The WIP limit
+  # and the thread lock were briefed for 21 and moved on to act IV: the bot
+  # needs two to four times par on every map of this ladder, so a budget tight
+  # enough to teach reads as an unwinnable map in the sweep (see the level-18
+  # record in MAP_DESIGN_GUIDELINES.md), and a Meet nobody can measure is a
+  # Meet nobody should ship first.
+  #
+  # Space demanded climbs 86 -> 93 (thresholds 14 -> 7). Default clock 40s.
+  # ===========================================================================
+
+  # 21 "Cherry Pick" - MEET portal, USE gravity well. The breather after the boss.
+  #
+  # A spine splits the board into two branches with one neck at the bottom. A
+  # portal pair joins the two top corners: a ball into the near mouth comes out
+  # of the far one, on the other branch, with no walk round the spine. The well
+  # sits under the far mouth and bends every arrival down, so what comes out
+  # does not go where it was aimed: it is thrown at the two slabs stacked under
+  # the well. The slabs are the win (one of two, so no single cut buries it),
+  # and the portal plus well is how balls reach them fast; the long way round
+  # the neck is the safe answer that costs tempo. A portal is solid to fences
+  # and open to balls, and a pocket holding one cannot lock, so the top of each
+  # branch is ground you cut AROUND, which gives the map its order.
+  # Greed hook: the nook under the top-left lip, one fence, superior-sized.
+  # Heights (3D board, objectRise.ts): the spine stands tall as the branch between the two rooms; the lip sits low, and the slabs stand proud as monoliths the well pours onto.
+  - id: level-21
+    name: Cherry Pick
+    level: 21
+    premise: "The one where a portal drops balls on the other branch, and the well under its mouth throws them at the slabs."
+    sizeThreshold: 14
+    expectedCuts: 8
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, yellow]
+    tiltChance: 0.3
+    win:
+      require:
+        - kind: space
+          threshold: 14
+        - kind: smashed
+          count: 1
+          of: monoliths
+    gravityWells:
+      - x: 600
+        'y': 300
+        width: 200
+        height: 150
+        turnRate: 3.0
+        pull: down
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: spine
+        rise: 1.6
+        kind: wall
+        shape: rect
+        x: 437
+        'y': 45
+        width: 26
+        height: 510
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+      - id: warp-near
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 250
+        radius: 34
+        portal: branch
+      - id: warp-far
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 220
+        radius: 34
+        portal: branch
+      - id: slab-a
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 480
+        width: 150
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-b
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 620
+        width: 150
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+    balls: []
+
+  # 22 "Cold Start" - MEET terminals, COMPRESSED cage.
+  #
+  # Three balls are asleep, one at each terminal, and a sleeping ball holds its
+  # pocket shut: the space round it cannot be captured until it is booted and
+  # then trapped. A fence routed past a terminal lights it and boots its ball,
+  # so wiring is the map's verb, and the win asks for two of the three (slack:
+  # the third is the greed hook, the one whose pocket is the best ground on the
+  # board). The cage is the family's compressed sibling and the answer to the
+  # question wiring creates - what do you do with a ball you just woke while
+  # you draw the next fence - somewhere to put it for eight seconds.
+  # Each terminal sits on a DIFFERENT side of its sleeper (above, below, to the
+  # right), so no single straight fence can separate two terminals from every
+  # sleeper at once: with both top terminals above their sleepers, one cut
+  # across the top strip stranded the map at 77% remaining on the sweep.
+  # Heights (3D board, objectRise.ts): the cage stands as a pen; the three shelves sit low, the invitation to seal beside each sleeper.
+  - id: level-22
+    name: Cold Start
+    level: 22
+    premise: "The one where three balls sleep at three terminals, and a fence past a terminal boots its ball so you can trap it."
+    sizeThreshold: 13
+    expectedCuts: 8
+    points: 5
+    maxBalls: 2
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue]
+    win:
+      require:
+        - kind: space
+          threshold: 13
+        - kind: terminals
+          count: 2
+    circuit:
+      radius: 30
+      announce: game.circuitComplete
+      terminals:
+        - x: 230
+          'y': 260
+          ball:
+            x: 230
+            'y': 350
+            typeId: red
+        - x: 700
+          'y': 390
+          ball:
+            x: 700
+            'y': 300
+            typeId: blue
+        - x: 570
+          'y': 600
+          ball:
+            x: 460
+            'y': 600
+            typeId: grey
+    beats:
+      - id: crunch
+        atSpaceRemaining: 40
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: pen
+        rise: 1.3
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 390
+        width: 130
+        height: 130
+        facing: right
+        holdSeconds: 8
+      - id: shelf-nw
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+      - id: shelf-ne
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+      - id: shelf-s
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 800
+        width: 300
+        height: 24
+    balls: []
+
+  # 23 "Backlog" - MEET one-way, MEET delivery box, FIGHT mover.
+  #
+  # One design, two halves: a divider across the middle with a membrane in its
+  # slot that balls fall through and cannot climb, and the box straight under
+  # the slot with its mouth facing up, so a ball that drops through the
+  # membrane is falling at the mouth. A ball that crosses the mouth is
+  # DELIVERED, not locked: nobody sealed it, it was taken somewhere, which is
+  # the verb this map adds. The patrol sweeps the upper side of the slot, so
+  # when a ball drops is partly its call. The box reserves its interior, so
+  # feeding it does not calm the map; the win wants one of its two deliveries,
+  # and the second is the greed hook. The quiet shelf's nook is the one-fence
+  # superior pocket. (The box first sat off to the side and the sweep read 1 of
+  # 8: a mouth the traffic never crosses is a box nobody fills by accident.)
+  # Heights (3D board, objectRise.ts): the divider stands tall and its membrane sits low, a full wall a ball rolls through being the one thing height must never say; the box stands as a bin, the shelf low.
+  - id: level-23
+    name: Backlog
+    level: 23
+    premise: "The one where balls fall through a membrane they cannot climb back over, and the win is one delivered into the box below."
+    sizeThreshold: 12
+    expectedCuts: 8
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey]
+    win:
+      require:
+        - kind: space
+          threshold: 12
+        - kind: delivered
+          count: 1
+    beats:
+      - id: overflow
+        atSpaceRemaining: 45
+        spawnAdds: 1
+        announce: game.beatReorg
+    entities:
+      - id: divider-left
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 430
+        width: 330
+        height: 26
+      - id: membrane
+        kind: wall
+        shape: rect
+        x: 375
+        'y': 430
+        width: 150
+        height: 26
+        oneWay: down
+      - id: divider-right
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 525
+        'y': 430
+        width: 330
+        height: 26
+      - id: neck-guard
+        kind: mover
+        shape: rect
+        x: 400
+        'y': 300
+        width: 90
+        height: 26
+        axis: horizontal
+        range: 240
+        speed: 165
+      - id: done-column
+        rise: 1.2
+        kind: box
+        shape: rect
+        x: 340
+        'y': 580
+        width: 220
+        height: 200
+        mouth: up
+        capacity: 2
+        reserves: true
+      - id: quiet-shelf
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 700
+        width: 150
+        height: 24
+    balls: []
+
+  # 24 "Cold Cache" - MEET fence ground, BREAK syntax area.
+  #
+  # The dark box in the top-right corner is the win, and it is the cheapest
+  # pocket on the board: two fences close it against the frame. The ground
+  # under it builds fences at half speed, so the cheapest pocket is the longest
+  # stand-still, and a ball in the box while your fence crawls across is the
+  # whole read. Two pillars make the rest of the board a pair of chambers with
+  # ordinary ground, where the clear is done and the balls are herded from.
+  # Greed hook: the nook under the bottom-left lip, one fence, superior-sized,
+  # on fast ground.
+  # Heights (3D board, objectRise.ts): the pillars stand as the two posts between the chambers; the lip sits low; the box and the cold ground are inlaid plates, ground rather than rooms.
+  - id: level-24
+    name: Cold Cache
+    level: 24
+    premise: "The one where the box is the cheapest pocket on the board, and the ground under it builds fences at half speed."
+    sizeThreshold: 11
+    expectedCuts: 8
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, yellow]
+    win:
+      require:
+        - kind: space
+          threshold: 11
+        - kind: area
+          count: 1
+    coloredAreas:
+      - kind: dark
+        x: 655
+        'y': 45
+        width: 200
+        height: 200
+    fenceZones:
+      - x: 600
+        'y': 45
+        width: 255
+        height: 255
+        speed: 0.5
+        name: cold cache
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: post-w
+        rise: 1.4
+        kind: wall
+        shape: circle
+        cx: 260
+        cy: 470
+        radius: 70
+      - id: post-e
+        rise: 1.4
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 560
+        radius: 70
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 700
+        width: 150
+        height: 24
+    balls: []
+
+  # 25 "Blast Radius" - MEET charge, USE deformable, BREAK breakable.
+  #
+  # The divider is two deformable bars with two plugs set into the middle, and
+  # the plugs take forty hits: a breakable nobody breaks by hand, which is the
+  # inversion of the slab the player has been smashing since level 8. Under
+  # each plug is a fuse. Route a fence over a fuse and the charge arms, counts
+  # down for 1.4 seconds, and blows its plug out of the wall, flinging the balls
+  # nearby and fracturing your own fences inside the blast. The win wants one
+  # plug of two, so there are two fuses and two answers, and a cut that buries
+  # a fuse's plug is refused like any other needed slab. The bars keep their
+  # dents and charge the balls for them, which is the deformable's Use beat.
+  # The black ball unlocks here, and it is the other answer: it does double
+  # damage and goes through a plug in a hundred seconds fewer than nobody.
+  # A 40-unit stub of bar sits between the plugs: two monoliths within 30 units
+  # of each other read as a STACK (initGame's support graph), and on two deals
+  # of four blowing one plug toppled the other for free.
+  # Greed hook: the nook under the top-right lip.
+  # Heights (3D board, objectRise.ts): the plugs stand proud as monoliths set into a divider of low bars; the anchors stand as posts, the lip low.
+  - id: level-25
+    name: Blast Radius
+    level: 25
+    premise: "The one where a fence over a fuse blows a plug nobody could break by hand, and the blast fractures your own fences."
+    sizeThreshold: 10
+    expectedCuts: 9
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, black]
+    win:
+      require:
+        - kind: space
+          threshold: 10
+        - kind: smashed
+          count: 1
+          of: monoliths
+    charges:
+      - fuse:
+          x: 365
+          'y': 560
+        radius: 32
+        targetId: plug-a
+        delaySeconds: 1.4
+        blastRadius: 200
+        announce: game.chargeBlown
+      - fuse:
+          x: 535
+          'y': 300
+        radius: 32
+        targetId: plug-b
+        delaySeconds: 1.4
+        blastRadius: 200
+        announce: game.chargeBlown
+    beats:
+      - id: deadline
+        atSpaceRemaining: 22
+        breakId: plug-a
+    entities:
+      - id: bar-left
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 430
+        width: 255
+        height: 32
+        deformable: true
+      - id: plug-a
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 420
+        width: 130
+        height: 52
+        breakable: true
+        hitsToBreak: 40
+      - id: bar-mid
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 430
+        'y': 420
+        width: 40
+        height: 52
+        deformable: true
+      - id: plug-b
+        kind: wall
+        shape: rect
+        x: 470
+        'y': 420
+        width: 130
+        height: 52
+        breakable: true
+        hitsToBreak: 40
+      - id: bar-right
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 430
+        width: 255
+        height: 32
+        deformable: true
+      - id: anchor-tl
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 240
+        cy: 220
+        radius: 52
+      - id: anchor-br
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 660
+        cy: 680
+        radius: 52
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 26 "Telemetry" - MEET data stream, COMPRESSED latch.
+  #
+  # A seam runs down the middle of the board. A fence drawn ALONG it harvests
+  # the spans it covers and pays overtime, and the seam is laid so tracing it
+  # is the longest, most exposed fence on the map. The curtain sits on the
+  # seam's joint and LATCHES: it opens after the first lock and stays open, so
+  # before that a fence down the seam stops at the curtain and harvests one
+  # span, and after it the same fence takes both. That is the latch's whole
+  # lesson in one object: the wall you were cutting against leaves when you
+  # succeed. The win asks for one span of three, so a cut that claims the
+  # middle of the board costs a span and not the map (two of three had the
+  # bot stranded on three seeds of eight); the rest of the seam is the greed
+  # hook. Greed hook: the spans behind the curtain.
+  # Heights (3D board, objectRise.ts): the two posts stand as the chamber walls; the curtain stands at fence height and visibly drops when it latches open; the lip sits low.
+  - id: level-26
+    name: Telemetry
+    level: 26
+    premise: "The one where a fence drawn along the seam harvests it, and the curtain across the seam lifts after your first lock."
+    sizeThreshold: 9
+    expectedCuts: 8
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, green]
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 1
+    dataStream:
+      path:
+        - x: 450
+          'y': 150
+        - x: 450
+          'y': 350
+        - x: 450
+          'y': 550
+        - x: 450
+          'y': 750
+      width: 40
+      reward:
+        kind: overtime
+        value: 34
+      announce: game.streamHarvested
+    beats:
+      - id: crunch
+        atSpaceRemaining: 30
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: curtain
+        rise: 1.0
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 437
+        width: 300
+        height: 26
+        latchAfter: 1
+      - id: post-w
+        rise: 1.4
+        kind: wall
+        shape: circle
+        cx: 200
+        cy: 450
+        radius: 70
+      - id: post-e
+        rise: 1.4
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 450
+        radius: 70
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 27 "Throughput" - USE data stream, USE fence ground.
+  #
+  # The seam runs the length of a pipe down the middle, five spans, and the
+  # pipe is cold ground: a fence along the seam builds at less than half speed
+  # for its whole length, exposed in the one lane every ball crosses. Two of
+  # five spans are the win, so a short trace in one half of the pipe and a
+  # second in the other is an answer, and a single full-length trace is the
+  # greedy one. The four racks make the halves chambers rather than open halls.
+  # Five spans rather than three because a cut across the pipe above the balls
+  # claims every span above it: at two of three the sweep stranded five seeds
+  # of eight and at two of four still three, which is the slack rule in lanes
+  # rather than objects. Greed hook: the full trace, all five spans in one
+  # fence.
+  # Heights (3D board, objectRise.ts): the pipe walls stand tall as the duct the seam runs down; the racks sit low, shelves in the chambers; the cold ground is a plate.
+  - id: level-27
+    name: Throughput
+    level: 27
+    premise: "The one where the seam runs down a pipe of cold ground, and the fence that harvests it is the slowest one you will draw."
+    sizeThreshold: 9
+    expectedCuts: 9
+    points: 5
+    maxBalls: 4
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey, yellow]
+    win:
+      require:
+        - kind: space
+          threshold: 9
+        - kind: harvested
+          count: 2
+    fenceZones:
+      - x: 380
+        'y': 45
+        width: 160
+        height: 810
+        speed: 0.45
+        name: the narrow pipe
+    dataStream:
+      path:
+        - x: 450
+          'y': 100
+        - x: 450
+          'y': 240
+        - x: 450
+          'y': 380
+        - x: 450
+          'y': 520
+        - x: 450
+          'y': 660
+        - x: 450
+          'y': 800
+      width: 38
+      reward:
+        kind: overtime
+        value: 38
+      announce: game.streamHarvested
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: pipe-left
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 180
+        width: 24
+        height: 540
+      - id: pipe-right
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 554
+        'y': 180
+        width: 24
+        height: 540
+      - id: rack-tl
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 170
+        'y': 200
+        width: 150
+        height: 34
+      - id: rack-bl
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 170
+        'y': 660
+        width: 150
+        height: 34
+      - id: rack-tr
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 580
+        'y': 200
+        width: 150
+        height: 34
+      - id: rack-br
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 580
+        'y': 660
+        width: 150
+        height: 34
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 700
+        width: 150
+        height: 24
+    balls: []
+
+  # 28 "Race Condition" - USE phasing, FIGHT gravity well.
+  #
+  # The dark box is the win and it sits in a room in the bottom-right corner.
+  # Its wide door is a phasing wall: solid for most of a nine second cycle,
+  # gone for the rest. Beside it a 60-unit slot stays open always, because a
+  # room whose only way in is a wall that is sometimes there is a room the
+  # engine captures at load and the reach guard fails on the first cut (section
+  # 7.6; the sweep read 0 of 8 before the slot). The slot is the slow answer: a
+  # ball squeezes through it when it happens to; the door is the fast one. The
+  # well in front of both pulls right, into the room, so the balls are swept at
+  # the wall whether it is there or not. A ball goes in when the door is down;
+  # the lid across the door is cut when it is up, since a fence terminates on a
+  # pillar whatever its phase. The lane you must cross is not always solid.
+  # Greed hook: the nook under the top-left lip.
+  # Heights (3D board, objectRise.ts): the room's wall and its phasing door stand tall, so the door visibly sinks; the lip sits low; the box and the well are inlaid plates.
+  - id: level-28
+    name: Race Condition
+    level: 28
+    premise: "The one where the box's wide door is a wall that is not always there, and the well sweeps the balls at it either way."
+    sizeThreshold: 8
+    expectedCuts: 9
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, compass]
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: area
+          count: 1
+    coloredAreas:
+      - kind: dark
+        x: 560
+        'y': 600
+        width: 250
+        height: 210
+    gravityWells:
+      - x: 290
+        'y': 640
+        width: 170
+        height: 200
+        turnRate: 3.0
+        pull: right
+    beats:
+      - id: crunch
+        atSpaceRemaining: 30
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: room-top
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 480
+        'y': 520
+        width: 375
+        height: 26
+      - id: room-left
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 480
+        'y': 546
+        width: 26
+        height: 74
+      - id: door
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 480
+        'y': 680
+        width: 26
+        height: 175
+        isPhasing: true
+        phaseCycleSeconds: 9
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 29 "Postmortem" - act III's SKILL CHECK. Nothing new: a cage from 22, two
+  # shields to smash from 8, a patrol from 4, a well from 15, and the tilt the
+  # act unlocked.
+  #
+  # Four balls, seven percent, two shields in the way and a pen in the far
+  # corner. The vault in the bottom-right pays double, which is the greed hook,
+  # and its lip is where the patrol sweeps. The well on the upper board is the
+  # tilt's reason: a third of the clear tiers turn the room a quarter, and down
+  # stays down, so the well lands on a different one of its four bearings each
+  # time. The cage is the only thing on the board that takes a ball away for a
+  # while, and with four of them it is the difference between a corner you can
+  # seal and one you cannot.
+  # Heights (3D board, objectRise.ts): the vault lips sit low and the cage stands as a pen; the shields stand proud as monoliths; the patrol runs at a mover's height.
+  - id: level-29
+    name: Postmortem
+    level: 29
+    premise: "The one where everything act III taught is on the board at once: a pen, two shields, a patrol and a room that turns."
+    sizeThreshold: 7
+    expectedCuts: 9
+    points: 5
+    maxBalls: 4
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey, lodestone]
+    tiltChance: 0.35
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: smashed
+          count: 1
+          of: monoliths
+    gravityWells:
+      - x: 300
+        'y': 250
+        width: 200
+        height: 180
+        turnRate: 2.9
+        pull: down
+    coloredAreas:
+      - kind: dark
+        x: 610
+        'y': 610
+        width: 210
+        height: 200
+        required: false
+    beats:
+      - id: escalate
+        atSpaceRemaining: 40
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: vault-lip-h
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 586
+        width: 255
+        height: 24
+      - id: vault-lip-v
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 576
+        'y': 700
+        width: 24
+        height: 155
+      - id: shield-a
+        kind: wall
+        shape: rect
+        x: 250
+        'y': 560
+        width: 190
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: shield-b
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 300
+        width: 170
+        height: 26
+        breakable: true
+        hitsToBreak: 3
+      - id: holding-pen
+        rise: 1.3
+        kind: cage
+        shape: rect
+        x: 45
+        'y': 45
+        width: 120
+        height: 120
+        facing: right
+        holdSeconds: 8
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+      - id: patrol
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 760
+        radius: 42
+        axis: horizontal
+        range: 340
+        speed: 170
+    balls: []

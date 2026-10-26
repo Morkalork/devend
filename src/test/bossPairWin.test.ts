@@ -28,7 +28,26 @@ import type { LevelConfig, LevelData } from "@/types/level";
 import { ENGINE_MAPS } from "./fixtures/maps";
 import { noSmashes } from "@/lib/destructibleClass";
 
-const LEVELS = ENGINE_MAPS as LevelConfig[];
+/**
+ * One map per level number, the LADDER's where both sets carry one. The retired
+ * level-20 is the fixture this file was written against; the ladder's level-20
+ * is the same fight rebuilt, and reading both would count one boss twice and
+ * then find the two "identical". ENGINE_MAPS lists the ladder first.
+ */
+function oneMapPerLevel(maps: LevelConfig[]): LevelConfig[] {
+  const seen = new Set<number>();
+  const out: LevelConfig[] = [];
+  for (const m of maps) {
+    if (m.level == null || seen.has(m.level)) {
+      continue;
+    }
+    seen.add(m.level);
+    out.push(m);
+  }
+  return out;
+}
+
+const LEVELS = oneMapPerLevel(ENGINE_MAPS as LevelConfig[]);
 const BOSSES = LEVELS.filter(l => l.boss);
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 

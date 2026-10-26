@@ -237,7 +237,10 @@ describe("the converted catalogue", () => {
    * supposed to bring its shop line back to life, and this is the test that
    * says whether it did.
    */
-  const PENDING_REBUILD = ["hot_start_architect_b"];
+  //
+  // HOT START (ARCHITECT) came off when act III landed: it gates on level 20,
+  // and the ladder reaches 29 now, so the line fires again.
+  const PENDING_REBUILD: string[] = [];
 
   it("never gates on a feature no shipped map has", () => {
     const anywhere = levels.map(mapContextOf);

@@ -121,7 +121,14 @@ describe("level 14 holds together", () => {
     //
     // 13 joined after a play review found it too like 12: it was stripped back
     // to its mirror, and its win is the box the mirror is for, not a smash.
-    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16]);
+    //
+    // ACT III broke the habit for good, which is what the band above it
+    // existed to do: 22 asks for terminals, 23 for a delivery, 24 and 28 for a
+    // zone, 26 and 27 for a harvest. 20 is a boss and states no win block at
+    // all. The three smash maps left in 21-29 (21, 25, 29) are the ones whose
+    // premise is a slab: a portal that throws balls at it, a charge that blows
+    // it, and the skill check.
+    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,

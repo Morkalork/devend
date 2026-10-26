@@ -62,9 +62,17 @@ describe("the map fixtures", () => {
     // level-19 joins as act II's skill check, a gravity pinwheel; the retired
     // level-19 is the one the gravity soak and renderer tests were written
     // against, so those three read RETIRED by name.
+    // level-20 to level-29 join together: the second boss and act III. Every
+    // one shares its id with a retired map that was a different board on the
+    // same rung (the retired 23 was a one-way drain under a chest, the ladder's
+    // is a membrane over a delivery box; the retired 28 was a well map, the
+    // ladder's is a phasing door), so a test that wants a retired board reads
+    // RETIRED by name.
     expect(shared).toEqual([
       "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
-      "level-17", "level-18", "level-19",
+      "level-17", "level-18", "level-19", "level-20", "level-21", "level-22",
+      "level-23", "level-24", "level-25", "level-26", "level-27", "level-28",
+      "level-29",
     ]);
   });
 

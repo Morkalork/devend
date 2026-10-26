@@ -397,7 +397,15 @@ describe("the ladder actually carries these hooks", () => {
     // 13 and 15 went ON in the act II review for the same reason: 13's box is
     // the one its mirror is for, and 15's cup is the one its well feeds. In
     // both the zone is how the map's new mechanic reaches the win.
-    const GATE_MAPS = ["level-10", "level-13", "level-15", "level-3", "level-4", "level-8", "level-9"];
+    //
+    // 20 rejoined as the second boss, exactly as the note above expects. 24 and
+    // 28 went ON with act III: 24's box is the one its cold ground prices, and
+    // 28's is the room its phasing door opens on. In both the zone is how the
+    // map's mechanic reaches the win, the same shape as 13 and 15.
+    const GATE_MAPS = [
+      "level-10", "level-13", "level-15", "level-20", "level-24", "level-28",
+      "level-3", "level-4", "level-8", "level-9",
+    ];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))
       .map(l => l.id);

@@ -42,7 +42,13 @@ const GREED_BREAKABLES: Record<string, string[]> = {
  * is its map's greed hook rather than decoration: 11's pocket is behind the
  * curtain the launcher's shot opens, and 18's is the room the windmill turns in.
  */
-const GREED_ZONES = ["level-11", "level-18"];
+/**
+ * level-29 joins: act III's skill check keeps the vault in its bottom-right
+ * corner as a bonus, the one pocket on the board that pays double, and its lip
+ * is the lane the patrol sweeps. The win is the smash and the clear; the vault
+ * is the price of greed, which is what a bonus zone is for.
+ */
+const GREED_ZONES = ["level-11", "level-18", "level-29"];
 
 describe("every object is a promise", () => {
   it("counts every kind of breakable a map shows", () => {
