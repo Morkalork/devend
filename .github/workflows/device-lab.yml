@@ -160,6 +160,14 @@ jobs:
             exit 1
           fi
           echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+          # The run's page in the Firebase console: each phone's video, log and screenshots.
+          CONSOLE=$(grep -o 'https://console.firebase.google.com/[^] ]*' run.log | head -1)
+          if [ -n "$CONSOLE" ]; then
+            {
+              echo "Each phone's video and log: [the run in Firebase Test Lab]($CONSOLE)"
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Fetch the reports
         if: steps.lab.outputs.run == 'true'
