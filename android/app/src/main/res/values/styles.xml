@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- What shows behind the status and gesture bars: on Android 15+ the
+             WebView is padded clear of them (Capacitor SystemBars), and the
+             gap would otherwise be the DayNight theme's light window. -->
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 

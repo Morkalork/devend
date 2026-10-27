@@ -87,10 +87,19 @@ export function isViewportZoomed(v: ViewportReading | null | undefined): boolean
  * OUT is the direction this keeps being reported in. `minimum-scale=1.0` closes
  * it. It is not a fix on iOS, which ignores the lot, and it is a fix everywhere
  * that reads the tag, which is the whole point of keeping the tag.
+ *
+ * No `viewport-fit=cover`. It asks to draw under the status bar, the camera
+ * cutout and the gesture bar, and nothing in the interface reads the
+ * safe-area insets that would keep the HUD out from under them. On Android
+ * 15+ (edge-to-edge is enforced for an app targeting SDK 35+) with a current
+ * WebView, Capacitor passes the insets through to a `cover` page untouched,
+ * so the top bar sat under the clock and the bottom bar under the gesture
+ * handle. Without it, Capacitor pads the WebView clear of the bars itself,
+ * and a browser keeps the page inside the safe area on a notched iPhone.
  */
 export const VIEWPORT_META_CONTENT =
   "width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, " +
-  "user-scalable=no, viewport-fit=cover";
+  "user-scalable=no";
 
 /**
  * The same viewport, written differently.
