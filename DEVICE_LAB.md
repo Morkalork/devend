@@ -71,10 +71,18 @@ five physical-device tests a day, which is why the nightly run uses four.
 3. **Make a service account** for GitHub. In IAM & Admin > Service Accounts >
    Create:
    - name: `github-device-lab`;
-   - roles: **Firebase Test Lab Admin** and **Storage Object Admin**. Object
-     Admin, not Viewer: the run uploads the APK into Test Lab's bucket
-     (`test-lab-*`) before reading the results back, and a Viewer is refused
-     with `storage.objects.create` denied.
+   - roles: **Firebase Test Lab Admin** and **Editor** (Basic > Editor).
+     Editor because of where Test Lab keeps its files. The run uploads the
+     APK into Test Lab's default bucket (`test-lab-*`) and reads the results
+     back from it, and that bucket is not in your project: it sits in a
+     project Google owns, and its access list admits your project's Editors.
+     So no storage role on your own project reaches it; both Storage Object
+     Viewer and Storage Object Admin were refused with
+     `storage.objects.create` denied. (Pointing Test Lab at a bucket in your
+     own project instead needs billing on the project, the paid Blaze plan.)
+     Editor can change anything in the project, which is one more reason the
+     key lives only in the GitHub secret, and a reason to keep the lab in a
+     project of its own if the project also holds something that matters.
 
    Then open it, go to Keys > Add key > JSON, and keep the file that downloads.
 4. **Add two repository secrets** in GitHub: the repository's Settings >
