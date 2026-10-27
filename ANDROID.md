@@ -92,6 +92,11 @@ JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.11.10-hotspot" ./gradlew a
 
 ## Release build (signed AAB for Google Play)
 
+**The normal way is CI:** `.github/workflows/android-release.yml` builds,
+checks and signs the bundle from repository secrets (PLAY_RELEASE_PLAN.md has
+the release checklist and how to make the secrets). The steps below are the
+same build by hand.
+
 ### 1. Generate an upload keystore (ONE TIME — back it up!)
 
 > ⚠️ If you lose this keystore you can never publish an update to the same
@@ -152,10 +157,12 @@ JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.11.10-hotspot" ./gradlew b
 # → app/build/outputs/bundle/release/app-release.aab
 ```
 
-### 4. Bump the version for each release
+### 4. The version of each release
 
-In `android/app/build.gradle` increment `versionCode` (integer, must rise every
-upload) and set `versionName` (human string, e.g. `1.0.0`).
+`versionCode` (integer, must rise with every upload) and `versionName` (what
+players see, e.g. `0.9.0-beta.1`) are build properties, not edits to
+`build.gradle`: `./gradlew bundleRelease -PversionCode=101 -PversionName=0.9.0-beta.1`.
+Without them a build is 1 / 1.0. The release workflow passes both.
 
 ## Google Play submission
 
@@ -173,24 +180,24 @@ upload) and set `versionName` (human string, e.g. `1.0.0`).
 5. **Privacy policy URL** — required even for games. A one-page site (e.g.
    GitHub Pages) is fine.
 6. **Content rating** — complete the IARC questionnaire (~10 min).
-7. **Data safety form** — declare what data the app collects (this app stores
-   only local `localStorage` progress; nothing leaves the device).
+7. **Data safety form** — declare what data the app collects. Progress stays
+   on the phone, but a build with `VITE_POSTHOG_KEY` sends anonymous analytics
+   and crash reports; PLAY_RELEASE_PLAN.md has the drafted answers.
 8. Submit. First review typically takes 1–3 days.
 
 ## TODO before first public release
 
-- [ ] Replace placeholder app icon + splash. Drop a 1024×1024 source at
-      `assets/icon.png` (and optionally `assets/splash.png`) and run
-      `npx @capacitor/assets generate --android`. No suitable source logo exists
-      in the repo yet — `public/favicon.ico` is only 256×256.
+- [x] App icon and splash generated from `assets/icon.png` and
+      `assets/splash*.png`; the store icon and feature graphic are in
+      `assets/play/`.
 - [x] `index.html` author/OG tags de-Lovable'd (author → `Morkalork`, stale
       `lovable.dev` image tags removed). Re-add an `og:image` once a share image
       exists.
-- [x] Admin/map-builder screens are gated — `Index.tsx` only mounts them when
-      `import.meta.env.DEV` is true, so they are absent from a production build.
-- [x] **`?admin=true` backdoor removed.** `isAdminEnabled` in
-      `src/pages/Index.tsx` is now `import.meta.env.DEV` only — admin screens are
-      unreachable in a production/Play build. The admin code is still lazy-loaded
-      as a separate chunk but no code path loads it in production.
-- [x] `versionCode 1` / `versionName "1.0"` set in `android/app/build.gradle`
-      (bump both for each subsequent release).
+- [ ] **Admin in Play builds** (decision open, PLAY_RELEASE_PLAN.md): off by
+      default on a Play install (`src/lib/adminAccess.ts` only opens it by
+      itself on the staging host), but ten taps on the menu ball still open it.
+      These two lines used to say Admin was absent from production builds,
+      which stopped being true when the gesture went in.
+- [x] Version code and name come from the build (`-PversionCode`,
+      `-PversionName`), passed by the release workflow.
+- [ ] Everything else before the first release: PLAY_RELEASE_PLAN.md.

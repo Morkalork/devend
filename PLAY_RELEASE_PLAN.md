@@ -1,0 +1,227 @@
+# Play Store: the first release (an invite-only beta)
+
+The goal: a closed-testing build on Google Play that a handful of invited
+players install from the Play Store, and that works on every phone they own.
+This page is the checklist, the decisions still open, and the drafts (privacy
+policy, Data safety answers, listing copy) the Play Console asks for.
+ANDROID.md covers the Capacitor project itself.
+
+"Invite only" maps to Play's **closed testing** track: an email list or a
+Google Group of testers, an opt-in link, and installs from the real Play
+Store, reviewed by Google like any release. (Internal testing is faster and
+unreviewed but capped at 100 testers and meant for the team; it is a good
+place for the very first upload, see step 5.)
+
+## 1. Where it stands
+
+| | state |
+|---|---|
+| App id `com.morkalork.devend`, name `Dev/End` | set (the id is permanent once uploaded) |
+| Target SDK 36, min SDK 24 | meets Play's current target-API rule |
+| Signed release bundle (.aab) | **workflow ready** (`.github/workflows/android-release.yml`); needs the upload key as secrets |
+| Version code / name | passed to the build by the workflow; must rise every upload |
+| 16 KB page sizes | checked on every release build (`scripts/check-16kb.mjs`) |
+| Release manifest | checked: not debuggable, no Test Lab launch, right version |
+| Android 15+ edge-to-edge | fixed in code (the HUD no longer goes under the status/gesture bars); **not yet seen on a 15+ phone** |
+| App icon, 512 store icon, 1024x500 feature graphic | done (`assets/`, `assets/play/`) |
+| Phone screenshots (2-8) | to do: section 6 |
+| Privacy policy page | drafted below; needs a permanent public URL |
+| Data safety answers | drafted below; depend on the analytics decision |
+| Content rating (IARC) | answers drafted below |
+| Music licence | 9 of 10 tracks credited (Pixabay); **maps_36-40.ogg has no recorded source** |
+
+## 2. What only the owner can do
+
+1. **Play Console account.** <https://play.google.com/console>, one-time fee,
+   identity verification (can take days). Say whether it is a **personal** or
+   an **organisation** account: a personal account created after November
+   2023 must run a closed test with **at least 12 testers opted in for 14 days
+   in a row** before it may apply for production. The beta is that closed
+   test, so invite at least 12 people and keep them opted in.
+2. **Upload key** (never paste it, or its passwords, into a chat or a commit):
+   ```sh
+   keytool -genkey -v -keystore devend-upload.keystore \
+     -alias devend -keyalg RSA -keysize 2048 -validity 10000
+   base64 -w0 devend-upload.keystore > devend-upload.keystore.b64   # macOS: base64 -i ... -o ...
+   ```
+   Back the keystore and both passwords up somewhere safe (a password
+   manager). Then GitHub > Settings > Secrets and variables > Actions, four
+   repository secrets: `ANDROID_KEYSTORE_BASE64` (the .b64 file's contents),
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`devend`),
+   `ANDROID_KEY_PASSWORD`. Delete the .b64 file afterwards.
+   With **Play App Signing** (the default, accept it) Google holds the key
+   that signs what players install; this upload key only proves an upload is
+   yours, and a lost upload key can be reset through Play support.
+3. **Merge `dev` into `main`** when the build is ready (or say so and it gets
+   done): GitHub only offers the workflow's "Run workflow" button for files
+   on the default branch, and `main` is the release branch.
+4. **Run the workflow** (Actions > Android release > Run workflow) with a
+   versionName, e.g. `0.9.0-beta.1`. Download the `.aab` artifact.
+5. **First upload by hand** (the Play API cannot create an app's first
+   release): Play Console > Create app (Game, Free) > Testing > Internal
+   testing > upload the .aab, add yourself, install from the opt-in link,
+   run section 7's checks. Then promote the same bundle to Closed testing,
+   add the testers' list or Google Group, fill the listing (section 5) and
+   submit for review.
+6. **Answers to section 3.**
+
+## 3. Decisions
+
+1. **Analytics and crash reports in the beta.** The app can send anonymous
+   gameplay events and uncaught errors to PostHog (EU cloud) if a key is
+   baked in (`POSTHOG_KEY` secret). Recommended **yes** for a beta: without
+   it a crash on a tester's phone is invisible unless they report it. Yes
+   means the Data safety form declares it (section 4) and the privacy policy
+   keeps its analytics paragraph; no means leave the secret unset and cut
+   that paragraph.
+2. **Admin in Play builds.** Admin is off on a Play install but opens after
+   ten taps on the menu ball (`adminAccess.ts`, Index). It carries the device
+   check and the touch trace, useful on a tester's phone, and the Playground,
+   infinite lives and map editing, which a curious tester could also find.
+   Recommended: keep it for the closed beta, decide before production.
+3. **maps_36-40.ogg.** Find where it came from and credit it in
+   `public/music.yml`, or replace it with a credited Pixabay track. A track
+   with no known licence should not ship in a store build.
+4. **Where the privacy policy lives.** Play needs a public URL that stays up.
+   Options: a production web host (is there one besides staging?), GitHub
+   Pages, or the staging host (works, but tied to staging staying up).
+   Once chosen, the draft below becomes `public/privacy.html`.
+5. **Audience.** Recommended: target age **13+**, no ads, no in-app purchases.
+   Including under-13s brings in the Families policy and its extra review.
+6. **Contact email** for the listing (public, required).
+
+## 4. Data safety (draft answers)
+
+What the app does with data, checked in code:
+
+- Progress, settings, run history and highscores stay **on the phone**
+  (localStorage in the WebView). There are no accounts and no online
+  leaderboards; the share card is an image the player shares themselves.
+- **Two-player** pairs over Nearby Connections (Bluetooth and Wi-Fi Direct,
+  phone to phone, no server). The name each phone advertises is "Player".
+  Location permission is requested only on Android 11 and below, where
+  Bluetooth discovery requires it, and it is never read.
+- **Analytics (only if decision 1 is yes):** anonymous gameplay events (run
+  started, map cleared or failed, upgrade bought, offer picked, run ended)
+  and uncaught errors, to PostHog's EU cloud. No accounts, no names, no
+  identifiers the player gives, no autocapture, no session recording.
+
+Answers, analytics on:
+
+| Play's question | answer |
+|---|---|
+| Does the app collect or share user data? | Yes |
+| Encrypted in transit? | Yes (HTTPS) |
+| Can users request deletion? | Data is anonymous and not linked to a user; say so in the policy |
+| App activity > App interactions | Collected; not shared; purpose: analytics; processed ephemerally: no; required: yes (no in-app opt-out yet) |
+| App info and performance > Crash logs, Diagnostics | Collected, not shared, analytics |
+| Device or other IDs | Collected (PostHog's anonymous install id), analytics |
+| Location, Personal info, Financial, Messages, Photos, Contacts | Not collected |
+
+Analytics off: "Does the app collect or share user data?" No.
+
+### Privacy policy (draft for `public/privacy.html`)
+
+> **Dev/End privacy policy**
+>
+> Dev/End is a game. It has no accounts and asks for no personal
+> information.
+>
+> **On your phone.** Your progress, settings, run history and records are
+> stored on your device only. Uninstalling the app deletes them.
+>
+> **Two-player.** Pair Programming connects two phones directly over
+> Bluetooth and Wi-Fi (Google Nearby Connections). Nothing goes through a
+> server. On Android 11 and below, Android requires the location permission
+> for Bluetooth discovery; the game never reads your location.
+>
+> **Anonymous analytics.** To find bugs and see how the game is played, the
+> app sends anonymous gameplay events (such as a run starting or a map being
+> cleared) and error reports to PostHog, hosted in the EU. They carry a
+> random identifier for the installation, not your name, email or any
+> account. We do not sell or share this data, and do not use it for
+> advertising.
+>
+> **Children.** The game is not directed at children under 13.
+>
+> **Contact.** [contact email]. Last updated [date].
+
+(Without analytics, drop that paragraph and the random identifier.)
+
+### Content rating (IARC questionnaire, draft answers)
+
+Category: Game. Violence: none (balls are sealed in or burst; no characters,
+no blood). Fear, sex, nudity, crude humour, drugs, alcohol, tobacco: none.
+Language: none. Gambling: **no**. Sprint Planning deals a "gamble" card: a
+price in the run (a life, hours) for a strong upgrade. Which prize is on the
+card is drawn when the cards are dealt (the jackpot is 5% of deals), but the
+player sees the exact price and prize before choosing, nothing is rolled
+after paying, and there is no money and nothing of value outside the game. It
+is not casino-style simulated gambling.
+Users interacting or exchanging content: no (two-player is a shared board
+between two phones in the same room, no chat). Shares location: no. Digital
+purchases: no. Expected rating: PEGI 3 / Everyone.
+
+## 5. Store listing (drafts)
+
+- **Name:** Dev/End
+- **Short description (80):** Slice the board, trap the bugs, ship before the deadline.
+- **Full description:**
+
+  > Dev/End is a fence-drawing arcade puzzler with a developer's sense of
+  > humour. Swipe to build a fence across the board; seal the bouncing balls
+  > into ever smaller pockets and claim the ground they leave behind. One ball
+  > through a fence still being built and it breaks.
+  >
+  > - 29 maps across an escalating ladder: moving blocks, breakables, portals,
+  >   gravity that turns the board, bombs that blast it open.
+  > - A run, not a level select: spend your hours in the store between maps
+  >   on upgrades, certificates and fence types, and plan each run's
+  >   Specialisation.
+  > - The Daily Stand-up: the same seeded run for everyone, once a day.
+  > - Pair Programming: two phones, one board, taking turns, over Bluetooth
+  >   with no account and no internet.
+  > - A real 3D board with lights and shadows, and a 2D mode for older phones.
+  >
+  > No ads. No in-app purchases. Plays offline.
+
+  (Checked against the code on 2026-10-27: 29 maps in public/map.yml.
+  Re-check before submitting.)
+- **Category:** Game > Puzzle. **Tags:** arcade, puzzle, casual.
+- **Graphics:** `assets/play/icon-512.png`, `assets/play/feature-graphic.png`,
+  phone screenshots (section 6).
+
+## 6. Screenshots
+
+Play wants 2 to 8 phone screenshots, 16:9 or 9:16, each side 320-3840 px.
+Best from a real phone (the 3D board looks its best on a GPU): the menu, a
+map mid-fence, a captured board, the store, Sprint Planning, two-player.
+They can also be produced from a headless browser at 1080x1920 on request.
+
+## 7. Before every release: on real phones
+
+From the Play internal track, not a sideloaded APK:
+
+- [ ] **Android 15 or 16 phone:** the top bar and the bottom controls are
+      fully clear of the status bar, camera cutout and gesture bar; the bars
+      show light icons on the dark background.
+- [ ] An Android 12-14 phone, and the oldest/slowest available (the device
+      lab covers 2022 phones; DEVICE_LAB.md).
+- [ ] First launch: splash, menu music starts, language follows the phone.
+- [ ] Back button on every screen: in play it opens the pause menu, on the
+      menu it leaves the app, never a blank page.
+- [ ] Home and back into the app mid-map: the map is paused, not lost.
+- [ ] A fence drawn slowly, quickly, and with a press-and-hold first.
+- [ ] Two-player on two phones: permission prompts (Android 12+ and 11-),
+      pairing, a full map, one phone leaving.
+- [ ] Airplane mode: everything except two-player discovery works.
+- [ ] **Progress survives an update:** play on beta N, install beta N+1 over
+      it, the run and the records are still there.
+- [ ] Play Console > Pre-launch report for the build: no crashes, no ANRs.
+
+## 8. After the beta
+
+- Production needs: the 12-testers-for-14-days rule met (personal accounts),
+  decision 2 settled, the privacy policy final, a production listing.
+- Optional: upload to Play from the workflow (a service account and the
+  Play Developer API), once the first upload has been made by hand.
