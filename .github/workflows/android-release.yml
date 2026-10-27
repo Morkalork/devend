@@ -1,0 +1,224 @@
+# The Play Store build: a signed Android App Bundle (PLAY_RELEASE_PLAN.md).
+#
+# Two ways in:
+#   - by hand (Actions > Android release > Run workflow), with a versionName:
+#     the full gate (typecheck, tests, lint), then a SIGNED .aab, verified and
+#     kept as an artifact to upload to Play Console;
+#   - on a push to dev that touches the native side or this file: the same
+#     build UNSIGNED, so a change that breaks the release build is caught the
+#     day it lands, not the day of a release.
+#
+# GitHub runs hand-started workflows only from the default branch (main), so
+# the "Run workflow" button appears once this file is on main.
+#
+# Signing needs four repository secrets (PLAY_RELEASE_PLAN.md says how to
+# make them): ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD. A hand-started run without them
+# fails and says which are missing, rather than producing an unsigned bundle
+# that Play would refuse.
+#
+# Optional: POSTHOG_KEY, baked in as VITE_POSTHOG_KEY when present (the app's
+# analytics and crash reports, src/lib/analytics.ts). Leave it unset to ship a
+# build that sends nothing.
+name: Android release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "versionName players see, e.g. 0.9.0-beta.1"
+        required: true
+      version_code:
+        description: "versionCode (must be higher than every upload before it; empty = this workflow's run number + 100)"
+        required: false
+        default: ""
+  push:
+    branches: [dev]
+    paths:
+      - "android/**"
+      - "capacitor.config.ts"
+      - "scripts/check-16kb.mjs"
+      - ".github/workflows/android-release.yml"
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SIGNED: ${{ github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        env:
+          NAME_IN: ${{ github.event.inputs.version_name }}
+          CODE_IN: ${{ github.event.inputs.version_code }}
+        run: |
+          NAME="${NAME_IN:-0.0.0-ci}"
+          CODE="${CODE_IN:-$(( ${{ github.run_number }} + 100 ))}"
+          if ! [[ "$CODE" =~ ^[0-9]+$ ]] || [ "$CODE" -lt 1 ] || [ "$CODE" -gt 2100000000 ]; then
+            echo "versionCode must be a whole number from 1 to 2100000000, got '$CODE'" >&2
+            exit 1
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Signing secrets present?
+        if: env.SIGNED == 'true'
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KS" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$KSP" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -z "$KA" ] && missing="$missing ANDROID_KEY_ALIAS"
+          [ -z "$KP" ] && missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            {
+              echo "## Android release: signing secrets missing"
+              echo
+              echo "Add these repository secrets (PLAY_RELEASE_PLAN.md):$missing"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing signing secrets:$missing" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The whole gate, on a release only: the same checks a commit has to
+      # pass, run on exactly the code being shipped.
+      - name: Typecheck
+        if: env.SIGNED == 'true'
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: Tests
+        if: env.SIGNED == 'true'
+        run: npm run test
+
+      - name: Lint
+        if: env.SIGNED == 'true'
+        run: npm run lint
+
+      - name: Build the web app
+        env:
+          VITE_POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+        run: npm run build
+
+      # The shipped bundle must not open Admin by itself. adminAccess.ts keys
+      # it off the staging host, which a Play install never has; VITE_ADMIN=1
+      # would force it on everywhere.
+      - name: Admin is not forced on
+        run: |
+          if grep -rq 'VITE_ADMIN:"1"\|VITE_ADMIN="1"' dist/assets/*.js; then
+            echo "This bundle was built with VITE_ADMIN=1: Admin would be on for every player." >&2
+            exit 1
+          fi
+
+      - name: Copy it into the Android project
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Keystore
+        if: env.SIGNED == 'true'
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          {
+            echo "storeFile=$RUNNER_TEMP/upload.keystore"
+            echo "storePassword=$KSP"
+            echo "keyAlias=$KA"
+            echo "keyPassword=$KP"
+          } > android/keystore.properties
+
+      - name: Build the bundle
+        working-directory: android
+        run: >
+          ./gradlew --no-daemon bundleRelease
+          -PversionCode=${{ steps.version.outputs.code }}
+          -PversionName=${{ steps.version.outputs.name }}
+
+      - name: Signed with the upload key?
+        if: env.SIGNED == 'true'
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$AAB" > verify.txt 2>&1 || { cat verify.txt; exit 1; }
+          grep -q "jar verified" verify.txt || { cat verify.txt; echo "The bundle is not signed." >&2; exit 1; }
+          keytool -printcert -jarfile "$AAB" | head -8
+
+      # What the merged manifest of the shipped bundle must not say. The
+      # bundle stores it as protobuf, where names and values are plain strings.
+      - name: Release manifest
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          unzip -p "$AAB" base/manifest/AndroidManifest.xml > manifest.pb
+          if grep -aq "com.google.intent.action.TEST_LOOP" manifest.pb; then
+            echo "The release manifest answers Test Lab's TEST_LOOP intent (debug only)." >&2
+            exit 1
+          fi
+          if grep -aq "debuggable" manifest.pb; then
+            echo "The release manifest sets android:debuggable." >&2
+            exit 1
+          fi
+          grep -aq "${{ steps.version.outputs.name }}" manifest.pb \
+            || { echo "versionName ${{ steps.version.outputs.name }} is not in the manifest." >&2; exit 1; }
+          echo "Release manifest: not debuggable, no test launch, versionName ${{ steps.version.outputs.name }}."
+
+      - name: 16 KB page sizes
+        run: node scripts/check-16kb.mjs android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Forget the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.keystore" android/keystore.properties
+
+      - name: Name the bundle
+        id: out
+        run: |
+          OUT="devend-${{ steps.version.outputs.name }}-${{ steps.version.outputs.code }}${{ env.SIGNED != 'true' && '-unsigned' || '' }}.aab"
+          cp android/app/build/outputs/bundle/release/app-release.aab "$OUT"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Android release"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| versionName | ${{ steps.version.outputs.name }} |"
+            echo "| versionCode | ${{ steps.version.outputs.code }} |"
+            echo "| commit | \`${GITHUB_SHA::7}\` (${GITHUB_REF_NAME}) |"
+            echo "| signed | ${{ env.SIGNED }} |"
+            echo "| analytics key baked in | ${{ secrets.POSTHOG_KEY != '' && 'yes' || 'no' }} |"
+            echo "| size | $(du -h "$OUT" | cut -f1) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.out.outputs.file }}
+          path: ${{ steps.out.outputs.file }}
+          retention-days: 90

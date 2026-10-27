@@ -19,15 +19,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Firebase Test Lab's game-loop launch: the app runs the device
-                 check, writes its report into the file the intent names and
-                 closes (TestLoopPlugin.java, DEVICE_LAB.md). Nothing else
-                 sends this action. -->
-            <intent-filter>
-                <action android:name="com.google.intent.action.TEST_LOOP" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/javascript" />
-            </intent-filter>
+            <!-- Firebase Test Lab's game-loop launch is declared for debug
+                 builds only (src/debug/AndroidManifest.xml). -->
         </activity>
 
         <provider

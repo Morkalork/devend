@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only, merged into the main manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity" android:exported="true">
+            <!-- Firebase Test Lab's game-loop launch: the app runs the device
+                 check, writes its report into the file the intent names and
+                 closes (TestLoopPlugin.java, DEVICE_LAB.md). The device lab
+                 builds the debug APK, so a Play build does not answer this
+                 intent at all: no other app can start the check, or have it
+                 write a report into a file of its choosing. -->
+            <intent-filter>
+                <action android:name="com.google.intent.action.TEST_LOOP" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/javascript" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
