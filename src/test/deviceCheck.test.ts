@@ -194,7 +194,7 @@ describe("the device lab's phones", async () => {
     const { picked, missed, enough } = pickDevices(catalogue, wishlist);
     expect(picked.map((p: { model: string }) => p.model)).toEqual(["a13", "a33x", "bluejay", "r0q"]);
     expect(picked[2].version).toBe("34");
-    expect(missed).toEqual(["budget 2022, PowerVR GE8320"]);
+    expect(missed).toEqual(["budget 2022, PowerVR GE8320 (Helio)"]);
     expect(enough).toBe(true);
     expect(deviceFlags(picked)[0]).toBe("--device=model=a13,version=33,locale=en,orientation=portrait");
   });

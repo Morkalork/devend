@@ -185,6 +185,8 @@ jobs:
           gsutil -m cp -r "gs://${{ steps.run.outputs.bucket }}/${{ steps.run.outputs.dir }}/*" device-lab-results/ || true
           # The videos stay in the bucket and the Test Lab console; the job keeps the rest.
           find device-lab-results -name '*.mp4' -delete
+          # And the device catalogue the phones were picked from, to fix the wishlist against.
+          cp catalogue.json device-lab-results/ || true
 
       - name: Keep the reports
         if: always() && steps.lab.outputs.run == 'true'
