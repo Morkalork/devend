@@ -11,6 +11,13 @@ const config: CapacitorConfig = {
     backgroundColor: '#0a0f0a',
   },
   plugins: {
+    // Android 15+ draws every app edge-to-edge. The page does not ask for
+    // viewport-fit=cover (src/lib/viewportZoom.ts), so Capacitor pads the
+    // WebView clear of the status and gesture bars; the bars sit on the dark
+    // window (styles.xml) and take light icons.
+    SystemBars: {
+      style: 'DARK',
+    },
     SplashScreen: {
       // Shows @drawable/splash full-screen; Android picks the portrait/landscape
       // variant automatically. The drawables hold assets/banner_*.png.

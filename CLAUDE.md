@@ -70,7 +70,10 @@ boon, a Specialisation that leans the shop toward one archetype, a gamble with
 a jackpot; built), and
 **ANDROID.md** for Capacitor/Play-Store packaging, and **DEVICE_LAB.md** for
 the device check and where it runs: in the app (Admin > Device check), on
-emulated 2022 phones in CI, and on real phones in Firebase Test Lab.
+emulated 2022 phones in CI, and on real phones in Firebase Test Lab, and
+**PLAY_RELEASE_PLAN.md** for the first Play release (an invite-only beta): the
+checklist, the owner's open decisions, the signed-bundle workflow and the
+drafts the Play Console asks for.
 
 ## Conventions
 

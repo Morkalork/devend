@@ -145,7 +145,7 @@ describe("asking for the zoom back", () => {
       .not.toBe(VIEWPORT_META_CONTENT);
     // Every term the page cares about survives, and no term appears twice.
     for (const term of ["width=device-width", "minimum-scale=1.0", "maximum-scale=1.0",
-                        "user-scalable=no", "viewport-fit=cover"]) {
+                        "user-scalable=no"]) {
       expect(toggled, `${term} was lost in the toggle`).toContain(term);
     }
     expect(toggled.match(/initial-scale=/g), "the toggle left a duplicate scale behind")
