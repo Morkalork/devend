@@ -108,6 +108,24 @@ function groundStillOpen(
 }
 
 /**
+ * Is this ball still in play, or able to come into it?
+ *
+ * A locked or delivered ball is out. A sleeper is in only while a fence can
+ * still light its terminal: once the terminal's ground is claimed the ball can
+ * never wake, and counting it kept a map running on a board with nothing left
+ * that could finish it.
+ */
+function canStillPlay(
+  game: CanvasGameState, grid: SpaceGrid, b: CanvasGameState["balls"][number], pending: ReadonlySet<number>,
+): boolean {
+  if (b.state === "won") return false;
+  if (b.state !== "dormant") return true;
+  const t = game.circuit?.terminals.find(x => x.ballId === b.id);
+  if (!t || t.lit) return true;
+  return groundStillOpen(grid, discCells(grid, t.x, t.y, t.radius), pending);
+}
+
+/**
  * Could any ball still get to this ground?
  *
  * Any ball not already locked away counts, the boss included. The gate's own
@@ -120,6 +138,14 @@ function ballCanReach(
 ): boolean {
   const grid = game.spaceGrid;
   if (!grid) return true;
+  // No ball left in play, so nothing can get anywhere. Asked first, because the
+  // ground below can read as "unknown" for ever: a delivery box's reserved
+  // interior is pending until the box is full, and with every ball locked or
+  // delivered the map used to sit on an empty board, neither won nor lost.
+  // Found on level 38, where the last ball "in play" was a sleeper whose
+  // terminal had been captured: it could never wake, so it was not in play.
+  const live = game.balls.filter(b => canStillPlay(game, grid, b, pending));
+  if (live.length === 0) return false;
   const read = readGround(grid, cells, pending);
   if (read.unknown) return true;
   if (read.active === 0) return false;        // claimed ground: gone for good
@@ -128,15 +154,13 @@ function ballCanReach(
   // A ball can leave its region through a link (spaceGrid.linkedReach).
   if (grid.links?.length) {
     const want = [...cells].filter(i => grid.cells[i] === CellState.ACTIVE);
-    for (const b of game.balls) {
-      if (b.state === "won") continue;
+    for (const b of live) {
       const reach = linkedReach(grid, b.position, b.typeId);
       if (reach && want.some(i => reach[i])) return true;
     }
   }
 
-  for (const b of game.balls) {
-    if (b.state === "won") continue;
+  for (const b of live) {
     const idx = worldToGridIndex(grid, b.position.x, b.position.y);
     const rid = idx >= 0 && grid.cells[idx] === CellState.ACTIVE
       ? grid.cellRegionIds[idx] : null;
