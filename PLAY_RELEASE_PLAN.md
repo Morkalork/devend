@@ -29,7 +29,7 @@ place for the very first upload, see step 5.)
 | Privacy policy page | drafted below; needs a permanent public URL |
 | Analytics and crash reports | **on for the beta** (decided 2026-10-29); a signed build refuses to go without the key and checks it is in the bundle |
 | Admin (ten taps on the menu ball) | **kept for the beta** (decided 2026-10-29); decide again before production |
-| Data safety answers | final for analytics on (section 4), assuming PostHog discards client IPs (section 2, step 3) |
+| Data safety answers | final for analytics on (section 4); PostHog stores no IP and derives no location (section 2, step 3) |
 | Content rating (IARC) | answers drafted below |
 | Music licence | 9 of 10 tracks credited (Pixabay); **maps_36-40.ogg has no recorded source** |
 
@@ -83,10 +83,12 @@ place for the very first upload, see step 5.)
      staging site uses (Heroku config var `VITE_POSTHOG_KEY`), or a separate
      PostHog project for the app if its numbers should stay apart from the
      web's. A signed build fails without it.
-   - In PostHog, Project settings: turn on **Discard client IP data**.
-     PostHog otherwise keeps each request's IP address and derives a city
-     from it, which Play counts as collecting approximate location; with it
-     on, the Data safety answers below are accurate as written.
+   - In PostHog, Project settings > Privacy: **Discard client IP data** on
+     (done 2026-10-29, with the organisation default on for new projects),
+     so no IP address is stored. That setting alone still lets PostHog's
+     GeoIP step derive a city and country from the IP before dropping it, so
+     the app also sends `$geoip_disable` with every event
+     (`src/lib/analytics.ts`), and no location is derived at all.
 4. **Merge `dev` into `main`: done** (2026-10-29, `main` at `25de74d`), so
    the workflow's "Run workflow" button exists. Bring `main` up to date
    again before each release build: the button builds what is on the branch
@@ -144,7 +146,7 @@ What the app does with data, checked in code:
   PostHog's EU cloud, with the browser-level device details PostHog attaches
   (OS, screen size, WebView version). No accounts, no names, no identifiers
   the player gives, no autocapture, no session recording. The client IP is
-  discarded (section 2, step 3).
+  discarded and no location is derived from it (section 2, step 3).
 
 Answers:
 
@@ -156,7 +158,7 @@ Answers:
 | App activity > App interactions | Collected; not shared; purpose: analytics; processed ephemerally: no; required: yes (no in-app opt-out yet) |
 | App info and performance > Crash logs, Diagnostics | Collected, not shared, analytics |
 | Device or other IDs | Collected (PostHog's anonymous install id), analytics |
-| Location, Personal info, Financial, Messages, Photos, Contacts | Not collected (location only holds while PostHog discards client IPs; if it does not, declare Approximate location, collected, analytics) |
+| Location, Personal info, Financial, Messages, Photos, Contacts | Not collected (no IP stored, no GeoIP: section 2, step 3) |
 
 ### Privacy policy (text for `public/privacy.html`, once decision 4 is made)
 

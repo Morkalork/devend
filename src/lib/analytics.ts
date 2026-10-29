@@ -47,6 +47,13 @@ function start(posthog: PostHog, key: string): void {
       // $exception events (crash visibility in the wild, e.g. renderer rollout).
       capture_exceptions: true,
     });
+    // No location, on every event (exceptions included). "Discard client IP
+    // data" in the PostHog project drops the IP, but its GeoIP step still
+    // reads it first and stores a city and country, which Play counts as
+    // collecting approximate location. $geoip_disable tells ingestion to skip
+    // that step, so the Data safety answer "location: not collected" holds
+    // whatever the project's settings say (PLAY_RELEASE_PLAN.md, section 4).
+    posthog.register({ $geoip_disable: true });
     client = posthog;
   } catch {
     // Analytics must never break the game.

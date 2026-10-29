@@ -43,6 +43,13 @@ describe("the release build", () => {
   });
 });
 
+describe("analytics", () => {
+  it("asks PostHog to skip GeoIP on every event, so no location is collected", () => {
+    const src = read("src/lib/analytics.ts");
+    expect(src).toMatch(/posthog\.register\(\{ \$geoip_disable: true \}\);\s*client = posthog;/);
+  });
+});
+
 describe("the Android project", () => {
   it("answers Test Lab's game-loop launch in debug builds only", () => {
     expect(read("android/app/src/main/AndroidManifest.xml")).not.toContain('android:name="com.google.intent.action.TEST_LOOP"');
