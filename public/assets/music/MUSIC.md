@@ -32,9 +32,6 @@ License: https://pixabay.com/service/license-summary/
 - maps_21-25.ogg: no-copyright-cyberpunk, by HumanStudioEDM: https://pixabay.com/music/dance-no-copyright-cyberpunk-527641/
 - maps_26-30.ogg: cyberpunk-futuristic-music, by Poradovskyi: https://pixabay.com/music/phonk-cyberpunk-futuristic-music-514973/
 - maps_31-35.ogg: cyber-sport-no-copyright-dj-music, by MiroMaxMusic: https://pixabay.com/music/dance-cyber-sport-no-copyright-dj-music-507206/
-- maps_36-40.ogg: **removed** before the first Play build (2026-10-29). Its
-  title, author and source were never recorded, so its licence could not be
-  shown. The ladder has 29 maps, so this band never played in a run, only in
-  the Jukebox. A new track for maps 36-40 goes in with its full credit in
-  `public/music.yml`.
+- maps_36-40.ogg: Go For It!, by melodyayresgriffiths: https://pixabay.com/music/video-games-go-for-it-80s-cheesy-vhs-infomercial-synthpop-soundtrack-187085/
+  (replaced the uncredited track on 2026-10-29).
 - end-credits.ogg: fun-8-bit-video-game-music-boss, by Keyframe Audio: https://pixabay.com/music/video-games-fun-8-bit-video-game-music-boss-133663/

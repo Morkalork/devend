@@ -85,27 +85,17 @@ tracks:
     bandFrom: 31
     bandTo: 35
 
-  # The one track whose provenance was never written down: MUSIC.md skips from
-  # 31-35 straight to the end credits. It ships and it plays, so it is listed
-  # rather than hidden, with the gap stated instead of guessed at. `artist:` is
-  # omitted deliberately - the screen renders "Artist not recorded" for it, and
-  # `src/test/musicCatalogue.test.ts` allows exactly this one file to be missing
-  # its credit, so a second undocumented track fails the build.
+  # The owner's replacement for the uncredited track that held this band
+  # (removed before the first Play build). Pushed as maps_41-45.mp3; bands
+  # must tile the ladder with no gap and play as Ogg Opus, so it fills 36-40.
   - file: maps_36-40.ogg
-    title: Unknown
-    source: Pixabay
-    usedFor: band
-    bandFrom: 36
-    bandTo: 40
-
-  - file: maps_41-45.mp3
     title: Go For It!
     artist: melodyayresgriffiths
     source: Pixabay
     url: https://pixabay.com/music/video-games-go-for-it-80s-cheesy-vhs-infomercial-synthpop-soundtrack-187085/
     usedFor: band
-    bandFrom: 41
-    bandTo: 45
+    bandFrom: 36
+    bandTo: 40
 
   - file: end-credits.ogg
     title: Fun 8-Bit Video Game Music

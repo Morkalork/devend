@@ -31,7 +31,7 @@ place for the very first upload, see step 5.)
 | Admin (ten taps on the menu ball) | **kept for the beta** (decided 2026-10-29); decide again before production |
 | Data safety answers | final for analytics on (section 4); PostHog stores no IP and derives no location (section 2, step 3) |
 | Content rating (IARC) | answers drafted below |
-| Music licence | every shipped track credited (Pixabay); the uncredited maps_36-40.ogg removed (it never played in a run); new music for it to come from the owner |
+| Music licence | every shipped track credited (Pixabay); the uncredited maps_36-40 track replaced by the owner's "Go For It!" (melodyayresgriffiths) |
 
 ## 2. What only the owner can do
 
@@ -119,11 +119,11 @@ place for the very first upload, see step 5.)
    Index). It carries the device check and the touch trace, which is why it
    stays; it also carries the Playground, infinite lives and map editing,
    which a tester could find. Decide again before production.
-3. **maps_36-40.ogg: REMOVED** (2026-10-29). Its source was never recorded,
-   so it is out of every build; the ladder's 29 maps never reached its band,
-   so only the Jukebox lost a track. The owner is finding new music; it goes
-   in with its full credit in `public/music.yml` (the catalogue test now
-   allows no uncredited track at all).
+3. **maps_36-40: REPLACED** (2026-10-29). The uncredited track is gone; the
+   owner's "Go For It!" by melodyayresgriffiths (Pixabay, credited in
+   `public/music.yml`) holds the band now. It was pushed as maps_41-45.mp3;
+   bands must tile with no gap and play as Ogg Opus, so it became
+   maps_36-40.ogg. The catalogue test allows no uncredited track at all.
 4. **Where the privacy policy lives.** Play needs a public URL that stays up.
    Options: a production web host (is there one besides staging?), GitHub
    Pages, or the staging host (works, but tied to staging staying up).
