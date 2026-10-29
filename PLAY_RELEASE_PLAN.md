@@ -35,26 +35,49 @@ place for the very first upload, see step 5.)
 
 ## 2. What only the owner can do
 
-1. **Play Console account.** <https://play.google.com/console>, one-time fee,
-   identity verification (can take days). Say whether it is a **personal** or
-   an **organisation** account: a personal account created after November
-   2023 must run a closed test with **at least 12 testers opted in for 14 days
-   in a row** before it may apply for production. The beta is that closed
-   test, so invite at least 12 people and keep them opted in.
-2. **Upload key** (never paste it, or its passwords, into a chat or a commit):
-   ```sh
-   keytool -genkey -v -keystore devend-upload.keystore \
-     -alias devend -keyalg RSA -keysize 2048 -validity 10000
-   base64 -w0 devend-upload.keystore > devend-upload.keystore.b64   # macOS: base64 -i ... -o ...
-   ```
-   Back the keystore and both passwords up somewhere safe (a password
-   manager). Then GitHub > Settings > Secrets and variables > Actions, four
-   repository secrets: `ANDROID_KEYSTORE_BASE64` (the .b64 file's contents),
-   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`devend`),
-   `ANDROID_KEY_PASSWORD`. Delete the .b64 file afterwards.
-   With **Play App Signing** (the default, accept it) Google holds the key
-   that signs what players install; this upload key only proves an upload is
-   yours, and a lost upload key can be reset through Play support.
+1. **Play Console account: done.** Personal account "Morkalork" (developer
+   account id 5892458869560659629), created before November 2023, so the
+   rule that new personal accounts must run a 12-tester, 14-day closed test
+   before production does **not** apply: the beta can have as many or as few
+   testers as wanted, and production is open whenever it is ready.
+2. **Upload key.** Made once, on your own computer, kept forever. Never paste
+   the file or its passwords into a chat, an issue or a commit.
+   1. *Make the key.* `keytool` comes with Android Studio. On Windows, in
+      PowerShell, from a folder outside the repo (e.g. `Documents`):
+      ```powershell
+      & "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkey -v `
+        -keystore devend-upload.keystore -alias devend -keyalg RSA -keysize 2048 -validity 10000
+      ```
+      (macOS/Linux: `keytool -genkey -v -keystore devend-upload.keystore
+      -alias devend -keyalg RSA -keysize 2048 -validity 10000`.) It asks for a
+      keystore password, then name and organisation questions (any honest
+      answers; they are not shown to players), then "Is this correct?": type
+      `yes`. If it asks for a separate key password, press Enter to reuse the
+      keystore password.
+   2. *Back it up now:* `devend-upload.keystore` and its password into a
+      password manager or another safe place. Lost, the key can be reset
+      through Play support (Play App Signing holds the real signing key),
+      but that takes days.
+   3. *Turn it into text for GitHub.* Windows PowerShell, same folder:
+      ```powershell
+      [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\devend-upload.keystore")) | Set-Clipboard
+      ```
+      (macOS: `base64 -i devend-upload.keystore | pbcopy`; Linux:
+      `base64 -w0 devend-upload.keystore`.) The key is now on the clipboard
+      as one long line of text.
+   4. *Add the secrets.* <https://github.com/Morkalork/devend/settings/secrets/actions>
+      (repository > Settings > Secrets and variables > Actions) > **New
+      repository secret**, once for each:
+
+      | Name | Secret |
+      |---|---|
+      | `ANDROID_KEYSTORE_BASE64` | paste the clipboard (step 3) |
+      | `ANDROID_KEYSTORE_PASSWORD` | the password from step 1 |
+      | `ANDROID_KEY_ALIAS` | `devend` |
+      | `ANDROID_KEY_PASSWORD` | the same password (unless you gave the key its own) |
+
+      GitHub never shows a secret again once saved; a wrong one is fixed by
+      saving it again under the same name.
 3. **Analytics key and IP setting.**
    - Add a fifth repository secret, `POSTHOG_KEY`: the same project key the
      staging site uses (Heroku config var `VITE_POSTHOG_KEY`), or a separate
@@ -64,9 +87,10 @@ place for the very first upload, see step 5.)
      PostHog otherwise keeps each request's IP address and derives a city
      from it, which Play counts as collecting approximate location; with it
      on, the Data safety answers below are accurate as written.
-4. **Merge `dev` into `main`** when the build is ready (or say so and it gets
-   done): GitHub only offers the workflow's "Run workflow" button for files
-   on the default branch, and `main` is the release branch.
+4. **Merge `dev` into `main`: done** (2026-10-29, `main` at `25de74d`), so
+   the workflow's "Run workflow" button exists. Bring `main` up to date
+   again before each release build: the button builds what is on the branch
+   it is run from.
 5. **Run the workflow** (Actions > Android release > Run workflow) with a
    versionName, e.g. `0.9.0-beta.1`. Download the `.aab` artifact.
 6. **First upload by hand** (the Play API cannot create an app's first
@@ -233,8 +257,7 @@ From the Play internal track, not a sideloaded APK:
 
 ## 8. After the beta
 
-- Production needs: the 12-testers-for-14-days rule met (personal accounts),
-  decision 2 settled again, an analytics consent switch or memory-only mode
+- Production needs: decision 2 settled again, an analytics consent switch or memory-only mode
   (decision 1), the privacy policy final, a production listing.
 - Optional: upload to Play from the workflow (a service account and the
   Play Developer API), once the first upload has been made by hand.
