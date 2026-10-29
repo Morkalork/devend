@@ -149,9 +149,11 @@ describe("no mechanic is introduced and then dropped", () => {
     // second map is act VI's.
     //
     // ACT V took the other three: the mirror on 36, the box and the terminals
-    // together on 38 (the box again on 39). The gate is the last single.
+    // together on 38 (the box again on 39). ACT VI took the last, the gate on
+    // 42, so with the ladder at 45 every headline mechanic is on two maps or
+    // more, and this is back to the assertion it was written to make.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["gate"]);
+      .toEqual([]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

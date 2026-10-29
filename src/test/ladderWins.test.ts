@@ -197,6 +197,11 @@ describe("the maps with nothing a lock cannot produce", () => {
     // a mirror, which is terrain, and its ask is a SUPERIOR lock, the pocket the
     // mirror is for. A lock rush can produce one, but only by aiming: sealing
     // every ball sloppily leaves the clause unmet.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16, 31, 34, 36]);
+    //
+    // 41 and 43 join with act VI. 41's objects are fast ground and a patrol,
+    // terrain both, and its ask is a speed clear, which no rush produces. 43's
+    // are two wells, and it asks for a superior lock the wells keep out of the
+    // two cheapest corners.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16, 31, 34, 36, 41, 43]);
   });
 });

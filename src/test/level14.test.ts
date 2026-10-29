@@ -135,7 +135,10 @@ describe("level 14 holds together", () => {
     //
     // ACT V has no smash at all: a superior lock (36), a zone (37), deliveries
     // (38, 39) and a boss (40).
-    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40]);
+    //
+    // ACT VI: a speed clear (41), a zone (42), a superior lock (43) and the
+    // last boss (45). 44 smashes, as a skill check that names a slab should.
+    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 45]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,

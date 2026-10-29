@@ -84,11 +84,11 @@ describe("the mechanics panel", () => {
   it("surfaces the single-use warnings rather than hiding them behind a toggle", () => {
     // These are the findings the panel exists for, so they must be visible in
     // the default view, not one click away.
-    // The LADDER, which is what Admin feeds the panel: across the ladder and
-    // the retired maps together nearly everything is on two maps, so the
-    // warnings this asks about are the ladder's own (the box, the terminals,
-    // the mirror and the gate today, each waiting on its second map).
-    render(<MechanicSpreadPanel levels={LADDER} current={lvl(6)} />);
+    // The ladder is what Admin feeds the panel, and since it reached 45 every
+    // headline mechanic on it has a second map, so there is no warning to
+    // show. Take one away: without level 42 the ball gate is on 33 alone.
+    const short = LADDER.filter(l => l.level !== 42);
+    render(<MechanicSpreadPanel levels={short} current={lvl(6)} />);
     expect(screen.getAllByText(/introduced and never developed/).length).toBeGreaterThan(0);
   });
 

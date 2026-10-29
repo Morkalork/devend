@@ -47,6 +47,11 @@ const NO_SUPERIOR_NOOK: Record<string, string> = {
   // mirror (or any corner's diagonal), so the straight probe cannot see it.
   "level-36": "the superior pocket is the mirror's V, a diagonal the straight probe cannot draw",
   "level-40": "boss map: the light box is the target, not a lock",
+  // 43's superior pockets are corner diagonals, which the straight probe
+  // cannot draw, and its two cheapest (the top corners) are pulled empty by its
+  // wells on purpose: the map is about building one somewhere else.
+  "level-43": "the superior pockets are corner diagonals, and the wells empty the two cheapest by design",
+  "level-45": "boss map: the light box is the target, not a lock",
 };
 
 describe("every map's authored pocket and lanes", () => {

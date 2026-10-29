@@ -375,13 +375,13 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 30 (boss), 33, 35 (boss), 37, 40 (boss) |
-| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29 |
+| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 30 (boss), 33, 35 (boss), 37, 40 (boss), 42, 45 (boss) |
+| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29, 41 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 21, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
 | pickup spots | E | Seasoning | 8 | 9 | - |
-| launcher | C | Meet | 11 | 12 | 17 |
+| launcher | C | Meet | 11 | 12 | 17, 42 |
 | bumper | C | Compressed | 11 | 12 | 16 |
 | deformable | A | Compressed | 16 | 25 | - |
 | phasing | A | Meet | 16 | 28 | 20 (boss) |
@@ -392,20 +392,20 @@ Every mechanic gets a status, and the status decides what it costs.
 | mirror | B | Meet | 13 | 36 | - |
 | terminals | E | Meet | 22 | 38 | - |
 | portal | B | Meet | 21 | 33 | 37 (Break), 39 |
-| WIP limit | D | Meet | 32 | 34 | - |
+| WIP limit | D | Meet | 32 | 34 | 44 |
 | cage | E | Compressed | 22 | 29 | - |
 | thread lock | D | Seasoning | - | - | `headline: false`: a lock count in an authored win is the `locks` clause, asked from map 1 |
-| gravity well | C | Meet | 15 | 21 | 28, 29 |
+| gravity well | C | Meet | 15 | 21 | 28, 29, 43 (Break) |
 | one-way | B | Meet | 23 | 31 | - |
-| delivery box | E | Meet | 23 | 38 | 39 |
-| fence ground | D | Meet | 24 | 27 | - |
-| charge | E | Meet | 25 | 32 | - |
+| delivery box | E | Meet | 23 | 38 | 39, 44 |
+| fence ground | D | Meet | 24 | 27 | 41 (Break) |
+| charge | E | Meet | 25 | 32 | 44 |
 | latch | A | Compressed | 26 | 34 | - |
 | data stream | E | Meet | 26 | 27 | - |
-| ball gate | B | Compressed | 33 | - | - |
+| ball gate | B | Compressed | 33 | 42 | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 19 | - |
-| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 30 (boss), 33, 35 (boss), 37, 40 (boss) |
+| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 30 (boss), 33, 35 (boss), 37, 40 (boss), 42, 45 (boss) |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |
@@ -596,9 +596,8 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 
 > **Acts II, III and IV were deleted and rebuilt one map at a time, and acts V
 > and VI were added past 35.** The owner extended the ladder to 45 on
-> 2026-10-29, with music for 41-45. `public/map.yml` is thirty-five maps (1-35,
-> every act through IV rebuilt); 36-45 below are **briefs, not descriptions**
-> until each says *(built)*. Where a table records what an old map used to be,
+> 2026-10-29, with music for 41-45. `public/map.yml` is forty-five maps in six
+> acts, every one built. Where a table records what an old map used to be,
 > it is kept as a record of what was tried and where it went wrong (see the
 > difficulty contract in section 1 and the case study on level 9), not as a
 > specification to reproduce.
@@ -611,7 +610,7 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 > twenty mechanics the engine has and the ladder no longer places - that list is
 > the rebuild's checklist, and a name comes off it when a map places it. It
 > emptied with act IV. `featureSchedule.test.ts` keeps `MIGRATED_ACTS`, which
-> holds acts I-IV and may only grow.
+> holds all six acts and may only grow.
 
 Space demanded is `100 - sizeThreshold`. It climbs within an act and may only
 fall on the map straight after a boss, which is the breather. Bosses sit below
@@ -1584,18 +1583,76 @@ shape no other boss has (1 target, 3 traps, no wipe, minions). Tuned from 2 of
 16 (speed 1.15, a minion every 7s, four at once) to **4 of 16** at speed 1.05,
 every 9s, three, level with 30.
 
-### Act VI - Release (41-45)  *(brief)*
+### Act VI - Release (41-45)  *(built)*
 
-*Owns: everything under the clock.* The inversions that are left, the ball
-gate's second map, and the finale. Space demanded **95 -> 96**, cuts 10.
+*Owns: everything under the clock, and the end.* The inversions act V left
+(fence ground and the well), the ball gate's second map, the final skill check
+and the last boss. Space demanded **95 -> 96**, cuts 10.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 41 | - | **Break** fence ground, Fight mover | The fast ground, where a fence builds twice as quickly, is the lane the patrol sweeps. The breather. |
-| 42 | - | **Use** ball gate, launcher | The launcher fires the roster down a lane where a gate lets one type into the paying room (the cell "ball gate sorts a launcher's roster"). |
-| 43 | - | **Break** one-way | A membrane that lets balls INTO a pocket you have closed. |
-| 44 | *(none: the skill check)* | the whole ladder | |
-| 45 | BOSS | - | The last fight carries all three ideas: a chained pair, the push, and minions. |
+| 41 | - | **Break** fence ground, Fight mover | The ground that builds fences twice as fast is the lane the patrol sweeps, and the clock wants you quick. The breather. *(built)* |
+| 42 | - | **Use** ball gate, launcher | The launcher fires the roster at a gate only the green ball can cross, straight into the box it has to be caught in. *(built)* |
+| 43 | - | **Break** gravity well | The cheapest pockets on the board are the top corners, and a well over each throws every ball back out. *(built)* |
+| 44 | *(none: the skill check)* | WIP limit, delivery, charge | One delivery, one smashed slab and the whole board have to fit inside twenty-eight fences, in any order. *(built)* |
+| 45 | BOSS | - | Everything breaks at once: a chained pair, a wipe every twenty-five seconds, and leaks the whole time. *(built)* |
+
+**43 was briefed as Break one-way and became Break gravity well.** Every
+version of a membrane turned against the player came back to 31's drain under
+another name. The well had the cleaner inversion: 15, 21 and 29 taught it as
+the aiming device that puts a ball where you want it, and two wells pulling
+balls out of the two cheapest corners is that lesson turned round.
+
+Swept 16 seeds on each map's own clock: 41 **16**, 42 **8**, 43 **3**, 44
+**6**, 45 **3**.
+
+#### 41 "Fast Path" - Break fence ground, Fight mover  *(built)*
+
+**A band across the middle builds fences at 2.2x, and the patrol sweeps it.**
+24 and 27's ground priced a cut by slowing it; this ground is a gift in the
+one place that can take it away, because a fence that grows into the patrol
+costs a life as a ball does. The win adds a forty-second speed clear. 16 of 16
+says nothing strands it; the bot cuts three times a second and clears it in
+11-24s, so its times say nothing about a person's and the forty is set for one.
+
+#### 42 "Canary" - Use ball gate, with the launcher  *(built)*
+
+**The launcher fires the roster down a lane that ends at a gate only the green
+ball may cross, and the box is the room behind it.** Two findings shaped it.
+Fired dead level, the roster ping-ponged on one line between the gate and the
+left wall for ever and green, stacked last, never reached the gate (section
+7.3b's one-column orbit, from a barrel): the barrel is turned 24 degrees. And
+with the gate as the only door, a green ball locked anywhere else stranded the
+box on 7 seeds of 16, so the room has an ordinary doorway too, the long way
+round for everyone; the gate is green's shortcut, not its only road. 0, then
+6, then **8 of 16**.
+
+#### 43 "Backpressure" - Break gravity well  *(built)*
+
+**Two wells over the top corners pull down, out of them.** A top corner is the
+cheapest superior pocket there is, and these throw back every ball that wanders
+in (measured: no ball stays in either corner over 40s). The win wants one
+superior lock; the answers are a diagonal timed against the pull, or a pocket
+built in a bottom corner the wells cannot reach. `tiltChance: 0`, so the pull
+stays one pull. 3 of 16, every loss the bot sealing everything without a
+superior, which it cannot take without a diagonal.
+
+#### 44 "Go Live" - the skill check  *(built)*
+
+**A delivery, a smash and the clear, inside twenty-eight fences.** The plug on
+the right has a fuse; the slab on the left has three hits and no fuse; the black
+ball breaks either at double strength. It shipped first with one plug and
+`winSpecProblems` refused it - one monolith for a clause that wants one is no
+slack - so the slab joined. Without the deadline beat the bot read 2 of 16
+(it never aims at a slab); with both the slack and the deadline, **6 of 16**.
+
+#### 45 "Production Outage" - BOSS  *(built)*
+
+**The last fight carries every idea a boss has had**: the chained pair (20),
+the push (30) and the leaks (10, 40), with the box back in the top-right
+corner where the first boss was fenced in, so the ladder ends where its first
+fight began. 0 of 16 with a minion every ten seconds, three at most; **3 of
+16** at every twelve, two at most, the hardest boss on the ladder.
 
 ---
 

@@ -2195,6 +2195,11 @@
         "name": "Parchear el Memory Leak",
         "description": "Desgasta la build con tres atrapadas, la última dentro de la caja clara.",
         "clarify": "El jefe necesita tres atrapadas. Las dos primeras pueden ser en cualquier sitio y no cuestan vida: se suelta más rápido y más pequeño, y una de tus vallas se revierte. La tercera debe ser dentro de la caja clara (abajo a la derecha); atrapado en otro sitio en su última vida, cuesta una vida. Cada nueve segundos más o menos escupe un minion, hasta tres a la vez; los minions son bolas normales que se quedan hasta que los encierras. Quedarse sin tiempo hace fracasar el mapa."
+      },
+      "defeat-outage": {
+        "name": "Resolver la caída",
+        "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja clara.",
+        "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier sitio y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja clara (arriba a la derecha), y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares que se desvanecen. Cada veinticinco segundos la pareja se detiene y tiembla, y luego borra cada valla del tablero, y escupe un minion enorme cada doce segundos más o menos, como mucho dos. Quedarse sin tiempo hace fracasar el mapa."
       }
     },
     "tagSets": {
@@ -2243,6 +2248,10 @@
       "level-40": {
         "name": "Memory Leak",
         "intro": "Una build con fugas. Necesita tres atrapadas: las dos primeras pueden ser en cualquier sitio y solo la sueltan, más rápida y más pequeña cada vez, y la tercera debe ser dentro de la caja clara, abajo a la derecha. Cada pocos segundos escupe un minion, y los minions se quedan hasta que los encierras, así que el tablero se llena mientras el jefe se vacía. Sella las fugas sobre la marcha: sus vallas son las paredes contra las que se construye la siguiente trampa."
+      },
+      "level-45": {
+        "name": "Production Outage",
+        "intro": "Todo a la vez, y todo lo que has aprendido. Una pareja encadenada que necesita dos atrapadas por mitad, como el Merge Conflict; un borrado de cada valla del tablero cada veinticinco segundos, como el Force Push; y minions enormes escapándose todo el rato, como el Memory Leak. Desgasta las dos mitades y luego enciérralas en la caja clara, arriba a la derecha, donde entregaste a tu primer jefe. Engánchalas en un pilar, guarda una congelación para el borrado y entrégalo."
       }
     },
     "levels": {
@@ -2405,6 +2414,26 @@
       "level-40": {
         "name": "Memory Leak",
         "premise": "En la que la build necesita tres atrapadas y suelta un minion cada pocos segundos, así que el tablero se llena mientras el jefe se vacía."
+      },
+      "level-41": {
+        "name": "Fast Path",
+        "premise": "En la que el suelo que construye vallas al doble de rápido es el carril que barre la patrulla, y el reloj te quiere rápido."
+      },
+      "level-42": {
+        "name": "Canary",
+        "premise": "En la que el lanzador dispara la plantilla contra una compuerta que solo cruza la bola verde, directa a la caja donde hay que atraparla."
+      },
+      "level-43": {
+        "name": "Backpressure",
+        "premise": "En la que los bolsillos más baratos del tablero son las esquinas de arriba, y un pozo sobre cada una vuelve a echar cada bola."
+      },
+      "level-44": {
+        "name": "Go Live",
+        "premise": "En la que una entrega, un bloque roto y todo el tablero tienen que caber en veintiocho vallas, en el orden que quieras."
+      },
+      "level-45": {
+        "name": "Production Outage",
+        "premise": "En la que todo se rompe a la vez: una pareja encadenada, un borrado cada veinticinco segundos y fugas todo el rato."
       }
     }
   },

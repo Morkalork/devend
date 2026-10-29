@@ -62,7 +62,8 @@ const oneInTheZone = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
 describe("the boss is the win, not the zone", () => {
   it("finds the chained pairs, so this is testing something", () => {
     const pairs = BOSSES.filter(l => (l.boss?.bossBall?.count ?? 1) > 1).map(l => l.level);
-    expect(pairs, "the pairs were retired: is this file still needed?").toEqual([20, 35]);
+    // 45, the last boss, is a pair as well: it carries every idea a boss has had.
+    expect(pairs, "the pairs were retired: is this file still needed?").toEqual([20, 35, 45]);
   });
 
   it.each(BOSSES.map(l => [l.level as number, l] as const))(

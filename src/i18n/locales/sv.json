@@ -2195,6 +2195,11 @@
         "name": "Laga Memory Leak",
         "description": "Nöt ner bygget med tre fångster, den sista inne i den ljusa rutan.",
         "clarify": "Bossen kräver tre fångster. De två första kan ske var som helst och kostar inget liv: den bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den tredje måste ske inne i den ljusa rutan (nere till höger); fångas den någon annanstans på sitt sista liv kostar det ett liv. Ungefär var nionde sekund spottar den ut en minion, högst tre åt gången; minionerna är vanliga bollar som stannar tills du stängslar in dem. Tar tiden slut misslyckas banan."
+      },
+      "defeat-outage": {
+        "name": "Lös avbrottet",
+        "description": "Nöt ner båda de kedjade halvorna, stängsla sedan in dem i den ljusa rutan.",
+        "clarify": "Varje halva kräver två fångster. Den första kan ske var som helst och kostar inget liv: halvan bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den andra måste ske inne i den ljusa rutan (uppe till höger), och båda halvorna måste hamna där. Deras kedja bryter varje staket den sveper över och fastnar på de tonande pelarna. Var tjugofemte sekund stannar paret och skakar, och raderar sedan varje staket på brädet, och ungefär var tolfte sekund spottar det ut en överstor minion, högst två. Tar tiden slut misslyckas banan."
       }
     },
     "tagSets": {
@@ -2243,6 +2248,10 @@
       "level-40": {
         "name": "Memory Leak",
         "intro": "Ett bygge som läcker. Det kräver tre fångster: de två första kan ske var som helst och sliter det bara loss, snabbare och mindre varje gång, och den tredje måste ske inne i den ljusa rutan nere till höger. Med några sekunders mellanrum spottar det ut en minion, och minionerna stannar tills du stängslar in dem, så brädet fylls medan bossen töms. Täta läckorna medan du går: deras staket är väggarna nästa fälla byggs mot."
+      },
+      "level-45": {
+        "name": "Production Outage",
+        "intro": "Allt på en gång, och allt du har lärt dig. Ett kedjat par där varje halva kräver två fångster, som Merge Conflict; en radering av varje staket på brädet var tjugofemte sekund, som Force Push; och överstora minioner som läcker ut hela tiden, som Memory Leak. Nöt ner båda halvorna, stängsla sedan in dem i den ljusa rutan uppe till höger, där din första boss levererades. Fånga dem på en pelare, spara en frysning till raderingen, och leverera."
       }
     },
     "levels": {
@@ -2405,6 +2414,26 @@
       "level-40": {
         "name": "Memory Leak",
         "premise": "Den där bygget kräver tre fångster och läcker en minion med några sekunders mellanrum, så brädet fylls medan bossen töms."
+      },
+      "level-41": {
+        "name": "Fast Path",
+        "premise": "Den där marken som bygger staket dubbelt så fort är filen patrullen sveper, och klockan vill att du är snabb."
+      },
+      "level-42": {
+        "name": "Canary",
+        "premise": "Den där kastaren skjuter hela uppställningen mot en grind bara den gröna bollen kan passera, rakt in i rutan den ska fångas i."
+      },
+      "level-43": {
+        "name": "Backpressure",
+        "premise": "Den där brädets billigaste fickor är de övre hörnen, och en brunn över vart och ett kastar ut varje boll igen."
+      },
+      "level-44": {
+        "name": "Go Live",
+        "premise": "Den där en leverans, ett krossat block och hela brädet ska rymmas inom tjugoåtta staket, i vilken ordning du vill."
+      },
+      "level-45": {
+        "name": "Production Outage",
+        "premise": "Den där allt går sönder på en gång: ett kedjat par, en radering var tjugofemte sekund och läckor hela tiden."
       }
     }
   },

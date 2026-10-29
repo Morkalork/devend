@@ -4574,3 +4574,423 @@ levels:
         cy: 400
         radius: 70
     balls: []
+
+  # ===========================================================================
+  # ACT VI - RELEASE (41-45): everything under the clock.
+  #
+  # The inversions act V left, the ball gate's second map, and the end of the
+  # ladder. Space demanded 95 -> 96 (thresholds 5 -> 4), cuts 10. The last
+  # boss, 45, carries every idea a boss has had: a chained pair, the push, and
+  # minions.
+  # ===========================================================================
+
+  # 41 "Fast Path" - BREAK fence ground, FIGHT mover. The breather after the boss.
+  #
+  # 24 and 27 taught ground that prices a cut by slowing it: the cheapest pocket
+  # was the longest stand-still. Here the ground is the other way round. A band
+  # across the middle builds fences at more than twice the speed, so a cut
+  # across it is the quickest thing on the board, and the win wants the map
+  # cleared inside forty seconds, so quick is what you need. (The bot clears
+  # this board in 11-24s, cutting three times a second; its times say nothing
+  # about a human's, so the forty is set for a person, not for the sweep.) But the band is
+  # the lane the patrol sweeps, and a fence that grows into the patrol costs a
+  # life just as a ball does. The gift is in the one place that can take it
+  # away: cut across the band between passes, or clear the slow halves first
+  # and leave the fast lane for when the board is small. The superior nook is
+  # under the top-right lip, well away from the lane.
+  # Heights (3D board, objectRise.ts): the patrol stands proud, the thing the lane is about; the lip low.
+  - id: level-41
+    name: Fast Path
+    level: 41
+    premise: "The one where the ground that builds fences twice as fast is the lane the patrol sweeps, and the clock wants you quick."
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, yellow]
+    timeLimit: 55
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: speedClear
+          seconds: 40
+          bonusPercent: 20
+    fenceZones:
+      - x: 45
+        'y': 390
+        width: 810
+        height: 120
+        speed: 2.2
+        name: hot path
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: patrol
+        rise: 1.4
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 40
+        axis: horizontal
+        range: 640
+        speed: 190
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 42 "Canary" - USE ball gate, with the launcher.
+  #
+  # The launcher on the left fires the whole roster down one lane, at the
+  # power you pull (11's wager: it sets the pay and the pace for the map), and
+  # the lane ends at a gate only the green ball may cross. Behind it is the
+  # box, a room too big to lock in by wandering in, and the win wants a ball
+  # locked in it on top of the clear. So the shot sorts the roster: green goes
+  # through and the others bounce back into the board, and the room is green's
+  # alone. That is the gate's Use (the cell "ball gate sorts a launcher's
+  # roster"): the money ball is the canary, and the box is where it has to be
+  # caught. It can walk back out through its own gate, so the room has to be
+  # cut down round it before it does. The room also has an ordinary doorway in
+  # its south-east corner, the long way round for everyone: with the gate as
+  # the only door, a green ball locked anywhere else stranded the box on 7
+  # seeds of 16, and a map one lock can quietly end is the thing the
+  # difficulty contract forbids. The gate is the canary's shortcut now, not its
+  # only road. The superior nook is under the top-left lip.
+  # Heights (3D board, objectRise.ts): the room's walls stand tall and the gate low, a door only one ball reads as open; the lip low.
+  - id: level-42
+    name: Canary
+    level: 42
+    premise: "The one where the launcher fires the roster at a gate only the green ball can cross, straight into the box it has to be caught in."
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, green]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: area
+          count: 1
+          bonusPercent: 25
+    coloredAreas:
+      - kind: dark
+        x: 625
+        'y': 250
+        width: 230
+        height: 400
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: barrel
+        kind: launcher
+        shape: rect
+        x: 60
+        'y': 600
+        width: 240
+        height: 110
+        facing: right
+        angle: -24
+      - id: room-north
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 226
+        width: 255
+        height: 24
+      - id: room-west-top
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 250
+        width: 25
+        height: 130
+      - id: canary-gate
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 380
+        width: 25
+        height: 140
+        passTypes: [green]
+      - id: room-west-bottom
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 520
+        width: 25
+        height: 130
+      - id: room-south
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 650
+        width: 160
+        height: 24
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 43 "Backpressure" - BREAK gravity well.
+  #
+  # Every well so far was an aiming device: 15's poured balls into a cup, 21's
+  # threw them at the slabs, 29's set the room's down. Here two wells sit over
+  # the two top corners and pull DOWN, out of them. A top corner is the
+  # cheapest superior pocket there is (one diagonal closes it), and these two
+  # throw back every ball that wanders in before a fence can catch it. The win
+  # wants one superior lock on top of the clear. So the lesson is turned round:
+  # the well that used to put a ball where you wanted it now takes it away, and
+  # the answers are to time a corner's diagonal against the pull, catching a
+  # ball deep in before it is dragged out, or to build a superior pocket out of
+  # two fences in a bottom corner the wells cannot reach. The board never tilts
+  # (tiltChance 0): two wells and a turning room would be two pulls to read.
+  # Heights (3D board, objectRise.ts): the two posts are anchors for the bottom-corner answer.
+  - id: level-43
+    name: Backpressure
+    level: 43
+    premise: "The one where the cheapest pockets on the board are the top corners, and a well over each throws every ball back out."
+    sizeThreshold: 4
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, lodestone]
+    timeLimit: 45
+    tiltChance: 0
+    win:
+      require:
+        - kind: space
+          threshold: 4
+        - kind: superiorLocks
+          count: 1
+          bonusPercent: 25
+    gravityWells:
+      - x: 45
+        'y': 45
+        width: 230
+        height: 230
+        turnRate: 3.0
+        pull: down
+      - x: 625
+        'y': 45
+        width: 230
+        height: 230
+        turnRate: 3.0
+        pull: down
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: post-w
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 260
+        cy: 620
+        radius: 55
+      - id: post-e
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 620
+        radius: 55
+    balls: []
+
+  # 44 "Go Live" - the skill check. Nothing new.
+  #
+  # The last map before the last boss asks for three things the ladder has
+  # taught, on one budget: a ball delivered into the box in the bottom-left
+  # corner (23, 38), one of two slabs smashed (25, 32), and the board cleared,
+  # all inside twenty-eight fences (32, 34). The plug on the right has a fuse
+  # under it: one of the twenty-eight blows it, and the blast fractures your
+  # own fences near it, so it wants arming before that corner is built. The
+  # slab on the left has no fuse and three hits in it, the slow answer, and the
+  # black ball breaks either at double strength. Two slabs for a clause that
+  # wants one is the slack: no single cut can bury the smash; and the plug goes
+  # by itself at 20% remaining if neither has, as 25's did. The box reserves
+  # its interior, so a delivery never calms the board. Every ask is priced;
+  # nothing is new; the order is yours. The superior nook is under the
+  # top-left lip.
+  # Heights (3D board, objectRise.ts): the box stands as a bin, the plug and the slab proud as the monoliths they are; the lip low.
+  - id: level-44
+    name: Go Live
+    level: 44
+    premise: "The one where one delivery, one smashed slab and the whole board have to fit inside twenty-eight fences, in any order you like."
+    sizeThreshold: 4
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, black]
+    timeLimit: 50
+    fenceBudget: 28
+    win:
+      require:
+        - kind: space
+          threshold: 4
+        - kind: delivered
+          count: 1
+          bonusPercent: 20
+        - kind: smashed
+          count: 1
+          of: monoliths
+          bonusPercent: 15
+    charges:
+      - fuse:
+          x: 630
+          'y': 390
+        radius: 32
+        targetId: plug
+        delaySeconds: 1.4
+        blastRadius: 190
+        announce: game.chargeBlown
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+      - id: deadline
+        atSpaceRemaining: 20
+        breakId: plug
+        announce: game.beatDeadline
+    entities:
+      - id: release-box
+        rise: 1.2
+        kind: box
+        shape: rect
+        x: 45
+        'y': 655
+        width: 200
+        height: 200
+        mouth: up
+        capacity: 2
+        reserves: true
+      - id: plug
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 290
+        width: 140
+        height: 40
+        breakable: true
+        hitsToBreak: 40
+      - id: slab
+        kind: wall
+        shape: rect
+        x: 200
+        'y': 430
+        width: 120
+        height: 36
+        breakable: true
+        hitsToBreak: 3
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 45 "Production Outage" - BOSS. The end of the ladder, and the one fight that
+  # carries every idea a boss has had: the chained pair from 20 (each half
+  # takes two traps, the chain shreds what it sweeps), the push from 30 (every
+  # twenty-five seconds every fence is gone) and the leaks from 10 and 40 (an
+  # oversized minion every twelve seconds or so, two at most). The box is back
+  # in the top-right corner, where the first boss was fenced in at level 10,
+  # so the ladder ends where its first fight began. Two phasing pillars snag
+  # the chain while they stand and shove the pair loose when they fade.
+  # Heights (3D board, objectRise.ts): the pillars stand tall, the snags the whole fight turns on.
+  - id: level-45
+    name: Production Outage
+    level: 45
+    premise: "The one where everything breaks at once: a chained pair, a wipe every twenty-five seconds, and leaks the whole time."
+    sizeThreshold: 14
+    expectedCuts: 9
+    points: 5
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 130
+    coloredAreas:
+      - kind: light
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    boss:
+      name: Production Outage
+      intro: "Everything at once, and everything you have learned. A chained pair that takes two traps each, like the Merge Conflict; a wipe of every fence on the board every twenty-five seconds, like the Force Push; and oversized minions leaking the whole time, like the Memory Leak. Wear both halves down, then fence them into the light box, top right, where your first boss was shipped. Snag them on a pillar, save a freeze for the wipe, and ship it."
+      creepFromStart: true
+      objective:
+        id: defeat-outage
+        name: Resolve the Outage
+        description: Wear both chained halves down, then fence them into the light box.
+        clarify: "Each half takes two traps. The first can be anywhere and costs no life: the half breaks out faster and smaller, and one of your fences is reverted. The second must be inside the light box (top right), and both halves must end up there. Their chain breaks any fence it sweeps and snags on the phasing pillars. Every twenty-five seconds the pair stops and shudders, then wipes every fence on the board, and it spits an oversized minion every twelve seconds or so, two at most. Running out of time fails the map."
+        kind: defeatBoss
+        reward: 24
+      bossBall:
+        hp: 2
+        count: 2
+        chained: true
+        radiusScale: 1.7
+        speedScale: 1.1
+        color: '#ff3b30'
+        fenceWipeSeconds: 25
+        spitIntervalSeconds: 12
+        maxMinions: 2
+        spawnEnlargedMinions: true
+    entities:
+      - id: pillar-w
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: pillar-s
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 13
+    balls: []

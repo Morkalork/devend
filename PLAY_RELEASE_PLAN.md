@@ -214,8 +214,8 @@ purchases: no. Expected rating: PEGI 3 / Everyone.
   > into ever smaller pockets and claim the ground they leave behind. One ball
   > through a fence still being built and it breaks.
   >
-  > - 29 maps across an escalating ladder: moving blocks, breakables, portals,
-  >   gravity that turns the board, bombs that blast it open.
+  > - 45 maps in six acts, each closed by a boss: moving blocks, breakables,
+  >   portals, gates, gravity that turns the board, bombs that blast it open.
   > - A run, not a level select: spend your hours in the store between maps
   >   on upgrades, certificates and fence types, and plan each run's
   >   Specialisation.
@@ -226,8 +226,8 @@ purchases: no. Expected rating: PEGI 3 / Everyone.
   >
   > No ads. No in-app purchases. Plays offline.
 
-  (Checked against the code on 2026-10-27: 29 maps in public/map.yml.
-  Re-check before submitting.)
+  (Checked against the code on 2026-10-29: 45 maps in public/map.yml, bosses
+  on 10, 20, 30, 35, 40 and 45. Re-check before submitting.)
 - **Category:** Game > Puzzle. **Tags:** arcade, puzzle, casual.
 - **Graphics:** `assets/play/icon-512.png`, `assets/play/feature-graphic.png`,
   phone screenshots (section 6).

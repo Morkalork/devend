@@ -63,6 +63,7 @@ const MIGRATED_ACTS: string[] = [
   // and claimed with its boss. Act V, new past the old ladder's end, the same.
   "IV Crunch",
   "V Scale",
+  "VI Release",
 ];
 
 const BOSS_LEVELS = [10, 20, 30, 35, 40, 45];
