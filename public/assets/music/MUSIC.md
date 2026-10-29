@@ -32,6 +32,7 @@ License: https://pixabay.com/service/license-summary/
 - maps_21-25.ogg: no-copyright-cyberpunk, by HumanStudioEDM: https://pixabay.com/music/dance-no-copyright-cyberpunk-527641/
 - maps_26-30.ogg: cyberpunk-futuristic-music, by Poradovskyi: https://pixabay.com/music/phonk-cyberpunk-futuristic-music-514973/
 - maps_31-35.ogg: cyber-sport-no-copyright-dj-music, by MiroMaxMusic: https://pixabay.com/music/dance-cyber-sport-no-copyright-dj-music-507206/
-- maps_36-40: no track yet (the uncredited one was removed on 2026-10-29); these maps play main.ogg.
+- maps_36-40.mp3: Lofi Synthwave, by ZephiraMusic: https://pixabay.com/music/synthwave-lofi-synthwave-588188/
+  (replaced the uncredited track on 2026-10-29).
 - maps_41-45.mp3: Go For It!, by melodyayresgriffiths: https://pixabay.com/music/video-games-go-for-it-80s-cheesy-vhs-infomercial-synthpop-soundtrack-187085/
 - end-credits.ogg: fun-8-bit-video-game-music-boss, by Keyframe Audio: https://pixabay.com/music/video-games-fun-8-bit-video-game-music-boss-133663/

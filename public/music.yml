@@ -85,9 +85,17 @@ tracks:
     bandFrom: 31
     bandTo: 35
 
-  # 36-40 has no track yet (its uncredited one came out before the first Play
-  # build): those maps play main.ogg until one is added. A band can be .ogg or
-  # .mp3; gameMusic plays whichever file its row names.
+  # A band can be .ogg or .mp3; gameMusic plays whichever file its row names.
+  # 36-40 replaced the uncredited track that came out before the first Play build.
+  - file: maps_36-40.mp3
+    title: Lofi Synthwave
+    artist: ZephiraMusic
+    source: Pixabay
+    url: https://pixabay.com/music/synthwave-lofi-synthwave-588188/
+    usedFor: band
+    bandFrom: 36
+    bandTo: 40
+
   - file: maps_41-45.mp3
     title: Go For It!
     artist: melodyayresgriffiths

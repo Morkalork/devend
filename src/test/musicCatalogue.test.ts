@@ -79,7 +79,8 @@ describe("music catalogue", () => {
   it("names the band each map of the ladder plays, or leaves it to main.ogg on purpose", () => {
     // Bands with no track yet. A band may come OFF this list, never go on
     // silently: a hole in the music is a decision, not an accident.
-    const UNSCORED = ["36-40"];
+    // Empty since 36-40 got "Lofi Synthwave".
+    const UNSCORED: string[] = [];
     const ladder = yaml.load(readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8")) as { levels: { level: number }[] };
     const top = Math.max(...ladder.levels.map((l) => l.level));
     const covered = new Set(catalogue.tracks.filter((t) => t.usedFor === "band").map((t) => `${t.bandFrom}-${t.bandTo}`));

@@ -80,7 +80,8 @@ describe("band tracks play as .ogg or .mp3", () => {
     vi.spyOn(cat, "getMusicCatalogue").mockReturnValue(cat.parseMusicDoc(doc));
     expect(music.musicSourcesForLevel(42)).toEqual(["/assets/music/maps_41-45.mp3"]);
     expect(music.musicSourcesForLevel(3)).toEqual(["/assets/music/maps_1-5.ogg"]);
-    expect(music.musicSourcesForLevel(37)).toEqual([]); // no track yet: straight to main
+    expect(music.musicSourcesForLevel(37)).toEqual(["/assets/music/maps_36-40.mp3"]);
+    expect(music.musicSourcesForLevel(47)).toEqual([]); // a band with no row: straight to main
     vi.restoreAllMocks();
   });
 
