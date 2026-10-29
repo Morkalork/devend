@@ -17,9 +17,10 @@
 # fails and says which are missing, rather than producing an unsigned bundle
 # that Play would refuse.
 #
-# Optional: POSTHOG_KEY, baked in as VITE_POSTHOG_KEY when present (the app's
-# analytics and crash reports, src/lib/analytics.ts). Leave it unset to ship a
-# build that sends nothing.
+# And POSTHOG_KEY, baked in as VITE_POSTHOG_KEY (the app's anonymous
+# analytics and crash reports, src/lib/analytics.ts): decided on for the beta
+# (PLAY_RELEASE_PLAN.md, decision 1), declared in the Data safety form, so a
+# signed build refuses to go without it. An unsigned push build may lack it.
 name: Android release
 
 on:
@@ -69,26 +70,28 @@ jobs:
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Signing secrets present?
+      - name: Release secrets present?
         if: env.SIGNED == 'true'
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KA: ${{ secrets.ANDROID_KEY_ALIAS }}
           KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PH: ${{ secrets.POSTHOG_KEY }}
         run: |
           missing=""
+          [ -z "$PH" ] && missing="$missing POSTHOG_KEY"
           [ -z "$KS" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
           [ -z "$KSP" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
           [ -z "$KA" ] && missing="$missing ANDROID_KEY_ALIAS"
           [ -z "$KP" ] && missing="$missing ANDROID_KEY_PASSWORD"
           if [ -n "$missing" ]; then
             {
-              echo "## Android release: signing secrets missing"
+              echo "## Android release: secrets missing"
               echo
               echo "Add these repository secrets (PLAY_RELEASE_PLAN.md):$missing"
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "Missing signing secrets:$missing" >&2
+            echo "Missing secrets:$missing" >&2
             exit 1
           fi
 
@@ -128,6 +131,20 @@ jobs:
             echo "This bundle was built with VITE_ADMIN=1: Admin would be on for every player." >&2
             exit 1
           fi
+
+      # The Data safety form says the app sends anonymous analytics; a signed
+      # build that silently lost its key would send nothing and hide every
+      # crash on a tester's phone.
+      - name: Analytics key is in the bundle
+        if: env.SIGNED == 'true'
+        env:
+          PH: ${{ secrets.POSTHOG_KEY }}
+        run: |
+          if ! grep -rqF "$PH" dist/assets/; then
+            echo "POSTHOG_KEY is set but is not in the built bundle." >&2
+            exit 1
+          fi
+          echo "Analytics key baked in."
 
       - name: Copy it into the Android project
         run: npx cap sync android

@@ -24,6 +24,12 @@ describe("the release build", () => {
     expect(read(".gitignore")).toMatch(/android\/keystore\.properties/);
   });
 
+  it("ships analytics in a signed build: the key is required and checked in the bundle", () => {
+    expect(WORKFLOW).toContain('[ -z "$PH" ] && missing="$missing POSTHOG_KEY"');
+    expect(WORKFLOW).toMatch(/- name: Analytics key is in the bundle\s+if: env\.SIGNED == 'true'/);
+    expect(WORKFLOW).toContain("VITE_POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}");
+  });
+
   it("runs the whole gate before a signed build", () => {
     for (const step of ["Typecheck", "Tests", "Lint"]) {
       expect(WORKFLOW).toMatch(new RegExp(`- name: ${step}\\s+if: env\\.SIGNED == 'true'`));

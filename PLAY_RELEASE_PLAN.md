@@ -2,8 +2,9 @@
 
 The goal: a closed-testing build on Google Play that a handful of invited
 players install from the Play Store, and that works on every phone they own.
-This page is the checklist, the decisions still open, and the drafts (privacy
-policy, Data safety answers, listing copy) the Play Console asks for.
+This page is the checklist, the decisions (made and still open), and the
+drafts (privacy policy, Data safety answers, listing copy) the Play Console
+asks for.
 ANDROID.md covers the Capacitor project itself.
 
 "Invite only" maps to Play's **closed testing** track: an email list or a
@@ -18,7 +19,7 @@ place for the very first upload, see step 5.)
 |---|---|
 | App id `com.morkalork.devend`, name `Dev/End` | set (the id is permanent once uploaded) |
 | Target SDK 36, min SDK 24 | meets Play's current target-API rule |
-| Signed release bundle (.aab) | **workflow ready** (`.github/workflows/android-release.yml`); needs the upload key as secrets |
+| Signed release bundle (.aab) | **workflow ready** (`.github/workflows/android-release.yml`); needs the upload key and the analytics key as secrets |
 | Version code / name | passed to the build by the workflow; must rise every upload |
 | 16 KB page sizes | checked on every release build (`scripts/check-16kb.mjs`) |
 | Release manifest | checked: not debuggable, no Test Lab launch, right version |
@@ -26,7 +27,9 @@ place for the very first upload, see step 5.)
 | App icon, 512 store icon, 1024x500 feature graphic | done (`assets/`, `assets/play/`) |
 | Phone screenshots (2-8) | to do: section 6 |
 | Privacy policy page | drafted below; needs a permanent public URL |
-| Data safety answers | drafted below; depend on the analytics decision |
+| Analytics and crash reports | **on for the beta** (decided 2026-10-29); a signed build refuses to go without the key and checks it is in the bundle |
+| Admin (ten taps on the menu ball) | **kept for the beta** (decided 2026-10-29); decide again before production |
+| Data safety answers | final for analytics on (section 4), assuming PostHog discards client IPs (section 2, step 3) |
 | Content rating (IARC) | answers drafted below |
 | Music licence | 9 of 10 tracks credited (Pixabay); **maps_36-40.ogg has no recorded source** |
 
@@ -52,33 +55,44 @@ place for the very first upload, see step 5.)
    With **Play App Signing** (the default, accept it) Google holds the key
    that signs what players install; this upload key only proves an upload is
    yours, and a lost upload key can be reset through Play support.
-3. **Merge `dev` into `main`** when the build is ready (or say so and it gets
+3. **Analytics key and IP setting.**
+   - Add a fifth repository secret, `POSTHOG_KEY`: the same project key the
+     staging site uses (Heroku config var `VITE_POSTHOG_KEY`), or a separate
+     PostHog project for the app if its numbers should stay apart from the
+     web's. A signed build fails without it.
+   - In PostHog, Project settings: turn on **Discard client IP data**.
+     PostHog otherwise keeps each request's IP address and derives a city
+     from it, which Play counts as collecting approximate location; with it
+     on, the Data safety answers below are accurate as written.
+4. **Merge `dev` into `main`** when the build is ready (or say so and it gets
    done): GitHub only offers the workflow's "Run workflow" button for files
    on the default branch, and `main` is the release branch.
-4. **Run the workflow** (Actions > Android release > Run workflow) with a
+5. **Run the workflow** (Actions > Android release > Run workflow) with a
    versionName, e.g. `0.9.0-beta.1`. Download the `.aab` artifact.
-5. **First upload by hand** (the Play API cannot create an app's first
+6. **First upload by hand** (the Play API cannot create an app's first
    release): Play Console > Create app (Game, Free) > Testing > Internal
    testing > upload the .aab, add yourself, install from the opt-in link,
    run section 7's checks. Then promote the same bundle to Closed testing,
    add the testers' list or Google Group, fill the listing (section 5) and
    submit for review.
-6. **Answers to section 3.**
+7. **Answers to the open decisions** in section 3.
 
 ## 3. Decisions
 
-1. **Analytics and crash reports in the beta.** The app can send anonymous
-   gameplay events and uncaught errors to PostHog (EU cloud) if a key is
-   baked in (`POSTHOG_KEY` secret). Recommended **yes** for a beta: without
-   it a crash on a tester's phone is invisible unless they report it. Yes
-   means the Data safety form declares it (section 4) and the privacy policy
-   keeps its analytics paragraph; no means leave the secret unset and cut
-   that paragraph.
-2. **Admin in Play builds.** Admin is off on a Play install but opens after
-   ten taps on the menu ball (`adminAccess.ts`, Index). It carries the device
-   check and the touch trace, useful on a tester's phone, and the Playground,
-   infinite lives and map editing, which a curious tester could also find.
-   Recommended: keep it for the closed beta, decide before production.
+1. **Analytics and crash reports in the beta: YES** (decided 2026-10-29).
+   Anonymous gameplay events and uncaught errors go to PostHog (EU cloud)
+   from every signed build (`POSTHOG_KEY`). The Data safety form declares it
+   (section 4) and the privacy policy keeps its analytics paragraph.
+   Before production: PostHog keeps a random install id on the phone, and
+   under EU ePrivacy rules storing an identifier for analytics normally needs
+   consent. Invited testers can be told in the opt-in invitation; a public
+   release should have a "share anonymous usage data" switch in Options (or
+   PostHog in memory-only mode, which keeps no id between launches).
+2. **Admin in Play builds: KEPT for the beta** (decided 2026-10-29). Off on a
+   Play install, opened by ten taps on the menu ball (`adminAccess.ts`,
+   Index). It carries the device check and the touch trace, which is why it
+   stays; it also carries the Playground, infinite lives and map editing,
+   which a tester could find. Decide again before production.
 3. **maps_36-40.ogg.** Find where it came from and credit it in
    `public/music.yml`, or replace it with a credited Pixabay track. A track
    with no known licence should not ship in a store build.
@@ -90,7 +104,7 @@ place for the very first upload, see step 5.)
    Including under-13s brings in the Families policy and its extra review.
 6. **Contact email** for the listing (public, required).
 
-## 4. Data safety (draft answers)
+## 4. Data safety (answers, analytics on)
 
 What the app does with data, checked in code:
 
@@ -101,12 +115,14 @@ What the app does with data, checked in code:
   phone to phone, no server). The name each phone advertises is "Player".
   Location permission is requested only on Android 11 and below, where
   Bluetooth discovery requires it, and it is never read.
-- **Analytics (only if decision 1 is yes):** anonymous gameplay events (run
-  started, map cleared or failed, upgrade bought, offer picked, run ended)
-  and uncaught errors, to PostHog's EU cloud. No accounts, no names, no
-  identifiers the player gives, no autocapture, no session recording.
+- **Analytics:** anonymous gameplay events (run started, map cleared or
+  failed, upgrade bought, offer picked, run ended) and uncaught errors, to
+  PostHog's EU cloud, with the browser-level device details PostHog attaches
+  (OS, screen size, WebView version). No accounts, no names, no identifiers
+  the player gives, no autocapture, no session recording. The client IP is
+  discarded (section 2, step 3).
 
-Answers, analytics on:
+Answers:
 
 | Play's question | answer |
 |---|---|
@@ -116,11 +132,9 @@ Answers, analytics on:
 | App activity > App interactions | Collected; not shared; purpose: analytics; processed ephemerally: no; required: yes (no in-app opt-out yet) |
 | App info and performance > Crash logs, Diagnostics | Collected, not shared, analytics |
 | Device or other IDs | Collected (PostHog's anonymous install id), analytics |
-| Location, Personal info, Financial, Messages, Photos, Contacts | Not collected |
+| Location, Personal info, Financial, Messages, Photos, Contacts | Not collected (location only holds while PostHog discards client IPs; if it does not, declare Approximate location, collected, analytics) |
 
-Analytics off: "Does the app collect or share user data?" No.
-
-### Privacy policy (draft for `public/privacy.html`)
+### Privacy policy (text for `public/privacy.html`, once decision 4 is made)
 
 > **Dev/End privacy policy**
 >
@@ -145,8 +159,6 @@ Analytics off: "Does the app collect or share user data?" No.
 > **Children.** The game is not directed at children under 13.
 >
 > **Contact.** [contact email]. Last updated [date].
-
-(Without analytics, drop that paragraph and the random identifier.)
 
 ### Content rating (IARC questionnaire, draft answers)
 
@@ -222,6 +234,7 @@ From the Play internal track, not a sideloaded APK:
 ## 8. After the beta
 
 - Production needs: the 12-testers-for-14-days rule met (personal accounts),
-  decision 2 settled, the privacy policy final, a production listing.
+  decision 2 settled again, an analytics consent switch or memory-only mode
+  (decision 1), the privacy policy final, a production listing.
 - Optional: upload to Play from the workflow (a service account and the
   Play Developer API), once the first upload has been made by hand.
