@@ -31,6 +31,7 @@ import {
 import { createWallsFromPolygon } from "@/lib/wallGeometry";
 import {
   createSpaceGrid,
+  buildGridLinks,
   findGridRegions,
   isPositionActive,
   CellState,
@@ -45,7 +46,7 @@ import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/g
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { entityIsDestructible } from "@/lib/physics/destructibles";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
-import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
+import { BEARING_VECTOR, isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { type LauncherState } from "@/lib/physics/launcher";
 import type { BoardEdgeSpecs } from "@/lib/physics/boardEdges";
@@ -1162,6 +1163,25 @@ export function createInitialGameData(
   // counted in initialActiveCount), so they read as locked until their gate
   // breaks and restores them.
   const spaceGrid   = createSpaceGrid(boardPolygon, sealedPolys.length ? [...obstaclePolygons, ...sealedPolys] : obstaclePolygons, initGridSize);
+  // The obstacles a ball can pass, as ground the capture flood may cross
+  // (spaceGrid.ts, GridLink): a room whose only way in is a membrane, a gate or
+  // a portal is not unreachable while a ball can still go through.
+  {
+    const passable = new Map<Polygon, { id: string; polygon: Polygon; bearing?: readonly [number, number]; passTypes?: string[]; portal?: string }>();
+    let k = 0;
+    for (const [poly, rule] of obstacleRules) {
+      passable.set(poly, {
+        id: `pass-${k++}`, polygon: poly,
+        ...(rule.oneWay ? { bearing: BEARING_VECTOR[rule.oneWay] } : {}),
+        ...(rule.passTypes?.length ? { passTypes: rule.passTypes } : {}),
+      });
+    }
+    for (const [poly, spec] of portals) {
+      const prev = passable.get(poly);
+      passable.set(poly, { ...(prev ?? { id: `pass-${k++}`, polygon: poly }), portal: spec.link });
+    }
+    if (passable.size) spaceGrid.links = buildGridLinks(spaceGrid, [...passable.values()]);
+  }
   // The same for a reserving box, so satisfying it hands back exactly its own
   // interior and nothing else.
   for (const rb of reservingBoxes) {

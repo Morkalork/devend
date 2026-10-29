@@ -27,6 +27,7 @@ import {
   buildGridRegionMap,
   findGridRegionForBall,
   floodRemovedEnclosure,
+  worldToGridIndex,
 } from "@/lib/spaceGrid";
 import {
   reassignBallsToRegions,
@@ -341,7 +342,22 @@ export function applyCutFn(
       }
       continue;
     }
-    for (const sub of subRegions.filter(r => r.hasBalls)) {
+    // A ball-free part normally goes: the capture just took its ground. On a
+    // board with a membrane, a gate or a portal the capture may have KEPT it,
+    // because a ball can still get in that way (GridLink), and then it has to
+    // stay a region, or the ball that comes through has nowhere to belong and
+    // is thrown back out of it.
+    const grid = game.spaceGrid;
+    const keptByLink = (samples: Vector2[]) => {
+      if (!grid?.links?.length || samples.length === 0) return false;
+      let live = 0;
+      for (const p of samples) {
+        const i = worldToGridIndex(grid, p.x, p.y);
+        if (i >= 0 && grid.cells[i] === CellState.ACTIVE) live++;
+      }
+      return live * 2 > samples.length;
+    };
+    for (const sub of subRegions.filter(r => r.hasBalls || keptByLink(r.samples))) {
       const result = buildPolygonFromSamples(sub.samples, sub.samples.length);
       if (result && result.estimatedArea > 100) {
         updatedRegions.push({ id: generateRegionId(), polygon: result.polygon, estimatedArea: result.estimatedArea, samplePoints: result.samplePoints });

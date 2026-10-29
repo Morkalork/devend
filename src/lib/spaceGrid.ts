@@ -84,6 +84,89 @@ export interface SpaceGrid {
    * a restore on such a copy must not mark the real board's ground as played.
    */
   startCellsOf?: Uint8Array;
+  /**
+   * Obstacles a ball may pass through, for captureUnreachableCells. Without
+   * them a membrane, a gate or a portal mouth is just a wall to the flood, so a
+   * room whose only way in is one of them is captured as unreachable on the
+   * first cut while a ball can still walk into it - and the ball that then
+   * does lands in captured ground and is thrown back ("escaped, recovered").
+   * Built once in initGame (buildGridLinks); copies of the grid share it.
+   */
+  links?: GridLink[];
+}
+
+/**
+ * An obstacle some balls cross: a one-way membrane, a ball-type gate or a
+ * portal mouth, as the ground around it.
+ *
+ * `ring` is the ACTIVE ground hugging the obstacle, where a ball stands to go
+ * through it. A ball that can reach one part of the ring can arrive in another:
+ * the far side for a membrane (only in its direction) or a gate (only for its
+ * types), and the OTHER mouth's ring for a portal.
+ */
+export interface GridLink {
+  id: string;
+  ring: Int32Array;
+  /** One-way: per ring cell, 1 on the side balls cross FROM, 2 on the side they cross TO, 0 neither. */
+  side?: Uint8Array;
+  /** Gate: the ball types that may cross. */
+  passTypes?: string[];
+  /** Portal: the link group; every mouth in it leads to every other. */
+  portal?: string;
+}
+
+/** How far out from an obstacle its ring reaches: past a big ball's core band. */
+const LINK_RING = 60;
+
+/**
+ * Describe the pass-through obstacles as ground, for the capture flood.
+ * `bearing` is a membrane's crossing direction; `passTypes` a gate's types;
+ * `portal` a portal mouth's link group. An obstacle may be several at once.
+ */
+export function buildGridLinks(
+  grid: SpaceGrid,
+  obstacles: { id: string; polygon: Polygon; bearing?: readonly [number, number]; passTypes?: string[]; portal?: string }[],
+): GridLink[] {
+  const links: GridLink[] = [];
+  for (const o of obstacles) {
+    const v = o.polygon.vertices;
+    if (v.length < 2) continue;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of v) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const c0 = Math.max(0, Math.floor((minX - LINK_RING - grid.originX) / grid.cellSize));
+    const c1 = Math.min(grid.width - 1, Math.ceil((maxX + LINK_RING - grid.originX) / grid.cellSize));
+    const r0 = Math.max(0, Math.floor((minY - LINK_RING - grid.originY) / grid.cellSize));
+    const r1 = Math.min(grid.height - 1, Math.ceil((maxY + LINK_RING - grid.originY) / grid.cellSize));
+    const ring: number[] = [];
+    const side: number[] = [];
+    // Half the obstacle's depth along the crossing, so a cell beside the end of
+    // a membrane is on neither side rather than on whichever one rounding picks.
+    const half = o.bearing ? Math.abs(o.bearing[0]) * (maxX - minX) / 2 + Math.abs(o.bearing[1]) * (maxY - minY) / 2 : 0;
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const p = { x: grid.originX + col * grid.cellSize + grid.cellSize / 2, y: grid.originY + row * grid.cellSize + grid.cellSize / 2 };
+        if (pointInPolygon(p, o.polygon)) continue;
+        let d = Infinity;
+        for (let i = 0; i < v.length; i++) d = Math.min(d, pointToSegmentDistance(p, v[i], v[(i + 1) % v.length]));
+        if (d > LINK_RING) continue;
+        ring.push(row * grid.width + col);
+        if (o.bearing) {
+          const along = (p.x - cx) * o.bearing[0] + (p.y - cy) * o.bearing[1];
+          side.push(along < -half ? 1 : along > half ? 2 : 0);
+        }
+      }
+    }
+    if (ring.length === 0) continue;
+    links.push({
+      id: o.id,
+      ring: Int32Array.from(ring),
+      ...(o.bearing ? { side: Uint8Array.from(side) } : {}),
+      ...(o.passTypes?.length ? { passTypes: o.passTypes } : {}),
+      ...(o.portal ? { portal: o.portal } : {}),
+    });
+  }
+  return links;
 }
 
 export interface GridRegion {
@@ -578,7 +661,7 @@ export function removeRegion(grid: SpaceGrid, region: GridRegion): void {
  */
 export function captureUnreachableCells(
   grid: SpaceGrid,
-  balls: { position: Vector2; radius: number; state: string; speed: number }[],
+  balls: { position: Vector2; radius: number; state: string; speed: number; typeId?: string }[],
   walls?: { start: Vector2; end: Vector2 }[],
 ): void {
   const { width, height, cells, cellSize } = grid;
@@ -601,7 +684,8 @@ export function captureUnreachableCells(
 
   // 1. Multi-source BFS: distance (in cells) from each ACTIVE cell to nearest REMOVED.
   const dist = new Int32Array(n).fill(-1);
-  const q = new Int32Array(n);
+  // Sized for the flood below, where each ball type may queue a cell once.
+  const q = new Int32Array(n * Math.max(1, activeBalls.length));
   let qh = 0, qt = 0;
   for (let i = 0; i < n; i++) {
     if (cells[i] !== CellState.ACTIVE) { dist[i] = 0; q[qt++] = i; }
@@ -652,28 +736,93 @@ export function captureUnreachableCells(
   const isCore = (i: number) => core[i] === 1;
 
   // 3. Flood core cells reachable from a ball (seed the core cells the ball covers).
+  //
+  //    Then across the obstacles a ball can pass (grid.links): wherever the
+  //    flood touches a membrane's near side, a gate, or a portal mouth, it
+  //    carries on from the ground on the other side. A gate only opens for the
+  //    types it names, so with a gate on the board each type floods on its own
+  //    and the results are joined.
   const reachable = new Uint8Array(n);
-  qh = 0; qt = 0;
+  const links = grid.links ?? [];
+  const hasGate = links.some(l => l.passTypes?.length);
+  const groups = new Map<string, typeof activeBalls>();
   for (const b of activeBalls) {
-    const bi = worldToGridIndex(grid, b.position.x, b.position.y);
-    if (bi < 0) continue;
-    const brow = (bi / width) | 0, bcol = bi % width;
-    for (let dr = -radiusCells; dr <= radiusCells; dr++) {
-      for (let dc = -radiusCells; dc <= radiusCells; dc++) {
-        const rr = brow + dr, cc = bcol + dc;
-        if (rr < 0 || rr >= height || cc < 0 || cc >= width) continue;
-        const si = rr * width + cc;
-        if (isCore(si) && !reachable[si]) { reachable[si] = 1; q[qt++] = si; }
+    const key = hasGate ? (b.typeId ?? "") : "";
+    const list = groups.get(key);
+    if (list) list.push(b); else groups.set(key, [b]);
+  }
+  const mark = new Uint8Array(n);
+  qh = 0; qt = 0;
+  for (const [type, group] of groups) {
+    mark.fill(0);
+    const groupStart = qt;
+    const push = (i: number) => {
+      if (isCore(i) && !mark[i]) { mark[i] = 1; q[qt++] = i; }
+    };
+    for (const b of group) {
+      const bi = worldToGridIndex(grid, b.position.x, b.position.y);
+      if (bi < 0) continue;
+      const brow = (bi / width) | 0, bcol = bi % width;
+      for (let dr = -radiusCells; dr <= radiusCells; dr++) {
+        for (let dc = -radiusCells; dc <= radiusCells; dc++) {
+          const rr = brow + dr, cc = bcol + dc;
+          if (rr < 0 || rr >= height || cc < 0 || cc >= width) continue;
+          push(rr * width + cc);
+        }
       }
     }
+    const crossed = new Set<GridLink>();
+    let qg = groupStart;
+    for (;;) {
+      while (qg < qt) {
+        const cur = q[qg++];
+        const row = (cur / width) | 0, col = cur % width;
+        if (row > 0) push(cur - width);
+        if (row < height - 1) push(cur + width);
+        if (col > 0) push(cur - 1);
+        if (col < width - 1) push(cur + 1);
+      }
+      // A link this flood can use: touched on a side it may cross from.
+      let grew = false;
+      for (const link of links) {
+        if (crossed.has(link)) continue;
+        if (link.passTypes?.length && !link.portal && !link.side && !link.passTypes.includes(type)) continue;
+        let touched = false;
+        for (let k = 0; k < link.ring.length && !touched; k++) {
+          const i = link.ring[k];
+          if (!mark[i]) continue;
+          const sd = link.side?.[k];
+          // A membrane is crossed from its near side; a gate that is also a
+          // membrane lets its types through either way.
+          if (link.side && sd !== 1 && !(link.passTypes?.includes(type))) continue;
+          touched = true;
+        }
+        if (!touched) continue;
+        crossed.add(link);
+        grew = true;
+        const targets = link.portal
+          ? links.filter(l => l.portal === link.portal && l !== link)
+          : [link];
+        for (const t of targets) {
+          if (t.portal) crossed.add(t);
+          for (let k = 0; k < t.ring.length; k++) {
+            const sd = t.side?.[k];
+            if (t.side && !t.portal && sd !== 2 && !(t.passTypes?.includes(type))) continue;
+            push(t.ring[k]);
+          }
+        }
+      }
+      if (!grew) break;
+    }
+    for (let k = groupStart; k < qt; k++) reachable[q[k]] = 1;
   }
-  while (qh < qt) {
-    const cur = q[qh++];
-    const row = (cur / width) | 0, col = cur % width;
-    if (row > 0)          { const ni = cur - width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
-    if (row < height - 1) { const ni = cur + width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
-    if (col > 0)          { const ni = cur - 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
-    if (col < width - 1)  { const ni = cur + 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+  // The groups may have queued the same cell twice; the dilation below walks
+  // the queue once, so keep each cell once.
+  {
+    let w = 0;
+    const seen = new Uint8Array(n);
+    for (let k = 0; k < qt; k++) { const i = q[k]; if (!seen[i]) { seen[i] = 1; q[w++] = i; } }
+    qt = w;
   }
 
   // 4. Dilate reachable core out to `radiusCells` over ACTIVE cells: the ball,
