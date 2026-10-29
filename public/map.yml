@@ -4201,3 +4201,376 @@ levels:
         isPhasing: true
         phaseCycleSeconds: 13
     balls: []
+
+  # ===========================================================================
+  # ACT V - SCALE (36-40): the inversions.
+  #
+  # Rule 3 of the teaching unit makes the inversion mandatory for anything with
+  # a Meet map, and the ladder through 35 spent its Breaks on act I's and act
+  # II's mechanics. Act V turns the redirectors and the scripted board against
+  # the player, and gives the last single-use mechanics their second map: the
+  # mirror (13), the delivery box (23) and the terminals (22).
+  #
+  # Space demanded 94 -> 95 (thresholds 6 -> 5), cuts 10, clocks 45s. Past 95%
+  # the spine flattens (MAP_DESIGN_GUIDELINES.md section 5): there is little
+  # ground left to demand, so the stakes rise with the roster and the mix.
+  # ===========================================================================
+
+  # 36 "Load Balancer" - USE mirror. The breather after the boss.
+  #
+  # A short mirror hangs below the middle of the top wall. Every corner on the
+  # board closes with one straight diagonal; the middle of a wall never does,
+  # because a straight fence from it runs on to another wall. A diagonal drag
+  # that meets the mirror's top face bounces back up to the wall, though, and
+  # the V it draws is the one pocket in the middle of a wall that a single fence
+  # can close, small enough to grade superior. The win wants one superior lock
+  # on top of the clear: the mirror's Use is that you have to aim it to get
+  # paid. Any corner's diagonal gives one too, so the V is the answer for a
+  # ball crossing the middle of the top, where the traffic is, and a corner the
+  # answer for one that wanders. The two posts make the lower board two rooms.
+  # (A dark bonus box sat in the V until act V carried a colored area on four
+  # of its five maps; the V pays through the win, which is the promise it
+  # makes.)
+  # Heights (3D board, objectRise.ts): the mirror stands proud, a bright bar the eye goes to; the posts are anchors.
+  - id: level-36
+    name: Load Balancer
+    level: 36
+    premise: "The one where the only one-fence pocket in the middle of a wall is the V you bounce off the mirror."
+    sizeThreshold: 6
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, white]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 6
+        - kind: superiorLocks
+          count: 1
+          bonusPercent: 20
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: mirror
+        rise: 1.4
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 155
+        width: 80
+        height: 20
+        mirror: true
+      - id: post-w
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 560
+        radius: 60
+      - id: post-e
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 650
+        cy: 560
+        radius: 60
+    balls: []
+
+  # 37 "Rollback" - BREAK portal.
+  #
+  # The box is a room in the bottom-left corner with one doorway, and a portal
+  # mouth stands inside it. The other mouth is in the open board, so the portal
+  # does what 21 and 33 taught: it is the shortcut, and here it feeds the box,
+  # dropping every ball that finds it straight into the room the win wants a
+  # lock in. And that is the inversion: a region holding a live portal cannot
+  # lock, because a ball in it can always leave the way it came. Seal the
+  # doorway with a ball inside and nothing happens. The room pays only once a
+  # fence has cut the mouth out of it, splitting the room so the mouth stands in
+  # one part and the ball in the other. The shortcut you were taught to use is
+  # the thing standing between you and the lock. Two answers: cut the mouth off
+  # first and let the portal keep feeding the room's other half, or seal a ball
+  # in the half that has no mouth. The one-fence superior nook is under the
+  # top-left lip.
+  # Heights (3D board, objectRise.ts): the room's walls stand tall, the box's frame; the lip low.
+  - id: level-37
+    name: Rollback
+    level: 37
+    premise: "The one where a portal feeds the box, and the box will not lock until you cut the portal out of it."
+    sizeThreshold: 6
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, green]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 6
+        - kind: area
+          count: 1
+          bonusPercent: 25
+    coloredAreas:
+      - kind: dark
+        x: 45
+        'y': 624
+        width: 255
+        height: 231
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: room-north
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 600
+        width: 279
+        height: 24
+      - id: room-east
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 300
+        'y': 624
+        width: 24
+        height: 156
+      - id: mouth-in
+        kind: wall
+        shape: circle
+        cx: 235
+        cy: 690
+        radius: 34
+        portal: rollback
+      - id: mouth-out
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 280
+        radius: 34
+        portal: rollback
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 38 "Dead Letter" - USE delivery box, USE terminals.
+  #
+  # Two balls sleep at two terminals, and a sleeping ball holds the ground
+  # round it shut (22), so the clear cannot finish until both are woken. The
+  # box at the foot of the board takes deliveries through its open top (23),
+  # and the win wants two delivered on top of the clear. The pairing is the
+  # map: one sleeper lies straight above the box's mouth, so a ball woken there
+  # falls into the box nearly by itself, and its terminal is the far one, in
+  # the top-left corner, a long fence away. The other sleeper is in the far
+  # right, and its terminal is beside it, cheap to light. So the cheap wake is
+  # the hard delivery and the costly wake is the easy one, and the box reserves
+  # its interior, so feeding it never calms the board. Both terminals are the
+  # Use of the circuit, both deliveries the Use of the box. The superior nook is
+  # under the top-right lip.
+  # Heights (3D board, objectRise.ts): the box stands as a bin; the shelf and the lip sit low.
+  - id: level-38
+    name: Dead Letter
+    level: 38
+    premise: "The one where two sleepers have to be woken and two balls delivered, and the cheap wake is never the easy delivery."
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 5
+    maxBalls: 2
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: delivered
+          count: 2
+          bonusPercent: 25
+    circuit:
+      radius: 30
+      announce: game.circuitComplete
+      terminals:
+        - x: 150
+          'y': 300
+          ball:
+            x: 450
+            'y': 520
+            typeId: grey
+        - x: 700
+          'y': 470
+          ball:
+            x: 760
+            'y': 560
+            typeId: yellow
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: post-box
+        rise: 1.2
+        kind: box
+        shape: rect
+        x: 340
+        'y': 640
+        width: 220
+        height: 200
+        mouth: up
+        capacity: 2
+        reserves: true
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 39 "Chaos Monkey" - the skill check. Nothing new.
+  #
+  # Act V's turnarounds on one board. A box on the right takes deliveries
+  # through its west face (38), and a portal's far mouth stands just off that
+  # face (37's portal, used straight this time), so a ball that finds the near
+  # mouth in the top-left is thrown at the box. The win wants one delivered on
+  # top of the clear, and the portal is the fast way to it. But a region holding
+  # a live portal cannot lock (37's lesson), so the box's approach is the one
+  # place on the board a lock is never cheap, and the portal's two mouths are
+  # ground you cut round rather than across. The monkey is the Turn: at 40%
+  # remaining it drops one more ball into play, announced, so the end of the
+  # map is busier than the middle and the box has a second customer. The
+  # one-fence superior nook is under the bottom-left lip.
+  # Heights (3D board, objectRise.ts): the box stands as a bin; the lip low.
+  - id: level-39
+    name: Chaos Monkey
+    level: 39
+    premise: "The one where a portal throws balls at the box, its mouths cannot lock, and the monkey adds a ball at the end."
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, purple]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: delivered
+          count: 1
+          bonusPercent: 20
+    beats:
+      - id: monkey
+        atSpaceRemaining: 40
+        spawnAdds: 1
+        announce: game.beatReorg
+    entities:
+      - id: dead-letters
+        rise: 1.2
+        kind: box
+        shape: rect
+        x: 650
+        'y': 330
+        width: 205
+        height: 200
+        mouth: left
+        capacity: 2
+        reserves: true
+      - id: warp-in
+        kind: wall
+        shape: circle
+        cx: 200
+        cy: 200
+        radius: 34
+        portal: monkey
+      - id: warp-out
+        kind: wall
+        shape: circle
+        cx: 560
+        cy: 430
+        radius: 34
+        portal: monkey
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 681
+        width: 155
+        height: 24
+    balls: []
+
+  # 40 "Memory Leak" - BOSS. Act V closes on a fight that never gets smaller:
+  # one build, three traps to bring down, and the minions it leaks as it goes
+  # stay on the board until something fences them in. Every trap short of the
+  # last tears it loose, faster and smaller, and every few seconds it spits
+  # another leak, so the board fills while the boss empties. The last trap must
+  # be in the light box, bottom right (the one corner no boss has used). A
+  # boss this long cannot be won by chasing it: the minions are what the clear
+  # is made of, and the fences that seal them are the walls the next trap is
+  # built against. One pillar in the middle splits the room into a loop.
+  # Heights (3D board, objectRise.ts): the pillar stands tall, the snag the fight turns on.
+  - id: level-40
+    name: Memory Leak
+    level: 40
+    premise: "The one where the build takes three traps and leaks a minion every few seconds, so the board fills while the boss empties."
+    sizeThreshold: 14
+    expectedCuts: 9
+    points: 5
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 100
+    coloredAreas:
+      - kind: light
+        x: 520
+        'y': 520
+        width: 335
+        height: 335
+    boss:
+      name: Memory Leak
+      intro: "A build that leaks. It takes three traps: the first two can be anywhere and only tear it loose, faster and smaller each time, and the third must be inside the light box, bottom right. Every few seconds it spits a minion, and the minions stay until you fence them in, so the board fills while the boss empties. Seal the leaks as you go: their fences are the walls the next trap is built against."
+      creepFromStart: true
+      objective:
+        id: defeat-memory-leak
+        name: Patch the Memory Leak
+        description: Wear the build down with three traps, the last one inside the light box.
+        clarify: "The boss takes three traps. The first two can be anywhere and cost no life: it breaks out faster and smaller, and one of your fences is reverted. The third must be inside the light box (bottom right); trapped anywhere else on its last life, it costs a life. Every nine seconds or so it spits a minion, up to three at once; minions are ordinary balls that stay until you fence them in. Running out of time fails the map."
+        kind: defeatBoss
+        reward: 20
+      bossBall:
+        hp: 3
+        radiusScale: 2.0
+        speedScale: 1.05
+        color: '#16a34a'
+        spitIntervalSeconds: 9
+        maxMinions: 3
+    entities:
+      - id: pillar
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 400
+        cy: 400
+        radius: 70
+    balls: []

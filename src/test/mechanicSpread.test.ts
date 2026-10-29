@@ -147,8 +147,11 @@ describe("no mechanic is introduced and then dropped", () => {
     // rule is a price. The ball gate joined on 33, where it is compressed. The
     // box, the terminals and the mirror are act V's (36 and 38), and the gate's
     // second map is act VI's.
+    //
+    // ACT V took the other three: the mirror on 36, the box and the terminals
+    // together on 38 (the box again on 39). The gate is the last single.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["box", "circuit", "gate", "mirror"]);
+      .toEqual(["gate"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

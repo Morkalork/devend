@@ -192,6 +192,11 @@ describe("the maps with nothing a lock cannot produce", () => {
     // thread-lock map, whose subject IS the lock count. `space + locks` is the
     // whole ask, and the locks are the lesson rather than a stand-in for
     // content the map does not have.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16, 31, 34]);
+    //
+    // 36 joins with act V on the same terms as 13 once did: its one object is
+    // a mirror, which is terrain, and its ask is a SUPERIOR lock, the pocket the
+    // mirror is for. A lock rush can produce one, but only by aiming: sealing
+    // every ball sloppily leaves the clause unmet.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16, 31, 34, 36]);
   });
 });

@@ -60,8 +60,9 @@ const MIGRATED_ACTS: string[] = [
   "II The Sprint",
   "III Legacy Code",
   // Act IV was rebuilt as one set, 31-35, built to the spine from the start,
-  // and claimed with its boss.
+  // and claimed with its boss. Act V, new past the old ladder's end, the same.
   "IV Crunch",
+  "V Scale",
 ];
 
 const BOSS_LEVELS = [10, 20, 30, 35, 40, 45];

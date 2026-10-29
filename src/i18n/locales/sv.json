@@ -2190,6 +2190,11 @@
         "name": "Slå ihop Hard Fork",
         "description": "Nöt ner båda de kedjade halvorna, stängsla sedan in dem i den ljusa rutan, mellan två raderingar.",
         "clarify": "Varje halva kräver två fångster. Den första kan ske var som helst och kostar inget liv: halvan bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den andra måste ske inne i den ljusa rutan (uppe till vänster), och båda halvorna måste hamna där. Deras kedja bryter varje staket den sveper över och fastnar på pelarna. Var tjugofemte sekund stannar paret och skakar, och raderar sedan varje staket på brädet, färdigt eller fortfarande växande. Tar tiden slut misslyckas banan."
+      },
+      "defeat-memory-leak": {
+        "name": "Laga Memory Leak",
+        "description": "Nöt ner bygget med tre fångster, den sista inne i den ljusa rutan.",
+        "clarify": "Bossen kräver tre fångster. De två första kan ske var som helst och kostar inget liv: den bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den tredje måste ske inne i den ljusa rutan (nere till höger); fångas den någon annanstans på sitt sista liv kostar det ett liv. Ungefär var nionde sekund spottar den ut en minion, högst tre åt gången; minionerna är vanliga bollar som stannar tills du stängslar in dem. Tar tiden slut misslyckas banan."
       }
     },
     "tagSets": {
@@ -2234,6 +2239,10 @@
       "level-35": {
         "name": "Hard Fork",
         "intro": "Repot har delat sig i två, och halvorna är kedjade vid varandra. Varje halva kräver två fångster: den första kan ske var som helst och sliter den bara loss, snabbare och mindre, och den andra måste ske inne i den ljusa rutan uppe till vänster, och båda halvorna måste hamna där. Deras kedja sliter sönder varje staket den sveper över, och var tjugofemte sekund stannar paret, skakar och raderar varje staket på brädet. Pelarna fångar kedjan medan de står."
+      },
+      "level-40": {
+        "name": "Memory Leak",
+        "intro": "Ett bygge som läcker. Det kräver tre fångster: de två första kan ske var som helst och sliter det bara loss, snabbare och mindre varje gång, och den tredje måste ske inne i den ljusa rutan nere till höger. Med några sekunders mellanrum spottar det ut en minion, och minionerna stannar tills du stängslar in dem, så brädet fylls medan bossen töms. Täta läckorna medan du går: deras staket är väggarna nästa fälla byggs mot."
       }
     },
     "levels": {
@@ -2376,6 +2385,26 @@
       "level-35": {
         "name": "Hard Fork",
         "premise": "Den där ett kedjat par raderar varje staket var tjugofemte sekund, så varje halva nöts ner i ett fönster och levereras i nästa."
+      },
+      "level-36": {
+        "name": "Load Balancer",
+        "premise": "Den där den enda fickan mitt på en vägg som ett staket kan stänga är V:et du studsar mot spegeln."
+      },
+      "level-37": {
+        "name": "Rollback",
+        "premise": "Den där en portal matar rutan, och rutan låser inte förrän du skurit bort portalen ur den."
+      },
+      "level-38": {
+        "name": "Dead Letter",
+        "premise": "Den där två sovande bollar ska väckas och två bollar levereras, och den billiga väckningen är aldrig den lätta leveransen."
+      },
+      "level-39": {
+        "name": "Chaos Monkey",
+        "premise": "Den där en portal kastar bollar mot lådan, dess mynningar kan inte låsa, och apan lägger till en boll på slutet."
+      },
+      "level-40": {
+        "name": "Memory Leak",
+        "premise": "Den där bygget kräver tre fångster och läcker en minion med några sekunders mellanrum, så brädet fylls medan bossen töms."
       }
     }
   },

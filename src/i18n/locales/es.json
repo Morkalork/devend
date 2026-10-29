@@ -2190,6 +2190,11 @@
         "name": "Fusionar el Hard Fork",
         "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja clara, entre dos borrados.",
         "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier sitio y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja clara (arriba a la izquierda), y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares. Cada veinticinco segundos la pareja se detiene y tiembla, y luego borra cada valla del tablero, terminada o aún creciendo. Quedarse sin tiempo hace fracasar el mapa."
+      },
+      "defeat-memory-leak": {
+        "name": "Parchear el Memory Leak",
+        "description": "Desgasta la build con tres atrapadas, la última dentro de la caja clara.",
+        "clarify": "El jefe necesita tres atrapadas. Las dos primeras pueden ser en cualquier sitio y no cuestan vida: se suelta más rápido y más pequeño, y una de tus vallas se revierte. La tercera debe ser dentro de la caja clara (abajo a la derecha); atrapado en otro sitio en su última vida, cuesta una vida. Cada nueve segundos más o menos escupe un minion, hasta tres a la vez; los minions son bolas normales que se quedan hasta que los encierras. Quedarse sin tiempo hace fracasar el mapa."
       }
     },
     "tagSets": {
@@ -2234,6 +2239,10 @@
       "level-35": {
         "name": "Hard Fork",
         "intro": "El repositorio se ha partido en dos, y las mitades están encadenadas. Cada mitad necesita dos atrapadas: la primera puede ser en cualquier sitio y solo la suelta, más rápida y más pequeña, y la segunda debe ser dentro de la caja clara, arriba a la izquierda, con las dos mitades acabando allí. Su cadena destroza cualquier valla que barre, y cada veinticinco segundos la pareja se detiene, tiembla y borra cada valla del tablero. Los pilares enganchan la cadena mientras siguen en pie."
+      },
+      "level-40": {
+        "name": "Memory Leak",
+        "intro": "Una build con fugas. Necesita tres atrapadas: las dos primeras pueden ser en cualquier sitio y solo la sueltan, más rápida y más pequeña cada vez, y la tercera debe ser dentro de la caja clara, abajo a la derecha. Cada pocos segundos escupe un minion, y los minions se quedan hasta que los encierras, así que el tablero se llena mientras el jefe se vacía. Sella las fugas sobre la marcha: sus vallas son las paredes contra las que se construye la siguiente trampa."
       }
     },
     "levels": {
@@ -2376,6 +2385,26 @@
       "level-35": {
         "name": "Hard Fork",
         "premise": "En la que una pareja encadenada borra cada valla cada veinticinco segundos, así que cada mitad se desgasta en una ventana y se entrega en la siguiente."
+      },
+      "level-36": {
+        "name": "Load Balancer",
+        "premise": "En la que el único bolsillo en medio de una pared que una valla puede cerrar es la V que rebotas en el espejo."
+      },
+      "level-37": {
+        "name": "Rollback",
+        "premise": "En la que un portal alimenta la caja, y la caja no bloquea hasta que recortas el portal fuera de ella."
+      },
+      "level-38": {
+        "name": "Dead Letter",
+        "premise": "En la que hay que despertar a dos dormidas y entregar dos bolas, y el despertar barato nunca es la entrega fácil."
+      },
+      "level-39": {
+        "name": "Chaos Monkey",
+        "premise": "En la que un portal lanza bolas a la caja, sus bocas no pueden bloquear, y el mono añade una bola al final."
+      },
+      "level-40": {
+        "name": "Memory Leak",
+        "premise": "En la que la build necesita tres atrapadas y suelta un minion cada pocos segundos, así que el tablero se llena mientras el jefe se vacía."
       }
     }
   },

@@ -42,6 +42,11 @@ const NO_SUPERIOR_NOOK: Record<string, string> = {
   "level-20": "boss map: the light box is the target, not a lock",
   "level-30": "boss map: the light box is the target, not a lock",
   "level-35": "boss map: the light box is the target, not a lock",
+  // The probe draws straight horizontal and vertical fences; a player draws
+  // any angle. 36's superior pocket is the V a diagonal bounces off its
+  // mirror (or any corner's diagonal), so the straight probe cannot see it.
+  "level-36": "the superior pocket is the mirror's V, a diagonal the straight probe cannot draw",
+  "level-40": "boss map: the light box is the target, not a lock",
 };
 
 describe("every map's authored pocket and lanes", () => {

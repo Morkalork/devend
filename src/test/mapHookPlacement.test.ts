@@ -405,10 +405,12 @@ describe("the ladder actually carries these hooks", () => {
     //
     // 30, 33 and 35 went ON with act IV: the two bosses as the note above
     // expects, and 33's box, which is the one its ball gate and its portal
-    // decide who can reach.
+    // decide who can reach. 37 and 40 with act V: 37's box is the room its
+    // portal feeds and poisons, and 40 is the boss.
     const GATE_MAPS = [
       "level-10", "level-13", "level-15", "level-20", "level-24", "level-28",
-      "level-3", "level-30", "level-33", "level-35", "level-4", "level-8", "level-9",
+      "level-3", "level-30", "level-33", "level-35", "level-37", "level-4", "level-40",
+      "level-8", "level-9",
     ];
     const gates = LEVELS
       .filter(l => (l.coloredAreas ?? []).some(a => a.required !== false))

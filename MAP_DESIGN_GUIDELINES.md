@@ -375,7 +375,7 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 30 (boss), 33, 35 (boss) |
+| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 30 (boss), 33, 35 (boss), 37, 40 (boss) |
 | mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 21, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
@@ -389,15 +389,15 @@ Every mechanic gets a status, and the status decides what it costs.
 | shard bomb | A | Seasoning | 5 | 6 | 7, 9, 11, 12, 13, 17 |
 | box blast | A | Seasoning | 11 | - | - |
 | rotor | C | Compressed | 17 | - | - |
-| mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 22 | - | - |
-| portal | B | Meet | 21 | 33 | - |
+| mirror | B | Meet | 13 | 36 | - |
+| terminals | E | Meet | 22 | 38 | - |
+| portal | B | Meet | 21 | 33 | 37 (Break), 39 |
 | WIP limit | D | Meet | 32 | 34 | - |
 | cage | E | Compressed | 22 | 29 | - |
 | thread lock | D | Seasoning | - | - | `headline: false`: a lock count in an authored win is the `locks` clause, asked from map 1 |
 | gravity well | C | Meet | 15 | 21 | 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
-| delivery box | E | Meet | 23 | - | - |
+| delivery box | E | Meet | 23 | 38 | 39 |
 | fence ground | D | Meet | 24 | 27 | - |
 | charge | E | Meet | 25 | 32 | - |
 | latch | A | Compressed | 26 | 34 | - |
@@ -405,7 +405,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | ball gate | B | Compressed | 33 | - | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 19 | - |
-| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 30 (boss), 33, 35 (boss) |
+| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 30 (boss), 33, 35 (boss), 37, 40 (boss) |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |
@@ -1378,7 +1378,7 @@ three bosses do not share a corner), built from scratch inside one window; the
 wind-up is the tell, and a freeze held over it buys a second look. Two posts sit
 a fence's length from the box: the anchors a fast trap is built against.
 
-**Bot sweep, 16 seeds: 4 of 16**, every loss a `lockedOut` (the boss trapped
+**Bot sweep, 16 seeds, on the map's own clock: 4 of 16**, every loss a `lockedOut` (the boss trapped
 outside the box), against 10's 3 of 8 and 20's 1 of 8. Bosses are the bot's
 floor, not the map's: it has no plan for a zone it must herd a ball into, and
 the board's chaos swings a boss sweep by several seeds on a single radius.
@@ -1428,9 +1428,8 @@ seed started with all three balls already in it: balls spawn round the board's
 centre (initGame), and the centre was on the ward side, so the intake was empty
 before the first cut. Flipped, the drain runs 30-45s, measured with no cuts.
 
-**Bot sweep, 16 seeds: 15 of 16**, 12 to 31 cuts against par 9; the loss is a
-bot that stopped finding cuts at 34% remaining. A breather after a boss, like
-21 (14 of 16).
+**Bot sweep, 16 seeds: 16 of 16**, 12 to 31 cuts against par 9. A breather
+after a boss, like 21 (14 of 16).
 
 #### 32 "Story Points" - Meet WIP limit, Use charge, Use chest  *(built)*
 
@@ -1449,10 +1448,10 @@ cheaper, not dearer. With the plug in the win and a deadline as its slack (in
 time, since there is one plug), the vault always opens; the choice is when.
 
 **The budget is the bot's floor, and says so.** Unbudgeted the bot needs 25-36
-cuts here (three times par). Swept at four budgets: 20 reads 1 of 16, 24 6, 26
-**8 of 16**, 28 11. 26 ships; a human at par has a dozen to spare, and only a
-playtest can say how far below 26 it should go (section 8, "a WIP limit the bot
-cannot meet says nothing").
+cuts here (three times par) and wins 15 of 16. Swept at five budgets: 20 reads 1
+of 16, 22 2, 24 3, **26 7 of 16**, 28 10. 26 ships; a human at par has a dozen
+to spare, and only a playtest can say how far below 26 it should go (section 8,
+"a WIP limit the bot cannot meet says nothing").
 
 #### 33 "Access Control" - Compressed ball gate, Use portal  *(built)*
 
@@ -1465,7 +1464,7 @@ it into the strip beside the box. Two answers, and they are different balls.
 **0 of 16 before the engine fix**, every seed `areaUnreachable` on the first
 cut: the strip was captured as unreachable while the compass stood a door away.
 After it, a corner mouth still stranded six seeds (an ordinary cut isolated the
-corner, then the compass locked somewhere else). Moved into the open board: **8
+corner, then the compass locked somewhere else). Moved into the open board: **9
 of 16**, the losses the bot locking every ball outside the box, which section 8
 calls the expected result on a content map.
 
@@ -1476,8 +1475,8 @@ twenty-two, with two locks in the win.** The bar is the cheapest anchor on the
 board and the first lock takes it away, so the order is the map: build against
 it and lock afterwards, or lock early and redo the plan without it. Both ends
 stand 120 clear of the frame, because a latch that sealed a room would have the
-room captured on the first cut. Swept at four budgets: 18 reads 4 of 16, **22 7
-of 16**, 26 12, none 15.
+room captured on the first cut. Swept at five budgets: 20 reads 4 of 16, **22 7
+of 16**, 24 11, 26 12, none 16.
 
 #### 35 "Hard Fork" - BOSS  *(built)*
 
@@ -1502,22 +1501,88 @@ bosses can each have a shape of their own (`bossFightShapes`).
   roll can produce a map that is unwinnable through no fault of the player.
   `winSpecProblems` flags it and the map builder shows the flag.
 
-### Act V - Scale (36-40)  *(brief)*
+### Act V - Scale (36-40)  *(built)*
 
 *Owns: the inversions.* Rule 3 under the teaching unit says the inversion is
 mandatory for anything with a Meet map, and the ladder through 35 spent its
-Breaks on act I's and act II's mechanics. Act V turns the redirectors and the
-scripted board against the player, and gives the last single-use mechanics
-their second map: the mirror (13), the delivery box (23) and the terminals (22).
-Space demanded **94 -> 95**, cuts 10, clocks authored at 45s.
+Breaks on act I's and act II's mechanics. Act V turns the portal against the
+player, and gives the last single-use mechanics their second map: the mirror
+(13), the delivery box (23) and the terminals (22). Space demanded **94 -> 95**,
+cuts 10, clocks authored at 45s.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 36 | - | **Use** mirror | The vault's only straight line comes off a mirror, so the fence that closes it is aimed somewhere else. The breather. |
-| 37 | - | **Break** portal | The cheapest pocket on the board holds a portal mouth, so it pays nothing until you cut the mouth out of it. |
-| 38 | - | **Use** delivery box, **Use** terminals | The ball you wake has to be delivered, and the box's mouth faces away from its terminal. |
-| 39 | *(none: the skill check)* | everything act V turned round | |
-| 40 | BOSS | - | One boss, three traps, and every trap it survives leaks a minion (1 target, 3 traps, no wipe, minions). |
+| 36 | - | **Use** mirror | The only one-fence pocket in the middle of a wall is the V you bounce off the mirror. The breather. *(built)* |
+| 37 | - | **Break** portal | A portal feeds the box, and the box will not lock until you cut the portal out of it. *(built)* |
+| 38 | - | **Use** delivery box, **Use** terminals | Two sleepers have to be woken and two balls delivered, and the cheap wake is never the easy delivery. *(built)* |
+| 39 | *(none: the skill check)* | Use portal, Use box, a spawned ball | A portal throws balls at the box, its mouths cannot lock, and the monkey adds a ball at the end. *(built)* |
+| 40 | BOSS | - | The build takes three traps and leaks a minion every few seconds, so the board fills while the boss empties. *(built)* |
+
+**Every act V map is a content map, and the bot reads like it** (section 8: it
+has no plan for a superior lock, a portal, a terminal or a box). Swept 16 seeds
+on each map's own clock: 36 **5**, 37 **6**, 38 **5**, 39 **8**, 40 **4**. The
+losses are the kinds section 8 calls expected - `lockedOut` with no superior or
+no delivery, `requirementUnreachable` after a terminal's ground was claimed -
+and none is a stall: every run ends on the map.
+
+#### 36 "Load Balancer" - Use mirror  *(built)*
+
+**A short mirror hangs below the middle of the top wall.** A corner closes with
+one straight diagonal; the middle of a wall never does, because a straight
+fence from it runs on to another wall. A diagonal that meets the mirror's top
+face bounces back up to the wall, and the V it draws (about 1.8% of the board)
+is the one mid-wall pocket a single fence can close. The win wants one
+superior lock; the V is the answer for a ball crossing the busy middle of the
+top, a corner's diagonal the answer for one that wanders.
+
+**Fences run at any angle; the bot and the pocket probe do not.** Both draw
+horizontal and vertical fences only, so neither can take the V or a corner
+triangle, and `mapPockets` lists 36 with that reason. Its 5 of 16 are the bot's
+accidental superiors. A dark bonus box sat in the V at first; it came off when
+act V carried a colored area on four of its five maps (`mechanicSpread`'s
+monopoly rule), and the V pays through the win instead.
+
+#### 37 "Rollback" - Break portal  *(built)*
+
+**The box is a room in the bottom-left corner, and a portal mouth stands
+inside it.** The other mouth is in the open board, so the portal feeds the room
+the win wants a lock in - and a region holding a live portal cannot lock. Seal
+the doorway with a ball inside and nothing happens; the room pays only once a
+fence has cut the mouth out of it. The shortcut you were taught is what stands
+between you and the lock. This map could not have existed before the act IV
+engine fix: the cut-off mouth's pocket is kept, not captured, while the far
+mouth can still be reached.
+
+#### 38 "Dead Letter" - Use delivery box, Use terminals  *(built)*
+
+**Two sleepers, two terminals, a box that wants two deliveries.** One sleeper
+lies straight over the box's open top, so it falls in nearly by itself once
+woken, and its terminal is the far one, in the top-left corner; the other
+sleeper's terminal is beside it. The cheap wake is the hard delivery.
+
+**It found a stall in the stranding check.** With every awake ball locked or
+delivered and a sleeper whose terminal's ground had been claimed, the map
+neither won nor failed: a box's reserved interior reads as pending ground, and
+a sleeper counted as in play whether or not it could ever wake. A sleeper now
+counts only while its terminal can be lit, and with no ball left in play the
+delivery is lost and the map says so (`deliveryStranding.test.ts`).
+
+#### 39 "Chaos Monkey" - the skill check  *(built)*
+
+**A portal's far mouth stands just off the box's open side**, so a ball that
+finds the near mouth is thrown at the box (the portal used straight), while
+its mouths are ground no lock can use (37's lesson). At 40% remaining the
+monkey drops one more ball into play, announced. A mirror and a bonus V were
+on it at first and came off with 36's; without them it sweeps 8 of 16, the
+act's easiest, as a skill check that asks for nothing new should.
+
+#### 40 "Memory Leak" - BOSS  *(built)*
+
+**One build, three traps, and a minion every nine seconds or so**, up to three
+at once, that stay until fenced in: the board fills while the boss empties. A
+shape no other boss has (1 target, 3 traps, no wipe, minions). Tuned from 2 of
+16 (speed 1.15, a minion every 7s, four at once) to **4 of 16** at speed 1.05,
+every 9s, three, level with 30.
 
 ### Act VI - Release (41-45)  *(brief)*
 

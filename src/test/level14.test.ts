@@ -132,7 +132,10 @@ describe("level 14 holds together", () => {
     // ACT IV keeps it broken: 31 and 34 ask for locks (the thread lock is the
     // act's own rule), 33 for the zone its gate guards, and the two bosses (30,
     // 35) state no win block. 32 smashes, because its plug is the vault door.
-    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28, 30, 31, 33, 34, 35]);
+    //
+    // ACT V has no smash at all: a superior lock (36), a zone (37), deliveries
+    // (38, 39) and a boss (40).
+    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,
