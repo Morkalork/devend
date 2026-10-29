@@ -64,7 +64,7 @@
  * claims, all read as "cannot tell" and the map carries on. The caller adds the
  * other half of that guard: nothing here is consulted before the player has cut.
  */
-import { CellState, worldToGridIndex, type SpaceGrid } from "@/lib/spaceGrid";
+import { CellState, worldToGridIndex, linkedReach, type SpaceGrid } from "@/lib/spaceGrid";
 import { sealedPendingCells } from "@/lib/coloredAreas";
 import { dealtSplit, splitLockCounts, evaluateWinCondition } from "@/lib/winSpec";
 import type { WinCondition, WinSpec, WinSnapshot } from "@/types/winSpec";
@@ -124,6 +124,16 @@ function ballCanReach(
   if (read.unknown) return true;
   if (read.active === 0) return false;        // claimed ground: gone for good
   if (read.owners.size === 0) return true;    // open, but unowned: cannot tell
+
+  // A ball can leave its region through a link (spaceGrid.linkedReach).
+  if (grid.links?.length) {
+    const want = [...cells].filter(i => grid.cells[i] === CellState.ACTIVE);
+    for (const b of game.balls) {
+      if (b.state === "won") continue;
+      const reach = linkedReach(grid, b.position, b.typeId);
+      if (reach && want.some(i => reach[i])) return true;
+    }
+  }
 
   for (const b of game.balls) {
     if (b.state === "won") continue;

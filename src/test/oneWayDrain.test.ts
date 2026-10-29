@@ -45,10 +45,12 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig, LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+// The RETIRED level 31, by name: the ladder's level 31 is a different board (a
+// membrane ward, not this pipe) and has its own test.
+import { RETIRED } from "./fixtures/maps";
 
 const level31 = (): LevelConfig => {
-  const l = ENGINE_MAPS.find(x => x.level === 31);
+  const l = RETIRED.find(x => x.id === "level-31");
   if (!l) throw new Error("no level 31");
   return l as unknown as LevelConfig;
 };
@@ -142,8 +144,8 @@ describe("a ball that falls in cannot climb back out", () => {
     // The counter-test, because "the ball stayed put" is also what a ball
     // wedged in a corner does. Thrown at a lid facing UP it must escape, which
     // is what proves the throw was real and the bearing is what stopped it.
-    const doc = ({ levels: ENGINE_MAPS } as LevelData);
-    const lvl = JSON.parse(JSON.stringify(doc.levels.find(x => x.level === 31))) as LevelConfig;
+    const doc = ({ levels: RETIRED } as LevelData);
+    const lvl = JSON.parse(JSON.stringify(doc.levels.find(x => x.id === "level-31"))) as LevelConfig;
     const lid = (lvl.entities ?? []).find(e => e.id === "drain-lid") as unknown as { oneWay: string };
     lid.oneWay = "up";
 

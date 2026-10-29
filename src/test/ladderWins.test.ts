@@ -186,6 +186,12 @@ describe("the maps with nothing a lock cannot produce", () => {
     // 15 LEFT with the act II review: its well now feeds a cup and the win is
     // a ball in the cup, so the map has something a lock cannot produce by
     // accident. The note above on why it was here stays as the history.
-    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16]);
+    //
+    // 31 and 34 JOIN with act IV, and on the list's own terms: each carries
+    // only terrain (31 a membrane, 34 a latch bar), and each is the act's
+    // thread-lock map, whose subject IS the lock count. `space + locks` is the
+    // whole ask, and the locks are the lesson rather than a stand-in for
+    // content the map does not have.
+    expect(bare.sort((a, b) => a - b)).toEqual([1, 2, 14, 16, 31, 34]);
   });
 });

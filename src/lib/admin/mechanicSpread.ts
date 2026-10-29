@@ -99,7 +99,11 @@ export const MECHANICS: Mechanic[] = [
   { key: "circuit", label: "Terminals", headline: true, detect: l => !!l.circuit },
   { key: "charge", label: "Charge", headline: true, detect: l => !!l.charges?.length },
   { key: "dataStream", label: "Data stream", headline: true, detect: l => !!l.dataStream },
-  { key: "threadLock", label: "Thread lock", headline: true, detect: l => !!l.threadLockRequired },
+  // Not a headline: the legacy field only shapes a DERIVED win, and a lock count
+  // in an authored win is the ordinary `locks` clause, which maps 1, 2, 14 and
+  // 16 already ask for. Act IV was briefed to "meet" it at 31 and found that it
+  // had been on the ladder since act I under another name.
+  { key: "threadLock", label: "Thread lock", headline: false, detect: l => !!l.threadLockRequired },
   { key: "fenceBudget", label: "WIP limit", headline: true, detect: l => !!l.fenceBudget },
   { key: "mutator", label: "Pinned mutator", headline: true, detect: l => !!l.mutator },
   { key: "pickupSpots", label: "Pickup spots", headline: true, detect: l => !!l.pickupSpots?.length },
@@ -109,12 +113,14 @@ export const MECHANICS: Mechanic[] = [
   { key: "circle", label: "Circle", headline: false, detect: l => anyEntity(l, e => e.shape === "circle") },
 ];
 
-/** The four acts, by level number. Bosses close each one. */
+/** The six acts, by level number. Bosses close each one. */
 export const ACTS: { name: string; from: number; to: number }[] = [
   { name: "I Onboarding", from: 1, to: 10 },
   { name: "II The Sprint", from: 11, to: 20 },
   { name: "III Legacy Code", from: 21, to: 30 },
   { name: "IV Crunch", from: 31, to: 35 },
+  { name: "V Scale", from: 36, to: 40 },
+  { name: "VI Release", from: 41, to: 45 },
 ];
 
 export interface MechanicUse {

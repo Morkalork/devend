@@ -2180,6 +2180,16 @@
         "name": "Resolver el Merge Conflict",
         "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja de sintaxis clara.",
         "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier parte del tablero y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja de sintaxis clara, y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares; cuando un pilar se desvanece, empuja a la pareja y la libera. Quedarse sin tiempo hace fracasar el mapa."
+      },
+      "defeat-force-push": {
+        "name": "Contener el Force Push",
+        "description": "Encierra la build negra en la caja clara, entre dos pushes.",
+        "clarify": "Atrapa la build negra dentro de la caja clara (abajo a la izquierda) para ganar, en una sola atrapada. Cada veinte segundos se detiene y tiembla, y luego destruye cada valla del tablero, terminada o aún creciendo; esa carga es tu señal. Atraparla fuera de la caja cuesta una vida y reinicia el mapa, y lo mismo pasa si se acaba el tiempo."
+      },
+      "defeat-hard-fork": {
+        "name": "Fusionar el Hard Fork",
+        "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja clara, entre dos borrados.",
+        "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier sitio y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja clara (arriba a la izquierda), y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares. Cada veinticinco segundos la pareja se detiene y tiembla, y luego borra cada valla del tablero, terminada o aún creciendo. Quedarse sin tiempo hace fracasar el mapa."
       }
     },
     "tagSets": {
@@ -2216,6 +2226,14 @@
       "level-20": {
         "name": "Merge Conflict",
         "intro": "Dos commits enredados por una cadena que destroza cada valla que barre. Ninguno se resuelve al primer intento: atrapa una mitad en cualquier sitio y se suelta, más rápida y más pequeña, llevándose una de tus vallas. Desgasta las dos mitades y luego enciérralas en la caja de sintaxis clara. La cadena se engancha en los pilares mientras están en pie, y una congelación compra una ventana limpia."
+      },
+      "level-30": {
+        "name": "Force Push",
+        "intro": "Una build negra y pesada que sobrescribe tu trabajo: cada veinte segundos se detiene, tiembla y destroza cada valla del tablero, terminada o no. Nada de lo que dibujes sobrevive al siguiente push, así que esto es una sola trampa limpia en la caja clara, abajo a la izquierda, construida en una única ventana. La carga es cuando se queda quieta. Una congelación mantenida durante el push te da una segunda oportunidad."
+      },
+      "level-35": {
+        "name": "Hard Fork",
+        "intro": "El repositorio se ha partido en dos, y las mitades están encadenadas. Cada mitad necesita dos atrapadas: la primera puede ser en cualquier sitio y solo la suelta, más rápida y más pequeña, y la segunda debe ser dentro de la caja clara, arriba a la izquierda, con las dos mitades acabando allí. Su cadena destroza cualquier valla que barre, y cada veinticinco segundos la pareja se detiene, tiembla y borra cada valla del tablero. Los pilares enganchan la cadena mientras siguen en pie."
       }
     },
     "levels": {
@@ -2334,6 +2352,30 @@
       "level-29": {
         "name": "Postmortem",
         "premise": "En la que todo lo que enseñó el acto III está en el tablero a la vez: un corral, dos escudos, una patrulla y una sala que gira."
+      },
+      "level-30": {
+        "name": "Force Push",
+        "premise": "En la que una build negra destroza cada valla del tablero cada veinte segundos, así que la trampa hay que construirla en una sola ventana."
+      },
+      "level-31": {
+        "name": "Triage",
+        "premise": "En la que cada bola se escurre por una membrana hacia la sala, y la victoria pide dos bloqueadas antes de que lleguen todas."
+      },
+      "level-32": {
+        "name": "Story Points",
+        "premise": "En la que veintiséis vallas tienen que cubrir el tablero y la cámara tras el tapón, así que tú eliges cuándo se abre la cámara."
+      },
+      "level-33": {
+        "name": "Access Control",
+        "premise": "En la que solo la brújula puede cruzar la compuerta hasta la caja, y el portal es el camino de bajada para todas las demás."
+      },
+      "level-34": {
+        "name": "Code Freeze",
+        "premise": "En la que veintidós vallas tienen que limpiar el tablero y bloquear dos bolas, y la barra que te ahorra vallas se levanta con tu primer bloqueo."
+      },
+      "level-35": {
+        "name": "Hard Fork",
+        "premise": "En la que una pareja encadenada borra cada valla cada veinticinco segundos, así que cada mitad se desgasta en una ventana y se entrega en la siguiente."
       }
     }
   },

@@ -40,6 +40,8 @@ const NO_SUPERIOR_NOOK: Record<string, string> = {
   "level-18": "the windmill room pays triple, which is its precision reward",
   "level-19": "the pinwheel's four-fold symmetry leaves no nook by design",
   "level-20": "boss map: the light box is the target, not a lock",
+  "level-30": "boss map: the light box is the target, not a lock",
+  "level-35": "boss map: the light box is the target, not a lock",
 };
 
 describe("every map's authored pocket and lanes", () => {

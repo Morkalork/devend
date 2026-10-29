@@ -128,7 +128,11 @@ describe("level 14 holds together", () => {
     // all. The three smash maps left in 21-29 (21, 25, 29) are the ones whose
     // premise is a slab: a portal that throws balls at it, a charge that blows
     // it, and the skill check.
-    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28]);
+    //
+    // ACT IV keeps it broken: 31 and 34 ask for locks (the thread lock is the
+    // act's own rule), 33 for the zone its gate guards, and the two bosses (30,
+    // 35) state no win block. 32 smashes, because its plug is the vault door.
+    expect(noSmash.map(l => l.level)).toEqual([13, 14, 15, 16, 20, 22, 23, 24, 26, 27, 28, 30, 31, 33, 34, 35]);
 
     // And they CONTRAST rather than stack, which took a revision to get right:
     // 15 first shipped carrying this map's weather as well as its own wells,

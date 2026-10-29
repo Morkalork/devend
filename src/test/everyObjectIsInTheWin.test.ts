@@ -35,6 +35,10 @@ const entities = (l: LevelConfig) => (l.entities ?? []) as unknown as E[];
  */
 const GREED_BREAKABLES: Record<string, string[]> = {
   "level-17": ["vault"],
+  // level-32's chest sits inside the vault the plug seals. The plug is in the
+  // win; the chest is what the vault pays when you let the balls in to break
+  // it, at the cost of the fences and seconds that takes under the budget.
+  "level-32": ["vault-chest"],
 };
 
 /**

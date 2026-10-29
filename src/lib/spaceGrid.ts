@@ -169,6 +169,66 @@ export function buildGridLinks(
   return links;
 }
 
+/**
+ * Every ACTIVE cell a ball now at `from` could ever stand in: its own ground
+ * plus whatever it can get to through the grid's links (a membrane the way it
+ * faces, a gate that names `typeId`, a portal to its other mouth).
+ *
+ * The stranding checks used to ask only "does the ball's region hold this
+ * ground", on the rule that a ball never leaves its region. A link is exactly a
+ * way to leave one, so on a board that has links they ask this instead. Plain
+ * 4-connectivity with no ball width: the generous reading, which is the right
+ * one for a check that costs a life. Null when the grid has no links, so the
+ * caller keeps its region test.
+ */
+export function linkedReach(grid: SpaceGrid, from: Vector2, typeId?: string): Uint8Array | null {
+  const links = grid.links;
+  if (!links?.length) return null;
+  const { width, height, cells } = grid;
+  const seen = new Uint8Array(cells.length);
+  const q: number[] = [];
+  const push = (i: number) => {
+    if (i >= 0 && cells[i] === CellState.ACTIVE && !seen[i]) { seen[i] = 1; q.push(i); }
+  };
+  push(worldToGridIndex(grid, from.x, from.y));
+  const crossed = new Set<GridLink>();
+  for (let head = 0; ;) {
+    while (head < q.length) {
+      const cur = q[head++];
+      const row = (cur / width) | 0, col = cur % width;
+      if (row > 0) push(cur - width);
+      if (row < height - 1) push(cur + width);
+      if (col > 0) push(cur - 1);
+      if (col < width - 1) push(cur + 1);
+    }
+    let grew = false;
+    for (const link of links) {
+      if (crossed.has(link)) continue;
+      const typePasses = !!typeId && !!link.passTypes?.includes(typeId);
+      if (link.passTypes?.length && !link.portal && !link.side && !typePasses) continue;
+      let touched = false;
+      for (let k = 0; k < link.ring.length && !touched; k++) {
+        if (!seen[link.ring[k]]) continue;
+        if (link.side && link.side[k] !== 1 && !typePasses) continue;
+        touched = true;
+      }
+      if (!touched) continue;
+      crossed.add(link);
+      grew = true;
+      const targets = link.portal ? links.filter(l => l.portal === link.portal && l !== link) : [link];
+      for (const t of targets) {
+        if (t.portal) crossed.add(t);
+        for (let k = 0; k < t.ring.length; k++) {
+          if (t.side && !t.portal && t.side[k] !== 2 && !typePasses) continue;
+          push(t.ring[k]);
+        }
+      }
+    }
+    if (!grew) break;
+  }
+  return seen;
+}
+
 export interface GridRegion {
   id: string;
   /** Indices into the grid's cells array */

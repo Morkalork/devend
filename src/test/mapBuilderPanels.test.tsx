@@ -22,7 +22,7 @@ import { MechanicSpreadPanel } from "@/components/admin/MechanicSpreadPanel";
 import { ROTATION_MIN_LEVEL } from "@/lib/mapRotation";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, LADDER } from "./fixtures/maps";
 
 const LEVELS = ENGINE_MAPS as LevelConfig[];
 const lvl = (n: number) => LEVELS.find(l => l.level === n)!;
@@ -84,8 +84,11 @@ describe("the mechanics panel", () => {
   it("surfaces the single-use warnings rather than hiding them behind a toggle", () => {
     // These are the findings the panel exists for, so they must be visible in
     // the default view, not one click away.
-    render(<MechanicSpreadPanel levels={LEVELS} current={lvl(6)} />);
-    // Several today (launcher, bumper, portal, box, threadLock, mutator).
+    // The LADDER, which is what Admin feeds the panel: across the ladder and
+    // the retired maps together nearly everything is on two maps, so the
+    // warnings this asks about are the ladder's own (the box, the terminals,
+    // the mirror and the gate today, each waiting on its second map).
+    render(<MechanicSpreadPanel levels={LADDER} current={lvl(6)} />);
     expect(screen.getAllByText(/introduced and never developed/).length).toBeGreaterThan(0);
   });
 

@@ -141,8 +141,14 @@ describe("no mechanic is introduced and then dropped", () => {
     // got their second map inside the act (22 and 29, 24 and 27, 26 and 27), so
     // they never appear here at all. Mirror stays, still waiting on its second
     // map. The seven come off as act IV develops them.
+    //
+    // ACT IV took four of them off: the one-way on 31, the charge on 32, the
+    // portal on 33 and the latch on 34, each the older half of a map whose new
+    // rule is a price. The ball gate joined on 33, where it is compressed. The
+    // box, the terminals and the mirror are act V's (36 and 38), and the gate's
+    // second map is act VI's.
     expect(singles.map(w => w.key).sort())
-      .toEqual(["box", "charge", "circuit", "latch", "mirror", "oneWay", "portal"]);
+      .toEqual(["box", "circuit", "gate", "mirror"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {
@@ -175,8 +181,13 @@ describe("no mechanic is introduced and then dropped", () => {
     // teach reads as an unwinnable map in the sweep (level 18's record in
     // MAP_DESIGN_GUIDELINES.md), and a Meet nobody can measure should not be
     // the first thing an act does.
+    //
+    // EMPTY with act IV. The WIP limit met on 32 and the ball gate on 33; the
+    // thread lock came off the other honest way, as `headline: false`, because
+    // a lock count in an authored win is the `locks` clause the ladder has
+    // asked for since map 1 (mechanicSpread.ts says why).
     expect(unused.map(w => w.label).sort(), "the unplaced list changed")
-      .toEqual(["Ball gate", "Thread lock", "WIP limit"]);
+      .toEqual([]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {

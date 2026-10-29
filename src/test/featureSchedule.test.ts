@@ -44,6 +44,10 @@ const ACTS = [
   { name: "II The Sprint", from: 11, to: 20 },
   { name: "III Legacy Code", from: 21, to: 30 },
   { name: "IV Crunch", from: 31, to: 35 },
+  // The ladder past 35, added with the music the owner chose for 41-45: two
+  // five-map acts, each closed by a boss, like act IV.
+  { name: "V Scale", from: 36, to: 40 },
+  { name: "VI Release", from: 41, to: 45 },
 ] as const;
 
 /** Acts whose maps have been authored to the schedule. May only grow. */
@@ -55,9 +59,12 @@ const MIGRATED_ACTS: string[] = [
   // list is allowed to grow.
   "II The Sprint",
   "III Legacy Code",
+  // Act IV was rebuilt as one set, 31-35, built to the spine from the start,
+  // and claimed with its boss.
+  "IV Crunch",
 ];
 
-const BOSS_LEVELS = [10, 20, 30, 35];
+const BOSS_LEVELS = [10, 20, 30, 35, 40, 45];
 
 const inAct = (a: { from: number; to: number }) =>
   MAPS.filter(l => l.level >= a.from && l.level <= a.to);

@@ -25,7 +25,7 @@ import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState"
 import type { Ball } from "@/types/game";
 import type { BossBall, LevelConfig } from "@/types/level";
 
-import { ENGINE_MAPS } from "./fixtures/maps";
+import { ENGINE_MAPS, LADDER_END } from "./fixtures/maps";
 
 /**
  * One map per level number, the LADDER's where both sets carry one. The retired
@@ -53,8 +53,11 @@ const at = (level: number) => BOSSES.find(l => l.level === level)!;
 const ball = (level: number): BossBall => at(level).boss!.bossBall ?? {};
 
 describe("each boss fight is shaped differently from the others", () => {
-  it("still ships exactly four", () => {
-    expect(BOSSES.map(l => l.level)).toEqual([10, 20, 30, 35]);
+  it("closes every act with one, and no more", () => {
+    // Four acts of the old ladder, six of the rebuilt one: 40 and 45 close the
+    // two acts past 35 the day they land.
+    const expected = [10, 20, 30, 35, 40, 45].filter(n => n <= Math.max(35, LADDER_END));
+    expect(BOSSES.map(l => l.level)).toEqual(expected);
   });
 
   /**
@@ -103,8 +106,18 @@ describe("each boss fight is shaped differently from the others", () => {
     expect(b.speedScale ?? 1).toBeLessThan(1.45);
   });
 
-  it("makes level 35 the only fight carrying all three ideas at once", () => {
+  it("makes level 35 the pair under the push", () => {
+    // 20's chained pair and 30's wipe, which no fight before it combined: each
+    // half has to be worn down in one window and shipped in the next.
     const b = ball(35);
+    expect((b.count ?? 1) > 1, "not a pair").toBe(true);
+    expect((b.fenceWipeSeconds ?? 0) > 0, "no wipe").toBe(true);
+  });
+
+  it.skipIf(LADDER_END < 45)("makes the final boss the only fight carrying all three ideas at once", () => {
+    // It was 35, the last map of the old ladder. The ladder ends at 45 now, and
+    // the fight that carries everything is the one that ends it.
+    const b = ball(45);
     expect((b.hp ?? 1) > 1, "no attrition").toBe(true);
     expect((b.count ?? 1) > 1, "not a pair").toBe(true);
     expect((b.fenceWipeSeconds ?? 0) > 0, "no wipe").toBe(true);

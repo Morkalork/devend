@@ -21,7 +21,8 @@ import { describe, it, expect } from "vitest";
 import { createBotGame, installClock, releaseClock, plainModifiers, stepBot, tryCut } from "@/lib/bot/headlessGame";
 import { setRunSeedText } from "@/lib/runRng";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
-import { CellState, worldToGridIndex } from "@/lib/spaceGrid";
+import { CellState, worldToGridIndex, linkedReach } from "@/lib/spaceGrid";
+import { anyGateTargetCanReach } from "@/lib/coloredAreas";
 import type { LevelConfig, LevelEntity } from "@/types/level";
 
 /** A wall down x = 380..406, solid but for a 240-unit piece in the middle. */
@@ -94,5 +95,32 @@ describe("the capture flood crosses what a ball can cross", () => {
     // A solid divider: only the portal joins the halves.
     expect(play(divided({}, portals), 1).leftOpen).toBe(true);
     expect(play(divided({}), 1).leftOpen, "without the portal the left is cut off").toBe(false);
+  });
+});
+
+describe("the stranding checks see through the same links", () => {
+  /**
+   * They used to read "can a ball reach this ground" as "does its region hold
+   * this ground", on the rule that a ball never leaves its region. Level 33's
+   * box sits below a gate only the compass crosses, so every first cut ended
+   * the map as areaUnreachable with the compass standing a door away.
+   */
+  it("finds a zone behind a gate reachable for the ball that may cross it", () => {
+    const level = { ...divided({ passTypes: ["blue"] }), coloredAreas: [{ kind: "dark", x: 100, y: 380, width: 160, height: 160 }] } as LevelConfig;
+    setRunSeedText("pass-1");
+    installClock();
+    try {
+      const ctx = createBotGame(level, level.level, plainModifiers(), { mutator: null });
+      ctx.game.balls.forEach((b, i) => { b.position = { x: 640, y: 250 + i * 150 }; });
+      const g = ctx.game.spaceGrid!;
+      const blue = ctx.game.balls.find(b => b.typeId === "blue")!;
+      const red = ctx.game.balls.find(b => b.typeId === "red")!;
+      const zoneCell = worldToGridIndex(g, 180, 460);
+      expect(linkedReach(g, blue.position, "blue")![zoneCell], "blue cannot get through its own gate").toBe(1);
+      expect(linkedReach(g, red.position, "red")![zoneCell], "red walked through a gate that does not name it").toBe(0);
+      expect(anyGateTargetCanReach(g, ctx.game.balls, ctx.game.coloredAreas ?? [])).toBe(true);
+    } finally {
+      releaseClock();
+    }
   });
 });

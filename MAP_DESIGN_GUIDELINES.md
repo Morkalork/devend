@@ -375,8 +375,8 @@ Every mechanic gets a status, and the status decides what it costs.
 
 | mechanic | family | status | meet | use | also on |
 |---|---|---|---|---|---|
-| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 31, 33 |
-| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29, 33 |
+| syntax area | D | Meet | 3 | 4 | 8, 9, 10 (boss), 11, 13, 15, 18, 20 (boss), 24, 28, 29, 30 (boss), 33, 35 (boss) |
+| mover | C | Meet | 4 | 7 | 8 (a sliding door), 9, 10 (boss), 17, 18, 19, 23, 29 |
 | breakable | A | Meet | 8 | 11 | 12, 13, 18, 21, 25, 29, 32 |
 | chest | A | Compressed | 7 | 9 | 11, 13, 15, 16, 17, 19, 23, 27, 32 |
 | reveals | A | Compressed | 8 | 11 | - |
@@ -390,22 +390,22 @@ Every mechanic gets a status, and the status decides what it costs.
 | box blast | A | Seasoning | 11 | - | - |
 | rotor | C | Compressed | 17 | - | - |
 | mirror | B | Meet | 13 | - | - |
-| terminals | E | Meet | 22 | - | 31 |
-| portal | B | Meet | 21 | - | 33 |
-| WIP limit | D | Meet | 32 | - | - |
+| terminals | E | Meet | 22 | - | - |
+| portal | B | Meet | 21 | 33 | - |
+| WIP limit | D | Meet | 32 | 34 | - |
 | cage | E | Compressed | 22 | 29 | - |
-| thread lock | D | Compressed | 31 | - | - |
+| thread lock | D | Seasoning | - | - | `headline: false`: a lock count in an authored win is the `locks` clause, asked from map 1 |
 | gravity well | C | Meet | 15 | 21 | 28, 29 |
 | one-way | B | Meet | 23 | 31 | - |
 | delivery box | E | Meet | 23 | - | - |
 | fence ground | D | Meet | 24 | 27 | - |
 | charge | E | Meet | 25 | 32 | - |
-| latch | A | Compressed | 26 | 31 | - |
+| latch | A | Compressed | 26 | 34 | - |
 | data stream | E | Meet | 26 | 27 | - |
-| ball gate | B | Compressed | 33 | 34 | - |
+| ball gate | B | Compressed | 33 | - | - |
 | pinned mutator | D | Seasoning | 14 | 19 | - |
 | live outer walls | D | Meet | 14 | 19 | - |
-| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 34, 35 |
+| syntax area (gate) | D | Meet | 3 | 4 | 8, 9, 10 (boss), 13, 15, 20 (boss), 24, 28, 30 (boss), 33, 35 (boss) |
 | bent shape | B | Seasoning | - | - | `headline: false` |
 | polygon shape | - | Seasoning | - | - | `headline: false` |
 | the second ball | - | roster | 2 | - | - |
@@ -594,14 +594,14 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 
 ## 5. The ladder
 
-> **Acts II, III and IV were deleted and are being rebuilt one map at a time.**
-> `public/map.yml` is twenty-nine maps. What follows still describes the whole plan,
-> including three acts that currently have no maps in them, because the plan is
-> what the rebuild is being written against - but read every row below act I as
-> a **brief, not a description**. The tables for 11-35 are what those maps used
-> to be; they are kept as a record of what was tried and where it went wrong
-> (see the difficulty contract in section 1 and the case study on level 9), not
-> as a specification to reproduce.
+> **Acts II, III and IV were deleted and rebuilt one map at a time, and acts V
+> and VI were added past 35.** The owner extended the ladder to 45 on
+> 2026-10-29, with music for 41-45. `public/map.yml` is thirty-five maps (1-35,
+> every act through IV rebuilt); 36-45 below are **briefs, not descriptions**
+> until each says *(built)*. Where a table records what an old map used to be,
+> it is kept as a record of what was tried and where it went wrong (see the
+> difficulty contract in section 1 and the case study on level 9), not as a
+> specification to reproduce.
 >
 > The old maps themselves are in `src/test/fixtures/retired-maps.yml`, where
 > they serve as engine-test fixtures and as worked YAML examples. They are not
@@ -609,18 +609,24 @@ Most pairs answer one of the four. A pair that answers none is not a map.
 >
 > Two things track the rebuild automatically. `mechanicSpread.test.ts` pins the
 > twenty mechanics the engine has and the ladder no longer places - that list is
-> the rebuild's checklist, and a name comes off it when a map places it.
-> `featureSchedule.test.ts` keeps `MIGRATED_ACTS`, which is back to act I alone
-> and may only grow.
+> the rebuild's checklist, and a name comes off it when a map places it. It
+> emptied with act IV. `featureSchedule.test.ts` keeps `MIGRATED_ACTS`, which
+> holds acts I-IV and may only grow.
 
 Space demanded is `100 - sizeThreshold`. It climbs within an act and may only
 fall on the map straight after a boss, which is the breather. Bosses sit below
 the map before them: a boss is about its objective, not about the clear.
 
 ```
-Act I    60 -> 84    Act III  86 -> 93
-Act II   84 -> 91    Act IV   92 -> 95
+Act I    60 -> 84    Act III  86 -> 93    Act V    94 -> 95
+Act II   84 -> 91    Act IV   92 -> 95    Act VI   95 -> 96
 ```
+
+Past 95% the spine flattens, and that is the honest reading of the board: at a
+threshold of 5 there is almost no ground left to demand, and a map that asks for
+96% is already asking for every ball sealed. So acts V and VI do not raise the
+dial; they raise the stakes with the roster, the clock, and combinations of
+mechanics the player has met twice.
 
 `expectedCuts` is deliberately **not** monotone: it says how many seals a map's
 topology is built around, so a map of fewer, larger chambers legitimately wants
@@ -1182,7 +1188,7 @@ must be zoned compounds that. A boss sweep is a floor (section 8): the bot
 aims for a zone only when a ball is already inside it, and nothing on this
 board drives one there.
 
-### Act III - Legacy Code (21-30)  *(rebuilding: 21-29 built, 30 to come)*
+### Act III - Legacy Code (21-30)  *(built)*
 
 *Owns: the board acting on its own schedule.*
 Board tilt unlocks at 21. Lodestone 21, black 25. Default clock 40s.
@@ -1212,8 +1218,8 @@ Space demanded climbs **86 -> 93** (thresholds 14 -> 7), cuts 8 -> 9.
 | 26 | **Meet** data stream, **Compressed** latch | - | A fence drawn along the seam harvests it, and the curtain across the seam lifts after your first lock. *(built)* |
 | 27 | - | Use data stream, Use fence ground | The seam runs down a pipe of cold ground, and the fence that harvests it is the slowest one you will draw. *(built)* |
 | 28 | - | Use phasing, Fight gravity well | The box's wide door is a wall that is not always there, and the well sweeps the balls at it either way. *(built)* |
-| 29 | *(none: the skill check)* | Use cage, Use breakable, Fight mover, the tilt | Everything act III taught at once: a pen, two shields, a patrol and a room that turns. *(built, ladder ends here)* |
-| 30 | BOSS | - | *(the fence wipe)* |
+| 29 | *(none: the skill check)* | Use cage, Use breakable, Fight mover, the tilt | Everything act III taught at once: a pen, two shields, a patrol and a room that turns. *(built)* |
+| 30 | BOSS | - | A black build shatters every fence on the board every twenty seconds, so the one trap has to be built inside one window. *(built)* |
 
 #### 21 "Cherry Pick" - Meet portal, Use gravity well  *(built)*
 
@@ -1362,19 +1368,126 @@ at (mapTiming's ramp), on the corrected harness (section 8), with the bombs
 armed and the mutator rolled from the seed. The clocks in the loss columns are
 that clock, not the sweep's 60s budget.
 
-### Act IV - Crunch (31-35)  *(deleted, to rebuild)*
+#### 30 "Force Push" - BOSS  *(built)*
 
-*Combination set-pieces. Meant to introduce no new primitives, and it introduces
-two: the ball gate at 33 and the pinned mutator at 34. Recorded rather than
-tidied away - see the four broken rules under the ledger.*
+**Every twenty seconds the black build stops, shudders and shatters every fence
+on the board, finished or not.** Act III's subject - the board acting on its own
+schedule - turned on the one thing the player owns. Nothing outlives the next
+push, so it is one clean trap in the light box (bottom left this time, so the
+three bosses do not share a corner), built from scratch inside one window; the
+wind-up is the tell, and a freeze held over it buys a second look. Two posts sit
+a fence's length from the box: the anchors a fast trap is built against.
+
+**Bot sweep, 16 seeds: 4 of 16**, every loss a `lockedOut` (the boss trapped
+outside the box), against 10's 3 of 8 and 20's 1 of 8. Bosses are the bot's
+floor, not the map's: it has no plan for a zone it must herd a ball into, and
+the board's chaos swings a boss sweep by several seeds on a single radius.
+
+### Act IV - Crunch (31-35)  *(built)*
+
+*Owns: the budget. Every cut is priced.* The last two rules that put a price
+on the cut itself arrive here, the WIP limit (D) and the ball gate (B's last
+sibling), and each lands on an older mechanic's second map, which is how act
+III's single-use list was paid off. Space demanded climbs **92 -> 95**, cuts 9
+-> 10, and every map authors **45s**: the default clock would be 30 from 31 on
+(mapTiming's ramp), which no act III pace survives with the seals this act adds.
+
+**The thread lock is not a Meet, and finding that out was part of the act.**
+It was briefed for 31. But `threadLockRequired` only shapes a DERIVED win, and
+a lock count in an authored win is the ordinary `locks` clause, which maps 1, 2,
+14 and 16 already ask for. So it is seasoning in the ledger (`headline: false`),
+and 31 and 34 ask for locks as a price rather than as a lesson.
+
+**The engine fix the act needed (section 7.6, the third bite).** A membrane, a
+gate and a portal mouth were walls to the capture flood, so a room whose only
+way in was one of them was captured on the first cut, and the ball that came
+through later was thrown back. 31's drain did nothing after the first cut on
+any seed, and 33's strip was captured before the compass could reach it. The
+flood now crosses them, and the stranding checks ask where a ball could ever
+get to rather than which region it stands in.
 
 | L | new | develops | premise |
 |---|---|---|---|
-| 31 | - | Use one-way + latch + terminals | A one-way neck over a drain that fills itself, a shutter that opens on your second lock, and a terminal to light. |
-| 32 | - | Fight WIP limit, Use charge + chest | Twelve fences, a slab, and the chest behind it. The burn is the map. |
-| 33 | **Compressed** ball gate | Break mirror, Use data stream + rotor | Only the compass may enter the safe lower line, so the two balls can no longer be solved in the same place. |
-| 34 | - | Use ball gate + pinned mutator | The gate is the whole win: two in the box, on a board with a live pull. |
-| 35 | BOSS | - | *(the chained pair, with the fence wipe)* |
+| 31 | - (two locks in the win) | **Use** one-way | Every ball drains through a membrane into the ward, and the win wants two locked before they all get there. *(built)* |
+| 32 | **Meet** WIP limit | **Use** charge, **Use** chest | Twenty-six fences have to cover the board and the vault behind the plug, so you choose when the vault opens. *(built)* |
+| 33 | **Compressed** ball gate | **Use** portal | Only the compass may cross the gate down to the box, and the portal is the way down for everyone else. *(built)* |
+| 34 | *(none: the skill check)* | **Use** latch, **Use** WIP limit, two locks | Twenty-two fences clear the board and lock two balls, and the bar that saves you fences lifts at your first lock. *(built)* |
+| 35 | BOSS | - | A chained pair wipes every fence every twenty-five seconds, so each half is worn down in one window and shipped in the next. *(built)* |
+
+#### 31 "Triage" - Use one-way, two locks  *(built)*
+
+**A wall down the board with a membrane in its middle that balls cross going
+left and never coming back.** The right is the intake, the left the ward, and
+the win wants two balls locked on top of the clear. The membrane is the map's
+clock: every ball drains into the ward in its own time, the intake it leaves is
+captured for free, and the cheap locks (the intake's, the superior nook under
+the top-right lip among them) are only there while a ball is.
+
+**Drained the wrong way first.** Drafted with the ward on the right, every
+seed started with all three balls already in it: balls spawn round the board's
+centre (initGame), and the centre was on the ward side, so the intake was empty
+before the first cut. Flipped, the drain runs 30-45s, measured with no cuts.
+
+**Bot sweep, 16 seeds: 15 of 16**, 12 to 31 cuts against par 9; the loss is a
+bot that stopped finding cuts at 34% remaining. A breather after a boss, like
+21 (14 of 16).
+
+#### 32 "Story Points" - Meet WIP limit, Use charge, Use chest  *(built)*
+
+**Twenty-six fences, and a vault in the top-left corner sealed by a plug no
+ball breaks by hand.** The plug is in the win, and the vault behind it (a
+`reveals` area) opens as new board the moment the plug goes, so every fence its
+ground costs comes out of the same budget. A fence over the fuse blows the plug
+when YOU choose, early, while the budget is fat; leave it and it goes by itself
+at 25% remaining, when the vault is the last thing you can afford. The chest
+inside is the greed hook.
+
+**It first asked for the clear alone, with the vault as pure greed, and the
+lock rush caught it** (`ladderWins`): a map that carries content its win ignores
+can be finished by sealing every ball fast, and a fence budget makes that rush
+cheaper, not dearer. With the plug in the win and a deadline as its slack (in
+time, since there is one plug), the vault always opens; the choice is when.
+
+**The budget is the bot's floor, and says so.** Unbudgeted the bot needs 25-36
+cuts here (three times par). Swept at four budgets: 20 reads 1 of 16, 24 6, 26
+**8 of 16**, 28 11. 26 ships; a human at par has a dozen to spare, and only a
+playtest can say how far below 26 it should go (section 8, "a WIP limit the bot
+cannot meet says nothing").
+
+#### 33 "Access Control" - Compressed ball gate, Use portal  *(built)*
+
+**A wall across the lower third whose only door is a gate the compass alone
+may cross; below it is the box, and the win wants a ball locked in it.** The
+compass walks down whenever it likes; every other ball needs the portal, whose
+near mouth sits in the open left of the upper board and whose far mouth drops
+it into the strip beside the box. Two answers, and they are different balls.
+
+**0 of 16 before the engine fix**, every seed `areaUnreachable` on the first
+cut: the strip was captured as unreachable while the compass stood a door away.
+After it, a corner mouth still stranded six seeds (an ordinary cut isolated the
+corner, then the compass locked somewhere else). Moved into the open board: **8
+of 16**, the losses the bot locking every ball outside the box, which section 8
+calls the expected result on a content map.
+
+#### 34 "Code Freeze" - the skill check  *(built)*
+
+**A bar across the middle, latched to open at the first lock, under a budget of
+twenty-two, with two locks in the win.** The bar is the cheapest anchor on the
+board and the first lock takes it away, so the order is the map: build against
+it and lock afterwards, or lock early and redo the plan without it. Both ends
+stand 120 clear of the frame, because a latch that sealed a room would have the
+room captured on the first cut. Swept at four budgets: 18 reads 4 of 16, **22 7
+of 16**, 26 12, none 15.
+
+#### 35 "Hard Fork" - BOSS  *(built)*
+
+**The chained pair from 20 under the push from 30.** Each half takes two traps
+and the chain shreds what it sweeps; every twenty-five seconds every fence is
+gone, so a half worn down in one window has to be shipped in the next. Two
+phasing pillars snag the chain while they stand. The fight that carries all
+three ideas (pair, wipe, minions) moved to 45, the last boss, so that five
+bosses can each have a shape of their own (`bossFightShapes`).
+**Bot sweep, 16 seeds: 2 of 16**, against 20's 1 of 8.
 
 **Act IV states its win.** Two rules fall out of that:
 
@@ -1388,6 +1501,36 @@ tidied away - see the four broken rules under the ledger.*
   picked from `maxBalls` and unlock levels, so a `lockType` clause left to the
   roll can produce a map that is unwinnable through no fault of the player.
   `winSpecProblems` flags it and the map builder shows the flag.
+
+### Act V - Scale (36-40)  *(brief)*
+
+*Owns: the inversions.* Rule 3 under the teaching unit says the inversion is
+mandatory for anything with a Meet map, and the ladder through 35 spent its
+Breaks on act I's and act II's mechanics. Act V turns the redirectors and the
+scripted board against the player, and gives the last single-use mechanics
+their second map: the mirror (13), the delivery box (23) and the terminals (22).
+Space demanded **94 -> 95**, cuts 10, clocks authored at 45s.
+
+| L | new | develops | premise |
+|---|---|---|---|
+| 36 | - | **Use** mirror | The vault's only straight line comes off a mirror, so the fence that closes it is aimed somewhere else. The breather. |
+| 37 | - | **Break** portal | The cheapest pocket on the board holds a portal mouth, so it pays nothing until you cut the mouth out of it. |
+| 38 | - | **Use** delivery box, **Use** terminals | The ball you wake has to be delivered, and the box's mouth faces away from its terminal. |
+| 39 | *(none: the skill check)* | everything act V turned round | |
+| 40 | BOSS | - | One boss, three traps, and every trap it survives leaks a minion (1 target, 3 traps, no wipe, minions). |
+
+### Act VI - Release (41-45)  *(brief)*
+
+*Owns: everything under the clock.* The inversions that are left, the ball
+gate's second map, and the finale. Space demanded **95 -> 96**, cuts 10.
+
+| L | new | develops | premise |
+|---|---|---|---|
+| 41 | - | **Break** fence ground, Fight mover | The fast ground, where a fence builds twice as quickly, is the lane the patrol sweeps. The breather. |
+| 42 | - | **Use** ball gate, launcher | The launcher fires the roster down a lane where a gate lets one type into the paying room (the cell "ball gate sorts a launcher's roster"). |
+| 43 | - | **Break** one-way | A membrane that lets balls INTO a pocket you have closed. |
+| 44 | *(none: the skill check)* | the whole ladder | |
+| 45 | BOSS | - | The last fight carries all three ideas: a chained pair, the push, and minions. |
 
 ---
 
@@ -1980,6 +2123,21 @@ The two pull in opposite directions, and the difference is what happens to the
 cells. A region that is merely unreachable gets captured. A `reveals` region is
 explicitly locked and is handed over as new capturable board when it opens,
 which is why it may - and must - be completely sealed.
+
+**A room behind something a ball can go through is not unreachable** - and
+until act IV the capture said it was. A membrane, a ball gate and a portal mouth
+are obstacles in the space grid, so the capture flood read them as walls: a
+ward behind a membrane with no ball in it yet was captured on the first cut, and
+the ball that crossed into it later landed in captured ground and was thrown
+back out ("escaped, recovered"). From the player's side the membrane went solid
+after the first fence. The grid now carries these obstacles as links
+(`spaceGrid.ts`, `GridLink`): the flood crosses a membrane in its own direction,
+a gate for the types it names, and a portal to its other mouth; a ball-free room
+the capture kept stays a region; and the stranding checks ask where a ball could
+ever get to (`linkedReach`) rather than which region it stands in. What is
+still true: a LATCH is a wall until it opens, so a room sealed by one is
+captured on the first cut. Use a latch as an anchor or a divider piece with
+balls on both sides, never as the only door.
 
 ---
 

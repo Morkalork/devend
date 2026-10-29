@@ -68,11 +68,16 @@ describe("the map fixtures", () => {
     // is a membrane over a delivery box; the retired 28 was a well map, the
     // ladder's is a phasing door), so a test that wants a retired board reads
     // RETIRED by name.
+    // level-30 to level-35 join with act IV and its two bosses. The retired
+    // 31 was the one-way drain pipe and the retired 34 the old Code Freeze
+    // rungs, and both pinned tests read RETIRED by name now; the ladder's 31
+    // is a membrane ward and its 34 a latch bar under a fence budget.
     expect(shared).toEqual([
       "level-11", "level-12", "level-13", "level-14", "level-15", "level-16",
       "level-17", "level-18", "level-19", "level-20", "level-21", "level-22",
       "level-23", "level-24", "level-25", "level-26", "level-27", "level-28",
-      "level-29",
+      "level-29", "level-30", "level-31", "level-32", "level-33", "level-34",
+      "level-35",
     ]);
   });
 

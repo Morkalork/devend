@@ -45,7 +45,7 @@ import type { Vector2 } from "@/lib/polygon";
 import {
   CellState, rasterizeCutToGrid, captureUnreachableCells, findGridRegions,
   countActiveCells, worldToGridIndex, exportGridRegionIdCounter,
-  importGridRegionIdCounter, type SpaceGrid,
+  importGridRegionIdCounter, linkedReach, type SpaceGrid,
 } from "@/lib/spaceGrid";
 import {
   areaCellIndices, gateAreas, gateTargets, sealedPendingCells, coloredAreaAt,
@@ -130,6 +130,9 @@ function zoneStillWinnable(
   // open. A sliver along the zone's edge is neither, and it is what an early
   // cut left on level 3 before a later one ended the map.
   for (const b of targets) {
+    // Through a link, a free ball may yet reach zone ground outside its region.
+    const reach = linkedReach(grid, b.position, b.typeId);
+    if (reach && !locked.has(regionOf(b)) && [...zone].some(i => reach[i] && roomForABall(grid, i, ballRadius(game)))) return true;
     const r = regionOf(b);
     if (!r || locked.has(r) || zoneCellsIn(r) === 0) continue;
     if (zoneCellsIn(r) / cells.length >= AREA_COVER_FRACTION) return true;

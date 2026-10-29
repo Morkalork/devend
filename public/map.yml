@@ -3680,3 +3680,524 @@ levels:
         range: 340
         speed: 170
     balls: []
+
+  # 30 "Force Push" - BOSS. Act III closes on the board acting on its own
+  # schedule, turned on the one thing the player owns: every twenty seconds the
+  # black build stops, shudders, and shatters every fence on the board, finished
+  # or not. Nothing outlives the next push, so this is not a boss you grind
+  # down: it is one clean trap, built from scratch inside a single window. The
+  # wind-up is the window's start and the tell (it stands still), and a freeze
+  # held over the wipe buys a second look at it. One trap, in the light box in
+  # the bottom left; trapped anywhere else it costs a life.
+  # The two posts are the anchors a fast trap is built against: each sits a
+  # fence's length from the box, so the window is one fence to cut the box's
+  # side off and one to close it. A boss sits below the map before it (section
+  # 5): the fight is the objective, not the clear.
+  # Heights (3D board, objectRise.ts): the posts stand tall, the anchors the whole fight is built against.
+  - id: level-30
+    name: Force Push
+    level: 30
+    premise: "The one where a black build shatters every fence on the board every twenty seconds, so the trap has to be built inside one window."
+    sizeThreshold: 12
+    expectedCuts: 8
+    points: 5
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 80
+    coloredAreas:
+      - kind: light
+        x: 45
+        'y': 520
+        width: 335
+        height: 335
+    boss:
+      name: Force Push
+      intro: "A heavy black build that overwrites your work: every twenty seconds it stops, shudders and shatters every fence on the board, finished or not. Nothing you draw outlives the next push, so this is one clean trap in the light box, bottom left, built inside a single window. The wind-up is when it stands still. A freeze held over the push buys you a second look."
+      creepFromStart: false
+      objective:
+        id: defeat-force-push
+        name: Contain the Force Push
+        description: Fence the black build into the light box, between two pushes.
+        clarify: "Trap the black build inside the light box (bottom left) to win, in one trap. Every twenty seconds it stops and shudders, then destroys every fence on the board, finished or still growing; that wind-up is your cue. Trapping it outside the box costs a life and restarts the map, and so does running out of time."
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        hp: 1
+        radiusScale: 2.2
+        speedScale: 1.25
+        color: '#2b2f3a'
+        fenceWipeSeconds: 20
+        spitIntervalSeconds: 0
+        maxMinions: 0
+    entities:
+      - id: post-n
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 210
+        cy: 330
+        radius: 60
+      - id: post-e
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 570
+        cy: 690
+        radius: 55
+    balls: []
+
+  # ===========================================================================
+  # ACT IV - CRUNCH (31-35): the budget. Every cut is priced.
+  #
+  # The last two rules that put a price on the cut itself arrive here: the WIP
+  # limit (a fixed number of fences, family D) and the ball gate (a wall only
+  # some balls may cross, family B's last sibling). Beside them the win counts
+  # sealed balls as well as ground on 31 and 34, the `locks` clause the ladder
+  # has asked since map 1, now as a price rather than the lesson. (It was
+  # briefed as a "thread lock" Meet; that is the same clause under an older
+  # name, so it is seasoning in the ledger.) Each map is an older mechanic's
+  # second map, which is how act III's single-use list gets paid off: the
+  # one-way on 31, the charge and the chest on 32, the portal on 33, the latch
+  # on 34. Every map states its own win with no all-locked back door, and every
+  # ask beyond the clear carries a premium.
+  #
+  # Space demanded climbs 92 -> 95 (thresholds 8 -> 5), cuts 9 -> 10. The
+  # default clock would be 30s from level 31 (mapTiming's ramp); these maps
+  # author 45s, the act III pace plus the extra seals the act asks for.
+  # ===========================================================================
+
+  # 31 "Triage" - USE one-way, with two locks in the win. The breather after the boss.
+  #
+  # A wall runs down the board with a membrane in its middle that balls cross
+  # going right and never coming back. The left is intake, the right is the
+  # ward, and the win wants TWO balls locked on top of the clear. The membrane
+  # is the map's clock and its greed hook at once. Every ball drains into the ward in its own time, and
+  # the intake it leaves behind is captured for free on the next cut, so
+  # waiting pays you space. But the ward is where the balls crowd, and two
+  # locks out of a crowd is the hard way: the cheap locks are the intake's,
+  # the one-fence superior nook under the top-left lip among them, and they
+  # are only there while a ball is. Lock early in the intake, or let the drain
+  # clear it and split the ward against its two posts. A ball you watch cross
+  # is a ball the nook will never see.
+  # Heights (3D board, objectRise.ts): the divider stands tall and its membrane sits low; the ward's posts stand as anchors, the lip low.
+  - id: level-31
+    name: Triage
+    level: 31
+    premise: "The one where every ball drains through a membrane into the ward, and the win wants two locked before they all get there."
+    sizeThreshold: 8
+    expectedCuts: 9
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, grey]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 8
+        - kind: locks
+          count: 2
+          bonusPercent: 20
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: divider-top
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 330
+        'y': 45
+        width: 26
+        height: 285
+      - id: membrane
+        kind: wall
+        shape: rect
+        x: 330
+        'y': 330
+        width: 26
+        height: 240
+        oneWay: left
+      - id: divider-bottom
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 330
+        'y': 570
+        width: 26
+        height: 285
+      - id: intake-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+      - id: ward-post-n
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 190
+        cy: 290
+        radius: 50
+      - id: ward-post-s
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 190
+        cy: 620
+        radius: 50
+    balls: []
+
+  # 32 "Story Points" - MEET WIP limit, USE charge, USE chest.
+  #
+  # Twenty-six fences for the whole map, and a vault in the top-left corner sealed
+  # by a plug no ball breaks by hand. The budget is the new thing, and the
+  # vault is what it prices: the plug is in the win, and the vault behind it
+  # opens as new board the moment the plug goes, so every fence its ground
+  # costs comes out of the same twenty-six. A fence routed over the fuse under the
+  # plug arms the charge (act III's verb, on its second map) and blows it when
+  # YOU choose, early, while the budget is fat and the vault's floor is cheap
+  # to take; leave it, and the plug goes by itself at 25% remaining, when the
+  # vault is the last thing you can afford. The chest inside is the greed hook
+  # (the chest on its Use): it pays for the balls you let into the vault to
+  # break it, and costs you the time and the fences to let them. The blast
+  # fractures your own fences near the plug, so arm it before you build there.
+  # Running out of fences loses a life and restarts the map; the HUD counts
+  # them down, so the price is on screen before every cut. The budget is set
+  # from the bot's floor (it needs 25-36 cuts here unbudgeted, three times par,
+  # and wins 8 of 16 at 26); a human at par has a dozen fences to spare, and
+  # only a playtest can say how far below 26 it should go.
+  # Heights (3D board, objectRise.ts): the vault walls stand tall, the plug proud as the monolith it is; the posts are anchors, the lip low.
+  - id: level-32
+    name: Story Points
+    level: 32
+    premise: "The one where twenty-six fences have to cover the board and the vault behind the plug, so you choose when the vault opens."
+    sizeThreshold: 7
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, purple]
+    timeLimit: 45
+    fenceBudget: 26
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: smashed
+          count: 1
+          of: monoliths
+          bonusPercent: 15
+    charges:
+      - fuse:
+          x: 185
+          'y': 345
+        radius: 32
+        targetId: plug
+        delaySeconds: 1.4
+        blastRadius: 190
+        announce: game.chargeBlown
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+      - id: deadline
+        atSpaceRemaining: 25
+        breakId: plug
+        announce: game.beatDeadline
+    entities:
+      - id: vault-east
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 275
+        'y': 45
+        width: 26
+        height: 256
+      - id: vault-south-a
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 275
+        width: 75
+        height: 26
+      - id: plug
+        kind: wall
+        shape: rect
+        x: 120
+        'y': 270
+        width: 155
+        height: 36
+        breakable: true
+        hitsToBreak: 40
+        reveals:
+          x: 51
+          'y': 51
+          width: 218
+          height: 218
+      - id: vault-chest
+        kind: wall
+        shape: rect
+        x: 110
+        'y': 120
+        width: 100
+        height: 70
+        chest: true
+      - id: post-n
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 580
+        cy: 320
+        radius: 55
+      - id: post-s
+        rise: 1.3
+        kind: wall
+        shape: circle
+        cx: 400
+        cy: 630
+        radius: 55
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 681
+        width: 155
+        height: 24
+    balls: []
+
+  # 33 "Access Control" - COMPRESSED ball gate, USE portal.
+  #
+  # A wall runs across the lower third of the board, and the only door in it
+  # is a gate the compass alone may cross: family B's last sibling, a wall that
+  # changes where a ball goes by asking WHICH ball it is. Below it is the box,
+  # and the win wants a ball locked in it on top of the clear. The compass
+  # walks down whenever it likes; every other ball needs the portal (act III's
+  # on its second map), whose near mouth sits in the top-left corner and whose
+  # far mouth drops it into the strip beside the box. So there are two answers
+  # and they are different balls: wait for the compass to wander through the
+  # gate, or feed a ball into the portal on purpose. Either way the box has to
+  # be closed with a ball in it, against the strip's own floor, and a portal
+  # mouth is ground no region can lock in, so the box's fences go round the
+  # far mouth, never across it. The one-fence superior nook is under the
+  # top-right lip, for whoever is not needed below.
+  # Heights (3D board, objectRise.ts): the divider stands tall and the gate low, a door only one ball reads as open; the lip low.
+  - id: level-33
+    name: Access Control
+    level: 33
+    premise: "The one where only the compass may cross the gate down to the box, and the portal is the way down for everyone else."
+    sizeThreshold: 6
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, compass]
+    timeLimit: 45
+    win:
+      require:
+        - kind: space
+          threshold: 6
+        - kind: area
+          count: 1
+          bonusPercent: 25
+    coloredAreas:
+      - kind: dark
+        x: 45
+        'y': 655
+        width: 200
+        height: 200
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: divider-left
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 560
+        width: 330
+        height: 26
+      - id: compass-gate
+        kind: wall
+        shape: rect
+        x: 375
+        'y': 560
+        width: 150
+        height: 26
+        passTypes: [compass]
+      - id: divider-right
+        rise: 1.5
+        kind: wall
+        shape: rect
+        x: 525
+        'y': 560
+        width: 330
+        height: 26
+      - id: warp-up
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 380
+        radius: 34
+        portal: down
+      - id: warp-down
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 730
+        radius: 34
+        portal: down
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 195
+        width: 155
+        height: 24
+    balls: []
+
+  # 34 "Code Freeze" - the skill check. Nothing new.
+  #
+  # Act IV's three prices on one board: a budget of fences (32), a win that
+  # wants balls locked and not just ground (31), and a bar across the middle
+  # that latches open the moment you lock your first ball (the latch from 26,
+  # on its second map). The bar is the cheapest anchor on the board: a fence
+  # from the frame to the bar closes a chamber at half the length of one that
+  # has to cross the room. But it is also what the first lock takes away, and
+  # the win needs two locks. So the order is the map: build your chambers
+  # against the bar while it stands and lock afterwards, or take an early lock
+  # and redo the plan without it, on the same twenty-two fences. Both ends of
+  # the bar stand clear of the frame, so it never divides the board, and the
+  # one-fence superior nook is under the bottom-right lip, where a lock can be
+  # cheap if it is the second one rather than the first.
+  # Heights (3D board, objectRise.ts): the bar stands at a slab's height, an anchor that is plainly not a wall for good; the lip low.
+  - id: level-34
+    name: Code Freeze
+    level: 34
+    premise: "The one where twenty-two fences have to clear the board and lock two balls, and the bar that saves you fences lifts at your first lock."
+    sizeThreshold: 5
+    expectedCuts: 10
+    points: 5
+    maxBalls: 3
+    variety: 0
+    randomShapes: 0
+    ballTypeIds: [red, blue, yellow]
+    timeLimit: 45
+    fenceBudget: 22
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: locks
+          count: 2
+          bonusPercent: 20
+    beats:
+      - id: crunch
+        atSpaceRemaining: 35
+        speedSpike: 0.12
+        announce: game.beatCrunchTime
+    entities:
+      - id: freeze-bar
+        rise: 1.0
+        kind: wall
+        shape: rect
+        x: 165
+        'y': 437
+        width: 570
+        height: 26
+        latchAfter: 1
+      - id: nook-lip
+        rise: 0.75
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 681
+        width: 155
+        height: 24
+    balls: []
+
+  # 35 "Hard Fork" - BOSS. Act IV closes on its own subject, the price of a
+  # cut, turned into a fight: the chained pair from 20 (each half takes two
+  # traps, the chain shreds any fence it sweeps) and the push from 30 (every
+  # twenty-five seconds every fence on the board is gone). Neither alone is
+  # new. Together they mean a half you wore down in one window has to be
+  # shipped in the next, because the fences that held it are not there any
+  # more: the first trap can be anywhere, the second must be in the light box
+  # top left, and both halves must end up there. The two phasing pillars snag
+  # the chain while they stand and shove the pair loose when they fade, so a
+  # pillar is a place to pin the pair for a window and a clock for when it
+  # comes free.
+  # Heights (3D board, objectRise.ts): the pillars stand tall, the snags the whole fight turns on.
+  - id: level-35
+    name: Hard Fork
+    level: 35
+    premise: "The one where a chained pair wipes every fence every twenty-five seconds, so each half is worn down in one window and shipped in the next."
+    sizeThreshold: 14
+    expectedCuts: 8
+    points: 5
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    timeLimit: 120
+    coloredAreas:
+      - kind: light
+        x: 45
+        'y': 45
+        width: 335
+        height: 335
+    boss:
+      name: Hard Fork
+      intro: "The repository has split in two, and the halves are chained together. Each half takes two traps: the first can be anywhere and only tears it loose, faster and smaller, and the second must be inside the light box, top left, with both halves ending up there. Their chain shreds any fence it sweeps, and every twenty-five seconds the pair stops, shudders and wipes every fence on the board. The pillars snag the chain while they stand."
+      creepFromStart: true
+      objective:
+        id: defeat-hard-fork
+        name: Merge the Hard Fork
+        description: Wear both chained halves down, then fence them into the light box, between two wipes.
+        clarify: "Each half takes two traps. The first can be anywhere and costs no life: the half breaks out faster and smaller, and one of your fences is reverted. The second must be inside the light box (top left), and both halves must end up there. Their chain breaks any fence it sweeps across and snags on the pillars. Every twenty-five seconds the pair stops and shudders, then wipes every fence on the board, finished or still growing. Running out of time fails the map."
+        kind: defeatBoss
+        reward: 20
+      bossBall:
+        hp: 2
+        count: 2
+        chained: true
+        radiusScale: 1.6
+        speedScale: 1.1
+        color: '#7c3aed'
+        fenceWipeSeconds: 25
+        spitIntervalSeconds: 0
+        maxMinions: 0
+    entities:
+      - id: pillar-n
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 300
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 11
+      - id: pillar-s
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 330
+        cy: 620
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 13
+    balls: []

@@ -19,7 +19,7 @@
  * + evaluateWinConditions, and rendering in the sleek renderer's area layer.
  */
 import type { AreaKind, ColoredArea } from "@/types/level";
-import { gridIndexToWorld, worldToGridIndex, CellState, type SpaceGrid } from "@/lib/spaceGrid";
+import { gridIndexToWorld, worldToGridIndex, CellState, linkedReach, type SpaceGrid } from "@/lib/spaceGrid";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
 /** The colours of one editor theme's highlighting, as #rrggbb. */
@@ -446,6 +446,16 @@ export function anyGateTargetCanReach(
   if (activeZoneCells === 0) return false;
   // Open ground the paint has no opinion about. Unknown, so: keep playing.
   if (owners.size === 0) return true;
+
+  // A board with a membrane, a gate or a portal: a ball can leave its region,
+  // so ask where it could ever get to rather than where it is (linkedReach).
+  if (grid.links?.length) {
+    const zone = areaCellIndices(grid, areas).filter(i => grid.cells[i] === CellState.ACTIVE);
+    for (const b of targets) {
+      const reach = linkedReach(grid, b.position, (b as { typeId?: string }).typeId);
+      if (reach && zone.some(i => reach[i])) return true;
+    }
+  }
 
   for (const b of targets) {
     const idx = worldToGridIndex(grid, b.position.x, b.position.y);
