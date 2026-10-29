@@ -23,7 +23,9 @@ const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => f.endsWith(".ogg")).sor
  * hidden or guessed at. This list may SHRINK, never grow: a second undocumented
  * track means somebody added music without recording where it came from.
  */
-const CREDIT_MISSING = ["maps_36-40.ogg"];
+// Empty: the one uncredited track (maps_36-40.ogg) was taken out before the
+// first Play build rather than shipped without a known licence.
+const CREDIT_MISSING: string[] = [];
 
 describe("music catalogue", () => {
   it("lists every track that ships, and only those", () => {
