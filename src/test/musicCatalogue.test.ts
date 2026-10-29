@@ -15,7 +15,8 @@ import sv from "@/i18n/locales/sv.json";
 const MUSIC_DIR = resolve(__dirname, "../../public/assets/music");
 const doc = yaml.load(readFileSync(resolve(__dirname, "../../public/music.yml"), "utf8")) as Record<string, unknown>;
 const catalogue = parseMusicDoc(doc);
-const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => f.endsWith(".ogg")).sort();
+// A track ships as Ogg Opus (the house format) or as MP3, which plays everywhere too.
+const filesOnDisk = readdirSync(MUSIC_DIR).filter((f) => /\.(ogg|mp3)$/.test(f)).sort();
 
 /**
  * The one track whose provenance was never written down (MUSIC.md jumps from
@@ -55,22 +56,36 @@ describe("music catalogue", () => {
     }
   });
 
-  it("says where each track is used, and the bands tile the ladder", () => {
+  it("says where each track is used, and each band sits on the 5-level grid", () => {
     const bands = catalogue.tracks
       .filter((t) => t.usedFor === "band")
       .sort((a, b) => (a.bandFrom ?? 0) - (b.bandFrom ?? 0));
     expect(bands.length).toBeGreaterThan(0);
-    let expected = 1;
+    let next = 1;
     for (const band of bands) {
       // Same 5-level banding gameMusic.musicFileForLevel derives from the name,
-      // so a row cannot claim a range the player will never hear it in.
-      expect(band.bandFrom).toBe(expected);
-      expect(band.bandTo).toBe(expected + 4);
-      expect(band.file).toBe(`maps_${band.bandFrom}-${band.bandTo}.ogg`);
-      expected += 5;
+      // so a row cannot claim a range the player will never hear it in. A band
+      // may be missing (its maps play main.ogg) but never overlap another.
+      expect(band.bandFrom).toBeGreaterThanOrEqual(next);
+      expect(((band.bandFrom ?? 0) - 1) % 5).toBe(0);
+      expect(band.bandTo).toBe((band.bandFrom ?? 0) + 4);
+      expect(band.file).toMatch(new RegExp(`^maps_${band.bandFrom}-${band.bandTo}\\.(ogg|mp3)$`));
+      next = (band.bandTo ?? 0) + 1;
     }
     expect(catalogue.tracks.filter((t) => t.usedFor === "menu")).toHaveLength(1);
     expect(catalogue.tracks.filter((t) => t.usedFor === "credits")).toHaveLength(1);
+  });
+
+  it("names the band each map of the ladder plays, or leaves it to main.ogg on purpose", () => {
+    // Bands with no track yet. A band may come OFF this list, never go on
+    // silently: a hole in the music is a decision, not an accident.
+    const UNSCORED = ["36-40"];
+    const ladder = yaml.load(readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8")) as { levels: { level: number }[] };
+    const top = Math.max(...ladder.levels.map((l) => l.level));
+    const covered = new Set(catalogue.tracks.filter((t) => t.usedFor === "band").map((t) => `${t.bandFrom}-${t.bandTo}`));
+    const missing: string[] = [];
+    for (let lo = 1; lo <= top; lo += 5) if (!covered.has(`${lo}-${lo + 4}`)) missing.push(`${lo}-${lo + 4}`);
+    expect(missing).toEqual(UNSCORED.filter((b) => Number(b.split("-")[0]) <= top));
   });
 
   it("carries a licence with a link", () => {

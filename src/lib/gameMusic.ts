@@ -4,8 +4,9 @@
 // GameScreen remount and keep playing). Track selection is driven by the current
 // level: a shared "main" loop plus one track per 5-level band (levels 1-5 ->
 // maps_1-5.ogg, 6-10 -> maps_6-10.ogg, ...). Switching crossfades between the two
-// elements so track changes are smooth, not abrupt. A missing/broken band track
-// falls back to main.ogg.
+// elements so track changes are smooth, not abrupt. A band may ship as .ogg or
+// .mp3 (music.yml names the file); a missing/broken band track falls back to
+// main.ogg.
 //
 // LOOPING IS IN TWO LAYERS, and the order matters. Each element has native
 // `loop` set, which is the floor and cannot fail. On top of that, a timeupdate
@@ -19,6 +20,7 @@
 // Files live in public/assets/music/ and are served at /assets/music/*.
 
 import { isAudioMuted } from "@/lib/gameAudio";
+import { getMusicCatalogue } from "@/lib/musicCatalogue";
 
 const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.ogg`;
@@ -39,6 +41,24 @@ export function musicFileForLevel(levelNumber: number): string {
   const lo = band * LEVELS_PER_BAND + 1;
   const hi = lo + LEVELS_PER_BAND - 1;
   return `${MUSIC_DIR}/maps_${lo}-${hi}.ogg`;
+}
+
+/**
+ * Every file a level's band may be in, best first. Once music.yml has loaded its
+ * row decides, so an .mp3 band is fetched as .mp3 and a band with no row goes
+ * straight to main; before that, the band name as .ogg and then as .mp3.
+ */
+export function musicSourcesForLevel(levelNumber: number): string[] {
+  const level = Math.max(1, Math.floor(levelNumber) || 1);
+  const catalogue = getMusicCatalogue();
+  if (catalogue) {
+    const row = catalogue.tracks.find(t =>
+      t.usedFor === "band" && t.bandFrom !== undefined && t.bandTo !== undefined &&
+      level >= t.bandFrom && level <= t.bandTo);
+    return row ? [row.src] : [];
+  }
+  const ogg = musicFileForLevel(level);
+  return [ogg, ogg.replace(/\.ogg$/, ".mp3")];
 }
 
 /** Band key for a level, used to avoid restarting music within the same band. */
@@ -187,12 +207,13 @@ function fadeTo(a: HTMLAudioElement, target: number, durationMs: number, gen: nu
 }
 
 /**
- * Crossfade to `src` (logical `key`). No-op if that track is already current, so
- * calling it every level only switches at band boundaries. When `withFallback`,
- * a load error swaps the incoming element to main.ogg without changing the key
- * (so a missing band file isn't re-attempted on every level in the band).
+ * Crossfade to the first of `sources` that loads (logical `key`). No-op if that
+ * track is already current, so calling it every level only switches at band
+ * boundaries. A load error moves the incoming element on to the next source,
+ * and with `withFallback` to main.ogg last, without changing the key (so a
+ * missing band file isn't re-attempted on every level in the band).
  */
-function switchTo(src: string, key: string, withFallback: boolean): void {
+function switchTo(sources: string | readonly string[], key: string, withFallback: boolean): void {
   if (key === currentKey) return;
   const pair = ensureDeck();
   if (!pair) return;
@@ -203,10 +224,16 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   const incoming = pair[(1 - activeIndex) as 0 | 1];
   const crossfade = !outgoing.paused;
 
-  incoming.onerror = withFallback
+  const queue = typeof sources === "string" ? [sources] : [...sources];
+  if (withFallback && queue[queue.length - 1] !== MAIN_TRACK) queue.push(MAIN_TRACK);
+  let src = queue.shift() ?? MAIN_TRACK;
+  incoming.onerror = queue.length
     ? () => {
-        incoming.onerror = null;
-        incoming.src = MAIN_TRACK; // fall back, keep the in-flight crossfade + key
+        const next = queue.shift();
+        if (!queue.length) incoming.onerror = null;
+        if (!next) return;
+        src = next;
+        incoming.src = next; // next source, keep the in-flight crossfade + key
         incoming.currentTime = 0;
         const pf = incoming.play();
         if (pf && typeof pf.catch === "function") pf.catch(() => armGestureUnlock());
@@ -281,7 +308,6 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   // the old element ends, so it's already silent when it stops. Stale handlers
   // (from earlier switches) cancel immediately via the fadeGen guard.
   const self = incoming;
-  const selfSrc = src;
   const selfKey = key;
   const selfFallback = withFallback;
   function onNearEnd() {
@@ -291,7 +317,7 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
     if (self.currentTime >= dur - crossfadeMs / 1000 - 0.5) {
       self.removeEventListener("timeupdate", onNearEnd);
       currentKey = null; // bypass the idempotency guard
-      switchTo(selfSrc, selfKey, selfFallback);
+      switchTo(src, selfKey, selfFallback); // the source that loaded, not the first tried
     }
   }
   self.addEventListener("timeupdate", onNearEnd);
@@ -300,11 +326,11 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
 /**
  * Play the track for the given level. Idempotent within a band, so calling it
  * every level (including across GameScreen remounts) crossfades only at band
- * boundaries and runs continuously through a 5-level stretch. Missing/broken band
- * files fall back to main.ogg.
+ * boundaries and runs continuously through a 5-level stretch. The band plays as
+ * .ogg or .mp3; missing/broken band files fall back to main.ogg.
  */
 export function playMusicForLevel(levelNumber: number): void {
-  switchTo(musicFileForLevel(levelNumber), bandKey(levelNumber), true);
+  switchTo(musicSourcesForLevel(levelNumber), bandKey(levelNumber), true);
 }
 
 /** Crossfade to the shared main loop (menus, or an explicit default). */

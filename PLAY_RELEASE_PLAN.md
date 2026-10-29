@@ -31,7 +31,7 @@ place for the very first upload, see step 5.)
 | Admin (ten taps on the menu ball) | **kept for the beta** (decided 2026-10-29); decide again before production |
 | Data safety answers | final for analytics on (section 4); PostHog stores no IP and derives no location (section 2, step 3) |
 | Content rating (IARC) | answers drafted below |
-| Music licence | every shipped track credited (Pixabay); the uncredited maps_36-40 track replaced by the owner's "Go For It!" (melodyayresgriffiths) |
+| Music licence | every shipped track credited (Pixabay); the uncredited maps_36-40 track removed (that band plays main.ogg); the owner's "Go For It!" (melodyayresgriffiths) on 41-45 |
 
 ## 2. What only the owner can do
 
@@ -119,11 +119,12 @@ place for the very first upload, see step 5.)
    Index). It carries the device check and the touch trace, which is why it
    stays; it also carries the Playground, infinite lives and map editing,
    which a tester could find. Decide again before production.
-3. **maps_36-40: REPLACED** (2026-10-29). The uncredited track is gone; the
-   owner's "Go For It!" by melodyayresgriffiths (Pixabay, credited in
-   `public/music.yml`) holds the band now. It was pushed as maps_41-45.mp3;
-   bands must tile with no gap and play as Ogg Opus, so it became
-   maps_36-40.ogg. The catalogue test allows no uncredited track at all.
+3. **maps_36-40: REMOVED, no track yet** (2026-10-29). The uncredited track
+   is gone and those maps play main.ogg until the owner adds one. The owner's
+   "Go For It!" (melodyayresgriffiths, Pixabay, credited in `public/music.yml`)
+   plays on 41-45 as the .mp3 it was pushed as: a band can be .ogg or .mp3. The
+   catalogue test allows no uncredited track at all, and names 36-40 as the one
+   band left to main.ogg on purpose.
 4. **Where the privacy policy lives.** Play needs a public URL that stays up.
    Options: a production web host (is there one besides staging?), GitHub
    Pages, or the staging host (works, but tied to staging staying up).

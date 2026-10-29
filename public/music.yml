@@ -85,17 +85,17 @@ tracks:
     bandFrom: 31
     bandTo: 35
 
-  # The owner's replacement for the uncredited track that held this band
-  # (removed before the first Play build). Pushed as maps_41-45.mp3; bands
-  # must tile the ladder with no gap and play as Ogg Opus, so it fills 36-40.
-  - file: maps_36-40.ogg
+  # 36-40 has no track yet (its uncredited one came out before the first Play
+  # build): those maps play main.ogg until one is added. A band can be .ogg or
+  # .mp3; gameMusic plays whichever file its row names.
+  - file: maps_41-45.mp3
     title: Go For It!
     artist: melodyayresgriffiths
     source: Pixabay
     url: https://pixabay.com/music/video-games-go-for-it-80s-cheesy-vhs-infomercial-synthpop-soundtrack-187085/
     usedFor: band
-    bandFrom: 36
-    bandTo: 40
+    bandFrom: 41
+    bandTo: 45
 
   - file: end-credits.ogg
     title: Fun 8-Bit Video Game Music
