@@ -2183,8 +2183,8 @@
       },
       "defeat-force-push": {
         "name": "Stoppa Force Push",
-        "description": "Stängsla in det svarta bygget i den ljusa rutan, mellan två pushar.",
-        "clarify": "Fånga det svarta bygget i den ljusa rutan (nere till vänster) för att vinna, med en enda fångst. Var tjugonde sekund stannar det och skakar, och förstör sedan varje staket på brädet, färdigt eller fortfarande växande; den uppladdningen är din signal. Fångar du det utanför rutan förlorar du ett liv och banan börjar om, och detsamma gäller om tiden tar slut."
+        "description": "Stängsla in båda de svarta byggena i de ljusa rutorna, mellan pusharna.",
+        "clarify": "Fånga båda de svarta byggena i de ljusa rutorna (nere till vänster och uppe till höger) för att vinna, en fångst vardera; vilken ruta som helst tar vilket bygge som helst. Var tjugonde sekund stannar de och skakar, och förstör sedan varje staket på brädet, färdigt eller fortfarande växande; den uppladdningen är din signal. Ett bygge du har fångat förblir fångat. Fångar du ett utanför rutorna förlorar du ett liv och banan börjar om, och detsamma gäller om tiden tar slut."
       },
       "defeat-hard-fork": {
         "name": "Slå ihop Hard Fork",
@@ -2239,7 +2239,7 @@
       },
       "level-30": {
         "name": "Force Push",
-        "intro": "Ett tungt svart bygge som skriver över ditt arbete: var tjugonde sekund stannar det, skakar och krossar varje staket på brädet, färdigt eller inte. Inget du ritar överlever nästa push, så det här är en enda ren fälla i den ljusa rutan nere till vänster, byggd inom ett enda fönster. Uppladdningen är när det står still. En frysning som hålls över pushen ger dig en andra chans."
+        "intro": "Två tunga svarta byggen som skriver över ditt arbete, ett långsamt och ett snabbt: var tjugonde sekund stannar de, skakar och krossar varje staket på brädet, färdigt eller inte. Inget du ritar överlever nästa push, så varje bygge är en ren fälla in i en ljus ruta (nere till vänster eller uppe till höger), byggd inom ett enda fönster. Ett fångat bygge förblir fångat. Uppladdningen är när de står still. En frysning som hålls över pushen ger dig en andra chans."
       },
       "level-35": {
         "name": "Hard Fork",
@@ -2373,7 +2373,7 @@
       },
       "level-30": {
         "name": "Force Push",
-        "premise": "Den där ett svart bygge krossar varje staket på brädet var tjugonde sekund, så fällan måste byggas inom ett enda fönster."
+        "premise": "Den där ett långsamt och ett snabbt svart bygge krossar varje staket var tjugonde sekund, så varje fälla ryms i ett fönster."
       },
       "level-31": {
         "name": "Triage",
@@ -2629,6 +2629,7 @@
     "needHarvested": "Skorda {{target}} strackor av flodet (du hade {{current}})",
     "objectiveBuried": "Du stängde in ett förstörbart objekt du fortfarande måste krossa",
     "requirementUnreachable": "Du stängde in något som den här kartan fortfarande behöver",
+    "bossOutside": "Du fångade en boss utanför rutorna",
     "needSplitLocks": "Lås in {{each}} på varje sida av planen (du klarade {{current}} av {{target}} sidor)",
     "needSmashedShards": "Krossa {{target}} skärvor (du hade {{current}})",
     "needSmashedMonoliths": "Krossa {{target}} monoliter (du hade {{current}})"

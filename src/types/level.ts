@@ -942,6 +942,12 @@ export interface BossBall {
   // ── Multi-boss + attacks (issue #64) ─────────────────────────────────────
   /** How many boss balls spawn (default 1). 2 = an interlinked pair (L20/L35). */
   count?: number;
+  /**
+   * Per-ball speed multipliers, one per spawned boss (index = spawn order),
+   * overriding `speedScale` for that ball. Lets a pair be one slow boss and one
+   * fast one (L30); a missing entry falls back to `speedScale`.
+   */
+  speedScales?: number[];
   /** Link the spawned boss balls together with a fence-breaking chain (a pair). */
   chained?: boolean;
   /** Periodic "wipe all player fences" attack: seconds between wipes (0 = never). */

@@ -1369,18 +1369,35 @@ that clock, not the sweep's 60s budget.
 
 #### 30 "Force Push" - BOSS  *(built)*
 
-**Every twenty seconds the black build stops, shudders and shatters every fence
+**Every twenty seconds the black builds stop, shudder and shatter every fence
 on the board, finished or not.** Act III's subject - the board acting on its own
 schedule - turned on the one thing the player owns. Nothing outlives the next
-push, so it is one clean trap in the light box (bottom left this time, so the
-three bosses do not share a corner), built from scratch inside one window; the
-wind-up is the tell, and a freeze held over it buys a second look. Two posts sit
-a fence's length from the box: the anchors a fast trap is built against.
+push, so each trap is built from scratch inside one window; the wind-up is the
+tell, and a freeze held over it buys a second look.
 
-**Bot sweep, 16 seeds, on the map's own clock: 4 of 16**, every loss a `lockedOut` (the boss trapped
-outside the box), against 10's 3 of 8 and 20's 1 of 8. Bosses are the bot's
-floor, not the map's: it has no plan for a zone it must herd a ball into, and
-the board's chaos swings a boss sweep by several seeds on a single radius.
+**Two builds, one slow and one fast, and two light boxes** (bottom left and top
+right), asked for as "the boss on level 30 should be harder". They are loose,
+not chained (the chain is 20's and 35's), and either box takes either build.
+`bossBall.speedScales` gives each its own speed, 0.9 and 1.6 against the old
+single 1.25: the slow one is the build you can plan a trap around, and the fast
+one is why it cannot be left for last. A trapped build stays trapped through the
+next push, because the wipe takes fences, never a locked pocket. One post sits a
+fence's length from each box's open side: the anchors a fast trap is built
+against. The clock went from 80s to 110s (two traps), and the reward from 16 to 20.
+
+Two engine changes came with it. The gate's 70% coverage rule pooled every gate
+box together, so with two boxes a pocket that took one box whole covered half
+the pool and did not count; it now reads each box on its own
+(`regionCoversAnyArea`). And a boss trapped outside the boxes used to end the
+map only through the lock-out, when nothing was left in play; with a second
+boss still loose the map ran on to the clock, unwinnable. It now fails on the
+trap (`bossOutside`, coloredAreas.bossTrappedOutside), on every boss map.
+
+**Bot sweep, 16 seeds, on the map's own clock: 2 of 16** (the single-boss
+version: 4 of 16), every loss a `bossOutside` (a build trapped outside the
+boxes). Bosses are the bot's floor, not the map's: it has no plan for a zone it
+must herd a ball into, and the board's chaos swings a boss sweep by several
+seeds on a single radius.
 
 ### Act IV - Crunch (31-35)  *(built)*
 

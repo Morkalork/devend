@@ -2183,8 +2183,8 @@
       },
       "defeat-force-push": {
         "name": "Contener el Force Push",
-        "description": "Encierra la build negra en la caja clara, entre dos pushes.",
-        "clarify": "Atrapa la build negra dentro de la caja clara (abajo a la izquierda) para ganar, en una sola atrapada. Cada veinte segundos se detiene y tiembla, y luego destruye cada valla del tablero, terminada o aún creciendo; esa carga es tu señal. Atraparla fuera de la caja cuesta una vida y reinicia el mapa, y lo mismo pasa si se acaba el tiempo."
+        "description": "Encierra las dos builds negras en las cajas claras, entre pushes.",
+        "clarify": "Atrapa las dos builds negras dentro de las cajas claras (abajo a la izquierda y arriba a la derecha) para ganar, una atrapada cada una; cualquier caja sirve para cualquier build. Cada veinte segundos se detienen y tiemblan, y luego destruyen cada valla del tablero, terminada o aún creciendo; esa carga es tu señal. Una build que has atrapado sigue atrapada. Atrapar una fuera de las cajas cuesta una vida y reinicia el mapa, y lo mismo pasa si se acaba el tiempo."
       },
       "defeat-hard-fork": {
         "name": "Fusionar el Hard Fork",
@@ -2239,7 +2239,7 @@
       },
       "level-30": {
         "name": "Force Push",
-        "intro": "Una build negra y pesada que sobrescribe tu trabajo: cada veinte segundos se detiene, tiembla y destroza cada valla del tablero, terminada o no. Nada de lo que dibujes sobrevive al siguiente push, así que esto es una sola trampa limpia en la caja clara, abajo a la izquierda, construida en una única ventana. La carga es cuando se queda quieta. Una congelación mantenida durante el push te da una segunda oportunidad."
+        "intro": "Dos builds negras y pesadas que sobrescriben tu trabajo, una lenta y una rápida: cada veinte segundos se detienen, tiemblan y destrozan cada valla del tablero, terminada o no. Nada de lo que dibujes sobrevive al siguiente push, así que cada una es una trampa limpia hacia una caja clara (abajo a la izquierda o arriba a la derecha), construida en una única ventana. Una build atrapada sigue atrapada. La carga es cuando se quedan quietas. Una congelación mantenida durante el push te da una segunda oportunidad."
       },
       "level-35": {
         "name": "Hard Fork",
@@ -2373,7 +2373,7 @@
       },
       "level-30": {
         "name": "Force Push",
-        "premise": "En la que una build negra destroza cada valla del tablero cada veinte segundos, así que la trampa hay que construirla en una sola ventana."
+        "premise": "En la que una build negra lenta y una rápida destrozan cada valla cada veinte segundos, así que cada trampa cabe en una ventana."
       },
       "level-31": {
         "name": "Triage",
@@ -2629,6 +2629,7 @@
     "needHarvested": "Cosecha {{target}} tramos del flujo (tenias {{current}})",
     "objectiveBuried": "Has cercado un objeto destructible que aún tenías que romper",
     "requirementUnreachable": "Has cercado algo que este mapa aún necesita",
+    "bossOutside": "Atrapaste a un jefe fuera de las cajas",
     "needSplitLocks": "Encerrar {{each}} en cada lado del tablero (cubriste {{current}} de {{target}} lados)",
     "needSmashedShards": "Rompe {{target}} fragmentos (tenías {{current}})",
     "needSmashedMonoliths": "Rompe {{target}} monolitos (tenías {{current}})"

@@ -93,7 +93,9 @@ describe("what a fence break is allowed to cost", () => {
       // either way - what it asked for cannot happen on this board any more -
       // so the only question was whether to end the run, and a stranding is a
       // mistake a replay fixes.
-      "areaUnreachable", "ballHitFence", "launcherPrematureLock",
+      // bossOutside costs a life too: a boss trapped outside the boxes is
+      // locked and unshipped, so the map is over, and a replay fixes it.
+      "areaUnreachable", "ballHitFence", "bossOutside", "launcherPrematureLock",
       "lockedOut", "moverHitFence", "objectiveBuried", "outOfFences",
       "requirementUnreachable", "timeUp",
     ]);

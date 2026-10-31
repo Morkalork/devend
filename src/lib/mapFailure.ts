@@ -99,7 +99,13 @@ export type MapFailKind =
    * ended nor failed, and the only exit was to lock the last ball on the wrong
    * side on purpose.
    */
-  | "requirementUnreachable";
+  | "requirementUnreachable"
+  /**
+   * A boss was trapped outside every gate box, so it is locked and unshipped
+   * and can never be shipped. Its own kind because the lesson is exact: the
+   * trap was right, the place was wrong (coloredAreas.bossTrappedOutside).
+   */
+  | "bossOutside";
 
 /**
  * Every kind, as a runtime list.
@@ -119,6 +125,7 @@ const ALL_FAIL_KINDS: Record<MapFailKind, true> = {
   lockedOut: true,
   objectiveBuried: true,
   requirementUnreachable: true,
+  bossOutside: true,
 };
 
 export const MAP_FAIL_KINDS = Object.keys(ALL_FAIL_KINDS) as MapFailKind[];

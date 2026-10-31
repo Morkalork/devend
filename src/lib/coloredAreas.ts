@@ -230,6 +230,28 @@ export function regionCoversAreas(
 }
 
 /**
+ * Does the region cover enough of ANY ONE of these areas (or of them all
+ * together)?
+ *
+ * The gate's coverage rule asked about the areas as one pool, which is the same
+ * thing while a map has one gate. With two (level 30's two boxes) the pool is
+ * both boxes, and a pocket that took all of one box covered half the pool and
+ * did not count. Each box is its own zone, as areaForLock already reads them;
+ * the pooled test is kept so nothing that counted before stops counting.
+ */
+export function regionCoversAnyArea(
+  grid: SpaceGrid,
+  cellIndices: number[],
+  areas: ColoredArea[],
+  minFraction: number,
+): boolean {
+  if (areas.some(a => regionCoversAreas(grid, cellIndices, [a], minFraction))) {
+    return true;
+  }
+  return regionCoversAreas(grid, cellIndices, areas, minFraction);
+}
+
+/**
  * The fraction of the given areas' cells that the region covers, 0 when there
  * is nothing to measure. Split out of regionCoversAreas so diagnostics can
  * report HOW CLOSE a lock came, which is the difference between "the rule is
@@ -356,6 +378,22 @@ export function gateTargets<T extends { state: string; isBoss?: boolean }>(
 ): T[] {
   const hasBoss = balls.some(b => b.isBoss);
   return balls.filter(b => b.state !== "won" && (!hasBoss || b.isBoss));
+}
+
+/**
+ * A boss locked somewhere that does not ship it: trapped outside every gate box.
+ *
+ * checkBallWonState ships a boss only when its trap lands in a gate; a trap
+ * anywhere else still locks it, unshipped, and an unshipped locked boss can
+ * never be shipped again. With one boss that was always the end of the map,
+ * through the lock-out (nothing left in play). With two loose bosses (level
+ * 30) the other is still bouncing, so the map ran on to the clock, unwinnable
+ * since the wrong trap. Read on its own so the map can end on the trap.
+ */
+export function bossTrappedOutside(
+  balls: ReadonlyArray<{ state: string; isBoss?: boolean; bossShipped?: boolean }>,
+): boolean {
+  return balls.some(b => !!b.isBoss && b.state === "won" && !b.bossShipped);
 }
 
 /**

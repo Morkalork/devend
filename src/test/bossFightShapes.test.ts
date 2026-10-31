@@ -98,12 +98,18 @@ describe("each boss fight is shaped differently from the others", () => {
   });
 
   it("makes level 30 about the clock on your build, not on the boss", () => {
-    // One trap, but nothing you build survives two wipes, so the whole job has
-    // to fit in one window. A slower boss than before: the pressure is the wipe.
+    // One trap per build, but nothing you build survives two wipes, so each
+    // trap has to fit in one window. Two builds, one slow and one fast, loose
+    // (not chained, which is 20's and 35's), each with a box of its own.
     const b = ball(30);
     expect(b.hp ?? 1).toBe(1);
+    expect(b.count ?? 1).toBe(2);
+    expect(b.chained ?? false).toBe(false);
     expect(b.fenceWipeSeconds ?? 0).toBeLessThanOrEqual(20);
-    expect(b.speedScale ?? 1).toBeLessThan(1.45);
+    const [slow, fast] = b.speedScales ?? [];
+    expect(slow, "the slow build").toBeLessThan(b.speedScale ?? 1.2);
+    expect(fast, "the fast build").toBeGreaterThan(b.speedScale ?? 1.2);
+    expect((at(30).coloredAreas ?? []).filter(a => a.required !== false)).toHaveLength(2);
   });
 
   it("makes level 35 the pair under the push", () => {

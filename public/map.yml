@@ -3683,67 +3683,80 @@ levels:
 
   # 30 "Force Push" - BOSS. Act III closes on the board acting on its own
   # schedule, turned on the one thing the player owns: every twenty seconds the
-  # black build stops, shudders, and shatters every fence on the board, finished
+  # black builds stop, shudder, and shatter every fence on the board, finished
   # or not. Nothing outlives the next push, so this is not a boss you grind
-  # down: it is one clean trap, built from scratch inside a single window. The
-  # wind-up is the window's start and the tell (it stands still), and a freeze
-  # held over the wipe buys a second look at it. One trap, in the light box in
-  # the bottom left; trapped anywhere else it costs a life.
-  # The two posts are the anchors a fast trap is built against: each sits a
-  # fence's length from the box, so the window is one fence to cut the box's
-  # side off and one to close it. A boss sits below the map before it (section
-  # 5): the fight is the objective, not the clear.
+  # down: it is clean traps, each built from scratch inside a single window.
+  # The wind-up is the window's start and the tell (they stand still), and a
+  # freeze held over the wipe buys a second look at it.
+  # Two builds, one slow and one fast, and two light boxes in opposite corners
+  # (bottom left, top right). Each build is one trap into either box; trapped
+  # anywhere else it costs a life (mapFailure bossOutside). The slow one is the
+  # build you can plan a trap around; the fast one is the reason you cannot
+  # leave it for last and still have time. A trapped build stays trapped
+  # through the next push: the wipe takes fences, never a locked pocket.
+  # The two posts are the anchors a fast trap is built against, one per box:
+  # each sits a fence's length from its box's open side, so the window is one
+  # fence to cut the box's side off and one to close it. A boss sits below the
+  # map before it (section 5): the fight is the objective, not the clear.
   # Heights (3D board, objectRise.ts): the posts stand tall, the anchors the whole fight is built against.
   - id: level-30
     name: Force Push
     level: 30
-    premise: "The one where a black build shatters every fence on the board every twenty seconds, so the trap has to be built inside one window."
+    premise: "The one where a slow and a fast black build shatter every fence every twenty seconds, so each trap fits in one window."
     sizeThreshold: 12
-    expectedCuts: 8
+    expectedCuts: 12
     points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 1
-    timeLimit: 80
+    timeLimit: 110
     coloredAreas:
       - kind: light
         x: 45
         'y': 520
         width: 335
         height: 335
+      - kind: light
+        x: 520
+        'y': 45
+        width: 335
+        height: 335
     boss:
       name: Force Push
-      intro: "A heavy black build that overwrites your work: every twenty seconds it stops, shudders and shatters every fence on the board, finished or not. Nothing you draw outlives the next push, so this is one clean trap in the light box, bottom left, built inside a single window. The wind-up is when it stands still. A freeze held over the push buys you a second look."
+      intro: "Two heavy black builds that overwrite your work, one slow and one fast: every twenty seconds they stop, shudder and shatter every fence on the board, finished or not. Nothing you draw outlives the next push, so each one is a clean trap into a light box (bottom left or top right), built inside a single window. A trapped build stays trapped. The wind-up is when they stand still. A freeze held over the push buys you a second look."
       creepFromStart: false
       objective:
         id: defeat-force-push
         name: Contain the Force Push
-        description: Fence the black build into the light box, between two pushes.
-        clarify: "Trap the black build inside the light box (bottom left) to win, in one trap. Every twenty seconds it stops and shudders, then destroys every fence on the board, finished or still growing; that wind-up is your cue. Trapping it outside the box costs a life and restarts the map, and so does running out of time."
+        description: Fence both black builds into the light boxes, between pushes.
+        clarify: "Trap both black builds inside the light boxes (bottom left and top right) to win, one trap each; either box takes either build. Every twenty seconds they stop and shudder, then destroy every fence on the board, finished or still growing; that wind-up is your cue. A build you have trapped stays trapped. Trapping one outside the boxes costs a life and restarts the map, and so does running out of time."
         kind: defeatBoss
-        reward: 16
+        reward: 20
       bossBall:
         hp: 1
+        count: 2
         radiusScale: 2.2
+        # The slow build first, the fast one second (spawn order).
         speedScale: 1.25
+        speedScales: [0.9, 1.6]
         color: '#2b2f3a'
         fenceWipeSeconds: 20
         spitIntervalSeconds: 0
         maxMinions: 0
     entities:
-      - id: post-n
-        rise: 1.8
-        kind: wall
-        shape: circle
-        cx: 210
-        cy: 330
-        radius: 60
-      - id: post-e
+      - id: post-sw
         rise: 1.8
         kind: wall
         shape: circle
         cx: 570
         cy: 690
+        radius: 55
+      - id: post-ne
+        rise: 1.8
+        kind: wall
+        shape: circle
+        cx: 330
+        cy: 210
         radius: 55
     balls: []
 

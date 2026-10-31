@@ -1202,6 +1202,7 @@
     "needHarvested": "Harvest {{target}} stretches of the stream (you had {{current}})",
     "objectiveBuried": "You fenced off a breakable you still had to smash",
     "requirementUnreachable": "You fenced off something this map still needs",
+    "bossOutside": "You trapped a boss outside the boxes",
     "needSplitLocks": "Lock {{each}} on each side of the board (you covered {{current}} of {{target}} sides)",
     "needSmashedShards": "Break {{target}} shards (you had {{current}})",
     "needSmashedMonoliths": "Break {{target}} monoliths (you had {{current}})"

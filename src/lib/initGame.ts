@@ -1075,7 +1075,7 @@ export function createInitialGameData(
       const bosses: Ball[] = [];
       for (let bi = 0; bi < count; bi++) {
         const boss = createBall(
-          baseType, bossPositions[bi], speedScale * (bossBall.speedScale ?? 1.2),
+          baseType, bossPositions[bi], speedScale * (bossBall.speedScales?.[bi] ?? bossBall.speedScale ?? 1.2),
           bossRadius, count > 1 ? `boss-rc-${bi}` : "boss-rc", spawnTime, 0,
         );
         boss.isBoss = true;

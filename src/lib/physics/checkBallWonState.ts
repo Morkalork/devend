@@ -7,6 +7,7 @@ import {
   gateAreas,
   regionWithinAreas,
   regionCoversAreas,
+  regionCoversAnyArea,
   regionCoverFraction,
 } from "@/lib/coloredAreas";
 import type { ColoredArea } from "@/types/level";
@@ -546,7 +547,7 @@ export function checkAndUpdateBallWonStates(
     // too strict). Only reached after the lock gate above, so `ballRegion` is a
     // real seal, not the open board.
     const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, gates) !== null)
-      || (areaGate && regionCoversAreas(game.spaceGrid, ballRegion.cellIndices, gates, AREA_COVER_FRACTION))
+      || (areaGate && regionCoversAnyArea(game.spaceGrid, ballRegion.cellIndices, gates, AREA_COVER_FRACTION))
       || containedInGate;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 

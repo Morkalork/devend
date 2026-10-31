@@ -49,7 +49,7 @@ import {
 } from "@/lib/spaceGrid";
 import {
   areaCellIndices, gateAreas, gateTargets, sealedPendingCells, coloredAreaAt,
-  regionCoversAreas, regionWithinAreas,
+  regionCoversAreas, regionCoversAnyArea, regionWithinAreas,
 } from "@/lib/coloredAreas";
 import { evaluateWinCondition } from "@/lib/winSpec";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
@@ -97,7 +97,7 @@ function zoneStillWinnable(
   const credits = (r: { cellIndices: number[] }, balls: typeof targets) =>
     zoneCellsIn(r) > 0 && (
       balls.some(b => coloredAreaAt(b.position.x, b.position.y, gates) !== null)
-      || regionCoversAreas(grid, r.cellIndices, gates, AREA_COVER_FRACTION)
+      || regionCoversAnyArea(grid, r.cellIndices, gates, AREA_COVER_FRACTION)
       || regionWithinAreas(grid, r.cellIndices, gates));
 
   let moving = game.balls.filter(b => b.state !== "won" && b.state !== "dormant" && b.speed > 0);

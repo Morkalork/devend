@@ -44,7 +44,7 @@ import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
-import { anyGateTargetCanReach, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
+import { anyGateTargetCanReach, bossTrappedOutside, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
 import { cutWouldBuryArea } from "@/lib/physics/areaReach";
@@ -752,6 +752,16 @@ export function evaluateWinConditions(
     failMapCostingALife(
       game, level, levelNumber, activeModifiers, callbacks,
       mapFailure("objectiveBuried", spec, snap));
+    return null;
+  }
+
+  // A boss trapped outside the boxes. It is locked and was not shipped, so the
+  // boss clause can never be met; say so on the trap rather than at the clock
+  // (bossTrappedOutside says why a pair needed this).
+  if (!game.bossDefeated && bossTrappedOutside(game.balls)) {
+    failMapCostingALife(
+      game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("bossOutside", spec, snap));
     return null;
   }
 
