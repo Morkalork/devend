@@ -1595,6 +1595,18 @@
       "hotfix_tripwire": {
         "name": "Hotfix-snubbeltråd",
         "description": "Ger Snubbeltråd-staketet: byggs 40% snabbare, och första bollen som nuddar det har sönder det."
+      },
+      "horizontal_scaling": {
+        "name": "Horizontal Scaling",
+        "description": "Varje lås räknas som en boll till för multiplikatorn för samtidiga fångster, ovanpå allt annat."
+      },
+      "hot_standby": {
+        "name": "Hot Standby",
+        "description": "En frysning till på varje bana."
+      },
+      "release_train": {
+        "name": "Release Train",
+        "description": "Ett kort till i varje butik."
       }
     },
     "tiers": {

@@ -103,6 +103,9 @@ import {
   RotateCcw,
   MousePointerClick,
   Sunrise,
+  Scaling,
+  ServerCog,
+  TrainFront,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -159,6 +162,10 @@ export const UPGRADE_ICONS: Record<string, LucideIcon> = {
   zap: Zap,
   'flame-kindling': FlameKindling,
   'thermometer-snowflake': ThermometerSnowflake,
+  // The late shelf (LATE_GAME_PLAN.md).
+  scaling: Scaling,
+  'server-cog': ServerCog,
+  'train-front': TrainFront,
   'arrow-down-to-dot': ArrowDownToDot,
   binoculars: Binoculars,
   'land-plot': LandPlot,

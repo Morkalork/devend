@@ -2000,6 +2000,18 @@
       "hotfix_tripwire": {
         "name": "হটফিক্স ট্রিপওয়্যার",
         "description": "ট্রিপওয়্যার বেড়া যোগ করে: 40% দ্রুত তৈরি হয়, আর প্রথম যে বল ছোঁয় সেটাই ভেঙে দেয়।"
+      },
+      "horizontal_scaling": {
+        "name": "Horizontal Scaling",
+        "description": "প্রতিটা লক একসঙ্গে-ফাঁদের গুণকের জন্য আরও একটা বল হিসেবে গোনা হয়, বাকি সবকিছুর ওপরে।"
+      },
+      "hot_standby": {
+        "name": "Hot Standby",
+        "description": "প্রতিটা ম্যাপে আরও একটা ফ্রিজ।"
+      },
+      "release_train": {
+        "name": "Release Train",
+        "description": "প্রতিটা দোকানে আরও একটা কার্ড।"
       }
     },
     "tagSets": {

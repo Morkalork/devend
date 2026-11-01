@@ -60,3 +60,27 @@ describe("Slow Build", () => {
     expect(mutatorFenceSpeedFactor(byId("overclock"))).toBe(1);
   });
 });
+
+describe("the late shelf (LATE_GAME_PLAN.md, fix 3)", () => {
+  const ups = (yaml.load(readFileSync("public/upgrades.yml", "utf8")) as {
+    upgrades: { id: string; unlockLevel?: number; tags?: string[]; prerequisites?: string[] }[];
+  }).upgrades;
+
+  it("gives every archetype something new to unlock past map 30", () => {
+    for (const tag of ["lock", "freeze", "bank", "tempo", "risk", "safety"]) {
+      const late = ups.filter(u => (u.tags ?? []).includes(tag) && (u.unlockLevel ?? 1) >= 30);
+      expect(late.length, `${tag} has nothing past 30`).toBeGreaterThan(0);
+    }
+  });
+
+  it("hangs each capstone off a ladder that exists", () => {
+    const ids = new Set(ups.map(u => u.id));
+    for (const id of ["horizontal_scaling", "hot_standby", "release_train"]) {
+      const u = ups.find(x => x.id === id)!;
+      expect(u, id).toBeDefined();
+      for (const p of u.prerequisites ?? []) {
+        expect(ids.has(p), `${id} needs ${p}`).toBe(true);
+      }
+    }
+  });
+});

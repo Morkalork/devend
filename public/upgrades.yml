@@ -2415,3 +2415,48 @@ upgrades:
     tags: [tempo, bank]
     grantsFenceType: tripwire
     modifiers: {}
+
+  # ===============================
+  # LATE SHELF (LATE_GAME_PLAN.md, fix 3)
+  # One Wizard capstone each for the three archetypes whose last unlock came
+  # before act IV (lock 24, freeze 24, bank 18), so the shop still has
+  # something new to show in the late acts. Each hangs off a ladder the player
+  # may already own, and none sits on a two-way choice, so neither fork is
+  # locked out of it.
+  # ===============================
+
+  - id: horizontal_scaling
+    name: Horizontal Scaling
+    tier: Wizard
+    description: "Every lock counts as one more ball for the simultaneous-trap multiplier, on top of anything else."
+    unlockLevel: 36
+    icon: scaling
+    prerequisites:
+      - rolling_redeploy
+    tags: [lock]
+    modifiers:
+      simultaneousLockBonus: 1
+
+  - id: hot_standby
+    name: Hot Standby
+    tier: Wizard
+    description: "One more freeze every map."
+    unlockLevel: 38
+    icon: server-cog
+    prerequisites:
+      - cron_job_principal
+    tags: [freeze]
+    modifiers:
+      freezeUsesPerMap: 1
+
+  - id: release_train
+    name: Release Train
+    tier: Wizard
+    description: "One more card in every shop."
+    unlockLevel: 41
+    icon: train-front
+    prerequisites:
+      - open_source_contribution
+    tags: [bank]
+    modifiers:
+      extraShopItems: 1

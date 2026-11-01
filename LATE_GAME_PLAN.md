@@ -65,7 +65,7 @@ you never start a fence beside just before it switches on.
   board surges to 1.5x speed for 3 seconds, with a warning second first.
   **Slow Build** (`lag`, rolled from 36): fences grow at 0.8x. Both pay the
   standard 1h of hazard pay.
-- Upgrades: a late shelf at 36 and 41, one per archetype that has none past 30.
+- Upgrades: a late shelf of three Wizard capstones for the archetypes whose last unlock came before act IV: **Horizontal Scaling** (lock, 36), **Hot Standby** (freeze, 38), **Release Train** (bank, 41).
 
 ## 4. Skill checks
 
@@ -108,3 +108,12 @@ Bot sweeps, 16 seeds, wins before -> after:
 | 44 | 7 | 4 | Feature Flag; 70s clock |
 
 The bot is a floor, not the map's difficulty (MAP_DESIGN_GUIDELINES.md section 8).
+
+**Second batch.** The late shelf: Horizontal Scaling (lock, 36, after Rolling
+Redeploy: every lock counts as one more ball for the simultaneous-trap
+multiplier), Hot Standby (freeze, 38, after Cron Job's Principal: one more
+freeze a map) and Release Train (bank, 41, after Open Source Contribution: one
+more card in every shop). Each uses an existing modifier, so Admin's Playground
+knobs already reach them; each has its own glyph (Scaling, ServerCog, TrainFront)
+and names in all four locales. Every archetype now has something to unlock past
+map 30, and a test holds it there.

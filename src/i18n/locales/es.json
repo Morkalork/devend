@@ -1595,6 +1595,18 @@
       "hotfix_tripwire": {
         "name": "Hotfix Tripwire",
         "description": "Añade la valla Tripwire: se construye un 40% más rápido, y la primera bola que la toca la rompe."
+      },
+      "horizontal_scaling": {
+        "name": "Horizontal Scaling",
+        "description": "Cada bloqueo cuenta como una bola más para el multiplicador de atrapadas simultáneas, además de todo lo demás."
+      },
+      "hot_standby": {
+        "name": "Hot Standby",
+        "description": "Una congelación más en cada mapa."
+      },
+      "release_train": {
+        "name": "Release Train",
+        "description": "Una carta más en cada tienda."
       }
     },
     "tiers": {
