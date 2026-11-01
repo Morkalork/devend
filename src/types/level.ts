@@ -954,6 +954,13 @@ export interface BossBall {
   fenceWipeSeconds?: number;
   /** When true, spit minions are enlarged (radius x1.3) like the big-ball gift. */
   spawnEnlargedMinions?: boolean;
+  /**
+   * The boss is an Autoscaler (LATE_GAME_PLAN.md, level 40): its size follows
+   * its room, on top of the shrink by HP. HP sets the size it shrinks TO.
+   */
+  autoscale?: boolean;
+  /** Its open-board radius as a multiple of its HP size (default 1.6). */
+  autoscaleMax?: number;
 }
 
 // ── Procedural slots (issue #53) ─────────────────────────────────────────────

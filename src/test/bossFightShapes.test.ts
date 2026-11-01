@@ -112,12 +112,18 @@ describe("each boss fight is shaped differently from the others", () => {
     expect((at(30).coloredAreas ?? []).filter(a => a.required !== false)).toHaveLength(2);
   });
 
-  it("makes level 35 the pair under the push", () => {
-    // 20's chained pair and 30's wipe, which no fight before it combined: each
-    // half has to be worn down in one window and shipped in the next.
+  it("makes level 35 the budget, not a third pair under the push", () => {
+    // Act IV's subject as a fight (LATE_GAME_PLAN.md): one build, three traps,
+    // and a fence budget for the whole fight. No wipe, so every fence stays.
     const b = ball(35);
-    expect((b.count ?? 1) > 1, "not a pair").toBe(true);
-    expect((b.fenceWipeSeconds ?? 0) > 0, "no wipe").toBe(true);
+    expect(b.count ?? 1, "a pair again").toBe(1);
+    expect(b.hp ?? 1).toBe(3);
+    expect(b.fenceWipeSeconds ?? 0, "a wipe again").toBe(0);
+    expect(at(35).fenceBudget ?? 0, "no budget").toBeGreaterThan(0);
+  });
+
+  it("makes level 40 the act's new ball as its boss", () => {
+    expect(ball(40).autoscale, "40 is not an Autoscaler").toBe(true);
   });
 
   it.skipIf(LADDER_END < 45)("makes the final boss the only fight carrying all three ideas at once", () => {

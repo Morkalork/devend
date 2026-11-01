@@ -1,4 +1,5 @@
 import { CanvasGameState } from "@/types/gameState";
+import { mutatorFenceSpeedFactor } from "@/lib/mapMutators";
 import { GrowingWall } from "@/types/game";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -75,7 +76,9 @@ export function updateFenceWallFn(
   const fenceType = getFenceType(wall.fenceTypeId).buildSpeed;
   const wallSpeedEffective =
     wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier
-    * lockTempo * rush * terrain * fenceType;
+    * lockTempo * rush * terrain * fenceType
+    // Slow Build (a late mutator): every fence on the map builds slower.
+    * mutatorFenceSpeedFactor(game.mapMutator ?? null);
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -231,6 +234,10 @@ export function updateFenceWallFn(
   if (abilityFenceShieldActive(game)) return;
 
   for (const ball of balls) {
+    // A Feature Flag that is off passes through a growing fence (featureFlag.ts).
+    if (ball.flagOff) {
+      continue;
+    }
     let hit = false;
     for (const seg of allSegments) {
       if (circleCapsuleCollision(ball.position, ball.radius, seg.start, seg.end, wall.thickness / 2)) {

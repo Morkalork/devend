@@ -2000,6 +2000,14 @@
       "white": {
         "name": "Blanca",
         "description": "Tócala para descartarla sin nada a cambio, o enciérrala por el mayor bono del juego."
+      },
+      "autoscaler": {
+        "name": "Autoescalador",
+        "description": "Enorme en el tablero abierto, y más pequeño con cada corte que lo encierra."
+      },
+      "featureflag": {
+        "name": "Feature flag",
+        "description": "Se apaga y se enciende. Mientras está tenue, tus vallas en crecimiento están a salvo."
       }
     },
     "bugs": {
@@ -2138,6 +2146,16 @@
         "name": "Gravedad Total",
         "description": "Todo en el tablero cae. Cada 10 segundos la atracción gira un cuarto, y las bolas caen hacia el nuevo lado.",
         "clarify": "La barra de arriba cuenta atrás hasta cada giro, y el borde ámbar muestra hacia dónde irá la atracción. Las vallas terminadas están a salvo; tu plan no."
+      },
+      "spike": {
+        "name": "Pico de tráfico",
+        "description": "Cada quince segundos el tablero se dispara. Durante tres segundos, bolas y obstáculos móviles van la mitad más rápido.",
+        "clarify": "El pico llega a un ritmo fijo, los últimos tres segundos de cada quince. Empieza tus cortes largos justo después de que acabe uno."
+      },
+      "lag": {
+        "name": "Build lento",
+        "description": "El servidor de builds va lento hoy. Cada valla tarda más en crecer.",
+        "clarify": "Las vallas se construyen a cuatro quintos de su velocidad normal, todo el mapa. Cortes más cortos, o lejos de las bolas."
       }
     },
     "mapObjectives": {
@@ -2186,11 +2204,6 @@
         "description": "Encierra las dos builds negras en las cajas claras, entre pushes.",
         "clarify": "Atrapa las dos builds negras dentro de las cajas claras (abajo a la izquierda y arriba a la derecha) para ganar, una atrapada cada una; cualquier caja sirve para cualquier build. Cada veinte segundos se detienen y tiemblan, y luego destruyen cada valla del tablero, terminada o aún creciendo; esa carga es tu señal. Una build que has atrapado sigue atrapada. Atrapar una fuera de las cajas cuesta una vida y reinicia el mapa, y lo mismo pasa si se acaba el tiempo."
       },
-      "defeat-hard-fork": {
-        "name": "Fusionar el Hard Fork",
-        "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja clara, entre dos borrados.",
-        "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier sitio y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja clara (arriba a la izquierda), y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares. Cada veinticinco segundos la pareja se detiene y tiembla, y luego borra cada valla del tablero, terminada o aún creciendo. Quedarse sin tiempo hace fracasar el mapa."
-      },
       "defeat-memory-leak": {
         "name": "Parchear el Memory Leak",
         "description": "Desgasta la build con tres atrapadas, la última dentro de la caja clara.",
@@ -2200,6 +2213,11 @@
         "name": "Resolver la caída",
         "description": "Desgasta las dos mitades encadenadas y luego enciérralas en la caja clara.",
         "clarify": "Cada mitad necesita dos atrapadas. La primera puede ser en cualquier sitio y no cuesta vida: la mitad se suelta más rápida y más pequeña, y una de tus vallas se revierte. La segunda debe ser dentro de la caja clara (arriba a la derecha), y las dos mitades deben acabar allí. Su cadena rompe cualquier valla que barre y se engancha en los pilares que se desvanecen. Cada veinticinco segundos la pareja se detiene y tiembla, y luego borra cada valla del tablero, y escupe un minion enorme cada doce segundos más o menos, como mucho dos. Quedarse sin tiempo hace fracasar el mapa."
+      },
+      "defeat-burn-rate": {
+        "name": "Entregar dentro del presupuesto",
+        "description": "Desgasta la build dos veces y luego enciérrala en la caja clara, con veintiséis vallas.",
+        "clarify": "La build necesita tres atrapadas. Las dos primeras pueden ser en cualquier sitio y no cuestan vida: se suelta, más rápida y más pequeña, y la primera revierte una de tus vallas. La tercera debe ser dentro de la caja clara (arriba a la izquierda). Toda la pelea tiene veintiséis vallas; si gastas la última sin ganar, el mapa falla. Quedarte sin tiempo también lo hace fallar."
       }
     },
     "tagSets": {
@@ -2242,12 +2260,12 @@
         "intro": "Dos builds negras y pesadas que sobrescriben tu trabajo, una lenta y una rápida: cada veinte segundos se detienen, tiemblan y destrozan cada valla del tablero, terminada o no. Nada de lo que dibujes sobrevive al siguiente push, así que cada una es una trampa limpia hacia una caja clara (abajo a la izquierda o arriba a la derecha), construida en una única ventana. Una build atrapada sigue atrapada. La carga es cuando se quedan quietas. Una congelación mantenida durante el push te da una segunda oportunidad."
       },
       "level-35": {
-        "name": "Hard Fork",
-        "intro": "El repositorio se ha partido en dos, y las mitades están encadenadas. Cada mitad necesita dos atrapadas: la primera puede ser en cualquier sitio y solo la suelta, más rápida y más pequeña, y la segunda debe ser dentro de la caja clara, arriba a la izquierda, con las dos mitades acabando allí. Su cadena destroza cualquier valla que barre, y cada veinticinco segundos la pareja se detiene, tiembla y borra cada valla del tablero. Los pilares enganchan la cadena mientras siguen en pie."
+        "name": "Burn Rate",
+        "intro": "El presupuesto es el jefe. Una build pesada que necesita tres atrapadas, y veintiséis vallas para toda la pelea. Las dos primeras atrapadas pueden ser en cualquier sitio: se suelta, más rápida y más pequeña, y la primera revierte una de tus vallas. La tercera debe ser dentro de la caja clara, arriba a la izquierda. Nada borra tu trabajo, así que cada valla que pones es un muro en el que puede apoyarse la siguiente trampa, y una menos que te queda."
       },
       "level-40": {
         "name": "Memory Leak",
-        "intro": "Una build con fugas. Necesita tres atrapadas: las dos primeras pueden ser en cualquier sitio y solo la sueltan, más rápida y más pequeña cada vez, y la tercera debe ser dentro de la caja clara, abajo a la derecha. Cada pocos segundos escupe un minion, y los minions se quedan hasta que los encierras, así que el tablero se llena mientras el jefe se vacía. Sella las fugas sobre la marcha: sus vallas son las paredes contra las que se construye la siguiente trampa."
+        "intro": "Una build que tiene fugas y crece hasta llenar su sala: enorme en el tablero abierto, más pequeña a medida que la encierras. Necesita tres atrapadas: las dos primeras pueden ser en cualquier sitio y solo la sueltan, más rápida y más pequeña cada vez, y la tercera debe ser dentro de la caja clara, abajo a la derecha. Cada pocos segundos escupe un minion, y los minions se quedan hasta que los encierres, así que el tablero se llena mientras el jefe se encoge. Tapa las fugas sobre la marcha: sus vallas son los muros contra los que se construye la siguiente trampa."
       },
       "level-45": {
         "name": "Production Outage",
@@ -2392,12 +2410,12 @@
         "premise": "En la que veintidós vallas tienen que limpiar el tablero y bloquear dos bolas, y la barra que te ahorra vallas se levanta con tu primer bloqueo."
       },
       "level-35": {
-        "name": "Hard Fork",
-        "premise": "En la que una pareja encadenada borra cada valla cada veinticinco segundos, así que cada mitad se desgasta en una ventana y se entrega en la siguiente."
+        "name": "Burn Rate",
+        "premise": "En la que el jefe necesita tres atrapadas y la pelea entera tiene veintiséis vallas, así que cada muro debe desgastarlo y retenerlo."
       },
       "level-36": {
         "name": "Load Balancer",
-        "premise": "En la que el único bolsillo en medio de una pared que una valla puede cerrar es la V que rebotas en el espejo."
+        "premise": "En la que el autoescalador se encoge con cada corte que lo encierra, y la V del espejo es el único bolsillo en medio de un muro."
       },
       "level-37": {
         "name": "Rollback",
@@ -2413,11 +2431,11 @@
       },
       "level-40": {
         "name": "Memory Leak",
-        "premise": "En la que la build necesita tres atrapadas y suelta un minion cada pocos segundos, así que el tablero se llena mientras el jefe se vacía."
+        "premise": "En la que una build tan grande como su sala necesita tres atrapadas y suelta minions, así que el tablero se llena mientras el jefe se encoge."
       },
       "level-41": {
         "name": "Fast Path",
-        "premise": "En la que el suelo que construye vallas al doble de rápido es el carril que barre la patrulla, y el reloj te quiere rápido."
+        "premise": "En la que una feature flag se apaga sobre el carril rápido que barre la patrulla, y una valla que crece sobre ella entonces es segura."
       },
       "level-42": {
         "name": "Canary",

@@ -13,11 +13,14 @@
  * - `crunch`    ball + mover speed ramp with every ball locked this map (capped).
  * - `overclock` flat ball + mover speed boost for the whole map.
  * - `gravity`   the board turns and the pull bends every heading (issue #77).
+ * - `spike`     Traffic Spike: every `period` seconds the board surges to
+ *               `factor` speed for `burstSeconds` (LATE_GAME_PLAN.md).
+ * - `lag`       Slow Build: every fence builds at `factor` speed.
  * - `none`      no effect (a defined "breather" entry; also see noneWeight).
  */
 import type { RawGravityConfig } from "@/lib/physics/gravity";
 
-export type MutatorBehavior = "crunch" | "overclock" | "gravity" | "none";
+export type MutatorBehavior = "crunch" | "overclock" | "gravity" | "spike" | "lag" | "none";
 
 /** One authored mutator entry (public/mapMutators.yml). English source of truth. */
 export interface MapMutator {

@@ -2000,6 +2000,14 @@
       "white": {
         "name": "Vit",
         "description": "Tryck på den för att kasta den utan utdelning, eller lås in den för spelets största bonus."
+      },
+      "autoscaler": {
+        "name": "Autoskalare",
+        "description": "Enorm på det öppna brädet, och mindre för varje snitt som stänger in den."
+      },
+      "featureflag": {
+        "name": "Funktionsflagga",
+        "description": "Blinkar av och på. Medan den är blek är dina växande staket säkra för den."
       }
     },
     "bugs": {
@@ -2138,6 +2146,16 @@
         "name": "Full gravitation",
         "description": "Allt på brädet faller. Var 10:e sekund vrids dragningen ett kvarts varv, och bollarna faller åt det nya hållet.",
         "clarify": "Stapeln längst upp räknar ner till varje vridning, och den bärnstensfärgade kanten visar vart dragningen går härnäst. Färdiga staket är säkra; din plan är det inte."
+      },
+      "spike": {
+        "name": "Trafiktopp",
+        "description": "Var femtonde sekund får brädet en topp. I tre sekunder går bollar och rörliga hinder hälften så fort till.",
+        "clarify": "Toppen kommer i jämn takt, de sista tre sekunderna av varje femton. Börja dina långa snitt direkt efter att en tagit slut."
+      },
+      "lag": {
+        "name": "Långsamt bygge",
+        "description": "Byggservern är långsam i dag. Varje staket tar längre tid att växa.",
+        "clarify": "Staketen byggs i fyra femtedelar av sin vanliga fart, hela banan. Kortare snitt, eller snitt bort från bollarna."
       }
     },
     "mapObjectives": {
@@ -2186,11 +2204,6 @@
         "description": "Stängsla in båda de svarta byggena i de ljusa rutorna, mellan pusharna.",
         "clarify": "Fånga båda de svarta byggena i de ljusa rutorna (nere till vänster och uppe till höger) för att vinna, en fångst vardera; vilken ruta som helst tar vilket bygge som helst. Var tjugonde sekund stannar de och skakar, och förstör sedan varje staket på brädet, färdigt eller fortfarande växande; den uppladdningen är din signal. Ett bygge du har fångat förblir fångat. Fångar du ett utanför rutorna förlorar du ett liv och banan börjar om, och detsamma gäller om tiden tar slut."
       },
-      "defeat-hard-fork": {
-        "name": "Slå ihop Hard Fork",
-        "description": "Nöt ner båda de kedjade halvorna, stängsla sedan in dem i den ljusa rutan, mellan två raderingar.",
-        "clarify": "Varje halva kräver två fångster. Den första kan ske var som helst och kostar inget liv: halvan bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den andra måste ske inne i den ljusa rutan (uppe till vänster), och båda halvorna måste hamna där. Deras kedja bryter varje staket den sveper över och fastnar på pelarna. Var tjugofemte sekund stannar paret och skakar, och raderar sedan varje staket på brädet, färdigt eller fortfarande växande. Tar tiden slut misslyckas banan."
-      },
       "defeat-memory-leak": {
         "name": "Laga Memory Leak",
         "description": "Nöt ner bygget med tre fångster, den sista inne i den ljusa rutan.",
@@ -2200,6 +2213,11 @@
         "name": "Lös avbrottet",
         "description": "Nöt ner båda de kedjade halvorna, stängsla sedan in dem i den ljusa rutan.",
         "clarify": "Varje halva kräver två fångster. Den första kan ske var som helst och kostar inget liv: halvan bryter sig loss snabbare och mindre, och ett av dina staket återställs. Den andra måste ske inne i den ljusa rutan (uppe till höger), och båda halvorna måste hamna där. Deras kedja bryter varje staket den sveper över och fastnar på de tonande pelarna. Var tjugofemte sekund stannar paret och skakar, och raderar sedan varje staket på brädet, och ungefär var tolfte sekund spottar det ut en överstor minion, högst två. Tar tiden slut misslyckas banan."
+      },
+      "defeat-burn-rate": {
+        "name": "Leverera inom budget",
+        "description": "Nöt ner bygget två gånger och stängsla sedan in det i den ljusa rutan, inom tjugosex staket.",
+        "clarify": "Bygget kräver tre fångster. De två första kan ske var som helst och kostar inget liv: det sliter sig loss, snabbare och mindre, och den första återställer ett av dina staket. Den tredje måste ske inne i den ljusa rutan (uppe till vänster). Hela striden har tjugosex staket; när det sista är förbrukat utan vinst misslyckas banan. Tar tiden slut misslyckas den också."
       }
     },
     "tagSets": {
@@ -2242,12 +2260,12 @@
         "intro": "Två tunga svarta byggen som skriver över ditt arbete, ett långsamt och ett snabbt: var tjugonde sekund stannar de, skakar och krossar varje staket på brädet, färdigt eller inte. Inget du ritar överlever nästa push, så varje bygge är en ren fälla in i en ljus ruta (nere till vänster eller uppe till höger), byggd inom ett enda fönster. Ett fångat bygge förblir fångat. Uppladdningen är när de står still. En frysning som hålls över pushen ger dig en andra chans."
       },
       "level-35": {
-        "name": "Hard Fork",
-        "intro": "Repot har delat sig i två, och halvorna är kedjade vid varandra. Varje halva kräver två fångster: den första kan ske var som helst och sliter den bara loss, snabbare och mindre, och den andra måste ske inne i den ljusa rutan uppe till vänster, och båda halvorna måste hamna där. Deras kedja sliter sönder varje staket den sveper över, och var tjugofemte sekund stannar paret, skakar och raderar varje staket på brädet. Pelarna fångar kedjan medan de står."
+        "name": "Burn Rate",
+        "intro": "Budgeten är bossen. Ett tungt bygge som kräver tre fångster, och tjugosex staket för hela striden. De två första fångsterna kan ske var som helst: det sliter sig loss, snabbare och mindre, och den första återställer ett av dina staket. Den tredje måste ske inne i den ljusa rutan uppe till vänster. Inget raderar ditt arbete, så varje staket du lägger är en vägg nästa fälla kan luta sig mot, och ett färre kvar."
       },
       "level-40": {
         "name": "Memory Leak",
-        "intro": "Ett bygge som läcker. Det kräver tre fångster: de två första kan ske var som helst och sliter det bara loss, snabbare och mindre varje gång, och den tredje måste ske inne i den ljusa rutan nere till höger. Med några sekunders mellanrum spottar det ut en minion, och minionerna stannar tills du stängslar in dem, så brädet fylls medan bossen töms. Täta läckorna medan du går: deras staket är väggarna nästa fälla byggs mot."
+        "intro": "Ett bygge som läcker och växer för att fylla sitt rum: enormt på det öppna brädet, mindre när du stänger in det. Det kräver tre fångster: de två första kan ske var som helst och sliter det bara loss, snabbare och mindre varje gång, och den tredje måste ske inne i den ljusa rutan nere till höger. Med några sekunders mellanrum spottar det ut en minion, och minionerna stannar tills du stängslar in dem, så brädet fylls medan bossen krymper. Täta läckorna medan du går: deras staket är väggarna nästa fälla byggs mot."
       },
       "level-45": {
         "name": "Production Outage",
@@ -2392,12 +2410,12 @@
         "premise": "Den där tjugotvå staket ska rensa brädet och låsa två bollar, och bommen som sparar staket lyfter vid ditt första lås."
       },
       "level-35": {
-        "name": "Hard Fork",
-        "premise": "Den där ett kedjat par raderar varje staket var tjugofemte sekund, så varje halva nöts ner i ett fönster och levereras i nästa."
+        "name": "Burn Rate",
+        "premise": "Den där bossen kräver tre fångster och hela striden får tjugosex staket, så varje vägg måste både nöta ner den och hålla den."
       },
       "level-36": {
         "name": "Load Balancer",
-        "premise": "Den där den enda fickan mitt på en vägg som ett staket kan stänga är V:et du studsar mot spegeln."
+        "premise": "Den där autoskalaren krymper för varje snitt som stänger in den, och V:et från spegeln är den enda fickan mitt på en vägg."
       },
       "level-37": {
         "name": "Rollback",
@@ -2413,11 +2431,11 @@
       },
       "level-40": {
         "name": "Memory Leak",
-        "premise": "Den där bygget kräver tre fångster och läcker en minion med några sekunders mellanrum, så brädet fylls medan bossen töms."
+        "premise": "Den där ett bygge lika stort som sitt rum kräver tre fångster och läcker minioner, så brädet fylls medan bossen krymper."
       },
       "level-41": {
         "name": "Fast Path",
-        "premise": "Den där marken som bygger staket dubbelt så fort är filen patrullen sveper, och klockan vill att du är snabb."
+        "premise": "Den där en funktionsflagga blinkar av över det snabba spåret patrullen sveper, och ett staket som växer över den då är säkert."
       },
       "level-42": {
         "name": "Canary",

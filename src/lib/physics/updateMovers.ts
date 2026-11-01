@@ -8,7 +8,7 @@ import { isPlayerControlled } from "./moverControl";
 export function updateMoversFn(dt: number, game: CanvasGameState): void {
   // Crunch/Overclock mutators (issue #54) speed movers too ("everything speeds
   // up"). Movers stay independent of Scope Creep (raw step), only the mutator.
-  const speedFactor = mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount);
+  const speedFactor = mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount, game.activePlaySeconds);
   // Fence friction (#): rebuilt every step rather than accumulated, because a
   // contact is only true for the frame it is measured on - a mover that has
   // cleared a fence must stop sparking on the very next frame.

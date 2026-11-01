@@ -1,5 +1,7 @@
 # Color Progression Configuration
-# Colors cycle based on completed levels (every 5 levels)
+# Colors cycle based on completed levels (every 5 levels). The cycle is the
+# whole ladder (45 maps), so no late act wears an early act's colour: it used
+# to be 30 long, and 31-45 replayed 1-15 (LATE_GAME_PLAN.md, fix 5).
 # Format: hex colors without #
 
 progression:
@@ -25,4 +27,19 @@ progression:
     
   - name: "Pure White"
     hex: "ffffff"
-    levels: 5  # Active for levels 26-30 (then cycles back)
+    levels: 5  # Active for levels 26-30
+
+  # Act IV, Crunch: the budget, in the colour of a deadline.
+  - name: "Ember Orange"
+    hex: "ff8a1f"
+    levels: 5  # Active for levels 31-35
+
+  # Act V, Scale.
+  - name: "Ultraviolet"
+    hex: "b26bff"
+    levels: 5  # Active for levels 36-40
+
+  # Act VI, Release (then cycles back).
+  - name: "Release Lime"
+    hex: "c4ff3d"
+    levels: 5  # Active for levels 41-45 (then cycles back)

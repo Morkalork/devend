@@ -1,4 +1,5 @@
 import { Ball, Vector2 } from "@/types/game";
+import { autoscaleRadius, DEFAULT_AUTOSCALE_MAX } from "@/lib/physics/autoscale";
 import { CanvasGameState } from "@/types/gameState";
 import {
   areaForLock,
@@ -72,13 +73,23 @@ export function escalateBoss(ball: Ball): void {
   ball.minimumSpeed = (ball.minimumSpeed ?? 0) * up;
   ball.velocity = { x: ball.velocity.x * up, y: ball.velocity.y * up };
   const maxHp = ball.bossMaxHp ?? 1;
+  let hpRadius: number;
   if (maxHp > 1 && ball.bossFullRadius !== undefined && ball.bossMinRadius !== undefined) {
     // frac = 1 at full HP, 0 at the last life (bossHp 1).
     const frac = Math.max(0, Math.min(1, ((ball.bossHp ?? 1) - 1) / (maxHp - 1)));
-    ball.radius = ball.bossMinRadius + (ball.bossFullRadius - ball.bossMinRadius) * frac;
+    hpRadius = ball.bossMinRadius + (ball.bossFullRadius - ball.bossMinRadius) * frac;
   } else {
-    ball.radius = Math.max(minR, ball.radius * 0.88); // fallback if unseeded
+    hpRadius = Math.max(minR, (ball.autoscaleBase ?? ball.radius) * 0.88); // fallback if unseeded
   }
+  // An autoscaling boss (level 40): HP sets the size it shrinks TO, and its
+  // room still decides how far above that it is. It eases there rather than
+  // snapping, like any Autoscaler.
+  if (ball.ability === "autoscale" && ball.autoscaleBase !== undefined) {
+    ball.autoscaleBase = hpRadius;
+    ball.autoscaleTarget = autoscaleRadius(hpRadius, ball.autoscaleMax ?? DEFAULT_AUTOSCALE_MAX, ball.autoscaleShare ?? 1);
+    return;
+  }
+  ball.radius = hpRadius;
 }
 
 /**

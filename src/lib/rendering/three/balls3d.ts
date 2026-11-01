@@ -128,7 +128,9 @@ export function ballPose(ball: Ball, now: number, fastestId: string | null): Bal
   const warmGain = 1 - (1 - warm.gain) * tellGain;
   const base = parseColor(ball.color);
   const color = mix(WARMUP_EMBER, fade > 0 ? mix(base, PALETTE.accent, fade) : base, warmHue);
-  const alpha = (dormant ? 0.5 : ball.state === "won" ? 0.72 : 1) * (0.32 + 0.68 * warmGain);
+  // A Feature Flag that is off draws faint (physics/featureFlag.ts).
+  const alpha = (dormant ? 0.5 : ball.state === "won" ? 0.72 : 1) * (0.32 + 0.68 * warmGain)
+    * (ball.flagOff ? 0.3 : 1);
 
   return {
     x: cx, z: cz, r: rBody, a, sy, color, alpha,

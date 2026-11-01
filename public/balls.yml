@@ -28,6 +28,9 @@
 #                  where speed finally means something against a brittle brick, since
 #                  those go on any contact at all whatever the force model says.
 #   ability        one of: none | variableSpeed | slowOthers | moneyBall | slowDown | breakObjects
+#                  | rainbow | tappable | turnTimer | attract | autoscale | featureFlag
+#   autoscaleMax   (autoscale only) radius multiple on the open board (default 2.2)
+#   flagOnSeconds / flagOffSeconds (featureFlag only) its blink (default 4 / 3)
 #   speedReduction (slowOthers only) speed each struck ball loses per hit (down to its minimumSpeed)
 #   description    one-line ability summary shown in the tutorial
 #   speedRange     (variableSpeed only) [lo, hi] — a new random speed is picked on each
@@ -165,6 +168,42 @@ balls:
     density: 2.6
     ability: breakObjects
     description: "Wrecking ball: smashes obstacles, and cracks your own fences in three hits."
+
+  # AUTOSCALER (act V, "Scale"; LATE_GAME_PLAN.md). Its size follows its room:
+  # huge on the open board, an ordinary ball once you have penned it in. So the
+  # first cuts are the dangerous ones, and every cut that shrinks its room
+  # shrinks it too. Never spat by a rainbow or a boss (getSpawnableBallTypes):
+  # its size is read off a cut, and a spit has none.
+  - id: autoscaler
+    name: Autoscaler
+    color: "#5ce1e6"
+    pattern: dimples
+    baseSpeed: 230
+    minimumSpeed: 150
+    unlockLevel: 36
+    lockMultiplier: 3
+    density: 1.4
+    ability: autoscale
+    autoscaleMax: 2.2
+    description: "Huge on the open board, and smaller with every cut that pens it in."
+
+  # FEATURE FLAG (act VI, "Release"; LATE_GAME_PLAN.md). Blinks off and on. While
+  # it is off it is faint and passes through your growing fences without
+  # breaking them; finished walls stop it either way. The one ball you cut
+  # across on purpose, timed to its off window.
+  - id: featureflag
+    name: Feature Flag
+    color: "#ffd166"
+    pattern: seam
+    baseSpeed: 260
+    minimumSpeed: 160
+    unlockLevel: 41
+    lockMultiplier: 3
+    density: 1
+    ability: featureFlag
+    flagOnSeconds: 4
+    flagOffSeconds: 3
+    description: "Blinks off and on. While faint, your growing fences are safe from it."
 
   # Rainbow: a fast, hue-shifting ball that shows up occasionally past level 10.
   # Every 10 seconds it spits out one random ball type available for the current

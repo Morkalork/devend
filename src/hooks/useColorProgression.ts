@@ -39,6 +39,9 @@ const defaultProgression: ColorStep[] = [
   { name: "Golden Yellow", hex: "ffdd00", levels: 5 },
   { name: "Crimson Red", hex: "ff3344", levels: 5 },
   { name: "Pure White", hex: "ffffff", levels: 5 },
+  { name: "Ember Orange", hex: "ff8a1f", levels: 5 },
+  { name: "Ultraviolet", hex: "b26bff", levels: 5 },
+  { name: "Release Lime", hex: "c4ff3d", levels: 5 },
 ];
 
 export function useColorProgression(currentLevel: number = 1) {

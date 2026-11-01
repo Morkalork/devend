@@ -392,7 +392,7 @@ Every mechanic gets a status, and the status decides what it costs.
 | mirror | B | Meet | 13 | 36 | - |
 | terminals | E | Meet | 22 | 38 | - |
 | portal | B | Meet | 21 | 33 | 37 (Break), 39 |
-| WIP limit | D | Meet | 32 | 34 | 44 |
+| WIP limit | D | Meet | 32 | 34 | 35 (boss), 44 |
 | cage | E | Compressed | 22 | 29 | - |
 | thread lock | D | Seasoning | - | - | `headline: false`: a lock count in an authored win is the `locks` clause, asked from map 1 |
 | gravity well | C | Meet | 15 | 21 | 28, 29, 43 (Break) |
@@ -1494,15 +1494,18 @@ stand 120 clear of the frame, because a latch that sealed a room would have the
 room captured on the first cut. Swept at five budgets: 20 reads 4 of 16, **22 7
 of 16**, 24 11, 26 12, none 16.
 
-#### 35 "Hard Fork" - BOSS  *(built)*
+#### 35 "Burn Rate" - BOSS  *(rebuilt; LATE_GAME_PLAN.md)*
 
-**The chained pair from 20 under the push from 30.** Each half takes two traps
-and the chain shreds what it sweeps; every twenty-five seconds every fence is
-gone, so a half worn down in one window has to be shipped in the next. Two
-phasing pillars snag the chain while they stand. The fight that carries all
-three ideas (pair, wipe, minions) moved to 45, the last boss, so that five
-bosses can each have a shape of their own (`bossFightShapes`).
-**Bot sweep, 16 seeds: 2 of 16**, against 20's 1 of 8.
+**Act IV's subject as a fight: one build, three traps, twenty-six fences for
+the whole fight.** It was "Hard Fork", the chained pair from 20 under the push
+from 30, which once 30 became a pair under the push made 30, 35 and 45 one
+fight. Now nothing wipes your work: every fence stays, and every one is one
+fewer. The first two traps can be anywhere and the third must be in the light
+box, top left (400 square, up from 335: at 335 the bot won 0 of 16, every loss
+the last trap landing outside). Two plain posts are free anchors.
+**Bot sweep, 16 seeds: 2 of 16**, the same as Hard Fork. It puts the WIP limit
+on three of act IV's five maps, which `mechanicSpread.test.ts` now pins as
+deliberate.
 
 **Act IV states its win.** Two rules fall out of that:
 
@@ -1541,7 +1544,12 @@ losses are the kinds section 8 calls expected - `lockedOut` with no superior or
 no delivery, `requirementUnreachable` after a terminal's ground was claimed -
 and none is a stall: every run ends on the map.
 
-#### 36 "Load Balancer" - Use mirror  *(built)*
+#### 36 "Load Balancer" - Meet Autoscaler, Use mirror  *(built)*
+
+**The Autoscaler arrives here (LATE_GAME_PLAN.md)**, in place of the white
+ball: a ball as big as its room, so the first cuts are the dangerous ones.
+Bot sweep 7 of 16, unchanged.
+
 
 **A short mirror hangs below the middle of the top wall.** A corner closes with
 one straight diagonal; the middle of a wall never does, because a straight
@@ -1600,6 +1608,12 @@ shape no other boss has (1 target, 3 traps, no wipe, minions). Tuned from 2 of
 16 (speed 1.15, a minion every 7s, four at once) to **4 of 16** at speed 1.05,
 every 9s, three, level with 30.
 
+**Rebuilt as an Autoscaler (LATE_GAME_PLAN.md).** Act V's new ball is its boss:
+`bossBall.autoscale`, huge on the open board (1.6x its HP size) and smaller as
+its room is cut down, while HP still sets the size it shrinks to. Radius scale
+2.0 -> 1.7 so the open-board size is not a wall. **Bot sweep: 2 of 16** (the
+old map read 1 of 16 on the same sweep).
+
 ### Act VI - Release (41-45)  *(built)*
 
 *Owns: everything under the clock, and the end.* The inversions act V left
@@ -1623,7 +1637,12 @@ balls out of the two cheapest corners is that lesson turned round.
 Swept 16 seeds on each map's own clock: 41 **16**, 42 **8**, 43 **3**, 44
 **6**, 45 **3**.
 
-#### 41 "Fast Path" - Break fence ground, Fight mover  *(built)*
+#### 41 "Fast Path" - Meet Feature Flag, Break fence ground, Fight mover  *(built)*
+
+**The Feature Flag arrives here (LATE_GAME_PLAN.md)**, in place of the yellow
+ball: off, it passes through a growing fence, and the fast lane builds fences
+quickly enough to fit one inside its off window. Bot sweep 16 of 16, unchanged.
+
 
 **A band across the middle builds fences at 2.2x, and the patrol sweeps it.**
 24 and 27's ground priced a cut by slowing it; this ground is a gift in the

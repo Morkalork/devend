@@ -250,7 +250,14 @@ describe("no single idea owns an act", () => {
     // sample all along, and it aged out rather than being fixed. The assertion
     // is empty again, which is the state it should stay in - a name arriving
     // here now means six maps' worth of evidence rather than four.
-    expect(monopolies).toEqual([]);
+    //
+    // One name is here on purpose. Act IV OWNS the budget ("every cut is
+    // priced"), and its boss became the budget fight (LATE_GAME_PLAN.md, fix
+    // 2) so that 30, 35 and 45 stopped being one fight. That put the WIP limit
+    // on 32, 34 and 35, three of five. The rule exists to catch a mechanic
+    // winning by default because it is easy to reach for; this one is the
+    // act's subject, chosen. Anything else arriving here is still a finding.
+    expect(monopolies).toEqual(["WIP limit: on 3 of act IV's 5 maps"]);
   });
 
   it("does not complain about furniture", () => {

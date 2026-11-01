@@ -48,6 +48,7 @@ import { anyGateTargetCanReach, bossTrappedOutside, gateAreas, sealedPendingCell
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
 import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
 import { cutWouldBuryArea } from "@/lib/physics/areaReach";
+import { retargetAutoscalers } from "@/lib/physics/autoscale";
 import { smashCounts } from "@/lib/destructibleClass";
 import { lostRequirement } from "@/lib/physics/requirementReach";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -373,6 +374,10 @@ export function applyCutFn(
   // instead of the O(balls x regions x samples x walls) scan this used to be.
   reassignBallsToRegions(game.balls, game.regions, game.walls, game.spaceGrid);
   validateAllBallOwnership(game.balls, game.regions, game.walls, game.spaceGrid);
+  // Autoscalers read their new room here, with every ball in its region.
+  if (game.spaceGrid) {
+    retargetAutoscalers(game.balls, game.regions, game.spaceGrid.initialActiveCount);
+  }
   game.activeWalls = game.activeWalls.filter(w => w !== wall);
   playCutClaimedSound();
 
@@ -402,6 +407,10 @@ export function applyCutFn(
     // depend on geometry they were not thinking about.
     wall.fenceTypeId ?? STANDARD_FENCE_ID,
   );
+  // A boss that broke out of a trap has jumped to another room: read it again.
+  if (game.spaceGrid) {
+    retargetAutoscalers(game.balls, game.regions, game.spaceGrid.initialActiveCount);
+  }
   const wasSuperior = game.superiorLockCount > superiorBefore;
 
   // A ball sealed inside a barrel that has not finished ejecting fails the map.

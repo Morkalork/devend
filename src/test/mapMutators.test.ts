@@ -163,7 +163,7 @@ describe("public/mapMutators.yml", () => {
   ) as { mutators: Array<{ id: string; behavior: string }> };
 
   /** Every behaviour updateBall / mapMutators.ts has a rule for. */
-  const IMPLEMENTED = new Set(["crunch", "overclock", "gravity", "none"]);
+  const IMPLEMENTED = new Set(["crunch", "overclock", "gravity", "spike", "lag", "none"]);
 
   it("only authors behaviours the code implements", () => {
     expect(doc.mutators.length, "the pool is empty").toBeGreaterThan(0);

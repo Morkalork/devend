@@ -116,3 +116,22 @@ describe("a boss trapped outside the boxes", () => {
     }
   });
 });
+
+describe("the autoscaling boss (level 40, LATE_GAME_PLAN.md)", () => {
+  it("is born at its open-board size, above the size its HP sets", () => {
+    const level = {
+      id: "leak", level: 40, sizeThreshold: 14, expectedCuts: 9, points: 5,
+      maxBalls: 1, variety: 0, randomShapes: 0,
+      coloredAreas: [{ kind: "light", x: 520, y: 520, width: 335, height: 335 }],
+      boss: {
+        name: "Leak", intro: "x",
+        objective: { id: "d", name: "d", description: "d", kind: "defeatBoss", reward: 10 },
+        bossBall: { hp: 3, radiusScale: 1.7, autoscale: true, autoscaleMax: 1.6 },
+      },
+    } as unknown as LevelConfig;
+    const [boss] = createInitialGameData(level, 40, MODS).balls.filter(b => b.isBoss);
+    expect(boss.ability).toBe("autoscale");
+    expect(boss.autoscaleBase).toBeDefined();
+    expect(boss.radius / boss.autoscaleBase!).toBeCloseTo(1.6, 5);
+  });
+});

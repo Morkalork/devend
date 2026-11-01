@@ -71,6 +71,9 @@ a jackpot; built), and
 **ANDROID.md** for Capacitor/Play-Store packaging, and **DEVICE_LAB.md** for
 the device check and where it runs: in the app (Admin > Device check), on
 emulated 2022 phones in CI, and on real phones in Firebase Test Lab, and
+**LATE_GAME_PLAN.md** for the plan and build record of the late game's
+continued innovation (maps 30-45: the Autoscaler and Feature Flag balls, the
+late mutators, the reshaped bosses, the late palettes and clocks), and
 **PLAY_RELEASE_PLAN.md** for the first Play release (an invite-only beta): the
 checklist, the owner's open decisions, the signed-bundle workflow and the
 drafts the Play Console asks for.

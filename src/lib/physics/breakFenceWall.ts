@@ -14,6 +14,7 @@
  * rasterized grid cells are restored and the regions are rebuilt from the
  * grid, so the two sides become one region again.
  */
+import { retargetAutoscalers } from "@/lib/physics/autoscale";
 import { CanvasGameState } from "@/types/gameState";
 import { Wall, isPlayerFence, FENCE_FRACTURE_HITS } from "@/lib/wallGeometry";
 import {
@@ -109,6 +110,8 @@ function rebuildRegionsFromGrid(game: CanvasGameState): void {
 
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   paintCellRegionIds(grid, game.regions);
+  // Ground came back: an Autoscaler in the reopened room grows to fit it.
+  retargetAutoscalers(game.balls, game.regions, grid.initialActiveCount);
 }
 
 const FRACTURE_DEBOUNCE_MS = 250; // one pass can't count as several fracture hits

@@ -134,7 +134,9 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
   // Guard the divisors so a stray `speedScale: 0` / `radiusScale: 0` in YAML
   // can't produce an Infinity speed/radius.
   const speedScale = (boss.baseSpeed / minionType.baseSpeed) / Math.max(0.05, bb.speedScale ?? 1.2);
-  const base = boss.splitBaseRadius ?? boss.radius;     // unswollen size
+  // Unswollen size, and for an autoscaling boss the size its HP sets, not the
+  // room's: a leak is a minion's size whatever room the boss is in.
+  const base = boss.splitBaseRadius ?? boss.autoscaleBase ?? boss.radius;
   // Boss-35 spits enlarged minions (the big-ball gift made hostile).
   const enlarge = bb.spawnEnlargedMinions ? BIG_BALL_RADIUS_SCALE : 1;
   const minionRadius = (base / Math.max(0.1, bb.radiusScale ?? 2)) * enlarge;

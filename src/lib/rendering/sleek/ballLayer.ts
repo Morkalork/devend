@@ -60,6 +60,9 @@ import { warmup, WARMUP_EMBER } from "@/lib/rendering/ballTell";
 import { compassRing } from "./compassRing";
 import { simNow } from "@/lib/simClock";
 
+/** A Feature Flag that is off draws faint (physics/featureFlag.ts). */
+const FLAG_OFF_ALPHA = 0.3;
+
 /** The corona's strength over the 3D renderer's sphere (see drawBall). */
 export const HYBRID_CORONA = 0.8;
 
@@ -734,7 +737,8 @@ export class SleekBallLayer {
     // ring and leaves the ball as bright as ever. Never to nothing, though -
     // this is the object the player is tracking, and it exists before it lights.
     const bodyAlpha = (dormant ? 0.5 : ball.state === "won" ? 0.72 : 1)
-      * (0.32 + 0.68 * warmGain);
+      * (0.32 + 0.68 * warmGain)
+      * (ball.flagOff ? FLAG_OFF_ALPHA : 1);
 
     // ── Stuck: the liquid splat ─────────────────────────────────────────────
     // A Bug Squash hold with its scene captured draws as a field, not a fan

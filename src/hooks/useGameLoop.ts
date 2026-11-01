@@ -36,6 +36,8 @@ import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffect
 import { launchPending, updateLauncherArming } from "@/lib/physics/launcher";
 import { updateRubble } from "@/lib/physics/rubble";
 import { applyLodestones } from "@/lib/physics/lodestone";
+import { easeAutoscalers } from "@/lib/physics/autoscale";
+import { tickFeatureFlags } from "@/lib/physics/featureFlag";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
@@ -525,7 +527,7 @@ export function createGameLoop(
         }
         // The Slow All ability (#38) folds in here too, so ball displacement and
         // the aim-line predictor both see it; it self-reverts by clock expiry.
-        game.creepFactor = creepF * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount) * abilitySpeedFactor(game) * (game.beatSpeedMult || 1);
+        game.creepFactor = creepF * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount, game.activePlaySeconds) * abilitySpeedFactor(game) * (game.beatSpeedMult || 1);
         // 1Hz clock tick to React (the countdown bar tweens between ticks).
         const wholeSecond = Math.floor(game.activePlaySeconds);
         if (wholeSecond !== prevWholeSecond) {
@@ -547,6 +549,10 @@ export function createGameLoop(
       // a cluster feels the same pull on the same frame rather than in the
       // order the list happens to be in.
       applyLodestones(game.balls, PHYSICS_STEP, game.frozenBallId ?? null);
+      // Autoscalers ease toward the size their room calls for; Feature Flags
+      // take this second's state, which the fence-strike check reads.
+      easeAutoscalers(game.balls, PHYSICS_STEP);
+      tickFeatureFlags(game.balls, game.activePlaySeconds);
 
       // Control Freak first: what the player is doing to a mover decides
       // whether the map gets to move it at all this step.

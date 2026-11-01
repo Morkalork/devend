@@ -57,7 +57,9 @@ export type BallAbility =
   | 'rainbow'       // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
   | 'tappable'      // white: TAP to remove it for nothing, or LOCK it for a huge bonus (#57)
   | 'turnTimer'     // compass: turns ninety degrees on a timer, wearing the countdown
-  | 'attract';      // lodestone: continuously pulls the other balls toward it
+  | 'attract'       // lodestone: continuously pulls the other balls toward it
+  | 'autoscale'     // autoscaler: its size follows the share of the board its room holds
+  | 'featureFlag';  // feature flag: blinks off and on; while off, growing fences are safe from it
 
 /**
  * The pattern on a ball's shell, which is what shows it rolling on the 3D
@@ -90,6 +92,12 @@ export interface BallTypeDef {
   attractTurnRate?: number;
   /** `attract` only: world-unit range beyond which it has no pull. */
   attractRadius?: number;
+  /** `autoscale` only: its radius, as a multiple of a normal ball's, on the open board. */
+  autoscaleMax?: number;
+  /** `featureFlag` only: seconds it stays on (an ordinary ball). */
+  flagOnSeconds?: number;
+  /** `featureFlag` only: seconds it stays off (growing fences are safe from it). */
+  flagOffSeconds?: number;
   /** Minimum completed-level number at which this ball becomes eligible. */
   unlockLevel: number;
   /** Lock-bonus multiplier when this ball is locked away. */
@@ -142,7 +150,7 @@ export const DEFAULT_RAINBOW_SPAWN_INTERVAL = 10;
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
   'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow', 'tappable',
-  'turnTimer', 'attract',
+  'turnTimer', 'attract', 'autoscale', 'featureFlag',
 ]);
 
 /** White "tappable" ball (#57): tap to discard for nothing, or lock for a big bonus. */
@@ -214,6 +222,9 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     attractRadius: Number.isFinite(Number(r.attractRadius)) && Number(r.attractRadius) > 0
       ? Number(r.attractRadius)
       : undefined,
+    autoscaleMax: positiveOrUndefined(r.autoscaleMax),
+    flagOnSeconds: positiveOrUndefined(r.flagOnSeconds),
+    flagOffSeconds: positiveOrUndefined(r.flagOffSeconds),
     ability,
     density,
     speedReduction,
@@ -223,6 +234,15 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     spawnChance,
     phase2: r.phase2 === true,
   };
+}
+
+/** A positive finite number from the YAML, or undefined. */
+function positiveOrUndefined(v: unknown): number | undefined {
+  const n = Number(v);
+  if (v === undefined || v === null || !Number.isFinite(n) || n <= 0) {
+    return undefined;
+  }
+  return n;
 }
 
 /** Parse a balls.yml document into validated defs ([] on any failure). */
@@ -284,7 +304,9 @@ export function getEligibleBallTypes(level: number): BallTypeDef[] {
 export function getSpawnableBallTypes(level: number): BallTypeDef[] {
   // Never spit rainbow (would compound) nor tappable (#57): white balls are a
   // deliberate, rare mechanic, not something a rainbow should flood the map with.
-  return getEligibleBallTypes(level).filter(t => t.ability !== 'rainbow' && t.ability !== 'tappable');
+  // Nor an autoscaler: its size is read off the room it is in after a cut, and
+  // a spit lands mid-fight with no cut to read it from.
+  return getEligibleBallTypes(level).filter(t => t.ability !== 'rainbow' && t.ability !== 'tappable' && t.ability !== 'autoscale');
 }
 
 // ── Runtime reload from the served public/balls.yml ─────────────────────────

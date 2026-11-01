@@ -30,6 +30,8 @@ import { createInitialGameData } from "@/lib/initGame";
 import { castRayWithReflections } from "@/lib/wallGeometry";
 import { vec2Normalize } from "@/lib/polygon";
 import { applyLodestones } from "@/lib/physics/lodestone";
+import { easeAutoscalers } from "@/lib/physics/autoscale";
+import { tickFeatureFlags } from "@/lib/physics/featureFlag";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { collectPhasedOut, tickPhasing } from "@/lib/physics/phasing";
 import { updateBall } from "@/lib/physics/updateBall";
@@ -411,7 +413,7 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // the fact that the balls were ignoring it.
   const creepF = creepFactor(game.activePlaySeconds, game.creepConfig);
   game.creepFactor = creepF
-    * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount)
+    * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount, game.activePlaySeconds)
     * abilitySpeedFactor(game)
     * (game.beatSpeedMult || 1);
 
@@ -434,6 +436,10 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   tickMapBeats(game, level, levelNumber);
 
   applyLodestones(game.balls, dt, game.frozenBallId ?? null);
+  // Autoscalers ease toward the size their room calls for; Feature Flags
+  // take this second's state, which the fence-strike check reads.
+  easeAutoscalers(game.balls, dt);
+  tickFeatureFlags(game.balls, game.activePlaySeconds);
   // Control Freak decides whether the map gets to move a mover at all this
   // step, so it runs before the movers do. Inert for the bot, which never
   // grabs anything - and here because a pass the harness silently omits is how

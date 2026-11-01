@@ -109,6 +109,23 @@ export interface Ball {
   /** Lodestone: how hard, and how far, it pulls the other balls. */
   attractTurnRate?: number;
   attractRadius?: number;
+  // ── Autoscaler (autoscale, LATE_GAME_PLAN.md) ─────────────────────────────
+  /** Its radius as an ordinary ball: the size it shrinks to when penned in. */
+  autoscaleBase?: number;
+  /** Its radius on the open board, as a multiple of autoscaleBase. */
+  autoscaleMax?: number;
+  /** The radius it is easing toward, set after every cut from its room's share. */
+  autoscaleTarget?: number;
+  /** Its room's share of the board's starting space at the last read (0-1). */
+  autoscaleShare?: number;
+  // ── Feature Flag (featureFlag, LATE_GAME_PLAN.md) ────────────────────────
+  /** Seconds on, then seconds off, from the ball type. */
+  flagOnSeconds?: number;
+  flagOffSeconds?: number;
+  /** Seconds into its cycle at active-play second 0, so two flags never blink as one. */
+  flagPhase?: number;
+  /** Off right now: drawn faint, and growing fences are safe from it. Set every frame. */
+  flagOff?: boolean;
   // ── Compass ability (turnTimer) ─────────────────────────────────────────
   /** active-play second of this ball's next quarter turn. */
   nextTurnAt?: number;

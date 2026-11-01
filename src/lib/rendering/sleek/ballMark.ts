@@ -1,7 +1,7 @@
 /**
  * A ball says what it does without using its colour to say it.
  *
- * Every one of the twelve ball types is identified by hue alone. That fails
+ * Every one of the fourteen ball types is identified by hue alone. That fails
  * three ways at once: a phone in daylight, a dark map (which the game now
  * offers deliberately), and colour vision deficiency, which about one man in
  * twelve has. Measured as CIELAB distance under deuteranopia, purple/compass
@@ -100,6 +100,16 @@ export const BALL_MARKS: Record<string, MarkStroke[]> = {
   // Press here.
   tappable: [
     { kind: "dot", at: [0, 0], r: 0.34 },
+  ],
+  // Two opposite corners: the size that follows its room.
+  autoscale: [
+    { kind: "poly", pts: [[-0.42, 0.16], [-0.42, -0.42], [0.16, -0.42]] },
+    { kind: "poly", pts: [[0.42, -0.16], [0.42, 0.42], [-0.16, 0.42]] },
+  ],
+  // A flag on its pole: the one that switches off and on.
+  featureFlag: [
+    { kind: "poly", pts: [[-0.26, 0.52], [-0.26, -0.5]] },
+    { kind: "poly", pts: [[-0.26, -0.5], [0.42, -0.26], [-0.26, -0.02]], close: true },
   ],
 };
 

@@ -38,6 +38,7 @@
  * free lock at a poor price, which is what keeps it from being the only bug
  * anyone wants.
  */
+import { retargetAutoscalers } from "@/lib/physics/autoscale";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Ball, Region, Vector2 } from "@/types/game";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -217,6 +218,8 @@ function rebuildAfterRings(game: CanvasGameState): void {
   game.regions = regions;
   reassignBallsToRegions(game.balls, game.regions, game.walls, grid);
   paintCellRegionIds(grid, game.regions);
+  // Ground came back: an Autoscaler in the reopened room grows to fit it.
+  retargetAutoscalers(game.balls, game.regions, grid.initialActiveCount);
 }
 
 export interface RingCallbacks {

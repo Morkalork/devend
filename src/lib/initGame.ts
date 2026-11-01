@@ -59,6 +59,8 @@ import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
 import { armTurnTimer, DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
+import { armAutoscaler, BOSS_AUTOSCALE_MAX, DEFAULT_AUTOSCALE_MAX } from "@/lib/physics/autoscale";
+import { armFeatureFlag } from "@/lib/physics/featureFlag";
 import {
   getVarietyDecorationConfig,
   applyRectVariation,
@@ -152,6 +154,14 @@ export function createBall(
       type.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL,
       getRunRng(`turnArm:${ball.id}`),
     );
+  }
+  // Autoscaler: born at its open-board size; the first cut starts it shrinking.
+  if (type.ability === "autoscale") {
+    armAutoscaler(ball, type.autoscaleMax);
+  }
+  // Feature Flag: its blink phased per ball from the run seed.
+  if (type.ability === "featureFlag") {
+    armFeatureFlag(ball, type.flagOnSeconds, type.flagOffSeconds, getRunRng(`flagArm:${ball.id}`)());
   }
   return ball;
 }
@@ -1039,7 +1049,9 @@ export function createInitialGameData(
   const balls: Ball[] = selectedTypes.map((type, i) => {
     const enlarged = levelNumber >= BIG_BALL_MIN_LEVEL && enlargeRng() < BIG_BALL_CHANCE;
     const r = enlarged ? ballRadius * BIG_BALL_RADIUS_SCALE : ballRadius;
-    const ball = createBall(type, findSpacedSpawn(r), scaleFor(i), r, `${type.id}-${i}`, spawnTime, 0);
+    // An Autoscaler is born at its open-board size, so it is spaced at that size.
+    const spacing = type.ability === "autoscale" ? r * (type.autoscaleMax ?? DEFAULT_AUTOSCALE_MAX) : r;
+    const ball = createBall(type, findSpacedSpawn(spacing), scaleFor(i), r, `${type.id}-${i}`, spawnTime, 0);
     if (enlarged) {
       ball.enlarged = true;
       ball.lockMultiplier = ball.lockMultiplier + BIG_BALL_LOCK_BONUS;
@@ -1066,7 +1078,8 @@ export function createInitialGameData(
       // the straight tether to the first is clear of every obstacle (#70), so
       // the pair is never born already snagged on a pillar/mirror.
       const bossPositions: Vector2[] = [];
-      for (let bi = 0; bi < count; bi++) bossPositions.push(findSpacedSpawn(bossRadius));
+      const bossSpacing = bossBall.autoscale ? bossRadius * (bossBall.autoscaleMax ?? BOSS_AUTOSCALE_MAX) : bossRadius;
+      for (let bi = 0; bi < count; bi++) bossPositions.push(findSpacedSpawn(bossSpacing));
       if (bossBall.chained && count >= 2) {
         for (let attempt = 0; attempt < 30 && !chainSegmentClear(bossPositions[0], bossPositions[1]); attempt++) {
           bossPositions[1] = findSpacedSpawn(bossRadius);
@@ -1084,6 +1097,11 @@ export function createInitialGameData(
         boss.bossFullRadius = bossRadius; // shrinks toward a normal ball as HP drains
         boss.bossMinRadius = ballRadius;  // last-life size = an ordinary ball
         boss.color = bossBall.color ?? "#ff2d55";
+        // An autoscaling boss (level 40) is born at its open-board size.
+        if (bossBall.autoscale) {
+          boss.ability = "autoscale";
+          armAutoscaler(boss, bossBall.autoscaleMax ?? BOSS_AUTOSCALE_MAX);
+        }
         balls.push(boss);
         bosses.push(boss);
       }

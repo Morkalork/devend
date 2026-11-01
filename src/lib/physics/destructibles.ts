@@ -11,6 +11,7 @@
  * regions, too heavy to do per step). Removed obstacles RE-OPEN their footprint
  * as capturable space.
  */
+import { retargetAutoscalers } from "@/lib/physics/autoscale";
 import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, blastBalls, bombHitDamage, shardBombTargets } from "@/lib/bombCore";
 import { carveBlast } from "@/lib/physics/blastCarve";
 import { CanvasGameState } from "@/types/gameState";
@@ -856,6 +857,8 @@ export function rebuildRegionsKeepAll(game: CanvasGameState): void {
   game.regions = regions;
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   paintCellRegionIds(grid, game.regions);
+  // Ground came back: an Autoscaler in the reopened room grows to fit it.
+  retargetAutoscalers(game.balls, game.regions, grid.initialActiveCount);
 }
 
 /**

@@ -3898,7 +3898,7 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, purple]
-    timeLimit: 45
+    timeLimit: 60
     fenceBudget: 26
     win:
       require:
@@ -4016,7 +4016,7 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, compass]
-    timeLimit: 45
+    timeLimit: 35
     win:
       require:
         - kind: space
@@ -4110,6 +4110,9 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, yellow]
+    # Traffic Spike pinned (LATE_GAME_PLAN.md): the act's skill check carries one
+    # thing the act has not asked yet, a beat to time the cuts to.
+    mutator: spike
     timeLimit: 45
     fenceBudget: 22
     win:
@@ -4144,75 +4147,69 @@ levels:
         height: 24
     balls: []
 
-  # 35 "Hard Fork" - BOSS. Act IV closes on its own subject, the price of a
-  # cut, turned into a fight: the chained pair from 20 (each half takes two
-  # traps, the chain shreds any fence it sweeps) and the push from 30 (every
-  # twenty-five seconds every fence on the board is gone). Neither alone is
-  # new. Together they mean a half you wore down in one window has to be
-  # shipped in the next, because the fences that held it are not there any
-  # more: the first trap can be anywhere, the second must be in the light box
-  # top left, and both halves must end up there. The two phasing pillars snag
-  # the chain while they stand and shove the pair loose when they fade, so a
-  # pillar is a place to pin the pair for a window and a clock for when it
-  # comes free.
-  # Heights (3D board, objectRise.ts): the pillars stand tall, the snags the whole fight turns on.
+  # 35 "Burn Rate" - BOSS. Act IV closes on its own subject, the price of a
+  # cut, as a fight (LATE_GAME_PLAN.md, fix 2). It was a chained pair under the
+  # push, which made 30, 35 and 45 one fight; the pair and the wipe are 30's and
+  # 45's now. This one is a single build that takes three traps, inside a budget
+  # of twenty-six fences for the whole fight. Nothing wipes your work: every fence
+  # you lay stays, and every one is one fewer. The first two traps can be
+  # anywhere (it breaks out faster and smaller, and the first one reverts a
+  # fence, which in a budget fight is the expensive part), and the third has to
+  # be in the light box, top left. So the fences that wore it down are the walls
+  # the last trap is built against, and a cheap first trap near the box is
+  # worth two anywhere else. The two posts are anchors, and they cost nothing.
+  # Heights (3D board, objectRise.ts): the posts stand tall, the anchors a budget fight leans on.
   - id: level-35
-    name: Hard Fork
+    name: Burn Rate
     level: 35
-    premise: "The one where a chained pair wipes every fence every twenty-five seconds, so each half is worn down in one window and shipped in the next."
+    premise: "The one where the boss takes three traps and the whole fight gets twenty-six fences, so every wall has to wear it down and hold it."
     sizeThreshold: 14
-    expectedCuts: 8
+    expectedCuts: 10
     points: 5
     variety: 0
     randomShapes: 0
     maxBalls: 1
     timeLimit: 120
+    fenceBudget: 26
     coloredAreas:
       - kind: light
         x: 45
         'y': 45
-        width: 335
-        height: 335
+        width: 400
+        height: 400
     boss:
-      name: Hard Fork
-      intro: "The repository has split in two, and the halves are chained together. Each half takes two traps: the first can be anywhere and only tears it loose, faster and smaller, and the second must be inside the light box, top left, with both halves ending up there. Their chain shreds any fence it sweeps, and every twenty-five seconds the pair stops, shudders and wipes every fence on the board. The pillars snag the chain while they stand."
+      name: Burn Rate
+      intro: "The budget is the boss. One heavy build that takes three traps, and twenty-six fences for the whole fight. The first two traps can be anywhere: it breaks out faster and smaller, and the first one reverts one of your fences. The third must be inside the light box, top left. Nothing wipes your work, so every fence you lay is a wall the next trap can lean on, and one fewer you have left."
       creepFromStart: true
       objective:
-        id: defeat-hard-fork
-        name: Merge the Hard Fork
-        description: Wear both chained halves down, then fence them into the light box, between two wipes.
-        clarify: "Each half takes two traps. The first can be anywhere and costs no life: the half breaks out faster and smaller, and one of your fences is reverted. The second must be inside the light box (top left), and both halves must end up there. Their chain breaks any fence it sweeps across and snags on the pillars. Every twenty-five seconds the pair stops and shudders, then wipes every fence on the board, finished or still growing. Running out of time fails the map."
+        id: defeat-burn-rate
+        name: Ship it on budget
+        description: Wear the build down twice, then fence it into the light box, inside twenty-six fences.
+        clarify: "The build takes three traps. The first two can be anywhere and cost no life: it breaks out faster and smaller, and the first one reverts one of your fences. The third must be inside the light box (top left). The whole fight has twenty-six fences; when the last one is spent without a win, the map fails. Running out of time fails it too."
         kind: defeatBoss
         reward: 20
       bossBall:
-        hp: 2
-        count: 2
-        chained: true
-        radiusScale: 1.6
-        speedScale: 1.1
-        color: '#7c3aed'
-        fenceWipeSeconds: 25
+        hp: 3
+        radiusScale: 2.0
+        speedScale: 1.05
+        color: '#ff8a1f'
         spitIntervalSeconds: 0
         maxMinions: 0
     entities:
-      - id: pillar-n
+      - id: post-n
         rise: 1.8
         kind: wall
         shape: circle
         cx: 600
         cy: 300
         radius: 55
-        isPhasing: true
-        phaseCycleSeconds: 11
-      - id: pillar-s
+      - id: post-s
         rise: 1.8
         kind: wall
         shape: circle
         cx: 330
         cy: 620
         radius: 55
-        isPhasing: true
-        phaseCycleSeconds: 13
     balls: []
 
   # ===========================================================================
@@ -4229,7 +4226,14 @@ levels:
   # ground left to demand, so the stakes rise with the roster and the mix.
   # ===========================================================================
 
-  # 36 "Load Balancer" - USE mirror. The breather after the boss.
+  # 36 "Load Balancer" - MEET Autoscaler, USE mirror. The breather after the boss.
+  #
+  # The Autoscaler (LATE_GAME_PLAN.md) arrives here, act V's one new thing: a
+  # ball as big as its room, huge on the open board and an ordinary ball once
+  # it is penned in. On a breather because the lesson is the first three cuts,
+  # which are the dangerous ones, and the mirror's V is a pocket the player
+  # already knows how to close. It replaced the white ball, which was a
+  # decision, not a lesson.
   #
   # A short mirror hangs below the middle of the top wall. Every corner on the
   # board closes with one straight diagonal; the middle of a wall never does,
@@ -4248,14 +4252,14 @@ levels:
   - id: level-36
     name: Load Balancer
     level: 36
-    premise: "The one where the only one-fence pocket in the middle of a wall is the V you bounce off the mirror."
+    premise: "The one where the Autoscaler shrinks with every cut that pens it in, and the V off the mirror is the one pocket mid-wall."
     sizeThreshold: 6
     expectedCuts: 10
     points: 5
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, white]
+    ballTypeIds: [red, blue, autoscaler]
     timeLimit: 45
     win:
       require:
@@ -4322,7 +4326,7 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, green]
-    timeLimit: 45
+    timeLimit: 35
     win:
       require:
         - kind: space
@@ -4483,8 +4487,8 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, purple]
-    timeLimit: 45
+    ballTypeIds: [red, autoscaler, purple]
+    timeLimit: 65
     win:
       require:
         - kind: space
@@ -4542,11 +4546,15 @@ levels:
   # boss this long cannot be won by chasing it: the minions are what the clear
   # is made of, and the fences that seal them are the walls the next trap is
   # built against. One pillar in the middle splits the room into a loop.
+  # It is an Autoscaler too (LATE_GAME_PLAN.md, fix 2), act V's new ball as its
+  # boss: huge on the open board, smaller as you pen it in, and its leaks do not
+  # shrink it. So the first cuts are the dangerous ones here as on 36, and the
+  # minions you seal are what makes its room, and it, small enough to trap.
   # Heights (3D board, objectRise.ts): the pillar stands tall, the snag the fight turns on.
   - id: level-40
     name: Memory Leak
     level: 40
-    premise: "The one where the build takes three traps and leaks a minion every few seconds, so the board fills while the boss empties."
+    premise: "The one where a build as big as its room takes three traps and leaks minions, so the board fills while the boss shrinks."
     sizeThreshold: 14
     expectedCuts: 9
     points: 5
@@ -4562,7 +4570,7 @@ levels:
         height: 335
     boss:
       name: Memory Leak
-      intro: "A build that leaks. It takes three traps: the first two can be anywhere and only tear it loose, faster and smaller each time, and the third must be inside the light box, bottom right. Every few seconds it spits a minion, and the minions stay until you fence them in, so the board fills while the boss empties. Seal the leaks as you go: their fences are the walls the next trap is built against."
+      intro: "A build that leaks, and grows to fill its room: huge on the open board, smaller as you pen it in. It takes three traps: the first two can be anywhere and only tear it loose, faster and smaller each time, and the third must be inside the light box, bottom right. Every few seconds it spits a minion, and the minions stay until you fence them in, so the board fills while the boss empties. Seal the leaks as you go: their fences are the walls the next trap is built against."
       creepFromStart: true
       objective:
         id: defeat-memory-leak
@@ -4573,9 +4581,11 @@ levels:
         reward: 20
       bossBall:
         hp: 3
-        radiusScale: 2.0
+        radiusScale: 1.7
         speedScale: 1.05
         color: '#16a34a'
+        autoscale: true
+        autoscaleMax: 1.6
         spitIntervalSeconds: 9
         maxMinions: 3
     entities:
@@ -4597,7 +4607,10 @@ levels:
   # minions.
   # ===========================================================================
 
-  # 41 "Fast Path" - BREAK fence ground, FIGHT mover. The breather after the boss.
+  # 41 "Fast Path" - MEET Feature Flag, BREAK fence ground, FIGHT mover. The breather after the boss.
+  # The Feature Flag (LATE_GAME_PLAN.md) arrives on the fast lane: off, it passes
+  # through growing fences, so a fence grown across it in its off window is
+  # safe, and the lane builds fences fast enough to fit inside one.
   #
   # 24 and 27 taught ground that prices a cut by slowing it: the cheapest pocket
   # was the longest stand-still. Here the ground is the other way round. A band
@@ -4615,14 +4628,14 @@ levels:
   - id: level-41
     name: Fast Path
     level: 41
-    premise: "The one where the ground that builds fences twice as fast is the lane the patrol sweeps, and the clock wants you quick."
+    premise: "The one where a Feature Flag blinks off over the fast lane the patrol sweeps, and a fence grown across it then is safe."
     sizeThreshold: 5
     expectedCuts: 10
     points: 5
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, yellow]
+    ballTypeIds: [red, blue, featureflag]
     timeLimit: 55
     win:
       require:
@@ -4693,7 +4706,7 @@ levels:
     variety: 0
     randomShapes: 0
     ballTypeIds: [red, blue, green]
-    timeLimit: 45
+    timeLimit: 35
     win:
       require:
         - kind: space
@@ -4867,8 +4880,8 @@ levels:
     maxBalls: 3
     variety: 0
     randomShapes: 0
-    ballTypeIds: [red, blue, black]
-    timeLimit: 50
+    ballTypeIds: [red, featureflag, black]
+    timeLimit: 70
     fenceBudget: 28
     win:
       require:

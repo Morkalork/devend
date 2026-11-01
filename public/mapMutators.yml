@@ -77,6 +77,37 @@ mutators:
       factor: 1.18
     overtimePremium: 1
 
+  # Traffic Spike (LATE_GAME_PLAN.md, a late unlock): every fifteen seconds the
+  # last three run hot, balls and movers at 1.5x. Not a constant tax like
+  # Overclock: the map is calm most of the time and the player learns its beat,
+  # so a cut is timed to the calm. Rolled from act IV on, and pinned on 34.
+  - id: spike
+    name: Traffic Spike
+    description: Every fifteen seconds the board surges. For three seconds, balls and movers run half again as fast.
+    clarify: The surge comes on a steady beat, the last three seconds of every fifteen. Start your long cuts right after one ends.
+    behavior: spike
+    weight: 2
+    minLevel: 31
+    params:
+      period: 15
+      burstSeconds: 3
+      factor: 1.5
+    overtimePremium: 1
+
+  # Slow Build (LATE_GAME_PLAN.md, a late unlock): every fence builds at 0.8x.
+  # The one mutator that prices the player's side rather than the balls'. From
+  # act V on, when the boards are full enough for a slower fence to matter.
+  - id: lag
+    name: Slow Build
+    description: The build server is slow today. Every fence takes longer to grow.
+    clarify: Fences build at four fifths of their usual speed, all map. Shorter cuts, or cuts away from the balls.
+    behavior: lag
+    weight: 2
+    minLevel: 36
+    params:
+      factor: 0.8
+    overtimePremium: 1
+
   # Full-map gravity: the room turned, on a clock, with no quiet stretches.
   #
   # The pull never stops and never eases, it just gets a quarter turn every ten

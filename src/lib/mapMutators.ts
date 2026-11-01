@@ -22,7 +22,7 @@ import type { Rng } from "@/lib/runRng";
 // A behaviour not on this list makes parseMutatorEntry drop the whole entry, so
 // an authored `behavior: conveyor` left in the YAML simply never loads rather
 // than half-applying.
-const VALID_BEHAVIORS = new Set(["crunch", "overclock", "gravity", "none"]);
+const VALID_BEHAVIORS = new Set(["crunch", "overclock", "gravity", "spike", "lag", "none"]);
 
 /**
  * The catalogue as it is on disk, read at BUILD time.
@@ -191,8 +191,13 @@ function resolveMutator(m: MapMutator): ActiveMapMutator {
  * into game.creepFactor so the aim line stays in sync) and mover speed. 1 for
  * none/no-mutator.
  */
-export function mutatorSpeedFactor(mut: ActiveMapMutator | null, lockedBallsCount: number): number {
+export function mutatorSpeedFactor(
+  mut: ActiveMapMutator | null, lockedBallsCount: number, activeSeconds = 0,
+): number {
   if (!mut) return 1;
+  if (mut.behavior === "spike") {
+    return spikeActive(mut, activeSeconds) ? (mut.params?.factor ?? 1.5) : 1;
+  }
   if (mut.behavior === "overclock") {
     const f = mut.params?.factor ?? 1.15;
     return f > 0 ? f : 1;
@@ -204,6 +209,35 @@ export function mutatorSpeedFactor(mut: ActiveMapMutator | null, lockedBallsCoun
     return 1 + pct / 100;
   }
   return 1;
+}
+
+/**
+ * Traffic Spike: is the board surging at this active-play second?
+ *
+ * Every `period` seconds (15) the last `burstSeconds` (3) of the cycle run at
+ * `factor`. The first surge comes a full period in, so the map opens calm.
+ * Pure, so the HUD and the tests read the same schedule the physics does.
+ */
+export function spikeActive(mut: ActiveMapMutator | null, activeSeconds: number): boolean {
+  if (!mut || mut.behavior !== "spike") {
+    return false;
+  }
+  const period = mut.params?.period ?? 15;
+  const burst = Math.min(period, mut.params?.burstSeconds ?? 3);
+  if (!(period > 0) || activeSeconds < period - burst) {
+    return false;
+  }
+  const t = activeSeconds % period;
+  return t >= period - burst;
+}
+
+/** Slow Build: the factor every fence's build speed is multiplied by (1 when not active). */
+export function mutatorFenceSpeedFactor(mut: ActiveMapMutator | null): number {
+  if (!mut || mut.behavior !== "lag") {
+    return 1;
+  }
+  const f = mut.params?.factor ?? 0.8;
+  return f > 0 ? f : 1;
 }
 
 /** Overtime hours awarded on clear for having played the mutated map (under cap). */
