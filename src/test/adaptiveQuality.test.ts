@@ -112,7 +112,7 @@ describe("the renderer", () => {
 
   it("stores each step down the moment it decides it, and logs why", () => {
     expect(step).toContain("setLearnedLimit(next);");
-    expect(step).toContain("recordQualityStep(this.tier, next, medianMs);");
+    expect(step).toContain("recordQualityDrop(this.tier, next, medianMs);");
     expect(step).toContain('setLearnedLimit("2d");');
   });
 

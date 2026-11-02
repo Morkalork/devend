@@ -77,6 +77,7 @@ const PING_EVERY_MS = 2000;
  * message carries the tick it belongs to.
  */
 export class NearbyTransport implements Transport {
+  readonly kind = "nearby" as const;
   private handler: ((msg: NetMessage) => void) | null = null;
   private closeHandler: ((reason: string) => void) | null = null;
   private listeners: PluginListenerHandle[] = [];

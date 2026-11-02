@@ -44,6 +44,7 @@ export function relayUrl(room: string, role: RelayRole, loc: Pick<Location, "pro
 interface RelayNotice { t: "relay"; state: "waiting" | "paired" }
 
 export class RelayTransport implements Transport {
+  readonly kind = "relay" as const;
   private ws: WebSocket;
   private handler: ((msg: NetMessage) => void) | null = null;
   private closeHandler: ((reason: string) => void) | null = null;

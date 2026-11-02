@@ -57,7 +57,7 @@ import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
-import { analytics } from '@/lib/analytics';
+import { analytics, setAnalyticsLevel, setAnalyticsRun } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled, debugMutatorId, forcedTilts } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers, isContinuation } from '@/lib/tenure';
@@ -869,6 +869,57 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     });
   }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, metaStats.highestLevelReached, lastRunUpgradeIds, metArchetypes]);
 
+  // The map being played, for events raised inside it (gameTelemetry.ts).
+  useEffect(() => {
+    setAnalyticsLevel(currentLevelIndex + 1);
+  }, [currentLevelIndex]);
+
+  // Analytics bookkeeping for run_started / run_ended (src/lib/analytics.ts).
+  // Refs, not state: they are read only when an event is raised, and the
+  // run's figures are copied in on every render so a handler sees them fresh
+  // without widening its dependency list.
+  const runOpenRef = useRef(false);
+  const runClockRef = useRef<number | null>(null);
+  const runFiguresRef = useRef({ levelsCompleted: 0, totalScore: 0, offerId: null as string | null, offerPool: null as string | null });
+  runFiguresRef.current = {
+    levelsCompleted: runLevelsCompleted,
+    totalScore,
+    offerId: runOffer?.id ?? null,
+    offerPool: runOffer?.pool ?? null,
+  };
+
+  /** run_ended, from whichever path ended the run; minutes from its start on this launch. */
+  const trackRunEnded = useCallback((reason: 'won' | 'outOfLives' | 'restarted', isWin: boolean) => {
+    const figures = runFiguresRef.current;
+    const startedAt = runClockRef.current;
+    analytics.runEnded({
+      isWin,
+      levelsCompleted: figures.levelsCompleted,
+      totalScore: figures.totalScore,
+      daily: dailyKeyRef.current !== null,
+      reason,
+      minutes: startedAt === null ? null : Math.round((Date.now() - startedAt) / 6000) / 10,
+      offerId: figures.offerId,
+      offerPool: figures.offerPool,
+    });
+    runOpenRef.current = false;
+    runClockRef.current = null;
+  }, []);
+
+  /**
+   * run_started. A run still open here was abandoned for this one (the in-game
+   * Restart, or a new run over a saved one), so it is closed as 'restarted'.
+   */
+  const trackRunStarted = useCallback((mode: 'new' | 'daily' | 'resume' | 'playAgain' | 'restart', daily: boolean) => {
+    if (runOpenRef.current) {
+      trackRunEnded('restarted', false);
+    }
+    setAnalyticsRun({ daily });
+    analytics.runStarted({ mode, daily });
+    runOpenRef.current = true;
+    runClockRef.current = Date.now();
+  }, [trackRunEnded]);
+
   /**
    * The last step of starting a run: Sprint Planning when it is unlocked (or
    * Tenure is owed, which is the boon card), otherwise straight into the map.
@@ -981,12 +1032,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         }
       }
 
-      analytics.runStarted({ mode: 'new', daily: false });
+      trackRunStarted('new', false);
 
       // The debug jump and a pair run go straight into the map (see enterRun).
       enterRun(!skipDraft && !pairRunRef.current);
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, clearDailyMode, enterRun]);
+  }, [loadLevels, loadUpgrades, loadCertificates, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, clearDailyMode, enterRun, trackRunStarted]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -1052,13 +1103,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     resetToFirstLevel(); // same seeded lineup for everyone, from level 1
 
-    analytics.runStarted({ mode: 'daily', daily: true });
+    trackRunStarted('daily', true);
 
     // The Daily deals Sprint Planning from its seed, so everyone sees the same
     // three cards (the pick is theirs), and never offers Tenure. A pair run
     // skips the draft, as it does everywhere.
     enterRun(!pairRunRef.current, { seeded: true });
-  }, [loadLevels, loadUpgrades, loadCertificates, resetRunScopedState, clearRun, resetToFirstLevel, clearDailyMode, enterRun]);
+  }, [loadLevels, loadUpgrades, loadCertificates, resetRunScopedState, clearRun, resetToFirstLevel, clearDailyMode, enterRun, trackRunStarted]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -1179,7 +1230,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (!levelsSuccess || !upgradesSuccess) return;
 
     applyRunRecord(save);
-    analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
+    trackRunStarted('resume', savedDaily !== null);
     if (save.betweenMaps) {
       // Saved after the map was won: back to the stage it was saved on, with
       // the map's results the store reads, once the sequence has settled.
@@ -1188,7 +1239,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     } else {
       nav.goToGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, applyRunRecord, nav.goToGame]);
+  }, [loadLevels, loadUpgrades, loadCertificates, applyRunRecord, nav.goToGame, trackRunStarted]);
 
 
   const handleContinueRun = useCallback(async () => {
@@ -1237,12 +1288,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
-    analytics.runEnded({
-      isWin: result.isWin,
-      levelsCompleted,
-      totalScore,
-      daily: dailyKeyRef.current !== null,
-    });
+    trackRunEnded(result.isWin ? 'won' : 'outOfLives', result.isWin);
     // Tenure (issue #75): the depth this run ENDED at decides the next
     // run's free upgrade. Recorded here and nowhere else, so quitting to the
     // menu leaves the last real result standing.
@@ -1261,7 +1307,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // held that slot, and the solo run parked in it is not the one that ended.
     if (!pairRunRef.current) clearRun();
     nav.endGame({ ...result, totalScore });
-  }, [nav.endGame, totalScore, finalizeRun, runLevelsCompleted, activeModifiers.extraCertificateHours, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
+  }, [nav.endGame, totalScore, finalizeRun, runLevelsCompleted, activeModifiers.extraCertificateHours, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex, trackRunEnded]);
 
   /**
    * The last map is won: the run is over, as a win. Banked and filed through
@@ -1406,12 +1452,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // The player pressed an ability button: spend one charge (floored at 0).
   const handleSpendAbility = useCallback((abilityId: string) => {
+    analytics.abilityUsed({ abilityId, level: currentLevelIndex + 1 });
     setAbilityCharges(prev => {
       const have = prev[abilityId] ?? 0;
-      if (have <= 0) return prev;
+      if (have <= 0) {
+        return prev;
+      }
       return { ...prev, [abilityId]: have - 1 };
     });
-  }, []);
+  }, [currentLevelIndex]);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     const currentLevelNum = currentLevelIndex + 1;
@@ -1489,6 +1538,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       overtime: levelOvertime,
       perfect: currentLives >= livesAtLevelStart,
       daily: dailyKeyRef.current !== null,
+      seconds: scoreData.activeSeconds === undefined ? null : Math.round(scoreData.activeSeconds),
+      livesLost: Math.max(0, livesAtLevelStart - currentLives),
+      fences: scoreData.cutCount,
+      mutator: scoreData.mutatorId ?? null,
     });
 
 
@@ -1831,6 +1884,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * still comes first, exactly as Continue would have it.
    */
   const handleSkipStoreFromOverlay = useCallback(() => {
+    analytics.shopSkipped({ level: currentLevelIndex + 1, overtimeBanked: totalScore });
     leaveDebrief();
     if (isLastLevel) {
       handleFinishRun();
@@ -1841,7 +1895,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     const interest = arriveAtStore();
     leaveStore(false, interest);
-  }, [leaveDebrief, isLastLevel, handleFinishRun, offerCapstoneIfDue, arriveAtStore, leaveStore]);
+  }, [leaveDebrief, isLastLevel, handleFinishRun, offerCapstoneIfDue, arriveAtStore, leaveStore, currentLevelIndex, totalScore]);
 
   /** Capstone draft pick: permanent for the run, then on to the shop. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
@@ -1854,7 +1908,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [proceedToShop]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
-    purchaseCertLevel(certId, targetLevel);
+    if (purchaseCertLevel(certId, targetLevel)) {
+      analytics.certBought({ certId, level: targetLevel });
+    }
   }, [purchaseCertLevel]);
 
   const handlePlayAgain = useCallback((startLevel?: number) => {
@@ -1887,10 +1943,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       }
     }
 
-    analytics.runStarted({ mode: 'playAgain', daily: false });
+    trackRunStarted('playAgain', false);
 
     enterRun(true);
-  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
+  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun, trackRunStarted]);
 
   const handleRestartRun = useCallback(() => {
     clearDailyMode(); // restart is always a normal (unseeded) run
@@ -1909,8 +1965,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel();
+    trackRunStarted('restart', false);
     enterRun(true);
-  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun]);
+  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, clearDailyMode, enterRun, trackRunStarted]);
 
   const handleBackToWelcome = useCallback(() => {
     // NOTE: does NOT clear the daily context; a saved daily run keeps its key
@@ -1926,6 +1983,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Upgrades too: locked-cert tooltips name the upgrade that unlocks them,
     // and the catalogue isn't loaded yet when entering from the welcome screen.
     await Promise.all([loadCertificates(), loadUpgrades()]);
+    analytics.certStoreOpened();
     nav.goToCertificateStore();
   }, [loadCertificates, loadUpgrades, nav.goToCertificateStore]);
 
@@ -1936,6 +1994,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [nav.goToOffers]);
 
   const handleReEnableAllTutorials = useCallback(() => {
+    analytics.settingChanged({ setting: "tutorialsReEnabled", value: "yes" });
     resetAllTutorials();
   }, [resetAllTutorials]);
 

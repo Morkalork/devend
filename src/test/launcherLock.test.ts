@@ -201,7 +201,7 @@ describe("the rules are wired in, not just defined", () => {
     const applyCut = read("src/lib/physics/applyCut.ts");
     const at = applyCut.indexOf("function failMapCostingALife(");
     expect(at, "the shared fail path is gone").toBeGreaterThan(-1);
-    const body = applyCut.slice(at, at + 900);
+    const body = applyCut.slice(at, at + 1000);
     expect(body, "a map failure stopped costing a life").toContain("getLives() - 1");
     expect(body, "the reason no longer reaches the restart").toContain("onMapTimedOut");
     expect(body, "the last life no longer ends the run").toContain("handleGameOverFn");

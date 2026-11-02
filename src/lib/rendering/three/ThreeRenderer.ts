@@ -62,7 +62,7 @@ import {
   CircuitSparks, POCKET_GOLD, bombLights, chargeLights, phaseCasters, pocketHeat, powerLevel,
 } from "./lightMechanics";
 import { getLightLook } from "@/lib/lightLook";
-import { recordQualityStep, recordShaderError } from "@/lib/rendering/rendererDiag";
+import { recordQualityDrop, recordQualityStep, recordShaderError } from "@/lib/rendering/rendererDiag";
 
 /**
  * How much of a solid's own colour shows unlit, on top of the board-wide
@@ -566,13 +566,13 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
       setLearnedLimit(next);
       // Whatever was earned above this is gone with it.
       setEarnedTier(next);
-      recordQualityStep(this.tier, next, medianMs);
+      recordQualityDrop(this.tier, next, medianMs);
     } else {
       // Already the cheapest 3D tier: the 2D board, from the next board on.
       this.exhausted = true;
       setLearnedLimit("2d");
       setEarnedTier(null);
-      recordQualityStep(this.tier, "2d", medianMs);
+      recordQualityDrop(this.tier, "2d", medianMs);
     }
     // Something now, not only at the next map: the 3D frame's resolution is
     // a render target, no shader, so it can change mid-map for the price of
@@ -582,7 +582,7 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const ratioNext = medianMs > SEVERE_FRAME_MS ? 1 : Math.max(1, ratioNow * 0.75);
     if (ratioNext < ratioNow) {
       this.emergencyRatio = ratioNext;
-      recordQualityStep(this.tier, "res", medianMs);
+      recordQualityDrop(this.tier, "res", medianMs);
       this.resizeAfterFrame();
     }
   }

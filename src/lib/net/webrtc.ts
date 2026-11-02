@@ -65,6 +65,7 @@ function gathered(pc: RTCPeerConnection): Promise<void> {
 }
 
 export class WebRtcTransport implements Transport {
+  readonly kind = "webrtc" as const;
   private pc: RTCPeerConnection;
   private channel: RTCDataChannel | null = null;
   private handler: ((msg: NetMessage) => void) | null = null;

@@ -29,7 +29,9 @@ let client: PostHog | null = null;
 export function initAnalytics(): void {
   const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
   const devOptIn = import.meta.env.VITE_POSTHOG_DEV === '1';
-  if (!key || (import.meta.env.DEV && !devOptIn)) return;
+  if (!key || (import.meta.env.DEV && !devOptIn)) {
+    return;
+  }
   import('posthog-js').then(({ default: posthog }) => start(posthog, key)).catch(() => {
     // Offline, or blocked: analytics must never break the game.
   });
@@ -60,12 +62,102 @@ function start(posthog: PostHog, key: string): void {
   }
 }
 
+/** One event as this session raised it, for Admin's "Events this session" list. */
+export interface SentEvent {
+  /** Date.now() when it was raised. */
+  at: number;
+  event: string;
+  props: Record<string, unknown>;
+  /** Did it go to PostHog? False without a key, before the client loads, or while muted. */
+  sent: boolean;
+}
+
+/** How many of this session's events Admin keeps. */
+export const SESSION_LOG_MAX = 60;
+
+const sessionLog: SentEvent[] = [];
+const listeners = new Set<() => void>();
+
+/**
+ * Admin's own play (the Playground, the device check) mutes analytics, so a
+ * tester's runs on staging do not count as players'. Events are still logged
+ * locally, marked unsent, so Admin can see what WOULD have gone.
+ */
+let muted = false;
+
+export function setAnalyticsMuted(next: boolean): void {
+  muted = next;
+}
+
+export function isAnalyticsMuted(): boolean {
+  return muted;
+}
+
+/** This session's events, oldest first. */
+export function getSessionEvents(): readonly SentEvent[] {
+  return sessionLog;
+}
+
+/** Forget this session's list (Admin's Clear; tests). */
+export function clearSessionEvents(): void {
+  sessionLog.length = 0;
+  for (const fn of listeners) {
+    try {
+      fn();
+    } catch {
+      // A listener must not stop the clear.
+    }
+  }
+}
+
+/** Called whenever an event is raised; returns the unsubscribe. */
+export function subscribeSessionEvents(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/**
+ * What the game layer cannot see but its events should carry: is the current
+ * run a Daily Stand-up. Set by the session when a run starts.
+ */
+const runContext = { daily: false, level: 0 };
+
+export function setAnalyticsRun(p: { daily: boolean }): void {
+  runContext.daily = p.daily;
+}
+
+/** The map being played (1-based), for events raised where the level is not known. */
+export function setAnalyticsLevel(level: number): void {
+  runContext.level = level;
+}
+
+/** Is a PostHog client live (a key was set and the library loaded)? */
+export function isAnalyticsLive(): boolean {
+  return client !== null;
+}
+
 function track(event: string, props?: Record<string, unknown>): void {
-  if (!client) return;
+  const willSend = client !== null && !muted;
+  sessionLog.push({ at: Date.now(), event, props: { ...(props ?? {}) }, sent: willSend });
+  if (sessionLog.length > SESSION_LOG_MAX) {
+    sessionLog.splice(0, sessionLog.length - SESSION_LOG_MAX);
+  }
+  for (const fn of listeners) {
+    try {
+      fn();
+    } catch {
+      // A listener must not stop the event.
+    }
+  }
+  if (!willSend || !client) {
+    return;
+  }
   try {
     client.capture(event, props);
   } catch {
-    // ignore — see header
+    // ignore - see header
   }
 }
 
@@ -75,16 +167,37 @@ function track(event: string, props?: Record<string, unknown>): void {
  */
 export const analytics = {
   /** A run began. `daily` = Daily Stand-up seeded run. */
-  runStarted: (p: { mode: 'new' | 'daily' | 'resume' | 'playAgain'; daily: boolean }) =>
+  runStarted: (p: { mode: 'new' | 'daily' | 'resume' | 'playAgain' | 'restart'; daily: boolean }) =>
     track('run_started', p),
 
-  /** A map was cleared. `perfect` = no lives lost on the map. */
+  /**
+   * A map was cleared. `perfect` = no lives lost on the map. `seconds` is
+   * active play (pauses and shops excluded), `fences` the fences drawn,
+   * `mutator` the map's mutator id or null.
+   */
   levelCompleted: (p: {
     level: number;
     overtime: number;
     perfect: boolean;
     daily: boolean;
+    seconds: number | null;
+    livesLost: number;
+    fences: number;
+    mutator: string | null;
   }) => track('level_completed', p),
+
+  /**
+   * A life was lost, with why (MapFailKind: timeUp, ballHitFence, bossOutside,
+   * ...). Fires on every life, the last one included, so it is the map
+   * difficulty signal; level_failed only marks the run's end.
+   */
+  lifeLost: (p: {
+    level: number;
+    reason: string;
+    seconds: number;
+    livesLeft: number;
+    mutator: string | null;
+  }) => track('life_lost', { ...p, daily: runContext.daily }),
 
   /** Ran out of lives on a map (before the Continue decision, if any). */
   levelFailed: (p: { level: number; continuesLeft: number; daily: boolean }) =>
@@ -100,13 +213,74 @@ export const analytics = {
   /** Picked the run's Promotion capstone. */
   capstoneSelected: (p: { capstoneId: string }) => track('capstone_selected', p),
 
-  /** The run is over (win or final death). */
+  /**
+   * The run is over. `reason`: won, outOfLives, or restarted (the player
+   * abandoned it for a fresh one). `minutes` since it started or was resumed
+   * on this launch. `offerId`/`offerPool` = the Sprint Planning card taken.
+   */
   runEnded: (p: {
     isWin: boolean;
     levelsCompleted: number;
     totalScore: number;
     daily: boolean;
+    reason: 'won' | 'outOfLives' | 'restarted';
+    minutes: number | null;
+    offerId: string | null;
+    offerPool: string | null;
   }) => track('run_ended', p),
+
+  /** The Certificate store was opened (from the menu). */
+  certStoreOpened: () => track('cert_store_opened', {}),
+
+  /** A certificate level was bought with Certificate Hours. */
+  certBought: (p: { certId: string; level: number }) => track('cert_bought', p),
+
+  /**
+   * An ability was used: a charge spent from the ability bar, or a Feature
+   * Freeze tap (`featureFreeze` from the upgrade's per-map uses, `freezeCharge`
+   * from a banked charge). `level` defaults to the map being played.
+   */
+  abilityUsed: (p: { abilityId: string; level?: number }) =>
+    track('ability_used', { abilityId: p.abilityId, level: p.level ?? runContext.level }),
+
+  /**
+   * A non-standard fence type was finished on a map. Once per type per map,
+   * so the count reads as "maps it was used on", not fences.
+   */
+  fenceTypeUsed: (p: { fenceTypeId: string; level: number }) => track('fence_type_used', p),
+
+  /** The player went past the store after a map ("next map" instead of "open store"). */
+  shopSkipped: (p: { level: number; overtimeBanked: number }) => track('shop_skipped', p),
+
+  /**
+   * A Pair Programming attempt or session. A session that connected is
+   * reported when it ends (`connected` true, `maps` = maps started together);
+   * a pairing that never connected is reported when it fails (`connected`
+   * false, `problem` = the lobby's reason, cut to 80 characters). `method`:
+   * nearby (Android radios) or link (QR / link, WebRTC with the relay behind it).
+   */
+  pairSession: (p: {
+    method: 'nearby' | 'link' | null;
+    role: 'host' | 'guest' | null;
+    transport: string | null;
+    connected: boolean;
+    maps: number;
+    problem?: string;
+  }) => track('pair_session', p),
+
+  /** A screen was shown (menus and between-map screens; the board is 'game'). */
+  screenViewed: (p: { screen: string }) => track('screen_viewed', p),
+
+  /** An option was changed. `value` is the new value, as a string. */
+  settingChanged: (p: { setting: string; value: string }) => track('setting_changed', p),
+
+  /**
+   * The 3D board lowered its quality on a slow phone (`to`: a tier, 'res' for
+   * resolution only, or '2d'), or could not start at all (from '3d', reason
+   * 'startFailed').
+   */
+  qualityDropped: (p: { from: string; to: string; fps: number | null; reason: 'slowFrames' | 'startFailed' }) =>
+    track('quality_dropped', p),
 
   /** Player took (or skipped) a Sprint Planning offer at the run start. */
   offerSelected: (p: { offerId: string | null; pool: string | null; grantedIds: string[] }) =>

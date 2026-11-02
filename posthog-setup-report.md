@@ -15,6 +15,30 @@ The wizard completed a targeted analytics integration for **Dev/End** (Vite + Re
 | `run_ended` | Run is over - win or final death (also fixed: now fires on retire) | `src/hooks/useGameSession.ts` *(pre-existing + retire fix)* |
 | `offer_selected` | Player took or skipped a Sprint Planning offer at the run start (offerId, pool, grantedIds; replaced `loadout_selected`) | `src/hooks/useGameSession.ts` |
 
+### Added 2026-11-02 (player behaviour, keep-or-drop)
+
+`level_completed` now also carries `seconds` (active play), `livesLost`,
+`fences` and `mutator`; `run_ended` carries `reason` (won / outOfLives /
+restarted), `minutes` and the Sprint Planning card (`offerId`, `offerPool`);
+`run_started` has a `restart` mode.
+
+| Event name | Properties | Raised in |
+|---|---|---|
+| `life_lost` | level, reason (MapFailKind: timeUp, ballHitFence, bossOutside, ...), seconds, livesLeft, mutator, daily | `src/lib/gameTelemetry.ts` (from applyCut / fenceStrike) |
+| `cert_store_opened` | - | `useGameSession.ts` |
+| `cert_bought` | certId, level | `useGameSession.ts` |
+| `ability_used` | abilityId (an ability-bar id, or featureFreeze / freezeCharge), level | `useGameSession.ts`, `net/commands.ts` |
+| `fence_type_used` | fenceTypeId, level; non-standard types, once per type per map | `gameTelemetry.ts` |
+| `shop_skipped` | level, overtimeBanked | `useGameSession.ts` |
+| `pair_session` | method, role, transport, connected, maps, problem | `usePairSession.ts`, `PairLobby.tsx` |
+| `screen_viewed` | screen | `useScreenNavigation.ts` |
+| `setting_changed` | setting (language, musicVolume, effectsVolume, tutorialsReEnabled, totalReset), value | `OptionsScreen.tsx`, `useGameSession.ts` |
+| `quality_dropped` | from, to (tier, res or 2d), fps, reason (slowFrames / startFailed) | `rendering/rendererDiag.ts` |
+
+Opening any Admin screen mutes analytics for the rest of that launch (a
+tester's play is not players' data). Admin > Analytics lists every event the
+launch raised, sent or not, and can unmute to check one lands in PostHog.
+
 ## Files changed
 
 - `src/lib/analytics.ts` — added `loadoutSelected` (and `ascensionStarted`, since removed with Ascension) event definitions

@@ -651,6 +651,10 @@ export interface LevelScoreData {
   levelName?: string;
   levelPremise?: string;
   cutCount: number;
+  /** Active-play seconds the map took (pauses and holds excluded), for analytics. */
+  activeSeconds?: number;
+  /** The map's mutator id, or null, for analytics. */
+  mutatorId?: string | null;
   expectedCuts: number;
   basePoints: number;
   levelScore: number;

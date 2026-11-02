@@ -84,6 +84,7 @@ export function handleGameOverFn(
 
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
+        activeSeconds: game.activePlaySeconds, mutatorId: game.mapMutator?.id ?? null,
       expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
       levelScore,
       remainingPercent: percent, overcutBonus: 0,
@@ -154,6 +155,7 @@ export function handlePushFailedFn(
 
   callbacks.onLevelComplete({
     levelNumber, levelId: level.id, cutCount: game.wallCount,
+        activeSeconds: game.activePlaySeconds, mutatorId: game.mapMutator?.id ?? null,
     expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
     levelScore,
     remainingPercent: percent, overcutBonus: 0,

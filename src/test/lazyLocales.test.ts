@@ -40,6 +40,6 @@ describe("the rest of the main bundle", () => {
   it("fetches posthog-js only when a key is set", () => {
     const analytics = readFileSync("src/lib/analytics.ts", "utf8");
     expect(analytics).not.toMatch(/^import posthog from/m);
-    expect(analytics).toMatch(/if \(!key \|\| \(import\.meta\.env\.DEV && !devOptIn\)\) return;\s*import\('posthog-js'\)/);
+    expect(analytics).toMatch(/if \(!key \|\| \(import\.meta\.env\.DEV && !devOptIn\)\) \{\s*return;\s*\}\s*import\('posthog-js'\)/);
   });
 });

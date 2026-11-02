@@ -22,6 +22,7 @@
  * instead and the guest follows. Because that makes the server part of the
  * game, the screen also says whether the server is awake (serverNap.ts).
  */
+import { analytics } from "@/lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Graphics } from "pixi.js";
@@ -246,6 +247,12 @@ function InviteLinkActions({ url, width }: { url: string; width: number }) {
   );
 }
 
+/** pair_session for a pairing that never connected (analytics.ts). */
+function reportPairFailed(method: "nearby" | "link", role: "host" | "guest" | null, problem: unknown): void {
+  const text = problem instanceof Error ? problem.message : String(problem);
+  analytics.pairSession({ method, role, transport: null, connected: false, maps: 0, problem: text.slice(0, 80) });
+}
+
 export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobbyProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
@@ -389,9 +396,14 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
           // so neither can be told one here.
           await completeHandshake(transport, { kind: "elect" });
         },
-        onFailed: (reason) => { setProblem(reason); setPhase("failed"); },
+        onFailed: (reason) => {
+          reportPairFailed("nearby", null, reason);
+          setProblem(reason);
+          setPhase("failed");
+        },
       });
     } catch (err) {
+      reportPairFailed("nearby", null, err);
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("failed");
     }
@@ -431,7 +443,10 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       clearTimeout(slowTimer);
       relayRef.current?.close();
       relayRef.current = null;
-      if (abort.signal.aborted) return;
+      if (abort.signal.aborted) {
+        return;
+      }
+      reportPairFailed("link", "host", err);
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("failed");
     }
@@ -463,6 +478,7 @@ export function PairLobby({ onBack, onPaired, playerName = "Player" }: PairLobby
       relayRef.current?.close();
       transportRef.current = null;
       relayRef.current = null;
+      reportPairFailed("link", "guest", err);
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("failed");
     }

@@ -144,7 +144,10 @@ What the app does with data, checked in code:
   Location permission is requested only on Android 11 and below, where
   Bluetooth discovery requires it, and it is never read.
 - **Analytics:** anonymous gameplay events (run started, map cleared or
-  failed, upgrade bought, offer picked, run ended) and uncaught errors, to
+  failed and why, a life lost and why, upgrade, certificate or offer picked,
+  ability or fence type used, store skipped, screen opened, option changed,
+  a Pair session's outcome, the 3D board lowering its quality, run ended) and
+  uncaught errors, to
   PostHog's EU cloud, with the browser-level device details PostHog attaches
   (OS, screen size, WebView version). No accounts, no names, no identifiers
   the player gives, no autocapture, no session recording. The client IP is

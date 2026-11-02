@@ -38,6 +38,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
+import { reportFenceFinished, reportLifeLost } from "@/lib/gameTelemetry";
 import { engagementProgress } from "@/lib/scoreEngagement";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { readLockAxes } from "@/lib/lockCapacity";
@@ -280,6 +281,7 @@ export function applyCutFn(
   // that bounces is several walls and one fence, and the Redeploy throw is
   // spent per FENCE.
   const cutId = generateWallId();
+  reportFenceFinished(game, levelNumber, wall.fenceTypeId);
   const addSegmentWalls = (waypoints: Vector2[]) => {
     const now = simNow();
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -623,6 +625,7 @@ function failMapCostingALife(
   failure: MapFailure,
 ): void {
   const newLives = callbacks.getLives() - 1;
+  reportLifeLost(game, levelNumber, failure, newLives);
   callbacks.setLivesRef(newLives);
   callbacks.setDisplayLives(newLives);
   callbacks.onLivesChange(newLives);
@@ -1138,6 +1141,7 @@ export function triggerLevelComplete(
     const deliver = () => {
       callbacks.onLevelComplete({
         levelNumber, levelId: level.id, cutCount: game.wallCount,
+        activeSeconds: game.activePlaySeconds, mutatorId: game.mapMutator?.id ?? null,
         expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
         levelScore,
         remainingPercent: percent, thresholdPercent: level.sizeThreshold, pushBonus,

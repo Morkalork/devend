@@ -75,6 +75,8 @@ export interface Transport {
    *  the adaptive input delay. */
   readonly rttMs: number | null;
   readonly isOpen: boolean;
+  /** Which link this is, for analytics (pair_session). */
+  readonly kind?: "webrtc" | "relay" | "nearby" | "memory";
 }
 
 /** How a MemoryTransport should misbehave, so a test can ask for a bad day. */
@@ -102,6 +104,7 @@ export const PERFECT_LINK: LinkConditions = { latencyMs: 0, jitterMs: 0, loss: 0
  * other and hide every ordering bug this is meant to find.
  */
 export class MemoryTransport implements Transport {
+  readonly kind = "memory" as const;
   private peer: MemoryTransport | null = null;
   private handler: ((msg: NetMessage) => void) | null = null;
   private closeHandler: ((reason: string) => void) | null = null;

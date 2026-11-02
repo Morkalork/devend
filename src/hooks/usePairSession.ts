@@ -24,6 +24,7 @@ import { LockstepSession } from "@/lib/net/lockstep";
 import { modifierHash } from "@/lib/net/stateHash";
 import { setCommandSink, setLocalPlayer, type GameCommand, type PlayerId } from "@/lib/net/commands";
 import { setRunSeedText } from "@/lib/runRng";
+import { analytics } from "@/lib/analytics";
 import type { NetMessage, Transport } from "@/lib/net/transport";
 import type { PairedSession } from "@/lib/net/transport";
 import { getDeviceId, pairIdFor } from "@/lib/net/deviceId";
@@ -119,6 +120,8 @@ export function usePairSession(paired: PairedSession | null) {
   // re-armed the map's Acceptance Criteria after every tap.
   const { saveFor, store: storeSave, discard: discardSave } = pairSave;
   const devicesRef = useRef<[string, string] | null>(null);
+  /** Maps this pair started together, for pair_session (analytics.ts). */
+  const pairMapsRef = useRef<Set<number>>(new Set());
 
   // ── Setting up ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -256,8 +259,16 @@ export function usePairSession(paired: PairedSession | null) {
       }
     };
 
+    pairMapsRef.current = new Set();
     return () => {
       disposed = true;
+      analytics.pairSession({
+        method: paired.transport.kind === "nearby" ? "nearby" : "link",
+        role: paired.isHost ? "host" : "guest",
+        transport: paired.transport.kind ?? null,
+        connected: true,
+        maps: pairMapsRef.current.size,
+      });
       setCommandSink(null);
       setLocalPlayer(0);
       sessionRef.current?.close();
@@ -287,6 +298,7 @@ export function usePairSession(paired: PairedSession | null) {
   const declareModifiers = useCallback((level: number, modifiers: Record<string, unknown>) => {
     const entry = { level, hash: modifierHash(modifiers) };
     myModifiersRef.current = entry;
+    pairMapsRef.current.add(level);
     transportRef.current?.send({ t: "modifiers", level, hash: entry.hash });
     compareModifiers();
   }, [compareModifiers]);

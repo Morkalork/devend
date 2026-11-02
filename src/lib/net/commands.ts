@@ -36,6 +36,7 @@ import type { GameMessageId } from "@/lib/gameMessages";
 import { vec2Length, vec2Normalize, vec2Sub } from "@/lib/polygon";
 import { WALL_THICKNESS, castRayWithReflections } from "@/lib/wallGeometry";
 import { STANDARD_FENCE_ID, getFenceType } from "@/lib/fences";
+import { reportFreezeTap } from "@/lib/gameTelemetry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import { slingShape, fireSlingFence } from "@/lib/physics/slingFence";
@@ -407,6 +408,7 @@ function applyFreezeTap(
     game.freezeUsesRemaining -= 1;
     deps.setFreezeUsesRemaining?.(game.freezeUsesRemaining);
   }
+  reportFreezeTap(!!cmd.useCharge);
 
   const now = simNow();
   const durationMs = (cmd.useCharge

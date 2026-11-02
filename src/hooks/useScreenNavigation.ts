@@ -6,9 +6,28 @@
  * game result, and exposes one goToX() helper per screen. No game logic
  * lives here — that is useGameSession's job.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GameScreen, GameResult } from '@/types/game';
 import { hasPairInvite } from '@/lib/net/pairInvite';
+import { analytics, setAnalyticsMuted } from '@/lib/analytics';
+
+/**
+ * Admin's screens. Opening any of them mutes analytics for the rest of the
+ * launch: whoever opened Admin is testing, and their runs (jumps to a map,
+ * the Playground, the device check) are not players' data.
+ */
+export const ADMIN_SCREENS: ReadonlySet<GameScreen> = new Set<GameScreen>([
+  'admin', 'mapBuilder', 'animationTest', 'upgradeAtlas', 'pairLoopback', 'nearbyDiagnostics', 'deviceCheck',
+]);
+
+/** screen_viewed for a player's screen; Admin's mute analytics instead. */
+export function reportScreen(screen: GameScreen): void {
+  if (ADMIN_SCREENS.has(screen)) {
+    setAnalyticsMuted(true);
+    return;
+  }
+  analytics.screenViewed({ screen });
+}
 
 export function useScreenNavigation() {
   // A guest who opened the host's QR link goes straight to the 2-Player screen,
@@ -17,6 +36,10 @@ export function useScreenNavigation() {
     () => hasPairInvite() ? 'pairLobby' : 'welcome',
   );
   const [lastResult, setLastResult] = useState<GameResult | null>(null);
+
+  useEffect(() => {
+    reportScreen(currentScreen);
+  }, [currentScreen]);
 
   const navigateTo = useCallback((screen: GameScreen) => {
     setCurrentScreen(screen);

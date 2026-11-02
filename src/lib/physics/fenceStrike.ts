@@ -26,6 +26,7 @@ import type { GameCallbacks } from "./gameCallbacks";
 import type { MapFailure } from "@/lib/mapFailure";
 import type { GameMessageId } from "@/lib/gameMessages";
 import { handleGameOverFn, handlePushFailedFn } from "./handleGameOver";
+import { reportLifeLost } from "@/lib/gameTelemetry";
 import { RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
@@ -128,6 +129,7 @@ function dockOrEnd(
   playFenceBreakSound();
   vibrateFenceBreak();
   const newLives = callbacks.getLives() - 1;
+  reportLifeLost(game, levelNumber, failure, newLives);
   callbacks.setLivesRef(newLives);
   callbacks.setDisplayLives(newLives);
   callbacks.onLivesChange(newLives);

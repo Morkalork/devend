@@ -18,6 +18,7 @@ import {
   setSfxVolumeSetting,
 } from "@/lib/soundSettings";
 import { playWallHitSound } from "@/lib/gameAudio";
+import { analytics } from "@/lib/analytics";
 import {
   Appear, COLOR, Icon, Label, Pressable, RADIUS, ScrollView, TEXT, View, hex, tint, useUiScreen,
 } from "../kit/ui";
@@ -56,6 +57,14 @@ export function OptionsScreen({
 
   const handleMusicVol = (v: number) => { setMusicVol(v); setMusicVolumeSetting(v); };
   const handleSfxVol = (v: number) => { setSfxVol(v); setSfxVolumeSetting(v); };
+  // Reported when the slider is let go, not on every step of the drag.
+  const reportMusicVol = () => {
+    analytics.settingChanged({ setting: "musicVolume", value: volumePercent(getMusicVolumeSetting()) });
+  };
+  const reportSfxVol = () => {
+    playWallHitSound(1);
+    analytics.settingChanged({ setting: "effectsVolume", value: volumePercent(getSfxVolumeSetting()) });
+  };
 
   const activeLanguage = activeLanguageOf(i18n.resolvedLanguage, i18n.language);
 
@@ -68,6 +77,9 @@ export function OptionsScreen({
   };
 
   const handleSelectLanguage = (lang: SupportedLanguage) => {
+    if (lang !== activeLanguage) {
+      analytics.settingChanged({ setting: "language", value: lang });
+    }
     changeLanguage(lang);
     setLangOpen(false);
   };
@@ -77,6 +89,7 @@ export function OptionsScreen({
   };
 
   const handleConfirmReset = () => {
+    analytics.settingChanged({ setting: "totalReset", value: "yes" });
     onTotalReset();
     setShowConfirm(false);
   };
@@ -182,9 +195,9 @@ export function OptionsScreen({
               {/* Sound volumes (music + effects, independent) */}
               <View layout={{ gap: 12 }}>
                 {sectionHeading(Volume2, t("options.sound"))}
-                {volumeRow(Music, t("options.music"), musicVol, handleMusicVol)}
+                {volumeRow(Music, t("options.music"), musicVol, handleMusicVol, reportMusicVol)}
                 {/* Effects play a test blip on release so the level is audible. */}
-                {volumeRow(Volume2, t("options.effects"), sfxVol, handleSfxVol, () => playWallHitSound(1))}
+                {volumeRow(Volume2, t("options.effects"), sfxVol, handleSfxVol, reportSfxVol)}
               </View>
 
               {/* Re-enable All Tutorials */}

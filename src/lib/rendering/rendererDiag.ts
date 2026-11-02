@@ -12,6 +12,7 @@
  * Device-local, in localStorage, like the renderer setting itself.
  */
 import { canvasAntialias } from "@/lib/rendering/canvasCompat";
+import { analytics } from "@/lib/analytics";
 export const DIAG_KEY = "devend:render3d:diag";
 
 export interface RendererDiag {
@@ -46,6 +47,9 @@ export function getRendererDiag(): RendererDiag | null {
 }
 
 export function recordRendererStart(outcome: "ok" | "failed", err?: unknown, build?: string): void {
+  if (outcome === "failed") {
+    analytics.qualityDropped({ from: "3d", to: "2d", fps: null, reason: "startFailed" });
+  }
   const e = err instanceof Error ? err : null;
   write({
     at: new Date().toISOString(),
@@ -95,6 +99,14 @@ export function getQualitySteps(): QualityStep[] {
   } catch {
     return [];
   }
+}
+
+/** A step DOWN for slow frames: recorded like any step, and sent to analytics (quality_dropped). */
+export function recordQualityDrop(from: string, to: string, medianMs: number): void {
+  analytics.qualityDropped({
+    from, to, fps: medianMs > 0 ? Math.round(1000 / medianMs) : null, reason: "slowFrames",
+  });
+  recordQualityStep(from, to, medianMs);
 }
 
 export function recordQualityStep(from: string, to: string, medianMs: number): void {

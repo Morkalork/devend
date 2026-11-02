@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RendererDiagCard } from './RendererDiagCard';
 import { UiKitPreview } from '@/ui/UiKitPreview';
 import { ZoomRecorderCard } from './ZoomRecorderCard';
+import { AnalyticsCard } from './AnalyticsCard';
 import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network, Layers, Users, Radar, Server, Moon, Box, Gauge, Eye, MoveVertical, ClipboardCheck, ClipboardList, Hand, Smartphone } from 'lucide-react';
 import {
   DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled,
@@ -526,6 +527,12 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             </div>
           </button>
 
+        </div>
+
+        {/* What analytics this launch raised, and whether it went (analytics.ts). */}
+        <div className="mt-6 space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Analytics</h2>
+          <AnalyticsCard />
         </div>
 
         {/* The board renderer (RENDER_3D_PLAN.md). Device settings, applied
