@@ -395,3 +395,10 @@ and the retirement of the loadouts all touch the same session state.
 reached on a 19-map ladder, so today Tenure only ever pays one tier. They will
 start paying as the ladder grows toward the planned map count.
 
+
+**Tenure is good for one run (2026-11-02, owner).** It used to stay owed until
+a run ENDED, so restarting, or starting a new run over a saved one, dealt it
+again. Now the run it is dealt into spends it, whether the player takes it,
+takes another card or skips (`claimTenure` zeroes `lastRunDepth`), and only a
+run that ends deep enough earns it again. Admin > Sprint Planning can owe it
+once for testing (`setForcedTenureDepth`), cleared the same way.

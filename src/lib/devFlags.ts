@@ -203,6 +203,17 @@ export function getForcedSprintOffer(): string | null { return sprintOfferOverri
 export function setForcedJackpot(on: boolean): void { jackpotOverride = on; }
 export function getForcedJackpot(): boolean { return jackpotOverride; }
 
+/**
+ * Owe Tenure on the next run as if the last one had reached this level (null
+ * clears). One-shot, like the reward itself: claiming the card clears it, so
+ * a tester sees the second run go without it.
+ */
+let tenureDepthOverride: number | null = null;
+export function setForcedTenureDepth(level: number | null): void {
+  tenureDepthOverride = level !== null && level > 0 ? Math.round(level) : null;
+}
+export function getForcedTenureDepth(): number | null { return tenureDepthOverride; }
+
 /** Show the draft before every run, even before Sprint Planning is unlocked. */
 export function setSprintAlwaysOn(on: boolean): void { sprintAlwaysOn = on; }
 export function isSprintAlwaysOn(): boolean { return sprintAlwaysOn; }

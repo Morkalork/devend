@@ -48,7 +48,7 @@ import {
   loadOffers, getOffer, getOfferCatalogue, rollSprintDeal, shopLeanOf, offerModifierLayers, pickLivesDelta,
   allOffers, type DealtOffer,
 } from '@/lib/sprintOffers';
-import { getForcedSprintOffer, getForcedJackpot, isSprintAlwaysOn } from '@/lib/devFlags';
+import { getForcedSprintOffer, getForcedJackpot, getForcedTenureDepth, isSprintAlwaysOn, setForcedTenureDepth } from '@/lib/devFlags';
 import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { storeInterest, desperationMultiplier } from '@/lib/offerPerks';
 import { runwayBonuses, spendChunks, spendBoons, spendChunkCap, SPEND_CHUNK_HOURS } from '@/lib/treasury';
@@ -391,6 +391,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     encounteredBallTypeIds,
     recordLevelReached,
     recordRunEnded,
+    claimTenure,
     recordRunUpgrades,
     lastRunUpgradeIds,
     recordFencesDrawn,
@@ -848,7 +849,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const dealSprint = useCallback((opts: { seeded: boolean }): DealtOffer[] => {
     let tenure: { chain: TenureOffer; earnedAtLevel: number; continued: boolean } | null = null;
-    const tenureDepth = metaStats.lastRunDepth;
+    const forcedDepth = getForcedTenureDepth();
+    const tenureDepth = forcedDepth ?? metaStats.lastRunDepth;
+    const tenureShopLevel = forcedDepth ?? metaStats.lastRunShopLevel;
     if (!opts.seeded && tenureSteps(tenureDepth) > 0) {
       // getLoadedUpgrades(), not the `upgrades` state: on the New Game path this
       // closure was created before loadUpgrades() ran, so the state read here
@@ -856,7 +859,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // limits what may be granted to what the run could actually have bought.
       // The first offer is the one guaranteed to continue the last run's build.
       const chain = rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
-        TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)[0];
+        TENURE_OFFER_COUNT, lastRunUpgradeIds, tenureShopLevel)[0];
       if (chain) tenure = { chain, earnedAtLevel: tenureDepth, continued: isContinuation(chain, lastRunUpgradeIds) };
     }
     return rollSprintDeal({
@@ -928,7 +931,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const enterRun = useCallback((wantsDraft: boolean, opts: { seeded?: boolean } = {}) => {
     const seeded = opts.seeded ?? false;
-    const tenureOwed = !seeded && tenureSteps(metaStats.lastRunDepth) > 0;
+    const tenureOwed = !seeded && tenureSteps(getForcedTenureDepth() ?? metaStats.lastRunDepth) > 0;
     const draftOn = SPRINT_PLANNING_ENABLED && wantsDraft && (sprintUnlocked || tenureOwed || isSprintAlwaysOn());
     const cards = draftOn ? dealSprint({ seeded }) : [];
     if (cards.length > 0) {
@@ -1355,6 +1358,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const handleSprintPick = useCallback((index: number | null) => {
     const card = index === null ? null : pendingSprint?.cards[index] ?? null;
+    // Tenure is good for ONE run: dealt into this one, it is spent whether it
+    // was taken, passed over for another card or skipped. Before this it stayed
+    // owed until a run ENDED, so a restart or a new run over a saved one dealt
+    // it again.
+    if (pendingSprint?.cards.some(c => c.tenure)) {
+      claimTenure();
+      setForcedTenureDepth(null);
+    }
     setPendingSprint(null);
     analytics.offerSelected({
       offerId: card?.offer.id ?? null,
@@ -1375,7 +1386,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       return;
     }
     nav.startGame();
-  }, [pendingSprint, grantUpgrades, nav.goToChainPick, nav.startGame]);
+  }, [pendingSprint, grantUpgrades, nav.goToChainPick, nav.startGame, claimTenure]);
 
   /** The chain picked for a choose prize (Pick a Junior, Headhunted). */
   const handleChainPick = useCallback((headId: string) => {

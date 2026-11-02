@@ -9,7 +9,7 @@ import {
   isForceRelayEnabled, setForceRelayEnabled,
   SIMULATED_NAPS, getSimulatedNap, setSimulatedNap, type SimulatedNap,
   getForcedSprintOffer, setForcedSprintOffer, getForcedJackpot, setForcedJackpot,
-  isSprintAlwaysOn, setSprintAlwaysOn,
+  isSprintAlwaysOn, setSprintAlwaysOn, getForcedTenureDepth, setForcedTenureDepth,
   isLauncherHandAlwaysEnabled, setLauncherHandAlwaysEnabled,
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
@@ -50,6 +50,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
   const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
+  const [tenureDepth, setTenureDepthState] = useState<number | null>(getForcedTenureDepth);
   const [launcherHand, setLauncherHandState] = useState(isLauncherHandAlwaysEnabled);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
   const [renderer, setRenderer] = useState<RendererChoice>(getRendererChoice);
@@ -304,6 +305,21 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               <input type="checkbox" id="sprint-force-jackpot" checked={jackpot}
                 onChange={e => { setForcedJackpot(e.target.checked); setJackpotState(e.target.checked); }} />
               Force the jackpot gamble
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Owe Tenure on the next run, as if the last run reached (once: claiming it clears this)
+              <select id="sprint-force-tenure" className="bg-background border border-border rounded px-2 py-1"
+                value={tenureDepth ?? ''}
+                onChange={e => {
+                  const v = e.target.value ? Number(e.target.value) : null;
+                  setForcedTenureDepth(v);
+                  setTenureDepthState(v);
+                }}>
+                <option value="">The real last run</option>
+                <option value="10">Level 10 (one step)</option>
+                <option value="20">Level 20 (two steps)</option>
+                <option value="30">Level 30 (three steps)</option>
+              </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               Force an offer into its pool's slot (locked ones too)

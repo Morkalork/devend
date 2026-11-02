@@ -237,6 +237,15 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
+   * Tenure was dealt into a run that has now started: it is spent. The next
+   * run owes nothing until a run ENDS deep enough to earn it again. Zeroing
+   * the depth is enough, because Tenure is the only reader of these two.
+   */
+  const claimTenure = useCallback(() => {
+    updateStats({ lastRunDepth: 0, lastRunShopLevel: 0 });
+  }, [updateStats]);
+
+  /**
    * Record fences drawn in a level
    */
   const recordFencesDrawn = useCallback((count: number) => {
@@ -366,6 +375,7 @@ export function useMetaProgression() {
     updateStats,
     recordLevelReached,
     recordRunEnded,
+    claimTenure,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,

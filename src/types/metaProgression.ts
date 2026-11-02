@@ -34,7 +34,9 @@ export interface MetaProgressionStats {
    * the next run's Tenure (issue #75, src/lib/tenure.ts). Unlike
    * highestLevelReached this is NOT a high-water mark: it goes down after a
    * short run, which is what keeps the reward re-earnable rather than a
-   * permanent unlock. Abandoning a run does not write it.
+   * permanent unlock. Abandoning a run does not write it. Starting a run
+   * that was dealt Tenure zeroes it (useMetaProgression.claimTenure): the
+   * reward is good for one run, then has to be earned again.
    */
   lastRunDepth: number;
   /**
