@@ -2068,27 +2068,43 @@ export function GameCanvas({
     // flight). Wrapped so the event is never read as resize options.
     const onWindowResize = () => resizeCanvas();
     window.addEventListener("resize", onWindowResize);
-    // Dev guard. The board is placed inside this container, so anything that
-    // changes the container's size without the viewport changing - a HUD row
-    // that paints empty and fills a commit later was the last one - moves the
-    // board on screen with no re-layout to show for it. Say so, loudly, in the
-    // build a change is tested in, rather than wait for it to be seen on a phone.
-    let layoutGuard: ResizeObserver | undefined;
-    if (process.env.NODE_ENV === "development" && typeof ResizeObserver !== "undefined") {
+    // The board's container can change WIDTH without the window resizing: the
+    // Playground's settings sidebar mounts once its level has loaded, which can
+    // be after this map was laid out, and takes 320px from the game pane. The
+    // board stayed laid out for the old width while everything around it
+    // re-centred (reported from the Playground as the board drawn off to one
+    // side, its flat marks and 3D walls apart). A width change is a real
+    // change of the space the board has, so it is a full re-layout, held
+    // while a fence is in flight like any other.
+    //
+    // HEIGHT alone is not: the bar stack under the board grows and settles in
+    // a map's first moments, and the latch (lib/boardLayoutLatch) owns that.
+    // A dev build still says so loudly when the height moves with the
+    // viewport unchanged.
+    let containerWatch: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== "undefined") {
       let seen: { w: number; h: number; vw: number; vh: number } | null = null;
-      layoutGuard = new ResizeObserver(() => {
+      containerWatch = new ResizeObserver(() => {
         const { width: w, height: h } = container.getBoundingClientRect();
         const now = { w, h, vw: window.innerWidth, vh: window.innerHeight };
-        if (seen && seen.vw === now.vw && seen.vh === now.vh && (seen.w !== w || seen.h !== h)) {
+        const prev = seen;
+        seen = now;
+        if (!prev) {
+          return;
+        }
+        if (Math.abs(prev.w - w) >= 1) {
+          resizeCanvas();
+          return;
+        }
+        if (process.env.NODE_ENV === "development" && prev.vw === now.vw && prev.vh === now.vh && prev.h !== h) {
           console.warn(
-            `[board] the board's container went from ${seen.w}x${seen.h} to ${w}x${h} with the viewport unchanged, `
+            `[board] the board's container went from ${prev.w}x${prev.h} to ${w}x${h} with the viewport unchanged, `
             + "so the board just moved on screen. Something around it changed height after layout: "
             + "give it a fixed height from its first frame (lib/boardLayoutLatch).",
           );
         }
-        seen = now;
       });
-      layoutGuard.observe(container);
+      containerWatch.observe(container);
     }
     let disposed = false;
     // The loop draws under the boot hold from the start (physics is held until
@@ -2127,7 +2143,7 @@ export function GameCanvas({
       disposed = true;
       resizeCanvasRef.current = null;
       window.removeEventListener("resize", onWindowResize);
-      layoutGuard?.disconnect();
+      containerWatch?.disconnect();
       if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
       stopGameLoop(game);
       // Cancel any pending flash/shake/game-over timeouts so they can't fire a

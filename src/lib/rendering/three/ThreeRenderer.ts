@@ -343,6 +343,17 @@ export class ThreeRenderer implements BoardRenderer, HybridHost {
     const w = Math.max(1, Math.round(widthPx * scale));
     const h = Math.max(1, Math.round(heightPx * scale));
     this.size = { w: widthPx, h: heightPx, scale: w / Math.max(1, widthPx) };
+    // three keeps its own idea of the canvas size, taken when it was made on
+    // this (shared) canvas, and restores that viewport whenever it goes back
+    // to drawing on the screen (setRenderTarget(null), at the end of every
+    // frame). Pixi then draws the whole board into it. Equal at first, so
+    // nothing showed until the canvas was resized: from then on the board was
+    // drawn stretched into the OLD size, the flat marks and the 3D walls apart
+    // and a slab of frame left behind (reported from the Playground, whose
+    // sidebar and window changes resize the board). Told the new size here.
+    const pr = renderer.getPixelRatio() || 1;
+    renderer.setViewport(0, 0, widthPx / pr, heightPx / pr);
+    renderer.setScissor(0, 0, widthPx / pr, heightPx / pr);
 
     if (this.outForPixi) releasePixiWrap(pixi, this.outForPixi);
     this.sceneRT?.dispose();
