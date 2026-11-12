@@ -3,46 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Privacy Policy — Dev/End</title>
+  <title>Privacy Policy: Dev/End</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6;
            max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
     h1 { font-size: 1.6rem; }
     h2 { font-size: 1.15rem; margin-top: 2rem; }
     code { background: #f0f0f0; padding: 0 .25rem; border-radius: 3px; }
+    ul { padding-left: 1.2rem; }
     footer { margin-top: 3rem; font-size: .85rem; color: #666; }
   </style>
 </head>
 <body>
   <h1>Privacy Policy for Dev/End</h1>
-  <p><strong>Last updated:</strong> 22 June 2026</p>
+  <p><strong>Last updated:</strong> 8 November 2026</p>
 
-  <p>This Privacy Policy describes how the mobile game <strong>Dev/End</strong>
+  <p>This Privacy Policy describes how the game <strong>Dev/End</strong>
   (the &ldquo;App&rdquo;), published by Morkalork (the &ldquo;Developer&rdquo;),
   handles information.</p>
 
-  <h2>Information we collect</h2>
-  <p>The App does <strong>not</strong> collect, transmit, or share any personal
-  information. We do not require an account, and we do not ask for your name,
-  email address, location, or any other personal data.</p>
+  <p>Dev/End is a game. It has no accounts and asks for no personal
+  information. There is nothing to sign up for, and we never ask for your
+  name, your email address or your location.</p>
 
-  <h2>Data stored on your device</h2>
-  <p>The App saves your game progress and settings (such as completed levels,
-  scores, achievements, and preferences) locally on your device using your
-  device&rsquo;s standard local storage. This data never leaves your device, is
-  not sent to us or any third party, and is removed when you uninstall the App
-  or clear its data.</p>
+  <h2>What stays on your phone</h2>
+  <p>Your progress, settings, run history and records are stored on your
+  device only, in the app&rsquo;s own local storage. They are not sent to us,
+  and uninstalling the App or clearing its data deletes them. Highscores are
+  local: there is no online leaderboard, and the share card is an image you
+  choose to share yourself.</p>
 
-  <h2>Third-party services</h2>
-  <p>The App does not include third-party analytics, advertising, or tracking
-  services. It does not transmit data to external servers.</p>
+  <h2>Anonymous analytics and crash reports</h2>
+  <p>To find bugs and to see how the game is actually played, the App sends
+  anonymous events to <strong>PostHog</strong>, hosted in the European Union.
+  What is sent:</p>
+  <ul>
+    <li><strong>Gameplay events:</strong> a run starting and ending, a map
+    cleared or failed and why, a life lost and why, an upgrade, certificate or
+    offer picked, an ability or fence type used, a store skipped, a screen
+    opened, a setting changed, the outcome of a two-player session, and the
+    3D board lowering its quality.</li>
+    <li><strong>Crash reports:</strong> uncaught errors, so a crash on a real
+    phone can be fixed.</li>
+    <li>The device details the analytics library attaches by default:
+    operating system, screen size and web view version.</li>
+  </ul>
+  <p>These events carry a <strong>random identifier for the installation</strong>,
+  not your name, your email or any account. There is no automatic capture of
+  taps or screens, no session recording and no user profile. Your IP address
+  is discarded on arrival and no location is derived from it, so we do not
+  learn your city or country. We do not sell or share this data, and we do not
+  use it for advertising.</p>
+
+  <h2>Two-player (Pair Programming)</h2>
+  <p>Pair Programming puts one board across two phones in the same room. What
+  the two phones exchange is the game itself: fences drawn, ball positions and
+  the agreement checks that keep both boards identical, plus a random
+  installation identifier and a display name (the App sends
+  &ldquo;Player&rdquo;, not a name you provide). No personal information
+  travels over the link.</p>
+  <p>The phones connect in whichever of these ways works:</p>
+  <ul>
+    <li><strong>Directly, with no network at all,</strong> over Google Nearby
+    Connections (Bluetooth and Wi-Fi Direct). Nothing leaves the two
+    phones.</li>
+    <li><strong>Directly over your Wi-Fi.</strong> To find each other, the
+    phones first swap one short connection blob (network candidates and a
+    certificate fingerprint, nothing about you and nothing about the game).
+    One half travels in the invitation link or QR code shown on screen; the
+    other is left in a mailbox on our server, which holds it in memory for at
+    most two minutes and deletes it as soon as the other phone collects
+    it.</li>
+    <li><strong>Through our server,</strong> if your network blocks the two
+    phones from reaching each other, as cafe, hotel and office Wi-Fi usually
+    does. Each phone then holds a connection to our server, which passes the
+    game messages between them unread and unchanged. Nothing is stored: the
+    messages are forwarded and forgotten, and a server restart simply ends the
+    session.</li>
+  </ul>
+  <p>On Android 11 and below, Android requires the location permission before
+  an app may discover nearby devices over Bluetooth. The App asks for it only
+  there, only for pairing, and never reads your location.</p>
+
+  <h2>No ads, no purchases</h2>
+  <p>The App contains no advertising, no advertising identifiers and no in-app
+  purchases. Apart from the analytics described above, it plays entirely
+  offline.</p>
 
   <h2>Children&rsquo;s privacy</h2>
-  <p>The App does not knowingly collect any personal information from anyone,
-  including children.</p>
+  <p>The game is not directed at children under 13, and we do not knowingly
+  collect personal information from anyone, children included.</p>
+
+  <h2>Your data and deletion</h2>
+  <p>The data on your phone is deleted by uninstalling the App or clearing its
+  data. The analytics events are anonymous and are not linked to you or to any
+  account, so there is no profile of you for us to look up or delete. If you
+  have a question about them, write to us at the address below.</p>
 
   <h2>Changes to this policy</h2>
-  <p>We may update this Privacy Policy from time to time. Any changes will be
+  <p>We may update this Privacy Policy from time to time. Any change will be
   posted on this page with a revised &ldquo;Last updated&rdquo; date.</p>
 
   <h2>Contact</h2>

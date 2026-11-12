@@ -26,7 +26,7 @@ place for the very first upload, see step 5.)
 | Android 15+ edge-to-edge | fixed in code (the HUD no longer goes under the status/gesture bars); **not yet seen on a 15+ phone** |
 | App icon, 512 store icon, 1024x500 feature graphic | done (`assets/`, `assets/play/`) |
 | Phone screenshots (2-8) | to do: section 6 |
-| Privacy policy page | drafted below; needs a permanent public URL |
+| Privacy policy page | written: `docs/privacy-policy.html` (analytics and the pair relay included); needs a permanent public URL (decision 4) |
 | Analytics and crash reports | **on for the beta** (decided 2026-10-29); a signed build refuses to go without the key and checks it is in the bundle |
 | Admin (ten taps on the menu ball) | **kept for the beta** (decided 2026-10-29); decide again before production |
 | Data safety answers | final for analytics on (section 4); PostHog stores no IP and derives no location (section 2, step 3) |
@@ -125,9 +125,12 @@ place for the very first upload, see step 5.)
    `public/music.yml` and both shipped as .mp3 (a band can be .ogg or .mp3).
    The catalogue test allows no uncredited track and no missing band.
 4. **Where the privacy policy lives.** Play needs a public URL that stays up.
-   Options: a production web host (is there one besides staging?), GitHub
-   Pages, or the staging host (works, but tied to staging staying up).
-   Once chosen, the draft below becomes `public/privacy.html`.
+   The text is written and in the repo at `docs/privacy-policy.html`; what is
+   missing is the address. Options: GitHub Pages (Settings > Pages, source
+   `main` branch `/docs`, which publishes that file as it stands), a
+   production web host, or the staging host (works, but tied to staging
+   staying up). If it should also be served by the app's own build, copy it to
+   `public/privacy.html` and keep one of the two as the copy that is edited.
 5. **Audience.** Recommended: target age **13+**, no ads, no in-app purchases.
    Including under-13s brings in the Families policy and its extra review.
 6. **Contact email** for the listing (public, required).
@@ -139,10 +142,19 @@ What the app does with data, checked in code:
 - Progress, settings, run history and highscores stay **on the phone**
   (localStorage in the WebView). There are no accounts and no online
   leaderboards; the share card is an image the player shares themselves.
-- **Two-player** pairs over Nearby Connections (Bluetooth and Wi-Fi Direct,
-  phone to phone, no server). The name each phone advertises is "Player".
-  Location permission is requested only on Android 11 and below, where
-  Bluetooth discovery requires it, and it is never read.
+- **Two-player** pairs phone to phone where it can: Nearby Connections
+  (Bluetooth and Wi-Fi Direct, no network at all), or a WebRTC data channel
+  over the local Wi-Fi, whose one-line answer passes through the server's
+  in-memory mailbox (`server/pairRooms.js`, two minutes, deleted on pickup).
+  Where the network blocks the two phones from reaching each other (client
+  isolation on cafe and office Wi-Fi), both hold a WebSocket to our own server
+  and it forwards the game messages unread, unchanged and unstored
+  (`server/relay.js`): in memory, dropped on a restart. So "no server" is
+  true of Nearby only, and the privacy policy says so.
+  What crosses the link is the game (fences, ball positions, agreement
+  checks), the random install id and a display name: the name each phone
+  advertises is "Player". Location permission is requested only on Android 11
+  and below, where Bluetooth discovery requires it, and it is never read.
 - **Analytics:** anonymous gameplay events (run started, map cleared or
   failed and why, a life lost and why, upgrade, certificate or offer picked,
   ability or fence type used, store skipped, screen opened, option changed,
@@ -165,31 +177,22 @@ Answers:
 | Device or other IDs | Collected (PostHog's anonymous install id), analytics |
 | Location, Personal info, Financial, Messages, Photos, Contacts | Not collected (no IP stored, no GeoIP: section 2, step 3) |
 
-### Privacy policy (text for `public/privacy.html`, once decision 4 is made)
+### Privacy policy
 
-> **Dev/End privacy policy**
->
-> Dev/End is a game. It has no accounts and asks for no personal
-> information.
->
-> **On your phone.** Your progress, settings, run history and records are
-> stored on your device only. Uninstalling the app deletes them.
->
-> **Two-player.** Pair Programming connects two phones directly over
-> Bluetooth and Wi-Fi (Google Nearby Connections). Nothing goes through a
-> server. On Android 11 and below, Android requires the location permission
-> for Bluetooth discovery; the game never reads your location.
->
-> **Anonymous analytics.** To find bugs and see how the game is played, the
-> app sends anonymous gameplay events (such as a run starting or a map being
-> cleared) and error reports to PostHog, hosted in the EU. They carry a
-> random identifier for the installation, not your name, email or any
-> account. We do not sell or share this data, and do not use it for
-> advertising.
->
-> **Children.** The game is not directed at children under 13.
->
-> **Contact.** [contact email]. Last updated [date].
+**The text lives in `docs/privacy-policy.html`** (written 2026-11-08), not in
+this plan: the draft that used to sit here was a second copy, and it drifted,
+still promising "no personal information" months after analytics was decided
+on and claiming two-player never touches a server. One copy, and the plan
+points at it.
+
+It covers, in the order a player reads them: no accounts and no personal
+information; what stays on the phone and that uninstalling deletes it; the
+analytics and crash reports, their event list, the random install id, and that
+no IP is stored and no location derived; the three ways two phones pair,
+including the relay and the pairing mailbox; no ads, no advertising ids and no
+purchases; under-13s; deletion; and the contact address. Keep it in step with
+the Data safety answers above, both ways: a change to either is a change to
+both.
 
 ### Content rating (IARC questionnaire, draft answers)
 
