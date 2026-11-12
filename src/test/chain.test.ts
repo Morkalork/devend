@@ -63,7 +63,7 @@ describe("tickChains tether", () => {
     expect(dist(a, b)).toBeLessThanOrEqual(ch.restLength + 1);
   });
 
-  it("redirects a pair pulling apart into a swing instead of braking them static", () => {
+  it("bounces a pair pulling apart back toward each other without braking them", () => {
     const a = ball("a", 0, 0), b = ball("b", 100, 0);
     const ch = makeChain(a, b, false); // restLength ~125
     // Taut, both balls driving straight apart along the chain axis.
@@ -71,10 +71,40 @@ describe("tickChains tether", () => {
     b.position = { x: 200, y: 0 }; b.velocity = { x: 100, y: 0 }; b.speed = 100;
     const g = game({ balls: [a, b], chains: [ch] });
     tickChains(g, 1 / 120, 0);
-    // Neither ball is braked toward zero: each keeps (essentially) its full speed,
-    // just turned tangential to the chain.
+    // Neither ball is braked toward zero: each keeps its full speed, now
+    // heading back toward its partner.
     expect(Math.hypot(a.velocity.x, a.velocity.y)).toBeCloseTo(100, 5);
     expect(Math.hypot(b.velocity.x, b.velocity.y)).toBeCloseTo(100, 5);
+    expect(a.velocity.x).toBeGreaterThan(0);
+    expect(b.velocity.x).toBeLessThan(0);
+  });
+
+  it("leaves a taut pair travelling together alone instead of turning it into spin", () => {
+    // The old swing turned the leading ball sideways here, which is how a
+    // travelling pair ended up orbiting in place (level 20).
+    const a = ball("a", 0, 0), b = ball("b", 100, 0);
+    const ch = makeChain(a, b, false);
+    b.position = { x: ch.restLength + 5, y: 0 };
+    const g = game({ balls: [a, b], chains: [ch] });
+    tickChains(g, 1 / 120, 0);
+    expect(a.velocity).toEqual({ x: 100, y: 0 });
+    expect(b.velocity).toEqual({ x: 100, y: 0 });
+  });
+
+  it("keeps the pair's shared momentum when the chain snaps taut", () => {
+    // B races ahead, A drifts sideways: the rope may only change how fast they
+    // separate, never where the pair as a whole is going.
+    const a = ball("a", 0, 0), b = ball("b", 100, 0);
+    const ch = makeChain(a, b, false);
+    b.position = { x: ch.restLength + 5, y: 0 };
+    a.velocity = { x: 0, y: 30 }; a.speed = 30;
+    b.velocity = { x: 60, y: 0 }; b.speed = 60;
+    const g = game({ balls: [a, b], chains: [ch] });
+    tickChains(g, 1 / 120, 0);
+    expect(a.velocity.x + b.velocity.x).toBeCloseTo(60, 5);
+    expect(a.velocity.y + b.velocity.y).toBeCloseTo(30, 5);
+    // And the pair is no longer separating.
+    expect(b.velocity.x - a.velocity.x).toBeLessThanOrEqual(0);
   });
 
   it("does not let the chain pump a pair's speed above their natural top", () => {

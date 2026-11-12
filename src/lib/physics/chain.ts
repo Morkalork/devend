@@ -100,29 +100,38 @@ function dampBall(ball: Ball, f: number): void {
 }
 
 /**
- * Redirect a ball's outward (chain-stretching) velocity into a tangential swing,
- * conserving its speed. This is what stops the pair going static: a taut chain
- * never *removes* speed, it turns it, so the two balls orbit each other like a
- * bolas instead of being braked to a standstill. `ox,oy` is the outward unit
- * (from the partner toward this ball); inward/tangential motion is left alone.
+ * The taut rope as an elastic bounce between the two balls: their radial
+ * (along-the-chain) velocities are swapped, as two equal balls trade them in a
+ * head-on collision, but only while they are pulling apart. That keeps the
+ * pair's shared motion: a pair travelling together is left alone, and the
+ * chain only acts on how fast the two separate.
+ *
+ * It replaces a "swing" that turned each ball's outward motion sideways at
+ * full speed. That kept speed too, but every time the chain went taut it
+ * turned the pair's travel into spin around each other, and nothing turned
+ * the spin back, so the pair ended up orbiting in place (level 20, 29% of
+ * the time measured with its centre almost still), which is very hard to fence.
+ * `ux,uy` is the unit vector from A to B.
  */
-function swing(ball: Ball, ox: number, oy: number): void {
-  const s = Math.hypot(ball.velocity.x, ball.velocity.y);
-  if (s < 1e-6) return;
-  const radial = ball.velocity.x * ox + ball.velocity.y * oy; // + = stretching
-  if (radial <= 0) return;                                    // slack side, leave it
-  // Tangent perpendicular to the chain, aligned with the ball's current swing.
-  let tx = -oy, ty = ox;
-  if (ball.velocity.x * tx + ball.velocity.y * ty < 0) { tx = -tx; ty = -ty; }
-  // Zeroing the radial part while conserving speed puts all of it into the swing.
-  ball.velocity.x = tx * s; ball.velocity.y = ty * s;
-  ball.speed = s;
+function ropeBounce(a: Ball, b: Ball, ux: number, uy: number): void {
+  const ra = a.velocity.x * ux + a.velocity.y * uy;
+  const rb = b.velocity.x * ux + b.velocity.y * uy;
+  if (rb - ra <= 0) {
+    // Closing or holding the gap: the rope is slack in velocity terms.
+    return;
+  }
+  const delta = rb - ra;
+  a.velocity.x += ux * delta; a.velocity.y += uy * delta;
+  b.velocity.x -= ux * delta; b.velocity.y -= uy * delta;
+  a.speed = Math.hypot(a.velocity.x, a.velocity.y);
+  b.speed = Math.hypot(b.velocity.x, b.velocity.y);
 }
 
 /**
  * Elastic tether. Past the rest length the rope reels the pair together by a
- * fraction of the overshoot (a soft spring, not a rigid rod) and converts the
- * stretching motion into a swing so neither ball loses speed. A hard clamp
+ * fraction of the overshoot (a soft spring, not a rigid rod) and bounces their
+ * separating motion back along the chain (ropeBounce), so the pair loses no
+ * energy and keeps travelling together. A hard clamp
  * engages only at STRETCH_MAX so the pair can never separate past the chain.
  */
 function tether(a: Ball, b: Ball, restLen: number): void {
@@ -136,9 +145,8 @@ function tether(a: Ball, b: Ball, restLen: number): void {
   a.position.x += ux * pull * 0.5; a.position.y += uy * pull * 0.5;
   b.position.x -= ux * pull * 0.5; b.position.y -= uy * pull * 0.5;
 
-  // Swing instead of brake: A's outward is -u (away from B), B's outward is +u.
-  swing(a, -ux, -uy);
-  swing(b, ux, uy);
+  // Bounce the separating motion back along the chain; shared motion is kept.
+  ropeBounce(a, b, ux, uy);
 
   // Hard safety limit: if still past the max stretch after the soft pull, clamp
   // the remainder so the balls can't drift out of reach of each other.
