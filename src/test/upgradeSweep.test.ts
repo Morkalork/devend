@@ -13,9 +13,10 @@
  *   UPGRADE_SWEEP_LEVELS=3,6,9      maps to play (default: the sample below)
  *   UPGRADE_SWEEP_ONLY=id,id        only these upgrades (plus the baseline)
  *
- * "(placebo)" is the noise floor. The simulation is chaotic: ANY change, even
- * balls 0.1% slower, reshuffles every seed's outcome, so a card's paired
- * difference only means something next to what that placebo's does.
+ * The "(placebo ...)" builds are the noise floor. The simulation is chaotic:
+ * ANY change, even balls 0.1% slower, reshuffles every seed's outcome, and one
+ * such placebo moved the mean clear time by 16%. So a card's paired difference
+ * means something only when it is larger than every placebo's.
  *
  * What the bot cannot measure, it reports as unchanged: it never taps a ball,
  * holds an object or picks a fence type, never shops, and plays one map at a
@@ -23,7 +24,7 @@
  * baseline is therefore "invisible to the bot", which is a finding about the
  * bot as much as the card, and the report keeps the two apart by that flag.
  */
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
@@ -45,6 +46,13 @@ const DEFAULT_LEVELS = [2, 4, 6, 8, 10, 12, 15, 18, 20, 23, 26, 29, 32, 36, 40];
 const SWEEP_BANKED = 60;
 /** Lives at the start of a map: the bot computes modifiers once, at the start. */
 const SWEEP_LIVES = 3;
+
+/** Builds that change nothing a player could feel: balls a hair slower or faster. */
+const PLACEBOS: Record<string, number> = {
+  "(placebo -0.1%)": 0.999, "(placebo +0.1%)": 1.001,
+  "(placebo -0.05%)": 0.9995, "(placebo +0.05%)": 1.0005,
+  "(placebo -0.2%)": 0.998, "(placebo +0.2%)": 1.002,
+};
 
 interface RunRow {
   level: number;
@@ -109,10 +117,21 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
 
     const only = process.env.UPGRADE_SWEEP_ONLY?.split(",");
     const shard = parseShard(process.env.UPGRADE_SWEEP_SHARD);
-    const ids = ["(baseline)", "(placebo)", ...upgrades.map(u => u.id)]
+    const ids = ["(baseline)", ...Object.keys(PLACEBOS), ...upgrades.map(u => u.id)]
       .filter(id => !only || id.startsWith("(") || only.includes(id));
     const mine = ids.filter((_, i) => i % shard.count === shard.index);
 
+    // A won map schedules its results screen on a timer, and that timer holds
+    // the whole game. Nothing here yields to the event loop, so real timers
+    // never fire and every board ever played stayed in memory until the
+    // process ran out (the first full sweep died that way). Fake timers, cleared
+    // after each run, drop them instead.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+
+    const outFile = resolve(outDir, `shard-${shard.index}-of-${shard.count}.json`);
+    const save = () => writeFileSync(outFile, JSON.stringify({
+      seeds, levels: levels.map(l => l.n), banked: SWEEP_BANKED, lives: SWEEP_LIVES, results,
+    }));
     const results: Record<string, RunRow[]> = {};
     const started = Date.now();
     for (const id of mine) {
@@ -123,22 +142,23 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
         };
         const owned = id.startsWith("(") ? [] : [id];
         const modifiers = computeGameModifiers(owned, lookup, undefined, context);
-        if (id === "(placebo)") {
-          modifiers.ballSpeedMultiplier *= 0.999;
+        const placebo = PLACEBOS[id];
+        if (placebo !== undefined) {
+          modifiers.ballSpeedMultiplier *= placebo;
         }
         // The map's own clock, plus a little, so a slow clear still counts.
         const maxFrames = Math.ceil(((level.timeLimit ?? 90) + 5) / PHYSICS_STEP);
         for (const seed of seeds) {
           rows.push(row(runBot(level, n, seed, { modifiers, maxFrames })));
+          vi.clearAllTimers();
         }
       }
       results[id] = rows;
+      // After every upgrade, so a crash part-way keeps what was measured.
+      save();
       console.log(`[sweep ${shard.index}/${shard.count}] ${id} done, ${((Date.now() - started) / 1000).toFixed(0)}s`);
     }
 
-    writeFileSync(
-      resolve(outDir, `shard-${shard.index}-of-${shard.count}.json`),
-      JSON.stringify({ seeds, levels: levels.map(l => l.n), banked: SWEEP_BANKED, lives: SWEEP_LIVES, results }),
-    );
+    vi.useRealTimers();
   }, 24 * 60 * 60 * 1000);
 });
