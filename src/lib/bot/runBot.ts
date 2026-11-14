@@ -36,6 +36,8 @@ export interface BotRunResult {
   bombs: number;
   /** Lives the run lost without ending: a ball into a growing fence, mostly. */
   livesLost: number;
+  /** Overtime the map paid on a win, 0 otherwise. */
+  levelScore: number;
 }
 
 export interface BotRunOptions {
@@ -213,6 +215,7 @@ export function runBot(
     violations,
     bombs: ctx.events.bombs,
     livesLost: ctx.events.livesLost,
+    levelScore: ctx.game.completedLevelScore ?? 0,
   };
 }
 

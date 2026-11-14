@@ -1111,6 +1111,10 @@ export function triggerLevelComplete(
       payoutMultiplier: game.breakMultiplier ?? 1,
     },
   );
+  // What the map paid, kept on the state as well as handed to onLevelComplete:
+  // that callback fires behind a timer, which the headless bot never runs, and
+  // the upgrade sweep (src/test/upgradeSweep.test.ts) reads the payout here.
+  game.completedLevelScore = levelScore;
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   // The debrief: once any lock animations settle, each thing on the board that
   // scored is boxed and tagged with what it paid (lib/scoreDebrief.ts), before

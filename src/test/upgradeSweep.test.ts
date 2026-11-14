@@ -1,0 +1,144 @@
+/**
+ * The upgrade sweep: does each upgrade change how a map plays?
+ *
+ * Opt-in (UPGRADE_SWEEP=1), never part of the normal suite: a full sweep is
+ * hours of simulated play. For every upgrade on its own, the bot plays a set
+ * of maps on fixed seeds with and without it, and the two runs on one seed are
+ * compared pair by pair, so the map's own luck cancels out.
+ *
+ *   UPGRADE_SWEEP=1                 run it
+ *   UPGRADE_SWEEP_OUT=<dir>         where each shard writes its JSON (required)
+ *   UPGRADE_SWEEP_SHARD=i/n         this process takes upgrades i, i+n, ... (default 0/1)
+ *   UPGRADE_SWEEP_SEEDS=<n>         seeds per map (default 16)
+ *   UPGRADE_SWEEP_LEVELS=3,6,9      maps to play (default: the sample below)
+ *   UPGRADE_SWEEP_ONLY=id,id        only these upgrades (plus the baseline)
+ *
+ * "(placebo)" is the noise floor. The simulation is chaotic: ANY change, even
+ * balls 0.1% slower, reshuffles every seed's outcome, so a card's paired
+ * difference only means something next to what that placebo's does.
+ *
+ * What the bot cannot measure, it reports as unchanged: it never taps a ball,
+ * holds an object or picks a fence type, never shops, and plays one map at a
+ * time with no purse. An upgrade whose every run is bit-identical to the
+ * baseline is therefore "invisible to the bot", which is a finding about the
+ * bot as much as the card, and the report keeps the two apart by that flag.
+ */
+import { describe, it } from "vitest";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
+import { runBot, type BotRunResult } from "@/lib/bot/runBot";
+import { computeGameModifiers } from "@/hooks/useActiveModifiers";
+import { mapContextOf, type RunContext } from "@/lib/upgradeConditions";
+import { loadScoringConfig } from "@/lib/scoring";
+import { PHYSICS_STEP } from "@/lib/gameConstants";
+import type { UpgradeConfig } from "@/types/upgrade";
+import type { LevelConfig } from "@/types/level";
+import { LADDER, byLevel } from "./fixtures/maps";
+
+const ENABLED = process.env.UPGRADE_SWEEP === "1";
+
+/** Early, mid and late maps, bosses included, so a card is seen across the run. */
+const DEFAULT_LEVELS = [2, 4, 6, 8, 10, 12, 15, 18, 20, 23, 26, 29, 32, 36, 40];
+
+/** A purse a mid-run player plausibly holds, so bank-gated cards switch on. */
+const SWEEP_BANKED = 60;
+/** Lives at the start of a map: the bot computes modifiers once, at the start. */
+const SWEEP_LIVES = 3;
+
+interface RunRow {
+  level: number;
+  seed: number;
+  won: boolean;
+  seconds: number;
+  livesLost: number;
+  score: number;
+  remaining: number;
+}
+
+function row(r: BotRunResult): RunRow {
+  return {
+    level: r.levelNumber, seed: r.seed, won: r.won,
+    seconds: +(r.frames * PHYSICS_STEP).toFixed(2), livesLost: r.livesLost,
+    score: r.levelScore, remaining: +r.remainingPercent.toFixed(2),
+  };
+}
+
+function parseShard(text: string | undefined): { index: number; count: number } {
+  if (!text) {
+    return { index: 0, count: 1 };
+  }
+  const [i, n] = text.split("/").map(Number);
+  return { index: i, count: n };
+}
+
+describe.skipIf(!ENABLED)("upgrade sweep", () => {
+  it("plays every upgrade against the baseline", async () => {
+    const outDir = process.env.UPGRADE_SWEEP_OUT;
+    if (!outDir) {
+      throw new Error("UPGRADE_SWEEP_OUT is required");
+    }
+    mkdirSync(outDir, { recursive: true });
+
+    // The map payout reads the scoring config, which the browser fetches.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const file = resolve(__dirname, "../../public", url.replace(/^\//, ""));
+      return new Response(readFileSync(file, "utf8"));
+    }) as typeof fetch;
+    try {
+      await loadScoringConfig();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    const upgrades = (yaml.load(
+      readFileSync(resolve(__dirname, "../../public/upgrades.yml"), "utf8"),
+    ) as { upgrades: UpgradeConfig[] }).upgrades;
+    const lookup = new Map(upgrades.map(u => [u.id, u]));
+
+    const seedCount = Number(process.env.UPGRADE_SWEEP_SEEDS ?? 16);
+    const seeds = Array.from({ length: seedCount }, (_, i) => 101 + i);
+    const levelNumbers = process.env.UPGRADE_SWEEP_LEVELS
+      ? process.env.UPGRADE_SWEEP_LEVELS.split(",").map(Number)
+      : DEFAULT_LEVELS;
+    const levels = levelNumbers
+      .map(n => ({ n, level: byLevel(LADDER, n) }))
+      .filter((x): x is { n: number; level: LevelConfig } => x.level !== undefined);
+
+    const only = process.env.UPGRADE_SWEEP_ONLY?.split(",");
+    const shard = parseShard(process.env.UPGRADE_SWEEP_SHARD);
+    const ids = ["(baseline)", "(placebo)", ...upgrades.map(u => u.id)]
+      .filter(id => !only || id.startsWith("(") || only.includes(id));
+    const mine = ids.filter((_, i) => i % shard.count === shard.index);
+
+    const results: Record<string, RunRow[]> = {};
+    const started = Date.now();
+    for (const id of mine) {
+      const rows: RunRow[] = [];
+      for (const { n, level } of levels) {
+        const context: RunContext = {
+          level: n, lives: SWEEP_LIVES, banked: SWEEP_BANKED, map: mapContextOf(level),
+        };
+        const owned = id.startsWith("(") ? [] : [id];
+        const modifiers = computeGameModifiers(owned, lookup, undefined, context);
+        if (id === "(placebo)") {
+          modifiers.ballSpeedMultiplier *= 0.999;
+        }
+        // The map's own clock, plus a little, so a slow clear still counts.
+        const maxFrames = Math.ceil(((level.timeLimit ?? 90) + 5) / PHYSICS_STEP);
+        for (const seed of seeds) {
+          rows.push(row(runBot(level, n, seed, { modifiers, maxFrames })));
+        }
+      }
+      results[id] = rows;
+      console.log(`[sweep ${shard.index}/${shard.count}] ${id} done, ${((Date.now() - started) / 1000).toFixed(0)}s`);
+    }
+
+    writeFileSync(
+      resolve(outDir, `shard-${shard.index}-of-${shard.count}.json`),
+      JSON.stringify({ seeds, levels: levels.map(l => l.n), banked: SWEEP_BANKED, lives: SWEEP_LIVES, results }),
+    );
+  }, 24 * 60 * 60 * 1000);
+});

@@ -642,6 +642,8 @@ export interface CanvasGameState {
   bombBoostSeconds?: number;
   /** The end-of-map debrief, built when the map is won; null until then. */
   debrief?: import("@/types/debrief").ScoreDebrief | null;
+  /** Overtime the map paid, set when it is won (the bot reads it; no timer runs there). */
+  completedLevelScore?: number;
   /**
    * The DELIVERY share of lockBonus: raw lockMultiplier x lockValue with every
    * quality multiplier stripped off. lockBonus minus this is what the CRAFT
