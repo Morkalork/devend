@@ -649,6 +649,12 @@ export function tryCut(ctx: BotGame, origin: Vector2, direction: Vector2): boole
   // and all, on a board whose fences are WALL_THICKNESS wide.
   const forward = castRayWithReflections(origin, dir, game.walls);
   const backward = castRayWithReflections(origin, neg, game.walls);
+  // A ray can find no wall at all (from a spot on a board that opens already
+  // part captured, Onboarding's): the command treats that as no cut, and so
+  // must this, or the bot crashes on a map a player plays fine.
+  if (!forward || !backward) {
+    return false;
+  }
   if (forward.waypoints.length < 2 || backward.waypoints.length < 2) return false;
 
   const before = game.activeWalls.length;
