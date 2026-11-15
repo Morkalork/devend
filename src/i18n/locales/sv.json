@@ -2487,6 +2487,258 @@
         "name": "Production Outage",
         "premise": "Den där allt går sönder på en gång: ett kedjat par, en radering var tjugofemte sekund och läckor hela tiden."
       }
+    },
+    "cards": {
+      "feature_freeze": {
+        "name": "Feature Freeze",
+        "description": "Tryck på en boll för att frysa den i 3s. Två tryck per bana."
+      },
+      "feature_freeze_plus": {
+        "name": "Feature Freeze+",
+        "description": "Tryck på en boll för att frysa den och dess närmaste granne i 3s. Två tryck per bana."
+      },
+      "cold_boot": {
+        "name": "Kallstart",
+        "description": "Varje bana börjar med alla bollar frusna i 4s."
+      },
+      "cold_boot_plus": {
+        "name": "Kallstart+",
+        "description": "Varje bana börjar med alla bollar frusna i 7s."
+      },
+      "cron_job": {
+        "name": "Cron-jobb",
+        "description": "Var 10:e sekund fryses en slumpad boll i 4s."
+      },
+      "cron_job_plus": {
+        "name": "Cron-jobb+",
+        "description": "Var 10:e sekund fryses en slumpad boll i 6s."
+      },
+      "frozen_assets": {
+        "name": "Frysta tillgångar",
+        "description": "Att låsa en boll medan den är frusen ger fyra gånger låsbonusen."
+      },
+      "thaw_cycle": {
+        "name": "Upptiningscykel",
+        "description": "Varje lås ger dig tillbaka ett frystryck. Kräver en frysning att trycka med."
+      },
+      "cold_storage_ice": {
+        "name": "Isstängsel",
+        "description": "Lägger till isstängslet: bollar som studsar mot det tappar fart. Det byggs 30% långsammare."
+      },
+      "permafrost": {
+        "name": "Permafrost",
+        "description": "Ett isstängsel fryser också bollen det bromsar, i 2s. Kräver isstängslet."
+      },
+      "permafrost_plus": {
+        "name": "Permafrost+",
+        "description": "Ett isstängsel fryser också bollen det bromsar, i 3,5s."
+      },
+      "deep_freeze": {
+        "name": "Djupfrysning",
+        "description": "En boll kan frysas igen i samma stund som den tinar: ingen väntetid."
+      },
+      "containment": {
+        "name": "Inneslutning",
+        "description": "Varje lås håller den närmaste fria bollen stilla i 3s."
+      },
+      "containment_plus": {
+        "name": "Inneslutning+",
+        "description": "Varje lås håller den närmaste fria bollen stilla i 5s."
+      },
+      "golden_handshake": {
+        "name": "Gyllene handslag",
+        "description": "Varje boll du låser ger 2 bonustimmar."
+      },
+      "golden_handshake_plus": {
+        "name": "Gyllene handslag+",
+        "description": "Varje boll du låser ger 4 bonustimmar."
+      },
+      "batch_commit": {
+        "name": "Batch-commit",
+        "description": "Varje lås räknas som en boll större för multiplikatorn för samtidiga fällor."
+      },
+      "loose_coupling": {
+        "name": "Lös koppling",
+        "description": "En boll låses i en ficka upp till dubbelt så stor som vanligt."
+      },
+      "loose_coupling_plus": {
+        "name": "Lös koppling+",
+        "description": "En boll låses i en ficka upp till nästan tre gånger så stor som vanligt."
+      },
+      "knowledge_transfer": {
+        "name": "Kunskapsöverföring",
+        "description": "Varje lås gör dina stängsel 15% snabbare resten av banan."
+      },
+      "acquire_the_mutex": {
+        "name": "Mutex-stängsel",
+        "description": "Lägger till mutex-stängslet: det låser bara en ficka med exakt en boll i, och betalar extra när det gör det."
+      },
+      "raise_the_semaphore": {
+        "name": "Semafor-stängsel",
+        "description": "Lägger till semafor-stängslet: det låser bara två eller fler bollar samtidigt, och betalar enormt för dem.",
+        "downside": "Det kan inte låsa en ensam boll, och det byggs 40% långsammare."
+      },
+      "fast_compile": {
+        "name": "Snabb kompilering",
+        "description": "Stängsel byggs 35% snabbare."
+      },
+      "fast_compile_plus": {
+        "name": "Snabb kompilering+",
+        "description": "Stängsel byggs 60% snabbare."
+      },
+      "hot_start": {
+        "name": "Varmstart",
+        "description": "De två första stängslen på varje bana blir klara direkt."
+      },
+      "hot_start_plus": {
+        "name": "Varmstart+",
+        "description": "De fyra första stängslen på varje bana blir klara direkt."
+      },
+      "multithreading": {
+        "name": "Multitrådning",
+        "description": "Rita ett stängsel till samtidigt."
+      },
+      "multithreading_plus": {
+        "name": "Multitrådning+",
+        "description": "Rita två stängsel till samtidigt."
+      },
+      "continuous_delivery": {
+        "name": "Kontinuerlig leverans",
+        "description": "Varje stängsel du blir klar med gör nästa 10% snabbare, resten av banan."
+      },
+      "scaffolding": {
+        "name": "Byggställning",
+        "description": "Varje stängsel börjar 30% ritat."
+      },
+      "onboarding": {
+        "name": "Onboarding",
+        "description": "Varje bana börjar med 15% av brädet redan erövrat."
+      },
+      "onboarding_plus": {
+        "name": "Onboarding+",
+        "description": "Varje bana börjar med 25% av brädet redan erövrat."
+      },
+      "hotfix_tripwire": {
+        "name": "Snubbeltråd",
+        "description": "Lägger till snubbeltråden: den byggs 40% snabbare.",
+        "downside": "Den första bollen som rör en färdig snubbeltråd bryter den."
+      },
+      "ghost_protocol": {
+        "name": "Spökprotokoll",
+        "description": "Ett nytt stängsel går igenom bollar under den första kvartssekunden det växer."
+      },
+      "defensive_programming": {
+        "name": "Defensiv programmering",
+        "description": "Varje bana börjar med en sköld: den första bollen som träffar ett växande stängsel kostar skölden, inte ett liv."
+      },
+      "defensive_programming_plus": {
+        "name": "Defensiv programmering+",
+        "description": "Varje bana börjar med två sköldar."
+      },
+      "slow_motion": {
+        "name": "Slow motion",
+        "description": "Alla bollar rör sig 20% långsammare."
+      },
+      "slow_motion_plus": {
+        "name": "Slow motion+",
+        "description": "Alla bollar rör sig 30% långsammare."
+      },
+      "compression": {
+        "name": "Komprimering",
+        "description": "Alla bollar är 25% mindre."
+      },
+      "compression_plus": {
+        "name": "Komprimering+",
+        "description": "Alla bollar är 40% mindre."
+      },
+      "fault_tolerance": {
+        "name": "Feltolerans",
+        "description": "Ett extra liv, så länge du har kvar det här kortet."
+      },
+      "add_guardrails": {
+        "name": "Skyddsräcke",
+        "description": "Lägger till skyddsräcket: en gång per bana kostar en boll genom det stängslet, inte ett liv. Det byggs 15% långsammare."
+      },
+      "load_balancer": {
+        "name": "Lastbalanserare",
+        "description": "Den snabbaste bollen på varje bana rör sig 20% långsammare."
+      },
+      "scrum_master": {
+        "name": "Scrum Master",
+        "description": "Se vart varje boll är på väg: dess tre nästa studsar ritas på brädet."
+      },
+      "soft_launch": {
+        "name": "Mjukstart",
+        "description": "Bollarna börjar varje bana i 70% fart under de första 12s."
+      },
+      "control_freak": {
+        "name": "Kontrollfreak",
+        "description": "Håll in på ett rörligt objekt för att stoppa det, och dra det längs sin egen bana."
+      },
+      "bug_squash": {
+        "name": "Buggmos",
+        "description": "Varje väggträff har 15% chans att mosa bollen platt och klistra fast den i 4s."
+      },
+      "technical_debt": {
+        "name": "Teknisk skuld",
+        "description": "Varje bana ger 50% mer övertid.",
+        "downside": "Alla bollar rör sig 20% snabbare."
+      },
+      "crunch_time": {
+        "name": "Crunch",
+        "description": "Stängsel byggs 60% snabbare.",
+        "downside": "Alla bollar är 20% större."
+      },
+      "incident_flare": {
+        "name": "Blosstängsel",
+        "description": "Lägger till blosstängslet: bollar som studsar mot det får mer fart, och snabba bollar är värda mer.",
+        "downside": "Snabba bollar är svårare att stängsla in, och det byggs 30% långsammare."
+      },
+      "rolling_redeploy": {
+        "name": "Redeploy-stängsel",
+        "description": "Lägger till redeploy-stängslet: ta tag i ett färdigt och slunga iväg bollarna framför det.",
+        "downside": "Det byggs 40% långsammare."
+      },
+      "moonshot": {
+        "name": "Månskott",
+        "description": "Utbetalningar för att utmana ödet och bonusar för utrymmesoptimering ger båda dubbelt."
+      },
+      "chaos_engineering": {
+        "name": "Kaosteknik",
+        "description": "Varje bana med skärvor har minst tre skärvbomber, och brytbara objekt tål en träff mindre."
+      },
+      "performance_bonus": {
+        "name": "Prestationsbonus",
+        "description": "Varje bana ger 25% mer övertid."
+      },
+      "performance_bonus_plus": {
+        "name": "Prestationsbonus+",
+        "description": "Varje bana ger 50% mer övertid."
+      },
+      "stock_options": {
+        "name": "Aktieoptioner",
+        "description": "Varje bana kan ge 6 timmar mer än sitt tak."
+      },
+      "expense_account": {
+        "name": "Utläggskonto",
+        "description": "Allt du betalar timmar för i butiken kostar 30% mindre."
+      },
+      "headhunter": {
+        "name": "Headhunter",
+        "description": "Varje butik erbjuder ett kort till att välja bland."
+      },
+      "compound_interest": {
+        "name": "Ränta på ränta",
+        "description": "Varje butik ger 8% ränta på timmarna du har."
+      },
+      "ship_early": {
+        "name": "Leverera tidigt",
+        "description": "Fönstren för tidig leverans varar 4s längre per boll, och Tempo ger dubbelt."
+      },
+      "padded_estimate": {
+        "name": "Tilltagen uppskattning",
+        "description": "Varje bana bedöms mot två extra stängsel i par, och att slå par ger dubbelt."
+      }
     }
   },
   "features": {

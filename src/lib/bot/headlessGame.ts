@@ -398,6 +398,10 @@ export function createBotGame(
     const chance = effectivePickupChance(opts.pickups, levelNumber, level.pickupChance, modifiers.pickupChanceBonus);
     game.pickupConfig = chance > 0 ? { ...opts.pickups, spawnChance: chance } : null;
   }
+  // The lock limit as the build widens it (Code Review, Loose Coupling).
+  // GameCanvas adds this to the board's threshold; without it here the sweep
+  // read both cards as changing nothing.
+  game.lockWinThresholdPercent += Math.max(0, modifiers.lockThresholdBonus ?? 0);
   game.wallShieldsRemaining = mapStartShields(modifiers);
   game.freezeUsesRemaining = mapStartFreezeUses(modifiers);
   applyMapStartBoons(game, modifiers);

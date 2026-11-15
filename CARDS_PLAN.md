@@ -1,7 +1,7 @@
 # CARDS_PLAN.md
 
-The redo of the upgrades as a card draft. Status: **phases 1 to 3 built**,
-phase 4 open. Why: the owner's report that "the upgrades don't change the game
+The redo of the upgrades as a card draft. Status: **phases 1 to 4 built**,
+phase 5 open. Why: the owner's report that "the upgrades don't change the game
 enough" and that the feeling of being handed just the right card (Slay the
 Spire) was missing, and the sweep that measured it (UPGRADE_SWEEP_REPORT.md):
 of 145 upgrades, 20 changed a map clearly, and the ones that did added a rule,
@@ -78,7 +78,8 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 1 | Rule sets, the catalogue switch, the run save, the Admin toggle | built |
 | 2 | The draft store: free card, skip, reroll, slots and the replace modal, the next-map line | built |
 | 3 | `cards.yml`, the two new mechanics, Tenure and Sprint Planning on cards | built |
-| 4 | The sweep as a gate on `cards.yml`; card text in es, sv and bn; bosses and elite maps that test a build; the pair's draft | open |
+| 4 | The sweep run on `cards.yml` and the catalogue tuned from it; card text in es, sv and bn | built |
+| 5 | Bosses and elite maps that test a build; the pair's draft; the "Sprint" panel's wording in the draft | open |
 
 ## Build record
 
@@ -90,6 +91,37 @@ is `rollShelf` with no locked teaser. Gallery: `UpgradeShop-draft`,
 `ReplaceCardModal`. Tests: `cards.test.ts`, `draftStore.test.ts`,
 `cardMechanics.test.ts`. Analytics: `draft_choice` (take, skip, reroll, drop).
 
-Known gaps: card names and descriptions are English in every language until
-phase 4 (the store's own strings are translated); the classic store's "Sprint"
-panel wording is unchanged in the draft.
+**Phase 4.** The sweep reads the draft catalogue (`UPGRADE_SWEEP_CATALOG=cards`)
+and plays named builds (`UPGRADE_SWEEP_BUILDS=a+b`), which is how a payoff card
+is read: alone it has nothing to pay off. Same method and noise floor as
+UPGRADE_SWEEP_REPORT.md (15 maps, 16 seeds, each "+" on top of its card).
+
+| | classic (145) | draft (61) |
+|---|---|---|
+| Clear (over 2x the noise) | 20 (14%) | 28 (46%) |
+| Weak (1x to 2x) | 26 | 7 |
+| Within the noise | 55 | 15 (Moonshot among them: the bot never pushes its luck) |
+| Never changed a run, though the bot plays it | 7 | 0 |
+| Not measurable by the bot alone | 37 | 11: five payoffs read in builds below, Fault Tolerance, Scrum Master, Control Freak and the three store cards |
+
+What it changed:
+- **Loose Coupling** read as nothing, because the lock limit was widened only in
+  GameCanvas; the bot now applies it too. Measured, it is among the strongest
+  cards (+39% pay, 13% faster clears), so it moved from common to uncommon.
+- **The freeze payoffs are small for this bot** (Frozen Assets +5.6% pay on top
+  of Feature Freeze, Thaw Cycle and Deep Freeze under 2%): its only freeze
+  habit is saving a fence, never setting up a frozen lock. Frozen Assets went
+  from triple to four times; the other two are left for play to judge.
+- Permafrost changes nearly every run it is in (233 of 240) but nets out near
+  the noise for the bot, like the Ice fence it rides on.
+- Compression, Containment, Cron Job, Ghost Protocol and Knowledge Transfer
+  sit in the noise for the bot. Left as they are: each is a rule a player can
+  build on, and the bot plays no build.
+
+Card text is in es, sv and bn under `content.cards` (its own namespace: eleven
+card ids are also classic ids with other numbers on them), and `cards.test.ts`
+holds the numbers in every language to the English.
+
+Known gaps (phase 5): the classic store's "Sprint" panel wording is unchanged
+in the draft; a pair run has no draft; no map yet asks a question that one
+build answers better than another.

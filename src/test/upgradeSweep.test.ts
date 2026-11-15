@@ -14,6 +14,9 @@
  *   UPGRADE_SWEEP_ONLY=id,id        only these upgrades (plus the baseline)
  *   UPGRADE_SWEEP_STACK=1           own each card WITH its prerequisites (transitively)
  *   UPGRADE_SWEEP_CATALOG=cards     sweep the draft catalogue (public/cards.yml)
+ *   UPGRADE_SWEEP_BUILDS=a+b,c+d    also play these builds (ids joined by +), each under
+ *                                   its own name: how a payoff card is read, since alone
+ *                                   it has nothing to pay off
  *
  * Stack mode is how a rung is read fairly. Alone, Feature Freeze Senior is +1s
  * on a freeze the build does not have, and reads as nothing; on top of Junior
@@ -157,6 +160,8 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
     const shard = parseShard(process.env.UPGRADE_SWEEP_SHARD);
     const ids = ["(baseline)", ...Object.keys(PLACEBOS), ...upgrades.map(u => u.id)]
       .filter(id => !only || id.startsWith("(") || only.includes(id));
+    const builds = (process.env.UPGRADE_SWEEP_BUILDS ?? "").split(",").filter(b => b.includes("+"));
+    ids.push(...builds);
     const mine = ids.filter((_, i) => i % shard.count === shard.index);
 
     // A won map schedules its results screen on a timer, and that timer holds
@@ -178,7 +183,9 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
         const context: RunContext = {
           level: n, lives: SWEEP_LIVES, banked: SWEEP_BANKED, map: mapContextOf(level),
         };
-        const owned = id.startsWith("(") ? [] : (STACK ? stackOf(id, lookup) : [id]);
+        const owned = id.startsWith("(") ? []
+          : id.includes("+") ? id.split("+")
+          : (STACK ? stackOf(id, lookup) : [id]);
         const modifiers = computeGameModifiers(owned, lookup, undefined, context);
         const placebo = PLACEBOS[id];
         if (placebo !== undefined) {

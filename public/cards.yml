@@ -124,9 +124,9 @@ upgrades:
   unlockLevel: 5
   icon: vault
   tags: [freeze, lock]
-  description: Locking a ball while it is frozen pays triple the lock bonus.
+  description: Locking a ball while it is frozen pays four times the lock bonus.
   modifiers:
-    frozenLockBonus: 2
+    frozenLockBonus: 3
 - id: thaw_cycle
   name: Thaw Cycle
   tier: Principal
@@ -219,20 +219,20 @@ upgrades:
     simultaneousLockBonus: 1
 - id: loose_coupling
   name: Loose Coupling
-  tier: Junior
+  tier: Senior
   unlockLevel: 2
   icon: ruler
   tags: &id007 [lock]
-  description: A pocket up to 10% over the lock limit still locks its ball.
+  description: A ball locks in a pocket up to twice the usual size.
   modifiers:
     lockThresholdBonus: 10
 - id: loose_coupling_plus
   name: Loose Coupling+
-  tier: Junior
+  tier: Senior
   unlockLevel: 2
   tags: *id007
   upgradeOf: loose_coupling
-  description: A pocket up to 18% over the lock limit still locks its ball.
+  description: A ball locks in a pocket up to nearly three times the usual size.
   modifiers:
     lockThresholdBonus: 8
 - id: knowledge_transfer

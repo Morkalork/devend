@@ -17,6 +17,7 @@
  */
 import type { TFunction } from 'i18next';
 import { getBallType } from '@/lib/ballTypes';
+import { getActiveRuleSet } from '@/lib/cardRules';
 
 type WithId = { id: string };
 
@@ -29,21 +30,28 @@ function field(
   return t(`content.${kind}.${id}.${name}`, { defaultValue: fallback ?? '', ...vars }) as string;
 }
 
+/**
+ * Where an upgrade's text lives: the draft catalogue (cards.yml) has its own
+ * namespace, because some of its ids are also classic ids with other numbers
+ * on them (Cold Boot is 2s there and 4s here).
+ */
+const upgradeKind = () => (getActiveRuleSet() === 'draft' ? 'cards' : 'upgrades');
+
 export const contentText = {
   // A store retainer card (abilityOffer.ts) is an upgrade dressed around an
   // ability, so its copy is the ability's.
   upgradeName: (t: TFunction, u: WithId & { name?: string; grantsAbility?: string }) =>
     u.grantsAbility
       ? field(t, 'abilities', u.grantsAbility, 'name', u.name)
-      : field(t, 'upgrades', u.id, 'name', u.name),
+      : field(t, upgradeKind(), u.id, 'name', u.name),
   upgradeDesc: (t: TFunction, u: WithId & { description?: string; grantsAbility?: string }) =>
     u.grantsAbility
       ? field(t, 'abilities', u.grantsAbility, 'description', u.description)
-      : field(t, 'upgrades', u.id, 'description', u.description),
+      : field(t, upgradeKind(), u.id, 'description', u.description),
 
   /** A draft card's cost line (cards.yml `downside`). */
   upgradeDownside: (t: TFunction, u: WithId & { downside?: string }) =>
-    field(t, 'upgrades', u.id, 'downside', u.downside),
+    field(t, upgradeKind(), u.id, 'downside', u.downside),
 
   /** Job-title tier (Junior, Senior, …) shared across all upgrades. */
   tier: (t: TFunction, tier?: string): string =>

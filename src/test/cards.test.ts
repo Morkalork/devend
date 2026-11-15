@@ -191,3 +191,40 @@ describe("Sprint Planning on the draft catalogue", () => {
     }
   });
 });
+
+describe("card text in every language", () => {
+  const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+  const numbers = (text: string) =>
+    (text.replace(/[০-৯]/g, d => String(BN_DIGITS.indexOf(d))).replace(/,/g, ".").match(/\d+(\.\d+)?/g) ?? []).sort().join(" ");
+  // Numbers a language may write as a word ("two shields"), so only the cards
+  // whose English uses digits are held to the digits.
+  const hasDigits = (text: string) => /\d/.test(text);
+
+  it.each(["es", "sv", "bn"])("%s has every card, with the same numbers as the English", (lang) => {
+    const locale = JSON.parse(readFileSync(resolve(__dirname, `../i18n/locales/${lang}.json`), "utf8")) as {
+      content: { cards: Record<string, { name?: string; description?: string; downside?: string }> };
+    };
+    const cards = locale.content.cards;
+    expect(Object.keys(cards).sort()).toEqual(CARDS.map(c => c.id).sort());
+    for (const c of CARDS) {
+      const tr = cards[c.id];
+      expect(tr.name, `${lang} ${c.id} name`).toBeTruthy();
+      expect(tr.description, `${lang} ${c.id} description`).toBeTruthy();
+      expect(!!tr.downside, `${lang} ${c.id} downside`).toBe(!!c.downside);
+      for (const text of [tr.name, tr.description, tr.downside ?? ""]) {
+        expect(text).not.toContain("\u2014");
+      }
+      if (hasDigits(c.description)) {
+        expect(numbers(tr.description!), `${lang} ${c.id}: ${tr.description}`).toBe(numbers(c.description));
+      }
+      if (c.downside && hasDigits(c.downside)) {
+        expect(numbers(tr.downside!), `${lang} ${c.id} downside`).toBe(numbers(c.downside));
+      }
+    }
+  });
+
+  it("reads the draft's own namespace, so a classic id with other numbers cannot leak in", () => {
+    const content = readFileSync(resolve(__dirname, "../i18n/content.ts"), "utf8");
+    expect(content).toMatch(/getActiveRuleSet\(\) === 'draft' \? 'cards' : 'upgrades'/);
+  });
+});
