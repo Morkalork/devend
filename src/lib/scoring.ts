@@ -542,8 +542,9 @@ export function calculateScore(
   // superior locks were already available would have paid exactly nothing.
   // See src/lib/launcher.ts. 1 on every map without a launcher.
   const launchMult = launchPayMultiplier(launchPower);
-  const multipliedBase = Math.floor(
-    basePoints * breakdown.performanceMultiplier * safeMultiplier * launchMult,
+  // The score multiplier is NOT applied here any more; see `multiplierHours`.
+  const baseBeforeMultiplier = Math.floor(
+    basePoints * breakdown.performanceMultiplier * launchMult,
   );
   const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
   const safeCapRaise = Number.isFinite(capRaise) && capRaise > 0 ? Math.round(capRaise) : 0;
@@ -560,22 +561,44 @@ export function calculateScore(
   //
   // Only ever off a POSITIVE pay. A map where Tempo has driven the total
   // negative must not have its penalty softened by ignoring the zones.
-  const grossMapPay = multipliedBase + breakdown.axes.total;
+  const grossMapPay = baseBeforeMultiplier + breakdown.axes.total;
   const zoneShareWithheld = withheldFromPay(grossMapPay, zoneShareMissed);
+  const mapPayBeforeMultiplier = grossMapPay - zoneShareWithheld;
+  // The score multiplier (Performance Bonus, Technical Debt, the Overtime
+  // certificate, Growth's desperation rate, achievements) scales the map's
+  // whole earned pay: "5% more overtime per map" means exactly that.
+  //
+  // It used to multiply the base alone, inside the floor above, and every map's
+  // base is 5h: 5 x 1.05, 5 x 1.10 and 5 x 1.15 all floor to 5, so Performance
+  // Bonus paid nothing at any tier, and a x1.6 Sprint Planning offer paid 3h.
+  // The upgrade sweep found it (UPGRADE_SWEEP_REPORT.md).
+  //
+  // Only ever on a POSITIVE pay, like the zone share: a multiplier must not
+  // deepen a penalty. The hours ride in `multipliedBase` ("the base the scorer
+  // used, multipliers included"), so the results screen's Score row still adds
+  // up to the payout with no new field to carry.
+  const multiplierHours = mapPayBeforeMultiplier > 0
+    ? Math.round(mapPayBeforeMultiplier * (safeMultiplier - 1))
+    : 0;
+  const multipliedBase = baseBeforeMultiplier + multiplierHours;
   breakdown.multipliedBase = multipliedBase;
   // What the map could have paid: the base plus every lane at its own ceiling.
   // The player's ceiling multipliers are already inside axes.ceilings, so this
   // is THEIR maximum on this map rather than a generic one.
   const c = breakdown.axes.ceilings;
-  breakdown.mapCeiling =
-    multipliedBase + c.delivery + c.craft + c.tempo + c.thrift + c.greed
+  breakdown.mapCeiling = Math.round((
+    baseBeforeMultiplier + c.delivery + c.craft + c.tempo + c.thrift + c.greed
     // Engagement is already zero in `ceilings` on a map that offers no
     // feature, so this grows the denominator only where the lane is real.
     // Leaving it out let the numerator collect 35h the denominator had never
     // heard of, and "Score: 130 / 110h" is the exact drift mapCeiling exists
     // to prevent.
-    + c.engagement;
-  const mapPay = grossMapPay - zoneShareWithheld;
+    + c.engagement
+  // The multiplier scales the ceiling as it scales the pay, or a x1.15 build
+  // could show "Score: 46 / 40h".
+  ) * Math.max(1, safeMultiplier));
+  // The win premium stays on the pay before the multiplier, as it always was.
+  const mapPay = mapPayBeforeMultiplier;
   breakdown.zoneShareWithheld = zoneShareWithheld;
   const winBonus = Math.round(mapPay * safeWinPct / 100);
   // `safePostCap` is gone from here, and that is the fix: bumper and power-up
@@ -585,7 +608,7 @@ export function calculateScore(
   // issue #79. `safeFlat` stays inside it - a mutator's hazard pay and an
   // objective's clear reward are ordinary income that the backstop should
   // still catch if it ever runs away.
-  const earned = mapPay + winBonus + safeFlat;
+  const earned = mapPay + multiplierHours + winBonus + safeFlat;
   // The backstop bounds the BASE and the flat bonuses, never the axes: the five
   // ceilings already bound those, and they are absolute hours while the base is
   // per-map. Clamping the sum against a multiple of basePoints would clip axis

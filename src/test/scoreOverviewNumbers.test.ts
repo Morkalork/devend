@@ -31,7 +31,10 @@ describe("what the scorer hands the overview", () => {
     const boosted = calculateScore(2, 4, 0, 30, 20, opts({ scoreMultiplier: 1.25 }));
 
     expect(plain.breakdown.multipliedBase).toBe(20);
-    expect(boosted.breakdown.multipliedBase).toBe(25);
+    // The multiplier scales the whole earned pay (base plus axes), and its
+    // hours ride in the base row so the Score line still adds up.
+    const plainPay = 20 + plain.axes.total;
+    expect(boosted.breakdown.multipliedBase).toBe(20 + Math.round(plainPay * 0.25));
     // What the overlay would have printed on its own: the same 20h in both.
     const overlayGuess = Math.floor(20 * boosted.breakdown.performanceMultiplier);
     expect(boosted.breakdown.multipliedBase).not.toBe(overlayGuess);

@@ -1,8 +1,8 @@
 /**
  * The shop must not sell a multiplier the per-map cap refuses to pay.
  *
- * Overtime is capped per map at `basePoints x overtimeCapHeadroom` (80h on a
- * base-20 map). Past that ceiling, more scoreMultiplier is not merely weak, it
+ * Overtime is capped per map by a backstop: `basePoints x overtimeCapHeadroom`
+ * plus every axis ceiling. Past that ceiling, more scoreMultiplier is not merely weak, it
  * is INERT: the player spends real overtime on a card whose effect is discarded
  * at scoring time, and nothing on screen says so.
  *
@@ -24,6 +24,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { LevelConfig } from "@/types/level";
+import { getAxisCeilings, axisCeilingTotal, DEFAULT_MAP_BASE_POINTS } from "@/lib/scoring";
 
 import { ENGINE_MAPS } from "./fixtures/maps";
 
@@ -60,22 +61,33 @@ function maxBuyableMultiplier(): number {
 }
 
 /**
- * The multiplier at which a map's raw score first exceeds its own cap.
+ * The real backstop (src/lib/scoring.ts): the base x headroom, plus every axis
+ * ceiling. The score multiplier scales the map's whole earned pay (it used to
+ * scale only the 5h base, floored, which is why Performance Bonus paid 0h).
+ */
+const AXES = getAxisCeilings();
+function backstop(level: LevelConfig): number {
+  return Math.round((level.points ?? DEFAULT_MAP_BASE_POINTS) * SCORING.overtimeCapHeadroom) + axisCeilingTotal();
+}
+
+/**
+ * The multiplier at which a map's pay first meets the backstop.
  *
- * Deliberately OPTIMISTIC: every ball locked at the base x1 lock value, with no
- * superior-lock, simultaneous-trap, break, push, objective or mutator income,
- * all of which fold in before the cap. Real play therefore caps SOONER than
- * this, so a multiplier that fails here fails by more than the number suggests.
+ * Deliberately a MODEST map: the base plus a full Delivery lane (every ball
+ * locked), and no other lane. A better-played map caps sooner; this asks the
+ * question for the map the multiplier has to pay on, not the perfect one.
  */
 function firstBindingMultiplier(level: LevelConfig): number {
-  const base = level.points ?? 20;
-  const cap = Math.round(base * SCORING.overtimeCapHeadroom);
-  const balls = level.maxBalls ?? level.balls?.length ?? 1;
-  const lockIncome = balls * SCORING.lockValue;
+  const pay = (level.points ?? DEFAULT_MAP_BASE_POINTS) + AXES.delivery;
   for (let m = 1; m <= 20; m += 0.01) {
-    if (Math.floor(base * m) + lockIncome > cap) return m;
+    if (Math.round(pay * m) > backstop(level)) return m;
   }
   return Infinity;
+}
+
+/** The most a map can pay before the multiplier: the base plus every lane full. */
+function perfectPay(level: LevelConfig): number {
+  return (level.points ?? DEFAULT_MAP_BASE_POINTS) + axisCeilingTotal();
 }
 
 const bindPoints = LEVELS.map(firstBindingMultiplier).sort((a, b) => a - b);
@@ -98,12 +110,13 @@ describe("what the cap will honour", () => {
   });
 
   /**
-   * A softer floor on the other side: if the ceiling were so far above what the
-   * shop sells that no build could ever reach it, the cap would not be doing
-   * anything and the tuning would have drifted the other way.
+   * The other side: the backstop must still bound a maximal build on a
+   * perfect map, or it would not be bounding anything at all.
    */
-  it("still lets a maximal build reach the ceiling on the tightest maps", () => {
-    expect(maxBuyableMultiplier()).toBeGreaterThan(bindPoints[0]);
+  it("still stops a maximal build on a perfect map", () => {
+    const sold = maxBuyableMultiplier();
+    const capped = LEVELS.filter(l => Math.round(perfectPay(l) * sold) > backstop(l));
+    expect(capped.length).toBeGreaterThan(0);
   });
 });
 
