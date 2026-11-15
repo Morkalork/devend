@@ -13,6 +13,7 @@
  *   UPGRADE_SWEEP_LEVELS=3,6,9      maps to play (default: the sample below)
  *   UPGRADE_SWEEP_ONLY=id,id        only these upgrades (plus the baseline)
  *   UPGRADE_SWEEP_STACK=1           own each card WITH its prerequisites (transitively)
+ *   UPGRADE_SWEEP_CATALOG=cards     sweep the draft catalogue (public/cards.yml)
  *
  * Stack mode is how a rung is read fairly. Alone, Feature Freeze Senior is +1s
  * on a freeze the build does not have, and reads as nothing; on top of Junior
@@ -131,9 +132,16 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
       globalThis.fetch = realFetch;
     }
 
+    const catalogue = process.env.UPGRADE_SWEEP_CATALOG === "cards" ? "cards.yml" : "upgrades.yml";
     const upgrades = (yaml.load(
-      readFileSync(resolve(__dirname, "../../public/upgrades.yml"), "utf8"),
+      readFileSync(resolve(__dirname, "../../public", catalogue), "utf8"),
     ) as { upgrades: UpgradeConfig[] }).upgrades;
+    // A draft card's "+" requires its card, as the loader holds it.
+    for (const u of upgrades) {
+      if (u.upgradeOf && !(u.prerequisites ?? []).includes(u.upgradeOf)) {
+        u.prerequisites = [...(u.prerequisites ?? []), u.upgradeOf];
+      }
+    }
     const lookup = new Map(upgrades.map(u => [u.id, u]));
 
     const seedCount = Number(process.env.UPGRADE_SWEEP_SEEDS ?? 16);
