@@ -34,12 +34,15 @@ import {
 } from "@/lib/runRng";
 import { exportMapIdCounters, importMapIdCounters } from "@/lib/gameUtils";
 import { exportGridRegionIdCounter, importGridRegionIdCounter } from "@/lib/spaceGrid";
+import { exportBugIdCounters, importBugIdCounters } from "@/lib/physics/bugs";
 
 export interface SimModuleState {
   clockMs: number;
   cursors: StreamCursors;
   ids: { region: number; wall: number };
   gridRegionId: number;
+  /** Optional so a snapshot from a build without it still restores. */
+  bugIds?: { bug: number; splat: number };
 }
 
 export function captureSimModuleState(): SimModuleState {
@@ -48,6 +51,7 @@ export function captureSimModuleState(): SimModuleState {
     cursors: exportStreamCursors(),
     ids: exportMapIdCounters(),
     gridRegionId: exportGridRegionIdCounter(),
+    bugIds: exportBugIdCounters(),
   };
 }
 
@@ -56,4 +60,7 @@ export function restoreSimModuleState(s: SimModuleState): void {
   importStreamCursors(s.cursors);
   importMapIdCounters(s.ids);
   importGridRegionIdCounter(s.gridRegionId);
+  if (s.bugIds) {
+    importBugIdCounters(s.bugIds);
+  }
 }

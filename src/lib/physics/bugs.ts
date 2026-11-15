@@ -148,10 +148,31 @@ export function clearPendingBugSpawn(): void {
   _pendingSpawn = undefined;
 }
 
-/** Test seam: makes ids reproducible across test files. */
+/**
+ * Start a map's bug and splat ids from scratch. Called by
+ * createInitialGameData with the other per-map id resets.
+ *
+ * A bug's effect magnitude is seeded by its id (`bug:${bug.id}`), and the
+ * counter used to run for the whole app session, so the same seed dealt the
+ * same bug a different id, and so a different magnitude, depending on how many
+ * bugs earlier maps had spawned: a Daily run could differ between players, and
+ * two phones in a pair that had played different maps before pairing could
+ * disagree. The upgrade sweep caught it as runs that changed with no change to
+ * the build.
+ */
 export function resetBugCounters(): void {
   _bugCounter = 0;
   _splatCounter = 0;
+}
+
+/** Where the bug id counters stand, for the pair snapshot (net/simState.ts). */
+export function exportBugIdCounters(): { bug: number; splat: number } {
+  return { bug: _bugCounter, splat: _splatCounter };
+}
+
+export function importBugIdCounters(v: { bug: number; splat: number }): void {
+  _bugCounter = v.bug;
+  _splatCounter = v.splat;
 }
 
 /**

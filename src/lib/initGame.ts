@@ -18,6 +18,7 @@ import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, Phas
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { SpaceGrid, GridRegion, resetGridRegionIds } from "@/lib/spaceGrid";
+import { resetBugCounters } from "@/lib/physics/bugs";
 import {
   vec2Length,
   pointInPolygon,
@@ -263,6 +264,7 @@ export function createInitialGameData(
   // whatever else the session has already played. See resetMapIds.
   resetMapIds();
   resetGridRegionIds();
+  resetBugCounters();
 
   const margin = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
   const arenaWidth  = BOARD_WIDTH  - margin * 2;
