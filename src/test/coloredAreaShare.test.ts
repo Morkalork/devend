@@ -187,8 +187,10 @@ describe("what is actually withheld", () => {
 });
 
 describe("the payout actually uses it", () => {
+  // The banked-push payout, lifted out of GameCanvas into lib/physics/bankPush.ts
+  // so the headless bot scores a banked push the way the Bank button does.
   const SRC = readFileSync(
-    resolve(process.cwd(), "src/components/game/GameCanvas.tsx"), "utf8");
+    resolve(process.cwd(), "src/lib/physics/bankPush.ts"), "utf8");
 
   it("pays the map out of the share-adjusted points, not the raw ones", () => {
     // Everything above is a pure function agreeing with itself. None of it

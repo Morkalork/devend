@@ -18,11 +18,17 @@
  * such placebo moved the mean clear time by 16%. So a card's paired difference
  * means something only when it is larger than every placebo's.
  *
- * What the bot cannot measure, it reports as unchanged: it never taps a ball,
- * holds an object or picks a fence type, never shops, and plays one map at a
- * time with no purse. An upgrade whose every run is bit-identical to the
- * baseline is therefore "invisible to the bot", which is a finding about the
- * bot as much as the card, and the report keeps the two apart by that flag.
+ * Every run plays real lives (3, plus the build's extra lives), with bugs and
+ * power-up tokens on, freezes tapped when the build has any (policy.ts
+ * planFreeze), as many fences at once as the build allows, and a fence-type
+ * card's type drawn for every fence.
+ *
+ * What the bot still cannot measure, it reports as unchanged: it never holds
+ * an object (Control Freak), never pushes its luck, never shops, and plays
+ * one map at a time with no purse. An upgrade whose every run is
+ * bit-identical to the baseline is therefore "invisible to the bot", which is
+ * a finding about the bot as much as the card, and the report keeps the two
+ * apart by that flag.
  */
 import { describe, it, vi } from "vitest";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -34,6 +40,8 @@ import { mapContextOf, type RunContext } from "@/lib/upgradeConditions";
 import { loadScoringConfig } from "@/lib/scoring";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import type { UpgradeConfig } from "@/types/upgrade";
+import { DEFAULT_BUG_CONFIG } from "@/types/bugs";
+import { DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
 import type { LevelConfig } from "@/types/level";
 import { LADDER, byLevel } from "./fixtures/maps";
 
@@ -148,8 +156,17 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
         }
         // The map's own clock, plus a little, so a slow clear still counts.
         const maxFrames = Math.ceil(((level.timeLimit ?? 90) + 5) / PHYSICS_STEP);
+        const card = lookup.get(id);
+        const runOpts = {
+          modifiers, maxFrames,
+          lives: SWEEP_LIVES + Math.max(0, Math.round(modifiers.extraLives ?? 0)),
+          bugs: DEFAULT_BUG_CONFIG,
+          pickups: DEFAULT_PICKUP_CONFIG,
+          useFreezes: true,
+          fenceTypeId: card?.grantsFenceType,
+        };
         for (const seed of seeds) {
-          rows.push(row(runBot(level, n, seed, { modifiers, maxFrames })));
+          rows.push(row(runBot(level, n, seed, runOpts)));
           vi.clearAllTimers();
         }
       }

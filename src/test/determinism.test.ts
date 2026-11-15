@@ -135,7 +135,7 @@ describe("nothing in a tick rolls an unseeded number that moves a ball", () => {
 
   it("the six the plan named are all seeded now", () => {
     const seeded: [string, RegExp][] = [
-      ["useGameLoop.ts (Cron Job's target)", /runStream\("autoFreeze"\)/],
+      ["autoFreeze.ts (Cron Job's target)", /runStream\("autoFreeze"\)/],
       ["initGame.ts (Runtime Optimisation's victim)", /getRunRng\(`slowOne:\$\{level\.id\}`\)/],
       ["circuit.ts (a woken ball's heading)", /runStream\(`wake:\$\{ballId\}`\)/],
       ["charge.ts (the blast-centre fallback)", /runStream\("chargeBlast"\)/],
@@ -143,7 +143,7 @@ describe("nothing in a tick rolls an unseeded number that moves a ball", () => {
       ["initGame.ts (a ball's starting spin)", /runStream\("ballSpin"\)/],
     ];
     const sources = Object.fromEntries(
-      ["src/hooks/useGameLoop.ts", "src/lib/initGame.ts", "src/lib/physics/circuit.ts",
+      ["src/lib/physics/autoFreeze.ts", "src/lib/initGame.ts", "src/lib/physics/circuit.ts",
        "src/lib/physics/charge.ts", "src/lib/physics/phasing.ts"]
         .map(f => [f, readFileSync(f, "utf-8")]));
     const all = Object.values(sources).join("\n");  // raw: these look for the call shape, backticks and all

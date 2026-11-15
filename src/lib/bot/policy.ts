@@ -168,3 +168,56 @@ function planZoneSeal(
   }
   return null;
 }
+
+/**
+ * Where to tap a freeze, if anywhere: the ball closest to a fence that is
+ * still growing, when it is near the fence and heading toward it.
+ *
+ * The bot's whole freeze policy, and deliberately a plain one: freeze the ball
+ * about to break a fence, which is the use every freeze card is sold for. It
+ * lets the upgrade sweep measure the freeze cards at all; before it the bot
+ * never tapped, and all of them read as changing nothing.
+ */
+export function planFreeze(game: CanvasGameState): { at: Vector2; regionId: string } | null {
+  if (game.activeWalls.length === 0) {
+    return null;
+  }
+  let best: { at: Vector2; regionId: string } | null = null;
+  let bestDist = Infinity;
+  for (const wall of game.activeWalls) {
+    const path = growingPath(wall);
+    for (const ball of game.balls) {
+      if (ball.state !== "active" || !ball.regionId) {
+        continue;
+      }
+      for (let i = 0; i < path.length - 1; i++) {
+        const c = closestOnSegment(ball.position, path[i], path[i + 1]);
+        const dx = c.x - ball.position.x;
+        const dy = c.y - ball.position.y;
+        const d = Math.hypot(dx, dy);
+        const reach = ball.radius * 3 + 20;
+        const approaching = dx * ball.velocity.x + dy * ball.velocity.y > 0;
+        if (d < reach && approaching && d < bestDist) {
+          bestDist = d;
+          best = { at: { ...ball.position }, regionId: ball.regionId };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+/** The part of a growing fence that exists so far, as a polyline. */
+function growingPath(wall: CanvasGameState["activeWalls"][number]): Vector2[] {
+  const back = wall.startWaypoints.slice(0, wall.startSegmentIndex + 1);
+  const front = wall.endWaypoints.slice(0, wall.endSegmentIndex + 1);
+  return [wall.startPoint, ...back.slice(1).reverse(), wall.origin, ...front.slice(1), wall.endPoint];
+}
+
+function closestOnSegment(p: Vector2, a: Vector2, b: Vector2): Vector2 {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const len2 = abx * abx + aby * aby || 1e-6;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2));
+  return { x: a.x + abx * t, y: a.y + aby * t };
+}

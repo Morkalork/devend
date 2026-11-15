@@ -13,8 +13,14 @@ import { readWinSnapshot } from "@/lib/physics/applyCut";
 import { resolveWinSpec, requirementsMet, metAlternative, evaluateWinCondition } from "@/lib/winSpec";
 import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
-import { planCut, seededRandom } from "./policy";
+import { planCut, planFreeze, seededRandom } from "./policy";
+import { concurrentFenceLimit } from "@/lib/concurrentFences";
+import { enqueueCommand } from "@/lib/net/commands";
+import type { BugConfig } from "@/types/bugs";
+import type { PickupConfig } from "@/types/pickups";
+import { scoreBankedPush } from "@/lib/physics/bankPush";
 import type { LevelConfig } from "@/types/level";
+import type { CanvasGameState } from "@/types/gameState";
 import { DEFAULT_SHARD_BOMB_CONFIG, type ShardBombConfig } from "@/lib/bombCore";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { MapFailKind } from "@/lib/mapFailure";
@@ -58,6 +64,26 @@ export interface BotRunOptions {
    * map with every blast disarmed, for measuring what the bombs change.
    */
   bombs?: ShardBombConfig | null;
+  /**
+   * Bugs and power-up tokens (lib/bugs.ts). Omitted, off, as every sweep
+   * before the upgrade sweep's second pass was played; the cards that act on
+   * tokens need them on to be measured.
+   */
+  bugs?: BugConfig | null;
+  /** Power-up tokens (createBotGame). Omitted, none. */
+  pickups?: PickupConfig;
+  /** Real lives (createBotGame). Omitted, the old bottomless three. */
+  lives?: number;
+  /** Draw every fence as this type (a card's `grantsFenceType`). */
+  fenceTypeId?: string;
+  /** Tap freezes when there are any (policy.ts planFreeze). Off by default. */
+  useFreezes?: boolean;
+}
+
+/** Is there a freeze to spend: a Feature Freeze use, or a banked charge? */
+function canFreeze(game: CanvasGameState, modifiers: GameModifiers): boolean {
+  const featureFreeze = modifiers.ballFreezeDuration > 0 && (game.freezeUsesRemaining ?? 0) > 0;
+  return featureFreeze || (game.freezeCharges ?? 0) > 0;
 }
 
 export function runBot(
@@ -78,8 +104,16 @@ export function runBot(
   // A RUN plays the map the player gets, so the roll is asked for here by name.
   // createBotGame defaults to a bare board precisely so that the many tests
   // which deal a board without arming a run seed stay deterministic.
-  const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers(),
-    { mutator: "mutator" in opts ? opts.mutator : "roll", bombs: "bombs" in opts ? opts.bombs : DEFAULT_SHARD_BOMB_CONFIG });
+  const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers(), {
+    mutator: "mutator" in opts ? opts.mutator : "roll",
+    bombs: "bombs" in opts ? opts.bombs : DEFAULT_SHARD_BOMB_CONFIG,
+    bugs: opts.bugs ?? undefined,
+    lives: opts.lives,
+    pickups: opts.pickups,
+  });
+  if (opts.fenceTypeId) {
+    ctx.game.selectedFenceTypeId = opts.fenceTypeId;
+  }
 
   // Fire any launcher before play starts. Without this a launcher map cannot be
   // won by a bot at all: the loaded ball stays dormant, a dormant ball holds its
@@ -135,7 +169,23 @@ export function runBot(
     // read a `launcherPrematureLock` loss on some seed that no player can
     // reach - level 11 on seed 7, level 17 on three of eight - and the sweep
     // was measuring the harness rather than the map.
-    if (f % cutEvery === 0 && ctx.game.activeWalls.length === 0 && !fencesBlockedByLauncher(ctx.game)) {
+    // A freeze, before the cut: the ball about to break a growing fence.
+    if (opts.useFreezes && canFreeze(ctx.game, ctx.modifiers)) {
+      const target = planFreeze(ctx.game);
+      if (target) {
+        const featureFreeze = ctx.modifiers.ballFreezeDuration > 0 && (ctx.game.freezeUsesRemaining ?? 0) > 0;
+        enqueueCommand(ctx.game, {
+          kind: "freezeTap", player: 0, at: target.at, regionId: target.regionId,
+          useCharge: !featureFreeze,
+        });
+      }
+    }
+
+    // As many fences at once as the build allows (concurrentFenceLimit, the
+    // input layer's own rule). The bot used to wait for the board to be empty,
+    // so Multithreading could never be measured.
+    const fenceRoom = ctx.game.activeWalls.length < concurrentFenceLimit(ctx.game, ctx.modifiers);
+    if (f % cutEvery === 0 && fenceRoom && !fencesBlockedByLauncher(ctx.game)) {
       // Desperation rises while nothing is happening, so a bot pinned in a
       // nearly-cleared board eventually takes the cut a player would take
       // rather than standing still and calling the map broken.
@@ -175,6 +225,11 @@ export function runBot(
       ctx.game.pushPromptPending = false;
       ctx.game.pushMode = "none";
       ctx.game.levelComplete = true;
+      // And scored, as the Bank button scores it. Without this a push-banked
+      // win paid 0h, which blunted every pay reading the upgrade sweep took.
+      ctx.game.completedLevelScore = scoreBankedPush(
+        ctx.game, level, levelNumber, ctx.modifiers,
+      ).levelScore;
       break;
     }
 

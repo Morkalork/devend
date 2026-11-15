@@ -47,7 +47,7 @@ import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import type { GameMessageId } from "@/lib/gameMessages";
-import { abilityFenceRushFactor } from "@/lib/abilityEffects";
+import { concurrentFenceLimit } from "@/lib/concurrentFences";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
 import { enqueueCommand, freezeTargetAt, getLocalPlayer } from "@/lib/net/commands";
@@ -87,12 +87,6 @@ function boardTilt(game: CanvasGameState): number {
   return boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
 }
 
-/** How many fences may grow at once: 1, plus the additionalConcurrentFences
- *  modifier, plus one while Fence Overclock is active (#38). */
-function concurrentFenceLimit(game: CanvasGameState, activeModifiers: GameModifiers): number {
-  const extra = Math.max(0, Math.round(activeModifiers.additionalConcurrentFences));
-  return 1 + extra + (abilityFenceRushFactor(game) > 1 ? 1 : 0);
-}
 
 export function useGameInput(
   canvasRef: RefObject<HTMLCanvasElement | null>,

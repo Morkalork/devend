@@ -47,6 +47,7 @@ import { anyLockFlashActive, lockFlashEnd } from "@/lib/lockFlash";
 import { drainCommands, type CommandDeps } from "@/lib/net/commands";
 import { startPairTurns } from "@/lib/net/pairTurn";
 import { runStream } from "@/lib/runRng";
+import { tickAutoFreeze } from "@/lib/physics/autoFreeze";
 import { createFrameGate } from "@/lib/frameGate";
 import { getFrameCap } from "@/lib/rendering/render3dSettings";
 import { runBoardFrameHooks } from "@/lib/rendering/boardFrameHook";
@@ -411,37 +412,8 @@ export function createGameLoop(
     game.lastTime   = timestamp;
     game.accumulator += Math.min(dt, MAX_FRAME_MS / 1000);
 
-    // Cron Job: on a fixed interval, freeze one random eligible ball. Reuses the
-    // same frozenUntil/freezeReadyAt path as the tap-driven Feature Freeze, so
-    // the physics loop below (and rendering) already hold and visualise it.
-    if (autoFreezeDuration > 0 && !game.isRecovering) {
-      const now = simNow();
-      if (game.lastAutoFreezeAt === 0) {
-        // First active frame of the map — start the clock so the first freeze
-        // lands one full interval in, not immediately at map start.
-        game.lastAutoFreezeAt = now;
-      } else if (now - game.lastAutoFreezeAt >= AUTO_FREEZE_INTERVAL_MS) {
-        const eligible = game.balls.filter(b =>
-          b.state === "active" &&
-          !(b.frozenUntil && now < b.frozenUntil) &&     // not already frozen
-          !(b.freezeReadyAt && now < b.freezeReadyAt)     // not on thaw cooldown
-        );
-        if (eligible.length > 0) {
-          // Seeded: Cron Job picking a different ball on each device would
-          // put the two boards on different paths within seconds.
-          const target = eligible[Math.floor(runStream("autoFreeze")() * eligible.length)];
-          const durationMs = autoFreezeDuration * 1000;
-          target.frozenUntil   = now + durationMs;
-          // Absolute Zero (freeze set bonus): no re-freeze cooldown after thaw.
-          target.freezeReadyAt = freezeNoCooldown > 0
-            ? now + durationMs
-            : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
-          game.lastAutoFreezeAt = now;
-        }
-        // No eligible ball (all frozen/cooling) — leave the clock so it retries
-        // next frame rather than skipping this scheduled tick entirely.
-      }
-    }
+    // Cron Job (lib/physics/autoFreeze.ts, shared with the headless bot).
+    tickAutoFreeze(game, autoFreezeDuration, freezeNoCooldown);
 
     // Player actions land HERE, at the top of the frame, before anything
     // moves. They used to land wherever the pointer handler happened to run,

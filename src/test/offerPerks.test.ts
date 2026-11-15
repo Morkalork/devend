@@ -28,7 +28,8 @@ describe("Reliability: the opening slow", () => {
     const src = read("src/lib/physics/updateBall.ts");
     expect(src).toMatch(/openingSlowFactor\(game\.activePlaySeconds, game\.openingSlowSeconds \?\? 0\)/);
     expect(src).toMatch(/const moveDt = dt \* .* \* opening;/);
-    expect(read("src/components/game/GameCanvas.tsx")).toMatch(/game\.openingSlowSeconds = activeModifiers\.openingSlowSeconds;/);
+    // Set at map start by lib/physics/mapStartBoons.ts, which GameCanvas and the bot share.
+    expect(read("src/lib/physics/mapStartBoons.ts")).toMatch(/game\.openingSlowSeconds = activeModifiers\.openingSlowSeconds;/);
   });
 });
 
@@ -93,7 +94,7 @@ describe("Cold Storage: frozen at the start", () => {
 
   it("holds for a stated time, never shortening a Cold Boot", () => {
     expect(START_FROZEN_SECONDS).toBeGreaterThan(0);
-    expect(read("src/components/game/GameCanvas.tsx")).toMatch(/ball\.frozenUntil = Math\.max\(ball\.frozenUntil \?\? 0, thaw\);/);
+    expect(read("src/lib/physics/mapStartBoons.ts")).toMatch(/ball\.frozenUntil = Math\.max\(ball\.frozenUntil \?\? 0, thaw\);/);
   });
 });
 

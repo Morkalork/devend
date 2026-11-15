@@ -65,7 +65,8 @@ import { clearFreeze } from "@/lib/physics/fenceStrike";
 import { updateBallEffects } from "@/lib/ballEffects";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { tickChains } from "@/lib/physics/chain";
-import { updatePickups } from "@/lib/pickups";
+import { updatePickups, effectivePickupChance } from "@/lib/pickups";
+import type { PickupConfig } from "@/types/pickups";
 import { assignShardBugs, effectiveBugChance, mapHasBugs, squashBugs, updateBugs } from "@/lib/physics/bugs";
 import { assignShardBombs, authoredShardBombs, boxBlastArmed, effectiveShardBombChance, type ShardBombConfig } from "@/lib/bombCore";
 import { authoredBugCarriers } from "@/lib/bugs";
@@ -80,6 +81,8 @@ import { resolveBoardEdges } from "@/lib/physics/boardEdges";
 import { advanceSimClock, setSimNow, simNow, SIM_CLOCK_START_MS } from "@/lib/simClock";
 import { drainCommands, enqueueCommand } from "@/lib/net/commands";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
+import { applyMapStartBoons, mapStartShields, mapStartFreezeUses } from "@/lib/physics/mapStartBoons";
+import { tickAutoFreeze } from "@/lib/physics/autoFreeze";
 /**
  * A clock the bot controls.
  *
@@ -178,7 +181,12 @@ export function plainModifiers(over: Partial<GameModifiers> = {}): GameModifiers
  * happened, and a bot that ignores them cannot tell a win from a crash. The
  * ones that matter are recorded; the rest are stubs because they drive pixels.
  */
-function recordingCallbacks(events: BotEvents): GameCallbacks {
+function recordingCallbacks(events: BotEvents, startingLives: number | null): GameCallbacks {
+  // Lives the board has left. `null` keeps the old harness rule, a bottomless
+  // 3 that no fence strike ever takes down, which every existing sweep was
+  // measured on; a number plays real lives, so a last strike ends the map and
+  // Fault Tolerance's extra life is a thing the bot can actually spend.
+  let lives = startingLives ?? 3;
   const noop = () => {};
   return {
     // ── what the game is telling us ──────────────────────────────────────
@@ -233,8 +241,12 @@ function recordingCallbacks(events: BotEvents): GameCallbacks {
     // what lets a finished map finish rather than holding on a frozen board.
     onBallTypeLocked: () => true,
     freezeOnComplete: () => false,
-    getLives: () => 3,
-    setLivesRef: noop,
+    getLives: () => lives,
+    setLivesRef: (n: number) => {
+      if (startingLives !== null) {
+        lives = n;
+      }
+    },
     flashTimeoutRef: { current: null },
     shakeTimeoutRef: { current: null },
   } as unknown as GameCallbacks;
@@ -278,7 +290,19 @@ export function createBotGame(
    * as `bugs`, so a test about something else is not reshaped by a crater;
    * runBot turns it on, because a sweep plays the map the player gets.
    */
-  opts: { mutator?: BotWeather; bugs?: BugConfig; bombs?: ShardBombConfig | null } = {},
+  /**
+   * `lives` plays real lives (see recordingCallbacks); omitted, the old
+   * bottomless three.
+   */
+  /**
+   * `pickups` arms power-up tokens with the same chance derivation GameCanvas
+   * uses (effectivePickupChance, the build's pickupChanceBonus included).
+   * Omitted, none, as before.
+   */
+  opts: {
+    mutator?: BotWeather; bugs?: BugConfig; bombs?: ShardBombConfig | null; lives?: number;
+    pickups?: PickupConfig;
+  } = {},
 ): BotGame {
   // A DEAL WITH NO RUN SEED IS A DEAL NOBODY CAN REPRODUCE, so arm one.
   //
@@ -367,9 +391,19 @@ export function createBotGame(
       : 0;
     assignShardBombs(game.destructibles, chance, authoredShardBombs(level), modifiers.shardBombsPerMap ?? 0);
   }
+  // What the build hands every map at its start, as GameCanvas hands it, from
+  // the same functions. Missing here, the sweep read shields, Cold Boot,
+  // Feature Freeze and every Sprint Planning opening as changing nothing.
+  if (opts.pickups) {
+    const chance = effectivePickupChance(opts.pickups, levelNumber, level.pickupChance, modifiers.pickupChanceBonus);
+    game.pickupConfig = chance > 0 ? { ...opts.pickups, spawnChance: chance } : null;
+  }
+  game.wallShieldsRemaining = mapStartShields(modifiers);
+  game.freezeUsesRemaining = mapStartFreezeUses(modifiers);
+  applyMapStartBoons(game, modifiers);
   return {
     game, level, levelNumber, modifiers,
-    callbacks: recordingCallbacks(events),
+    callbacks: recordingCallbacks(events, opts.lives ?? null),
     events, frames: 0,
   };
 }
@@ -386,6 +420,9 @@ export function createBotGame(
 export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   const { game, level, levelNumber, modifiers, callbacks } = ctx;
   if (game.levelComplete || game.gameOver) return;
+
+  // Cron Job, where the loop ticks it: just before the player's actions.
+  tickAutoFreeze(game, modifiers.autoFreezeDuration, modifiers.freezeNoCooldown);
 
   // Player actions first, exactly where the loop drains them: at the top of
   // the frame, before anything moves.
