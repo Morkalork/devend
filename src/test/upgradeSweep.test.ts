@@ -12,6 +12,12 @@
  *   UPGRADE_SWEEP_SEEDS=<n>         seeds per map (default 16)
  *   UPGRADE_SWEEP_LEVELS=3,6,9      maps to play (default: the sample below)
  *   UPGRADE_SWEEP_ONLY=id,id        only these upgrades (plus the baseline)
+ *   UPGRADE_SWEEP_STACK=1           own each card WITH its prerequisites (transitively)
+ *
+ * Stack mode is how a rung is read fairly. Alone, Feature Freeze Senior is +1s
+ * on a freeze the build does not have, and reads as nothing; on top of Junior
+ * it is what buying it adds. Compare a card's stack with the stack of its
+ * prerequisites, which is always some other card's stack (or the baseline).
  *
  * The "(placebo ...)" builds are the noise floor. The simulation is chaotic:
  * ANY change, even balls 0.1% slower, reshuffles every seed's outcome, and one
@@ -46,6 +52,22 @@ import type { LevelConfig } from "@/types/level";
 import { LADDER, byLevel } from "./fixtures/maps";
 
 const ENABLED = process.env.UPGRADE_SWEEP === "1";
+const STACK = process.env.UPGRADE_SWEEP_STACK === "1";
+
+/** A card and everything it requires, transitively, prerequisites first. */
+function stackOf(id: string, lookup: Map<string, UpgradeConfig>): string[] {
+  const out: string[] = [];
+  const visit = (at: string) => {
+    for (const p of lookup.get(at)?.prerequisites ?? []) {
+      if (lookup.has(p) && !out.includes(p)) {
+        visit(p);
+        out.push(p);
+      }
+    }
+  };
+  visit(id);
+  return [...out, id];
+}
 
 /** Early, mid and late maps, bosses included, so a card is seen across the run. */
 const DEFAULT_LEVELS = [2, 4, 6, 8, 10, 12, 15, 18, 20, 23, 26, 29, 32, 36, 40];
@@ -138,7 +160,7 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
 
     const outFile = resolve(outDir, `shard-${shard.index}-of-${shard.count}.json`);
     const save = () => writeFileSync(outFile, JSON.stringify({
-      seeds, levels: levels.map(l => l.n), banked: SWEEP_BANKED, lives: SWEEP_LIVES, results,
+      seeds, levels: levels.map(l => l.n), banked: SWEEP_BANKED, lives: SWEEP_LIVES, stacked: STACK, results,
     }));
     const results: Record<string, RunRow[]> = {};
     const started = Date.now();
@@ -148,7 +170,7 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
         const context: RunContext = {
           level: n, lives: SWEEP_LIVES, banked: SWEEP_BANKED, map: mapContextOf(level),
         };
-        const owned = id.startsWith("(") ? [] : [id];
+        const owned = id.startsWith("(") ? [] : (STACK ? stackOf(id, lookup) : [id]);
         const modifiers = computeGameModifiers(owned, lookup, undefined, context);
         const placebo = PLACEBOS[id];
         if (placebo !== undefined) {
@@ -163,7 +185,8 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
           bugs: DEFAULT_BUG_CONFIG,
           pickups: DEFAULT_PICKUP_CONFIG,
           useFreezes: true,
-          fenceTypeId: card?.grantsFenceType,
+          fenceTypeId: card?.grantsFenceType
+            ?? owned.map(o => lookup.get(o)?.grantsFenceType).find(t => t !== undefined),
         };
         for (const seed of seeds) {
           rows.push(row(runBot(level, n, seed, runOpts)));
