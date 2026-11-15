@@ -74,6 +74,15 @@ export interface ShelfInput {
   shopSlots: number;
   /** The run's Specialisation, when it has one: weights and the guaranteed slot. */
   lean?: ShopLean | null;
+  /**
+   * Draft rules: no locked "teaser". There the only locked cards are a "+"
+   * whose card the build does not hold, which teases nothing.
+   */
+  noTeaser?: boolean;
+  /** Draft rules, a reroll: keys the roll apart from the visit's first one. */
+  rollKey?: string;
+  /** Draft rules, a reroll: ids the new shelf must not repeat. */
+  exclude?: string[];
 }
 
 /** The tag counts the shelf weights by: owned upgrades plus a Specialisation's affinity. */
@@ -86,7 +95,7 @@ export function shelfTagCounts(ownedUpgradeIds: string[], upgrades: UpgradeConfi
  * Picks are tag-weighted toward the player's owned archetypes (weightedSample),
  * plus at most one locked "teaser" if there is room.
  */
-export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean }: ShelfInput): UpgradeConfig[] {
+export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser, rollKey, exclude }: ShelfInput): UpgradeConfig[] {
   // Filter out owned, upgrades not yet unlocked by level progression, and any
   // choice group whose pick is already made (a sibling owned).
   // The fence bar holds four types and the catalogue has six, so a
@@ -95,6 +104,7 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
   // must never have.
   const available = upgrades.filter(u =>
     !ownedUpgradeIds.includes(u.id) &&
+    !(exclude?.includes(u.id)) &&
     completedLevel >= (u.unlockLevel ?? 1) &&
     !fenceOfferIsEmpty(u.grantsFenceType, heldFenceTypeIds) &&
     !(u.choiceGroup && upgrades.some(o => o.choiceGroup === u.choiceGroup && ownedUpgradeIds.includes(o.id)))
@@ -110,7 +120,7 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
   // Seeded runs (Daily Stand-up) roll the shelf from the run seed keyed by the
   // level, so everyone opening this shop sees the same offers. Only the roll
   // is shared, not the choices.
-  const shelfRng = getRunRng(`shop:${completedLevel}`);
+  const shelfRng = getRunRng(rollKey ? `shop:${completedLevel}:${rollKey}` : `shop:${completedLevel}`);
   const offers = weightedSample(unlocked, shopSlots, counts, completedLevel, shelfRng);
   // A Specialisation's guaranteed slot: odds are what lean the shelf, a
   // guarantee is what a player can read. The last pick (the least likely the
@@ -119,7 +129,7 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
     const tagged = unlocked.filter(u => u.tags?.includes(lean.tag) && !offers.includes(u));
     if (tagged.length > 0) offers[offers.length - 1] = weightedSample(tagged, 1, counts, completedLevel, shelfRng)[0];
   }
-  if (offers.length < shopSlots && locked.length > 0) {
+  if (!noTeaser && offers.length < shopSlots && locked.length > 0) {
     offers.push(weightedSample(locked, 1, counts, completedLevel, shelfRng)[0]);
   }
   return offers;

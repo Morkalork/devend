@@ -329,6 +329,11 @@ export function TicketCard({
               </View>
             )}
 
+            {/* Draft cards: what a strong card charges you, said in the cost colour. */}
+            {upgrade.downside && (
+              <Label text={contentText.upgradeDownside(t, upgrade)} size={TEXT.sm} lineHeight={20} weight="600" color={ROLE.cost} wrap />
+            )}
+
             {/* Labels: the archetype tags, and the situation a conditional upgrade needs. */}
             {((upgrade.tags?.length ?? 0) > 0 || upgrade.condition) && (
               <layoutContainer layout={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }} filters={out ? grey : undefined} alpha={out ? 0.7 : 1}>

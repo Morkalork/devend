@@ -1430,5 +1430,27 @@
       "specialisation": "Only offered here. Leans the store toward one archetype for the whole run.",
       "gamble": "A price now for a prize that would take ten maps to reach."
     }
+  },
+  "cardDraft": {
+    "freePick": "Take one card free, or skip it for {{hours}}h.",
+    "freeTaken": "Free card taken. Another card costs hours.",
+    "reroll": "Reroll {{hours}}h",
+    "build": "Build: {{held}} of {{slots}} cards",
+    "buildFull": "Build full ({{held}} of {{slots}}): a new card replaces one.",
+    "nextMap": "Next: L{{level}} {{name}} ({{features}})",
+    "nextMapPlain": "Next: L{{level}} {{name}}",
+    "featureBalls_one": "{{count}} ball",
+    "featureBalls_other": "{{count}} balls",
+    "feature": {
+      "boss": "a boss",
+      "movers": "moving objects",
+      "well": "a gravity well",
+      "breakables": "breakables",
+      "areas": "syntax areas"
+    },
+    "replaceTitle": "Take {{name}}",
+    "replaceHint": "Your build is full. Tap the card you give up for it. A card's + goes with it.",
+    "replaceRow": "Give up {{name}}",
+    "skipAndStart": "Skip the card (+{{hours}}h), start level {{level}}"
   }
 }

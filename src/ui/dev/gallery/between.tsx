@@ -14,6 +14,7 @@ import { ResultScreen } from "../../screens/ResultScreen";
 import { ContinuePrompt } from "../../screens/ContinuePrompt";
 import { UpgradeShop } from "../../screens/UpgradeShop";
 import { ChoiceChooserModal, UpgradeDetailModal } from "../../screens/shopParts";
+import { ReplaceCardModal } from "../../screens/draftStoreParts";
 import { ChainPickScreen } from "../../screens/ChainPickScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
@@ -261,6 +262,19 @@ export const entries: GalleryEntry[] = [
     // Every upgrade already owned, so the strip opens on the ability slot.
     render: () => <UpgradeShop {...shopProps} completedLevel={12} ownedUpgradeIds={shopUpgrades.map(u => u.id)} abilityOfferCount={2}
       freeAbilityGrant="freezeAll" activeModifiers={undefined} shopDiscountMultiplier={1} />,
+  },
+  {
+    // Draft rules (CARDS_PLAN.md): the free card, a full build and the next map's line.
+    id: "UpgradeShop-draft", group: "screen",
+    render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
+      ownedUpgradeIds={shopUpgrades.slice(0, 2).map(u => u.id)}
+      draft={{ slots: 2, skipHours: 10, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] } }} />,
+  },
+  {
+    // Draft rules: the build is full, so taking a card asks which one to give up.
+    id: "ReplaceCardModal", group: "modal",
+    render: () => <ReplaceCardModal incoming={shopUpgrades[7]} held={[shopUpgrades[0], shopUpgrades[2], shopUpgrades[3]]} plusOf={{ [shopUpgrades[0].id]: { ...shopUpgrades[1], name: `${shopUpgrades[0].name}+` } }}
+      accent={hex(ACCENT)} onReplace={noop} onClose={noop} />,
   },
   {
     id: "ChainPickScreen", group: "screen",

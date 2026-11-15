@@ -1,0 +1,638 @@
+# The draft catalogue (CARDS_PLAN.md): the cards a run plays with under the
+# draft rules (src/lib/cardRules.ts). The classic store reads upgrades.yml
+# instead; the two share one schema and one modifier pipeline.
+#
+# What is different here, on purpose:
+#   - One card is one idea. No Junior/Senior/Principal ladder: a card has at
+#     most one upgrade, its "+" (`upgradeOf: <card id>`), which rides on the
+#     card, requires it, and takes no slot of its own. A "+" lists only what it
+#     ADDS (multipliers multiply, flat values sum), and its description says
+#     what the card does once it is upgraded.
+#   - A build holds CARD_SLOTS cards, so every effect is big enough to feel:
+#     the upgrade sweep's rule is that a card must beat twice the noise
+#     (UPGRADE_SWEEP_REPORT.md), and a 5% nudge does not.
+#   - `tier` is the card's RARITY here: Junior common, Senior uncommon,
+#     Principal rare. It prices a card bought with hours, as in the classic
+#     store.
+#   - `downside:` is the line a strong card charges you, shown in red.
+#   - `certCredit:` names the certificate chase a card counts toward, by the
+#     classic id the certificate names.
+#
+# No em-dashes in name, description or downside (CLAUDE.md).
+pricing:
+  minCost: 2
+  anchorHours: 48
+  blockInflation: 1.15
+  tierFactor:
+    Junior: 0.7
+    Senior: 0.95
+    Principal: 1.3
+    Architect: 1.7
+    Wizard: 2.1
+tagSets:
+  threshold: 3
+  bonuses:
+  - tag: lock
+    name: Chain Reaction
+    description: Every lock counts as one ball bigger for the simultaneous-trap multiplier.
+    modifiers:
+      simultaneousLockBonus: 1
+  - tag: freeze
+    name: Absolute Zero
+    description: Frozen balls can be re-frozen immediately, no cooldown.
+    modifiers:
+      freezeNoCooldown: 1
+  - tag: bank
+    name: Framework Agreement
+    description: All shop prices drop by 10%.
+    modifiers:
+      shopDiscountMultiplier: 0.9
+  - tag: tempo
+    name: Ship It
+    description: Draw one additional fence at the same time.
+    modifiers:
+      additionalConcurrentFences: 1
+  - tag: risk
+    name: Double Or Nothing
+    description: Push-your-luck payouts are doubled.
+    modifiers:
+      pushBonusMultiplier: 2
+  - tag: safety
+    name: Insurance Policy
+    description: Gain 1 extra Continue.
+    modifiers:
+      extraContinues: 1
+upgrades:
+- id: feature_freeze
+  name: Feature Freeze
+  tier: Junior
+  unlockLevel: 3
+  icon: mouse-pointer-click
+  tags: &id001 [freeze]
+  description: Tap a ball to freeze it for 3s. Two taps per map.
+  modifiers:
+    ballFreezeDuration: 3
+    freezeUsesPerMap: 2
+- id: feature_freeze_plus
+  name: Feature Freeze+
+  tier: Junior
+  unlockLevel: 3
+  tags: *id001
+  upgradeOf: feature_freeze
+  description: Tap a ball to freeze it and its nearest neighbour for 3s. Two taps per map.
+  modifiers:
+    ballFreezeCount: 1
+- id: cold_boot
+  name: Cold Boot
+  tier: Junior
+  unlockLevel: 2
+  icon: power
+  tags: &id002 [freeze, safety]
+  description: Every map starts with all balls frozen for 4s.
+  modifiers:
+    spawnFreezeSeconds: 4
+- id: cold_boot_plus
+  name: Cold Boot+
+  tier: Junior
+  unlockLevel: 2
+  tags: *id002
+  upgradeOf: cold_boot
+  description: Every map starts with all balls frozen for 7s.
+  modifiers:
+    spawnFreezeSeconds: 3
+- id: cron_job
+  name: Cron Job
+  tier: Senior
+  unlockLevel: 8
+  icon: calendar-clock
+  tags: &id003 [freeze]
+  description: Every 10s, a random ball is frozen for 4s.
+  modifiers:
+    autoFreezeDuration: 4
+- id: cron_job_plus
+  name: Cron Job+
+  tier: Senior
+  unlockLevel: 8
+  tags: *id003
+  upgradeOf: cron_job
+  description: Every 10s, a random ball is frozen for 6s.
+  modifiers:
+    autoFreezeDuration: 2
+- id: frozen_assets
+  name: Frozen Assets
+  tier: Senior
+  unlockLevel: 5
+  icon: vault
+  tags: [freeze, lock]
+  description: Locking a ball while it is frozen pays triple the lock bonus.
+  modifiers:
+    frozenLockBonus: 2
+- id: thaw_cycle
+  name: Thaw Cycle
+  tier: Principal
+  unlockLevel: 8
+  icon: recycle
+  tags: [freeze, lock]
+  description: Every lock hands you back a freeze tap. Needs a freeze to tap with.
+  modifiers:
+    freezeUsesPerLock: 1
+- id: cold_storage_ice
+  name: Ice Fence
+  tier: Senior
+  unlockLevel: 6
+  icon: refrigerator
+  tags: [freeze]
+  description: 'Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower.'
+  modifiers: {}
+  grantsFenceType: ice
+- id: permafrost
+  name: Permafrost
+  tier: Principal
+  unlockLevel: 9
+  icon: thermometer-snowflake
+  tags: &id004 [freeze]
+  description: An Ice fence also freezes the ball it slows, for 2s. Needs the Ice fence.
+  modifiers:
+    iceFreezeSeconds: 2
+- id: permafrost_plus
+  name: Permafrost+
+  tier: Principal
+  unlockLevel: 9
+  tags: *id004
+  upgradeOf: permafrost
+  description: An Ice fence also freezes the ball it slows, for 3.5s.
+  modifiers:
+    iceFreezeSeconds: 1.5
+- id: deep_freeze
+  name: Deep Freeze
+  tier: Principal
+  unlockLevel: 10
+  icon: snowflake
+  tags: [freeze]
+  description: 'A ball can be frozen again the moment it thaws: no cooldown.'
+  modifiers:
+    freezeNoCooldown: 1
+- id: containment
+  name: Containment
+  tier: Junior
+  unlockLevel: 3
+  icon: lock-keyhole
+  tags: &id005 [lock, freeze]
+  description: Every lock holds the nearest free ball still for 3s.
+  modifiers:
+    lockStunSeconds: 3
+- id: containment_plus
+  name: Containment+
+  tier: Junior
+  unlockLevel: 3
+  tags: *id005
+  upgradeOf: containment
+  description: Every lock holds the nearest free ball still for 5s.
+  modifiers:
+    lockStunSeconds: 2
+- id: golden_handshake
+  name: Golden Handshake
+  tier: Junior
+  unlockLevel: 2
+  icon: banknote
+  tags: &id006 [lock, bank]
+  description: Every ball you lock pays 2 bonus hours.
+  modifiers:
+    overtimePerLock: 2
+- id: golden_handshake_plus
+  name: Golden Handshake+
+  tier: Junior
+  unlockLevel: 2
+  tags: *id006
+  upgradeOf: golden_handshake
+  description: Every ball you lock pays 4 bonus hours.
+  modifiers:
+    overtimePerLock: 2
+- id: batch_commit
+  name: Batch Commit
+  tier: Senior
+  unlockLevel: 6
+  icon: orbit
+  tags: [lock]
+  description: Every lock counts as one ball bigger for the simultaneous-trap multiplier.
+  modifiers:
+    simultaneousLockBonus: 1
+- id: loose_coupling
+  name: Loose Coupling
+  tier: Junior
+  unlockLevel: 2
+  icon: ruler
+  tags: &id007 [lock]
+  description: A pocket up to 10% over the lock limit still locks its ball.
+  modifiers:
+    lockThresholdBonus: 10
+- id: loose_coupling_plus
+  name: Loose Coupling+
+  tier: Junior
+  unlockLevel: 2
+  tags: *id007
+  upgradeOf: loose_coupling
+  description: A pocket up to 18% over the lock limit still locks its ball.
+  modifiers:
+    lockThresholdBonus: 8
+- id: knowledge_transfer
+  name: Knowledge Transfer
+  tier: Senior
+  unlockLevel: 5
+  icon: book-open
+  tags: [lock, tempo]
+  description: Each lock speeds up your fences by 15% for the rest of the map.
+  modifiers:
+    fenceSpeedPerLock: 0.15
+- id: acquire_the_mutex
+  name: Mutex Fence
+  tier: Senior
+  unlockLevel: 8
+  icon: lock-keyhole
+  tags: [lock, safety]
+  description: 'Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does.'
+  modifiers: {}
+  grantsFenceType: mutex
+- id: raise_the_semaphore
+  name: Semaphore Fence
+  tier: Principal
+  unlockLevel: 10
+  icon: flag
+  tags: [lock, risk]
+  description: 'Adds the Semaphore fence: it locks only two or more balls at once, and pays hugely for them.'
+  modifiers: {}
+  grantsFenceType: semaphore
+  downside: It cannot lock a ball on its own, and it builds 40% slower.
+- id: fast_compile
+  name: Fast Compile
+  tier: Junior
+  unlockLevel: 1
+  icon: fast-forward
+  tags: &id008 [tempo]
+  description: Fences build 35% faster.
+  modifiers:
+    fenceGenerationSpeedMultiplier: 1.35
+- id: fast_compile_plus
+  name: Fast Compile+
+  tier: Junior
+  unlockLevel: 1
+  tags: *id008
+  upgradeOf: fast_compile
+  description: Fences build 60% faster.
+  modifiers:
+    fenceGenerationSpeedMultiplier: 1.185
+  certCredit: fast_compile_principal
+- id: hot_start
+  name: Hot Start
+  tier: Junior
+  unlockLevel: 2
+  icon: flame
+  tags: &id009 [tempo]
+  description: The first two fences of every map finish instantly.
+  modifiers:
+    instantFencesPerMap: 2
+- id: hot_start_plus
+  name: Hot Start+
+  tier: Junior
+  unlockLevel: 2
+  tags: *id009
+  upgradeOf: hot_start
+  description: The first four fences of every map finish instantly.
+  modifiers:
+    instantFencesPerMap: 2
+  certCredit: hot_start_architect
+- id: multithreading
+  name: Multithreading
+  tier: Senior
+  unlockLevel: 6
+  icon: split
+  tags: &id010 [tempo]
+  description: Draw one more fence at the same time.
+  modifiers:
+    additionalConcurrentFences: 1
+  certCredit: multithreading_principal
+- id: multithreading_plus
+  name: Multithreading+
+  tier: Senior
+  unlockLevel: 6
+  tags: *id010
+  upgradeOf: multithreading
+  description: Draw two more fences at the same time.
+  modifiers:
+    additionalConcurrentFences: 1
+- id: continuous_delivery
+  name: Continuous Delivery
+  tier: Senior
+  unlockLevel: 7
+  icon: train-front
+  tags: [tempo]
+  description: Each fence you finish makes the next one 10% faster, for the rest of the map.
+  modifiers:
+    fenceSpeedPerFence: 0.1
+- id: scaffolding
+  name: Scaffolding
+  tier: Junior
+  unlockLevel: 3
+  icon: land-plot
+  tags: [tempo, safety]
+  description: Every fence starts 30% drawn.
+  modifiers:
+    fenceHeadStart: 0.3
+- id: onboarding
+  name: Onboarding
+  tier: Junior
+  unlockLevel: 1
+  icon: sunrise
+  tags: &id011 [tempo]
+  description: Every map starts with 15% of the board already captured.
+  modifiers:
+    startingCapturePercent: 15
+- id: onboarding_plus
+  name: Onboarding+
+  tier: Junior
+  unlockLevel: 1
+  tags: *id011
+  upgradeOf: onboarding
+  description: Every map starts with 25% of the board already captured.
+  modifiers:
+    startingCapturePercent: 10
+- id: hotfix_tripwire
+  name: Tripwire Fence
+  tier: Senior
+  unlockLevel: 7
+  icon: zap
+  tags: [tempo, risk]
+  description: 'Adds the Tripwire fence: it builds 40% faster.'
+  modifiers: {}
+  grantsFenceType: tripwire
+  downside: The first ball to touch a finished Tripwire breaks it.
+- id: ghost_protocol
+  name: Ghost Protocol
+  tier: Senior
+  unlockLevel: 9
+  icon: ghost
+  tags: [tempo, safety]
+  description: A new fence passes through balls for the first quarter second of its growth.
+  modifiers:
+    fenceGraceMs: 250
+- id: defensive_programming
+  name: Defensive Programming
+  tier: Junior
+  unlockLevel: 1
+  icon: shield
+  tags: &id012 [safety]
+  description: 'Each map starts with a shield: the first ball to hit a growing fence costs the shield, not a life.'
+  modifiers:
+    wallShieldsPerMap: 1
+- id: defensive_programming_plus
+  name: Defensive Programming+
+  tier: Junior
+  unlockLevel: 1
+  tags: *id012
+  upgradeOf: defensive_programming
+  description: Each map starts with two shields.
+  modifiers:
+    wallShieldsPerMap: 1
+- id: slow_motion
+  name: Slow Motion
+  tier: Junior
+  unlockLevel: 1
+  icon: clock
+  tags: &id013 [safety]
+  description: All balls move 20% slower.
+  modifiers:
+    ballSpeedMultiplier: 0.8
+- id: slow_motion_plus
+  name: Slow Motion+
+  tier: Junior
+  unlockLevel: 1
+  tags: *id013
+  upgradeOf: slow_motion
+  description: All balls move 30% slower.
+  modifiers:
+    ballSpeedMultiplier: 0.875
+  certCredit: runtime_optimisation_principal
+- id: compression
+  name: Compression
+  tier: Junior
+  unlockLevel: 2
+  icon: memory-stick
+  tags: &id014 [safety]
+  description: All balls are 25% smaller.
+  modifiers:
+    ballSizeMultiplier: 0.75
+  certCredit: memory_footprint_principal
+- id: compression_plus
+  name: Compression+
+  tier: Junior
+  unlockLevel: 2
+  tags: *id014
+  upgradeOf: compression
+  description: All balls are 40% smaller.
+  modifiers:
+    ballSizeMultiplier: 0.8
+- id: fault_tolerance
+  name: Fault Tolerance
+  tier: Senior
+  unlockLevel: 4
+  icon: heart
+  tags: [safety]
+  description: One extra life, for as long as you hold this card.
+  modifiers:
+    extraLives: 1
+  certCredit: fault_tolerance_architect
+- id: add_guardrails
+  name: Guardrail Fence
+  tier: Junior
+  unlockLevel: 4
+  icon: fence
+  tags: [safety]
+  description: 'Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. It builds 15% slower.'
+  modifiers: {}
+  grantsFenceType: guardrail
+- id: load_balancer
+  name: Load Balancer
+  tier: Senior
+  unlockLevel: 5
+  icon: scaling
+  tags: [safety]
+  description: The fastest ball on every map moves 20% slower.
+  modifiers:
+    fastestBallSlowPercent: 20
+- id: scrum_master
+  name: Scrum Master
+  tier: Junior
+  unlockLevel: 3
+  icon: route
+  tags: [safety]
+  description: 'See where every ball is going: its next three bounces are drawn on the board.'
+  modifiers:
+    ballPathPredictionBounces: 3
+    ballPathPredictionBalls: 999
+  certCredit: scrum_master_6
+- id: soft_launch
+  name: Soft Launch
+  tier: Junior
+  unlockLevel: 4
+  icon: gauge
+  tags: [safety]
+  description: Balls open every map at 70% speed for the first 12s.
+  modifiers:
+    openingSlowSeconds: 12
+- id: control_freak
+  name: Control Freak
+  tier: Senior
+  unlockLevel: 6
+  icon: grab
+  tags: [safety]
+  description: Press and hold a moving object to stop it, and drag it along its own track.
+  modifiers:
+    moverBrake: 1
+    moverDrive: 1
+- id: bug_squash
+  name: Bug Squash
+  tier: Junior
+  unlockLevel: 7
+  icon: bug
+  tags: [safety, freeze]
+  description: Every wall hit has a 15% chance to squash the ball flat and stick it there for 4s.
+  modifiers:
+    bugSquashChance: 15
+    bugSquashSeconds: 4
+- id: technical_debt
+  name: Technical Debt
+  tier: Senior
+  unlockLevel: 4
+  icon: credit-card
+  tags: [risk, bank]
+  description: Every map pays 50% more overtime.
+  modifiers:
+    scoreMultiplier: 1.5
+    ballSpeedMultiplier: 1.2
+  downside: All balls move 20% faster.
+- id: crunch_time
+  name: Crunch Time
+  tier: Senior
+  unlockLevel: 5
+  icon: flame-kindling
+  tags: [risk, tempo]
+  description: Fences build 60% faster.
+  modifiers:
+    fenceGenerationSpeedMultiplier: 1.6
+    ballSizeMultiplier: 1.2
+  downside: All balls are 20% bigger.
+- id: incident_flare
+  name: Flare Fence
+  tier: Senior
+  unlockLevel: 8
+  icon: flame-kindling
+  tags: [risk]
+  description: 'Adds the Flare fence: balls bouncing off it speed up, and faster balls are worth more.'
+  modifiers: {}
+  grantsFenceType: flare
+  downside: Faster balls are harder to fence, and it builds 30% slower.
+- id: rolling_redeploy
+  name: Redeploy Fence
+  tier: Principal
+  unlockLevel: 11
+  icon: rotate-ccw
+  tags: [risk, tempo]
+  description: 'Adds the Redeploy fence: grab a finished one and fling the balls in front of it.'
+  modifiers: {}
+  grantsFenceType: redeploy
+  downside: It builds 40% slower.
+- id: moonshot
+  name: Moonshot
+  tier: Junior
+  unlockLevel: 3
+  icon: rocket
+  tags: [risk]
+  description: Push-your-luck payouts and Space Optimization bonuses both pay double.
+  modifiers:
+    pushBonusMultiplier: 2
+    spaceBonusMultiplier: 2
+- id: chaos_engineering
+  name: Chaos Engineering
+  tier: Senior
+  unlockLevel: 6
+  icon: bomb
+  tags: [risk]
+  description: Every map with shards has at least three shard bombs, and breakables need one hit less.
+  modifiers:
+    shardBombsPerMap: 3
+    destructibleHitsReduction: 1
+- id: performance_bonus
+  name: Performance Bonus
+  tier: Junior
+  unlockLevel: 1
+  icon: trending-up
+  tags: &id015 [bank]
+  description: Every map pays 25% more overtime.
+  modifiers:
+    scoreMultiplier: 1.25
+- id: performance_bonus_plus
+  name: Performance Bonus+
+  tier: Junior
+  unlockLevel: 1
+  tags: *id015
+  upgradeOf: performance_bonus
+  description: Every map pays 50% more overtime.
+  modifiers:
+    scoreMultiplier: 1.2
+  certCredit: performance_bonus_principal
+- id: stock_options
+  name: Stock Options
+  tier: Senior
+  unlockLevel: 6
+  icon: gem
+  tags: [bank]
+  description: Every map can pay 6 more hours than its ceiling.
+  modifiers:
+    overtimeCapBonus: 6
+- id: expense_account
+  name: Expense Account
+  tier: Junior
+  unlockLevel: 3
+  icon: receipt
+  tags: [bank]
+  description: Everything you pay hours for in the store costs 30% less.
+  modifiers:
+    shopDiscountMultiplier: 0.7
+- id: headhunter
+  name: Headhunter
+  tier: Senior
+  unlockLevel: 4
+  icon: binoculars
+  tags: [bank]
+  description: Every store offers one more card to choose from.
+  modifiers:
+    extraShopItems: 1
+- id: compound_interest
+  name: Compound Interest
+  tier: Senior
+  unlockLevel: 5
+  icon: piggy-bank
+  tags: [bank]
+  description: Every store pays 8% interest on the hours you hold.
+  modifiers:
+    shopInterestPercent: 8
+- id: ship_early
+  name: Ship Early
+  tier: Senior
+  unlockLevel: 10
+  icon: timer
+  tags: [bank, tempo]
+  description: Ship Early windows last 4s longer per ball, and Tempo pays double.
+  modifiers:
+    shipEarlySecondsPerBall: 4
+    shipEarlyBonusMultiplier: 2
+- id: padded_estimate
+  name: Padded Estimate
+  tier: Junior
+  unlockLevel: 6
+  icon: clipboard-check
+  tags: [bank]
+  description: Every map is scored against two extra fences of par, and beating par pays double.
+  modifiers:
+    parBonus: 2
+    underParBonusMultiplier: 2

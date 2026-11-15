@@ -249,7 +249,14 @@ export type ResolvedPrize =
  */
 export function resolvePrize(prize: OfferPrize, upgrades: UpgradeConfig[], rng: () => number): ResolvedPrize | null {
   if (prize.kind === "architect") {
-    const heads = upgrades.filter(u => u.tier === "Architect");
+    let heads = upgrades.filter(u => u.tier === "Architect");
+    // The draft catalogue has no Architect tier; its rarest cards are its
+    // Principals, so the jackpot pays one of those (with its "+" when it has
+    // one, as the Architect comes with its ancestors).
+    if (heads.length === 0) {
+      const rare = upgrades.filter(u => u.tier === "Principal" && !u.upgradeOf);
+      heads = rare.map(u => upgrades.find(p => p.upgradeOf === u.id) ?? u);
+    }
     if (heads.length === 0) return null;
     return { grants: architectWithAncestors(heads[Math.floor(rng() * heads.length)], upgrades) };
   }

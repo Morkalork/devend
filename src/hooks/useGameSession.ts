@@ -69,6 +69,7 @@ import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish'
 import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
+import { getActiveRuleSet, setActiveRuleSet, preferredRuleSet, withPlus } from '@/lib/cardRules';
 
 /**
  * Drop one debug query param, keeping the rest. Replacing the whole search
@@ -132,6 +133,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const {
     upgrades,
+    upgradeLookup,
     tagSets,
     isLoading: isLoadingUpgrades,
     error: upgradeError,
@@ -789,6 +791,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carryFreeShopItems,
     capstoneId: capstone?.id ?? null,
     takenOfferId,
+    ruleSet: getActiveRuleSet(),
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
     dailyKey,
@@ -953,6 +956,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (runSeed) {
       setRunSeedText(runSeed);
     }
+    // The run's store rules, fixed here and saved with the run. A pair plays
+    // the classic store: both phones must read one catalogue, and the pair's
+    // store is a shared decision the draft has no screen for yet.
+    setActiveRuleSet(pairRunRef.current ? 'classic' : preferredRuleSet());
     // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
@@ -1058,6 +1065,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setRunSeedText(dailySeedText(key));
     dailyKeyRef.current = key;
     setDailyKey(key);
+    // The Daily is one shared run for everyone, so it keeps one rule set.
+    setActiveRuleSet('classic');
 
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -1204,6 +1213,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setRunSeedText(runSeed ?? (savedDaily ? dailySeedText(savedDaily) : null));
     dailyKeyRef.current = savedDaily;
     setDailyKey(savedDaily);
+    // The rules the run was started under: its owned ids are that catalogue's.
+    // A save from before the draft existed is a classic run.
+    setActiveRuleSet(save.ruleSet ?? 'classic');
 
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -1816,6 +1828,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
+    if (getActiveRuleSet() === 'draft') {
+      analytics.draftChoice({ level: currentLevelIndex + 1, action: 'take', cardId: upgradeId });
+    }
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     // Budget Cycle: purchases land as a synchronous burst right before the
@@ -1831,12 +1846,40 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Upgrade-chain certs credit the "max tier". For a tier-3 choice, either
     // option counts, so credit the choiceGroup (which is named after the cert's
     // sourceUpgradeId) rather than the specific variant id.
-    const certKey = upgrade?.choiceGroup ?? upgradeId;
+    // A draft card names the certificate it counts toward (`certCredit`),
+    // since cards.yml has none of the classic ids the certificates chase.
+    const certKey = upgrade?.certCredit ?? upgrade?.choiceGroup ?? upgradeId;
     if (certSourceIds.has(certKey)) {
       const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
   }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex]);
+
+  /**
+   * Draft rules: drop a card (and its "+") from the build, to make room for
+   * the one being taken. Lives a card granted go with it, never below one.
+   */
+  const handleDropUpgrade = useCallback((upgradeId: string) => {
+    const gone = withPlus(upgradeId, ownedUpgradeIds, upgradeLookup);
+    if (gone.length === 0) {
+      return;
+    }
+    const lives = gone.reduce((sum, id) => sum + (upgradeLookup.get(id)?.modifiers?.extraLives ?? 0), 0);
+    if (lives > 0) {
+      setCurrentLives(prev => Math.max(1, prev - lives));
+    }
+    analytics.draftChoice({ level: currentLevelIndex + 1, action: 'drop', cardId: upgradeId });
+    setOwnedUpgradeIds(prev => prev.filter(id => !gone.includes(id)));
+  }, [ownedUpgradeIds, upgradeLookup, currentLevelIndex]);
+
+  /** Draft rules: hours in (skipping the card) or out (a reroll). */
+  const handleDraftHours = useCallback((hours: number, action: 'skip' | 'reroll') => {
+    analytics.draftChoice({ level: currentLevelIndex + 1, action, cardId: null });
+    setTotalScore(prev => Math.max(0, prev + hours));
+    if (hours < 0) {
+      spentThisShopVisitRef.current += -hours;
+    }
+  }, [currentLevelIndex]);
 
   /**
    * Buy an ability retainer from the store's ability slot.
@@ -1993,6 +2036,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleOpenCertificateStore = useCallback(async () => {
     // Upgrades too: locked-cert tooltips name the upgrade that unlocks them,
     // and the catalogue isn't loaded yet when entering from the welcome screen.
+    // The certificates name upgrades of the classic catalogue.
+    setActiveRuleSet('classic');
     await Promise.all([loadCertificates(), loadUpgrades()]);
     analytics.certStoreOpened();
     nav.goToCertificateStore();
@@ -2232,6 +2277,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleSkipStoreFromOverlay,
     handleDismissFeatureUnlocked,
     handlePurchaseUpgrade,
+    handleDropUpgrade,
+    handleDraftHours,
+    /** The run's store rules (lib/cardRules.ts). Read at render; fixed per run. */
+    ruleSet: getActiveRuleSet(),
     handlePurchaseAbility,
     retainedAbilityIds,
     freeAbilityGrant,

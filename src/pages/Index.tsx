@@ -33,6 +33,8 @@ import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
 import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
+import { nextMapInfo } from '@/ui/screens/draftStoreModel';
+import { CARD_SLOTS, SKIP_HOURS } from '@/lib/cardRules';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
 import { ChainPickScreen } from '@/ui/screens/ChainPickScreen';
@@ -664,6 +666,15 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   // the store reopens this shelf rather than a new roll.
                   dealt={session.storeDealt}
                   onDealt={session.handleShopDealt}
+                  // The run's store rules: the draft (one free card a visit,
+                  // a build of CARD_SLOTS) or the classic store.
+                  draft={session.ruleSet === 'draft' ? {
+                    slots: CARD_SLOTS,
+                    skipHours: SKIP_HOURS,
+                    onDrop: session.handleDropUpgrade,
+                    onHours: session.handleDraftHours,
+                    nextMap: nextMapInfo(session.nextLevel, session.currentLevelIndex + 2, t),
+                  } : null}
                   extraShopItems={session.activeModifiers.extraShopItems}
                   shopRestockCount={session.activeModifiers.shopRestockCount}
                   shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}

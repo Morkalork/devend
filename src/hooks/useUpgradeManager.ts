@@ -13,6 +13,7 @@ import { prerequisitesMet, choiceGroups } from '@/lib/upgradeUnlock';
 import { LevelData } from '@/types/level';
 import { mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 import { fetchConfig } from '@/lib/configFetch';
+import { catalogueFileFor, getActiveRuleSet } from '@/lib/cardRules';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -78,8 +79,10 @@ export function useUpgradeManager() {
       // Fetch the catalogue and the level curve together: upgrade costs are
       // derived from the base points of the level each one unlocks at.
       const [yamlText, mapText] = await Promise.all([
-        fetchConfig('/upgrades.yml').then((res) => {
-          if (!res.ok) throw new Error(`Failed to load upgrades.yml: ${res.status}`);
+        // The run's rule set picks the catalogue: upgrades.yml for the classic
+        // store, cards.yml for the draft (lib/cardRules.ts).
+        fetchConfig(catalogueFileFor(getActiveRuleSet())).then((res) => {
+          if (!res.ok) throw new Error(`Failed to load ${catalogueFileFor(getActiveRuleSet())}: ${res.status}`);
           return res.text();
         }),
         fetchConfig('/map.yml').then((res) => {
@@ -130,6 +133,13 @@ export function useUpgradeManager() {
         // entry in the lookup.
         if (lookup.has(upgrade.id)) {
           throw new Error(`Duplicate upgrade id "${upgrade.id}"`);
+        }
+
+        // A "+" requires its card: said once in the YAML (`upgradeOf`), held
+        // here as a prerequisite so the shelf, the lock rule and the sweep all
+        // read it the way they read any other chain.
+        if (upgrade.upgradeOf && !(upgrade.prerequisites ?? []).includes(upgrade.upgradeOf)) {
+          upgrade.prerequisites = [...(upgrade.prerequisites ?? []), upgrade.upgradeOf];
         }
 
         lookup.set(upgrade.id, upgrade);

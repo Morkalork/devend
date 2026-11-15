@@ -120,6 +120,18 @@ function resolveChain(
   for (let step = 1; step < steps; step++) {
     const wantTier = TENURE_PATH[step];
     const prev = path[path.length - 1];
+    // The draft catalogue (cards.yml) has no tier ladder: a card's whole chain
+    // is the card and its "+". So the step after a card is its "+", and a
+    // chain that has reached one is complete however deep the reward runs -
+    // otherwise the deepest runs, which earn three steps, would earn nothing.
+    if (prev.upgradeOf) {
+      return path;
+    }
+    const plus = all.find(u => u.upgradeOf === prev.id && isAvailable(u, shoppedThrough));
+    if (plus) {
+      path.push(plus);
+      continue;
+    }
     const candidates = all.filter(u =>
       u.tier === wantTier
       && (u.prerequisites ?? []).includes(prev.id)
@@ -171,6 +183,8 @@ export function eligibleTenureChains(
   const byId = new Map(upgrades.map(u => [u.id, u] as const));
   const heads = upgrades.filter(u => {
     if (u.tier !== TENURE_PATH[0]) return false;
+    // A draft card's "+" rides on its card: never the start of a line.
+    if (u.upgradeOf) return false;
     if (!isAvailable(u, shoppedThrough)) return false;
     for (const p of u.prerequisites ?? []) {
       const parent = byId.get(p);

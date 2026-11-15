@@ -1818,7 +1818,12 @@ export function GameCanvas({
     const callbacks: GameCallbacks = {
       // Called only when a ball locks: mirror the count AND flag that a lock
       // happened this map (for the zero-lock explainer).
-      setLockedBallsCount: (n: number) => { setLockedBallsCount(n); madeLockThisMapRef.current = true; },
+      setLockedBallsCount: (n: number) => {
+        setLockedBallsCount(n);
+        madeLockThisMapRef.current = true;
+        // Thaw Cycle hands freeze taps back on a lock; keep the HUD's count in step.
+        setFreezeUsesRemaining(gameRef.current.freezeUsesRemaining ?? 0);
+      },
       onBossState: (hp: number, maxHp: number, defeated: boolean) => setBossHud({ active: !defeated, hp, maxHp, defeated }),
       setRemainingPercent,
       setTutorialCutMade,

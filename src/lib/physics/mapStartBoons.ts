@@ -31,6 +31,8 @@ export function applyMapStartBoons(game: CanvasGameState, activeModifiers: GameM
   }
   // Reliability (Sprint Planning): the opening slow, read by updateBall.
   game.openingSlowSeconds = activeModifiers.openingSlowSeconds;
+  // Permafrost: read by updateBall where a ball bounces off an Ice fence.
+  game.iceFreezeSeconds = activeModifiers.iceFreezeSeconds;
 }
 
 /** Shields granted fresh every map (Defensive Programming, Second Wind). */

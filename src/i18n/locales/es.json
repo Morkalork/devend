@@ -1010,6 +1010,28 @@
     "music": "Música",
     "offers": "Planificación de sprint"
   },
+  "cardDraft": {
+    "freePick": "Elige una carta gratis, o pasa y cobra {{hours}}h.",
+    "freeTaken": "Carta gratis elegida. Otra carta cuesta horas.",
+    "reroll": "Cambiar {{hours}}h",
+    "build": "Mazo: {{held}} de {{slots}} cartas",
+    "buildFull": "Mazo lleno ({{held}} de {{slots}}): una carta nueva sustituye a otra.",
+    "nextMap": "Siguiente: N{{level}} {{name}} ({{features}})",
+    "nextMapPlain": "Siguiente: N{{level}} {{name}}",
+    "featureBalls_one": "{{count}} bola",
+    "featureBalls_other": "{{count}} bolas",
+    "feature": {
+      "boss": "un jefe",
+      "movers": "objetos móviles",
+      "well": "un pozo de gravedad",
+      "breakables": "objetos rompibles",
+      "areas": "zonas de sintaxis"
+    },
+    "replaceTitle": "Elegir {{name}}",
+    "replaceHint": "Tu mazo está lleno. Toca la carta que entregas a cambio. Su + se va con ella.",
+    "replaceRow": "Entregar {{name}}",
+    "skipAndStart": "Pasar (+{{hours}}h), empezar nivel {{level}}"
+  },
   "content": {
     "upgrades": {
       "runtime_optimisation_junior": {

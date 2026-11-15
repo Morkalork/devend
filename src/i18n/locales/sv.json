@@ -1010,6 +1010,28 @@
     "music": "Musik",
     "offers": "Sprintplanering"
   },
+  "cardDraft": {
+    "freePick": "Ta ett kort gratis, eller hoppa över för {{hours}}h.",
+    "freeTaken": "Gratiskortet är taget. Ett till kort kostar timmar.",
+    "reroll": "Nya kort {{hours}}h",
+    "build": "Bygge: {{held}} av {{slots}} kort",
+    "buildFull": "Bygget är fullt ({{held}} av {{slots}}): ett nytt kort ersätter ett annat.",
+    "nextMap": "Nästa: N{{level}} {{name}} ({{features}})",
+    "nextMapPlain": "Nästa: N{{level}} {{name}}",
+    "featureBalls_one": "{{count}} boll",
+    "featureBalls_other": "{{count}} bollar",
+    "feature": {
+      "boss": "en boss",
+      "movers": "rörliga objekt",
+      "well": "en gravitationsbrunn",
+      "breakables": "brytbara objekt",
+      "areas": "syntaxområden"
+    },
+    "replaceTitle": "Ta {{name}}",
+    "replaceHint": "Ditt bygge är fullt. Tryck på kortet du ger upp. Kortets + följer med.",
+    "replaceRow": "Ge upp {{name}}",
+    "skipAndStart": "Hoppa över (+{{hours}}h), starta nivå {{level}}"
+  },
   "content": {
     "upgrades": {
       "runtime_optimisation_junior": {

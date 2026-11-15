@@ -43,10 +43,13 @@ import {
 } from "./shopParts";
 import {
   buildTagChips, cardModel, certChaseIndex, chooseVariantOutcome, dependentsIndex, freeOfferIdFor, itemClickOutcome,
-  missingPrereqs, priceOf, purchasesFor, restockCandidates, rollShelf, shelfTagCounts, selectionCost, shelfMarks, type StoreDealt,
+  lockedFor, missingPrereqs, priceOf, purchasesFor, restockCandidates, rollShelf, shelfTagCounts, selectionCost, shelfMarks, type StoreDealt,
 } from "./shopModel";
 import { ticketStatus, unavailable, wontFit } from "./storeBoardModel";
 import { PipelineFrame } from "./PipelineFrame";
+import { DraftBar, ReplaceCardModal, type NextMapInfo } from "./draftStoreParts";
+import { rerollPrice } from "@/lib/cardRules";
+import { draftBuild, draftPriceOf, freePickIdOf, needsReplacement } from "./draftStoreModel";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 
 interface UpgradeShopProps {
@@ -137,6 +140,12 @@ interface UpgradeShopProps {
    * a run resumed in the store: it gets the same shelf back, not a re-roll that
    * closing the game would otherwise buy.
    */
+  /**
+   * Draft rules (lib/cardRules.ts, CARDS_PLAN.md). Absent: the classic store.
+   * The first card taken each visit is free, passing on it pays `skipHours`,
+   * a build holds `slots` cards and a further one replaces one of them.
+   */
+  draft?: DraftStore | null;
   dealt?: StoreDealt | null;
   /** Told the shelf once it is dealt, so the run save can keep it. */
   onDealt?: (dealt: StoreDealt) => void;
@@ -153,6 +162,16 @@ const MARKET = hex("#c9a227");
 const RUNWAY = hex("#2dd4bf");
 const RUNWAY_OFF = hex("#8a8f98");
 const YELLOW_500 = 0xeab308;
+
+export interface DraftStore {
+  slots: number;
+  skipHours: number;
+  /** Drop a held card (and its "+") from the build. */
+  onDrop: (upgradeId: string) => void;
+  /** Hours in (skipping the free card) or out (a reroll). */
+  onHours: (hours: number, action: "skip" | "reroll") => void;
+  nextMap: NextMapInfo | null;
+}
 
 export function UpgradeShop({
   runContext = null,
@@ -191,6 +210,7 @@ export function UpgradeShop({
   onDealt,
   freeAbilityGrant = null,
   pipeline,
+  draft = null,
 }: UpgradeShopProps) {
   const { t } = useTranslation();
   const screen = useUiScreen();
@@ -213,6 +233,11 @@ export function UpgradeShop({
   // Restocked tickets the player has not swiped to yet: a restock lands at
   // the END of the strip, out of sight, so it is announced until it is seen.
   const [freshIds, setFreshIds] = useState<string[]>([]);
+  // Draft rules: rerolls paid for this visit, the card each pick replaces
+  // (picked id -> dropped id), and the pick waiting on that choice.
+  const [rerollsUsed, setRerollsUsed] = useState(0);
+  const [drops, setDrops] = useState<Record<string, string>>({});
+  const [replaceFor, setReplaceFor] = useState<UpgradeConfig | null>(null);
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -233,7 +258,7 @@ export function UpgradeShop({
       const byId = new Map(upgrades.map(u => [u.id, u]));
       return dealt.offerIds.flatMap(id => byId.get(id) ?? []);
     }
-    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean });
+    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser: !!draft });
   });
 
   const [restocksUsed, setRestocksUsed] = useState(0);
@@ -291,10 +316,23 @@ export function UpgradeShop({
   // and what a build is made of; the constant card needs no prime position.
   const shelfItems = useMemo(() => [...offeredUpgrades, ...abilityOffers], [abilityOffers, offeredUpgrades]);
 
+  // Draft rules: the FIRST card taken each visit is free, so until one is
+  // taken every card on the shelf is. Abilities are never the free card.
+  const freePickId = draft ? freePickIdOf(selectedIds, offeredUpgrades) : null;
   const priceFor = useCallback(
-    (u: UpgradeConfig) => priceOf(u, { freeOfferId, inflation: priceInflation, discount: shopDiscountMultiplier }),
-    [shopDiscountMultiplier, freeOfferId, priceInflation],
+    (u: UpgradeConfig) => {
+      const storePrice = priceOf(u, { freeOfferId, inflation: priceInflation, discount: shopDiscountMultiplier });
+      return draft ? draftPriceOf(u, freePickId, storePrice) : storePrice;
+    },
+    [shopDiscountMultiplier, freeOfferId, priceInflation, draft, freePickId],
   );
+
+  // Draft rules: the build as it would stand if this visit ended now.
+  const byId = useMemo(() => new Map(upgrades.map(u => [u.id, u])), [upgrades]);
+  const build = draftBuild(draft ? ownedUpgradeIds : [], byId, selectedIds, offeredUpgrades, drops);
+  const liveDrops = build.dropped;
+  const heldCards = build.held;
+  const heldCount = build.count;
   const hasDiscount = shopDiscountMultiplier < 1;
   const inflationPercent = Math.round((priceInflation - 1) * 100);
 
@@ -321,7 +359,18 @@ export function UpgradeShop({
     shakeTimer.current = setTimeout(() => setShakingId(null), 600);
   }, []);
 
-  const handleItemClick = (upgrade: UpgradeConfig, alreadySelected: boolean) => {
+  const handleItemClick = (upgrade: UpgradeConfig, alreadySelected: boolean, replacing = false) => {
+    if (draft && !alreadySelected && !closed && !upgrade.grantsAbility) {
+      // A "+" whose card is being given up this visit has nothing to ride on.
+      if (upgrade.upgradeOf && liveDrops.includes(upgrade.upgradeOf)) { shake(upgrade.id); return; }
+      // The build is full: taking this card means choosing one to give up.
+      if (!replacing && needsReplacement(upgrade, build, draft.slots)
+          && !lockedFor(upgrade, [...allOwnedIds, ...selectedIds], isLocked)) {
+        if (heldCards.length === 0) { shake(upgrade.id); return; }
+        setReplaceFor(upgrade);
+        return;
+      }
+    }
     const outcome = itemClickOutcome({
       closed, upgrade, alreadySelected, allOwnedIds, selectedIds, upgrades, isLocked,
       price: priceFor(upgrade), remainingBudget,
@@ -357,12 +406,49 @@ export function UpgradeShop({
   };
 
   const handleContinue = () => {
+    if (draft && !closed) {
+      // Cards given up first, so the build never holds more than its slots.
+      for (const dropped of liveDrops) draft.onDrop(dropped);
+      // Passing on the free card pays hours instead.
+      if (freePickId === null && offeredUpgrades.length > 0) draft.onHours(draft.skipHours, "skip");
+    }
     for (const p of purchasesFor(selectedIds, shelfItems, upgrades, priceFor)) {
       if (p.channel === "ability") onPurchaseAbility?.(p.id, p.price);
       else onPurchase(p.id, p.price);
       setPurchasedThisSession(prev => [...prev, p.shelfId]);
     }
     onContinue();
+  };
+
+  // Draft rules: pay hours for a new shelf. Cards already picked stay picked
+  // and stay on the shelf; everything else is dealt again.
+  const nextRerollPrice = rerollPrice(rerollsUsed, shopDiscountMultiplier);
+  const canReroll = !!draft && !closed && remainingBudget >= nextRerollPrice;
+  const handleReroll = () => {
+    if (!draft || !canReroll) return;
+    draft.onHours(-nextRerollPrice, "reroll");
+    const kept = offeredUpgrades.filter(o => selectedIds.includes(o.id));
+    const dealtAgain = rollShelf({
+      upgrades, ownedUpgradeIds: [...allOwnedIds, ...selectedIds], completedLevel, heldFenceTypeIds,
+      shopSlots: Math.max(0, shopSlots - kept.length), lean, noTeaser: true,
+      rollKey: `reroll:${rerollsUsed}`, exclude: offeredUpgrades.map(o => o.id),
+    });
+    const shelf = [...kept, ...dealtAgain];
+    setOfferedUpgrades(shelf);
+    setFreshIds(dealtAgain.map(u => u.id));
+    setRerollsUsed(n => n + 1);
+    // The save keeps the shelf as it now stands, not the one that was paid to replace.
+    onDealt?.({ offerIds: shelf.map(u => u.id), abilityIds: abilityOffers.flatMap(o => o.grantsAbility ? [o.grantsAbility] : []) });
+  };
+  const handleReplace = (dropped: UpgradeConfig) => {
+    const incoming = replaceFor;
+    setReplaceFor(null);
+    if (!incoming) return;
+    setDrops(prev => ({ ...prev, [incoming.id]: dropped.id }));
+    // A "+" picked this visit for the card being given up goes with it.
+    const withoutOrphans = selectedIds.filter(id => byId.get(id)?.upgradeOf !== dropped.id);
+    if (withoutOrphans.length !== selectedIds.length) setSelectedIds(withoutOrphans);
+    handleItemClick(incoming, false, true);
   };
 
   const column = pipelineColumnWidth(screen.width);
@@ -625,6 +711,9 @@ export function UpgradeShop({
                     <ArcadeText text={t("upgradeShop.hoursValue", { hours: selectedTotalCost })} color={arcadeInk("primary")} size={TEXT.sm} />
                   </View>
                 </>
+              ) : draft && !closed && offeredUpgrades.length > 0 ? (
+                // Passing on the free card is a choice with a price on it.
+                <ArcadeText text={t("cardDraft.skipAndStart", { hours: draft.skipHours, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
               ) : (
                 <ArcadeText text={continueLabel(plan, "store", t)} color={arcadeInk("primary")} size={TEXT.sm} />
               )}
@@ -648,6 +737,20 @@ export function UpgradeShop({
           )}
 
           {showClosedInfo && <ClosedInfoModal onClose={() => setShowClosedInfo(false)} />}
+
+          {replaceFor && (
+            <ReplaceCardModal
+              incoming={replaceFor}
+              held={heldCards}
+              plusOf={Object.fromEntries(allOwnedIds.flatMap(id => {
+                const u = byId.get(id);
+                return u?.upgradeOf ? [[u.upgradeOf, u]] : [];
+              }))}
+              accent={accent}
+              onReplace={handleReplace}
+              onClose={() => setReplaceFor(null)}
+            />
+          )}
 
           {chooserOptions.length > 0 && (
             <ChoiceChooserModal
@@ -679,6 +782,23 @@ export function UpgradeShop({
 
       {/* Every fifth map: one line, not a panel, so the tickets stay in view. */}
       {completedLevel % 5 === 0 && <WaypointBanner level={completedLevel} />}
+
+      {/* Draft rules: the free card, the build's slots and the next map. */}
+      {draft && !closed && (
+        <Appear fromY={-8} delay={0.1}>
+          <DraftBar
+            held={heldCount}
+            slots={draft.slots}
+            freeTaken={freePickId !== null}
+            skipHours={draft.skipHours}
+            rerollPrice={nextRerollPrice}
+            canReroll={canReroll}
+            onReroll={handleReroll}
+            nextMap={draft.nextMap}
+            accent={boardAccent}
+          />
+        </Appear>
+      )}
 
       {/* The sprint the backlog's tickets are pulled into. Not on a closed
           store: nothing can be committed there. */}

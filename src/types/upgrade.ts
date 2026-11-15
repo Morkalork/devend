@@ -88,6 +88,19 @@ export interface UpgradeConfig {
    * synthesises. Run-scoped, like every other upgrade.
    */
   grantsFenceType?: string;
+  /**
+   * Draft rules (cards.yml, lib/cardRules.ts): this entry is the "+" of the
+   * named card. It requires that card, rides on it, and takes no slot of its
+   * own. Never set in upgrades.yml.
+   */
+  upgradeOf?: string;
+  /**
+   * Draft rules: the certificate chase this card counts toward, by the classic
+   * id the certificate names (`sourceUpgradeId` in certificates.yml).
+   */
+  certCredit?: string;
+  /** Draft rules: a line on the card saying what it costs you. Shown in red. */
+  downside?: string;
   modifiers: Record<string, number>;
   /**
    * Build scaling: this effect grows with how committed the run is to an

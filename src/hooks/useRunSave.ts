@@ -62,6 +62,12 @@ export interface RunSave {
   // resume with no offer.
   /** The Sprint Planning offer the run took (offers.yml id, or "tenure"). */
   takenOfferId?: string | null;
+  /**
+   * The store rules the run was started under (lib/cardRules.ts): they pick
+   * the catalogue its owned ids belong to. Absent on a save from before the
+   * draft, which was a classic run.
+   */
+  ruleSet?: 'classic' | 'draft';
   // Records (HIGHSCORES.md): cumulative overtime after each completed map, and
   // whether the run may file on the ledger (debug starts are not eligible).
   // Optional so saves written before Phase A still load; default [] / true.

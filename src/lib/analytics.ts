@@ -282,6 +282,15 @@ export const analytics = {
   qualityDropped: (p: { from: string; to: string; fps: number | null; reason: 'slowFrames' | 'startFailed' }) =>
     track('quality_dropped', p),
 
+  /**
+   * Draft rules (CARDS_PLAN.md): what the player did with a store visit's
+   * cards. `take` is every card taken (the free one and any bought), `skip`
+   * passing on the free card for hours, `reroll` a paid reroll, `drop` the
+   * card given up to make room.
+   */
+  draftChoice: (p: { level: number; action: 'take' | 'skip' | 'reroll' | 'drop'; cardId: string | null }) =>
+    track('draft_choice', p),
+
   /** Player took (or skipped) a Sprint Planning offer at the run start. */
   offerSelected: (p: { offerId: string | null; pool: string | null; grantedIds: string[] }) =>
     track('offer_selected', p),

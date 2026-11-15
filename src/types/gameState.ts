@@ -397,6 +397,8 @@ export interface CanvasGameState {
    * active play at the map's start (offerPerks.ts). Set per map; 0 or absent = off.
    */
   openingSlowSeconds?: number;
+  /** Permafrost: seconds an Ice fence freezes the ball it slows (0 = off). Set at map start. */
+  iceFreezeSeconds?: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**

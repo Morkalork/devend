@@ -1431,6 +1431,28 @@
       "gamble": "এখন একটা দাম, এমন পুরস্কারের জন্য যা পেতে দশটা ম্যাপ লাগত।"
     }
   },
+  "cardDraft": {
+    "freePick": "একটি কার্ড বিনামূল্যে নিন, অথবা বাদ দিয়ে {{hours}}h নিন।",
+    "freeTaken": "বিনামূল্যের কার্ড নেওয়া হয়েছে। আরেকটি কার্ডে ঘণ্টা খরচ হবে।",
+    "reroll": "নতুন কার্ড {{hours}}h",
+    "build": "বিল্ড: {{slots}}টির মধ্যে {{held}}টি কার্ড",
+    "buildFull": "বিল্ড পূর্ণ ({{slots}}টির মধ্যে {{held}}টি): নতুন কার্ড একটির জায়গা নেবে।",
+    "nextMap": "পরের: L{{level}} {{name}} ({{features}})",
+    "nextMapPlain": "পরের: L{{level}} {{name}}",
+    "featureBalls_one": "{{count}}টি বল",
+    "featureBalls_other": "{{count}}টি বল",
+    "feature": {
+      "boss": "একটি বস",
+      "movers": "চলমান বস্তু",
+      "well": "একটি মাধ্যাকর্ষণ কূপ",
+      "breakables": "ভাঙা যায় এমন বস্তু",
+      "areas": "সিনট্যাক্স এলাকা"
+    },
+    "replaceTitle": "{{name}} নিন",
+    "replaceHint": "আপনার বিল্ড পূর্ণ। বদলে যে কার্ডটি ছাড়বেন সেটিতে ট্যাপ করুন। তার + সঙ্গে চলে যাবে।",
+    "replaceRow": "{{name}} ছেড়ে দিন",
+    "skipAndStart": "বাদ দিন (+{{hours}}h), লেভেল {{level}} শুরু"
+  },
   "content": {
     "upgrades": {
       "runtime_optimisation_junior": {

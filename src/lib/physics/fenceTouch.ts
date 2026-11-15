@@ -60,6 +60,11 @@ function speedStepOf(wall: Wall): number {
   return getFenceType(wall.fenceTypeId).ballSpeedStep;
 }
 
+/** Is this a fence that takes speed off a ball (Ice)? */
+export function fenceSlows(wall: Wall): boolean {
+  return speedStepOf(wall) < 0;
+}
+
 /**
  * Apply one fence's speed step to a ball, or do nothing.
  *

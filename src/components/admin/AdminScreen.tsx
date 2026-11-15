@@ -13,6 +13,7 @@ import {
   isLauncherHandAlwaysEnabled, setLauncherHandAlwaysEnabled,
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
+import { CARD_SLOTS, preferredRuleSet, setPreferredRuleSet } from '@/lib/cardRules';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import { showDiagnostics } from '@/lib/bootDiagnostics';
@@ -50,6 +51,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
   const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
+  const [classicStore, setClassicStoreState] = useState(() => preferredRuleSet() === 'classic');
   const [tenureDepth, setTenureDepthState] = useState<number | null>(getForcedTenureDepth);
   const [launcherHand, setLauncherHandState] = useState(isLauncherHandAlwaysEnabled);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
@@ -296,6 +298,11 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
                 </div>
               </div>
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="classic-store" checked={classicStore}
+                onChange={e => { setPreferredRuleSet(e.target.checked ? 'classic' : 'draft'); setClassicStoreState(e.target.checked); }} />
+              Classic store for new runs (off: the card draft, one free card a map and a build of {CARD_SLOTS})
+            </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" id="sprint-always-on" checked={sprintAlways}
                 onChange={e => { setSprintAlwaysOn(e.target.checked); setSprintAlwaysState(e.target.checked); }} />

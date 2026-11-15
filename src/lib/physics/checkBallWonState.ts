@@ -787,6 +787,13 @@ export function checkAndUpdateBallWonStates(
       if (held) held.frozenUntil = now + activeModifiers.lockStunSeconds * 1000;
     }
 
+    // Thaw Cycle: every lock hands back Feature Freeze taps. The HUD's count
+    // is refreshed by the lock callback below (GameCanvas mirrors it there).
+    if (activeModifiers.freezeUsesPerLock > 0) {
+      game.freezeUsesRemaining = (game.freezeUsesRemaining ?? 0)
+        + Math.max(0, Math.round(activeModifiers.freezeUsesPerLock));
+    }
+
     applyMicroManagerSpeedCap(
       game.balls,
       activeModifiers,

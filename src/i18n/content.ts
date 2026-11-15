@@ -41,6 +41,10 @@ export const contentText = {
       ? field(t, 'abilities', u.grantsAbility, 'description', u.description)
       : field(t, 'upgrades', u.id, 'description', u.description),
 
+  /** A draft card's cost line (cards.yml `downside`). */
+  upgradeDownside: (t: TFunction, u: WithId & { downside?: string }) =>
+    field(t, 'upgrades', u.id, 'downside', u.downside),
+
   /** Job-title tier (Junior, Senior, …) shared across all upgrades. */
   tier: (t: TFunction, tier?: string): string =>
     tier ? (t(`content.tiers.${tier}`, { defaultValue: tier }) as string) : (tier ?? ''),

@@ -56,7 +56,8 @@ import { runStream } from "@/lib/runRng";
 import { ballMayPass } from "@/lib/physics/obstacleRules";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { openingSlowFactor } from "@/lib/offerPerks";
-import { applyFenceSpeedStep } from "@/lib/physics/fenceTouch";
+import { applyFenceSpeedStep, fenceSlows } from "@/lib/physics/fenceTouch";
+import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
 import { simNow } from "@/lib/simClock";
@@ -916,7 +917,17 @@ export function updateBall(
       // HERE, on the wall that was actually struck, rather than after the loop
       // from a remembered id: a ball can touch two fences in one step, and the
       // one that changes its speed has to be one it really hit.
-      applyFenceSpeedStep(ball, wall, now);
+      const stepped = applyFenceSpeedStep(ball, wall, now);
+      // Permafrost: the Ice fence that slowed it also holds it still, unless
+      // it is frozen already or still on its thaw cooldown (the same cooldown
+      // a tapped freeze leaves, so a ball cannot be pinned against Ice forever).
+      if (stepped && (game.iceFreezeSeconds ?? 0) > 0 && fenceSlows(wall)
+          && !(ball.frozenUntil && now < ball.frozenUntil)
+          && !(ball.freezeReadyAt && now < ball.freezeReadyAt)) {
+        const ms = (game.iceFreezeSeconds ?? 0) * 1000;
+        ball.frozenUntil = now + ms;
+        ball.freezeReadyAt = now + ms * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+      }
       // The same dent from the edge as from the face. `wall.deformable` is the
       // very object the polygon map holds, so the two paths cannot disagree.
       // Read the normal off the wall BEFORE the dent moves it.

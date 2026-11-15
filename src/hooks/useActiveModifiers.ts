@@ -275,6 +275,17 @@ export interface GameModifiers {
   // Additive (sum) — Containment: seconds the nearest free ball is held still
   // after every lock.
   lockStunSeconds: number;
+  /**
+   * Permafrost (cards.yml): a ball that an Ice fence slows is also frozen for
+   * this many seconds, with the usual re-freeze cooldown after it. The payoff
+   * card for the Ice fence: it turns a slow into a lock window.
+   */
+  iceFreezeSeconds: number;
+  /**
+   * Thaw Cycle (cards.yml): every lock hands back this many Feature Freeze
+   * taps, on this map. Freeze a ball, lock it, freeze the next.
+   */
+  freezeUsesPerLock: number;
   // Additive (sum) — Cold Storage: balls (the fastest first) that start every
   // map frozen, for START_FROZEN_SECONDS.
   startFrozenBalls: number;
@@ -456,6 +467,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   fenceHeadStart: 0,
   shopInterestPercent: 0,
   lockStunSeconds: 0,
+  iceFreezeSeconds: 0,
+  freezeUsesPerLock: 0,
   startFrozenBalls: 0,
   scoreBonusPerMissingLife: 0,
 };
