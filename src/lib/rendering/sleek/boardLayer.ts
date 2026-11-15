@@ -426,11 +426,16 @@ export class BoardLayer {
     }
     const project = (loop: { x: number; y: number }[]) => loop.map(p => w2s(p.x, p.y));
     if (ground.strip) {
+      // The head-start strip is a ring: the arena with the live board cut out.
+      // Pixi 8 does not punch a hole for a second poly() before one fill() -
+      // it fills both, so this painted the WHOLE board as captured ground
+      // (Onboarding, reported from play). A hole is a cut() of its own.
       this.coverFill.poly(project(ground.strip.outer));
+      this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
       for (const hole of ground.strip.holes) {
         this.coverFill.poly(project(hole));
+        this.coverFill.cut();
       }
-      this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
     }
     const loops = ground.loops.filter(l => l.length >= 3).map(project);
     if (loops.length === 0) {
