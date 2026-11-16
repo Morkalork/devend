@@ -35,6 +35,7 @@ import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { nextMapInfo } from '@/ui/screens/draftStoreModel';
 import { CARD_SLOTS, SKIP_HOURS } from '@/lib/cardRules';
+import { contractFor, CONTRACT_FREE_PICKS } from '@/lib/contracts';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
 import { ChainPickScreen } from '@/ui/screens/ChainPickScreen';
@@ -674,6 +675,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     onDrop: session.handleDropUpgrade,
                     onHours: session.handleDraftHours,
                     nextMap: nextMapInfo(session.nextLevel, session.currentLevelIndex + 2, t),
+                    // A contract on the next map, and the payout of one just won.
+                    contract: contractFor(session.nextLevel, session.currentLevelIndex + 2, session.contracts),
+                    onContract: session.handleDraftContract,
+                    freePicks: session.contractReward ? CONTRACT_FREE_PICKS : 1,
+                    rareShelf: session.contractReward,
                   } : null}
                   extraShopItems={session.activeModifiers.extraShopItems}
                   shopRestockCount={session.activeModifiers.shopRestockCount}

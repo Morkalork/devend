@@ -135,6 +135,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     upgrades,
     upgradeLookup,
     tagSets,
+    contracts,
     isLoading: isLoadingUpgrades,
     error: upgradeError,
     loadUpgrades,
@@ -195,6 +196,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [carrySpendFences, setCarrySpendFences] = useState(0);
   const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
   const [carrySpendCapture, setCarrySpendCapture] = useState(0);
+  // Contracts (lib/contracts.ts): the one taken for the map being played, and
+  // whether the last contracted map was won, which the next store pays out.
+  const [activeContractId, setActiveContractId] = useState<string | null>(null);
+  const [contractReward, setContractReward] = useState(false);
   const spentThisShopVisitRef = useRef(0);
 
   // Free-store-item pickups (issue #48): each claimed token makes the next
@@ -625,6 +630,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendCapture > 0) {
       bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
     }
+    // A contract taken in the store: its one hard rule, on this map only.
+    const contract = activeContractId ? contracts.find(c => c.id === activeContractId) : undefined;
+    if (contract) {
+      bonuses = mergeBonuses(bonuses, contract.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
     // Growth (Sprint Planning): a map started below three lives pays more.
     // livesAtLevelStart, not currentLives, so the rate is fixed for the map.
     const desperation = desperationMultiplier(livesAtLevelStart, baseModifiers.scoreBonusPerMissingLife);
@@ -639,7 +649,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       });
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted, livesAtLevelStart]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, runLevelsCompleted, livesAtLevelStart, activeContractId, contracts]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -739,6 +749,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
     setCarrySpendCapture(0);
+    setActiveContractId(null);
+    setContractReward(false);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
     setPendingSprint(null);
@@ -792,6 +804,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     capstoneId: capstone?.id ?? null,
     takenOfferId,
     ruleSet: getActiveRuleSet(),
+    contractId: activeContractId,
+    contractReward,
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
     dailyKey,
@@ -1176,6 +1190,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
+    setActiveContractId(save.contractId ?? null);
+    setContractReward(save.contractReward ?? false);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     spentThisShopVisitRef.current = 0;
     // Saves written before Sprint Planning carry `draftedLoadoutIds` instead,
@@ -1495,6 +1511,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (lastDeliveredCompletionRef.current === currentLevelNum) return;
     lastDeliveredCompletionRef.current = currentLevelNum;
     setRunStartIntroPending(false); // the run is underway: later maps get the short boot
+    // A contracted map, won: the next store pays it out, and the rule is spent.
+    if (activeContractId) {
+      setContractReward(true);
+      setActiveContractId(null);
+    }
     // The onboarding map (first run only) has served its purpose the moment it
     // is cleared: every later run opens on the real level-1 map instead.
     if (isOnboardingMap(currentLevel)) markOnboardingSeen();
@@ -1588,7 +1609,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, armFeatureUnlock]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, armFeatureUnlock, activeContractId]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1871,6 +1892,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     analytics.draftChoice({ level: currentLevelIndex + 1, action: 'drop', cardId: upgradeId });
     setOwnedUpgradeIds(prev => prev.filter(id => !gone.includes(id)));
   }, [ownedUpgradeIds, upgradeLookup, currentLevelIndex]);
+
+  /**
+   * Draft rules, leaving the store: the contract taken for the next map (or
+   * none), and the last contract's payout, which this visit has now had.
+   */
+  const handleDraftContract = useCallback((contractId: string | null) => {
+    if (contractId) {
+      analytics.draftChoice({ level: currentLevelIndex + 1, action: 'contract', cardId: contractId });
+    }
+    setActiveContractId(contractId);
+    setContractReward(false);
+  }, [currentLevelIndex]);
 
   /** Draft rules: hours in (skipping the card) or out (a reroll). */
   const handleDraftHours = useCallback((hours: number, action: 'skip' | 'reroll') => {
@@ -2279,6 +2312,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handlePurchaseUpgrade,
     handleDropUpgrade,
     handleDraftHours,
+    handleDraftContract,
+    contracts,
+    activeContractId,
+    contractReward,
     /** The run's store rules (lib/cardRules.ts). Read at render; fixed per run. */
     ruleSet: getActiveRuleSet(),
     handlePurchaseAbility,

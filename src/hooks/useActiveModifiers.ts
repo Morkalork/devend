@@ -286,6 +286,17 @@ export interface GameModifiers {
    * taps, on this map. Freeze a ball, lock it, freeze the next.
    */
   freezeUsesPerLock: number;
+  /**
+   * Afterburner (cards.yml): a ball locked while moving at least
+   * FAST_LOCK_FACTOR times its own base speed pays this much more lock bonus
+   * (1 = double). The payoff for the Flare fence, which is what makes a ball
+   * that fast.
+   */
+  fastLockBonus: number;
+  /** Crash Barrier (cards.yml): extra Guardrail shields every map. */
+  guardrailExtraShields: number;
+  /** Tensioned Wire (cards.yml): extra touches a Tripwire survives before it breaks. */
+  fenceExtraHits: number;
   // Additive (sum) — Cold Storage: balls (the fastest first) that start every
   // map frozen, for START_FROZEN_SECONDS.
   startFrozenBalls: number;
@@ -469,6 +480,9 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   lockStunSeconds: 0,
   iceFreezeSeconds: 0,
   freezeUsesPerLock: 0,
+  fastLockBonus: 0,
+  guardrailExtraShields: 0,
+  fenceExtraHits: 0,
   startFrozenBalls: 0,
   scoreBonusPerMissingLife: 0,
 };

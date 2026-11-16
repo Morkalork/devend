@@ -83,6 +83,11 @@ export interface ShelfInput {
   rollKey?: string;
   /** Draft rules, a reroll: ids the new shelf must not repeat. */
   exclude?: string[];
+  /**
+   * Draft rules, the store after a won contract: deal from the uncommon and
+   * rare cards only, when there are enough of them to fill the shelf.
+   */
+  rareOnly?: boolean;
 }
 
 /** The tag counts the shelf weights by: owned upgrades plus a Specialisation's affinity. */
@@ -95,7 +100,7 @@ export function shelfTagCounts(ownedUpgradeIds: string[], upgrades: UpgradeConfi
  * Picks are tag-weighted toward the player's owned archetypes (weightedSample),
  * plus at most one locked "teaser" if there is room.
  */
-export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser, rollKey, exclude }: ShelfInput): UpgradeConfig[] {
+export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser, rollKey, exclude, rareOnly }: ShelfInput): UpgradeConfig[] {
   // Filter out owned, upgrades not yet unlocked by level progression, and any
   // choice group whose pick is already made (a sibling owned).
   // The fence bar holds four types and the catalogue has six, so a
@@ -112,8 +117,10 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
   // Through the shared rule, not a second copy of it, so the shelf never
   // offers a card the buy button (isLocked) then refuses.
   const byId = new Map(upgrades.map(u => [u.id, u]));
-  const unlocked = collapseChoiceGroups(
+  const everyUnlocked = collapseChoiceGroups(
     available.filter(u => prerequisitesMet(u, ownedUpgradeIds, byId)));
+  const rarer = everyUnlocked.filter(u => u.tier !== "Junior");
+  const unlocked = rareOnly && rarer.length >= shopSlots ? rarer : everyUnlocked;
   const locked = collapseChoiceGroups(
     available.filter(u => !prerequisitesMet(u, ownedUpgradeIds, byId)));
   const counts = shelfTagCounts(ownedUpgradeIds, upgrades, lean);

@@ -35,7 +35,7 @@ import { vec2Length, lineSegmentIntersection, pointInPolygon, polygonBounds } fr
 import { traceContours, snapOutlineToWalls } from "@/lib/rendering/regionContour";
 import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
-import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
+import { BALL_WON_REGION_THRESHOLD, FAST_LOCK_FACTOR } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scoring";
@@ -633,6 +633,9 @@ export function checkAndUpdateBallWonStates(
 
     ball.state = 'won';
     ball.wonTime = simNow();
+    // How fast it was going when the pocket closed, kept for Afterburner: the
+    // lock stops the ball on the next line, and the payout below runs after.
+    ball.lockedAtSpeed = ball.speed;
     ball.velocity = { x: 0, y: 0 };
     ball.speed = 0;
 
@@ -868,6 +871,14 @@ export function checkAndUpdateBallWonStates(
             b.position.x, b.position.y, game.gravityWells, game.spaceRemainingPercent,
           ) !== null);
       const gravityMult = underGravity ? 1 + activeModifiers.gravityLockBonus : 1;
+      // Afterburner: a ball locked while running hot pays more. Its speed is
+      // read off `lockedAtSpeed` (taken as the lock stopped it),
+      // against the ball's own base, so a ball that is merely a fast TYPE does
+      // not qualify: something has to have sped it up (a Flare fence, mostly).
+      const fastMult =
+        activeModifiers.fastLockBonus > 0 && (b.baseSpeed ?? 0) > 0 && (b.lockedAtSpeed ?? 0) >= b.baseSpeed * FAST_LOCK_FACTOR
+          ? 1 + activeModifiers.fastLockBonus
+          : 1;
       // The Lamp: this is the ball currently lighting the board, and sealing it
       // pays extra. Read from the lamp state BEFORE this pass reassigns it
       // (advanceLamp runs on the next frame, once these balls are no longer
@@ -900,7 +911,7 @@ export function checkAndUpdateBallWonStates(
       // which is by definition inside the pocket - a pocket straddling the
       // line belongs to the side the ball is actually sitting in.
       (game.lockPoints ??= []).push({ x: b.position.x, y: b.position.y });
-      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult * lampMult;
+      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult * fastMult * lampMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
       else { standardPoints += ballPoints; standardBase += basePoints; }

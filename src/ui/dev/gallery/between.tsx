@@ -268,7 +268,9 @@ export const entries: GalleryEntry[] = [
     id: "UpgradeShop-draft", group: "screen",
     render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
       ownedUpgradeIds={shopUpgrades.slice(0, 2).map(u => u.id)}
-      draft={{ slots: 2, skipHours: 10, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] } }} />,
+      draft={{ slots: 2, skipHours: 10, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
+        contract: { id: "hotfix_friday", name: "Hotfix Friday", description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 } },
+        onContract: noop, freePicks: 2 }} />,
   },
   {
     // Draft rules: the build is full, so taking a card asks which one to give up.

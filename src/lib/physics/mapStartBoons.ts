@@ -33,6 +33,10 @@ export function applyMapStartBoons(game: CanvasGameState, activeModifiers: GameM
   game.openingSlowSeconds = activeModifiers.openingSlowSeconds;
   // Permafrost: read by updateBall where a ball bounces off an Ice fence.
   game.iceFreezeSeconds = activeModifiers.iceFreezeSeconds;
+  // Crash Barrier and Tensioned Wire: read where a Guardrail is struck and
+  // where a finished fence is given its hit budget.
+  game.guardrailExtraShields = Math.max(0, Math.round(activeModifiers.guardrailExtraShields));
+  game.fenceExtraHits = Math.max(0, Math.round(activeModifiers.fenceExtraHits));
 }
 
 /** Shields granted fresh every map (Defensive Programming, Second Wind). */

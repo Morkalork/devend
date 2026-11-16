@@ -1030,7 +1030,15 @@
     "replaceTitle": "Elegir {{name}}",
     "replaceHint": "Tu mazo está lleno. Toca la carta que entregas a cambio. Su + se va con ella.",
     "replaceRow": "Entregar {{name}}",
-    "skipAndStart": "Pasar (+{{hours}}h), empezar nivel {{level}}"
+    "skipAndStart": "Pasar (+{{hours}}h), empezar nivel {{level}}",
+    "freePicks": "Elige {{count}} cartas gratis, o pasa y cobra {{hours}}h.",
+    "contractTitle": "Contrato: {{name}}",
+    "contractReward": "Si lo ganas, la siguiente tienda reparte dos cartas gratis de entre las poco comunes y las raras.",
+    "cards": "Cartas",
+    "picksTitle": "Tus elecciones",
+    "picksEmpty": "Aún no has elegido nada. Toca una carta para quedártela.",
+    "takeAndStart_one": "Elegir {{count}} carta y empezar nivel {{level}}",
+    "takeAndStart_other": "Elegir {{count}} cartas y empezar nivel {{level}}"
   },
   "content": {
     "upgrades": {
@@ -2738,6 +2746,32 @@
       "padded_estimate": {
         "name": "Estimación inflada",
         "description": "Cada mapa se puntúa con dos vallas extra de par, y superar el par paga el doble."
+      },
+      "afterburner": {
+        "name": "Postcombustión",
+        "description": "Una bola bloqueada mientras va más rápido que su velocidad normal paga el triple del bono de bloqueo. Una valla bengala es lo que la pone así de rápida."
+      },
+      "crash_barrier": {
+        "name": "Barrera de choque",
+        "description": "La valla quitamiedos lleva dos escudos más en cada mapa. Necesita la valla quitamiedos."
+      },
+      "tensioned_wire": {
+        "name": "Cable tensado",
+        "description": "Una valla trampa aguanta dos toques más antes de romperse. Necesita la valla trampa."
+      }
+    },
+    "contracts": {
+      "hotfix_friday": {
+        "name": "Hotfix de viernes",
+        "description": "Todas las bolas se mueven un 30% más rápido en el siguiente mapa."
+      },
+      "scale_up": {
+        "name": "Escalado",
+        "description": "Todas las bolas son un 30% más grandes en el siguiente mapa."
+      },
+      "legacy_code": {
+        "name": "Código heredado",
+        "description": "Tus vallas se construyen un 35% más lento en el siguiente mapa."
       }
     }
   },

@@ -40,7 +40,10 @@ export function guardrailShieldsOf(fenceTypeId: string | undefined): number {
 
 /** True when a fence of this type would still be forgiven on this map. */
 export function isArmedGuardrail(game: CanvasGameState, fenceTypeId: string | undefined): boolean {
-  const n = guardrailShieldsOf(fenceTypeId);
+  const own = guardrailShieldsOf(fenceTypeId);
+  // Crash Barrier adds shields to a fence that has one; it never gives one to
+  // a fence type that has none.
+  const n = own > 0 ? own + (game.guardrailExtraShields ?? 0) : 0;
   return n > 0 && (game.guardrailShieldsUsed ?? 0) < n;
 }
 

@@ -286,9 +286,10 @@ export const analytics = {
    * Draft rules (CARDS_PLAN.md): what the player did with a store visit's
    * cards. `take` is every card taken (the free one and any bought), `skip`
    * passing on the free card for hours, `reroll` a paid reroll, `drop` the
-   * card given up to make room.
+   * card given up to make room, `contract` a hard map taken on (cardId is
+   * the contract's id).
    */
-  draftChoice: (p: { level: number; action: 'take' | 'skip' | 'reroll' | 'drop'; cardId: string | null }) =>
+  draftChoice: (p: { level: number; action: 'take' | 'skip' | 'reroll' | 'drop' | 'contract'; cardId: string | null }) =>
     track('draft_choice', p),
 
   /** Player took (or skipped) a Sprint Planning offer at the run start. */

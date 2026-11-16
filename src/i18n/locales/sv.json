@@ -1030,7 +1030,15 @@
     "replaceTitle": "Ta {{name}}",
     "replaceHint": "Ditt bygge är fullt. Tryck på kortet du ger upp. Kortets + följer med.",
     "replaceRow": "Ge upp {{name}}",
-    "skipAndStart": "Hoppa över (+{{hours}}h), starta nivå {{level}}"
+    "skipAndStart": "Hoppa över (+{{hours}}h), starta nivå {{level}}",
+    "freePicks": "Ta {{count}} kort gratis, eller hoppa över för {{hours}}h.",
+    "contractTitle": "Kontrakt: {{name}}",
+    "contractReward": "Vinn den, så delar nästa butik ut två gratiskort bland de ovanliga och sällsynta.",
+    "cards": "Kort",
+    "picksTitle": "Dina val",
+    "picksEmpty": "Inget valt ännu. Tryck på ett kort för att ta det.",
+    "takeAndStart_one": "Ta {{count}} kort och starta nivå {{level}}",
+    "takeAndStart_other": "Ta {{count}} kort och starta nivå {{level}}"
   },
   "content": {
     "upgrades": {
@@ -2738,6 +2746,32 @@
       "padded_estimate": {
         "name": "Tilltagen uppskattning",
         "description": "Varje bana bedöms mot två extra stängsel i par, och att slå par ger dubbelt."
+      },
+      "afterburner": {
+        "name": "Efterbrännare",
+        "description": "En boll som låses medan den går snabbare än sin normala fart ger tre gånger låsbonusen. Ett blosstängsel är det som gör den så snabb."
+      },
+      "crash_barrier": {
+        "name": "Krockbarriär",
+        "description": "Skyddsräcket har två sköldar till på varje bana. Kräver skyddsräcket."
+      },
+      "tensioned_wire": {
+        "name": "Spänd tråd",
+        "description": "En snubbeltråd tål två beröringar till innan den går av. Kräver snubbeltråden."
+      }
+    },
+    "contracts": {
+      "hotfix_friday": {
+        "name": "Fredagshotfix",
+        "description": "Alla bollar rör sig 30% snabbare på nästa bana."
+      },
+      "scale_up": {
+        "name": "Uppskalning",
+        "description": "Alla bollar är 30% större på nästa bana."
+      },
+      "legacy_code": {
+        "name": "Legacykod",
+        "description": "Dina stängsel byggs 35% långsammare på nästa bana."
       }
     }
   },

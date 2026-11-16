@@ -14,6 +14,7 @@ import { LevelData } from '@/types/level';
 import { mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 import { fetchConfig } from '@/lib/configFetch';
 import { catalogueFileFor, getActiveRuleSet } from '@/lib/cardRules';
+import { parseContracts, type Contract } from '@/lib/contracts';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -22,6 +23,8 @@ interface UpgradeManagerState {
   upgradeLookup: Map<string, UpgradeConfig>;
   /** Set-bonus definitions (tagSets block); undefined when the file has none. */
   tagSets?: TagSetsConfig;
+  /** Draft rules: the catalogue's contracts (lib/contracts.ts); [] for the classic store. */
+  contracts: Contract[];
   isLoading: boolean;
   error: string | null;
 }
@@ -68,6 +71,7 @@ export function useUpgradeManager() {
   const [state, setState] = useState<UpgradeManagerState>({
     upgrades: [],
     upgradeLookup: new Map(),
+    contracts: [],
     isLoading: false,
     error: null,
   });
@@ -196,6 +200,7 @@ export function useUpgradeManager() {
         upgrades: data.upgrades,
         upgradeLookup: lookup,
         tagSets,
+        contracts: parseContracts(data.contracts),
         isLoading: false,
         error: null,
       });
@@ -264,6 +269,7 @@ export function useUpgradeManager() {
     upgrades: state.upgrades,
     upgradeLookup: state.upgradeLookup,
     tagSets: state.tagSets,
+    contracts: state.contracts,
     isLoading: state.isLoading,
     error: state.error,
     loadUpgrades,

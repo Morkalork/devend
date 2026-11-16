@@ -48,17 +48,17 @@ export function nextMapInfo(level: LevelConfig | null, levelNumber: number, t: T
 // ── The draft's rules, apart from the component so they can be tested ─────
 
 /**
- * The card taken free this visit: the FIRST card picked off the shelf. Null
- * while none is picked, which is when every card on the shelf is still free.
- * An ability is never the free card.
+ * The cards taken free this visit: the first `count` picked off the shelf
+ * (one, or two at the store after a won contract). While fewer are picked,
+ * every card on the shelf is still free. An ability is never a free card.
  */
-export function freePickIdOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[]): string | null {
-  return selectedIds.find(id => offered.some(o => o.id === id)) ?? null;
+export function freePickIdsOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[], count = 1): string[] {
+  return selectedIds.filter(id => offered.some(o => o.id === id)).slice(0, count);
 }
 
-/** What a card costs under the draft rules: nothing for the free pick, its store price otherwise. */
-export function draftPriceOf(u: UpgradeConfig, freePickId: string | null, storePrice: number): number {
-  if (!u.grantsAbility && (freePickId === null || freePickId === u.id)) {
+/** What a card costs under the draft rules: nothing for a free pick, its store price otherwise. */
+export function draftPriceOf(u: UpgradeConfig, freePickIds: readonly string[], count: number, storePrice: number): number {
+  if (!u.grantsAbility && (freePickIds.length < count || freePickIds.includes(u.id))) {
     return 0;
   }
   return storePrice;

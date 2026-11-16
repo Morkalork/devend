@@ -451,6 +451,9 @@ interface SprintPanelProps {
   onJump?: (shelfIndex: number) => void;
   /** Tapping a committed line takes it back out of the sprint. */
   onRemove: (id: string) => void;
+  /** Draft rules: the panel's own words ("Your picks"), in place of the sprint's. */
+  titleText?: string;
+  emptyText?: string;
 }
 
 /**
@@ -461,6 +464,7 @@ interface SprintPanelProps {
  */
 export function SprintPanel({
   level, lines, committed, capacity, accent, wontFit: notFitting = null, fields, restocked = null, onJump, onRemove,
+  titleText, emptyText,
 }: SprintPanelProps) {
   const { t } = useTranslation();
   const share = useTween(capacityShare(committed, capacity), 0.3);
@@ -468,7 +472,7 @@ export function SprintPanel({
     <View label="sprint" layout={{ alignSelf: "stretch", gap: 10, padding: 14, borderRadius: RADIUS.sm, backgroundColor: ROLE.raised, borderWidth: 1, borderColor: ROLE.edge }}>
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Icon icon={SquareKanban} size={16} color={accent} />
-        <Label text={t("upgradeShop.sprintTitle", { level })} size={TEXT.base} font="display" weight="700" color={ROLE.ink} />
+        <Label text={titleText ?? t("upgradeShop.sprintTitle", { level })} size={TEXT.base} font="display" weight="700" color={ROLE.ink} />
         <View layout={{ flex: 1 }} />
         <Label text={t("upgradeShop.sprintCapacity", { used: committed, total: capacity })} size={TEXT.xs} font="mono" color={ROLE.muted} />
       </View>
@@ -499,7 +503,7 @@ export function SprintPanel({
       )}
 
       {lines.length === 0 ? (
-        <Label text={t("upgradeShop.sprintEmpty")} size={TEXT.xs} color={ROLE.muted} wrap />
+        <Label text={emptyText ?? t("upgradeShop.sprintEmpty")} size={TEXT.xs} color={ROLE.muted} wrap />
       ) : (
         <View layout={{ gap: 2 }}>
           {lines.map(line => (

@@ -1451,6 +1451,14 @@
     "replaceTitle": "Take {{name}}",
     "replaceHint": "Your build is full. Tap the card you give up for it. A card's + goes with it.",
     "replaceRow": "Give up {{name}}",
-    "skipAndStart": "Skip the card (+{{hours}}h), start level {{level}}"
+    "skipAndStart": "Skip the card (+{{hours}}h), start level {{level}}",
+    "freePicks": "Take {{count}} cards free, or skip them for {{hours}}h.",
+    "contractTitle": "Contract: {{name}}",
+    "contractReward": "Win it, and the next store deals two free cards from the uncommon and rare ones.",
+    "cards": "Cards",
+    "picksTitle": "Your picks",
+    "picksEmpty": "Nothing picked yet. Tap a card to take it.",
+    "takeAndStart_one": "Take {{count}} card and start level {{level}}",
+    "takeAndStart_other": "Take {{count}} cards and start level {{level}}"
   }
 }

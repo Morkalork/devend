@@ -53,6 +53,11 @@ export const contentText = {
   upgradeDownside: (t: TFunction, u: WithId & { downside?: string }) =>
     field(t, upgradeKind(), u.id, 'downside', u.downside),
 
+  /** A contract (cards.yml `contracts:`): the draft's hard map. */
+  contractName: (t: TFunction, c: WithId & { name?: string }) => field(t, 'contracts', c.id, 'name', c.name),
+  contractDesc: (t: TFunction, c: WithId & { description?: string }) =>
+    field(t, 'contracts', c.id, 'description', c.description),
+
   /** Job-title tier (Junior, Senior, …) shared across all upgrades. */
   tier: (t: TFunction, tier?: string): string =>
     tier ? (t(`content.tiers.${tier}`, { defaultValue: tier }) as string) : (tier ?? ''),

@@ -302,8 +302,10 @@ export function applyCutFn(
         segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);
       }
       // Durability: the fence type's own budget, when it states one.
-      const hits = getFenceType(wall.fenceTypeId).maxHits;
-      if (hits != null) {
+      const ownHits = getFenceType(wall.fenceTypeId).maxHits;
+      if (ownHits != null) {
+        // Tensioned Wire: more touches for a fence that has a budget at all.
+        const hits = ownHits + (game.fenceExtraHits ?? 0);
         segment.maxHits = hits;
         segment.hitsLeft = hits;
       }

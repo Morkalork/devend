@@ -4,7 +4,7 @@
  * when the build is full. UpgradeShop.tsx keeps the state; these draw it.
  */
 import { useTranslation } from "react-i18next";
-import { Dices, Layers, MapPin } from "lucide-react";
+import { CheckSquare, Dices, Layers, MapPin, Square } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import { contentText } from "@/i18n/content";
 import {
@@ -35,6 +35,10 @@ interface DraftBarProps {
   onReroll: () => void;
   nextMap: NextMapInfo | null;
   accent: number;
+  /** Free cards this visit: one, or more at the store after a won contract. */
+  freePicks: number;
+  /** The contract offered on the next map, already translated; null when there is none. */
+  contract: { name: string; description: string; accepted: boolean; onToggle: () => void } | null;
 }
 
 /**
@@ -43,7 +47,7 @@ interface DraftBarProps {
  * it. The reroll sits beside the first, because it is the other thing to do
  * with a shelf you do not like.
  */
-export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canReroll, onReroll, nextMap, accent }: DraftBarProps) {
+export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canReroll, onReroll, nextMap, accent, freePicks, contract }: DraftBarProps) {
   const { t } = useTranslation();
   const full = held >= slots;
   return (
@@ -51,7 +55,11 @@ export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canRe
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <View layout={{ flex: 1 }}>
           <Label
-            text={freeTaken ? t("cardDraft.freeTaken") : t("cardDraft.freePick", { hours: skipHours })}
+            text={freeTaken
+              ? t("cardDraft.freeTaken")
+              : freePicks > 1
+                ? t("cardDraft.freePicks", { count: freePicks, hours: skipHours })
+                : t("cardDraft.freePick", { hours: skipHours })}
             size={TEXT.sm} weight="600" color={freeTaken ? ROLE.muted : ROLE.ink} wrap
           />
         </View>
@@ -79,6 +87,26 @@ export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canRe
           />
         </View>
       </View>
+
+      {/* The contract: one hard rule on the next map, for a better store after it. */}
+      {contract && (
+        <Pressable
+          onTap={contract.onToggle}
+          label={t("cardDraft.contractTitle", { name: contract.name })}
+          layout={{
+            flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 10, borderRadius: RADIUS.sm,
+            borderWidth: 1, borderColor: contract.accepted ? ROLE.cost : ROLE.edge,
+            backgroundColor: contract.accepted ? tint(ROLE.cost, 0.1) : undefined,
+          }}
+        >
+          <Icon icon={contract.accepted ? CheckSquare : Square} size={16} color={contract.accepted ? ROLE.cost : ROLE.muted} />
+          <View layout={{ flex: 1, gap: 2 }}>
+            <Label text={t("cardDraft.contractTitle", { name: contract.name })} size={TEXT.xs} weight="700" color={contract.accepted ? ROLE.cost : ROLE.ink} wrap />
+            <Label text={contract.description} size={TEXT.xs} color={ROLE.muted} wrap />
+            <Label text={t("cardDraft.contractReward")} size={TEXT.xs} color={ROLE.hours} wrap />
+          </View>
+        </Pressable>
+      )}
 
       {nextMap && (
         <View layout={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>

@@ -171,7 +171,9 @@ describe("the type travels with the fence, not with the player", () => {
   it("takes its durability from the fence type, and only when the type states one", () => {
     // The run-wide durability was Ascension's, and went with it.
     const src = read("src/lib/physics/applyCut.ts");
-    expect(src).toMatch(/const hits = getFenceType\(wall\.fenceTypeId\)\.maxHits;/);
+    // Still the type's own budget; Tensioned Wire (cards.yml) adds to it, and only when there is one.
+    expect(src).toMatch(/const ownHits = getFenceType\(wall\.fenceTypeId\)\.maxHits;/);
+    expect(src).toMatch(/if \(ownHits != null\) \{/);
     expect(src).not.toMatch(/fenceDurability/);
   });
 });

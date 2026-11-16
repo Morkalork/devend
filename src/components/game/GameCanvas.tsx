@@ -167,6 +167,7 @@ import { acceptanceMarks, readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
 import { missedAreaShare } from "@/lib/coloredAreaShare";
 import { scoreBankedPush } from "@/lib/physics/bankPush";
+import { isArmedGuardrail } from "@/lib/physics/guardrailFence";
 import { simNow } from "@/lib/simClock";
 import { PendingResize } from "@/lib/boardResizeHold";
 import { layoutInset, stackCoversBoard } from "@/lib/boardLayoutLatch";
@@ -1847,7 +1848,8 @@ export function GameCanvas({
       onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(markFailure(failure)),
       onGameMessage: (id: GameMessageId) => {
         // The one message that is also state: the slot bar's shield goes out.
-        if (id === "guardrailCaught") setGuardrailSpent(true);
+        // Out only once the LAST shield is spent: Crash Barrier gives a map more than one.
+        if (id === "guardrailCaught") setGuardrailSpent(!isArmedGuardrail(gameRef.current, "guardrail"));
         onMessageRef.current?.(id);
       },
       onTutorialCutSuccess,

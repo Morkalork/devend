@@ -50,3 +50,6 @@ export const COLORS = {
  * gap someone forgot to close.
  */
 export const BOX_WALL_THICKNESS = 18;
+
+/** Afterburner: a ball is "running hot" at this multiple of its own base speed. One Flare bounce (+18 on a base of 250) clears it. */
+export const FAST_LOCK_FACTOR = 1.05;

@@ -49,7 +49,8 @@ import { ticketStatus, unavailable, wontFit } from "./storeBoardModel";
 import { PipelineFrame } from "./PipelineFrame";
 import { DraftBar, ReplaceCardModal, type NextMapInfo } from "./draftStoreParts";
 import { rerollPrice } from "@/lib/cardRules";
-import { draftBuild, draftPriceOf, freePickIdOf, needsReplacement } from "./draftStoreModel";
+import { draftBuild, draftPriceOf, freePickIdsOf, needsReplacement } from "./draftStoreModel";
+import type { Contract } from "@/lib/contracts";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 
 interface UpgradeShopProps {
@@ -171,6 +172,14 @@ export interface DraftStore {
   /** Hours in (skipping the free card) or out (a reroll). */
   onHours: (hours: number, action: "skip" | "reroll") => void;
   nextMap: NextMapInfo | null;
+  /** Free cards this visit: 1, or CONTRACT_FREE_PICKS after a won contract. */
+  freePicks?: number;
+  /** After a won contract: the shelf deals from the uncommon and rare cards. */
+  rareShelf?: boolean;
+  /** The contract offered on the next map (lib/contracts.ts), or null. */
+  contract?: Contract | null;
+  /** Leaving the store: the contract taken for the next map, or null. */
+  onContract?: (contractId: string | null) => void;
 }
 
 export function UpgradeShop({
@@ -238,6 +247,8 @@ export function UpgradeShop({
   const [rerollsUsed, setRerollsUsed] = useState(0);
   const [drops, setDrops] = useState<Record<string, string>>({});
   const [replaceFor, setReplaceFor] = useState<UpgradeConfig | null>(null);
+  const [contractAccepted, setContractAccepted] = useState(false);
+  const freePicks = Math.max(1, draft?.freePicks ?? 1);
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -258,7 +269,7 @@ export function UpgradeShop({
       const byId = new Map(upgrades.map(u => [u.id, u]));
       return dealt.offerIds.flatMap(id => byId.get(id) ?? []);
     }
-    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser: !!draft });
+    return rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser: !!draft, rareOnly: !!draft?.rareShelf });
   });
 
   const [restocksUsed, setRestocksUsed] = useState(0);
@@ -318,13 +329,14 @@ export function UpgradeShop({
 
   // Draft rules: the FIRST card taken each visit is free, so until one is
   // taken every card on the shelf is. Abilities are never the free card.
-  const freePickId = draft ? freePickIdOf(selectedIds, offeredUpgrades) : null;
+  const freePickIds = draft ? freePickIdsOf(selectedIds, offeredUpgrades, freePicks) : [];
+  const freePickKey = freePickIds.join(",");
   const priceFor = useCallback(
     (u: UpgradeConfig) => {
       const storePrice = priceOf(u, { freeOfferId, inflation: priceInflation, discount: shopDiscountMultiplier });
-      return draft ? draftPriceOf(u, freePickId, storePrice) : storePrice;
+      return draft ? draftPriceOf(u, freePickKey ? freePickKey.split(",") : [], freePicks, storePrice) : storePrice;
     },
-    [shopDiscountMultiplier, freeOfferId, priceInflation, draft, freePickId],
+    [shopDiscountMultiplier, freeOfferId, priceInflation, draft, freePickKey, freePicks],
   );
 
   // Draft rules: the build as it would stand if this visit ended now.
@@ -410,8 +422,10 @@ export function UpgradeShop({
       // Cards given up first, so the build never holds more than its slots.
       for (const dropped of liveDrops) draft.onDrop(dropped);
       // Passing on the free card pays hours instead.
-      if (freePickId === null && offeredUpgrades.length > 0) draft.onHours(draft.skipHours, "skip");
+      if (freePickIds.length === 0 && offeredUpgrades.length > 0) draft.onHours(draft.skipHours, "skip");
     }
+    // The contract taken for the next map; also spends a won contract's payout.
+    if (draft) draft.onContract?.(contractAccepted && draft.contract && !closed ? draft.contract.id : null);
     for (const p of purchasesFor(selectedIds, shelfItems, upgrades, priceFor)) {
       if (p.channel === "ability") onPurchaseAbility?.(p.id, p.price);
       else onPurchase(p.id, p.price);
@@ -430,7 +444,7 @@ export function UpgradeShop({
     const kept = offeredUpgrades.filter(o => selectedIds.includes(o.id));
     const dealtAgain = rollShelf({
       upgrades, ownedUpgradeIds: [...allOwnedIds, ...selectedIds], completedLevel, heldFenceTypeIds,
-      shopSlots: Math.max(0, shopSlots - kept.length), lean, noTeaser: true,
+      shopSlots: Math.max(0, shopSlots - kept.length), lean, noTeaser: true, rareOnly: !!draft.rareShelf,
       rollKey: `reroll:${rerollsUsed}`, exclude: offeredUpgrades.map(o => o.id),
     });
     const shelf = [...kept, ...dealtAgain];
@@ -657,7 +671,7 @@ export function UpgradeShop({
               )}
               {/* The backlog's heading: what the strip below is, and how much is in it. */}
               <View layout={{ width: column, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <Label text={t("upgradeShop.backlog")} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted} />
+                <Label text={draft ? t("cardDraft.cards") : t("upgradeShop.backlog")} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted} />
                 <View layout={{ borderRadius: RADIUS.full, paddingLeft: 6, paddingRight: 6, backgroundColor: ROLE.edge }}>
                   <Label text={String(shelfItems.length)} size={TEXT.xs} weight="700" color={ROLE.ink} />
                 </View>
@@ -704,14 +718,14 @@ export function UpgradeShop({
               {selectedIds.length > 0 ? (
                 <>
                   {/* Commit the sprint and go: the button still says where it goes. */}
-                  <ArcadeText text={t("upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
+                  <ArcadeText text={t(draft ? "cardDraft.takeAndStart" : "upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
                   {/* Cost as an icon chip: the display font's parentheses look broken. */}
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     <Icon icon={Clock} size={16} color={arcadeInk("primary")} />
                     <ArcadeText text={t("upgradeShop.hoursValue", { hours: selectedTotalCost })} color={arcadeInk("primary")} size={TEXT.sm} />
                   </View>
                 </>
-              ) : draft && !closed && offeredUpgrades.length > 0 ? (
+              ) : draft && !closed && offeredUpgrades.length > 0 && freePickIds.length === 0 ? (
                 // Passing on the free card is a choice with a price on it.
                 <ArcadeText text={t("cardDraft.skipAndStart", { hours: draft.skipHours, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
               ) : (
@@ -789,7 +803,14 @@ export function UpgradeShop({
           <DraftBar
             held={heldCount}
             slots={draft.slots}
-            freeTaken={freePickId !== null}
+            freeTaken={freePickIds.length >= freePicks}
+            freePicks={freePicks}
+            contract={draft.contract ? {
+              name: contentText.contractName(t, draft.contract),
+              description: contentText.contractDesc(t, draft.contract),
+              accepted: contractAccepted,
+              onToggle: () => setContractAccepted(a => !a),
+            } : null}
             skipHours={draft.skipHours}
             rerollPrice={nextRerollPrice}
             canReroll={canReroll}
@@ -815,6 +836,8 @@ export function UpgradeShop({
             restocked={freshLine}
             onJump={i => setJump(prev => ({ index: i, nonce: (prev?.nonce ?? 0) + 1 }))}
             onRemove={removeFromSprint}
+            titleText={draft ? t("cardDraft.picksTitle") : undefined}
+            emptyText={draft ? t("cardDraft.picksEmpty") : undefined}
           />
         </Appear>
       )}

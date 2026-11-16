@@ -9,10 +9,13 @@ import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelConfig } from "@/types/level";
 import {
-  draftBuild, draftPriceOf, freePickIdOf, needsReplacement, nextMapFeatureKeys,
+  draftBuild, draftPriceOf, freePickIdsOf, needsReplacement, nextMapFeatureKeys,
 } from "@/ui/screens/draftStoreModel";
 import { catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet } from "@/lib/cardRules";
 import { LADDER, byLevel } from "./fixtures/maps";
+import { contractFor, parseContracts, CONTRACT_MIN_LEVEL } from "@/lib/contracts";
+import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import { rollShelf } from "@/ui/screens/shopModel";
 
 const CARDS = (yaml.load(readFileSync(resolve(__dirname, "../../public/cards.yml"), "utf8")) as UpgradeData).upgrades;
 const BY_ID = new Map(CARDS.map(c => [c.id, c]));
@@ -23,19 +26,73 @@ describe("the free card", () => {
   const shelf = [card("fast_compile"), card("slow_motion"), card("cold_boot")];
 
   it("is every card until one is picked, then only that one", () => {
-    expect(freePickIdOf([], shelf)).toBeNull();
-    expect(draftPriceOf(shelf[0], null, 34)).toBe(0);
-    expect(draftPriceOf(shelf[1], null, 34)).toBe(0);
-    const free = freePickIdOf(["slow_motion", "fast_compile"], shelf);
-    expect(free).toBe("slow_motion");
-    expect(draftPriceOf(shelf[1], free, 34)).toBe(0);
-    expect(draftPriceOf(shelf[0], free, 34)).toBe(34);
+    expect(freePickIdsOf([], shelf)).toEqual([]);
+    expect(draftPriceOf(shelf[0], [], 1, 34)).toBe(0);
+    expect(draftPriceOf(shelf[1], [], 1, 34)).toBe(0);
+    const free = freePickIdsOf(["slow_motion", "fast_compile"], shelf);
+    expect(free).toEqual(["slow_motion"]);
+    expect(draftPriceOf(shelf[1], free, 1, 34)).toBe(0);
+    expect(draftPriceOf(shelf[0], free, 1, 34)).toBe(34);
   });
 
   it("is never an ability, picked first or not", () => {
-    expect(freePickIdOf(["ability:magnet"], shelf)).toBeNull();
-    expect(draftPriceOf(ability, null, 20)).toBe(20);
-    expect(freePickIdOf(["ability:magnet", "cold_boot"], shelf)).toBe("cold_boot");
+    expect(freePickIdsOf(["ability:magnet"], shelf)).toEqual([]);
+    expect(draftPriceOf(ability, [], 1, 20)).toBe(20);
+    expect(freePickIdsOf(["ability:magnet", "cold_boot"], shelf)).toEqual(["cold_boot"]);
+  });
+
+  it("is two cards at the store after a won contract", () => {
+    const one = freePickIdsOf(["slow_motion"], shelf, 2);
+    // One taken, one still to take: every other card is still free.
+    expect(draftPriceOf(shelf[0], one, 2, 34)).toBe(0);
+    const two = freePickIdsOf(["slow_motion", "fast_compile", "cold_boot"], shelf, 2);
+    expect(two).toEqual(["slow_motion", "fast_compile"]);
+    expect(draftPriceOf(shelf[2], two, 2, 34)).toBe(34);
+  });
+});
+
+describe("contracts", () => {
+  const contracts = parseContracts((yaml.load(readFileSync(resolve(__dirname, "../../public/cards.yml"), "utf8")) as UpgradeData).contracts);
+  const plain = { id: "m", name: "m" } as LevelConfig;
+
+  it("are read from the catalogue, each one hard rule the engine knows", () => {
+    expect(contracts.length).toBeGreaterThanOrEqual(3);
+    for (const c of contracts) {
+      for (const key of Object.keys(c.modifiers)) {
+        expect(key in DEFAULT_MODIFIERS, `${c.id}: ${key}`).toBe(true);
+      }
+      expect(c.description).not.toContain("\u2014");
+    }
+    expect(parseContracts([{ id: "x" }, null, "y"])).toEqual([]);
+  });
+
+  it("are offered in turn, never early, never on a boss or after the last map", () => {
+    expect(contractFor(plain, CONTRACT_MIN_LEVEL - 1, contracts)).toBeNull();
+    expect(contractFor(null, 12, contracts)).toBeNull();
+    expect(contractFor(byLevel(LADDER, 20) as LevelConfig, 20, contracts)).toBeNull();
+    const seen = new Set([5, 6, 7, 8, 9].map(n => contractFor(plain, n, contracts)!.id));
+    expect(seen.size).toBe(contracts.length);
+  });
+
+  it("make the map harder, for that map only, and pay out at the next store", () => {
+    const session = readFileSync(resolve(__dirname, "../hooks/useGameSession.ts"), "utf8");
+    expect(session).toMatch(/const contract = activeContractId \? contracts\.find\(c => c\.id === activeContractId\) : undefined;/);
+    expect(session).toMatch(/if \(activeContractId\) \{\s*setContractReward\(true\);\s*setActiveContractId\(null\);/);
+    expect(session).toMatch(/contractId: activeContractId,\s*contractReward,/);
+  });
+
+  it("deal the payout from the uncommon and rare cards", () => {
+    const withPrereqs = CARDS.map(c => (c.upgradeOf ? { ...c, prerequisites: [c.upgradeOf] } : c));
+    const shelf = rollShelf({
+      upgrades: withPrereqs, ownedUpgradeIds: [], completedLevel: 12, heldFenceTypeIds: [], shopSlots: 3, noTeaser: true, rareOnly: true,
+    });
+    expect(shelf).toHaveLength(3);
+    expect(shelf.every(c => c.tier !== "Junior")).toBe(true);
+    // Too few rarer cards to fill the shelf (level 1): the ordinary shelf, never a short one.
+    const early = rollShelf({
+      upgrades: withPrereqs, ownedUpgradeIds: [], completedLevel: 1, heldFenceTypeIds: [], shopSlots: 3, noTeaser: true, rareOnly: true,
+    });
+    expect(early).toHaveLength(3);
   });
 });
 

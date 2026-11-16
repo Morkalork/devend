@@ -37,6 +37,8 @@ export interface Ball {
   radius: number;
   speed: number;
   baseSpeed: number; // original speed at init, used by MicroManager to compute proportional reduction
+  /** Its speed at the moment it was locked (the lock then stops it). Read by Afterburner. */
+  lockedAtSpeed?: number;
   topSpeed: number;
   color: string; // hex color with #
   regionId: string; // which region this ball is in

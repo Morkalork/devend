@@ -399,6 +399,10 @@ export interface CanvasGameState {
   openingSlowSeconds?: number;
   /** Permafrost: seconds an Ice fence freezes the ball it slows (0 = off). Set at map start. */
   iceFreezeSeconds?: number;
+  /** Crash Barrier: Guardrail shields on top of the fence type's own. Set at map start. */
+  guardrailExtraShields?: number;
+  /** Tensioned Wire: touches added to a fence type's hit budget. Set at map start. */
+  fenceExtraHits?: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**

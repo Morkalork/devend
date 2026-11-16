@@ -149,7 +149,8 @@ describe("the store's follow-up tweaks", () => {
   });
 
   it("names the destination on the commit button too", () => {
-    expect(shop).toContain('t("upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })');
+    // The draft has its own words for the same button, and both name the level.
+    expect(shop).toContain('t(draft ? "cardDraft.takeAndStart" : "upgradeShop.commitAndStart", { count: selectedIds.length, level: completedLevel + 1 })');
   });
 
   it("says a checkpoint in one line", () => {

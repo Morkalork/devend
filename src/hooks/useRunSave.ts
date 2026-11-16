@@ -68,6 +68,9 @@ export interface RunSave {
    * draft, which was a classic run.
    */
   ruleSet?: 'classic' | 'draft';
+  /** Draft rules: the contract on the map being played, and a won one's payout still owed. */
+  contractId?: string | null;
+  contractReward?: boolean;
   // Records (HIGHSCORES.md): cumulative overtime after each completed map, and
   // whether the run may file on the ledger (debug starts are not eligible).
   // Optional so saves written before Phase A still load; default [] / true.

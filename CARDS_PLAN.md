@@ -1,7 +1,7 @@
 # CARDS_PLAN.md
 
-The redo of the upgrades as a card draft. Status: **phases 1 to 4 built**,
-phase 5 open. Why: the owner's report that "the upgrades don't change the game
+The redo of the upgrades as a card draft. Status: **phases 1 to 5 built**;
+what is still open is listed at the end. Why: the owner's report that "the upgrades don't change the game
 enough" and that the feeling of being handed just the right card (Slay the
 Spire) was missing, and the sweep that measured it (UPGRADE_SWEEP_REPORT.md):
 of 145 upgrades, 20 changed a map clearly, and the ones that did added a rule,
@@ -44,7 +44,7 @@ blind pick.
 
 ## The catalogue (`public/cards.yml`)
 
-46 cards and 15 "+", one idea each, on the classic schema and the same modifier
+49 cards and 15 "+", one idea each, on the classic schema and the same modifier
 pipeline. `tier` is rarity (Junior common, Senior uncommon, Principal rare).
 Rules it is held to (`src/test/cards.test.ts`):
 
@@ -79,7 +79,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 2 | The draft store: free card, skip, reroll, slots and the replace modal, the next-map line | built |
 | 3 | `cards.yml`, the two new mechanics, Tenure and Sprint Planning on cards | built |
 | 4 | The sweep run on `cards.yml` and the catalogue tuned from it; card text in es, sv and bn | built |
-| 5 | Bosses and elite maps that test a build; the pair's draft; the "Sprint" panel's wording in the draft | open |
+| 5 | Contracts (the draft's elite maps), payoff cards for the Flare, Guardrail and Tripwire fences, the draft's own panel wording | built |
 
 ## Build record
 
@@ -122,6 +122,37 @@ Card text is in es, sv and bn under `content.cards` (its own namespace: eleven
 card ids are also classic ids with other numbers on them), and `cards.test.ts`
 holds the numbers in every language to the English.
 
-Known gaps (phase 5): the classic store's "Sprint" panel wording is unchanged
-in the draft; a pair run has no draft; no map yet asks a question that one
-build answers better than another.
+**Phase 5.**
+
+*Contracts* (`src/lib/contracts.ts`, the `contracts:` block of `cards.yml`) are
+the draft's elite maps. From the store before map 4 on, and never before a
+boss, the draft bar offers one hard rule for the NEXT map only: Hotfix Friday
+(balls 30% faster), Scale-Up (balls 30% bigger) or Legacy Code (fences 35%
+slower), in turn by map number, so each comes round and none needs forcing.
+Take it and win the map, and the store after it deals **two free cards from
+the uncommon and rare ones**. Each asks a different question, so a build
+answers some better than others: slow and freeze for the fast balls, shields
+and Compression for the big ones, tempo for the slow fences. The rule rides
+the ordinary modifier merge for that map (`activeContractId` in the session),
+is saved with the run, and survives a Continue on the same map.
+
+*Fence payoffs.* Three cards, each with a new key and a Playground knob:
+Afterburner (`fastLockBonus`: a ball locked while running faster than its base
+speed pays triple, which is what a Flare fence sets up), Crash Barrier
+(`guardrailExtraShields`: two more Guardrail shields a map) and Tensioned Wire
+(`fenceExtraHits`: a Tripwire survives two more touches). The Mutex and
+Semaphore fences already had theirs (Golden Handshake, Batch Commit).
+Measured in builds: Afterburner +22% pay on top of the Flare fence; Tensioned
+Wire +5%; Crash Barrier near nothing for the bot, which rarely loses two
+fences on one map.
+
+*Wording.* In the draft the store's panel reads "Your picks" and "Cards", and
+the button says what it takes.
+
+Still open:
+- a contracted map does not yet say so on the board itself (the store is the
+  only place it is named);
+- a pair run has no draft;
+- no boss or authored map has been changed: contracts are the build test, and
+  the ladder's own maps are as they were;
+- the Redeploy fence has no payoff card.

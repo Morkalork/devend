@@ -202,6 +202,8 @@ export interface TagSetsConfig {
 
 export interface UpgradeData {
   pricing?: Partial<UpgradePricing>;
+  /** Draft rules: the contracts block (lib/contracts.ts). Read loosely; parseContracts checks it. */
+  contracts?: unknown;
   tagSets?: TagSetsConfig;
   upgrades: UpgradeConfig[];
 }
