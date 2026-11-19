@@ -913,11 +913,17 @@ levels:
   # WHO IS IN THE ROOM WITH THE CURTAIN. Only a ball in the right-hand room can
   # break the curtain, and only a ball behind it can be locked in the box. The
   # doorway between the rooms is narrow now (110) and a sliding door runs
-  # through it on a four-second rhythm, so balls cross only when it is open,
-  # and a fence that shuts the doorway has to be drawn between its passes. The
-  # play is to get balls onto the curtain's side and close the door on them:
-  # too early and nothing is there to break the curtain, too late and they
-  # have wandered back.
+  # through it, so balls cross only when it is open, and a fence that shuts
+  # the doorway has to be drawn between its passes. The play is to get balls
+  # onto the curtain's side and close the door on them: too early and nothing
+  # is there to break the curtain, too late and they have wandered back.
+  # The door slides 320 (it was 120): at 120 it never left the doorway's
+  # approach, so a ball had to thread past a door standing in front of the
+  # opening, reported as "almost impossible to get through". At 320 it is
+  # clear of the opening for most of its eleven-second cycle and shuts it for
+  # about three seconds of each, which is a door rather than a plug. The
+  # bot reads 10 of 16 at either travel; the difference is the ball's, not
+  # the win's.
   #
   # Reported from play: "good win condition, requires tactic to complete.
   # Boring map design outside the coloured area with destructible block", and
@@ -1027,7 +1033,7 @@ levels:
         width: 26
         height: 110
         axis: horizontal
-        range: 120
+        range: 320
         speed: 60
       - id: curtain-jamb
         rise: 1.5
