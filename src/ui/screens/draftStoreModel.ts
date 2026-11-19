@@ -48,11 +48,13 @@ export function nextMapInfo(level: LevelConfig | null, levelNumber: number, t: T
 // ── The draft's rules, apart from the component so they can be tested ─────
 
 /**
- * The cards taken free this visit: the first `count` picked off the shelf
- * (one, or two at the store after a won contract). While fewer are picked,
- * every card on the shelf is still free. An ability is never a free card.
+ * The cards taken free this visit: the first `count` picked off the shelf.
+ * Under the earned rules that is none at an ordinary store and one at the
+ * store after a won contract (CONTRACT_FREE_PICKS). While fewer than `count`
+ * are picked, every card on the shelf is still free. An ability is never a
+ * free card.
  */
-export function freePickIdsOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[], count = 1): string[] {
+export function freePickIdsOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[], count = 0): string[] {
   return selectedIds.filter(id => offered.some(o => o.id === id)).slice(0, count);
 }
 

@@ -34,7 +34,7 @@ import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { nextMapInfo } from '@/ui/screens/draftStoreModel';
-import { CARD_SLOTS, SKIP_HOURS } from '@/lib/cardRules';
+import { CARD_SLOTS } from '@/lib/cardRules';
 import { contractFor, CONTRACT_FREE_PICKS } from '@/lib/contracts';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
@@ -667,18 +667,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   // the store reopens this shelf rather than a new roll.
                   dealt={session.storeDealt}
                   onDealt={session.handleShopDealt}
-                  // The run's store rules: the draft (one free card a visit,
-                  // a build of CARD_SLOTS) or the classic store.
+                  // The run's store rules: the draft (every card bought, a
+                  // build of CARD_SLOTS) or the classic store.
                   draft={session.ruleSet === 'draft' ? {
                     slots: CARD_SLOTS,
-                    skipHours: SKIP_HOURS,
                     onDrop: session.handleDropUpgrade,
                     onHours: session.handleDraftHours,
                     nextMap: nextMapInfo(session.nextLevel, session.currentLevelIndex + 2, t),
                     // A contract on the next map, and the payout of one just won.
                     contract: contractFor(session.nextLevel, session.currentLevelIndex + 2, session.contracts),
                     onContract: session.handleDraftContract,
-                    freePicks: session.contractReward ? CONTRACT_FREE_PICKS : 1,
+                    freePicks: session.contractReward ? CONTRACT_FREE_PICKS : 0,
                     rareShelf: session.contractReward,
                   } : null}
                   extraShopItems={session.activeModifiers.extraShopItems}

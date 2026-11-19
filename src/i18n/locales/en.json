@@ -1432,8 +1432,6 @@
     }
   },
   "cardDraft": {
-    "freePick": "Take one card free, or skip it for {{hours}}h.",
-    "freeTaken": "Free card taken. Another card costs hours.",
     "reroll": "Reroll {{hours}}h",
     "build": "Build: {{held}} of {{slots}} cards",
     "buildFull": "Build full ({{held}} of {{slots}}): a new card replaces one.",
@@ -1451,14 +1449,16 @@
     "replaceTitle": "Take {{name}}",
     "replaceHint": "Your build is full. Tap the card you give up for it. A card's + goes with it.",
     "replaceRow": "Give up {{name}}",
-    "skipAndStart": "Skip the card (+{{hours}}h), start level {{level}}",
-    "freePicks": "Take {{count}} cards free, or skip them for {{hours}}h.",
     "contractTitle": "Contract: {{name}}",
-    "contractReward": "Win it, and the next store deals two free cards from the uncommon and rare ones.",
+    "contractReward": "Win it, and the next store deals one free card from the uncommon and rare ones.",
     "cards": "Cards",
     "picksTitle": "Your picks",
     "picksEmpty": "Nothing picked yet. Tap a card to take it.",
     "takeAndStart_one": "Take {{count}} card and start level {{level}}",
-    "takeAndStart_other": "Take {{count}} cards and start level {{level}}"
+    "takeAndStart_other": "Take {{count}} cards and start level {{level}}",
+    "earned": "Every card costs hours. A good map pays for more than one.",
+    "contractFree_one": "Contract won: take {{count}} card free from the rarer ones.",
+    "contractFree_other": "Contract won: take {{count}} cards free from the rarer ones.",
+    "contractTaken": "Contract card taken. Another card costs hours."
   }
 }

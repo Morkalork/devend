@@ -3,9 +3,16 @@
  *
  *  - `classic`: the original store. upgrades.yml, every card bought with hours,
  *    no limit on how many a build holds.
- *  - `draft`: after each map, take ONE of the cards on offer for free, or skip
- *    it for hours. cards.yml, a build holds CARD_SLOTS cards, and a seventh
- *    means dropping one. Hours buy a second card, a reroll, and abilities.
+ *  - `draft`: cards.yml, a build of CARD_SLOTS cards (a seventh means dropping
+ *    one), and EVERY card bought with hours. A common card costs about what an
+ *    ordinary map pays, so a normal run affords one card a map and a strong map
+ *    affords two or three: more cards are earned on the board, never dealt.
+ *    The run's one free card is the Sprint Planning offer before map 1, and a
+ *    won contract deals one more. Hours also buy a reroll and abilities.
+ *
+ *    It opened as "take one card free a map, or skip it for hours", and that
+ *    read as too many cards too early: with the free card and a second bought
+ *    the build of six was full by map 4, and every store after was a swap.
  *
  * The rule set is fixed when a run starts and saved with it, because the two
  * read different catalogues: a run resumed under the other set would own ids
@@ -19,8 +26,6 @@ const CLASSIC_KEY = "devend:classicStore";
 
 /** How many cards a draft build holds. A card's "+" rides on its card. */
 export const CARD_SLOTS = 6;
-/** Hours paid for passing on the free card. */
-export const SKIP_HOURS = 10;
 /** The first reroll of a visit; each further one costs this much more. */
 export const REROLL_HOURS = 6;
 

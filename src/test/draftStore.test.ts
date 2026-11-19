@@ -1,6 +1,7 @@
 /**
- * The draft store's rules (CARDS_PLAN.md): one free card a visit, a build of
- * a fixed number of slots, and a card given up to make room for another.
+ * The draft store's rules (CARDS_PLAN.md): every card bought with hours, a
+ * won contract's store dealing one free, a build of a fixed number of slots,
+ * and a card given up to make room for another.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -13,7 +14,8 @@ import {
 } from "@/ui/screens/draftStoreModel";
 import { catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet } from "@/lib/cardRules";
 import { LADDER, byLevel } from "./fixtures/maps";
-import { contractFor, parseContracts, CONTRACT_MIN_LEVEL } from "@/lib/contracts";
+import { contractFor, parseContracts, CONTRACT_MIN_LEVEL, CONTRACT_FREE_PICKS } from "@/lib/contracts";
+import { mergePricing, resolveUpgradeCost } from "@/lib/upgradePricing";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { rollShelf } from "@/ui/screens/shopModel";
 
@@ -22,32 +24,41 @@ const BY_ID = new Map(CARDS.map(c => [c.id, c]));
 const card = (id: string): UpgradeConfig => BY_ID.get(id)!;
 const ability = { id: "ability:magnet", name: "Magnet", tier: "Junior", description: "", modifiers: {}, grantsAbility: "magnet" } as UpgradeConfig;
 
-describe("the free card", () => {
+describe("every card is bought", () => {
   const shelf = [card("fast_compile"), card("slow_motion"), card("cold_boot")];
 
-  it("is every card until one is picked, then only that one", () => {
+  it("deals nothing free at an ordinary store, however many are picked", () => {
+    // The store opened as "one card free a visit", and that read as too many
+    // cards too early. Now the only free card after Sprint Planning is a won
+    // contract's, so an ordinary visit prices every card.
     expect(freePickIdsOf([], shelf)).toEqual([]);
-    expect(draftPriceOf(shelf[0], [], 1, 34)).toBe(0);
-    expect(draftPriceOf(shelf[1], [], 1, 34)).toBe(0);
-    const free = freePickIdsOf(["slow_motion", "fast_compile"], shelf);
-    expect(free).toEqual(["slow_motion"]);
-    expect(draftPriceOf(shelf[1], free, 1, 34)).toBe(0);
-    expect(draftPriceOf(shelf[0], free, 1, 34)).toBe(34);
+    expect(freePickIdsOf(["slow_motion", "fast_compile"], shelf)).toEqual([]);
+    expect(draftPriceOf(shelf[0], [], 0, 34)).toBe(34);
+    expect(draftPriceOf(shelf[1], [], 0, 34)).toBe(34);
   });
 
-  it("is never an ability, picked first or not", () => {
-    expect(freePickIdsOf(["ability:magnet"], shelf)).toEqual([]);
-    expect(draftPriceOf(ability, [], 1, 20)).toBe(20);
-    expect(freePickIdsOf(["ability:magnet", "cold_boot"], shelf)).toEqual(["cold_boot"]);
+  it("prices a common card at an ordinary map's pay, so a normal run affords one a map", () => {
+    // upgradePricing.ts measured an ordinary clear at 16h, a good one at 34h
+    // and a flawless one at 47h through calculateScore. A common at the
+    // ordinary figure is one card a map; a good map buys two, a flawless one
+    // three. That is where "more cards" comes from: the board, not the shelf.
+    const pricing = mergePricing((yaml.load(readFileSync(resolve(__dirname, "../../public/cards.yml"), "utf8")) as UpgradeData).pricing);
+    const common = resolveUpgradeCost(card("fast_compile"), pricing);
+    expect(common).toBeGreaterThanOrEqual(14);
+    expect(common).toBeLessThanOrEqual(18);
+    expect(Math.floor(34 / common)).toBe(2);
+    expect(Math.floor(47 / common)).toBeGreaterThanOrEqual(2);
   });
 
-  it("is two cards at the store after a won contract", () => {
-    const one = freePickIdsOf(["slow_motion"], shelf, 2);
-    // One taken, one still to take: every other card is still free.
-    expect(draftPriceOf(shelf[0], one, 2, 34)).toBe(0);
-    const two = freePickIdsOf(["slow_motion", "fast_compile", "cold_boot"], shelf, 2);
-    expect(two).toEqual(["slow_motion", "fast_compile"]);
-    expect(draftPriceOf(shelf[2], two, 2, 34)).toBe(34);
+  it("deals one free card at the store after a won contract, never an ability", () => {
+    expect(CONTRACT_FREE_PICKS).toBe(1);
+    expect(draftPriceOf(shelf[0], [], CONTRACT_FREE_PICKS, 34)).toBe(0);
+    const one = freePickIdsOf(["slow_motion", "fast_compile"], shelf, CONTRACT_FREE_PICKS);
+    expect(one).toEqual(["slow_motion"]);
+    expect(draftPriceOf(shelf[1], one, CONTRACT_FREE_PICKS, 34)).toBe(0);
+    expect(draftPriceOf(shelf[0], one, CONTRACT_FREE_PICKS, 34)).toBe(34);
+    expect(freePickIdsOf(["ability:magnet", "cold_boot"], shelf, CONTRACT_FREE_PICKS)).toEqual(["cold_boot"]);
+    expect(draftPriceOf(ability, [], CONTRACT_FREE_PICKS, 20)).toBe(20);
   });
 });
 

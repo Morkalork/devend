@@ -264,13 +264,13 @@ export const entries: GalleryEntry[] = [
       freeAbilityGrant="freezeAll" activeModifiers={undefined} shopDiscountMultiplier={1} />,
   },
   {
-    // Draft rules (CARDS_PLAN.md): the free card, a full build and the next map's line.
+    // Draft rules (CARDS_PLAN.md): a won contract's free card, a full build and the next map's line.
     id: "UpgradeShop-draft", group: "screen",
     render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
       ownedUpgradeIds={shopUpgrades.slice(0, 2).map(u => u.id)}
-      draft={{ slots: 2, skipHours: 10, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
+      draft={{ slots: 2, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
         contract: { id: "hotfix_friday", name: "Hotfix Friday", description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 } },
-        onContract: noop, freePicks: 2 }} />,
+        onContract: noop, freePicks: 1 }} />,
   },
   {
     // Draft rules: the build is full, so taking a card asks which one to give up.

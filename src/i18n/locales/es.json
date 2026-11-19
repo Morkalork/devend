@@ -1011,8 +1011,6 @@
     "offers": "Planificación de sprint"
   },
   "cardDraft": {
-    "freePick": "Elige una carta gratis, o pasa y cobra {{hours}}h.",
-    "freeTaken": "Carta gratis elegida. Otra carta cuesta horas.",
     "reroll": "Cambiar {{hours}}h",
     "build": "Mazo: {{held}} de {{slots}} cartas",
     "buildFull": "Mazo lleno ({{held}} de {{slots}}): una carta nueva sustituye a otra.",
@@ -1030,15 +1028,17 @@
     "replaceTitle": "Elegir {{name}}",
     "replaceHint": "Tu mazo está lleno. Toca la carta que entregas a cambio. Su + se va con ella.",
     "replaceRow": "Entregar {{name}}",
-    "skipAndStart": "Pasar (+{{hours}}h), empezar nivel {{level}}",
-    "freePicks": "Elige {{count}} cartas gratis, o pasa y cobra {{hours}}h.",
     "contractTitle": "Contrato: {{name}}",
-    "contractReward": "Si lo ganas, la siguiente tienda reparte dos cartas gratis de entre las poco comunes y las raras.",
+    "contractReward": "Gánalo, y la siguiente tienda reparte una carta gratis entre las poco comunes y raras.",
     "cards": "Cartas",
     "picksTitle": "Tus elecciones",
     "picksEmpty": "Aún no has elegido nada. Toca una carta para quedártela.",
     "takeAndStart_one": "Elegir {{count}} carta y empezar nivel {{level}}",
-    "takeAndStart_other": "Elegir {{count}} cartas y empezar nivel {{level}}"
+    "takeAndStart_other": "Elegir {{count}} cartas y empezar nivel {{level}}",
+    "earned": "Cada carta cuesta horas. Un buen mapa paga más de una.",
+    "contractFree_one": "Contrato ganado: elige {{count}} carta gratis entre las más raras.",
+    "contractFree_other": "Contrato ganado: elige {{count}} cartas gratis entre las más raras.",
+    "contractTaken": "Carta del contrato elegida. Otra carta cuesta horas."
   },
   "content": {
     "upgrades": {

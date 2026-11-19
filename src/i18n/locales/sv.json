@@ -1011,8 +1011,6 @@
     "offers": "Sprintplanering"
   },
   "cardDraft": {
-    "freePick": "Ta ett kort gratis, eller hoppa över för {{hours}}h.",
-    "freeTaken": "Gratiskortet är taget. Ett till kort kostar timmar.",
     "reroll": "Nya kort {{hours}}h",
     "build": "Bygge: {{held}} av {{slots}} kort",
     "buildFull": "Bygget är fullt ({{held}} av {{slots}}): ett nytt kort ersätter ett annat.",
@@ -1030,15 +1028,17 @@
     "replaceTitle": "Ta {{name}}",
     "replaceHint": "Ditt bygge är fullt. Tryck på kortet du ger upp. Kortets + följer med.",
     "replaceRow": "Ge upp {{name}}",
-    "skipAndStart": "Hoppa över (+{{hours}}h), starta nivå {{level}}",
-    "freePicks": "Ta {{count}} kort gratis, eller hoppa över för {{hours}}h.",
     "contractTitle": "Kontrakt: {{name}}",
-    "contractReward": "Vinn den, så delar nästa butik ut två gratiskort bland de ovanliga och sällsynta.",
+    "contractReward": "Vinn den, så delar nästa butik ut ett gratis kort bland de ovanliga och sällsynta.",
     "cards": "Kort",
     "picksTitle": "Dina val",
     "picksEmpty": "Inget valt ännu. Tryck på ett kort för att ta det.",
     "takeAndStart_one": "Ta {{count}} kort och starta nivå {{level}}",
-    "takeAndStart_other": "Ta {{count}} kort och starta nivå {{level}}"
+    "takeAndStart_other": "Ta {{count}} kort och starta nivå {{level}}",
+    "earned": "Varje kort kostar timmar. En bra bana betalar för fler än ett.",
+    "contractFree_one": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
+    "contractFree_other": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
+    "contractTaken": "Kontraktskortet taget. Ett kort till kostar timmar."
   },
   "content": {
     "upgrades": {

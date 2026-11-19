@@ -12,8 +12,13 @@
 #     the upgrade sweep's rule is that a card must beat twice the noise
 #     (UPGRADE_SWEEP_REPORT.md), and a 5% nudge does not.
 #   - `tier` is the card's RARITY here: Junior common, Senior uncommon,
-#     Principal rare. It prices a card bought with hours, as in the classic
-#     store.
+#     Principal rare. It prices the card, and EVERY card is bought: the store
+#     deals nothing free (a won contract's store deals one). The anchor below
+#     is an ORDINARY map's pay rather than the classic store's good map
+#     (upgradePricing.ts measured flawless 47h, good 34h, ordinary 16h,
+#     scrappy 6h): 23 x 0.7 puts a common at 16h, so a normal run affords one
+#     card a map, a good map affords two and a flawless one three. More cards
+#     are earned on the board, which is the rule the free card had undone.
 #   - `downside:` is the line a strong card charges you, shown in red.
 #   - `certCredit:` names the certificate chase a card counts toward, by the
 #     classic id the certificate names.
@@ -21,7 +26,7 @@
 # No em-dashes in name, description or downside (CLAUDE.md).
 pricing:
   minCost: 2
-  anchorHours: 48
+  anchorHours: 23
   blockInflation: 1.15
   tierFactor:
     Junior: 0.7

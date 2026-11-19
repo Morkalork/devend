@@ -289,7 +289,7 @@ export const analytics = {
    * card given up to make room, `contract` a hard map taken on (cardId is
    * the contract's id).
    */
-  draftChoice: (p: { level: number; action: 'take' | 'skip' | 'reroll' | 'drop' | 'contract'; cardId: string | null }) =>
+  draftChoice: (p: { level: number; action: 'take' | 'reroll' | 'drop' | 'contract'; cardId: string | null }) =>
     track('draft_choice', p),
 
   /** Player took (or skipped) a Sprint Planning offer at the run start. */

@@ -23,8 +23,13 @@ export interface Contract {
 
 /** The first map a contract may be offered ON: the early maps are still teaching. */
 export const CONTRACT_MIN_LEVEL = 4;
-/** Free cards at the store after a contracted map is won. */
-export const CONTRACT_FREE_PICKS = 2;
+/**
+ * Free cards at the store after a contracted map is won: the one free card a
+ * store ever deals. It was two while an ordinary store also dealt one free;
+ * now every ordinary card is bought, the contract is how a card is earned
+ * on the board rather than with hours, and one is the whole point.
+ */
+export const CONTRACT_FREE_PICKS = 1;
 
 /**
  * The contract offered for the map about to be played, or null: none before

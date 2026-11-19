@@ -1905,8 +1905,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setContractReward(false);
   }, [currentLevelIndex]);
 
-  /** Draft rules: hours in (skipping the card) or out (a reroll). */
-  const handleDraftHours = useCallback((hours: number, action: 'skip' | 'reroll') => {
+  /** Draft rules: hours out, for a reroll. */
+  const handleDraftHours = useCallback((hours: number, action: 'reroll') => {
     analytics.draftChoice({ level: currentLevelIndex + 1, action, cardId: null });
     setTotalScore(prev => Math.max(0, prev + hours));
     if (hours < 0) {

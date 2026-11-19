@@ -1,6 +1,6 @@
 # CARDS_PLAN.md
 
-The redo of the upgrades as a card draft. Status: **phases 1 to 5 built**;
+The redo of the upgrades as a card draft. Status: **phases 1 to 6 built**;
 what is still open is listed at the end. Why: the owner's report that "the upgrades don't change the game
 enough" and that the feeling of being handed just the right card (Slay the
 Spire) was missing, and the sweep that measured it (UPGRADE_SWEEP_REPORT.md):
@@ -26,9 +26,9 @@ the run save), because the two read different catalogues:
 | | classic | draft |
 |---|---|---|
 | Catalogue | `public/upgrades.yml` | `public/cards.yml` |
-| After a map | buy what the hours afford | **take one card free**, or skip it for `SKIP_HOURS` |
+| After a map | buy what the hours afford | buy what the hours afford, at **an ordinary map's pay a common card**; a won contract's store deals one free |
 | Build | no limit | `CARD_SLOTS` cards; one more means giving one up |
-| Hours buy | cards | a second card, a reroll (`REROLL_HOURS`, rising per visit), abilities |
+| Hours buy | cards | cards, a reroll (`REROLL_HOURS`, rising per visit), abilities |
 | Ladders | Junior to Wizard | a card and at most one upgrade, its "+" |
 
 New solo runs play the draft. **Admin > "Classic store for new runs"** switches
@@ -80,6 +80,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 3 | `cards.yml`, the two new mechanics, Tenure and Sprint Planning on cards | built |
 | 4 | The sweep run on `cards.yml` and the catalogue tuned from it; card text in es, sv and bn | built |
 | 5 | Contracts (the draft's elite maps), payoff cards for the Flare, Guardrail and Tripwire fences, the draft's own panel wording | built |
+| 6 | The earned store: no free card, every card priced at an ordinary map's pay, a won contract deals one | built |
 
 ## Build record
 
@@ -149,7 +150,37 @@ fences on one map.
 *Wording.* In the draft the store's panel reads "Your picks" and "Cards", and
 the button says what it takes.
 
+**Phase 6: the earned store.** The draft opened as "take one card free a map,
+or skip it for hours", and played, that was too many cards too early: with
+the free card and a second bought when the hours allowed, the build of six was
+full by map 4 and every store after it was a swap, which is a decision about
+what to lose rather than what to build. The owner's rule for the redo: *a
+normal run affords one card a map, and more has to be earned on the board.*
+
+So nothing is free at an ordinary store any more. `SKIP_HOURS` is gone with
+the free card (there is nothing to skip), `freePicks` defaults to none, and the
+contract's payout is **one** free card from the rarer ones rather than two:
+with the ordinary free card gone, one is the whole reward and the only free
+card a store deals. The run's one free card is the Sprint Planning offer
+before map 1, which stays as it was.
+
+The price is what makes the rule true. `cards.yml`'s anchor is **23h** (the
+classic store's is 48): `upgradePricing.ts` measured, through `calculateScore`,
+flawless 47h, good 34h, ordinary 16h, scrappy 6h, and 23 x 0.7 puts a common
+card at 16h, an uncommon at 22h and a rare at 30h. An ordinary map buys one
+common, a good map two, a flawless map three; a scrappy map buys nothing and
+banks toward the next. `blockInflation` is unchanged, so prices still climb
+15% per five maps as a build's pay does. `draftStore.test.ts` pins the common
+card's price to the ordinary figure.
+
+What the bar says changed with it: "Every card costs hours. A good map pays
+for more than one." at an ordinary store, and the contract's line at the one
+after a won contract. In every language.
+
 Still open:
+- the price anchor is set from the pricing note's measured pays, not from a
+  sweep of the draft itself; a sweep that reads hours banked per map under
+  the draft's own cards would settle whether 23 is right;
 - a contracted map does not yet say so on the board itself (the store is the
   only place it is named);
 - a pair run has no draft;

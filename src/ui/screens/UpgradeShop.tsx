@@ -143,7 +143,7 @@ interface UpgradeShopProps {
    */
   /**
    * Draft rules (lib/cardRules.ts, CARDS_PLAN.md). Absent: the classic store.
-   * The first card taken each visit is free, passing on it pays `skipHours`,
+   * Every card is bought with hours (a won contract's store deals one free),
    * a build holds `slots` cards and a further one replaces one of them.
    */
   draft?: DraftStore | null;
@@ -166,13 +166,12 @@ const YELLOW_500 = 0xeab308;
 
 export interface DraftStore {
   slots: number;
-  skipHours: number;
   /** Drop a held card (and its "+") from the build. */
   onDrop: (upgradeId: string) => void;
-  /** Hours in (skipping the free card) or out (a reroll). */
-  onHours: (hours: number, action: "skip" | "reroll") => void;
+  /** Hours out: a reroll. */
+  onHours: (hours: number, action: "reroll") => void;
   nextMap: NextMapInfo | null;
-  /** Free cards this visit: 1, or CONTRACT_FREE_PICKS after a won contract. */
+  /** Free cards this visit: none, or CONTRACT_FREE_PICKS after a won contract. */
   freePicks?: number;
   /** After a won contract: the shelf deals from the uncommon and rare cards. */
   rareShelf?: boolean;
@@ -248,7 +247,7 @@ export function UpgradeShop({
   const [drops, setDrops] = useState<Record<string, string>>({});
   const [replaceFor, setReplaceFor] = useState<UpgradeConfig | null>(null);
   const [contractAccepted, setContractAccepted] = useState(false);
-  const freePicks = Math.max(1, draft?.freePicks ?? 1);
+  const freePicks = Math.max(0, draft?.freePicks ?? 0);
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -327,7 +326,7 @@ export function UpgradeShop({
   // and what a build is made of; the constant card needs no prime position.
   const shelfItems = useMemo(() => [...offeredUpgrades, ...abilityOffers], [abilityOffers, offeredUpgrades]);
 
-  // Draft rules: the FIRST card taken each visit is free, so until one is
+  // Draft rules: a won contract's store deals free cards; until they are
   // taken every card on the shelf is. Abilities are never the free card.
   const freePickIds = draft ? freePickIdsOf(selectedIds, offeredUpgrades, freePicks) : [];
   const freePickKey = freePickIds.join(",");
@@ -421,8 +420,6 @@ export function UpgradeShop({
     if (draft && !closed) {
       // Cards given up first, so the build never holds more than its slots.
       for (const dropped of liveDrops) draft.onDrop(dropped);
-      // Passing on the free card pays hours instead.
-      if (freePickIds.length === 0 && offeredUpgrades.length > 0) draft.onHours(draft.skipHours, "skip");
     }
     // The contract taken for the next map; also spends a won contract's payout.
     if (draft) draft.onContract?.(contractAccepted && draft.contract && !closed ? draft.contract.id : null);
@@ -725,9 +722,6 @@ export function UpgradeShop({
                     <ArcadeText text={t("upgradeShop.hoursValue", { hours: selectedTotalCost })} color={arcadeInk("primary")} size={TEXT.sm} />
                   </View>
                 </>
-              ) : draft && !closed && offeredUpgrades.length > 0 && freePickIds.length === 0 ? (
-                // Passing on the free card is a choice with a price on it.
-                <ArcadeText text={t("cardDraft.skipAndStart", { hours: draft.skipHours, level: completedLevel + 1 })} color={arcadeInk("primary")} size={TEXT.sm} />
               ) : (
                 <ArcadeText text={continueLabel(plan, "store", t)} color={arcadeInk("primary")} size={TEXT.sm} />
               )}
@@ -797,7 +791,7 @@ export function UpgradeShop({
       {/* Every fifth map: one line, not a panel, so the tickets stay in view. */}
       {completedLevel % 5 === 0 && <WaypointBanner level={completedLevel} />}
 
-      {/* Draft rules: the free card, the build's slots and the next map. */}
+      {/* Draft rules: what this visit deals, the build's slots and the next map. */}
       {draft && !closed && (
         <Appear fromY={-8} delay={0.1}>
           <DraftBar
@@ -811,7 +805,6 @@ export function UpgradeShop({
               accepted: contractAccepted,
               onToggle: () => setContractAccepted(a => !a),
             } : null}
-            skipHours={draft.skipHours}
             rerollPrice={nextRerollPrice}
             canReroll={canReroll}
             onReroll={handleReroll}

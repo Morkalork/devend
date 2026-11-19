@@ -27,27 +27,26 @@ interface DraftBarProps {
   /** Slot cards held, after this visit's picks and drops. */
   held: number;
   slots: number;
-  /** Has the free card been taken this visit? */
+  /** Have this visit's free cards (a won contract's) all been taken? */
   freeTaken: boolean;
-  skipHours: number;
   rerollPrice: number;
   canReroll: boolean;
   onReroll: () => void;
   nextMap: NextMapInfo | null;
   accent: number;
-  /** Free cards this visit: one, or more at the store after a won contract. */
+  /** Free cards this visit: none, or the won contract's. */
   freePicks: number;
   /** The contract offered on the next map, already translated; null when there is none. */
   contract: { name: string; description: string; accepted: boolean; onToggle: () => void } | null;
 }
 
 /**
- * The draft's rules for this visit, in three lines: the free card (or what
- * skipping it pays), how full the build is, and what the next map will ask of
- * it. The reroll sits beside the first, because it is the other thing to do
- * with a shelf you do not like.
+ * The draft's rules for this visit, in three lines: what the shelf costs
+ * (every card is bought, unless a won contract dealt one free), how full the
+ * build is, and what the next map will ask of it. The reroll sits beside the
+ * first, because it is the other thing to do with a shelf you do not like.
  */
-export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canReroll, onReroll, nextMap, accent, freePicks, contract }: DraftBarProps) {
+export function DraftBar({ held, slots, freeTaken, rerollPrice, canReroll, onReroll, nextMap, accent, freePicks, contract }: DraftBarProps) {
   const { t } = useTranslation();
   const full = held >= slots;
   return (
@@ -55,12 +54,12 @@ export function DraftBar({ held, slots, freeTaken, skipHours, rerollPrice, canRe
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <View layout={{ flex: 1 }}>
           <Label
-            text={freeTaken
-              ? t("cardDraft.freeTaken")
-              : freePicks > 1
-                ? t("cardDraft.freePicks", { count: freePicks, hours: skipHours })
-                : t("cardDraft.freePick", { hours: skipHours })}
-            size={TEXT.sm} weight="600" color={freeTaken ? ROLE.muted : ROLE.ink} wrap
+            text={freePicks <= 0
+              ? t("cardDraft.earned")
+              : freeTaken
+                ? t("cardDraft.contractTaken")
+                : t("cardDraft.contractFree", { count: freePicks })}
+            size={TEXT.sm} weight="600" color={freePicks > 0 && freeTaken ? ROLE.muted : ROLE.ink} wrap
           />
         </View>
         <Pressable
