@@ -212,26 +212,8 @@ upgrades:
   description: 'A ball can be frozen again the moment it thaws: no cooldown.'
   modifiers:
     freezeNoCooldown: 1
-- id: containment
-  name: Containment
-  tier: Junior
-  unlockLevel: 3
-  icon: lock-keyhole
-  tags: &id005 [lock, freeze]
-  description: Every lock holds the nearest free ball still for 3s.
-  modifiers:
-    lockStunSeconds: 3
-- id: containment_plus
-  name: Containment+
-  tier: Junior
-  unlockLevel: 3
-  tags: *id005
-  upgradeOf: containment
-  description: Every lock holds the nearest free ball still for 5s.
-  modifiers:
-    lockStunSeconds: 2
 - id: golden_handshake
-  paysOff: [acquire_the_mutex, containment]
+  paysOff: [acquire_the_mutex]
   name: Golden Handshake
   tier: Junior
   unlockLevel: 2
@@ -250,7 +232,7 @@ upgrades:
   modifiers:
     overtimePerLock: 2
 - id: batch_commit
-  paysOff: [raise_the_semaphore, containment]
+  paysOff: [raise_the_semaphore]
   name: Batch Commit
   tier: Senior
   unlockLevel: 6
@@ -278,16 +260,6 @@ upgrades:
   description: A ball locks in a pocket up to nearly three times the usual size.
   modifiers:
     lockThresholdBonus: 8
-- id: knowledge_transfer
-  paysOff: [containment]
-  name: Knowledge Transfer
-  tier: Senior
-  unlockLevel: 5
-  icon: book-open
-  tags: [lock, tempo]
-  description: Each lock speeds up your fences by 15% for the rest of the map.
-  modifiers:
-    fenceSpeedPerLock: 0.15
 - id: acquire_the_mutex
   name: Mutex Fence
   tier: Senior
@@ -412,15 +384,6 @@ upgrades:
   modifiers: {}
   grantsFenceType: tripwire
   downside: The first ball to touch a finished Tripwire breaks it.
-- id: ghost_protocol
-  name: Ghost Protocol
-  tier: Senior
-  unlockLevel: 9
-  icon: ghost
-  tags: [tempo, safety]
-  description: A new fence passes through balls for the first quarter second of its growth.
-  modifiers:
-    fenceGraceMs: 250
 - id: defensive_programming
   name: Defensive Programming
   tier: Junior
@@ -458,25 +421,6 @@ upgrades:
   modifiers:
     ballSpeedMultiplier: 0.875
   certCredit: runtime_optimisation_principal
-- id: compression
-  name: Compression
-  tier: Junior
-  unlockLevel: 2
-  icon: memory-stick
-  tags: &id014 [safety]
-  description: All balls are 25% smaller.
-  modifiers:
-    ballSizeMultiplier: 0.75
-  certCredit: memory_footprint_principal
-- id: compression_plus
-  name: Compression+
-  tier: Junior
-  unlockLevel: 2
-  tags: *id014
-  upgradeOf: compression
-  description: All balls are 40% smaller.
-  modifiers:
-    ballSizeMultiplier: 0.8
 - id: fault_tolerance
   name: Fault Tolerance
   tier: Senior
@@ -496,15 +440,6 @@ upgrades:
   description: 'Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. It builds 15% slower.'
   modifiers: {}
   grantsFenceType: guardrail
-- id: load_balancer
-  name: Load Balancer
-  tier: Senior
-  unlockLevel: 5
-  icon: scaling
-  tags: [safety]
-  description: The fastest ball on every map moves 20% slower.
-  modifiers:
-    fastestBallSlowPercent: 20
 - id: scrum_master
   name: Scrum Master
   tier: Junior
@@ -587,16 +522,6 @@ upgrades:
   modifiers: {}
   grantsFenceType: redeploy
   downside: It builds 40% slower.
-- id: moonshot
-  name: Moonshot
-  tier: Junior
-  unlockLevel: 3
-  icon: rocket
-  tags: [risk]
-  description: Push-your-luck payouts and Space Optimization bonuses both pay double.
-  modifiers:
-    pushBonusMultiplier: 2
-    spaceBonusMultiplier: 2
 - id: chaos_engineering
   name: Chaos Engineering
   tier: Senior
@@ -626,16 +551,6 @@ upgrades:
   modifiers:
     scoreMultiplier: 1.2
   certCredit: performance_bonus_principal
-- id: stock_options
-  paysOff: [performance_bonus, technical_debt]
-  name: Stock Options
-  tier: Senior
-  unlockLevel: 6
-  icon: gem
-  tags: [bank]
-  description: Every map can pay 6 more hours than its ceiling.
-  modifiers:
-    overtimeCapBonus: 6
 - id: expense_account
   paysOff: [performance_bonus, technical_debt]
   name: Expense Account
@@ -676,16 +591,6 @@ upgrades:
   modifiers:
     shipEarlySecondsPerBall: 4
     shipEarlyBonusMultiplier: 2
-- id: padded_estimate
-  name: Padded Estimate
-  tier: Junior
-  unlockLevel: 6
-  icon: clipboard-check
-  tags: [bank]
-  description: Every map is scored against two extra fences of par, and beating par pays double.
-  modifiers:
-    parBonus: 2
-    underParBonusMultiplier: 2
 - id: afterburner
   paysOff: [incident_flare]
   name: Afterburner

@@ -2553,14 +2553,6 @@
         "name": "Djupfrysning",
         "description": "En boll kan frysas igen i samma stund som den tinar: ingen väntetid."
       },
-      "containment": {
-        "name": "Inneslutning",
-        "description": "Varje lås håller den närmaste fria bollen stilla i 3s."
-      },
-      "containment_plus": {
-        "name": "Inneslutning+",
-        "description": "Varje lås håller den närmaste fria bollen stilla i 5s."
-      },
       "golden_handshake": {
         "name": "Gyllene handslag",
         "description": "Varje boll du låser ger 2 bonustimmar."
@@ -2580,10 +2572,6 @@
       "loose_coupling_plus": {
         "name": "Lös koppling+",
         "description": "En boll låses i en ficka upp till nästan tre gånger så stor som vanligt."
-      },
-      "knowledge_transfer": {
-        "name": "Kunskapsöverföring",
-        "description": "Varje lås gör dina stängsel 15% snabbare resten av banan."
       },
       "acquire_the_mutex": {
         "name": "Mutex-stängsel",
@@ -2639,10 +2627,6 @@
         "description": "Lägger till snubbeltråden: den byggs 40% snabbare.",
         "downside": "Den första bollen som rör en färdig snubbeltråd bryter den."
       },
-      "ghost_protocol": {
-        "name": "Spökprotokoll",
-        "description": "Ett nytt stängsel går igenom bollar under den första kvartssekunden det växer."
-      },
       "defensive_programming": {
         "name": "Defensiv programmering",
         "description": "Varje bana börjar med en sköld: den första bollen som träffar ett växande stängsel kostar skölden, inte ett liv."
@@ -2659,14 +2643,6 @@
         "name": "Slow motion+",
         "description": "Alla bollar rör sig 30% långsammare."
       },
-      "compression": {
-        "name": "Komprimering",
-        "description": "Alla bollar är 25% mindre."
-      },
-      "compression_plus": {
-        "name": "Komprimering+",
-        "description": "Alla bollar är 40% mindre."
-      },
       "fault_tolerance": {
         "name": "Feltolerans",
         "description": "Ett extra liv, så länge du har kvar det här kortet."
@@ -2674,10 +2650,6 @@
       "add_guardrails": {
         "name": "Skyddsräcke",
         "description": "Lägger till skyddsräcket: en gång per bana kostar en boll genom det stängslet, inte ett liv. Det byggs 15% långsammare."
-      },
-      "load_balancer": {
-        "name": "Lastbalanserare",
-        "description": "Den snabbaste bollen på varje bana rör sig 20% långsammare."
       },
       "scrum_master": {
         "name": "Scrum Master",
@@ -2715,10 +2687,6 @@
         "description": "Lägger till redeploy-stängslet: ta tag i ett färdigt och slunga iväg bollarna framför det.",
         "downside": "Det byggs 40% långsammare."
       },
-      "moonshot": {
-        "name": "Månskott",
-        "description": "Utbetalningar för att utmana ödet och bonusar för utrymmesoptimering ger båda dubbelt."
-      },
       "chaos_engineering": {
         "name": "Kaosteknik",
         "description": "Varje bana med skärvor har minst tre skärvbomber, och brytbara objekt tål en träff mindre."
@@ -2730,10 +2698,6 @@
       "performance_bonus_plus": {
         "name": "Prestationsbonus+",
         "description": "Varje bana ger 50% mer övertid."
-      },
-      "stock_options": {
-        "name": "Aktieoptioner",
-        "description": "Varje bana kan ge 6 timmar mer än sitt tak."
       },
       "expense_account": {
         "name": "Utläggskonto",
@@ -2750,10 +2714,6 @@
       "ship_early": {
         "name": "Leverera tidigt",
         "description": "Fönstren för tidig leverans varar 4s längre per boll, och Tempo ger dubbelt."
-      },
-      "padded_estimate": {
-        "name": "Tilltagen uppskattning",
-        "description": "Varje bana bedöms mot två extra stängsel i par, och att slå par ger dubbelt."
       },
       "afterburner": {
         "name": "Efterbrännare",

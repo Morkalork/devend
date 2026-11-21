@@ -2553,14 +2553,6 @@
         "name": "Congelación profunda",
         "description": "Una bola puede volver a congelarse en cuanto se descongela: sin espera."
       },
-      "containment": {
-        "name": "Contención",
-        "description": "Cada bloqueo deja quieta 3s a la bola libre más cercana."
-      },
-      "containment_plus": {
-        "name": "Contención+",
-        "description": "Cada bloqueo deja quieta 5s a la bola libre más cercana."
-      },
       "golden_handshake": {
         "name": "Apretón de oro",
         "description": "Cada bola que bloqueas paga 2 horas extra."
@@ -2580,10 +2572,6 @@
       "loose_coupling_plus": {
         "name": "Acoplamiento débil+",
         "description": "Una bola se bloquea en un hueco de hasta casi el triple del tamaño habitual."
-      },
-      "knowledge_transfer": {
-        "name": "Transferencia de conocimiento",
-        "description": "Cada bloqueo acelera tus vallas un 15% durante el resto del mapa."
       },
       "acquire_the_mutex": {
         "name": "Valla mutex",
@@ -2639,10 +2627,6 @@
         "description": "Añade la valla trampa: se construye un 40% más rápido.",
         "downside": "La primera bola que toca una valla trampa terminada la rompe."
       },
-      "ghost_protocol": {
-        "name": "Protocolo fantasma",
-        "description": "Una valla nueva atraviesa las bolas durante el primer cuarto de segundo de su crecimiento."
-      },
       "defensive_programming": {
         "name": "Programación defensiva",
         "description": "Cada mapa empieza con un escudo: la primera bola que golpea una valla en crecimiento cuesta el escudo, no una vida."
@@ -2659,14 +2643,6 @@
         "name": "Cámara lenta+",
         "description": "Todas las bolas se mueven un 30% más lento."
       },
-      "compression": {
-        "name": "Compresión",
-        "description": "Todas las bolas son un 25% más pequeñas."
-      },
-      "compression_plus": {
-        "name": "Compresión+",
-        "description": "Todas las bolas son un 40% más pequeñas."
-      },
       "fault_tolerance": {
         "name": "Tolerancia a fallos",
         "description": "Una vida extra, mientras conserves esta carta."
@@ -2674,10 +2650,6 @@
       "add_guardrails": {
         "name": "Valla quitamiedos",
         "description": "Añade la valla quitamiedos: una vez por mapa, una bola que la atraviesa cuesta la valla, no una vida. Se construye un 15% más lento."
-      },
-      "load_balancer": {
-        "name": "Balanceador de carga",
-        "description": "La bola más rápida de cada mapa se mueve un 20% más lento."
       },
       "scrum_master": {
         "name": "Scrum Master",
@@ -2715,10 +2687,6 @@
         "description": "Añade la valla de redespliegue: agarra una terminada y lanza las bolas que tiene delante.",
         "downside": "Se construye un 40% más lento."
       },
-      "moonshot": {
-        "name": "Apuesta lunar",
-        "description": "Los pagos de tentar a la suerte y los bonos de optimización de espacio pagan el doble."
-      },
       "chaos_engineering": {
         "name": "Ingeniería del caos",
         "description": "Cada mapa con fragmentos tiene al menos tres bombas de fragmento, y los objetos rompibles necesitan un golpe menos."
@@ -2730,10 +2698,6 @@
       "performance_bonus_plus": {
         "name": "Bono de rendimiento+",
         "description": "Cada mapa paga un 50% más de horas extra."
-      },
-      "stock_options": {
-        "name": "Opciones sobre acciones",
-        "description": "Cada mapa puede pagar 6 horas más que su tope."
       },
       "expense_account": {
         "name": "Cuenta de gastos",
@@ -2750,10 +2714,6 @@
       "ship_early": {
         "name": "Entrega anticipada",
         "description": "Las ventanas de entrega anticipada duran 4s más por bola, y Tempo paga el doble."
-      },
-      "padded_estimate": {
-        "name": "Estimación inflada",
-        "description": "Cada mapa se puntúa con dos vallas extra de par, y superar el par paga el doble."
       },
       "afterburner": {
         "name": "Postcombustión",

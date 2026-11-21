@@ -62,10 +62,10 @@ The engines, each an enabler and the card that pays it off:
 |---|---|---|
 | Freeze | Feature Freeze, Cold Boot, Cron Job, Bug Squash | Frozen Assets (frozen locks pay triple), Thaw Cycle (a lock refunds a freeze), Deep Freeze (no cooldown) |
 | Ice | Ice Fence | Permafrost (Ice freezes the ball it slows), then every freeze payoff |
-| Lock chain | Containment (a lock holds the nearest ball) | Frozen Assets, Batch Commit, Golden Handshake, Knowledge Transfer |
+| Lock chain | the Mutex and Semaphore fences, Breakpoint | Frozen Assets, Batch Commit, Golden Handshake |
 | Multi-lock | Semaphore Fence, Batch Commit | Golden Handshake, Loose Coupling |
 | Tempo | Fast Compile, Hot Start, Scaffolding | Multithreading, Continuous Delivery, Ship Early |
-| Bank | Performance Bonus, Technical Debt | Stock Options, Compound Interest, Expense Account |
+| Bank | Performance Bonus, Technical Debt | Compound Interest, Expense Account |
 | Fence types | Flare, Guardrail, Tripwire, Redeploy fences | Afterburner, Crash Barrier, Tensioned Wire, Hot Reload (a Redeploy cut throws twice) |
 
 Two keys are new, each with a Playground knob: `iceFreezeSeconds` (Permafrost)
@@ -88,6 +88,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 7 | The pace measured and the draft's own inflation; the contract on the board; Hot Reload for the Redeploy fence; the shelf leans toward payoffs; Daily and pair on the draft; the human pass list | built |
 | 8 | The pick and the shop: one card free after every map, the hours spent at the shop after a boss | built |
 | 9 | The verb cards: Breakpoint, Stash, Refactor, Merge Conflict and Rate Limiter, each a new thing a finger does | built |
+| 10 | The cut: eight cards the player could not feel removed (Ghost Protocol, Knowledge Transfer, Compression, Containment, Load Balancer, Moonshot, Padded Estimate, Stock Options) | built |
 
 ## Build record
 
@@ -366,6 +367,18 @@ languages and a test of the rule. The bot cannot play any of them, which is
 the point: the sweep measures numbers, and these are not numbers. The
 "in the noise" list from phase 7 is where the next cuts come from if the
 catalogue is to stay at about fifty.
+
+**Phase 10: the cut.** Asked for the five most boring cards, the answer was
+the sweep's noise list read against the catalogue: Ghost Protocol (a quarter
+second of fence grace nobody sees), Knowledge Transfer (a ramp that pays
+after the last lock), Compression (pockets scale with the ball, so a smaller
+ball locks no easier), Containment (a three-second hold on a ball on the
+wrong side of the fence) and Load Balancer (one ball a fifth slower, inside
+the ordinary spread), with Moonshot, Padded Estimate and Stock Options as
+the mentions (double a bonus most players never reach). The owner cut all
+eight, "+" riders included. The classic catalogue keeps its versions, so
+their modifier keys stay in the engine; the draft is 47 cards. Soft Launch,
+named as Load Balancer's twin, was not on the list and stays.
 
 Still open:
 - the verb cards have no counter in the top bar: the ticket says the ration
