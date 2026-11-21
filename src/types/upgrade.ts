@@ -101,6 +101,13 @@ export interface UpgradeConfig {
   certCredit?: string;
   /** Draft rules: a line on the card saying what it costs you. Shown in red. */
   downside?: string;
+  /**
+   * Draft rules: the cards this one is the payoff for, by id (CARDS_PLAN.md's
+   * engines). The shelf leans toward a payoff whose enabler the build holds,
+   * and the card says so, which is what makes a pick feel dealt rather than
+   * rolled. Never a "+", and never itself.
+   */
+  paysOff?: string[];
   modifiers: Record<string, number>;
   /**
    * Build scaling: this effect grows with how committed the run is to an

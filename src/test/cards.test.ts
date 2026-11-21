@@ -85,6 +85,32 @@ describe("the catalogue's shape", () => {
   });
 });
 
+describe("what a card pays off", () => {
+  const byId = new Map(CARDS.map(c => [c.id, c]));
+
+  it("names cards that exist, never a + and never itself", () => {
+    const problems: string[] = [];
+    for (const c of CARDS) {
+      for (const id of c.paysOff ?? []) {
+        const target = byId.get(id);
+        if (!target) problems.push(`${c.id} pays off ${id}, which is not a card`);
+        else if (target.upgradeOf) problems.push(`${c.id} pays off ${id}, which is a +`);
+        if (id === c.id) problems.push(`${c.id} pays off itself`);
+      }
+      if (c.upgradeOf && c.paysOff) problems.push(`${c.id} is a + and lists payoffs of its own`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("covers every fence type's payoff, Redeploy included", () => {
+    // The six fence cards each have a card that pays for using them.
+    const fenceCards = CARDS.filter(c => c.grantsFenceType).map(c => c.id);
+    for (const fence of fenceCards) {
+      expect(CARDS.some(c => c.paysOff?.includes(fence)), `no card pays off ${fence}`).toBe(true);
+    }
+  });
+});
+
 describe("every effect is big enough to feel", () => {
   // The sweep's finding: a 5% nudge is noise. A multiplier here moves its
   // number by at least 15%, in either direction.

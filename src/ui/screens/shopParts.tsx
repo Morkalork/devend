@@ -10,8 +10,7 @@ import { ColorMatrixFilter, type Graphics } from "pixi.js";
 import { animate } from "motion";
 // Info directly, not the kit's HoldHint: that is fixed at 0.8 alpha and the card's hint is fainter (opacity-30).
 import {
-  ArrowRight, Check, ChevronDown, ChevronUp, ChevronsUp, Clock, Equal, Flag, Flame, Info as HoldInfoIcon, Lock, SquareKanban, Medal, RefreshCw, X,
-} from "lucide-react";
+  ArrowRight, Check, ChevronDown, ChevronUp, ChevronsUp, Clock, Equal, Flag, Flame, Info as HoldInfoIcon, Lock, SquareKanban, Medal, RefreshCw, X, Link2 } from "lucide-react";
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { Certificate } from "@/types/certificate";
 import { conditionMet, type RunContext } from "@/lib/upgradeConditions";
@@ -204,6 +203,11 @@ interface TicketCardProps {
   onJump: (shelfIndex: number) => void;
   /** Restocked this visit and not yet looked at. */
   fresh?: boolean;
+  /**
+   * Draft cards: the cards this one pays off, named, and whether the build
+   * holds one of them. Null for a card that is nobody's payoff.
+   */
+  paysOff?: { names: string; held: boolean } | null;
   onTap: () => void;
   onHold: () => void;
 }
@@ -236,7 +240,7 @@ const PRIORITY_GLYPH = [ChevronDown, Equal, ChevronUp, ChevronsUp, Flame] as con
  * ability, so it never reads as a fourth upgrade.
  */
 export function TicketCard({
-  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, remainingBudget, blockers, onJump, fresh = false, onTap, onHold,
+  upgrade, model, upgrades, index, shaking, hasDiscount, mapsRemaining, runContext, accent, remainingBudget, blockers, onJump, fresh, paysOff = null, onTap, onHold,
 }: TicketCardProps) {
   const { t } = useTranslation();
   const { inv, isChoice, chosenMember, displayUpgrade, owned, selected, locked, shownPrice, purchasable, certChase, certShown } = model;
@@ -332,6 +336,21 @@ export function TicketCard({
             {/* Draft cards: what a strong card charges you, said in the cost colour. */}
             {upgrade.downside && (
               <Label text={contentText.upgradeDownside(t, upgrade)} size={TEXT.sm} lineHeight={20} weight="600" color={ROLE.cost} wrap />
+            )}
+
+            {/* Draft cards: the card this one is the payoff for. In the hours
+                colour when the build holds it, which is the moment the pick
+                reads as dealt rather than rolled; muted when it does not. */}
+            {paysOff && (
+              <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon icon={Link2} size={14} color={paysOff.held ? ROLE.hours : ROLE.muted} />
+                <View layout={{ flex: 1 }}>
+                  <Label
+                    text={t(paysOff.held ? "cardDraft.paysOffHeld" : "cardDraft.paysOff", { names: paysOff.names })}
+                    size={TEXT.sm} lineHeight={20} weight="600" color={paysOff.held ? ROLE.hours : ROLE.muted} wrap
+                  />
+                </View>
+              </View>
             )}
 
             {/* Labels: the archetype tags, and the situation a conditional upgrade needs. */}

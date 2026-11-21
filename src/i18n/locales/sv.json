@@ -1038,7 +1038,9 @@
     "earned": "Varje kort kostar timmar. En bra bana betalar för fler än ett.",
     "contractFree_one": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
     "contractFree_other": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
-    "contractTaken": "Kontraktskortet taget. Ett kort till kostar timmar."
+    "contractTaken": "Kontraktskortet taget. Ett kort till kostar timmar.",
+    "paysOff": "Betalar sig med {{names}}.",
+    "paysOffHeld": "Betalar sig med {{names}}, som du har."
   },
   "content": {
     "upgrades": {
@@ -2758,6 +2760,10 @@
       "tensioned_wire": {
         "name": "Spänd tråd",
         "description": "En snubbeltråd tål två beröringar till innan den går av. Kräver snubbeltråden."
+      },
+      "hot_reload": {
+        "name": "Omladdning",
+        "description": "Ett Redeploy-staket laddar om en gång, så det kan kastas två gånger innan det är förbrukat. Kräver Redeploy-staketet."
       }
     },
     "contracts": {

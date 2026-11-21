@@ -971,9 +971,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setRunSeedText(runSeed);
     }
     // The run's store rules, fixed here and saved with the run. A pair plays
-    // the classic store: both phones must read one catalogue, and the pair's
-    // store is a shared decision the draft has no screen for yet.
-    setActiveRuleSet(pairRunRef.current ? 'classic' : preferredRuleSet());
+    // the draft on both phones whatever either Admin prefers: both must read
+    // one catalogue, and the store is the host's decision already (the guest
+    // is gated while the host shops and adopts the host's run record, which
+    // carries the picks, the contract and the rule set, at every map start).
+    setActiveRuleSet(pairRunRef.current ? 'draft' : preferredRuleSet());
     // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
@@ -1079,8 +1081,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setRunSeedText(dailySeedText(key));
     dailyKeyRef.current = key;
     setDailyKey(key);
-    // The Daily is one shared run for everyone, so it keeps one rule set.
-    setActiveRuleSet('classic');
+    // The Daily is one shared run for everyone, so it keeps one rule set, and
+    // never the Admin preference: the draft, whose shelf, rerolls and
+    // contracts are all dealt from the run seed.
+    setActiveRuleSet('draft');
 
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -2315,6 +2319,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleDraftContract,
     contracts,
     activeContractId,
+    /** The contract this map plays under, for the board's rule banner. */
+    activeContract: activeContractId ? contracts.find(c => c.id === activeContractId) ?? null : null,
     contractReward,
     /** The run's store rules (lib/cardRules.ts). Read at render; fixed per run. */
     ruleSet: getActiveRuleSet(),

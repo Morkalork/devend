@@ -43,12 +43,15 @@ import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 import { MAP_RULE_VIOLET } from "@/components/game/mapRuleTheme";
 import type { ActiveMapMutator } from "@/types/mapMutator";
-import { Appear, Icon, Label, Pressable, RADIUS, View, hex, tint, useUiScreen, type Layout } from "../kit/ui";
+import type { Contract } from "@/lib/contracts";
+import { Appear, Icon, Label, Pressable, RADIUS, ROLE, View, hex, tint, useUiScreen, type Layout } from "../kit/ui";
 import { ANNOUNCE_MS, mapRuleText } from "./mapRuleModel";
 
 interface MapRuleBannerProps {
-  /** The map's mutator. Nothing renders without one, which is most maps. */
+  /** The map's mutator. Nothing renders without one or a contract, which is most maps. */
   mutator?: ActiveMapMutator | null;
+  /** The contract taken for this map in the store (lib/contracts.ts), if any. */
+  contract?: Contract | null;
   /** Opens the Specs panel, which carries the full explanation. */
   onExplain?: () => void;
   /** Canvas only: where the parent puts the banner's box. */
@@ -63,22 +66,26 @@ const MORPH_S = 0.35;
 /** Tailwind's `sm` breakpoint: the announcement steps up a size from here. */
 const SM = 640;
 
-export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps) {
+export function MapRuleBanner({ mutator, contract, onExplain, layout }: MapRuleBannerProps) {
   const { t } = useTranslation();
   const [announcing, setAnnouncing] = useState(true);
   const wide = useUiScreen().width >= SM;
 
-  // Keyed on the mutator, so a new map announces its rule again rather than
-  // inheriting the previous map's collapsed chip.
+  // Keyed on the mutator and the contract, so a new map announces its rules
+  // again rather than inheriting the previous map's collapsed chip.
   useEffect(() => {
-    if (!mutator) return;
+    if (!mutator && !contract) return;
     setAnnouncing(true);
     const timer = setTimeout(() => setAnnouncing(false), ANNOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [mutator]);
+  }, [mutator, contract]);
 
-  const text = mapRuleText(t, mutator, announcing);
+  const text = mapRuleText(t, mutator, announcing, contract);
   if (!text) return null;
+  // A contract alone wears the store's contract colour, so the board and the
+  // store agree about what it is; with a mutator the rule's violet leads.
+  const INK = mutator ? VIOLET : ROLE.cost;
+  const DETAIL_INK = mutator ? DETAIL : ROLE.ink;
 
   return (
     <View layout={{ alignItems: "center", justifyContent: "center", ...(layout ?? {}) }}>
@@ -95,20 +102,20 @@ export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps
           // Announcing spans the frame, so a hazard rule top and bottom rather
           // than a box, which would read as a second top bar. (The DOM's
           // fade-out-at-the-edges gradient is its dominant colour here.)
-          <Pressable onTap={onExplain} label={text.ariaLabel} layout={{ backgroundColor: tint(VIOLET, 0x1f / 255) }}>
-            <View layout={{ height: 1, backgroundColor: tint(VIOLET, 0x55 / 255) }} />
+          <Pressable onTap={onExplain} label={text.ariaLabel} layout={{ backgroundColor: tint(INK, 0x1f / 255) }}>
+            <View layout={{ height: 1, backgroundColor: tint(INK, 0x55 / 255) }} />
             <View layout={{ alignItems: "center", gap: 4, paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10 }}>
               <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Icon icon={TriangleAlert} size={20} color={VIOLET} />
-                <Label text={text.name} font="display" size={wide ? 18 : 16} weight="900" upper letterSpacing={wide ? 1.8 : 1.6} color={VIOLET} glow={14} />
+                <Icon icon={TriangleAlert} size={20} color={INK} />
+                <Label text={text.name} font="display" size={wide ? 18 : 16} weight="900" upper letterSpacing={wide ? 1.8 : 1.6} color={INK} glow={14} />
               </View>
               {/* WRAPPING rather than truncating: what it does is the clause
                   that stops bent trajectories reading as a bug. */}
               {text.detail && (
-                <Label text={text.detail} wrap align="center" size={wide ? 14 : 12} weight="600" lineHeight={wide ? 19 : 17} color={DETAIL} alpha={0.9} />
+                <Label text={text.detail} wrap align="center" size={wide ? 14 : 12} weight="600" lineHeight={wide ? 19 : 17} color={DETAIL_INK} alpha={0.9} />
               )}
             </View>
-            <View layout={{ height: 1, backgroundColor: tint(VIOLET, 0x55 / 255) }} />
+            <View layout={{ height: 1, backgroundColor: tint(INK, 0x55 / 255) }} />
           </Pressable>
         ) : (
           // The chip is a bordered pill: it has to look like an object, not a heading.
@@ -116,10 +123,10 @@ export function MapRuleBanner({ mutator, onExplain, layout }: MapRuleBannerProps
             flexDirection: "row", alignItems: "center", gap: 8,
             paddingLeft: 10, paddingRight: 10, paddingTop: 4, paddingBottom: 4,
             borderRadius: RADIUS.full, borderWidth: 1,
-            borderColor: tint(VIOLET, 0x77 / 255), backgroundColor: tint(VIOLET, 0x22 / 255),
+            borderColor: tint(INK, 0x77 / 255), backgroundColor: tint(INK, 0x22 / 255),
           }}>
-            <Icon icon={TriangleAlert} size={14} color={VIOLET} />
-            <Label text={text.name} font="display" size={11} weight="700" upper letterSpacing={0.55} color={VIOLET} />
+            <Icon icon={TriangleAlert} size={14} color={INK} />
+            <Label text={text.name} font="display" size={11} weight="700" upper letterSpacing={0.55} color={INK} />
           </Pressable>
         )}
       </Appear>

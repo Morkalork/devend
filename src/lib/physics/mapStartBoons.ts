@@ -37,6 +37,8 @@ export function applyMapStartBoons(game: CanvasGameState, activeModifiers: GameM
   // where a finished fence is given its hit budget.
   game.guardrailExtraShields = Math.max(0, Math.round(activeModifiers.guardrailExtraShields));
   game.fenceExtraHits = Math.max(0, Math.round(activeModifiers.fenceExtraHits));
+  // Hot Reload: read where a Redeploy fence is thrown.
+  game.slingExtraThrows = Math.max(0, Math.round(activeModifiers.slingExtraThrows));
 }
 
 /** Shields granted fresh every map (Defensive Programming, Second Wind). */

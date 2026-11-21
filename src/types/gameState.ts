@@ -403,6 +403,8 @@ export interface CanvasGameState {
   guardrailExtraShields?: number;
   /** Tensioned Wire: touches added to a fence type's hit budget. Set at map start. */
   fenceExtraHits?: number;
+  /** Hot Reload: throws a Redeploy fence has on top of its one. Set at map start. */
+  slingExtraThrows?: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**

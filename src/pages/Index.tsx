@@ -623,6 +623,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 capstone={session.capstone}
+                contract={session.activeContract}
                 runOffer={session.runOffer}
                 scalingReadouts={session.scalingReadouts}
                 runStartIntro={session.runStartIntroPending}

@@ -101,6 +101,7 @@ import {
   Refrigerator,
   ShieldCheck,
   RotateCcw,
+  RefreshCw,
   MousePointerClick,
   Sunrise,
   Scaling,
@@ -176,6 +177,7 @@ export const UPGRADE_ICONS: Record<string, LucideIcon> = {
   refrigerator: Refrigerator,
   'shield-check': ShieldCheck,
   'rotate-ccw': RotateCcw,
+  'refresh-cw': RefreshCw,
   'mouse-pointer-click': MousePointerClick,
   sunrise: Sunrise,
 };

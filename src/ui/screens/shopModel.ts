@@ -100,6 +100,24 @@ export function shelfTagCounts(ownedUpgradeIds: string[], upgrades: UpgradeConfi
  * Picks are tag-weighted toward the player's owned archetypes (weightedSample),
  * plus at most one locked "teaser" if there is room.
  */
+/**
+ * How much likelier a payoff card is on the shelf once the build holds one of
+ * the cards it pays off (`paysOff`, CARDS_PLAN.md). Three: enough that the
+ * card you built toward turns up within a visit or two, not so much that the
+ * shelf stops showing anything else.
+ */
+export const PAYOFF_WEIGHT = 3;
+
+/** The held cards this card is the payoff for, by id. Empty when it pays off nothing held. */
+export function paysOffHeld(u: Pick<UpgradeConfig, "paysOff">, ownedIds: readonly string[]): string[] {
+  return (u.paysOff ?? []).filter(id => ownedIds.includes(id));
+}
+
+/** The shelf's lean toward payoffs: PAYOFF_WEIGHT for a card whose enabler is held, else 1. */
+export function payoffWeight(u: UpgradeConfig, ownedIds: readonly string[]): number {
+  return paysOffHeld(u, ownedIds).length > 0 ? PAYOFF_WEIGHT : 1;
+}
+
 export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFenceTypeIds, shopSlots, lean, noTeaser, rollKey, exclude, rareOnly }: ShelfInput): UpgradeConfig[] {
   // Filter out owned, upgrades not yet unlocked by level progression, and any
   // choice group whose pick is already made (a sibling owned).
@@ -128,13 +146,16 @@ export function rollShelf({ upgrades, ownedUpgradeIds, completedLevel, heldFence
   // level, so everyone opening this shop sees the same offers. Only the roll
   // is shared, not the choices.
   const shelfRng = getRunRng(rollKey ? `shop:${completedLevel}:${rollKey}` : `shop:${completedLevel}`);
-  const offers = weightedSample(unlocked, shopSlots, counts, completedLevel, shelfRng);
+  // The draft's payoff lean: a card that pays off something the build holds
+  // is likelier, so the second half of an engine turns up for the first.
+  const boost = (u: UpgradeConfig) => payoffWeight(u, ownedUpgradeIds);
+  const offers = weightedSample(unlocked, shopSlots, counts, completedLevel, shelfRng, boost);
   // A Specialisation's guaranteed slot: odds are what lean the shelf, a
   // guarantee is what a player can read. The last pick (the least likely the
   // weights made) gives way to a card of the tag when none came up.
   if (lean?.guaranteedSlot && offers.length > 0 && !offers.some(u => u.tags?.includes(lean.tag))) {
     const tagged = unlocked.filter(u => u.tags?.includes(lean.tag) && !offers.includes(u));
-    if (tagged.length > 0) offers[offers.length - 1] = weightedSample(tagged, 1, counts, completedLevel, shelfRng)[0];
+    if (tagged.length > 0) offers[offers.length - 1] = weightedSample(tagged, 1, counts, completedLevel, shelfRng, boost)[0];
   }
   if (!noTeaser && offers.length < shopSlots && locked.length > 0) {
     offers.push(weightedSample(locked, 1, counts, completedLevel, shelfRng)[0]);

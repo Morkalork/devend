@@ -8,6 +8,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createBotGame, plainModifiers, installClock, releaseClock } from "@/lib/bot/headlessGame";
 import { applyFenceSpeedStep, fenceSlows } from "@/lib/physics/fenceTouch";
+import { fireSlingFence, isLoadedSling, slingShape } from "@/lib/physics/slingFence";
+import type { CanvasGameState } from "@/types/gameState";
 import { setRunSeedText } from "@/lib/runRng";
 import type { Ball } from "@/types/game";
 import type { Wall } from "@/lib/wallGeometry";
@@ -105,5 +107,57 @@ describe("the fence payoffs", () => {
     expect(lock).toMatch(/ball\.lockedAtSpeed = ball\.speed;\s*ball\.velocity = \{ x: 0, y: 0 \};/);
     expect(lock).toMatch(/\(b\.lockedAtSpeed \?\? 0\) >= b\.baseSpeed \* FAST_LOCK_FACTOR/);
     expect(lock).toMatch(/mult \* frozenMult \* gravityMult \* fastMult \* lampMult/);
+  });
+});
+
+describe("Hot Reload", () => {
+  // Two segments of one Redeploy cut, and a ball standing in front of them.
+  const slingBoard = (extra: number) => {
+    const a = { id: "a", cutId: "cut-1", fenceTypeId: "redeploy", start: { x: 100, y: 300 }, end: { x: 200, y: 300 }, thickness: 6 } as unknown as Wall;
+    const b = { id: "b", cutId: "cut-1", fenceTypeId: "redeploy", start: { x: 200, y: 300 }, end: { x: 300, y: 300 }, thickness: 6 } as unknown as Wall;
+    const ball = { id: "ball", state: "active", position: { x: 150, y: 260 }, velocity: { x: 0, y: 0 }, speed: 0, baseSpeed: 250 } as unknown as Ball;
+    const game = { walls: [a, b], balls: [ball], slingExtraThrows: extra } as unknown as CanvasGameState;
+    // A pull straight down, so the throw goes up, at the ball.
+    const shape = slingShape(a, { x: 0, y: 120 })!;
+    return { a, b, ball, game, shape };
+  };
+
+  it("is dealt to the board at map start, and off without the card", () => {
+    try {
+      installClock();
+      setRunSeedText("hot-reload");
+      const on = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({ slingExtraThrows: 1 }));
+      expect(on.game.slingExtraThrows).toBe(1);
+      const off = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers());
+      expect(off.game.slingExtraThrows).toBe(0);
+    } finally {
+      releaseClock();
+    }
+  });
+
+  it("without it a Redeploy cut is spent by its one throw, every segment together", () => {
+    const { a, b, game, shape } = slingBoard(0);
+    expect(shape).toBeTruthy();
+    expect(fireSlingFence(game, a, shape)).toBe(true);
+    expect(isLoadedSling(a)).toBe(false);
+    expect(isLoadedSling(b)).toBe(false);
+  });
+
+  it("with it the cut throws once more before it is spent", () => {
+    const { a, b, ball, game, shape } = slingBoard(1);
+    expect(fireSlingFence(game, a, shape)).toBe(true);
+    expect(isLoadedSling(a)).toBe(true);
+    expect(isLoadedSling(b)).toBe(true);
+    // The ball is back in front of the fence for the second throw.
+    ball.position = { x: 150, y: 260 };
+    expect(fireSlingFence(game, b, shape)).toBe(true);
+    expect(isLoadedSling(a)).toBe(false);
+    expect(isLoadedSling(b)).toBe(false);
+  });
+
+  it("is a card in the draft catalogue that pays off the Redeploy fence", () => {
+    const cards = src("../public/cards.yml");
+    expect(cards).toMatch(/- id: hot_reload\n {2}paysOff: \[rolling_redeploy\]/);
+    expect(cards).toMatch(/slingExtraThrows: 1/);
   });
 });

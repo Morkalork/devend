@@ -15,9 +15,10 @@ import {
 import { catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet } from "@/lib/cardRules";
 import { LADDER, byLevel } from "./fixtures/maps";
 import { contractFor, parseContracts, CONTRACT_MIN_LEVEL, CONTRACT_FREE_PICKS } from "@/lib/contracts";
-import { mergePricing, resolveUpgradeCost } from "@/lib/upgradePricing";
+import { inflationForLevel, mergePricing, resolveUpgradeCost } from "@/lib/upgradePricing";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { rollShelf } from "@/ui/screens/shopModel";
+import { rollShelf, payoffWeight, paysOffHeld, PAYOFF_WEIGHT } from "@/ui/screens/shopModel";
+import { setRunSeedText } from "@/lib/runRng";
 
 const CARDS = (yaml.load(readFileSync(resolve(__dirname, "../../public/cards.yml"), "utf8")) as UpgradeData).upgrades;
 const BY_ID = new Map(CARDS.map(c => [c.id, c]));
@@ -48,6 +49,21 @@ describe("every card is bought", () => {
     expect(common).toBeLessThanOrEqual(18);
     expect(Math.floor(34 / common)).toBe(2);
     expect(Math.floor(47 / common)).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps a common card under a good map's pay to the end of the ladder", () => {
+    // The scoring axes are absolute, so an ordinary map pays about the same
+    // at map 30 as at map 3; the classic 1.15 per five maps tripled a common
+    // against that flat pay (the pay sweep in CARDS_PLAN.md phase 7: 0 of 14
+    // wins afforded one at map 29). The draft's own inflation is softer, so
+    // one card an ordinary map holds for the whole run and a good map still
+    // buys two at map 40.
+    const pricing = mergePricing((yaml.load(readFileSync(resolve(__dirname, "../../public/cards.yml"), "utf8")) as UpgradeData).pricing);
+    const common = resolveUpgradeCost(card("fast_compile"), pricing);
+    const late = Math.round(common * inflationForLevel(40, pricing));
+    expect(late).toBeGreaterThan(common);
+    expect(late).toBeLessThanOrEqual(34);
+    expect(Math.floor(47 / late)).toBeGreaterThanOrEqual(1);
   });
 
   it("deals one free card at the store after a won contract, never an ability", () => {
@@ -138,6 +154,33 @@ describe("the build's slots", () => {
   });
 });
 
+describe("the shelf points at payoffs", () => {
+  const withPrereqs = CARDS.map(c => (c.upgradeOf ? { ...c, prerequisites: [c.upgradeOf] } : c));
+  const shelfWith = (owned: string[], key: string) => rollShelf({
+    upgrades: withPrereqs, ownedUpgradeIds: owned, completedLevel: 12, heldFenceTypeIds: [], shopSlots: 3, noTeaser: true, rollKey: key,
+  });
+
+  it("weighs a payoff card up once the build holds what it pays off", () => {
+    expect(paysOffHeld(card("afterburner"), [])).toEqual([]);
+    expect(paysOffHeld(card("afterburner"), ["incident_flare"])).toEqual(["incident_flare"]);
+    expect(payoffWeight(card("afterburner"), [])).toBe(1);
+    expect(payoffWeight(card("afterburner"), ["incident_flare"])).toBe(PAYOFF_WEIGHT);
+    // A card that is nobody's payoff is never leaned on.
+    expect(payoffWeight(card("fast_compile"), ["incident_flare", "feature_freeze"])).toBe(1);
+  });
+
+  it("deals the payoff more often to the build that set it up", () => {
+    setRunSeedText("payoff-lean");
+    let withFlare = 0, without = 0;
+    for (let i = 0; i < 120; i++) {
+      if (shelfWith(["incident_flare"], `k${i}`).some(c => c.id === "afterburner")) withFlare++;
+      if (shelfWith([], `k${i}`).some(c => c.id === "afterburner")) without++;
+    }
+    setRunSeedText(null);
+    expect(withFlare).toBeGreaterThan(without);
+  });
+});
+
 describe("the next map's line", () => {
   it("names what a card can care about on a boss map", () => {
     const boss = byLevel(LADDER, 20) as LevelConfig;
@@ -167,8 +210,11 @@ describe("the rule set", () => {
     const session = readFileSync(resolve(__dirname, "../hooks/useGameSession.ts"), "utf8");
     expect(session).toMatch(/ruleSet: getActiveRuleSet\(\),/);
     expect(session).toMatch(/setActiveRuleSet\(save\.ruleSet \?\? 'classic'\)/);
-    // A pair and the Daily stay on the classic store.
-    expect(session).toMatch(/setActiveRuleSet\(pairRunRef\.current \? 'classic' : preferredRuleSet\(\)\)/);
+    // A pair and the Daily play the draft on every phone, never the Admin
+    // preference, so everyone in one run reads one catalogue.
+    expect(session).toMatch(/setActiveRuleSet\(pairRunRef\.current \? 'draft' : preferredRuleSet\(\)\)/);
+    const daily = session.slice(session.indexOf("const handleStartDaily"));
+    expect(daily.slice(0, 2000)).toMatch(/setActiveRuleSet\('draft'\)/);
     setActiveRuleSet("classic");
     expect(getActiveRuleSet()).toBe("classic");
   });

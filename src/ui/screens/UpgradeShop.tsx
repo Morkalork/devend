@@ -50,6 +50,7 @@ import { PipelineFrame } from "./PipelineFrame";
 import { DraftBar, ReplaceCardModal, type NextMapInfo } from "./draftStoreParts";
 import { rerollPrice } from "@/lib/cardRules";
 import { draftBuild, draftPriceOf, freePickIdsOf, needsReplacement } from "./draftStoreModel";
+import { paysOffHeld } from "./shopModel";
 import type { Contract } from "@/lib/contracts";
 import { continueLabel, pipelineColumnWidth, samplePlan, type BetweenMapPlan } from "./pipelineModel";
 
@@ -338,6 +339,23 @@ export function UpgradeShop({
     [shopDiscountMultiplier, freeOfferId, priceInflation, draft, freePickKey, freePicks],
   );
 
+  // Draft rules: what a payoff card pays off, named, and whether the build
+  // (owned, or picked this visit) holds one of those cards.
+  const paysOffLine = (u: UpgradeConfig): { names: string; held: boolean } | null => {
+    if (!draft || !u.paysOff || u.paysOff.length === 0) {
+      return null;
+    }
+    const named = u.paysOff.map(id => byId.get(id)).filter((c): c is UpgradeConfig => !!c);
+    if (named.length === 0) {
+      return null;
+    }
+    const heldIds = [...allOwnedIds, ...selectedIds];
+    return {
+      names: named.map(c => contentText.upgradeName(t, c)).join(", "),
+      held: paysOffHeld(u, heldIds).length > 0,
+    };
+  };
+
   // Draft rules: the build as it would stand if this visit ended now.
   const byId = useMemo(() => new Map(upgrades.map(u => [u.id, u])), [upgrades]);
   const build = draftBuild(draft ? ownedUpgradeIds : [], byId, selectedIds, offeredUpgrades, drops);
@@ -495,6 +513,7 @@ export function UpgradeShop({
         remainingBudget={remainingBudget}
         blockers={blockers}
         fresh={freshIds.includes(upgrade.id)}
+        paysOff={paysOffLine(upgrade)}
         onJump={i => setJump(prev => ({ index: i, nonce: (prev?.nonce ?? 0) + 1 }))}
         hasDiscount={hasDiscount}
         mapsRemaining={mapsRemaining}

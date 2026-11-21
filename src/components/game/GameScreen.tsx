@@ -51,6 +51,7 @@ import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator, getMapMutators, mutatorById } from '@/lib/mapMutators';
 import { debugMutatorId, devFenceSlots } from '@/lib/devFlags';
 import type { MapMutator } from '@/types/mapMutator';
+import type { Contract } from '@/lib/contracts';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData, type AcceptanceRow } from '@/types/game';
@@ -177,6 +178,8 @@ interface GameScreenProps {
   runOffer?: RunOffer | null;
   /** What build scaling is paying right now (upgradeScaling.ts). */
   scalingReadouts?: ScalingReadout[];
+  /** The contract taken for this map in the store (lib/contracts.ts): named on the board with the mutator. */
+  contract?: Contract | null;
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
   /**
@@ -262,6 +265,7 @@ export function GameScreen({
   capstone = null,
   runOffer = null,
   scalingReadouts = [],
+  contract = null,
   adminMode = false,
   noCards = false,
   showBallSpeeds = false,
@@ -1038,9 +1042,10 @@ export function GameScreen({
                 />
                 {/* The map's rule, centred in the gutter between the top bar and
                     the board's top edge, costing the board no height. */}
-                {mapMutator && (
+                {(mapMutator || contract) && (
                   <MapRuleBanner
                     mutator={mapMutator}
+                    contract={contract}
                     onExplain={() => { setTopPanelFocus('mapRule'); setTopPanelOpen(true); }}
                     layout={{
                       position: "absolute", left: r.x, top: r.y,

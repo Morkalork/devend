@@ -178,9 +178,20 @@ export function fireSlingFence(
   // bounced off a mirror is several Wall segments and one fence; leaving the
   // other segments loaded would hand a bounced cut two throws for the price of
   // one, which is a reward for geometry the player did not choose.
+  //
+  // Hot Reload (cards.yml) gives every Redeploy cut extra throws: the count is
+  // kept on the walls, so the whole cut counts as one and a reload is spent
+  // together too.
   const cut = wall.cutId;
+  const throws = (wall.slingThrows ?? 0) + 1;
+  const spent = throws >= 1 + (game.slingExtraThrows ?? 0);
   for (const w of game.walls) {
-    if (w === wall || (cut != null && w.cutId === cut)) w.slingSpent = true;
+    if (w === wall || (cut != null && w.cutId === cut)) {
+      w.slingThrows = throws;
+      if (spent) {
+        w.slingSpent = true;
+      }
+    }
   }
   return true;
 }

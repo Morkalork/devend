@@ -297,6 +297,11 @@ export interface GameModifiers {
   guardrailExtraShields: number;
   /** Tensioned Wire (cards.yml): extra touches a Tripwire survives before it breaks. */
   fenceExtraHits: number;
+  /**
+   * Hot Reload (cards.yml): extra throws a Redeploy fence has before it is
+   * spent. The payoff for the Redeploy fence, which is thrown once by itself.
+   */
+  slingExtraThrows: number;
   // Additive (sum) — Cold Storage: balls (the fastest first) that start every
   // map frozen, for START_FROZEN_SECONDS.
   startFrozenBalls: number;
@@ -483,6 +488,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   fastLockBonus: 0,
   guardrailExtraShields: 0,
   fenceExtraHits: 0,
+  slingExtraThrows: 0,
   startFrozenBalls: 0,
   scoreBonusPerMissingLife: 0,
 };

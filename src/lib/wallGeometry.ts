@@ -96,6 +96,12 @@ export interface Wall {
    * the count lived anywhere but here.
    */
   slingSpent?: boolean;
+  /**
+   * Throws this cut has made so far. One spends it, unless Hot Reload
+   * (`game.slingExtraThrows`) gives the fence more; `slingSpent` is still the
+   * one flag everything else reads.
+   */
+  slingThrows?: number;
 }
 
 /** Fences the player drew: not board edges, not obstacle boundaries. */

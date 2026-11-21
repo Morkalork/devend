@@ -1038,7 +1038,9 @@
     "earned": "Cada carta cuesta horas. Un buen mapa paga más de una.",
     "contractFree_one": "Contrato ganado: elige {{count}} carta gratis entre las más raras.",
     "contractFree_other": "Contrato ganado: elige {{count}} cartas gratis entre las más raras.",
-    "contractTaken": "Carta del contrato elegida. Otra carta cuesta horas."
+    "contractTaken": "Carta del contrato elegida. Otra carta cuesta horas.",
+    "paysOff": "Rentabiliza {{names}}.",
+    "paysOffHeld": "Rentabiliza {{names}}, que ya tienes."
   },
   "content": {
     "upgrades": {
@@ -2758,6 +2760,10 @@
       "tensioned_wire": {
         "name": "Cable tensado",
         "description": "Una valla trampa aguanta dos toques más antes de romperse. Necesita la valla trampa."
+      },
+      "hot_reload": {
+        "name": "Recarga en caliente",
+        "description": "Una valla Redeploy se recarga una vez, así que puede lanzarse dos veces antes de gastarse. Necesita la valla Redeploy."
       }
     },
     "contracts": {

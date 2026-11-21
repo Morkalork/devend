@@ -32,9 +32,11 @@ the run save), because the two read different catalogues:
 | Ladders | Junior to Wizard | a card and at most one upgrade, its "+" |
 
 New solo runs play the draft. **Admin > "Classic store for new runs"** switches
-back, for comparing the two. A pair run and the Daily stay classic: both phones
-(and every Daily player) must read one catalogue, and the pair's shared store
-has no draft screen yet.
+back, for comparing the two; the toggle is a solo preference only. A pair run
+and the Daily play the draft whatever it says: both phones (and every Daily
+player) must read one catalogue, so neither can follow a per-phone preference,
+and the draft is the game's store now. The pair's shared store is the draft
+screen with the host's picks.
 
 A "+" (`upgradeOf: <card>`) requires its card, rides on it and takes no slot;
 it turns up on the shelf once the card is held. Giving a card up gives up its
@@ -63,6 +65,7 @@ The engines, each an enabler and the card that pays it off:
 | Multi-lock | Semaphore Fence, Batch Commit | Golden Handshake, Loose Coupling |
 | Tempo | Fast Compile, Hot Start, Scaffolding | Multithreading, Continuous Delivery, Ship Early |
 | Bank | Performance Bonus, Technical Debt | Stock Options, Compound Interest, Expense Account |
+| Fence types | Flare, Guardrail, Tripwire, Redeploy fences | Afterburner, Crash Barrier, Tensioned Wire, Hot Reload (a Redeploy cut throws twice) |
 
 Two keys are new, each with a Playground knob: `iceFreezeSeconds` (Permafrost)
 and `freezeUsesPerLock` (Thaw Cycle).
@@ -81,6 +84,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 4 | The sweep run on `cards.yml` and the catalogue tuned from it; card text in es, sv and bn | built |
 | 5 | Contracts (the draft's elite maps), payoff cards for the Flare, Guardrail and Tripwire fences, the draft's own panel wording | built |
 | 6 | The earned store: no free card, every card priced at an ordinary map's pay, a won contract deals one | built |
+| 7 | The pace measured and the draft's own inflation; the contract on the board; Hot Reload for the Redeploy fence; the shelf leans toward payoffs; Daily and pair on the draft; the human pass list | built |
 
 ## Build record
 
@@ -177,13 +181,105 @@ What the bar says changed with it: "Every card costs hours. A good map pays
 for more than one." at an ordinary store, and the contract's line at the one
 after a won contract. In every language.
 
+**Phase 7: the pace, the board, the last engine, and what only a person can
+judge.**
+
+*The pace, measured.* A pay sweep (the bot on the sweep's fifteen sample maps,
+16 seeds each, no cards, 3 lives, the draft catalogue's prices) read the hours
+a won map pays against the common card's price at that map. Pay is the map's
+`calculateScore` through the store's own conversion, so it is what the player
+would see on the shelf:
+
+| map | common at 1.15 | common at 1.06 | wins /16 | median pay | pay range | wins that afford one (at 1.15) |
+|---|---|---|---|---|---|---|
+| 2 | 16 | 16 | 11 | 9 | 9-13 | 0 |
+| 4 | 16 | 16 | 10 | 25 | 18-30 | 10 |
+| 6 | 18 | 17 | 2 | 8 | 7-8 | 0 |
+| 8 | 18 | 17 | 13 | 18 | 14-37 | 9 |
+| 10 | 21 | 18 | 3 | 18 | 12-19 | 0 |
+| 12 | 21 | 18 | 16 | 17 | 10-39 | 5 |
+| 15 | 24 | 19 | 15 | 22 | 16-33 | 5 |
+| 18 | 24 | 19 | 12 | 15 | 6-23 | 0 |
+| 20 | 28 | 20 | 3 | 31 | 25-33 | 2 |
+| 23 | 28 | 20 | 11 | 14 | 11-19 | 0 |
+| 26 | 32 | 21 | 11 | 32 | 15-40 | 6 |
+| 29 | 32 | 21 | 14 | 18 | 11-26 | 0 |
+| 32 | 37 | 23 | 7 | 29 | 17-35 | 0 |
+| 36 | 43 | 24 | 7 | 20 | 17-26 | 0 |
+| 40 | 49 | 26 | 2 | 32 | 25-32 | 0 |
+
+Two readings. First, the bot plays a scrappy-to-ordinary map (it never pushes,
+rarely clears fast, loses lives), and its median pay sits at 15-30h across the
+whole ladder, flat: the scoring axes are absolute, so map 29 pays what map 8
+does. Second, the classic store's 1.15 per five maps was written for a
+catalogue whose bank cards raise pay with the run; against the draft's flat
+pay it tripled a common by map 40, and from map 23 on not one of the bot's
+wins afforded a card. So the 23h anchor stands (it matches an ordinary
+clear, which the bot confirms, and a human's ordinary map pays more than the
+bot's) and `cards.yml` sets its own **`blockInflation: 1.06`**: a common is
+16h at map 4 and about 26h at map 40, under a good map's 34h the whole way,
+so one card an ordinary map holds for the run and a good map buys two at the
+end as at the start. `draftStore.test.ts` pins the late price under 34h. The
+sweep itself was a one-off test file, run and deleted; the numbers are the
+record, and `upgradeSweep.test.ts` is the tool to rerun it with.
+
+*The contract on the board.* A contracted map now wears its contract where
+the mutator banner sits: `MapRuleBanner` takes `contract`, and `mapRuleText`
+names it alone (the store's contract colour, so the two agree) or next to the
+mutator ("Shifting gravity + No fence lost"). It announces for `ANNOUNCE_MS`
+like a mutator and then folds to its chip; the Specs panel still carries the
+full terms. `GameScreen` passes `session.activeContract`, and the gallery has
+it as `MapRuleBanner-contract`.
+
+*Hot Reload: the Redeploy fence's payoff.* Senior, map 9, risk and tempo:
+a Redeploy fence reloads once, so a cut can be thrown twice before it is
+spent. `slingExtraThrows` on `GameModifiers` (the Playground knob "Redeploy
+Extra Throws"), carried onto the board as `game.slingExtraThrows`, and
+`fireSlingFence` counts throws on every segment of the cut, so a bounced cut
+is still one fence with one reload. Every fence type now has its payoff.
+
+*The shelf leans toward payoffs.* `paysOff: [card, ...]` on a card names what
+it is a payoff for, and the shelf roll weights a card `PAYOFF_WEIGHT` (3)
+times its tag weight when one of those is held, in both passes of the roll.
+It is a lean, not a guarantee: the shelf is still a draft. The ticket says
+"Pays off: Rolling Redeploy", and "Pays off a card you hold" when it does, so
+the "right card" feeling has a reason the player can read. Seventeen cards
+carry it (the freeze ladder, the bank chain, Multithreading, Continuous
+Delivery and the fence payoffs among them); `cards.test.ts` checks every id
+named exists and no card pays off itself.
+
+*Daily and pair on the draft.* The Daily plays the draft for everyone, so
+one seed deals one shelf; a pair run plays the draft because the guest is
+gated on the host's record and adopts it, and a per-phone preference could
+have put the two phones on two catalogues. The Admin toggle is a solo
+preference. The pair's store is the draft screen, with the host's picks.
+
+*Stale strings.* "One free card a map" was still in Admin's toggle
+description and in CLAUDE.md; both now say every card is bought.
+
+*What only a person can judge.* The bot's sweep reports a card as unchanged
+when the bot cannot use it, and the paired difference of many cards sits
+under the placebo's, so these go on the human playtest list rather than on
+the "does nothing" list:
+
+- *the bot cannot reach them:* Frozen Assets, Thaw Cycle, Deep Freeze and
+  Permafrost (it never taps a frozen ball with intent), Afterburner, Crash
+  Barrier and Tensioned Wire (it does not throw or aim at a fence type's
+  moment), Fault Tolerance, Scrum Master, Control Freak, Expense Account,
+  Headhunter, Compound Interest (purse, shop and hold decisions it never
+  makes);
+- *in the noise:* Compression, Containment, Cron Job, Ghost Protocol,
+  Knowledge Transfer, Moonshot, and the +1s and +5% "+" cards generally: a
+  change the simulation cannot tell from balls 0.1% slower may still be one
+  a player feels, or may be a card to cut.
+
+The question for each is the same: after ten maps with it, did the build play
+differently, and did the player know why. That is a playtest, not a sweep.
+
 Still open:
-- the price anchor is set from the pricing note's measured pays, not from a
-  sweep of the draft itself; a sweep that reads hours banked per map under
-  the draft's own cards would settle whether 23 is right;
-- a contracted map does not yet say so on the board itself (the store is the
-  only place it is named);
-- a pair run has no draft;
 - no boss or authored map has been changed: contracts are the build test, and
   the ladder's own maps are as they were;
-- the Redeploy fence has no payoff card.
+- the human pass above has not been played yet; a card on the "in the noise"
+  list that a playtest cannot feel either should be cut or made bigger;
+- the pay sweep measures the bot; a human pay per map, read from the saved
+  runs once there are some, is the number to re-anchor on.

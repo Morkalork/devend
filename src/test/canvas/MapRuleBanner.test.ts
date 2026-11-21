@@ -32,6 +32,25 @@ describe("the map rule banner", () => {
   it("renders nothing at all on an ordinary map", () => {
     expect(mapRuleText(t, null, true)).toBeNull();
     expect(mapRuleText(t, undefined, false)).toBeNull();
+    expect(mapRuleText(t, null, true, null)).toBeNull();
+  });
+
+  const CONTRACT = {
+    id: "hotfix_friday", name: "Hotfix Friday",
+    description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 },
+  };
+
+  it("names a contract taken in the store, alone or beside the mutator", () => {
+    // The draft's elite-map rule used to be named nowhere but the store.
+    const alone = mapRuleText(t, null, true, CONTRACT)!;
+    expect(alone.name).toBe("Hotfix Friday");
+    expect(alone.detail).toMatch(/30% faster/);
+    expect(alone.ariaLabel).toMatch(/contract/i);
+    expect(mapRuleText(t, null, false, CONTRACT)!.detail).toBeNull();
+    const both = mapRuleText(t, GRAVITY, true, CONTRACT)!;
+    expect(both.name).toBe("Technical Gravity + Hotfix Friday");
+    expect(both.detail).toMatch(/pulled one way/);
+    expect(both.detail).toMatch(/Hotfix Friday: All balls move 30% faster/);
   });
 
   it("is named for a reader who cannot see the colour", () => {
@@ -71,7 +90,7 @@ describe("the component", () => {
   });
 
   it("announces again on the next map rather than starting collapsed", () => {
-    // The announce timer is keyed on the mutator.
-    expect(src).toMatch(/setAnnouncing\(true\);[\s\S]*?ANNOUNCE_MS\);[\s\S]*?\}, \[mutator\]\);/);
+    // The announce timer is keyed on the mutator and the contract.
+    expect(src).toMatch(/setAnnouncing\(true\);[\s\S]*?ANNOUNCE_MS\);[\s\S]*?\}, \[mutator, contract\]\);/);
   });
 });

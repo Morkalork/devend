@@ -74,9 +74,9 @@ emulated 2022 phones in CI, and on real phones in Firebase Test Lab, and
 **LATE_GAME_PLAN.md** for the plan and build record of the late game's
 continued innovation (maps 30-45: the Autoscaler and Feature Flag balls, the
 late mutators, the reshaped bosses, the late palettes and clocks), and
-**CARDS_PLAN.md** for the redo of the upgrades as a card draft (one free card a
-map, a build of six, `public/cards.yml`; the classic store and `upgrades.yml`
-remain behind an Admin toggle), and
+**CARDS_PLAN.md** for the redo of the upgrades as a card draft (every card
+bought at an ordinary map's pay, a build of six, `public/cards.yml`; the
+classic store and `upgrades.yml` remain behind an Admin toggle), and
 **UPGRADE_SWEEP_REPORT.md** for what each upgrade measurably changes when the bot
 plays it (and `src/test/upgradeSweep.test.ts`, the opt-in sweep that made it), and
 **PLAY_RELEASE_PLAN.md** for the first Play release (an invite-only beta): the

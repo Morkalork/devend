@@ -20,6 +20,9 @@
 #     card a map, a good map affords two and a flawless one three. More cards
 #     are earned on the board, which is the rule the free card had undone.
 #   - `downside:` is the line a strong card charges you, shown in red.
+#   - `paysOff:` names the cards this one is the payoff for (the engines in
+#     CARDS_PLAN.md). The shelf leans toward a payoff whose enabler the build
+#     holds, and the card says it pays off something you hold.
 #   - `certCredit:` names the certificate chase a card counts toward, by the
 #     classic id the certificate names.
 #
@@ -27,7 +30,14 @@
 pricing:
   minCost: 2
   anchorHours: 23
-  blockInflation: 1.15
+  # Softer than the classic store's 1.15. With nothing dealt free, a card is
+  # paid for out of map pay alone, and the scoring axes are absolute: an
+  # ordinary map pays about the same at 30 as at 3. 1.15 tripled a common card
+  # by map 40 against that flat pay (measured: the bot's median map paid for a
+  # common on 10 of 10 wins at map 4 and 0 of 14 at map 29). 1.06 takes a
+  # common from 16h to about 26h by map 40, under a good map's 34h the whole
+  # way, so one card an ordinary map stays the normal rate to the end.
+  blockInflation: 1.06
   tierFactor:
     Junior: 0.7
     Senior: 0.95
@@ -143,6 +153,7 @@ upgrades:
   modifiers:
     autoFreezeDuration: 2
 - id: frozen_assets
+  paysOff: [feature_freeze, cold_boot, cron_job, bug_squash, permafrost]
   name: Frozen Assets
   tier: Senior
   unlockLevel: 5
@@ -152,6 +163,7 @@ upgrades:
   modifiers:
     frozenLockBonus: 3
 - id: thaw_cycle
+  paysOff: [feature_freeze]
   name: Thaw Cycle
   tier: Principal
   unlockLevel: 8
@@ -170,6 +182,7 @@ upgrades:
   modifiers: {}
   grantsFenceType: ice
 - id: permafrost
+  paysOff: [cold_storage_ice]
   name: Permafrost
   tier: Principal
   unlockLevel: 9
@@ -188,6 +201,7 @@ upgrades:
   modifiers:
     iceFreezeSeconds: 1.5
 - id: deep_freeze
+  paysOff: [feature_freeze, cron_job]
   name: Deep Freeze
   tier: Principal
   unlockLevel: 10
@@ -215,6 +229,7 @@ upgrades:
   modifiers:
     lockStunSeconds: 2
 - id: golden_handshake
+  paysOff: [acquire_the_mutex, containment]
   name: Golden Handshake
   tier: Junior
   unlockLevel: 2
@@ -233,6 +248,7 @@ upgrades:
   modifiers:
     overtimePerLock: 2
 - id: batch_commit
+  paysOff: [raise_the_semaphore, containment]
   name: Batch Commit
   tier: Senior
   unlockLevel: 6
@@ -242,6 +258,7 @@ upgrades:
   modifiers:
     simultaneousLockBonus: 1
 - id: loose_coupling
+  paysOff: [raise_the_semaphore]
   name: Loose Coupling
   tier: Senior
   unlockLevel: 2
@@ -260,6 +277,7 @@ upgrades:
   modifiers:
     lockThresholdBonus: 8
 - id: knowledge_transfer
+  paysOff: [containment]
   name: Knowledge Transfer
   tier: Senior
   unlockLevel: 5
@@ -326,6 +344,7 @@ upgrades:
     instantFencesPerMap: 2
   certCredit: hot_start_architect
 - id: multithreading
+  paysOff: [fast_compile, hot_start]
   name: Multithreading
   tier: Senior
   unlockLevel: 6
@@ -345,6 +364,7 @@ upgrades:
   modifiers:
     additionalConcurrentFences: 1
 - id: continuous_delivery
+  paysOff: [fast_compile, scaffolding]
   name: Continuous Delivery
   tier: Senior
   unlockLevel: 7
@@ -605,6 +625,7 @@ upgrades:
     scoreMultiplier: 1.2
   certCredit: performance_bonus_principal
 - id: stock_options
+  paysOff: [performance_bonus, technical_debt]
   name: Stock Options
   tier: Senior
   unlockLevel: 6
@@ -614,6 +635,7 @@ upgrades:
   modifiers:
     overtimeCapBonus: 6
 - id: expense_account
+  paysOff: [performance_bonus, technical_debt]
   name: Expense Account
   tier: Junior
   unlockLevel: 3
@@ -632,6 +654,7 @@ upgrades:
   modifiers:
     extraShopItems: 1
 - id: compound_interest
+  paysOff: [performance_bonus, technical_debt]
   name: Compound Interest
   tier: Senior
   unlockLevel: 5
@@ -641,6 +664,7 @@ upgrades:
   modifiers:
     shopInterestPercent: 8
 - id: ship_early
+  paysOff: [fast_compile, hot_start, scaffolding]
   name: Ship Early
   tier: Senior
   unlockLevel: 10
@@ -661,6 +685,7 @@ upgrades:
     parBonus: 2
     underParBonusMultiplier: 2
 - id: afterburner
+  paysOff: [incident_flare]
   name: Afterburner
   tier: Senior
   unlockLevel: 9
@@ -670,6 +695,7 @@ upgrades:
   modifiers:
     fastLockBonus: 2
 - id: crash_barrier
+  paysOff: [add_guardrails]
   name: Crash Barrier
   tier: Senior
   unlockLevel: 6
@@ -679,6 +705,7 @@ upgrades:
   modifiers:
     guardrailExtraShields: 2
 - id: tensioned_wire
+  paysOff: [hotfix_tripwire]
   name: Tensioned Wire
   tier: Senior
   unlockLevel: 9
@@ -687,3 +714,13 @@ upgrades:
   description: A Tripwire survives two more touches before it breaks. Needs the Tripwire fence.
   modifiers:
     fenceExtraHits: 2
+- id: hot_reload
+  paysOff: [rolling_redeploy]
+  name: Hot Reload
+  tier: Senior
+  unlockLevel: 9
+  icon: refresh-cw
+  tags: [risk, tempo]
+  description: A Redeploy fence reloads once, so it can be thrown twice before it is spent. Needs the Redeploy fence.
+  modifiers:
+    slingExtraThrows: 1

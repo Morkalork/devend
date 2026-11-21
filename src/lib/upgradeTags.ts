@@ -68,9 +68,11 @@ export function weightedSample(
   counts: Map<string, number>,
   completedLevel?: number,
   rng: () => number = Math.random,
+  /** A further multiplier per card: the draft's payoff lean (shopModel.payoffWeight). */
+  boost: (u: UpgradeConfig) => number = () => 1,
 ): UpgradeConfig[] {
   const weightOf = (u: UpgradeConfig) =>
-    tagWeight(u, counts) * (completedLevel !== undefined ? unlockRecencyWeight(u, completedLevel) : 1);
+    tagWeight(u, counts) * (completedLevel !== undefined ? unlockRecencyWeight(u, completedLevel) : 1) * boost(u);
   const pool = [...items];
   const picked: UpgradeConfig[] = [];
   while (picked.length < n && pool.length > 0) {

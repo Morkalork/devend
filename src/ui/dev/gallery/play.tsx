@@ -198,6 +198,15 @@ export const entries: GalleryEntry[] = [
     ),
   },
   {
+    // A contract alone: the draft's elite-map rule, in the store's contract colour.
+    id: "MapRuleBanner-contract", group: "play", render: () => (
+      <MapRuleBanner
+        contract={{ id: "hotfix_friday", name: "Hotfix Friday", description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 } }}
+        onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(), width: 390, height: 150 }}
+      />
+    ),
+  },
+  {
     id: "MapRuleBanner-narrow", group: "play", render: () => (
       <InLocale lng="es">
         <MapRuleBanner mutator={GRAVITY} onExplain={noop} layout={{ position: "absolute", left: 0, top: topBarHeight(), width: 320, height: 110 }} />
