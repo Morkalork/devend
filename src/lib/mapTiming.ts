@@ -6,8 +6,9 @@
  * lives (see evaluateWinConditions). The on-screen readout reuses the Ship
  * Early countdown bar (ShipEarlyBar), which drains over this same limit.
  *
- * Levels 1..TIME_LIMIT_EXEMPT_MAX_LEVEL are the tutorial band: no time limit,
- * and (deliberately) no Ship Early bonus either, so early play stays pressure
+ * Levels 1..TIME_LIMIT_EXEMPT_MAX_LEVEL are the tutorial band: no default time
+ * limit (a map may still author its own), and (deliberately) no Ship Early
+ * bonus either, so early play stays pressure
  * free while the game is still teaching the basics.
  */
 import type { LevelConfig } from '@/types/level';
@@ -41,9 +42,12 @@ export function getMapTimeLimit(
   level: Pick<LevelConfig, 'timeLimit'>,
   levelNumber: number,
 ): number | null {
-  if (isTimingExempt(levelNumber)) return null;
+  // An authored timer is the map's own design and is used as written, in the
+  // tutorial band too: the brick ladder's second map is thirty seconds on
+  // purpose (BRICKS_PLAN.md). The band only spares a map the DEFAULT clock.
   const t = level.timeLimit;
-  if (typeof t === 'number' && t > 0) return t; // authored timer, used as-is
+  if (typeof t === 'number' && t > 0) return t;
+  if (isTimingExempt(levelNumber)) return null;
   const steps = Math.floor((levelNumber - 1) / TIMER_RAMP_EVERY_MAPS);
   return Math.max(MIN_MAP_TIME_LIMIT, DEFAULT_MAP_TIME_LIMIT - steps * TIMER_RAMP_STEP_SECONDS);
 }

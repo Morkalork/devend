@@ -17,7 +17,7 @@
  * fails, and that is the point: the failure is the conversation about whether
  * the change was intended.
  *
- * THE LADDER IS TEN MAPS while acts II-IV are rebuilt, so the pinned numbers
+ * THE ARCHIVE IS TEN MAPS while acts II-IV are rebuilt, so the pinned numbers
  * describe act I on its own and the unused list below is twenty names long.
  * That list is not a backlog of bugs, it is the rebuild's checklist: every
  * mechanic the engine has and the ladder has not placed yet. A name coming off
@@ -32,9 +32,9 @@ import {
   MECHANICS, ACTS, mechanicSpread, spreadWarnings, actOf, MIN_HEADLINE_MAPS,
 } from "@/lib/admin/mechanicSpread";
 import type { LevelConfig } from "@/types/level";
-import { LADDER, LADDER_END, ENGINE_MAPS } from "./fixtures/maps";
+import { ARCHIVE, ARCHIVE_END, ENGINE_MAPS } from "./fixtures/maps";
 
-const LEVELS = LADDER;
+const LEVELS = ARCHIVE;
 
 const use = (key: string) => mechanicSpread(LEVELS).find(m => m.key === key)!;
 
@@ -44,16 +44,16 @@ describe("the ladder itself", () => {
     // map per number, so this is the assumption stated out loud.
     //
     // The LENGTH is no longer pinned - the ladder grows a map at a time while
-    // acts II-IV are rebuilt - but its SHAPE is: 1 to LADDER_END with nothing
+    // acts II-IV are rebuilt - but its SHAPE is: 1 to ARCHIVE_END with nothing
     // missing and nothing doubled. A rebuilt map landing as 12 while 11 is
     // still unwritten would leave a hole a run walks straight into.
     const numbers = LEVELS.map(l => l.level);
     expect(new Set(numbers).size, "two maps share a level number")
       .toBe(LEVELS.length);
     expect(Math.min(...numbers)).toBe(1);
-    expect(Math.max(...numbers)).toBe(LADDER_END);
-    expect(LEVELS.length, `a level number is missing below ${LADDER_END}`)
-      .toBe(LADDER_END);
+    expect(Math.max(...numbers)).toBe(ARCHIVE_END);
+    expect(LEVELS.length, `a level number is missing below ${ARCHIVE_END}`)
+      .toBe(ARCHIVE_END);
   });
 
   it("puts every level in exactly one act", () => {
@@ -69,7 +69,7 @@ describe("the ladder itself", () => {
     // The acts still describe the whole plan, so acts II-IV are declared and
     // hold nothing. Naming that here means a map appearing in an act before
     // the act is designed shows up as a failure rather than as a surprise.
-    for (const a of ACTS.filter(a => a.from > LADDER_END)) {
+    for (const a of ACTS.filter(a => a.from > ARCHIVE_END)) {
       expect(LEVELS.filter(l => l.level >= a.from && l.level <= a.to),
         `act ${a.name} is not built yet but has maps in it`).toEqual([]);
     }

@@ -30,7 +30,7 @@ import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-const RAW = readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8");
+const RAW = readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8");
 const LEVELS = (yaml.load(RAW) as LevelData).levels as LevelConfig[];
 
 describe("an area on a map that states its own win", () => {

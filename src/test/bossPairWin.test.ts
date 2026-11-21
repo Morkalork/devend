@@ -29,7 +29,7 @@ import { ENGINE_MAPS } from "./fixtures/maps";
 import { noSmashes } from "@/lib/destructibleClass";
 
 /**
- * One map per level number, the LADDER's where both sets carry one. The retired
+ * One map per level number, the ARCHIVE's where both sets carry one. The retired
  * level-20 is the fixture this file was written against; the ladder's level-20
  * is the same fight rebuilt, and reading both would count one boss twice and
  * then find the two "identical". ENGINE_MAPS lists the ladder first.

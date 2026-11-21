@@ -12,18 +12,18 @@
  * written in 140 characters is the finding.
  */
 import { describe, it, expect } from "vitest";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { premiseProblems, PREMISE_MAX_CHARS } from "@/lib/mapPremise";
 
 describe("a map's premise", () => {
   it("is on every map on the ladder, and is one short sentence", () => {
-    const problems = LADDER.flatMap(l => premiseProblems(l.premise).map(p => `${l.id}: ${p}`));
+    const problems = ARCHIVE.flatMap(l => premiseProblems(l.premise).map(p => `${l.id}: ${p}`));
     expect(problems).toEqual([]);
   });
 
   it("is different on every map, since two maps with one idea are one map", () => {
     const seen = new Map<string, string>();
-    for (const l of LADDER) {
+    for (const l of ARCHIVE) {
       const key = (l.premise ?? "").trim().toLowerCase();
       expect(seen.get(key), `${l.id} states the same premise as ${seen.get(key)}`).toBeUndefined();
       seen.set(key, l.id);

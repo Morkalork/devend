@@ -16,7 +16,7 @@ import { describe, it, expect } from "vitest";
 import {
   createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock,
 } from "@/lib/bot/headlessGame";
-import { LADDER } from "@/test/fixtures/maps";
+import { ARCHIVE } from "@/test/fixtures/maps";
 import {
   resolveWinSpec, isWinMet, evaluateWinCondition, winSpecProblems,
   splitLine, splitAxis, dealtSplit, splitLockCounts, NO_RUN_RULES } from "@/lib/winSpec";
@@ -143,7 +143,7 @@ describe("splitLocks is checked against the map that asks for it", () => {
 });
 
 describe("level 2, the first map to ask for it", () => {
-  const level = LADDER.find(l => l.id === "level-2")!;
+  const level = ARCHIVE.find(l => l.id === "level-2")!;
 
   it("authors the clause instead of a plain lock count", () => {
     const spec = resolveWinSpec(level, NO_RUN_RULES);
@@ -179,7 +179,7 @@ describe("the runtime records where a lock happened", () => {
    * whatever that code did.
    */
   function playLevel2() {
-    const level = LADDER.find(l => l.id === "level-2")!;
+    const level = ARCHIVE.find(l => l.id === "level-2")!;
     const ctx = createBotGame(level, 2, plainModifiers());
     const g = ctx.game as never as {
       balls: { position: { x: number; y: number }; velocity: { x: number; y: number };
@@ -361,7 +361,7 @@ describe("the maps that ask it", () => {
   ];
 
   for (const { id, divider } of MAPS) {
-    const lvl = () => LADDER.find(l => l.id === id)!;
+    const lvl = () => ARCHIVE.find(l => l.id === id)!;
 
     it(`${id} authors the clause, not a plain lock count`, () => {
       const spec = resolveWinSpec(lvl(), NO_RUN_RULES);
@@ -391,7 +391,7 @@ describe("the maps that ask it", () => {
     // The reason this went from one map to several: a mechanic that appears
     // once is a mechanic nobody learns. One in the tutorial band, one in act
     // II (level 4 left in the act I review; see the note on MAPS above).
-    const carriers = LADDER
+    const carriers = ARCHIVE
       .filter(l => resolveWinSpec(l, NO_RUN_RULES).require.some(c => c.kind === "splitLocks"))
       .map(l => l.level)
       .sort((a, b) => a - b);

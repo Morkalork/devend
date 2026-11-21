@@ -15,12 +15,12 @@ import { setRunSeedText } from "@/lib/runRng";
 import { cutWouldBuryArea } from "@/lib/physics/areaReach";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import type { CanvasGameState } from "@/types/gameState";
 
 afterEach(() => releaseClock());
 
-const L3 = byLevel(LADDER, 3)!;
+const L3 = byLevel(ARCHIVE, 3)!;
 
 // Level 3 never rotates, so the box is where map.yml draws it: x 630-855,
 // y 45-270, with its floor (the nook lip) at y 270. One vertical fence down
@@ -75,7 +75,7 @@ describe("sealing the win's zone", () => {
 describe("sealing a zone that is still behind its door", () => {
   // Level 8's box sits behind a curtain. Pinned upright (it rotates from level
   // 4 up) so the doorway is where map.yml draws it: x 437-463, y 345-455.
-  const L8 = { ...byLevel(LADDER, 8)!, neverRotates: true };
+  const L8 = { ...byLevel(ARCHIVE, 8)!, neverRotates: true };
   const SHUT_THE_DOORWAY = [{ start: { x: 450, y: 340 }, end: { x: 450, y: 460 } }];
 
   function board8(balls: Array<{ x: number; y: number }>): CanvasGameState {

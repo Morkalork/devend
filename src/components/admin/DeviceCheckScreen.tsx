@@ -104,7 +104,10 @@ export function DeviceCheckScreen({ run, onExit }: { run: DeviceCheckRun; onExit
   useEffect(() => {
     let live = true;
     Promise.all([
-      fetch('/map.yml').then(r => r.text()),
+      // The archive, not the ladder: the check measures a phone on four maps
+      // chosen for what they cost to draw (DEVICE_CHECK_LEVELS), and those are
+      // the pre-pivot maps. The ladder was started over and does not have them.
+      fetch('/maps-archive.yml').then(r => r.text()),
       loadBallTypes(), loadAbilities(), loadFenceTypes(),
     ]).then(([text]) => {
       if (!live) {

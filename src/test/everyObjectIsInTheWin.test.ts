@@ -17,7 +17,7 @@
  * only shrink, or grow with a reason written beside the entry.
  */
 import { describe, it, expect } from "vitest";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import type { LevelConfig } from "@/types/level";
 
@@ -57,7 +57,7 @@ const GREED_ZONES = ["level-11", "level-18", "level-29"];
 describe("every object is a promise", () => {
   it("counts every kind of breakable a map shows", () => {
     const problems: string[] = [];
-    for (const l of LADDER) {
+    for (const l of ARCHIVE) {
       const spec = resolveWinSpec(l, NO_RUN_RULES);
       const asks = new Set(spec.require
         .filter(c => c.kind === "smashed")
@@ -76,7 +76,7 @@ describe("every object is a promise", () => {
 
   it("keeps every exempted breakable on the board, so the list cannot rot", () => {
     for (const [id, names] of Object.entries(GREED_BREAKABLES)) {
-      const l = LADDER.find(x => x.id === id);
+      const l = ARCHIVE.find(x => x.id === id);
       expect(l, `${id} is gone; take it off the list`).toBeDefined();
       for (const n of names) {
         expect(entities(l!).some(e => e.id === n), `${id} no longer has ${n}`).toBe(true);
@@ -85,7 +85,7 @@ describe("every object is a promise", () => {
   });
 
   it("allows a bonus zone only where it is the map's greed hook", () => {
-    const bonus = LADDER
+    const bonus = ARCHIVE
       .filter(l => (l.coloredAreas ?? []).some(a => a.required === false))
       .map(l => l.id)
       .sort();

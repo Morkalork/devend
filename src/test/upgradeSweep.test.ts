@@ -53,7 +53,7 @@ import type { UpgradeConfig } from "@/types/upgrade";
 import { DEFAULT_BUG_CONFIG } from "@/types/bugs";
 import { DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
 import type { LevelConfig } from "@/types/level";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 
 const ENABLED = process.env.UPGRADE_SWEEP === "1";
 const STACK = process.env.UPGRADE_SWEEP_STACK === "1";
@@ -153,7 +153,7 @@ describe.skipIf(!ENABLED)("upgrade sweep", () => {
       ? process.env.UPGRADE_SWEEP_LEVELS.split(",").map(Number)
       : DEFAULT_LEVELS;
     const levels = levelNumbers
-      .map(n => ({ n, level: byLevel(LADDER, n) }))
+      .map(n => ({ n, level: byLevel(ARCHIVE, n) }))
       .filter((x): x is { n: number; level: LevelConfig } => x.level !== undefined);
 
     const only = process.env.UPGRADE_SWEEP_ONLY?.split(",");

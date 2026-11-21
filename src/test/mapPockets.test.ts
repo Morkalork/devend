@@ -19,7 +19,7 @@
  * shrink: a map whose precision reward lives somewhere else says so here.
  */
 import { describe, it, expect } from "vitest";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { probePockets, LANE_MIN_LENGTH } from "@/lib/admin/pocketProbe";
@@ -55,7 +55,7 @@ const NO_SUPERIOR_NOOK: Record<string, string> = {
 };
 
 describe("every map's authored pocket and lanes", () => {
-  const results = LADDER.map(l => ({ l, p: probe(l) }));
+  const results = ARCHIVE.map(l => ({ l, p: probe(l) }));
 
   it("offers a one-fence superior pocket, or says where its reward is instead", () => {
     const missing = results
@@ -72,7 +72,7 @@ describe("every map's authored pocket and lanes", () => {
       expect(has, `${l.id} has a superior nook now; take it off the list`).toBe(false);
     }
     for (const id of Object.keys(NO_SUPERIOR_NOOK)) {
-      expect(LADDER.some(l => l.id === id), `${id} is gone; take it off the list`).toBe(true);
+      expect(ARCHIVE.some(l => l.id === id), `${id} is gone; take it off the list`).toBe(true);
     }
   });
 

@@ -359,7 +359,7 @@ describe("duplication is gated to level 11 and up", () => {
  */
 describe("every ball-spawning beat in map.yml announces itself", () => {
   const MAP = yaml.load(
-    readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+    readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8"),
   ) as { levels: { id: string; level: number; beats?: MapBeat[] }[] };
 
   it("carries an announce wherever spawnAdds is set", () => {

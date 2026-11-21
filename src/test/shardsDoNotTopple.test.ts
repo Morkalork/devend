@@ -16,7 +16,7 @@ import { createInitialGameData } from "@/lib/initGame";
 import { createBotGame } from "@/lib/bot/headlessGame";
 import { setRunSeedText } from "@/lib/runRng";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import type { LevelConfig, LevelEntity } from "@/types/level";
 
 const brick = (id: string, y: number, extra: Partial<LevelEntity> = {}): LevelEntity => ({
@@ -69,7 +69,7 @@ describe("the stack graph", () => {
 describe("the shipped ladder", () => {
   it("has no hidden topple on any map, on any deal", () => {
     const found: string[] = [];
-    for (const l of LADDER) {
+    for (const l of ARCHIVE) {
       for (let s = 0; s < 12; s++) {
         setRunSeedText(`topple-audit-${s}`);
         const g = createBotGame(l, l.level).game;

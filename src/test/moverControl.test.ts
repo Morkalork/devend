@@ -590,7 +590,7 @@ describe("level 17's wiper", () => {
     // with a rotor; an edit that slid the pivot or widened the sweep would put
     // the arm through the glass it is meant to serve balls into, and nothing
     // else in the suite would notice.
-    const d = yaml.load(readFileSync("public/map.yml", "utf8")) as {
+    const d = yaml.load(readFileSync("public/maps-archive.yml", "utf8")) as {
       levels: { level: number; entities: Record<string, number | string>[] }[];
     };
     const lv = d.levels.find(l => l.level === 17)!;
@@ -633,7 +633,7 @@ describe("level 17's wiper", () => {
   });
 
   it("is a hazard the map does not depend on: nothing in the win mentions it", () => {
-    const d = yaml.load(readFileSync("public/map.yml", "utf8")) as {
+    const d = yaml.load(readFileSync("public/maps-archive.yml", "utf8")) as {
       levels: { level: number; win?: { require?: { kind: string }[] } }[];
     };
     const lv = d.levels.find(l => l.level === 17)!;

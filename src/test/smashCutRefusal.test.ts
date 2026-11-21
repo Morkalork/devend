@@ -37,7 +37,7 @@ import { resolve } from "node:path";
 import {
   createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock,
 } from "@/lib/bot/headlessGame";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 import { cutWouldBurySmashes } from "@/lib/physics/smashReach";
 import { refusalFlare, REFUSAL_FLARE_SECONDS } from "@/lib/rendering/startupPulse";
@@ -169,7 +169,7 @@ describe("on a real board, an ordinary cut is untouched", () => {
   it("lands a fence that buries nothing", () => {
     installClock();
     setRunSeedText("smash-refusal");
-    const level = byLevel(LADDER, 6)!;
+    const level = byLevel(ARCHIVE, 6)!;
     const ctx = createBotGame(level, 6, plainModifiers());
     for (let i = 0; i < 30; i++) stepBot(ctx);
     const game = ctx.game;
@@ -229,7 +229,7 @@ describe("the ladder's counts", () => {
    * win has other lines). A number in a YAML file is exactly the kind of thing
    * that drifts back.
    */
-  const yaml = read("public/map.yml");
+  const yaml = read("public/maps-archive.yml");
 
   it("asks for a real share of the bricks on the maps that have many", () => {
     const levels = yaml.split(/\n {2}- id: level-/).slice(1);

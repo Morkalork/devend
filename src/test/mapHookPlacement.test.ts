@@ -28,7 +28,7 @@ import type { LevelConfig } from "@/types/level";
 import type { Vector2 } from "@/lib/polygon";
 
 const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as { levels: LevelConfig[] }).levels;
 
 interface Box { x0: number; y0: number; x1: number; y1: number; id: string }

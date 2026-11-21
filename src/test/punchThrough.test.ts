@@ -29,7 +29,7 @@ import { describe, it, expect } from "vitest";
 import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock, type BotGame,
 } from "@/lib/bot/headlessGame";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 import {
   ballImpactDamage, punchesThrough, punchingThrough, PUNCH_THROUGH_GRACE_MS,
@@ -101,7 +101,7 @@ function level6(): BotGame {
   installClock();
   setRunSeedText("punch-through");
   // Pinned upright: level 6 rotates, and every coordinate below is authored.
-  const ctx = createBotGame({ ...byLevel(LADDER, 6)!, neverRotates: true }, 6, plainModifiers());
+  const ctx = createBotGame({ ...byLevel(ARCHIVE, 6)!, neverRotates: true }, 6, plainModifiers());
   for (let i = 0; i < 30; i++) stepBot(ctx);
   for (const ball of ctx.game.balls) {
     ball.position = { x: 120, y: 820 };

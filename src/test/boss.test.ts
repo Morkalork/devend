@@ -26,7 +26,7 @@ import yaml from "js-yaml";
 
 /** The real map list, for pinning authored boss numbers. */
 const REAL_LEVELS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+  readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8"),
 ) as { levels: LevelConfig[] }).levels;
 import type { LevelConfig } from "@/types/level";
 import type { Ball } from "@/types/game";

@@ -38,7 +38,7 @@ import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import type { LevelConfig, LevelData } from "@/types/level";
 
 const MAPS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+  readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 const L8 = MAPS.find(l => l.level === 8)!;
 

@@ -21,10 +21,10 @@ import { createBotGame, stepBot } from "@/lib/bot/headlessGame";
 import { runBot } from "@/lib/bot/runBot";
 import { setRunSeedText } from "@/lib/runRng";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import type { LevelConfig } from "@/types/level";
 
-const at = (n: number) => (LADDER as LevelConfig[]).find(l => l.level === n)!;
+const at = (n: number) => (ARCHIVE as LevelConfig[]).find(l => l.level === n)!;
 const mutatorOf = (g: { mapMutator: unknown }) =>
   (g.mapMutator as { id?: string } | null)?.id ?? "none";
 

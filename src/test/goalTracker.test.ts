@@ -21,7 +21,7 @@ import {
   mapGoals, extraGoals, outstandingGoals, goalAtRisk, everyRequirementMet,
 } from "@/lib/goalTracker";
 import { isWinMet, resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 import { noSmashes } from "@/lib/destructibleClass";
 import { everySmashed } from "./fixtures/smashCounts";
@@ -271,7 +271,7 @@ describe("the word CLEAR, which speaks for the whole map", () => {
    * against a shipped map rather than a lookalike. The name below stays L13
    * only in the history above.
    */
-  const L13 = resolveWinSpec(byLevel(LADDER, 12)!, NO_RUN_RULES);
+  const L13 = resolveWinSpec(byLevel(ARCHIVE, 12)!, NO_RUN_RULES);
   const goalsOf = (spec: WinSpec, s: WinSnapshot) => mapGoals(spec, s);
 
   it("reads the map as unwon while the slab still stands", () => {

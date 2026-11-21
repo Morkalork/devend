@@ -30,7 +30,7 @@ const load = <T>(file: string): T =>
 
 const CATALOGUE = load<{ upgrades: UpgradeConfig[] }>("upgrades.yml").upgrades;
 const LAST_LEVEL = Math.max(
-  ...load<{ levels: { level: number }[] }>("map.yml").levels.map(l => l.level),
+  ...load<{ levels: { level: number }[] }>("maps-archive.yml").levels.map(l => l.level),
 );
 
 /** Minimal upgrade; only the fields the graph reads. */

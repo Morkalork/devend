@@ -38,7 +38,7 @@ import type { LevelData } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
-const levels = (yaml.load(read("public/map.yml")) as LevelData).levels;
+const levels = (yaml.load(read("public/maps-archive.yml")) as LevelData).levels;
 
 describe("clearing a freeze", () => {
   it("drops every part of it, not just the id", () => {

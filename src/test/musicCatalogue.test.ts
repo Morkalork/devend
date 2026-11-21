@@ -81,7 +81,7 @@ describe("music catalogue", () => {
     // silently: a hole in the music is a decision, not an accident.
     // Empty since 36-40 got "Lofi Synthwave".
     const UNSCORED: string[] = [];
-    const ladder = yaml.load(readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8")) as { levels: { level: number }[] };
+    const ladder = yaml.load(readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8")) as { levels: { level: number }[] };
     const top = Math.max(...ladder.levels.map((l) => l.level));
     const covered = new Set(catalogue.tracks.filter((t) => t.usedFor === "band").map((t) => `${t.bandFrom}-${t.bandTo}`));
     const missing: string[] = [];

@@ -19,7 +19,7 @@ import { resetMapIds } from "@/lib/gameUtils";
 import { createRng } from "@/lib/runRng";
 
 const read = (p: string) => readFileSync(p, "utf8");
-const LEVELS = (yaml.load(read("public/map.yml")) as LevelData).levels;
+const LEVELS = (yaml.load(read("public/maps-archive.yml")) as LevelData).levels;
 const CB = { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} };
 const BLAST: BombBlast = { radius: 100, damage: 1.5, ballBoost: 1.5 };
 

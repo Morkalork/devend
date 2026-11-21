@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { createBotGame, stepBot, installClock, releaseClock } from "@/lib/bot/headlessGame";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 
 const STEP = 1 / 120;
@@ -22,7 +22,7 @@ function stillFraction(seedText: string): number {
   installClock();
   setRunSeedText(seedText);
   try {
-    const ctx = createBotGame(byLevel(LADDER, 20)!, 20);
+    const ctx = createBotGame(byLevel(ARCHIVE, 20)!, 20);
     const chain = ctx.game.chains?.[0];
     expect(chain).toBeDefined();
     let still = 0;

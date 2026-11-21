@@ -19,7 +19,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import { setRunSeedText } from "@/lib/runRng";
 import type { Ball } from "@/types/game";
 import type { Wall } from "@/lib/wallGeometry";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 
 const src = (f: string) => readFileSync(resolve(__dirname, "..", f), "utf8");
 const wall = (fenceTypeId?: string) => ({ id: "w", start: { x: 0, y: 0 }, end: { x: 100, y: 0 }, thickness: 6, fenceTypeId }) as unknown as Wall;
@@ -29,9 +29,9 @@ describe("Permafrost", () => {
     try {
       installClock();
       setRunSeedText("permafrost");
-      const on = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({ iceFreezeSeconds: 2 }));
+      const on = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers({ iceFreezeSeconds: 2 }));
       expect(on.game.iceFreezeSeconds).toBe(2);
-      const off = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers());
+      const off = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers());
       expect(off.game.iceFreezeSeconds).toBe(0);
     } finally {
       releaseClock();
@@ -85,7 +85,7 @@ describe("the fence payoffs", () => {
     try {
       installClock();
       setRunSeedText("payoffs");
-      const ctx = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({ guardrailExtraShields: 2, fenceExtraHits: 2 }));
+      const ctx = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers({ guardrailExtraShields: 2, fenceExtraHits: 2 }));
       expect(ctx.game.guardrailExtraShields).toBe(2);
       expect(ctx.game.fenceExtraHits).toBe(2);
     } finally {
@@ -132,9 +132,9 @@ describe("Hot Reload", () => {
     try {
       installClock();
       setRunSeedText("hot-reload");
-      const on = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({ slingExtraThrows: 1 }));
+      const on = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers({ slingExtraThrows: 1 }));
       expect(on.game.slingExtraThrows).toBe(1);
-      const off = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers());
+      const off = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers());
       expect(off.game.slingExtraThrows).toBe(0);
     } finally {
       releaseClock();
@@ -181,7 +181,7 @@ describe("the verb cards", () => {
     try {
       installClock();
       setRunSeedText("verbs");
-      const on = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({
+      const on = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers({
         breakpointsPerMap: 2, stashPerMap: 1, refactorsPerMap: 1, ballMerge: 1, stickyTapsPerMap: 3,
       }));
       expect(on.game.breakpointsRemaining).toBe(2);
@@ -190,7 +190,7 @@ describe("the verb cards", () => {
       expect(on.game.stickyTapsRemaining).toBe(3);
       expect(on.game.breakpoints).toEqual([]);
       expect(on.game.stash).toBeNull();
-      const off = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers());
+      const off = createBotGame(byLevel(ARCHIVE, 8)!, 8, plainModifiers());
       expect(off.game.breakpointsRemaining).toBe(0);
       expect(off.game.ballMerge).toBe(false);
       expect(off.game.stickyTapsRemaining).toBe(0);

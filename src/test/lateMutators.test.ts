@@ -9,7 +9,7 @@ import {
   mutatorFenceSpeedFactor, mutatorSpeedFactor, parseMutatorEntry, spikeActive,
 } from "@/lib/mapMutators";
 import type { ActiveMapMutator } from "@/types/mapMutator";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 const doc = yaml.load(readFileSync("public/mapMutators.yml", "utf8")) as { mutators: unknown[] };
 const catalogue = doc.mutators.map(parseMutatorEntry).filter((m): m is NonNullable<typeof m> => m !== null);
@@ -38,7 +38,7 @@ describe("Traffic Spike", () => {
   });
 
   it("is pinned on 34, the act's skill check", () => {
-    expect(LADDER.find(l => l.level === 34)?.mutator).toBe("spike");
+    expect(ARCHIVE.find(l => l.level === 34)?.mutator).toBe("spike");
   });
 });
 

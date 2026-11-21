@@ -243,7 +243,7 @@ describe("what a map pays against what the shop charges", () => {
    * paying the moment the economy was rescaled.
    */
   const levelDoc = yaml.load(
-    readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+    readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
   ) as { levels: Array<{ points: number }> };
   const MAP_BASE_POINTS = levelDoc.levels[0].points;
   const LV = scoring.lockValue;
@@ -342,7 +342,7 @@ describe("what a map pays against what the shop charges", () => {
     // No run may buy everything. Measured against a flawless run on every map
     // rather than against the old cap, which no longer binds anything.
     const maps = (yaml.load(
-      readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+      readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
     ) as LevelData).levels.length;
     const total = upgrades
       .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);

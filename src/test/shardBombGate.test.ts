@@ -18,11 +18,11 @@ import {
 import { createBotGame, plainModifiers } from "@/lib/bot/headlessGame";
 import { setRunSeedText } from "@/lib/runRng";
 import { sfxGate } from "@/lib/sfxGate";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 const CFG = DEFAULT_SHARD_BOMB_CONFIG;
 const level = (n: number) => {
-  const l = LADDER.find(x => x.level === n);
+  const l = ARCHIVE.find(x => x.level === n);
   if (!l) throw new Error(`no level ${n}`);
   return l;
 };
@@ -65,7 +65,7 @@ describe("the chance a map's shards carry a bomb", () => {
 describe("the ladder", () => {
   it("lets every brick map from 5 on roll bombs, the first one included", () => {
     expect(CFG.startLevel).toBe(5);
-    const withShards = LADDER.filter(l => (l.entities ?? []).some(e => e.kind === "wall" && "brittle" in e && e.brittle));
+    const withShards = ARCHIVE.filter(l => (l.entities ?? []).some(e => e.kind === "wall" && "brittle" in e && e.brittle));
     expect(withShards.map(l => l.level)).toEqual(expect.arrayContaining([5, 6, 17]));
     const bombed = withShards.filter(l => mapCanHaveShardBombs(l)).map(l => l.level);
     expect(bombed).toEqual(withShards.map(l => l.level));

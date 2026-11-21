@@ -21,7 +21,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { setRunSeedText } from "@/lib/runRng";
@@ -45,7 +45,7 @@ function deal(level: LevelConfig, seed: number): CanvasGameState {
   }
 }
 
-const gateMaps = LADDER.filter(l => gateAreas(l.coloredAreas ?? []).length > 0);
+const gateMaps = ARCHIVE.filter(l => gateAreas(l.coloredAreas ?? []).length > 0);
 
 describe("every gate map on the ladder", () => {
   it("has gate maps to check", () => {
@@ -81,7 +81,7 @@ describe("every gate map on the ladder", () => {
 });
 
 describe("level 8, the reported map", () => {
-  const level = byLevel(LADDER, 8)!;
+  const level = byLevel(ARCHIVE, 8)!;
 
   it("keeps its whole zone behind the curtain, which is the shape that broke", () => {
     // Proves the fixture reproduces the report: on the un-rotated deal not one
@@ -138,7 +138,7 @@ describe("a stranding check waits for the first cut", () => {
     return { callbacks, failures };
   }
 
-  const level = byLevel(LADDER, 8)!;
+  const level = byLevel(ARCHIVE, 8)!;
 
   /** The old bug's board: the curtain gone from the model with its cells still REMOVED. */
   function curtainGoneCellsStillRemoved(game: CanvasGameState): void {

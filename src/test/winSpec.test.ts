@@ -23,7 +23,7 @@ import type { WinConditionKind } from "@/types/winSpec";
 import type { WinCondition, WinSnapshot, WinSpec } from "@/types/winSpec";
 import type { LevelConfig } from "@/types/level";
 
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { noSmashes } from "@/lib/destructibleClass";
 import { everySmashed } from "./fixtures/smashCounts";
 const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
@@ -102,7 +102,7 @@ describe("deriving a spec reproduces the old chain exactly", () => {
 });
 
 describe("every shipped map still means what it meant", () => {
-  const MAPS = LADDER;
+  const MAPS = ARCHIVE;
 
   /**
    * EVERY non-boss map states its own win now, checked as the rule "derived

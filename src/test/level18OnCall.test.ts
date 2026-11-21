@@ -14,7 +14,7 @@
  * and the arm grinds through its own walls.
  */
 import { describe, it, expect } from "vitest";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import {
   buildMoverPolygon, buildRotorOutline, updateMoverPolygon,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/physics/moverState";
 import type { WallRectEntity, MoverRectEntity } from "@/types/level";
 
-const level = byLevel(LADDER, 18)!;
+const level = byLevel(ARCHIVE, 18)!;
 const walls = (level.entities ?? []).filter(e => e.kind === "wall") as WallRectEntity[];
 const wall = (id: string) => walls.find(w => w.id === id)!;
 const mover = (level.entities ?? []).find(e => e.kind === "mover") as MoverRectEntity;

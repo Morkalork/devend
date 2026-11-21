@@ -1,7 +1,7 @@
 /**
  * Every id a map PINS has to name something.
  *
- * public/map.yml is loaded with js-yaml and cast to `LevelData`. That cast is
+ * public/maps-archive.yml is loaded with js-yaml and cast to `LevelData`. That cast is
  * unchecked, so the type declaration is a statement of intent and nothing more:
  * a level can author any shape at all and TypeScript will agree with it.
  *

@@ -159,7 +159,7 @@ describe("a diagonal cut's outline", () => {
  * exactly what a line shooting out of a pocket looks like. This plays real maps
  * and watches every flash contour the game actually produces.
  */
-import { LADDER } from "@/test/fixtures/maps";
+import { ARCHIVE } from "@/test/fixtures/maps";
 import {
   createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock,
 } from "@/lib/bot/headlessGame";
@@ -173,7 +173,7 @@ describe("flash contours produced in play", () => {
   it("never spike, on either the claim flash or the lock flash", () => {
     installClock();
     let worstClaim = 0, worstLock = 0, claimAt = "", lockAt = "", seen = 0;
-    for (const level of LADDER.slice(0, 12)) {
+    for (const level of ARCHIVE.slice(0, 12)) {
       for (let seed = 1; seed <= 3; seed++) {
         const r = seeded(seed * 104729 + (level.level ?? 1) * 31);
         const ctx = createBotGame(level, level.level ?? 1, plainModifiers());

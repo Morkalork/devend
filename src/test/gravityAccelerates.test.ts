@@ -16,7 +16,7 @@ import {
   normaliseGravity, gravityStep, accelTurnRate, DEFAULT_GRAVITY,
   type GravityConfig,
 } from "@/lib/physics/gravity";
-import { LADDER } from "@/test/fixtures/maps";
+import { ARCHIVE } from "@/test/fixtures/maps";
 import yaml from "js-yaml";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -147,7 +147,7 @@ describe("level 14 is the map that asked for this", () => {
   ) as { mutators: { id: string; gravity?: Record<string, unknown> }[] }).mutators;
 
   it("pins a mutator that accelerates", () => {
-    const level = LADDER.find(l => l.id === "level-14")!;
+    const level = ARCHIVE.find(l => l.id === "level-14")!;
     expect(level.mutator).toBe("tipping");
     const m = mutators.find(x => x.id === "tipping")!;
     expect(m.gravity!.accelerate).toBe(true);
@@ -159,7 +159,7 @@ describe("level 14 is the map that asked for this", () => {
     // had five obstacles, and on a board like that a ball clips something
     // within half a second and the arc you were meant to read never finishes:
     // reported as "still not normal gravity" with the physics already working.
-    const level = LADDER.find(l => l.id === "level-14")!;
+    const level = ARCHIVE.find(l => l.id === "level-14")!;
     expect(level.entities ?? []).toEqual([]);
     expect(level.coloredAreas ?? []).toEqual([]);
     // And with nothing to break, the clause that named breakables had to go.
@@ -171,7 +171,7 @@ describe("level 14 is the map that asked for this", () => {
     // walls put back the little each bounce loses. Gentle because the FALL is
     // what puts speed in now: the floor's old 1.15 was right under a pull that
     // only steered, and is a pump under one that accelerates.
-    const edges = (LADDER.find(l => l.id === "level-14")!).boardEdges!;
+    const edges = (ARCHIVE.find(l => l.id === "level-14")!).boardEdges!;
     for (const side of ["top", "bottom", "left", "right"] as const) {
       expect(edges[side]?.kick, side).toBeGreaterThan(1);
       expect(edges[side]?.kick, side).toBeLessThanOrEqual(1.1);

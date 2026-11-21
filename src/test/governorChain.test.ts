@@ -54,7 +54,7 @@ const level11 = (): LevelConfig => {
   // Meet map and carries no bumpers - the old one broke the one-Meet rule by
   // debuting three mechanics at once, which is why it was replaced. What is
   // tested here is the bumper CHAIN in the engine, not the ladder, so it wants
-  // the board that has one; it moves back to LADDER when a rebuilt map places
+  // the board that has one; it moves back to ARCHIVE when a rebuilt map places
   // bumpers again.
   const l = RETIRED.find(x => x.level === 11);
   if (!l) throw new Error("no retired level 11");

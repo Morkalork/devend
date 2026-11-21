@@ -80,7 +80,7 @@ describe("the catalogue", () => {
   });
 
   it("can unlock every locked offer: the level exists and the tag is real", () => {
-    const levels = (yaml.load(read("public/map.yml")) as { levels: unknown[] }).levels.length;
+    const levels = (yaml.load(read("public/maps-archive.yml")) as { levels: unknown[] }).levels.length;
     for (const o of allOffers(cat)) {
       if (o.unlock?.kind === "levelReached") expect(o.unlock.level, o.id).toBeLessThanOrEqual(levels);
     }

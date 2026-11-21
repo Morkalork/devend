@@ -26,9 +26,9 @@ import {
   commandAllowed, firstTurnPlayer, settlePairTurn, startPairTurns, turnViewFor,
 } from "@/lib/net/pairTurn";
 import type { CanvasGameState } from "@/types/gameState";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
-const board = LADDER.find(l => l.level === 3)!;
+const board = ARCHIVE.find(l => l.level === 3)!;
 
 afterEach(() => { releaseClock(); setRunSeedText(null); });
 

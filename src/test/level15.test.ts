@@ -24,13 +24,13 @@
  * the well is what does the aiming, and the map cannot be read without it.
  */
 import { describe, it, expect } from "vitest";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { mutatorById } from "@/lib/mapMutators";
 import { DEFAULT_WELL_TURN_RATE } from "@/lib/physics/gravityWells";
 import { createInitialGameData } from "@/lib/initGame";
 import { plainModifiers } from "@/lib/bot/headlessGame";
 
-const l15 = LADDER.find(l => l.level === 15)!;
+const l15 = ARCHIVE.find(l => l.level === 15)!;
 const wells = () => l15.gravityWells ?? [];
 
 describe("level 15 holds together", () => {
@@ -150,7 +150,7 @@ describe("the wells reach the board the player gets", () => {
   it("hands every map's areas and anchors over the same way", () => {
     // Not just this map: the hole was in the shared builder, so the check is
     // that any map's authored sets arrive rather than that level 15's do.
-    for (const level of LADDER) {
+    for (const level of ARCHIVE) {
       const data = createInitialGameData(level, level.level ?? 1, plainModifiers());
       expect(data.gravityWells.length, `level ${level.level} wells`)
         .toBe((level.gravityWells ?? []).length);

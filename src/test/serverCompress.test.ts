@@ -46,7 +46,7 @@ describe("choosing an encoding", () => {
 
 describe("what gets compressed", () => {
   it("compresses the text the first screen waits on", () => {
-    for (const f of ["assets/index-abc.js", "assets/index-abc.css", "index.html", "map.yml", "assets/Michroma-Regular.ttf"]) {
+    for (const f of ["assets/index-abc.js", "assets/index-abc.css", "index.html", "maps-archive.yml", "assets/Michroma-Regular.ttf"]) {
       expect(isCompressible(f, 50_000), f).toBe(true);
     }
   });

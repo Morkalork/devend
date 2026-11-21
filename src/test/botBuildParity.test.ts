@@ -17,9 +17,9 @@ import { setRunSeedText } from "@/lib/runRng";
 import { simNow } from "@/lib/simClock";
 import { AUTO_FREEZE_INTERVAL_MS, PHYSICS_STEP } from "@/lib/gameConstants";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 
-const LEVEL = byLevel(LADDER, 8)!;
+const LEVEL = byLevel(ARCHIVE, 8)!;
 
 function deal(over: Partial<GameModifiers> = {}, opts: Parameters<typeof createBotGame>[3] = {}) {
   installClock();

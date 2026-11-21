@@ -11,7 +11,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock,
 } from "@/lib/bot/headlessGame";
-import { LADDER } from "@/test/fixtures/maps";
+import { ARCHIVE } from "@/test/fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import { castRayWithReflections } from "@/lib/wallGeometry";
@@ -38,7 +38,7 @@ function board(bends: number) {
   releaseClock();
   setRunSeedText("bent-fence");
   installClock();
-  const level = LADDER.find((l) => l.level === 1)!;
+  const level = ARCHIVE.find((l) => l.level === 1)!;
   const ctx = createBotGame(level, 1, plainModifiers({ bentFenceBends: bends }));
   for (let i = 0; i < 30; i++) stepBot(ctx);
   const game = ctx.game as unknown as CanvasGameState;
