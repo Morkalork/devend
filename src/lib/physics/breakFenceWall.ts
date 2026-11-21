@@ -44,7 +44,7 @@ export interface WallBreakCallbacks {
  * along the segment must have ACTIVE cells on BOTH sides. Conservative — any
  * void contact anywhere along the segment makes the fence permanent.
  */
-function isBreakSafe(game: CanvasGameState, wall: Wall): boolean {
+export function isBreakSafe(game: CanvasGameState, wall: Wall): boolean {
   const grid = game.spaceGrid;
   if (!grid) return false;
 

@@ -726,3 +726,54 @@ upgrades:
   description: A Redeploy fence reloads once, so it can be thrown twice before it is spent. Needs the Redeploy fence.
   modifiers:
     slingExtraThrows: 1
+
+# ── The verb cards (CARDS_PLAN.md phase 9; src/lib/physics/verbCards.ts) ──
+# Cards that change what a finger does, rather than a number it carries.
+- id: breakpoint
+  paysOff: [scrum_master, frozen_assets]
+  name: Breakpoint
+  tier: Senior
+  unlockLevel: 3
+  icon: crosshair
+  tags: [freeze, lock]
+  description: Tap an empty spot to set a trap. The first ball to cross it freezes there for 3s. Two traps a map.
+  modifiers:
+    breakpointsPerMap: 2
+- id: stash
+  name: Stash
+  tier: Principal
+  unlockLevel: 5
+  icon: archive
+  tags: [risk]
+  description: An ability button that remembers where every ball is, once a map. The next ball that would cost you a life puts them all back there instead.
+  modifiers:
+    stashPerMap: 1
+- id: refactor
+  name: Refactor
+  tier: Senior
+  unlockLevel: 4
+  icon: eraser
+  tags: [tempo]
+  description: Press and hold a finished fence to delete it, once a map. Captured space stays captured, so only the open lanes change. A fence holding back captured space cannot go.
+  modifiers:
+    refactorsPerMap: 1
+- id: merge_conflict
+  paysOff: [loose_coupling, golden_handshake]
+  name: Merge Conflict
+  tier: Senior
+  unlockLevel: 6
+  icon: git-merge
+  tags: [lock]
+  description: Two plain balls that collide fuse into one bigger, slower ball, worth both their lock bonuses. Bosses and special balls do not merge.
+  modifiers:
+    ballMerge: 1
+- id: rate_limiter
+  paysOff: [frozen_assets]
+  name: Rate Limiter
+  tier: Junior
+  unlockLevel: 2
+  icon: hand
+  tags: [freeze]
+  description: Tap a wall to make a stretch of it sticky for 2s. The next ball to hit it stops dead for 3s. Three taps a map.
+  modifiers:
+    stickyTapsPerMap: 3

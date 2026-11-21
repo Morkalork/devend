@@ -1170,7 +1170,9 @@
     "cutWouldBuryArea": "That cut would have left no ball that can still get into the zone, so it did not land.",
     "partnersTurn": "It's your partner's turn. Watch their fence, yours is next.",
     "oneFenceATurn": "One fence a turn. Your partner is up once this one is built.",
-    "secondFingerCancel": "A second finger touched the board, so that fence was cancelled. Draw with one finger."
+    "secondFingerCancel": "A second finger touched the board, so that fence was cancelled. Draw with one finger.",
+    "refactorFused": "That fence holds back captured space, so it stays. Refactor an inner one.",
+    "stashRestored": "A ball cut through your fence. Your stash put the balls back instead."
   },
   "mapFailure": {
     "title": "Map failed",

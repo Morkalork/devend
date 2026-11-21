@@ -46,6 +46,8 @@ import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityE
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { simNow } from "@/lib/simClock";
 import { tapSquashBug } from "@/lib/physics/bugs";
+import { cutSegmentsOf, setBreakpoint, setStickyPatch } from "@/lib/physics/verbCards";
+import { isBreakSafe } from "@/lib/physics/breakFenceWall";
 import { commandAllowed, settlePairTurn, spendPairTurn, passPairTurn } from "@/lib/net/pairTurn";
 
 /** Player 0 is whoever started the run; player 1 is the partner. Solo play is
@@ -152,7 +154,14 @@ export type GameCommand =
    */
   | { kind: "passTurn"; player: PlayerId }
   | { kind: "abilityTarget"; player: PlayerId; abilityId: string; target: Vector2 }
-  | { kind: "rubberBand"; player: PlayerId; shape: import("@/lib/rubberBand").BandShape };
+  | { kind: "rubberBand"; player: PlayerId; shape: import("@/lib/rubberBand").BandShape }
+  // ── The verb cards (physics/verbCards.ts) ──
+  /** Breakpoint: a trap set at a tapped point. */
+  | { kind: "breakpoint"; player: PlayerId; at: Vector2 }
+  /** Refactor: a held fence deleted, named by its wall (the whole cut goes). */
+  | { kind: "refactor"; player: PlayerId; wallId: string }
+  /** Rate Limiter: a tapped wall made sticky around the point. */
+  | { kind: "stickyTap"; player: PlayerId; wallId: string; at: Vector2 };
 
 /**
  * The few things a command needs that do not live on the game state.
@@ -256,7 +265,55 @@ export function applyCommand(game: CanvasGameState, cmd: GameCommand, rawDeps: C
     case "abilityTarget": applyAbilityTarget(game, cmd, deps); break;
     case "rubberBand":   applyRubberBand(game, cmd, deps); break;
     case "passTurn":     passPairTurn(game); break;
+    case "breakpoint":   applyBreakpoint(game, cmd, deps); break;
+    case "refactor":     applyRefactor(game, cmd, deps); break;
+    case "stickyTap":    applyStickyTap(game, cmd, deps); break;
   }
+}
+
+// ── the verb cards ──────────────────────────────────────────────────────────
+
+function applyBreakpoint(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "breakpoint" }>,
+  deps: CommandDeps,
+): void {
+  // Judged again here, off shared state: a ball may have rolled under the
+  // point since the tap, and a trap set on top of a ball would fire at once.
+  if (setBreakpoint(game, cmd.at, simNow())) deps.vibrate?.(15);
+}
+
+function applyRefactor(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "refactor" }>,
+  deps: CommandDeps,
+): void {
+  if ((game.refactorsRemaining ?? 0) <= 0) return;
+  const wall = game.walls.find(w => w.id === cmd.wallId);
+  if (!wall) return;
+  const segments = cutSegmentsOf(game, wall);
+  // The void rule (breakFenceWall.ts): a fence with captured space on one
+  // side is the only thing between the board and the void, and stays. Said
+  // out loud, and the ration is not spent on a fence that cannot go.
+  if (!segments.every(w => isBreakSafe(game, w))) {
+    deps.onMessage?.("refactorFused");
+    return;
+  }
+  game.refactorsRemaining = (game.refactorsRemaining ?? 0) - 1;
+  for (const w of segments) {
+    if (!game.pendingWallBreaks.includes(w)) game.pendingWallBreaks.push(w);
+  }
+  deps.vibrate?.(25);
+}
+
+function applyStickyTap(
+  game: CanvasGameState,
+  cmd: Extract<GameCommand, { kind: "stickyTap" }>,
+  deps: CommandDeps,
+): void {
+  const wall = game.walls.find(w => w.id === cmd.wallId);
+  if (!wall) return;
+  if (setStickyPatch(game, wall, cmd.at, simNow())) deps.vibrate?.(15);
 }
 
 // ── abilities ───────────────────────────────────────────────────────────────

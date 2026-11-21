@@ -83,6 +83,7 @@ import { drainCommands, enqueueCommand } from "@/lib/net/commands";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
 import { applyMapStartBoons, mapStartShields, mapStartFreezeUses } from "@/lib/physics/mapStartBoons";
 import { tickAutoFreeze } from "@/lib/physics/autoFreeze";
+import { tickBreakpoints, tickStickyPatches } from "@/lib/physics/verbCards";
 /**
  * A clock the bot controls.
  *
@@ -427,6 +428,8 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
 
   // Cron Job, where the loop ticks it: just before the player's actions.
   tickAutoFreeze(game, modifiers.autoFreezeDuration, modifiers.freezeNoCooldown);
+  tickBreakpoints(game, simNow(), modifiers.freezeNoCooldown);
+  tickStickyPatches(game, simNow());
 
   // Player actions first, exactly where the loop drains them: at the top of
   // the frame, before anything moves.

@@ -32,10 +32,12 @@ const CATALOGUE = [SHOCK, FREEZE];
 describe("the catalogue actually marks Shockwave as replenishing", () => {
   // The logic below is worth nothing if the YAML never opts anything in. This
   // reads the shipped catalogue rather than a fixture.
-  it("ships replenishTo on shockwave and on nothing else", () => {
+  it("ships replenishTo on shockwave and the Stash card's ability, and on nothing else", () => {
+    // Stash (cards.yml) refills every map by the same machinery, keyed on the
+    // card being held rather than on a feature (useGameSession).
     const replenishing = getAllAbilities().filter(a => (a.replenishTo ?? 0) > 0);
-    expect(replenishing.map(a => a.id)).toEqual(["shockwave"]);
-    expect(replenishing[0].replenishTo).toBe(1);
+    expect(replenishing.map(a => a.id)).toEqual(["shockwave", "stash"]);
+    expect(replenishing.map(a => a.replenishTo)).toEqual([1, 1]);
   });
 });
 

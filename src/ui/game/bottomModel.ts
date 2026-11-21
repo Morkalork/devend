@@ -5,7 +5,7 @@
  * original applied inline; the reasoning is kept next to it.
  */
 import {
-  Snowflake, Snail, Shield, Eraser, Magnet, Hourglass, Scissors, Spline, Sparkles,
+  Snowflake, Snail, Shield, Eraser, Magnet, Hourglass, Scissors, Spline, Sparkles, Archive,
 } from "lucide-react";
 import {
   getFenceType, standardFenceType, FENCE_SLOTS, STANDARD_FENCE_ID, type FenceTypeDef,
@@ -207,6 +207,7 @@ const RUSH_CLOCK: IconSource = [
  */
 const GLYPH_BY_KIND: Record<AbilityKind, IconSource> = {
   freeze: Snowflake,
+  stash: Archive,
   slow: Snail,
   slowArea: Hourglass,
   descope: Scissors,

@@ -12,6 +12,7 @@
  *                  space, and redraw each locked pocket's own outline.
  */
 import { CanvasGameState } from "@/types/gameState";
+import { takeStash } from "@/lib/physics/verbCards";
 import { getAbility } from "@/lib/abilities";
 import { placeSlowArea } from "@/lib/physics/slowAreas";
 import { descopeAt } from "@/lib/physics/descope";
@@ -781,6 +782,11 @@ export function fireAbility(
       break;
     case "fenceShield":
       applyFenceShield(game, def.durationSeconds ?? DEFAULT_FENCE_SHIELD_SECONDS);
+      break;
+    case "stash":
+      // Remember where the balls are (physics/verbCards.ts); the next ball
+      // through a fence puts them back instead of costing a life.
+      takeStash(game, now);
       break;
     case "slowArea":
     case "descope":

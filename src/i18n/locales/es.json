@@ -1999,6 +1999,11 @@
         "name": "Escudo de Valla",
         "description": "Tu valla en crecimiento ignora los golpes de bola durante unos segundos.",
         "howTo": "Toca y traza un corte por una zona concurrida sin que se rompa."
+      },
+      "stash": {
+        "name": "Reserva",
+        "description": "Recuerda dónde está cada bola. La siguiente bola que te costaría una vida las devuelve a todas a su sitio.",
+        "howTo": "Toca después de un buen corte, antes de uno arriesgado. Las vallas que dibujes después se quedan."
       }
     },
     "balls": {
@@ -2765,6 +2770,26 @@
       "hot_reload": {
         "name": "Recarga en caliente",
         "description": "Una valla Redeploy se recarga una vez, así que puede lanzarse dos veces antes de gastarse. Necesita la valla Redeploy."
+      },
+      "breakpoint": {
+        "name": "Punto de interrupción",
+        "description": "Toca un punto vacío para poner una trampa. La primera bola que la cruce se congela ahí 3 s. Dos trampas por mapa."
+      },
+      "stash": {
+        "name": "Reserva",
+        "description": "Un botón de habilidad que recuerda dónde está cada bola, una vez por mapa. La siguiente bola que te costaría una vida las devuelve a todas a su sitio."
+      },
+      "refactor": {
+        "name": "Refactorizar",
+        "description": "Mantén pulsada una valla terminada para borrarla, una vez por mapa. El espacio capturado sigue capturado: solo cambian los carriles abiertos. Una valla que contiene espacio capturado no puede irse."
+      },
+      "merge_conflict": {
+        "name": "Conflicto de fusión",
+        "description": "Dos bolas normales que chocan se funden en una más grande y lenta, que vale las bonificaciones de bloqueo de ambas. Los jefes y las bolas especiales no se funden."
+      },
+      "rate_limiter": {
+        "name": "Limitador",
+        "description": "Toca una pared para hacer pegajoso un tramo durante 2 s. La siguiente bola que lo golpee se para en seco 3 s. Tres toques por mapa."
       }
     },
     "contracts": {
@@ -2942,7 +2967,9 @@
     "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
     "partnersTurn": "Le toca a tu compañero. Mira su valla, la siguiente es tuya.",
     "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida.",
-    "secondFingerCancel": "Un segundo dedo tocó el tablero, así que esa valla se canceló. Dibuja con un solo dedo."
+    "secondFingerCancel": "Un segundo dedo tocó el tablero, así que esa valla se canceló. Dibuja con un solo dedo.",
+    "refactorFused": "Esa valla contiene espacio capturado, así que se queda. Refactoriza una interior.",
+    "stashRestored": "Una bola cortó tu valla. Tu reserva devolvió las bolas a su sitio."
   },
   "mapFailure": {
     "title": "Mapa fallido",

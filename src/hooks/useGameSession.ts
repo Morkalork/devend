@@ -2128,15 +2128,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // found it early spent their charge, watched it not return for five maps, and
   // reasonably concluded it did not replenish. The feature is still honoured, so
   // a player who reached level 10 without ever finding one still gets it.
+  //
+  // Stash (cards.yml, physics/verbCards.ts) is the same shape from a card: the
+  // card's modifier is what makes the ability HELD, and the catalogue's
+  // replenishTo refills it every map while the card is in the build.
+  const stashHeld = activeModifiers.stashPerMap > 0;
   useEffect(() => {
     setAbilityCharges(prev => replenishAbilityCharges(
       prev,
       heldAbilityIds(prev, everHeldAbilityIdsRef.current),
       getAllAbilities(),
-      isFeatureUnlocked('panicShockwave') ? ['shockwave'] : [],
+      [
+        ...(isFeatureUnlocked('panicShockwave') ? ['shockwave'] : []),
+        ...(stashHeld ? ['stash'] : []),
+      ],
       retainedAbilityIds,
     ));
-  }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges, retainedAbilityIds]);
+  }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges, retainedAbilityIds, stashHeld]);
 
   // Sync completed achievements into cert manager for achievement-locked certs
   useEffect(() => {

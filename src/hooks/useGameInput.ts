@@ -32,6 +32,7 @@ import {
 import { fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { loadedSlingAt, slingShape, fireSlingFence } from "@/lib/physics/slingFence";
 import { moverAt, railParam, railReading, releaseMover } from "@/lib/physics/moverControl";
+import { canSetBreakpoint, refactorTargetAt, stickyTargetAt } from "@/lib/physics/verbCards";
 import { bugAtTap } from "@/lib/physics/bugs";
 import {
   BOARD_WIDTH,
@@ -160,6 +161,30 @@ export function useGameInput(
       if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
       holdPointerId = null;
       holdStartWorld = null;
+    };
+
+    /**
+     * The verb cards' taps (physics/verbCards.ts), on a tap that froze
+     * nothing: a wall within reach becomes sticky (Rate Limiter), else open
+     * board takes a trap (Breakpoint). The wall first, because a tap beside a
+     * fence is more often aimed at the fence than at the space next to it.
+     * Returns true when a command was sent.
+     */
+    const tapVerb = (game: CanvasGameState, at: { x: number; y: number }): boolean => {
+      if (activeModifiers.stickyTapsPerMap > 0) {
+        const wall = stickyTargetAt(game, at);
+        if (wall) {
+          enqueueCommand(game, { kind: "stickyTap", player: getLocalPlayer(), wallId: wall.id, at: { ...at } });
+          trace(() => `tap: wall made sticky`);
+          return true;
+        }
+      }
+      if (activeModifiers.breakpointsPerMap > 0 && canSetBreakpoint(game, at)) {
+        enqueueCommand(game, { kind: "breakpoint", player: getLocalPlayer(), at: { ...at } });
+        trace(() => `tap: breakpoint set`);
+        return true;
+      }
+      return false;
     };
 
     // Nearest superior-lock star under a world point, or null. Only counts stars
@@ -405,8 +430,13 @@ export function useGameInput(
         if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
           const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
           const star = onSuperiorInfoRef?.current ? superiorStarAt(game, w) : null;
-          const entity = star ? null : (onEntityInfoRef?.current ? boardEntityAt(game, w.x, w.y) : null);
-          if (star || entity) {
+          // Refactor (physics/verbCards.ts): a hold on a finished fence deletes
+          // it. Judged before the entity explainer, since a fence is not an
+          // entity, and only while the map has a refactor left: without one
+          // the hold falls through to whatever else is under the finger.
+          const refactor = !star && activeModifiers.refactorsPerMap > 0 ? refactorTargetAt(game, w) : null;
+          const entity = star || refactor ? null : (onEntityInfoRef?.current ? boardEntityAt(game, w.x, w.y) : null);
+          if (star || refactor || entity) {
             clearHold();
             holdPointerId = e.pointerId;
             holdStartWorld = w;
@@ -414,6 +444,14 @@ export function useGameInput(
               holdTimer = null;
               if (navigator.vibrate) navigator.vibrate(20);
               if (star) onSuperiorInfoRef?.current?.();
+              else if (refactor) {
+                // Named, not described: the command finds the cut by this wall.
+                enqueueCommand(game, { kind: "refactor", player: getLocalPlayer(), wallId: refactor.id });
+                // The press is spent on the hold: a cut from here now would
+                // start on the fence that is about to go.
+                endSwipe(game);
+                trace(() => `#${e.pointerId} hold: refactor, fence deleted`);
+              }
               else if (entity) onEntityInfoRef?.current?.(entity);
               clearHold();
             }, HOLD_MS);
@@ -803,9 +841,11 @@ export function useGameInput(
               useCharge: !featureFreeze,
             });
             trace(() => `#${e.pointerId} up: tap, freeze`);
-          } else {
+          } else if (!tapVerb(game, game.swipeStart)) {
             trace(() => `#${e.pointerId} up: tap on no ball`);
           }
+        } else if (tap && tapVerb(game, game.swipeStart)) {
+          // Rate Limiter or Breakpoint, with no freeze to spend. See tapVerb.
         } else if (dist >= BASE_SWIPE_MIN_DISTANCE && game.pairTurn?.spent) {
           // One fence a turn in a pair. Taps above still work, since guarding
           // the fence that is building is still this player's turn.
@@ -910,5 +950,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef, onTapRemoveRef]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, activeModifiers.refactorsPerMap, activeModifiers.stickyTapsPerMap, activeModifiers.breakpointsPerMap, onAbilityTargetRef, onSuperiorInfoRef, onTapRemoveRef]);
 }

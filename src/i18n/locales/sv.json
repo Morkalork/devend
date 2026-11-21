@@ -1999,6 +1999,11 @@
         "name": "Staketsköld",
         "description": "Ditt växande staket ignorerar bollträffar i några sekunder.",
         "howTo": "Tryck och rita ett snitt genom ett livligt område utan att det går sönder."
+      },
+      "stash": {
+        "name": "Förråd",
+        "description": "Minns var varje boll är. Nästa boll som skulle kosta dig ett liv sätter i stället tillbaka alla.",
+        "howTo": "Tryck efter ett bra snitt, före ett riskabelt. Staket du ritar efteråt stannar."
       }
     },
     "balls": {
@@ -2765,6 +2770,26 @@
       "hot_reload": {
         "name": "Omladdning",
         "description": "Ett Redeploy-staket laddar om en gång, så det kan kastas två gånger innan det är förbrukat. Kräver Redeploy-staketet."
+      },
+      "breakpoint": {
+        "name": "Brytpunkt",
+        "description": "Tryck på en tom plats för att sätta en fälla. Första bollen som korsar den fryser där i 3 s. Två fällor per bana."
+      },
+      "stash": {
+        "name": "Förråd",
+        "description": "En förmågeknapp som minns var varje boll är, en gång per bana. Nästa boll som skulle kosta dig ett liv sätter i stället tillbaka alla."
+      },
+      "refactor": {
+        "name": "Refaktorera",
+        "description": "Håll på ett färdigt staket för att ta bort det, en gång per bana. Erövrad yta förblir erövrad, så bara de öppna gångarna ändras. Ett staket som håller tillbaka erövrad yta kan inte tas bort."
+      },
+      "merge_conflict": {
+        "name": "Sammanslagningskonflikt",
+        "description": "Två vanliga bollar som krockar smälter samman till en större, långsammare boll, värd bådas låsbonus. Bossar och specialbollar smälter inte samman."
+      },
+      "rate_limiter": {
+        "name": "Hastighetsspärr",
+        "description": "Tryck på en vägg för att göra en sträcka klibbig i 2 s. Nästa boll som träffar den stannar tvärt i 3 s. Tre tryck per bana."
       }
     },
     "contracts": {
@@ -2942,7 +2967,9 @@
     "cutWouldBuryArea": "Det snittet hade inte lämnat någon boll som kan ta sig in i zonen, så det gick inte igenom.",
     "partnersTurn": "Det är din partners tur. Titta på deras staket, ditt är nästa.",
     "oneFenceATurn": "Ett staket per tur. Din partner är på tur när det här är byggt.",
-    "secondFingerCancel": "Ett andra finger rörde brädet, så det staketet avbröts. Rita med ett finger."
+    "secondFingerCancel": "Ett andra finger rörde brädet, så det staketet avbröts. Rita med ett finger.",
+    "refactorFused": "Det staketet håller tillbaka erövrad yta, så det stannar. Refaktorera ett inre.",
+    "stashRestored": "En boll skar genom ditt staket. Ditt förråd satte tillbaka bollarna i stället."
   },
   "mapFailure": {
     "title": "Kartan misslyckades",

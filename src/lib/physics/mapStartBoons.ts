@@ -39,6 +39,18 @@ export function applyMapStartBoons(game: CanvasGameState, activeModifiers: GameM
   game.fenceExtraHits = Math.max(0, Math.round(activeModifiers.fenceExtraHits));
   // Hot Reload: read where a Redeploy fence is thrown.
   game.slingExtraThrows = Math.max(0, Math.round(activeModifiers.slingExtraThrows));
+  // The verb cards (lib/physics/verbCards.ts): the map's rations, and a clean
+  // board. A trap, a stash or a sticky stretch cannot outlive the map that
+  // set it, for the reason a mover grab cannot: the thing it names is gone.
+  game.breakpointsRemaining = Math.max(0, Math.round(activeModifiers.breakpointsPerMap));
+  game.breakpoints = [];
+  game.breakpointTrips = [];
+  game.stash = null;
+  game.refactorsRemaining = Math.max(0, Math.round(activeModifiers.refactorsPerMap));
+  game.ballMerge = activeModifiers.ballMerge > 0;
+  game.mergeFlashes = [];
+  game.stickyTapsRemaining = Math.max(0, Math.round(activeModifiers.stickyTapsPerMap));
+  game.stickyPatches = [];
 }
 
 /** Shields granted fresh every map (Defensive Programming, Second Wind). */

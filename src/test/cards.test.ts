@@ -32,9 +32,12 @@ const CERT_SOURCES = new Set(
 );
 
 describe("the catalogue's shape", () => {
-  it("is about forty cards, each one idea", () => {
+  it("is about fifty cards, each one idea", () => {
+    // Forty when the draft opened; the fence payoffs, Hot Reload and the five
+    // verb cards (phase 9) brought it to the mid fifties. The cap is a brake on
+    // the catalogue growing by numbers, not by ideas.
     expect(BASE.length).toBeGreaterThanOrEqual(36);
-    expect(BASE.length).toBeLessThanOrEqual(50);
+    expect(BASE.length).toBeLessThanOrEqual(60);
     // One card per name: the ladders are gone.
     expect(new Set(BASE.map(c => c.name)).size).toBe(BASE.length);
   });

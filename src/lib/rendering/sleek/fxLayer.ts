@@ -28,6 +28,7 @@ import {
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
 import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
+import { BREAKPOINT_RADIUS, STICKY_HALF_LENGTH, STICKY_PATCH_MS } from "@/lib/physics/verbCards";
 import { isArmedGuardrail } from "@/lib/physics/guardrailFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
@@ -46,6 +47,11 @@ import { previewCutPaths } from "@/lib/cutPreview";
 
 /** Opacity of the predicted path. A forecast, so never fully opaque. */
 const TRAJECTORY_ALPHA = 0.5;
+/** The verb cards' colours: the freeze's ice for a trap, the Stash ability's gold for the rest. */
+const VERB_ICE = 0x7fd4ff;
+const VERB_AMBER = 0xf2c14e;
+/** How long a verb card's one-off mark (a trap firing, a merge, a restore) stays. */
+const VERB_FLASH_MS = 600;
 /** World units the line drifts past the last bounce before it is gone. */
 const TAIL_WORLD = 130;
 /** Alpha steps across that drift. One stroke each, whatever the ball count. */
@@ -144,6 +150,7 @@ export class FxLayer {
     }
     this.drawFalling(game, light, w2s, now);
     this.drawAbilityFx(game, w2s, scale, now);
+    this.drawVerbCards(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);
     this.drawPickupFeedback(game, w2s, scale, now);
     this.drawBugSplats(game, w2s, scale, now);
@@ -560,6 +567,73 @@ export class FxLayer {
   }
 
   /** Magnet: a fading ring at the point the player pulled toward. */
+  /**
+   * The verb cards (physics/verbCards.ts): a trap waiting, a trap firing, a
+   * sticky stretch on a wall, two balls becoming one, and the balls going
+   * back to a stash. Controls and consequences, so they live with the grips
+   * and the markers rather than in the wall or ball layers.
+   */
+  private drawVerbCards(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    // Breakpoint: a dashed ring with a dot, breathing, in the freeze's ice blue.
+    for (const bp of game.breakpoints ?? []) {
+      const p = w2s(bp.x, bp.y);
+      const settle = Math.min(1, (now - bp.setAt) / 220);
+      const r = BREAKPOINT_RADIUS * scale * (1.6 - 0.6 * settle);
+      const pulse = 0.7 + 0.3 * Math.sin(now / 360);
+      const STEPS = 16;
+      for (let i = 0; i < STEPS; i += 2) {
+        const a0 = (i / STEPS) * Math.PI * 2 + now / 1400;
+        const a1 = ((i + 1) / STEPS) * Math.PI * 2 + now / 1400;
+        this.over.moveTo(p.x + Math.cos(a0) * r, p.y + Math.sin(a0) * r);
+        this.over.lineTo(p.x + Math.cos(a1) * r, p.y + Math.sin(a1) * r);
+      }
+      this.over.stroke({ width: Math.max(1.5, 2 * scale), color: VERB_ICE, alpha: 0.85 * pulse });
+      this.over.circle(p.x, p.y, 3 * scale).fill({ color: VERB_ICE, alpha: 0.9 });
+    }
+    // A trap firing: the ring snaps shut on the ball.
+    for (const trip of game.breakpointTrips ?? []) {
+      const t = (now - trip.startTime) / VERB_FLASH_MS;
+      if (t < 0 || t >= 1) continue;
+      const p = w2s(trip.x, trip.y);
+      this.over.circle(p.x, p.y, (BREAKPOINT_RADIUS * 2 * (1 - t) + 6) * scale)
+        .stroke({ width: Math.max(2, 3 * scale), color: VERB_ICE, alpha: 1 - t });
+    }
+    // Rate Limiter: an amber band along the wall, draining as its time runs out.
+    for (const patch of game.stickyPatches ?? []) {
+      const left = (patch.until - now) / STICKY_PATCH_MS;
+      if (left <= 0) continue;
+      const half = STICKY_HALF_LENGTH * left;
+      const a = w2s(patch.x - patch.dx * half, patch.y - patch.dy * half);
+      const b = w2s(patch.x + patch.dx * half, patch.y + patch.dy * half);
+      this.over.moveTo(a.x, a.y).lineTo(b.x, b.y)
+        .stroke({ width: Math.max(4, 7 * scale), color: VERB_AMBER, alpha: 0.75, cap: "round" });
+      const glow = 0.6 + 0.4 * Math.sin(now / 160);
+      this.over.moveTo(a.x, a.y).lineTo(b.x, b.y)
+        .stroke({ width: Math.max(1.5, 2.5 * scale), color: 0xffffff, alpha: 0.35 * glow, cap: "round" });
+    }
+    // Merge Conflict: two rings collapsing into one.
+    for (const m of game.mergeFlashes ?? []) {
+      const t = (now - m.startTime) / VERB_FLASH_MS;
+      if (t < 0 || t >= 1) continue;
+      const p = w2s(m.x, m.y);
+      const r = (30 * (1 - t) + 8) * scale;
+      this.over.circle(p.x - r * 0.4, p.y, r).stroke({ width: Math.max(1.5, 2 * scale), color: PALETTE.accent, alpha: (1 - t) * 0.8 });
+      this.over.circle(p.x + r * 0.4, p.y, r).stroke({ width: Math.max(1.5, 2 * scale), color: PALETTE.accent, alpha: (1 - t) * 0.8 });
+    }
+    // Stash: the balls went back; a gold ring on each, closing.
+    if (game.stashRestoredAt !== undefined) {
+      const t = (now - game.stashRestoredAt) / VERB_FLASH_MS;
+      if (t >= 0 && t < 1) {
+        for (const ball of game.balls) {
+          if (ball.state !== "active") continue;
+          const p = w2s(ball.position.x, ball.position.y);
+          this.over.circle(p.x, p.y, (ball.radius + 22 * (1 - t)) * scale)
+            .stroke({ width: Math.max(1.5, 2 * scale), color: VERB_AMBER, alpha: 1 - t });
+        }
+      }
+    }
+  }
+
   private drawMagnetMarker(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const m = game.magnetMarker;
     if (!m) return;

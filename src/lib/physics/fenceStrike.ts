@@ -32,6 +32,7 @@ import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
 import { simNow } from "@/lib/simClock";
 import { spendGuardrailShield } from "./guardrailFence";
+import { restoreStash } from "@/lib/physics/verbCards";
 
 /**
  * How long a post-break freeze may last before the loop lifts it regardless.
@@ -222,6 +223,19 @@ export function ballStruckFence(
     game.activeWalls = [];
     flashAndShake(callbacks, 200, unfreezeAfterShake);
     handlePushFailedFn(game, level, levelNumber, activeModifiers, callbacks);
+    return;
+  }
+
+  // Stash (physics/verbCards.ts): the balls go back to where the player
+  // remembered them, and the life stays. The culprit's freeze is cleared
+  // FIRST, so the shake's end does not put it back on the fence it broke.
+  if (game.stash) {
+    clearFreeze(game);
+    restoreStash(game, simNow());
+    game.activeWalls = [];
+    callbacks.onGameMessage?.("stashRestored");
+    recover(game, callbacks);
+    flashAndShake(callbacks, 150, () => {});
     return;
   }
 

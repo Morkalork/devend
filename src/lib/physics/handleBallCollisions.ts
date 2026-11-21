@@ -10,6 +10,7 @@ import { Ball } from "@/types/game";
 import { triggerBallHit } from "@/lib/ballEffects";
 import { playBallCollideSound } from "@/lib/gameAudio";
 import { simNow } from "@/lib/simClock";
+import { isMergeable, mergeBalls } from "@/lib/physics/verbCards";
 
 /** Resolve all pairwise ball-to-ball collisions for this physics step. */
 export function handleBallCollisions(game: CanvasGameState): void {
@@ -83,6 +84,17 @@ export function handleBallCollisions(game: CanvasGameState): void {
           (ball1.velocity.y - ball2.velocity.y) * ny;
 
         if (relVelNormal > 0) {
+          // Merge Conflict (physics/verbCards.ts): two plain balls become one.
+          // Before the exchange, so the merged ball carries the pair's
+          // momentum rather than a bounce neither of them finished.
+          if (game.ballMerge && isMergeable(ball1, now) && isMergeable(ball2, now)
+              && mergeBalls(game, ball1, ball2, now)) {
+            playBallCollideSound(1);
+            // ball2 is gone from the list; the outer loop's indices still hold
+            // for everything before it, and what came after shifts down one.
+            j--;
+            continue;
+          }
           // Capture each ball's speed at impact, before the elastic exchange, so
           // a purple's drain is measured against the pre-collision speed (a fixed
           // amount) instead of riding on top of the random elastic change.
@@ -104,7 +116,6 @@ export function handleBallCollisions(game: CanvasGameState): void {
 
           // Trigger ball-to-ball collision effect (strongest visual). Both balls
           // squash along the shared contact normal, scaled by the closing speed.
-          const now = simNow();
           triggerBallHit(ball1.effects, now, nx, ny, relVelNormal);
           triggerBallHit(ball2.effects, now, nx, ny, relVelNormal);
 

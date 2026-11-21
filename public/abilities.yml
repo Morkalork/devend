@@ -166,3 +166,17 @@ abilities:
     durationSeconds: 5
     description: "Your growing fence ignores ball hits for a few seconds."
     howTo: "Tap, then draw a cut through a busy area without it breaking."
+
+  # Stash (cards.yml): comes only from its card, which refills it every map.
+  # Never from a chest and never on the store's shelf (`cardOnly`), because a
+  # one-shot that outlives its map would turn a timing decision into a bank.
+  - id: stash
+    name: Stash
+    kind: stash
+    color: "#f2c14e"
+    weight: 1
+    startLevel: 1
+    replenishTo: 1
+    cardOnly: true
+    description: "Remembers where the balls are. The next lost life puts them back there instead. Comes back each map."
+    howTo: "Tap after a good cut, before a risky one. Fences you draw afterwards stay."

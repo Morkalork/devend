@@ -18,11 +18,11 @@ import abilitiesYamlRaw from "../../public/abilities.yml?raw";
 import { fetchConfig } from "@/lib/configFetch";
 
 /** The coded effect an ability triggers. A new kind needs code in abilityEffects.ts. */
-export type AbilityKind = "freeze" | "slow" | "slowArea" | "descope" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield" | "rubberBand";
+export type AbilityKind = "freeze" | "slow" | "slowArea" | "descope" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield" | "rubberBand" | "stash";
 /** Every coded kind, exported so nothing has to keep a second copy of the list. */
 export const ABILITY_KINDS: readonly AbilityKind[] = [
   "freeze", "slow", "slowArea", "descope", "clearFences", "magnet", "shockwave",
-  "fenceRush", "fenceShield", "rubberBand",
+  "fenceRush", "fenceShield", "rubberBand", "stash",
 ];
 const VALID_KINDS = new Set<AbilityKind>(ABILITY_KINDS);
 
@@ -54,6 +54,11 @@ export interface AbilityDef {
    * every ability but Shockwave. See abilityReplenish.ts.
    */
   replenishTo?: number;
+  /**
+   * Comes only from a card (cards.yml): never rolled from a chest and never on
+   * the store's shelf. The card's modifier is what hands out its charges.
+   */
+  cardOnly?: boolean;
   /** Info modal: one-line "what it does". */
   description?: string;
   /** Info modal: one-line "how to use it". */
@@ -92,6 +97,7 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     factor,
     size,
     replenishTo,
+    cardOnly: r.cardOnly === true,
     targeted: r.targeted === true,
     description: typeof r.description === "string" ? r.description : undefined,
     howTo: typeof r.howTo === "string" ? r.howTo : undefined,
@@ -132,7 +138,7 @@ export function getAbility(id: string): AbilityDef | undefined {
 
 /** Abilities eligible to appear in a chest at the given (1-based) level. */
 export function getEligibleAbilities(level: number): AbilityDef[] {
-  return liveAbilities.filter(a => a.startLevel <= level);
+  return liveAbilities.filter(a => a.startLevel <= level && !a.cardOnly);
 }
 
 /**

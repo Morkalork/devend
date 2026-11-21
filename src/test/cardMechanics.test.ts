@@ -9,6 +9,12 @@ import { resolve } from "node:path";
 import { createBotGame, plainModifiers, installClock, releaseClock } from "@/lib/bot/headlessGame";
 import { applyFenceSpeedStep, fenceSlows } from "@/lib/physics/fenceTouch";
 import { fireSlingFence, isLoadedSling, slingShape } from "@/lib/physics/slingFence";
+import {
+  BREAKPOINT_FREEZE_MS, STICKY_HOLD_MS, applyStickyHit, canSetBreakpoint, cutSegmentsOf, isMergeable, mergeBalls,
+  refactorTargetAt, restoreStash, setBreakpoint, setStickyPatch, stickyTargetAt, takeStash, tickBreakpoints,
+} from "@/lib/physics/verbCards";
+import { createBallEffectState } from "@/lib/ballEffects";
+import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import type { CanvasGameState } from "@/types/gameState";
 import { setRunSeedText } from "@/lib/runRng";
 import type { Ball } from "@/types/game";
@@ -159,5 +165,171 @@ describe("Hot Reload", () => {
     const cards = src("../public/cards.yml");
     expect(cards).toMatch(/- id: hot_reload\n {2}paysOff: \[rolling_redeploy\]/);
     expect(cards).toMatch(/slingExtraThrows: 1/);
+  });
+});
+
+// ── The verb cards (CARDS_PLAN.md phase 9; lib/physics/verbCards.ts) ────────
+
+describe("the verb cards", () => {
+  const plainBall = (id: string, x: number, y: number, vx = 100, vy = 0): Ball => ({
+    id, state: "active", position: { x, y }, velocity: { x: vx, y: vy }, speed: Math.hypot(vx, vy),
+    baseSpeed: 250, topSpeed: 300, minimumSpeed: 60, radius: 12, ability: "none", lockMultiplier: 1,
+    regionId: "r", effects: createBallEffectState(),
+  } as unknown as Ball);
+
+  it("are dealt to the board at map start, and off without the cards", () => {
+    try {
+      installClock();
+      setRunSeedText("verbs");
+      const on = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers({
+        breakpointsPerMap: 2, stashPerMap: 1, refactorsPerMap: 1, ballMerge: 1, stickyTapsPerMap: 3,
+      }));
+      expect(on.game.breakpointsRemaining).toBe(2);
+      expect(on.game.refactorsRemaining).toBe(1);
+      expect(on.game.ballMerge).toBe(true);
+      expect(on.game.stickyTapsRemaining).toBe(3);
+      expect(on.game.breakpoints).toEqual([]);
+      expect(on.game.stash).toBeNull();
+      const off = createBotGame(byLevel(LADDER, 8)!, 8, plainModifiers());
+      expect(off.game.breakpointsRemaining).toBe(0);
+      expect(off.game.ballMerge).toBe(false);
+      expect(off.game.stickyTapsRemaining).toBe(0);
+    } finally {
+      releaseClock();
+    }
+  });
+
+  it("Breakpoint: a trap set on open board freezes the first ball across it, once", () => {
+    const ball = plainBall("b1", 100, 300);
+    const other = plainBall("b2", 100, 340);
+    const game = { balls: [ball, other], walls: [], breakpointsRemaining: 2, regions: [] } as unknown as CanvasGameState;
+    // Not on a ball.
+    expect(canSetBreakpoint(game, { x: 100, y: 300 })).toBe(false);
+    expect(setBreakpoint(game, { x: 200, y: 300 }, 1000)).toBe(true);
+    expect(game.breakpointsRemaining).toBe(1);
+    expect(game.breakpoints?.length).toBe(1);
+    // Far away: nothing yet.
+    tickBreakpoints(game, 1100, 0);
+    expect(ball.frozenUntil).toBeUndefined();
+    // The ball reaches it: frozen there, trap spent, the other ball untouched.
+    ball.position = { x: 196, y: 302 };
+    tickBreakpoints(game, 1200, 0);
+    expect(ball.frozenUntil).toBe(1200 + BREAKPOINT_FREEZE_MS);
+    expect(other.frozenUntil).toBeUndefined();
+    expect(game.breakpoints?.length).toBe(0);
+    expect(game.breakpointTrips?.length).toBe(1);
+    // The ration runs out.
+    expect(setBreakpoint(game, { x: 300, y: 300 }, 1300)).toBe(true);
+    expect(setBreakpoint(game, { x: 400, y: 300 }, 1400)).toBe(false);
+  });
+
+  it("Stash: remembers the balls and puts them back, once, keeping a ball out of captured space", () => {
+    const a = plainBall("a", 100, 100, 50, 0);
+    const b = plainBall("b", 300, 300, 0, 50);
+    const game = { balls: [a, b], walls: [], regions: [], movers: [], spaceGrid: null } as unknown as CanvasGameState;
+    takeStash(game, 500);
+    expect(game.stash?.balls.length).toBe(2);
+    a.position = { x: 150, y: 120 };
+    a.velocity = { x: 0, y: 80 };
+    b.position = { x: 310, y: 330 };
+    expect(restoreStash(game, 900)).toBe(true);
+    expect(a.position).toEqual({ x: 100, y: 100 });
+    expect(a.velocity).toEqual({ x: 50, y: 0 });
+    expect(b.position).toEqual({ x: 300, y: 300 });
+    expect(game.stash).toBeNull();
+    expect(game.stashRestoredAt).toBe(900);
+    // Spent: a second lost life is a lost life.
+    expect(restoreStash(game, 950)).toBe(false);
+    // A remembered spot captured since is no place for a ball: it stays put.
+    takeStash(game, 1000);
+    b.position = { x: 320, y: 340 };
+    // A grid whose cells are all ACTIVE (0), but for the one under (300, 300).
+    (game as unknown as { spaceGrid: unknown }).spaceGrid = {
+      cellSize: 15, width: 40, height: 40, originX: 0, originY: 0, cells: new Uint8Array(1600), activeCount: 1599, initialActiveCount: 1600,
+    };
+    const grid = game.spaceGrid!;
+    grid.cells[Math.floor(300 / 15) * 40 + Math.floor(300 / 15)] = 1;
+    restoreStash(game, 1200);
+    expect(a.position).toEqual({ x: 100, y: 100 });
+    expect(b.position).toEqual({ x: 320, y: 340 });
+  });
+
+  it("Refactor: the hold finds a finished player fence, never a loaded Redeploy or the board", () => {
+    const fence = { id: "w-1", cutId: "cut-1", fenceTypeId: "standard", start: { x: 100, y: 300 }, end: { x: 200, y: 300 }, thickness: 6 } as unknown as Wall;
+    const fence2 = { id: "w-2", cutId: "cut-1", fenceTypeId: "standard", start: { x: 200, y: 300 }, end: { x: 300, y: 300 }, thickness: 6 } as unknown as Wall;
+    const sling = { id: "w-3", cutId: "cut-2", fenceTypeId: "redeploy", start: { x: 100, y: 500 }, end: { x: 200, y: 500 }, thickness: 6 } as unknown as Wall;
+    const edge = { id: "board-top", start: { x: 0, y: 0 }, end: { x: 600, y: 0 }, thickness: 6 } as unknown as Wall;
+    const game = { walls: [fence, fence2, sling, edge], balls: [], refactorsRemaining: 1 } as unknown as CanvasGameState;
+    expect(refactorTargetAt(game, { x: 150, y: 310 })).toBe(fence);
+    expect(refactorTargetAt(game, { x: 150, y: 505 })).toBeNull();
+    expect(refactorTargetAt(game, { x: 300, y: 4 })).toBeNull();
+    expect(cutSegmentsOf(game, fence)).toEqual([fence, fence2]);
+    game.refactorsRemaining = 0;
+    expect(refactorTargetAt(game, { x: 150, y: 310 })).toBeNull();
+  });
+
+  it("Merge Conflict: two plain balls become one bigger, slower ball worth both locks", () => {
+    const a = plainBall("a", 100, 100, 200, 0);
+    const b = plainBall("b", 120, 100, -100, 0);
+    b.lockMultiplier = 2;
+    const game = { balls: [a, b], walls: [], regions: [] } as unknown as CanvasGameState;
+    expect(isMergeable(a, 0)).toBe(true);
+    expect(mergeBalls(game, a, b, 10)).toBe(true);
+    expect(game.balls).toEqual([a]);
+    expect(a.radius).toBeCloseTo(Math.hypot(12, 12));
+    expect(a.lockMultiplier).toBe(3);
+    // Momentum shared, then slowed: well under the faster ball's 200.
+    expect(a.speed).toBeLessThan(200 * 0.85);
+    expect(a.speed).toBeGreaterThanOrEqual(60 * 0.85 - 1e-9);
+    expect(game.mergeFlashes?.length).toBe(1);
+    // A boss, a special ball or a frozen one never merges.
+    const boss = plainBall("boss", 0, 0);
+    boss.isBoss = true;
+    expect(isMergeable(boss, 0)).toBe(false);
+    const purple = plainBall("p", 0, 0);
+    purple.ability = "slowOthers";
+    expect(isMergeable(purple, 0)).toBe(false);
+    const frozen = plainBall("f", 0, 0);
+    frozen.frozenUntil = 5000;
+    expect(isMergeable(frozen, 100)).toBe(false);
+    // A ball that would come out too big bounces instead.
+    const big = plainBall("big", 0, 0);
+    big.radius = BASE_BALL_RADIUS * 2.1;
+    expect(mergeBalls(game, big, plainBall("c", 0, 0), 20)).toBe(false);
+  });
+
+  it("Rate Limiter: a tapped wall holds a stretch that stops the next ball dead, then times out", () => {
+    const wall = { id: "w-1", start: { x: 100, y: 300 }, end: { x: 400, y: 300 }, thickness: 6 } as unknown as Wall;
+    const game = { walls: [wall], balls: [], stickyTapsRemaining: 1 } as unknown as CanvasGameState;
+    expect(stickyTargetAt(game, { x: 250, y: 320 })).toBe(wall);
+    expect(stickyTargetAt(game, { x: 250, y: 400 })).toBeNull();
+    const patch = setStickyPatch(game, wall, { x: 250, y: 320 }, 1000)!;
+    expect(patch.x).toBe(250);
+    expect(patch.y).toBe(300);
+    expect(game.stickyTapsRemaining).toBe(0);
+    expect(stickyTargetAt(game, { x: 250, y: 320 })).toBeNull();
+    // A hit off the stretch bounces as ever; one on it sticks and spends it.
+    const ball = plainBall("b", 250, 288, 0, 100);
+    expect(applyStickyHit(game, ball, { x: 320, y: 300 }, 1500)).toBe(false);
+    expect(applyStickyHit(game, ball, { x: 260, y: 300 }, 1500)).toBe(true);
+    expect(ball.velocity).toEqual({ x: 0, y: 0 });
+    expect(ball.frozenUntil).toBe(1500 + STICKY_HOLD_MS);
+    expect(game.stickyPatches?.length).toBe(0);
+    // Untouched, a patch drains away on its own.
+    setStickyPatch({ ...game, stickyTapsRemaining: 1 } as CanvasGameState, wall, { x: 150, y: 300 }, 2000);
+  });
+
+  it("are five cards in the draft catalogue, each on a key the engine reads", () => {
+    const cards = src("../public/cards.yml");
+    for (const [id, key] of [
+      ["breakpoint", "breakpointsPerMap: 2"], ["stash", "stashPerMap: 1"], ["refactor", "refactorsPerMap: 1"],
+      ["merge_conflict", "ballMerge: 1"], ["rate_limiter", "stickyTapsPerMap: 3"],
+    ]) {
+      expect(cards, id).toContain(`- id: ${id}\n`);
+      expect(cards, id).toContain(key);
+    }
+    // Stash is an ability the card alone hands out: never a chest's, never the store's.
+    const abilities = src("../public/abilities.yml");
+    expect(abilities).toMatch(/- id: stash\n[\s\S]*?cardOnly: true/);
   });
 });

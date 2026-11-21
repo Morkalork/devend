@@ -42,6 +42,10 @@ export type GameMessageId =
   | "lifeLostBall"
   /** A moving block ran through the fence you were drawing, and it cost a life. */
   | "lifeLostMover"
+  /** Refactor: the held fence borders captured space, so it is load-bearing and stays. */
+  | "refactorFused"
+  /** Stash: a ball cut through the fence, and the stash put the balls back instead of costing a life. */
+  | "stashRestored"
   /** A ball cut through a Guardrail fence, and its shield saved the life. */
   | "guardrailCaught"
   /**
@@ -129,6 +133,8 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   launcherLoaded: true,
   lifeLostBall: true,
   lifeLostMover: true,
+  refactorFused: true,
+  stashRestored: true,
   guardrailCaught: true,
   cutWouldTrapBall: true,
   cutWouldBurySlabs: true,

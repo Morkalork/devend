@@ -87,6 +87,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 6 | The earned store: no free card, every card priced at an ordinary map's pay, a won contract deals one | built |
 | 7 | The pace measured and the draft's own inflation; the contract on the board; Hot Reload for the Redeploy fence; the shelf leans toward payoffs; Daily and pair on the draft; the human pass list | built |
 | 8 | The pick and the shop: one card free after every map, the hours spent at the shop after a boss | built |
+| 9 | The verb cards: Breakpoint, Stash, Refactor, Merge Conflict and Rate Limiter, each a new thing a finger does | built |
 
 ## Build record
 
@@ -315,7 +316,63 @@ lines and the component's pick-mode seams; `pipelineModel.test.ts` the shop
 stage. The gallery has the pick (`UpgradeShop-draft`) and the shop
 (`UpgradeShop-shop`).
 
+**Phase 9: the verb cards.** The owner's complaint, after the pick and the
+shop: *the cards only provide statistical upgrades; very few change the
+gameplay. The one that lets you hold a moving object is great, but too few
+are like that.* Of 62 cards, five changed what a finger does (the freeze
+tap, the mover hold, the Redeploy fling, Scrum Master's drawn path, the
+Mutex and Semaphore pockets); the rest are a number on a modifier, which is
+also the only thing the sweep could measure, so the catalogue drifted that
+way. Five more verbs, picked from a list of five plus two, all in
+`src/lib/physics/verbCards.ts` and each reached through a command
+(`net/commands.ts`), so a pair plays them in lockstep and a replay carries
+them:
+
+- *Breakpoint* (Senior, map 3): tap an empty spot to set a trap; the first
+  ball across it freezes there for 3s, by the freeze tap's own path. Two a
+  map. A tap that froze nothing and landed on open board is the trap; the
+  trap is judged again when the command applies, so a ball that rolled
+  under the point in the meantime does not get a trap set on top of it.
+  Pays off Scrum Master and Frozen Assets.
+- *Stash* (Principal, map 5): an ability button, `stash` in abilities.yml,
+  marked `cardOnly` so no chest rolls it and no store sells it; the card's
+  modifier is what makes it held, and `replenishTo: 1` refills it every map
+  while the card is in the build. Pressing it remembers where every ball
+  is. The next ball through a fence puts them all back there instead of
+  costing a life (`ballStruckFence`, after the shields and the push, before
+  the life). Only the balls and the movers go back: a fence drawn since
+  stays, space captured since stays captured, and a remembered spot that
+  has been captured is no place for a ball, so that ball keeps where it is.
+- *Refactor* (Senior, map 4): press and hold a finished fence to delete it,
+  once a map, through the fence-break path (`pendingWallBreaks`), so the
+  regions it separated merge again. The void rule holds: a fence with
+  captured space on one side is load-bearing and stays, said in the message
+  bar, and the ration is not spent. A loaded Redeploy fence is a grab, not a
+  hold. The hold shares the explainer's timer and slop.
+- *Merge Conflict* (Senior, map 6): two plain balls that collide fuse into
+  one, area added, momentum shared and then slowed by 15%, lock bonus
+  summed. Bosses, minions, special balls and frozen balls never merge, and a
+  ball that would come out past 2.2 base radii bounces instead. Pays off
+  Loose Coupling and Golden Handshake.
+- *Rate Limiter* (Junior, map 2): tap a wall, the board's or a fence, and a
+  stretch of it is sticky for 2s; the next ball to hit it stops dead for 3s,
+  by the freeze hold. Three taps a map. Judged before the trap on a tap, so
+  a tap beside a fence is read as aimed at the fence.
+
+Each has a Playground knob, a mark on the board (the fx layer: a breathing
+dashed ring for a trap, an amber band draining along a sticky wall, rings
+for a trap firing, a merge and a restore), its description in four
+languages and a test of the rule. The bot cannot play any of them, which is
+the point: the sweep measures numbers, and these are not numbers. The
+"in the noise" list from phase 7 is where the next cuts come from if the
+catalogue is to stay at about fifty.
+
 Still open:
+- the verb cards have no counter in the top bar: the ticket says the ration
+  and the marks say what is set, but "how many traps do I have left" is a
+  question the board does not answer yet;
+- Kill Switch and Hotpatch, the two of the five the owner did not take,
+  stay on the list;
 - the shop's shelf is the ordinary catalogue priced; a shop-only catalogue
   (a card removal, a relic-like permanent, the "+" of every held card dealt
   together) would make the shop a different place rather than a bigger

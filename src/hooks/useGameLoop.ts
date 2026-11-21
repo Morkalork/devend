@@ -48,6 +48,7 @@ import { drainCommands, type CommandDeps } from "@/lib/net/commands";
 import { startPairTurns } from "@/lib/net/pairTurn";
 import { runStream } from "@/lib/runRng";
 import { tickAutoFreeze } from "@/lib/physics/autoFreeze";
+import { tickBreakpoints, tickStickyPatches } from "@/lib/physics/verbCards";
 import { createFrameGate } from "@/lib/frameGate";
 import { getFrameCap } from "@/lib/rendering/render3dSettings";
 import { runBoardFrameHooks } from "@/lib/rendering/boardFrameHook";
@@ -414,6 +415,9 @@ export function createGameLoop(
 
     // Cron Job (lib/physics/autoFreeze.ts, shared with the headless bot).
     tickAutoFreeze(game, autoFreezeDuration, freezeNoCooldown);
+    // The verb cards' traps and sticky stretches (lib/physics/verbCards.ts).
+    tickBreakpoints(game, simNow(), freezeNoCooldown);
+    tickStickyPatches(game, simNow());
 
     // Player actions land HERE, at the top of the frame, before anything
     // moves. They used to land wherever the pointer handler happened to run,

@@ -302,6 +302,17 @@ export interface GameModifiers {
    * spent. The payoff for the Redeploy fence, which is thrown once by itself.
    */
   slingExtraThrows: number;
+  // ── The verb cards (cards.yml; lib/physics/verbCards.ts). All additive. ──
+  /** Breakpoint: freeze traps a map can set by tapping empty board. */
+  breakpointsPerMap: number;
+  /** Stash: times a map the ability button remembers the balls, for the next lost life to restore. */
+  stashPerMap: number;
+  /** Refactor: finished fences a map can delete by holding them. */
+  refactorsPerMap: number;
+  /** Merge Conflict: > 0 and two plain balls that collide fuse into one. */
+  ballMerge: number;
+  /** Rate Limiter: wall taps a map that make a stretch sticky for the next ball. */
+  stickyTapsPerMap: number;
   // Additive (sum) — Cold Storage: balls (the fastest first) that start every
   // map frozen, for START_FROZEN_SECONDS.
   startFrozenBalls: number;
@@ -489,6 +500,11 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   guardrailExtraShields: 0,
   fenceExtraHits: 0,
   slingExtraThrows: 0,
+  breakpointsPerMap: 0,
+  stashPerMap: 0,
+  refactorsPerMap: 0,
+  ballMerge: 0,
+  stickyTapsPerMap: 0,
   startFrozenBalls: 0,
   scoreBonusPerMissingLife: 0,
 };

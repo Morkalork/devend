@@ -77,7 +77,7 @@ describe("every ability has a card worth opening", () => {
 });
 
 describe("the claims that remain are true", () => {
-  it("Shockwave is the only one that promises to come back, and it does", () => {
+  it("only Shockwave and the Stash promise to come back, and they do", () => {
     // `replenishTo` is what makes "you always start a map with one" true.
     for (const a of getAllAbilities()) {
       const promises = /comes back|start a map with/i.test(`${a.description} ${a.howTo}`);

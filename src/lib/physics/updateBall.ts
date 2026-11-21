@@ -57,6 +57,7 @@ import { ballMayPass } from "@/lib/physics/obstacleRules";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { openingSlowFactor } from "@/lib/offerPerks";
 import { applyFenceSpeedStep, fenceSlows } from "@/lib/physics/fenceTouch";
+import { applyStickyHit } from "@/lib/physics/verbCards";
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
@@ -684,8 +685,10 @@ export function updateBall(
         );
         // Trigger wall hit effect on ball
         triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
-        // The squelch replaces the thud on the hit that sticks.
-        if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
+        // The squelch replaces the thud on the hit that sticks: a Rate Limiter
+        // stretch (physics/verbCards.ts) or a Bug Squash.
+        if (applyStickyHit(game, ball, boardResult.impactEdge.point, now)
+            || maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
         else playWallHitSound(impactStrength);
       }
     }
@@ -949,7 +952,8 @@ export function updateBall(
         registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position, ball.color);
       }
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
-      if (maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
+      // A Rate Limiter stretch on this wall stops the ball dead (physics/verbCards.ts).
+      if (applyStickyHit(game, ball, impactPoint, now) || maybeBugSquash(ball, game, now)) playSquishSound(impactStrength);
       else playWallHitSound(impactStrength);
 
       // Fence durability: each (debounced) hit wears the fence down.

@@ -405,6 +405,27 @@ export interface CanvasGameState {
   fenceExtraHits?: number;
   /** Hot Reload: throws a Redeploy fence has on top of its one. Set at map start. */
   slingExtraThrows?: number;
+  // ── The verb cards (lib/physics/verbCards.ts). Rations set at map start. ──
+  /** Breakpoint: traps this map can still set. */
+  breakpointsRemaining?: number;
+  /** Breakpoint: traps set and not yet tripped. */
+  breakpoints?: import("@/lib/physics/verbCards").Breakpoint[];
+  /** Breakpoint: where a trap just fired, for the renderer's ring. */
+  breakpointTrips?: { x: number; y: number; startTime: number }[];
+  /** Stash: where the balls were when the player last pressed the button, until a lost life spends it. */
+  stash?: import("@/lib/physics/verbCards").BoardStash | null;
+  /** Stash: sim ms the balls were last put back, for the renderer's flash. */
+  stashRestoredAt?: number;
+  /** Refactor: finished fences this map can still delete. */
+  refactorsRemaining?: number;
+  /** Merge Conflict: plain balls that collide fuse. */
+  ballMerge?: boolean;
+  /** Merge Conflict: where two balls just became one, for the renderer. */
+  mergeFlashes?: { x: number; y: number; startTime: number }[];
+  /** Rate Limiter: wall taps this map can still make. */
+  stickyTapsRemaining?: number;
+  /** Rate Limiter: the sticky stretches on the board right now. */
+  stickyPatches?: import("@/lib/physics/verbCards").StickyPatch[];
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**
