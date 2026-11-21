@@ -26,9 +26,10 @@ the run save), because the two read different catalogues:
 | | classic | draft |
 |---|---|---|
 | Catalogue | `public/upgrades.yml` | `public/cards.yml` |
-| After a map | buy what the hours afford | buy what the hours afford, at **an ordinary map's pay a common card**; a won contract's store deals one free |
+| After a map | buy what the hours afford | the **pick**: `PICK_CHOICES` cards, take one, free (if the map locked enough balls to open the store); a won contract deals the pick from the rarer cards |
+| After a boss | the same store | the **shop**: the pick, then `SHOP_CHOICES` priced cards, abilities and rerolls, bought with the hours banked since the last boss |
 | Build | no limit | `CARD_SLOTS` cards; one more means giving one up |
-| Hours buy | cards | cards, a reroll (`REROLL_HOURS`, rising per visit), abilities |
+| Hours buy | cards, every map | the shop's shelf, a reroll (`REROLL_HOURS`, rising per visit), abilities: at the shop only |
 | Ladders | Junior to Wizard | a card and at most one upgrade, its "+" |
 
 New solo runs play the draft. **Admin > "Classic store for new runs"** switches
@@ -85,6 +86,7 @@ it is: a chain is a card and its "+", and the jackpot pays a rare card.
 | 5 | Contracts (the draft's elite maps), payoff cards for the Flare, Guardrail and Tripwire fences, the draft's own panel wording | built |
 | 6 | The earned store: no free card, every card priced at an ordinary map's pay, a won contract deals one | built |
 | 7 | The pace measured and the draft's own inflation; the contract on the board; Hot Reload for the Redeploy fence; the shelf leans toward payoffs; Daily and pair on the draft; the human pass list | built |
+| 8 | The pick and the shop: one card free after every map, the hours spent at the shop after a boss | built |
 
 ## Build record
 
@@ -276,7 +278,51 @@ the "does nothing" list:
 The question for each is the same: after ten maps with it, did the build play
 differently, and did the player know why. That is a playtest, not a sweep.
 
+**Phase 8: the pick and the shop.** The owner's design, from before phase 6,
+was Slay the Spire's and not a price rule: *one card after every map, one
+only, as long as enough balls were locked, and the hours buy something else,
+at a special shop after each boss.* Phase 6 had read "one card a map" as a
+price and built the earned store, where a scrappy run fell behind on cards
+as well as on hours. This phase builds the design as it was meant.
+
+Two stores (`storeKindAfter` in `cardRules.ts`, decided by whether the map
+just cleared was a boss):
+
+- *The pick*, after an ordinary map: `PICK_CHOICES` (3) cards, one taken
+  free, nothing else on the shelf. No ability slot, no reroll, no prices:
+  the sprint's capacity line reads zero committed because nothing here can
+  be committed. A tap on a second card replaces the first, since one card is
+  the rule and a change of mind should not need an un-tap. The lock toll is
+  the gate the owner named: a map that locked too few balls opens the store
+  closed, as it always has, and a closed store deals no pick. A won
+  contract's pick comes from the uncommon and rare cards (`rareShelf`).
+- *The shop*, after a boss (maps 10, 20, 30, 40): the same free pick, then
+  `SHOP_CHOICES` (5) cards plus the build's extra shop items, the ability
+  slot, and the reroll, all bought with the hours banked since the last
+  boss. The pipeline strip names the stage "Shop" and its button "Open the
+  shop" (`BetweenMapPlan.shop`), so the player sees the shop coming from
+  the debrief.
+
+The build grows at one card a map for everyone; what a run earned on the
+board shows at the shop, where four or five maps of pay buy two to four
+cards' worth for a run that played them well and less for one that did not.
+The prices and the 1.06 inflation from phase 7 stand, now applied at the
+shop only. `CONTRACT_FREE_PICKS` is gone (the free card is every store's,
+`FREE_PICKS`), and the contract's reward is the rarer pick. The Admin
+toggle's text, the catalogue header and CLAUDE.md say the new rule;
+`draftStore.test.ts` pins the store kind per map, the free pick, the bar's
+lines and the component's pick-mode seams; `pipelineModel.test.ts` the shop
+stage. The gallery has the pick (`UpgradeShop-draft`) and the shop
+(`UpgradeShop-shop`).
+
 Still open:
+- the shop's shelf is the ordinary catalogue priced; a shop-only catalogue
+  (a card removal, a relic-like permanent, the "+" of every held card dealt
+  together) would make the shop a different place rather than a bigger
+  store;
+- the pay sweep in phase 7 read hours per map against a card's price; under
+  the pick and the shop the question is hours per act against the shop's
+  shelf, and has not been measured;
 - no boss or authored map has been changed: contracts are the build test, and
   the ladder's own maps are as they were;
 - the human pass above has not been played yet; a card on the "in the noise"

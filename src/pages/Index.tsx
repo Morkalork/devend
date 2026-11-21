@@ -34,8 +34,8 @@ import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
 import { nextMapInfo } from '@/ui/screens/draftStoreModel';
-import { CARD_SLOTS } from '@/lib/cardRules';
-import { contractFor, CONTRACT_FREE_PICKS } from '@/lib/contracts';
+import { CARD_SLOTS, storeKindAfter } from '@/lib/cardRules';
+import { contractFor } from '@/lib/contracts';
 import { CapstoneDraftScreen } from '@/ui/screens/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/ui/screens/RunDraftScreen';
 import { ChainPickScreen } from '@/ui/screens/ChainPickScreen';
@@ -668,9 +668,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   // the store reopens this shelf rather than a new roll.
                   dealt={session.storeDealt}
                   onDealt={session.handleShopDealt}
-                  // The run's store rules: the draft (every card bought, a
-                  // build of CARD_SLOTS) or the classic store.
+                  // The run's store rules: the draft (one card free a map, the
+                  // hours spent at the shop after a boss, a build of
+                  // CARD_SLOTS) or the classic store.
                   draft={session.ruleSet === 'draft' ? {
+                    kind: storeKindAfter(session.currentLevel),
                     slots: CARD_SLOTS,
                     onDrop: session.handleDropUpgrade,
                     onHours: session.handleDraftHours,
@@ -678,7 +680,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     // A contract on the next map, and the payout of one just won.
                     contract: contractFor(session.nextLevel, session.currentLevelIndex + 2, session.contracts),
                     onContract: session.handleDraftContract,
-                    freePicks: session.contractReward ? CONTRACT_FREE_PICKS : 0,
                     rareShelf: session.contractReward,
                   } : null}
                   extraShopItems={session.activeModifiers.extraShopItems}

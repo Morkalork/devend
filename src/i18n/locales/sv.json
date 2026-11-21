@@ -1029,18 +1029,19 @@
     "replaceHint": "Ditt bygge är fullt. Tryck på kortet du ger upp. Kortets + följer med.",
     "replaceRow": "Ge upp {{name}}",
     "contractTitle": "Kontrakt: {{name}}",
-    "contractReward": "Vinn den, så delar nästa butik ut ett gratis kort bland de ovanliga och sällsynta.",
+    "contractReward": "Vinn den, så delar nästa butik ut ditt kort bland de ovanliga och sällsynta.",
     "cards": "Kort",
     "picksTitle": "Dina val",
     "picksEmpty": "Inget valt ännu. Tryck på ett kort för att ta det.",
     "takeAndStart_one": "Ta {{count}} kort och starta nivå {{level}}",
     "takeAndStart_other": "Ta {{count}} kort och starta nivå {{level}}",
-    "earned": "Varje kort kostar timmar. En bra bana betalar för fler än ett.",
-    "contractFree_one": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
-    "contractFree_other": "Kontrakt vunnet: ta {{count}} kort gratis bland de ovanligare.",
-    "contractTaken": "Kontraktskortet taget. Ett kort till kostar timmar.",
     "paysOff": "Betalar sig med {{names}}.",
-    "paysOffHeld": "Betalar sig med {{names}}, som du har."
+    "paysOffHeld": "Betalar sig med {{names}}, som du har.",
+    "pick": "Ta ett kort. Dina timmar väntar på butiken efter bossen.",
+    "pickTaken": "Kort taget. Tryck på ett annat om du ändrar dig.",
+    "shop": "Butiken: ett kort gratis, och dina timmar köper resten.",
+    "shopTaken": "Gratiskortet taget. Allt annat kostar timmar.",
+    "contractFree": "Kontrakt vunnet: ditt gratiskort kommer från de ovanligare."
   },
   "content": {
     "upgrades": {
@@ -3163,7 +3164,9 @@
     "fullPay": "Allt som banan kunde ge",
     "toSpend": "att spendera före nivå {{level}}",
     "toSpendLast": "att spendera",
-    "pickOne": "Välj 1 av {{count}}"
+    "pickOne": "Välj 1 av {{count}}",
+    "shop": "Bossbutik",
+    "toShop": "Öppna bossbutiken"
   },
   "sprint": {
     "kind": {

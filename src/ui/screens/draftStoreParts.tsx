@@ -11,6 +11,8 @@ import {
   Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, tint, useUiScreen,
 } from "../kit/ui";
 import { schoolColor } from "./shopModel";
+import { draftBarLine } from "./draftStoreModel";
+import type { StoreKind } from "@/lib/cardRules";
 
 /** The explainer cards' width (max-w-sm), as the store's other modals. */
 const MODAL_W = 384;
@@ -24,29 +26,31 @@ export interface NextMapInfo {
 }
 
 interface DraftBarProps {
+  /** The pick or the shop (lib/cardRules.ts), which is what the first line says. */
+  kind: StoreKind;
   /** Slot cards held, after this visit's picks and drops. */
   held: number;
   slots: number;
-  /** Have this visit's free cards (a won contract's) all been taken? */
+  /** Has this visit's free card been taken? */
   freeTaken: boolean;
-  rerollPrice: number;
-  canReroll: boolean;
-  onReroll: () => void;
+  /** The reroll, at a shop; null at a pick, where hours are not spent. */
+  reroll: { price: number; can: boolean; onReroll: () => void } | null;
   nextMap: NextMapInfo | null;
   accent: number;
-  /** Free cards this visit: none, or the won contract's. */
-  freePicks: number;
+  /** After a won contract: the shelf was dealt from the rarer cards. */
+  rareShelf: boolean;
   /** The contract offered on the next map, already translated; null when there is none. */
   contract: { name: string; description: string; accepted: boolean; onToggle: () => void } | null;
 }
 
 /**
- * The draft's rules for this visit, in three lines: what the shelf costs
- * (every card is bought, unless a won contract dealt one free), how full the
- * build is, and what the next map will ask of it. The reroll sits beside the
- * first, because it is the other thing to do with a shelf you do not like.
+ * The draft's rules for this visit, in three lines: what the shelf deals (one
+ * card free; at a shop the rest cost hours), how full the build is, and what
+ * the next map will ask of it. At a shop the reroll sits beside the first,
+ * because it is the other thing to do with a shelf you do not like; a pick
+ * has no reroll, since a pick spends nothing.
  */
-export function DraftBar({ held, slots, freeTaken, rerollPrice, canReroll, onReroll, nextMap, accent, freePicks, contract }: DraftBarProps) {
+export function DraftBar({ kind, held, slots, freeTaken, reroll, nextMap, accent, rareShelf, contract }: DraftBarProps) {
   const { t } = useTranslation();
   const full = held >= slots;
   return (
@@ -54,26 +58,24 @@ export function DraftBar({ held, slots, freeTaken, rerollPrice, canReroll, onRer
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <View layout={{ flex: 1 }}>
           <Label
-            text={freePicks <= 0
-              ? t("cardDraft.earned")
-              : freeTaken
-                ? t("cardDraft.contractTaken")
-                : t("cardDraft.contractFree", { count: freePicks })}
-            size={TEXT.sm} weight="600" color={freePicks > 0 && freeTaken ? ROLE.muted : ROLE.ink} wrap
+            text={t(draftBarLine(kind, freeTaken, rareShelf))}
+            size={TEXT.sm} weight="600" color={freeTaken ? ROLE.muted : ROLE.ink} wrap
           />
         </View>
-        <Pressable
-          onTap={canReroll ? onReroll : undefined}
-          alpha={canReroll ? 1 : 0.45}
-          label={t("cardDraft.reroll", { hours: rerollPrice })}
-          layout={{
-            flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6,
-            borderRadius: RADIUS.sm, borderWidth: 1, borderColor: canReroll ? tint(ROLE.hours, 0.6) : ROLE.edge,
-          }}
-        >
-          <Icon icon={Dices} size={14} color={canReroll ? ROLE.hours : ROLE.muted} />
-          <Label text={t("cardDraft.reroll", { hours: rerollPrice })} size={TEXT.xs} weight="700" color={canReroll ? ROLE.hours : ROLE.muted} />
-        </Pressable>
+        {reroll && (
+          <Pressable
+            onTap={reroll.can ? reroll.onReroll : undefined}
+            alpha={reroll.can ? 1 : 0.45}
+            label={t("cardDraft.reroll", { hours: reroll.price })}
+            layout={{
+              flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6,
+              borderRadius: RADIUS.sm, borderWidth: 1, borderColor: reroll.can ? tint(ROLE.hours, 0.6) : ROLE.edge,
+            }}
+          >
+            <Icon icon={Dices} size={14} color={reroll.can ? ROLE.hours : ROLE.muted} />
+            <Label text={t("cardDraft.reroll", { hours: reroll.price })} size={TEXT.xs} weight="700" color={reroll.can ? ROLE.hours : ROLE.muted} />
+          </Pressable>
+        )}
       </View>
 
       <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

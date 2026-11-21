@@ -4,21 +4,30 @@
  *  - `classic`: the original store. upgrades.yml, every card bought with hours,
  *    no limit on how many a build holds.
  *  - `draft`: cards.yml, a build of CARD_SLOTS cards (a seventh means dropping
- *    one), and EVERY card bought with hours. A common card costs about what an
- *    ordinary map pays, so a normal run affords one card a map and a strong map
- *    affords two or three: more cards are earned on the board, never dealt.
- *    The run's one free card is the Sprint Planning offer before map 1, and a
- *    won contract deals one more. Hours also buy a reroll and abilities.
+ *    one), and two kinds of store (storeKindAfter):
  *
- *    It opened as "take one card free a map, or skip it for hours", and that
- *    read as too many cards too early: with the free card and a second bought
- *    the build of six was full by map 4, and every store after was a swap.
+ *      the PICK, after an ordinary map: PICK_CHOICES cards, take one, free,
+ *      as long as the map locked enough balls to open the store at all (the
+ *      lock toll in useGameSession). Hours are not spent here; there is
+ *      nothing to spend them on. A won contract deals the pick from the
+ *      rarer cards.
+ *
+ *      the SHOP, after a boss: the same free pick, and then the hours banked
+ *      since the last boss buy the rest, a shelf of SHOP_CHOICES priced
+ *      cards, abilities and rerolls.
+ *
+ *    So the build grows at one card a map for everyone, and what a run earned
+ *    on the board shows at the shop, where the hours go. It opened as "take
+ *    one card free a map, or skip it for hours, and buy more", and that read
+ *    as too many cards too early; then as "every card bought", which made a
+ *    scrappy run fall behind on cards as well as on hours.
  *
  * The rule set is fixed when a run starts and saved with it, because the two
  * read different catalogues: a run resumed under the other set would own ids
  * its catalogue has never heard of.
  */
 import type { UpgradeConfig } from "@/types/upgrade";
+import type { LevelConfig } from "@/types/level";
 
 export type RuleSet = "classic" | "draft";
 
@@ -26,8 +35,22 @@ const CLASSIC_KEY = "devend:classicStore";
 
 /** How many cards a draft build holds. A card's "+" rides on its card. */
 export const CARD_SLOTS = 6;
-/** The first reroll of a visit; each further one costs this much more. */
+/** The first reroll of a visit (shop only); each further one costs this much more. */
 export const REROLL_HOURS = 6;
+/** Cards a pick deals: Slay the Spire's three, enough to be a choice and few enough to read. */
+export const PICK_CHOICES = 3;
+/** Cards a shop deals, before any extra shop items: the pick's three and two more to buy. */
+export const SHOP_CHOICES = 5;
+/** Free cards at any open draft store: the pick, one. */
+export const FREE_PICKS = 1;
+
+/** The two draft stores: see the header. */
+export type StoreKind = "pick" | "shop";
+
+/** Which store opens after `cleared`: the shop after a boss, the pick after anything else. */
+export function storeKindAfter(cleared: Pick<LevelConfig, "boss"> | null | undefined): StoreKind {
+  return cleared?.boss ? "shop" : "pick";
+}
 
 /**
  * What a new run plays when nothing has been chosen: the draft, except under

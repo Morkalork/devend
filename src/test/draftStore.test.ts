@@ -10,11 +10,11 @@ import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelConfig } from "@/types/level";
 import {
-  draftBuild, draftPriceOf, freePickIdsOf, needsReplacement, nextMapFeatureKeys,
+  draftBarLine, draftBuild, draftPriceOf, freePickIdsOf, needsReplacement, nextMapFeatureKeys,
 } from "@/ui/screens/draftStoreModel";
-import { catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet } from "@/lib/cardRules";
+import { FREE_PICKS, PICK_CHOICES, SHOP_CHOICES, catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet, storeKindAfter } from "@/lib/cardRules";
 import { LADDER, byLevel } from "./fixtures/maps";
-import { contractFor, parseContracts, CONTRACT_MIN_LEVEL, CONTRACT_FREE_PICKS } from "@/lib/contracts";
+import { contractFor, parseContracts, CONTRACT_MIN_LEVEL } from "@/lib/contracts";
 import { inflationForLevel, mergePricing, resolveUpgradeCost } from "@/lib/upgradePricing";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { rollShelf, payoffWeight, paysOffHeld, PAYOFF_WEIGHT } from "@/ui/screens/shopModel";
@@ -25,17 +25,31 @@ const BY_ID = new Map(CARDS.map(c => [c.id, c]));
 const card = (id: string): UpgradeConfig => BY_ID.get(id)!;
 const ability = { id: "ability:magnet", name: "Magnet", tier: "Junior", description: "", modifiers: {}, grantsAbility: "magnet" } as UpgradeConfig;
 
-describe("every card is bought", () => {
+describe("the pick and the shop", () => {
   const shelf = [card("fast_compile"), card("slow_motion"), card("cold_boot")];
 
-  it("deals nothing free at an ordinary store, however many are picked", () => {
-    // The store opened as "one card free a visit", and that read as too many
-    // cards too early. Now the only free card after Sprint Planning is a won
-    // contract's, so an ordinary visit prices every card.
+  it("opens the pick after an ordinary map and the shop after a boss", () => {
+    // Slay the Spire's shape: a card reward after every fight, and the gold
+    // spent at a shop. Here the pick is one of three, free, and the hours
+    // wait for the shop after the boss.
+    expect(storeKindAfter(byLevel(LADDER, 3))).toBe("pick");
+    expect(storeKindAfter(byLevel(LADDER, 10))).toBe("shop");
+    expect(storeKindAfter(byLevel(LADDER, 20))).toBe("shop");
+    expect(storeKindAfter(null)).toBe("pick");
+    expect(PICK_CHOICES).toBe(3);
+    expect(SHOP_CHOICES).toBeGreaterThan(PICK_CHOICES);
+  });
+
+  it("deals one card free at every open store, and prices the rest", () => {
+    expect(FREE_PICKS).toBe(1);
     expect(freePickIdsOf([], shelf)).toEqual([]);
-    expect(freePickIdsOf(["slow_motion", "fast_compile"], shelf)).toEqual([]);
-    expect(draftPriceOf(shelf[0], [], 0, 34)).toBe(34);
-    expect(draftPriceOf(shelf[1], [], 0, 34)).toBe(34);
+    // Nothing picked yet: every card on the shelf is the free one.
+    expect(draftPriceOf(shelf[0], [], FREE_PICKS, 34)).toBe(0);
+    const one = freePickIdsOf(["slow_motion", "fast_compile"], shelf);
+    expect(one).toEqual(["slow_motion"]);
+    expect(draftPriceOf(shelf[1], one, FREE_PICKS, 34)).toBe(0);
+    // At a shop the second card is bought; at a pick there is no second card.
+    expect(draftPriceOf(shelf[0], one, FREE_PICKS, 34)).toBe(34);
   });
 
   it("prices a common card at an ordinary map's pay, so a normal run affords one a map", () => {
@@ -66,15 +80,32 @@ describe("every card is bought", () => {
     expect(Math.floor(47 / late)).toBeGreaterThanOrEqual(1);
   });
 
-  it("deals one free card at the store after a won contract, never an ability", () => {
-    expect(CONTRACT_FREE_PICKS).toBe(1);
-    expect(draftPriceOf(shelf[0], [], CONTRACT_FREE_PICKS, 34)).toBe(0);
-    const one = freePickIdsOf(["slow_motion", "fast_compile"], shelf, CONTRACT_FREE_PICKS);
-    expect(one).toEqual(["slow_motion"]);
-    expect(draftPriceOf(shelf[1], one, CONTRACT_FREE_PICKS, 34)).toBe(0);
-    expect(draftPriceOf(shelf[0], one, CONTRACT_FREE_PICKS, 34)).toBe(34);
-    expect(freePickIdsOf(["ability:magnet", "cold_boot"], shelf, CONTRACT_FREE_PICKS)).toEqual(["cold_boot"]);
-    expect(draftPriceOf(ability, [], CONTRACT_FREE_PICKS, 20)).toBe(20);
+  it("says what the visit deals, in the bar's first line", () => {
+    expect(draftBarLine("pick", false, false)).toBe("cardDraft.pick");
+    expect(draftBarLine("pick", true, false)).toBe("cardDraft.pickTaken");
+    expect(draftBarLine("shop", false, false)).toBe("cardDraft.shop");
+    expect(draftBarLine("shop", true, false)).toBe("cardDraft.shopTaken");
+    // A won contract's rarer shelf is said until the card is taken.
+    expect(draftBarLine("pick", false, true)).toBe("cardDraft.contractFree");
+    expect(draftBarLine("pick", true, true)).toBe("cardDraft.pickTaken");
+  });
+
+  it("never deals an ability free", () => {
+    expect(freePickIdsOf(["ability:magnet", "cold_boot"], shelf)).toEqual(["cold_boot"]);
+    expect(draftPriceOf(ability, [], FREE_PICKS, 20)).toBe(20);
+  });
+
+  it("keeps the pick to one card and the shop's reroll off the pick", () => {
+    // The shop component: a pick's tap replaces the card picked before it,
+    // and the reroll is the shop's alone. Pinned on the source, as the
+    // store board tests are, because the component is Pixi.
+    const shop = readFileSync(resolve(__dirname, "../ui/screens/UpgradeShop.tsx"), "utf8");
+    expect(shop).toContain('const picking = draft?.kind === "pick";');
+    expect(shop).toContain("selectedIds: picking && !alreadySelected ? [] : selectedIds");
+    expect(shop).toContain("const canReroll = !!draft && !picking && !closed");
+    expect(shop).toContain("shopSlots = picking ? PICK_CHOICES : (draft ? SHOP_CHOICES : 3) + extraShopItems");
+    expect(shop).toContain("picking ? 0 : abilityOfferCount");
+    expect(shop).toContain("reroll={picking ? null : {");
   });
 });
 

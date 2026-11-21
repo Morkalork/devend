@@ -69,7 +69,7 @@ import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish'
 import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
-import { getActiveRuleSet, setActiveRuleSet, preferredRuleSet, withPlus } from '@/lib/cardRules';
+import { getActiveRuleSet, setActiveRuleSet, preferredRuleSet, storeKindAfter, withPlus } from '@/lib/cardRules';
 
 /**
  * Drop one debug query param, keeping the rest. Replacing the whole search
@@ -1742,8 +1742,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearedLevel: currentLevelIndex + 1,
     promotion: !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
     store: true,
+    // The draft's shop after a boss (lib/cardRules.ts); the classic store is one store.
+    shop: getActiveRuleSet() === 'draft' && storeKindAfter(currentLevel) === 'shop',
     last: isLastLevel,
-  }), [currentLevelIndex, capstone, isLastLevel]);
+  }), [currentLevelIndex, currentLevel, capstone, isLastLevel]);
   const [frozenBetweenMapPlan, setFrozenBetweenMapPlan] = useState<BetweenMapPlan | null>(null);
   useEffect(() => {
     if (showLevelComplete) {

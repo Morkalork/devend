@@ -19,6 +19,7 @@ import { ChainPickScreen } from "../../screens/ChainPickScreen";
 import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
 import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
+import { samplePlan } from "../../screens/pipelineModel";
 
 const ACCENT = "#00ff88";
 const noop = () => {};
@@ -264,13 +265,22 @@ export const entries: GalleryEntry[] = [
       freeAbilityGrant="freezeAll" activeModifiers={undefined} shopDiscountMultiplier={1} />,
   },
   {
-    // Draft rules (CARDS_PLAN.md): a won contract's free card, a full build and the next map's line.
+    // Draft rules (CARDS_PLAN.md): the pick after an ordinary map, one of three free, a full build, a contract and the next map's line.
     id: "UpgradeShop-draft", group: "screen",
     render: () => <UpgradeShop {...shopProps} playerPoints={50} completedLevel={3} abilityOfferCount={0} shopRestockCount={0}
       ownedUpgradeIds={shopUpgrades.slice(0, 2).map(u => u.id)}
-      draft={{ slots: 2, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
+      draft={{ kind: "pick", slots: 2, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
         contract: { id: "hotfix_friday", name: "Hotfix Friday", description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 } },
-        onContract: noop, freePicks: 1 }} />,
+        onContract: noop }} />,
+  },
+  {
+    // Draft rules: the shop after a boss, where the banked hours are spent: the pick, priced cards, the ability slot and a reroll.
+    id: "UpgradeShop-shop", group: "screen",
+    render: () => <UpgradeShop {...shopProps} playerPoints={140} completedLevel={10} abilityOfferCount={1} shopRestockCount={0}
+      pipeline={{ ...samplePlan(10), promotion: false, shop: true }}
+      ownedUpgradeIds={shopUpgrades.slice(0, 2).map(u => u.id)}
+      draft={{ kind: "shop", slots: 6, onDrop: noop, onHours: noop, nextMap: { level: 11, name: "Merge Conflict", features: ["3 balls", "moving objects"] },
+        contract: null, onContract: noop }} />,
   },
   {
     // Draft rules: the build is full, so taking a card asks which one to give up.

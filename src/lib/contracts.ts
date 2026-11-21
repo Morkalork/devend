@@ -3,10 +3,11 @@
  *
  * A store visit may offer a contract on the NEXT map: one hard rule for that
  * map only (faster balls, bigger balls, slower fences). Take it and win the
- * map, and the store after it deals two free cards from the uncommon and rare
- * ones. Each contract asks a different question, so a build answers some
- * better than others: slow or freeze for the fast balls, shields or
- * Compression for the big ones, tempo cards for the slow fences.
+ * map, and the store after it deals its pick from the uncommon and rare
+ * cards instead of the whole catalogue. Each contract asks a different
+ * question, so a build answers some better than others: slow or freeze for
+ * the fast balls, shields or Compression for the big ones, tempo cards for
+ * the slow fences.
  *
  * Which contract is offered turns with the map number rather than a roll, so
  * every kind comes round and none needs forcing to be seen.
@@ -23,13 +24,6 @@ export interface Contract {
 
 /** The first map a contract may be offered ON: the early maps are still teaching. */
 export const CONTRACT_MIN_LEVEL = 4;
-/**
- * Free cards at the store after a contracted map is won: the one free card a
- * store ever deals. It was two while an ordinary store also dealt one free;
- * now every ordinary card is bought, the contract is how a card is earned
- * on the board rather than with hours, and one is the whole point.
- */
-export const CONTRACT_FREE_PICKS = 1;
 
 /**
  * The contract offered for the map about to be played, or null: none before

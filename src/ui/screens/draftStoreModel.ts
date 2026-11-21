@@ -9,7 +9,7 @@ import { mapContextOf } from "@/lib/upgradeConditions";
 import { contentText } from "@/i18n/content";
 import type { NextMapInfo } from "./draftStoreParts";
 import type { UpgradeConfig } from "@/types/upgrade";
-import { isPlusCard, slotCards } from "@/lib/cardRules";
+import { FREE_PICKS, isPlusCard, slotCards, type StoreKind } from "@/lib/cardRules";
 
 /** The features a card can care about, in a fixed order. */
 export function nextMapFeatureKeys(level: LevelConfig): string[] {
@@ -47,14 +47,24 @@ export function nextMapInfo(level: LevelConfig | null, levelNumber: number, t: T
 
 // ── The draft's rules, apart from the component so they can be tested ─────
 
+/** The draft bar's first line: what this visit deals, and whether it has been taken. */
+export function draftBarLine(kind: StoreKind, freeTaken: boolean, rareShelf: boolean): string {
+  if (freeTaken) {
+    return kind === "pick" ? "cardDraft.pickTaken" : "cardDraft.shopTaken";
+  }
+  if (rareShelf) {
+    return "cardDraft.contractFree";
+  }
+  return kind === "pick" ? "cardDraft.pick" : "cardDraft.shop";
+}
+
 /**
  * The cards taken free this visit: the first `count` picked off the shelf.
- * Under the earned rules that is none at an ordinary store and one at the
- * store after a won contract (CONTRACT_FREE_PICKS). While fewer than `count`
- * are picked, every card on the shelf is still free. An ability is never a
- * free card.
+ * That is the pick (FREE_PICKS, one) at every open draft store; at a shop
+ * the cards after it are bought. While fewer than `count` are picked, every
+ * card on the shelf is still free. An ability is never a free card.
  */
-export function freePickIdsOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[], count = 0): string[] {
+export function freePickIdsOf(selectedIds: readonly string[], offered: readonly UpgradeConfig[], count = FREE_PICKS): string[] {
   return selectedIds.filter(id => offered.some(o => o.id === id)).slice(0, count);
 }
 

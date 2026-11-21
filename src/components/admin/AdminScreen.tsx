@@ -301,7 +301,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" id="classic-store" checked={classicStore}
                 onChange={e => { setPreferredRuleSet(e.target.checked ? 'classic' : 'draft'); setClassicStoreState(e.target.checked); }} />
-              Classic store for new runs (off: the card draft, every card bought and a build of {CARD_SLOTS})
+              Classic store for new runs (off: the card draft, one card free a map, hours spent at the shop after a boss, a build of {CARD_SLOTS})
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" id="sprint-always-on" checked={sprintAlways}

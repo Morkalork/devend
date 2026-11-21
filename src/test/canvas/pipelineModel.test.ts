@@ -47,6 +47,11 @@ describe("the Continue buttons name where they go", () => {
     expect(continueLabel(plan(), "store", t)).toBe("Start level 11");
     expect(continueLabel(plan({ last: true }), "debrief", t)).toBe("Finish the run");
   });
+
+  it("names the shop after a boss, where the draft's hours are spent", () => {
+    expect(continueLabel(plan({ promotion: false, shop: true }), "debrief", t)).toBe("Open the shop");
+    expect(pipelineStages(plan({ shop: true }), "store", t).map(s => s.title)).toEqual(["Debrief", "Promotion", "Shop", "Level 11"]);
+  });
 });
 
 describe("pipelineStages", () => {

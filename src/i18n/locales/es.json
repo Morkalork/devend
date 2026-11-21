@@ -1029,18 +1029,19 @@
     "replaceHint": "Tu mazo está lleno. Toca la carta que entregas a cambio. Su + se va con ella.",
     "replaceRow": "Entregar {{name}}",
     "contractTitle": "Contrato: {{name}}",
-    "contractReward": "Gánalo, y la siguiente tienda reparte una carta gratis entre las poco comunes y raras.",
+    "contractReward": "Gánalo, y la siguiente tienda reparte tu carta entre las poco comunes y raras.",
     "cards": "Cartas",
     "picksTitle": "Tus elecciones",
     "picksEmpty": "Aún no has elegido nada. Toca una carta para quedártela.",
     "takeAndStart_one": "Elegir {{count}} carta y empezar nivel {{level}}",
     "takeAndStart_other": "Elegir {{count}} cartas y empezar nivel {{level}}",
-    "earned": "Cada carta cuesta horas. Un buen mapa paga más de una.",
-    "contractFree_one": "Contrato ganado: elige {{count}} carta gratis entre las más raras.",
-    "contractFree_other": "Contrato ganado: elige {{count}} cartas gratis entre las más raras.",
-    "contractTaken": "Carta del contrato elegida. Otra carta cuesta horas.",
     "paysOff": "Rentabiliza {{names}}.",
-    "paysOffHeld": "Rentabiliza {{names}}, que ya tienes."
+    "paysOffHeld": "Rentabiliza {{names}}, que ya tienes.",
+    "pick": "Elige una carta. Tus horas esperan a la tienda de después del jefe.",
+    "pickTaken": "Carta elegida. Toca otra si cambias de idea.",
+    "shop": "La tienda: una carta gratis, y tus horas compran el resto.",
+    "shopTaken": "Carta gratis elegida. Todo lo demás cuesta horas.",
+    "contractFree": "Contrato ganado: tu carta gratis sale de las más raras."
   },
   "content": {
     "upgrades": {
@@ -3163,7 +3164,9 @@
     "fullPay": "Todo lo que podía pagar este mapa",
     "toSpend": "para gastar antes del nivel {{level}}",
     "toSpendLast": "para gastar",
-    "pickOne": "Elige 1 de {{count}}"
+    "pickOne": "Elige 1 de {{count}}",
+    "shop": "Tienda del jefe",
+    "toShop": "Abrir la tienda del jefe"
   },
   "sprint": {
     "kind": {

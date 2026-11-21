@@ -48,7 +48,7 @@ import {
 import { ticketStatus, unavailable, wontFit } from "./storeBoardModel";
 import { PipelineFrame } from "./PipelineFrame";
 import { DraftBar, ReplaceCardModal, type NextMapInfo } from "./draftStoreParts";
-import { rerollPrice } from "@/lib/cardRules";
+import { FREE_PICKS, PICK_CHOICES, SHOP_CHOICES, rerollPrice, type StoreKind } from "@/lib/cardRules";
 import { draftBuild, draftPriceOf, freePickIdsOf, needsReplacement } from "./draftStoreModel";
 import { paysOffHeld } from "./shopModel";
 import type { Contract } from "@/lib/contracts";
@@ -166,13 +166,19 @@ const RUNWAY_OFF = hex("#8a8f98");
 const YELLOW_500 = 0xeab308;
 
 export interface DraftStore {
+  /**
+   * The pick (after an ordinary map: PICK_CHOICES cards, one taken free,
+   * hours untouched) or the shop (after a boss: the pick, then the hours
+   * buy the rest). lib/cardRules.ts.
+   */
+  kind: StoreKind;
   slots: number;
   /** Drop a held card (and its "+") from the build. */
   onDrop: (upgradeId: string) => void;
-  /** Hours out: a reroll. */
+  /** Hours out: a reroll (shop only). */
   onHours: (hours: number, action: "reroll") => void;
   nextMap: NextMapInfo | null;
-  /** Free cards this visit: none, or CONTRACT_FREE_PICKS after a won contract. */
+  /** Free cards this visit: FREE_PICKS unless a test says otherwise. */
   freePicks?: number;
   /** After a won contract: the shelf deals from the uncommon and rare cards. */
   rareShelf?: boolean;
@@ -248,7 +254,9 @@ export function UpgradeShop({
   const [drops, setDrops] = useState<Record<string, string>>({});
   const [replaceFor, setReplaceFor] = useState<UpgradeConfig | null>(null);
   const [contractAccepted, setContractAccepted] = useState(false);
-  const freePicks = Math.max(0, draft?.freePicks ?? 0);
+  const freePicks = Math.max(0, draft?.freePicks ?? (draft ? FREE_PICKS : 0));
+  // The pick is one card of three, and nothing else: no abilities, no hours.
+  const picking = draft?.kind === "pick";
 
   // `grayscale` on the closed shelf: what you missed, drained of colour.
   const closedFilters = useMemo(() => {
@@ -258,7 +266,9 @@ export function UpgradeShop({
     return [gray];
   }, [closed]);
 
-  const shopSlots = 3 + extraShopItems;
+  // The pick deals its three whatever the build's shop perks say: a bigger
+  // pick is still one card, and the perks are for the shop.
+  const shopSlots = picking ? PICK_CHOICES : (draft ? SHOP_CHOICES : 3) + extraShopItems;
   const dependentsById = useMemo(() => dependentsIndex(upgrades), [upgrades]);
 
   // Pick random offers once on mount; restocks append to this list.
@@ -302,10 +312,11 @@ export function UpgradeShop({
   // assignment block) and then the discount (Bulk Licensing certificate).
   const priceInflation = inflationForLevel(completedLevel);
   // The ability slot's cards, rolled once per visit like the upgrade shelf.
+  // None at a pick: an ability is bought, and the pick spends nothing.
   const [abilityOffers] = useState<UpgradeConfig[]>(() => dealt
     ? abilityOffersFor(dealt.abilityIds, completedLevel, mapsRemaining)
     : rollAbilityOffers(
-      completedLevel, mapsRemaining, heldAbilityIds, abilityOfferCount,
+      completedLevel, mapsRemaining, heldAbilityIds, picking ? 0 : abilityOfferCount,
       getRunRng(`shop:${completedLevel}:ability`), abilitySlots,
     ));
   // Report what was dealt, once: the shelf as it opened, before any restock.
@@ -400,8 +411,12 @@ export function UpgradeShop({
         return;
       }
     }
+    // At a pick the new card takes the place of the one picked before it,
+    // rather than joining it: one card, and a tap elsewhere is a change of
+    // mind. The drop recorded for the old pick goes inert with it
+    // (draftBuild only counts a drop whose card is still picked).
     const outcome = itemClickOutcome({
-      closed, upgrade, alreadySelected, allOwnedIds, selectedIds, upgrades, isLocked,
+      closed, upgrade, alreadySelected, allOwnedIds, selectedIds: picking && !alreadySelected ? [] : selectedIds, upgrades, isLocked,
       price: priceFor(upgrade), remainingBudget,
     });
     if (outcome.kind === "ignore") return;
@@ -452,7 +467,7 @@ export function UpgradeShop({
   // Draft rules: pay hours for a new shelf. Cards already picked stay picked
   // and stay on the shelf; everything else is dealt again.
   const nextRerollPrice = rerollPrice(rerollsUsed, shopDiscountMultiplier);
-  const canReroll = !!draft && !closed && remainingBudget >= nextRerollPrice;
+  const canReroll = !!draft && !picking && !closed && remainingBudget >= nextRerollPrice;
   const handleReroll = () => {
     if (!draft || !canReroll) return;
     draft.onHours(-nextRerollPrice, "reroll");
@@ -814,19 +829,18 @@ export function UpgradeShop({
       {draft && !closed && (
         <Appear fromY={-8} delay={0.1}>
           <DraftBar
+            kind={draft.kind}
             held={heldCount}
             slots={draft.slots}
             freeTaken={freePickIds.length >= freePicks}
-            freePicks={freePicks}
+            rareShelf={!!draft.rareShelf}
             contract={draft.contract ? {
               name: contentText.contractName(t, draft.contract),
               description: contentText.contractDesc(t, draft.contract),
               accepted: contractAccepted,
               onToggle: () => setContractAccepted(a => !a),
             } : null}
-            rerollPrice={nextRerollPrice}
-            canReroll={canReroll}
-            onReroll={handleReroll}
+            reroll={picking ? null : { price: nextRerollPrice, can: canReroll, onReroll: handleReroll }}
             nextMap={draft.nextMap}
             accent={boardAccent}
           />

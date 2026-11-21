@@ -12,13 +12,15 @@
 #     the upgrade sweep's rule is that a card must beat twice the noise
 #     (UPGRADE_SWEEP_REPORT.md), and a 5% nudge does not.
 #   - `tier` is the card's RARITY here: Junior common, Senior uncommon,
-#     Principal rare. It prices the card, and EVERY card is bought: the store
-#     deals nothing free (a won contract's store deals one). The anchor below
-#     is an ORDINARY map's pay rather than the classic store's good map
-#     (upgradePricing.ts measured flawless 47h, good 34h, ordinary 16h,
-#     scrappy 6h): 23 x 0.7 puts a common at 16h, so a normal run affords one
-#     card a map, a good map affords two and a flawless one three. More cards
-#     are earned on the board, which is the rule the free card had undone.
+#     Principal rare. After an ordinary map the store is a PICK: three cards,
+#     one taken free, and hours are not spent. After a boss it is the SHOP:
+#     the same free pick, and then the hours banked since the last boss buy
+#     the rest, at the prices below (src/lib/cardRules.ts). The anchor is an
+#     ORDINARY map's pay (upgradePricing.ts measured flawless 47h, good 34h,
+#     ordinary 16h, scrappy 6h): 23 x 0.7 puts a common at 16h, so the four
+#     or five maps between bosses bank two to four cards' worth for a run
+#     that plays them well, and less for one that does not. That is where
+#     doing well on the board shows: at the shop, never in the pick.
 #   - `downside:` is the line a strong card charges you, shown in red.
 #   - `paysOff:` names the cards this one is the payoff for (the engines in
 #     CARDS_PLAN.md). The shelf leans toward a payoff whose enabler the build
@@ -30,13 +32,13 @@
 pricing:
   minCost: 2
   anchorHours: 23
-  # Softer than the classic store's 1.15. With nothing dealt free, a card is
-  # paid for out of map pay alone, and the scoring axes are absolute: an
-  # ordinary map pays about the same at 30 as at 3. 1.15 tripled a common card
-  # by map 40 against that flat pay (measured: the bot's median map paid for a
-  # common on 10 of 10 wins at map 4 and 0 of 14 at map 29). 1.06 takes a
-  # common from 16h to about 26h by map 40, under a good map's 34h the whole
-  # way, so one card an ordinary map stays the normal rate to the end.
+  # Softer than the classic store's 1.15. A shop card is paid for out of map
+  # pay alone, and the scoring axes are absolute: an ordinary map pays about
+  # the same at 30 as at 3. 1.15 tripled a common card by map 40 against that
+  # flat pay (measured: the bot's median map paid for a common on 10 of 10
+  # wins at map 4 and 0 of 14 at map 29). 1.06 takes a common from 16h to
+  # about 26h by map 40, under a good map's 34h the whole way, so the hours
+  # of one act buy about as much at the last shop as at the first.
   blockInflation: 1.06
   tierFactor:
     Junior: 0.7
