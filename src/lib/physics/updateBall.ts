@@ -58,6 +58,7 @@ import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { openingSlowFactor } from "@/lib/offerPerks";
 import { applyFenceSpeedStep, fenceSlows } from "@/lib/physics/fenceTouch";
 import { applyStickyHit } from "@/lib/physics/verbCards";
+import { SHOVE_MS, frostOnBounce, frostOnIce } from "@/lib/physics/rungs";
 import { FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 
 import { applyBoardEdge, sideOfEdge } from "@/lib/physics/boardEdges";
@@ -266,6 +267,8 @@ function applyBouncer(
   game: CanvasGameState, ball: Ball, spec: BouncerSpec | undefined, now: number,
 ): void {
   if (!spec || !bouncerReady(ball, spec, now)) return;
+  // Pace 2 (physics/rungs.ts): a steady ball is not kicked.
+  if (ball.steady) return;
   const hit = bouncerKick(ball, spec);
   // Spend an hour from the bumper's bank. In here rather than in bouncerKick
   // because the kick is pure geometry and this is a payment - and because the
@@ -737,8 +740,11 @@ export function updateBall(
       surfaceHit = true;
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
-      // Black ball wears down movers (its heavy mass makes short work of them).
-      if (ball.ability === 'breakObjects') {
+      // Weight 3 (physics/rungs.ts): the mover is shoved off its patrol.
+      if (ball.shoves) mover.shovedUntil = now + SHOVE_MS;
+      // Black ball wears down movers (its heavy mass makes short work of them);
+      // so does a roster ball of weight two or more.
+      if (ball.ability === 'breakObjects' || ball.heavy) {
         const d = findMoverDestructible(game, mover.id);
         // The ball's own position at contact is the impact point. Passing it
         // matters: registerObjectHit records the dent and sheds the chips only
@@ -921,6 +927,8 @@ export function updateBall(
       // from a remembered id: a ball can touch two fences in one step, and the
       // one that changes its speed has to be one it really hit.
       const stepped = applyFenceSpeedStep(ball, wall, now);
+      // Frost 3 (physics/rungs.ts): Ice is a wall to it; it freezes on touch.
+      if (fenceSlows(wall)) frostOnIce(ball, now);
       // Permafrost: the Ice fence that slowed it also holds it still, unless
       // it is frozen already or still on its thaw cooldown (the same cooldown
       // a tapped freeze leaves, so a ball cannot be pinned against Ice forever).
@@ -972,7 +980,7 @@ export function updateBall(
       // Force Push (a squashed bug) does the same for its few seconds, and the
       // cost is the whole point of the buff: the ball that is finally opening
       // the wall is dismantling the pocket you drew to catch it in.
-      if (!isObstacleWall && (ball.ability === 'breakObjects' || isWrecking(ball, now))) {
+      if (!isObstacleWall && (ball.ability === 'breakObjects' || ball.heavy || isWrecking(ball, now))) {
         registerFenceFracture(game, wall, now);
       }
 
@@ -1020,7 +1028,7 @@ export function updateBall(
                 ball.punchThroughId = oid;
                 ball.punchThroughUntil = now + PUNCH_THROUGH_GRACE_MS;
               }
-            } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
+            } else if (d.kind === 'mirror' && (ball.ability === 'breakObjects' || ball.heavy)) {
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             }
           }
@@ -1049,6 +1057,9 @@ export function updateBall(
       }
     }
   }
+
+  // Frost 1 (physics/rungs.ts): every third surface hit freezes the ball.
+  if (surfaceHit) frostOnBounce(ball, now);
 
   // ── Ball-type speed abilities (issue #37) ────────────────────────────────
   // Yellow: every surface contact picks a new random speed within its range

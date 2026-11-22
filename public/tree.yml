@@ -1,0 +1,352 @@
+# The ball tree (BALL_TREE_PLAN.md): the catalogue a run under the tree rule
+# set buys from between maps (src/lib/tree.ts). The balls are the player's; a
+# map brings none.
+#
+#   tree:       the roster's prices: a rung's base by rank, the stack factor a
+#               ball's next rung is multiplied by per rung it already holds,
+#               and the price of the second and third ball. The rungs' words
+#               are in src/lib/roster.ts and their rules in
+#               src/lib/physics/rungs.ts, since they are code, not cards.
+#   upgrades:   the GENERAL nodes, in the upgrades.yml / cards.yml shape so
+#               the modifier pipeline, the fence slots and the abilities read
+#               them unchanged. `branch` files a node under Fences, Hands or
+#               Office; `prerequisites` are the tree's edges; an `upgradeOf`
+#               rides its node as a "+" did. No node slows, shrinks or
+#               steadies all balls: those were the cards the player could not
+#               feel, and under the tree the balls are theirs.
+#
+# Prices: a node's tier through the pricing block, with no inflation; depth
+# is priced by the stack factor on a ball, and by the ladder on a branch.
+# No em-dashes in name or description (CLAUDE.md).
+pricing:
+  minCost: 2
+  anchorHours: 23
+  blockInflation: 1.0
+  tierFactor:
+    Junior: 0.7
+    Senior: 0.95
+    Principal: 1.3
+    Architect: 1.7
+    Wizard: 2.1
+tree:
+  # Hours for a rung at rank one, two and three, before stacking.
+  rungBase: [12, 20, 32]
+  # The next rung on a ball costs this much more per rung the ball already holds.
+  stackFactor: 1.35
+  # The second ball, then the third. Flat, with no traits: the fleet is many cheap decisions.
+  ballCost: [30, 50]
+tagSets:
+  threshold: 99
+  bonuses: []
+upgrades:
+- id: fast_compile
+  branch: fences
+  name: Fast Compile
+  tier: Junior
+  icon: fast-forward
+  tags: [tempo]
+  description: Fences build 35% faster.
+  modifiers: {fenceGenerationSpeedMultiplier: 1.35}
+- id: fast_compile_plus
+  branch: fences
+  name: Fast Compile+
+  tier: Junior
+  tags: [tempo]
+  upgradeOf: fast_compile
+  description: Fences build 60% faster.
+  modifiers: {fenceGenerationSpeedMultiplier: 1.185}
+- id: multithreading
+  branch: fences
+  name: Multithreading
+  tier: Senior
+  icon: split
+  tags: [tempo]
+  description: Draw one more fence at the same time.
+  modifiers: {additionalConcurrentFences: 1}
+- id: multithreading_plus
+  branch: fences
+  name: Multithreading+
+  tier: Senior
+  tags: [tempo]
+  upgradeOf: multithreading
+  description: Draw two more fences at the same time.
+  modifiers: {additionalConcurrentFences: 1}
+- id: add_guardrails
+  branch: fences
+  name: Guardrail Fence
+  tier: Junior
+  icon: fence
+  tags: [safety]
+  prerequisites: [fast_compile]
+  description: 'Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. It builds 15% slower.'
+  grantsFenceType: guardrail
+  modifiers: {}
+- id: cold_storage_ice
+  branch: fences
+  name: Ice Fence
+  tier: Senior
+  icon: refrigerator
+  tags: [freeze]
+  prerequisites: [fast_compile]
+  description: 'Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower.'
+  grantsFenceType: ice
+  modifiers: {}
+- id: incident_flare
+  branch: fences
+  name: Flare Fence
+  tier: Senior
+  icon: flame-kindling
+  tags: [risk]
+  prerequisites: [fast_compile]
+  description: 'Adds the Flare fence: balls bouncing off it speed up, and faster balls are worth more.'
+  downside: Faster balls are harder to fence, and it builds 30% slower.
+  grantsFenceType: flare
+  modifiers: {}
+- id: hotfix_tripwire
+  branch: fences
+  name: Tripwire Fence
+  tier: Senior
+  icon: zap
+  tags: [tempo, risk]
+  prerequisites: [fast_compile]
+  description: 'Adds the Tripwire fence: it builds 40% faster.'
+  downside: The first ball to touch a finished Tripwire breaks it.
+  grantsFenceType: tripwire
+  modifiers: {}
+- id: acquire_the_mutex
+  branch: fences
+  name: Mutex Fence
+  tier: Senior
+  icon: lock-keyhole
+  tags: [lock, safety]
+  prerequisites: [fast_compile]
+  description: 'Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does.'
+  grantsFenceType: mutex
+  modifiers: {}
+- id: rolling_redeploy
+  branch: fences
+  name: Redeploy Fence
+  tier: Principal
+  icon: rotate-ccw
+  tags: [risk, tempo]
+  prerequisites: [fast_compile]
+  description: 'Adds the Redeploy fence: grab a finished one and fling the balls in front of it.'
+  downside: It builds 40% slower.
+  grantsFenceType: redeploy
+  modifiers: {}
+- id: raise_the_semaphore
+  branch: fences
+  name: Semaphore Fence
+  tier: Principal
+  icon: flag
+  tags: [lock, risk]
+  prerequisites: [fast_compile]
+  description: 'Adds the Semaphore fence: it locks only two or more balls at once, and pays hugely for them.'
+  downside: It cannot lock a ball on its own, and it builds 40% slower.
+  grantsFenceType: semaphore
+  modifiers: {}
+- id: crash_barrier
+  branch: fences
+  name: Crash Barrier
+  tier: Senior
+  icon: shield-check
+  tags: [safety]
+  prerequisites: [add_guardrails]
+  description: The Guardrail fence carries two more shields every map. Needs the Guardrail fence.
+  modifiers: {guardrailExtraShields: 2}
+- id: afterburner
+  branch: fences
+  name: Afterburner
+  tier: Senior
+  icon: rocket
+  tags: [risk, lock]
+  prerequisites: [incident_flare]
+  description: A ball locked while it is running faster than its normal speed pays triple the lock bonus. A Flare fence is what makes one that fast.
+  modifiers: {fastLockBonus: 2}
+- id: tensioned_wire
+  branch: fences
+  name: Tensioned Wire
+  tier: Senior
+  icon: spline
+  tags: [tempo]
+  prerequisites: [hotfix_tripwire]
+  description: A Tripwire survives two more touches before it breaks. Needs the Tripwire fence.
+  modifiers: {fenceExtraHits: 2}
+- id: hot_reload
+  branch: fences
+  name: Hot Reload
+  tier: Senior
+  icon: refresh-cw
+  tags: [risk, tempo]
+  prerequisites: [rolling_redeploy]
+  description: A Redeploy fence reloads once, so it can be thrown twice before it is spent. Needs the Redeploy fence.
+  modifiers: {slingExtraThrows: 1}
+- id: feature_freeze
+  branch: hands
+  name: Feature Freeze
+  tier: Junior
+  icon: mouse-pointer-click
+  tags: [freeze]
+  description: Tap a ball to freeze it for 3s. Two taps per map.
+  modifiers: {ballFreezeDuration: 3, freezeUsesPerMap: 2}
+- id: feature_freeze_plus
+  branch: hands
+  name: Feature Freeze+
+  tier: Junior
+  tags: [freeze]
+  upgradeOf: feature_freeze
+  description: Tap a ball to freeze it and its nearest neighbour for 3s. Two taps per map.
+  modifiers: {ballFreezeCount: 1}
+- id: rate_limiter
+  branch: hands
+  name: Rate Limiter
+  tier: Junior
+  icon: hand
+  tags: [freeze]
+  description: Tap a wall to make a stretch of it sticky for 2s. The next ball to hit it stops dead for 3s. Three taps a map.
+  modifiers: {stickyTapsPerMap: 3}
+- id: breakpoint
+  branch: hands
+  name: Breakpoint
+  tier: Senior
+  icon: crosshair
+  tags: [freeze, lock]
+  description: Tap an empty spot to set a trap. The first ball to cross it freezes there for 3s. Two traps a map.
+  modifiers: {breakpointsPerMap: 2}
+- id: refactor
+  branch: hands
+  name: Refactor
+  tier: Senior
+  icon: eraser
+  tags: [tempo]
+  description: Press and hold a finished fence to delete it, once a map. Captured space stays captured, so only the open lanes change. A fence holding back captured space cannot go.
+  modifiers: {refactorsPerMap: 1}
+- id: stash
+  branch: hands
+  name: Stash
+  tier: Principal
+  icon: archive
+  tags: [risk]
+  description: An ability button that remembers where every ball is, once a map. The next ball that would cost you a life puts them all back there instead.
+  modifiers: {stashPerMap: 1}
+- id: merge_conflict
+  branch: hands
+  name: Merge Conflict
+  tier: Senior
+  icon: git-merge
+  tags: [lock]
+  description: Two plain balls that collide fuse into one bigger, slower ball, worth both their lock bonuses. Bosses and special balls do not merge.
+  modifiers: {ballMerge: 1}
+- id: control_freak
+  branch: hands
+  name: Control Freak
+  tier: Senior
+  icon: grab
+  tags: [safety]
+  description: Press and hold a moving object to stop it, and drag it along its own track.
+  modifiers: {moverBrake: 1, moverDrive: 1}
+- id: scrum_master
+  branch: hands
+  name: Scrum Master
+  tier: Junior
+  icon: route
+  tags: [safety]
+  description: 'See where every ball is going: its next three bounces are drawn on the board. A ball with the sight rung draws its own either way.'
+  modifiers: {ballPathPredictionBounces: 3, ballPathPredictionBalls: 999}
+- id: hot_start
+  branch: hands
+  name: Hot Start
+  tier: Junior
+  icon: flame
+  tags: [tempo]
+  description: The first two fences of every map finish instantly.
+  modifiers: {instantFencesPerMap: 2}
+- id: fault_tolerance
+  branch: office
+  name: Fault Tolerance
+  tier: Senior
+  icon: heart
+  tags: [safety]
+  description: One extra life, for as long as you hold this card.
+  modifiers: {extraLives: 1}
+- id: defensive_programming
+  branch: office
+  name: Defensive Programming
+  tier: Junior
+  icon: shield
+  tags: [safety]
+  description: 'Each map starts with a shield: the first ball to hit a growing fence costs the shield, not a life.'
+  modifiers: {wallShieldsPerMap: 1}
+- id: defensive_programming_plus
+  branch: office
+  name: Defensive Programming+
+  tier: Junior
+  tags: [safety]
+  upgradeOf: defensive_programming
+  description: Each map starts with two shields.
+  modifiers: {wallShieldsPerMap: 1}
+- id: performance_bonus
+  branch: office
+  name: Performance Bonus
+  tier: Junior
+  icon: trending-up
+  tags: [bank]
+  description: Every map pays 25% more overtime.
+  modifiers: {scoreMultiplier: 1.25}
+- id: performance_bonus_plus
+  branch: office
+  name: Performance Bonus+
+  tier: Junior
+  tags: [bank]
+  upgradeOf: performance_bonus
+  description: Every map pays 50% more overtime.
+  modifiers: {scoreMultiplier: 1.2}
+- id: compound_interest
+  branch: office
+  name: Compound Interest
+  tier: Senior
+  icon: piggy-bank
+  tags: [bank]
+  description: Every store pays 8% interest on the hours you hold.
+  modifiers: {shopInterestPercent: 8}
+- id: expense_account
+  branch: office
+  name: Expense Account
+  tier: Junior
+  icon: receipt
+  tags: [bank]
+  description: Every node in the tree costs 30% less.
+  modifiers: {shopDiscountMultiplier: 0.7}
+- id: ship_early
+  branch: office
+  name: Ship Early
+  tier: Senior
+  icon: timer
+  tags: [bank, tempo]
+  description: Ship Early windows last 4s longer per ball, and Tempo pays double.
+  modifiers: {shipEarlySecondsPerBall: 4, shipEarlyBonusMultiplier: 2}
+- id: onboarding
+  branch: office
+  name: Onboarding
+  tier: Junior
+  icon: sunrise
+  tags: [tempo]
+  description: Every map starts with 15% of the board already captured.
+  modifiers: {startingCapturePercent: 15}
+- id: scaffolding
+  branch: office
+  name: Scaffolding
+  tier: Junior
+  icon: land-plot
+  tags: [tempo, safety]
+  description: Every fence starts 30% drawn.
+  modifiers: {fenceHeadStart: 0.3}
+- id: fault_tolerance_2
+  branch: office
+  name: Redundancy
+  tier: Principal
+  icon: heart
+  tags: [risk]
+  prerequisites: [fault_tolerance]
+  description: A second extra life, for as long as you hold this node.
+  modifiers: {extraLives: 1}

@@ -2765,6 +2765,156 @@
         "name": "Código heredado",
         "description": "Tus vallas se construyen un 35% más lento en el siguiente mapa."
       }
+    },
+    "tree": {
+      "fast_compile": {
+        "name": "Compilación rápida",
+        "description": "Las vallas se construyen un 35% más rápido."
+      },
+      "fast_compile_plus": {
+        "name": "Compilación rápida+",
+        "description": "Las vallas se construyen un 60% más rápido."
+      },
+      "multithreading": {
+        "name": "Multihilo",
+        "description": "Dibuja una valla más al mismo tiempo."
+      },
+      "multithreading_plus": {
+        "name": "Multihilo+",
+        "description": "Dibuja dos vallas más al mismo tiempo."
+      },
+      "add_guardrails": {
+        "name": "Valla quitamiedos",
+        "description": "Añade la valla quitamiedos: una vez por mapa, una bola que la atraviesa cuesta la valla, no una vida. Se construye un 15% más lento."
+      },
+      "cold_storage_ice": {
+        "name": "Valla de hielo",
+        "description": "Añade la valla de hielo: las bolas que rebotan en ella pierden velocidad. Se construye un 30% más lento."
+      },
+      "incident_flare": {
+        "name": "Valla bengala",
+        "description": "Añade la valla bengala: las bolas que rebotan en ella aceleran, y las bolas rápidas valen más.",
+        "downside": "Las bolas rápidas son más difíciles de cercar, y se construye un 30% más lento."
+      },
+      "hotfix_tripwire": {
+        "name": "Valla trampa",
+        "description": "Añade la valla trampa: se construye un 40% más rápido.",
+        "downside": "La primera bola que toca una valla trampa terminada la rompe."
+      },
+      "acquire_the_mutex": {
+        "name": "Valla mutex",
+        "description": "Añade la valla mutex: solo bloquea un hueco con una única bola dentro, y paga extra cuando lo hace."
+      },
+      "rolling_redeploy": {
+        "name": "Valla de redespliegue",
+        "description": "Añade la valla de redespliegue: agarra una terminada y lanza las bolas que tiene delante.",
+        "downside": "Se construye un 40% más lento."
+      },
+      "raise_the_semaphore": {
+        "name": "Valla semáforo",
+        "description": "Añade la valla semáforo: solo bloquea dos o más bolas a la vez, y paga muchísimo por ellas.",
+        "downside": "No puede bloquear una bola sola, y se construye un 40% más lento."
+      },
+      "crash_barrier": {
+        "name": "Barrera de choque",
+        "description": "La valla quitamiedos lleva dos escudos más en cada mapa. Necesita la valla quitamiedos."
+      },
+      "afterburner": {
+        "name": "Postcombustión",
+        "description": "Una bola bloqueada mientras va más rápido que su velocidad normal paga el triple del bono de bloqueo. Una valla bengala es lo que la pone así de rápida."
+      },
+      "tensioned_wire": {
+        "name": "Cable tensado",
+        "description": "Una valla trampa aguanta dos toques más antes de romperse. Necesita la valla trampa."
+      },
+      "hot_reload": {
+        "name": "Recarga en caliente",
+        "description": "Una valla Redeploy se recarga una vez, así que puede lanzarse dos veces antes de gastarse. Necesita la valla Redeploy."
+      },
+      "feature_freeze": {
+        "name": "Congelación de funciones",
+        "description": "Toca una bola para congelarla 3s. Dos toques por mapa."
+      },
+      "feature_freeze_plus": {
+        "name": "Congelación de funciones+",
+        "description": "Toca una bola para congelarla junto con su vecina más cercana durante 3s. Dos toques por mapa."
+      },
+      "rate_limiter": {
+        "name": "Limitador",
+        "description": "Toca una pared para hacer pegajoso un tramo durante 2 s. La siguiente bola que lo golpee se para en seco 3 s. Tres toques por mapa."
+      },
+      "breakpoint": {
+        "name": "Punto de interrupción",
+        "description": "Toca un punto vacío para poner una trampa. La primera bola que la cruce se congela ahí 3 s. Dos trampas por mapa."
+      },
+      "refactor": {
+        "name": "Refactorizar",
+        "description": "Mantén pulsada una valla terminada para borrarla, una vez por mapa. El espacio capturado sigue capturado: solo cambian los carriles abiertos. Una valla que contiene espacio capturado no puede irse."
+      },
+      "stash": {
+        "name": "Reserva",
+        "description": "Un botón de habilidad que recuerda dónde está cada bola, una vez por mapa. La siguiente bola que te costaría una vida las devuelve a todas a su sitio."
+      },
+      "merge_conflict": {
+        "name": "Conflicto de fusión",
+        "description": "Dos bolas normales que chocan se funden en una más grande y lenta, que vale las bonificaciones de bloqueo de ambas. Los jefes y las bolas especiales no se funden."
+      },
+      "control_freak": {
+        "name": "Maniático del control",
+        "description": "Mantén pulsado un objeto móvil para detenerlo, y arrástralo por su propio carril."
+      },
+      "scrum_master": {
+        "name": "Scrum Master",
+        "description": "Ve adónde va cada bola: sus tres próximos rebotes se dibujan en el tablero. Una bola con el peldaño de vista dibuja los suyos de todos modos."
+      },
+      "hot_start": {
+        "name": "Arranque en caliente",
+        "description": "Las dos primeras vallas de cada mapa se terminan al instante."
+      },
+      "fault_tolerance": {
+        "name": "Tolerancia a fallos",
+        "description": "Una vida extra, mientras conserves esta carta."
+      },
+      "defensive_programming": {
+        "name": "Programación defensiva",
+        "description": "Cada mapa empieza con un escudo: la primera bola que golpea una valla en crecimiento cuesta el escudo, no una vida."
+      },
+      "defensive_programming_plus": {
+        "name": "Programación defensiva+",
+        "description": "Cada mapa empieza con dos escudos."
+      },
+      "performance_bonus": {
+        "name": "Bono de rendimiento",
+        "description": "Cada mapa paga un 25% más de horas extra."
+      },
+      "performance_bonus_plus": {
+        "name": "Bono de rendimiento+",
+        "description": "Cada mapa paga un 50% más de horas extra."
+      },
+      "compound_interest": {
+        "name": "Interés compuesto",
+        "description": "Cada tienda paga un 8% de interés sobre las horas que tienes."
+      },
+      "expense_account": {
+        "name": "Cuenta de gastos",
+        "description": "Cada nodo del árbol cuesta un 30% menos."
+      },
+      "ship_early": {
+        "name": "Entrega anticipada",
+        "description": "Las ventanas de entrega anticipada duran 4s más por bola, y Tempo paga el doble."
+      },
+      "onboarding": {
+        "name": "Incorporación",
+        "description": "Cada mapa empieza con el 15% del tablero ya capturado."
+      },
+      "scaffolding": {
+        "name": "Andamiaje",
+        "description": "Cada valla empieza dibujada al 30%."
+      },
+      "fault_tolerance_2": {
+        "name": "Redundancia",
+        "description": "Una segunda vida extra, mientras tengas este nodo."
+      }
     }
   },
   "features": {

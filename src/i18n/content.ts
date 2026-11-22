@@ -35,7 +35,10 @@ function field(
  * namespace, because some of its ids are also classic ids with other numbers
  * on them (Cold Boot is 2s there and 4s here).
  */
-const upgradeKind = () => (getActiveRuleSet() === 'draft' ? 'cards' : 'upgrades');
+const upgradeKind = () => {
+  const rules = getActiveRuleSet();
+  return rules === 'draft' ? 'cards' : rules === 'tree' ? 'tree' : 'upgrades';
+};
 
 export const contentText = {
   // A store retainer card (abilityOffer.ts) is an upgrade dressed around an

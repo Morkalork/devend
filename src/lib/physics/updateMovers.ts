@@ -4,6 +4,7 @@ import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { moverSpeedAt } from "./moverEase";
 import { moverFenceDrag, type FrictionContact } from "./moverFriction";
 import { isPlayerControlled } from "./moverControl";
+import { simNow } from "@/lib/simClock";
 
 export function updateMoversFn(dt: number, game: CanvasGameState): void {
   // Crunch/Overclock mutators (issue #54) speed movers too ("everything speeds
@@ -21,6 +22,8 @@ export function updateMoversFn(dt: number, game: CanvasGameState): void {
     // the map's to move this step. Two authors writing one rail parameter in
     // the same step is how you get a hazard that stutters under the finger.
     if (isPlayerControlled(game, mover)) continue;
+    // Shoved off its patrol by a weight-three ball (physics/rungs.ts).
+    if (mover.shovedUntil !== undefined && simNow() < mover.shovedUntil) continue;
 
     // ROTORS turn; shuttles slide. Handled first and separately rather than
     // folded into the offset maths below, because almost nothing carries over:

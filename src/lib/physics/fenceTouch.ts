@@ -75,6 +75,10 @@ export function fenceSlows(wall: Wall): boolean {
 export function applyFenceSpeedStep(ball: Ball, wall: Wall, now: number): boolean {
   const step = speedStepOf(wall);
   if (step === 0) return false;
+  // The roster's rungs (physics/rungs.ts): a steady ball takes no step at all,
+  // and a heavy one is too much for Ice to slow.
+  if (ball.steady) return false;
+  if (step < 0 && ball.heavy) return false;
   if (now - (ball.lastFenceStepAt ?? 0) < STEP_DEBOUNCE_MS) return false;
 
   const current = Math.hypot(ball.velocity.x, ball.velocity.y);

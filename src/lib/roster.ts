@@ -35,9 +35,9 @@ export const RUNG_META: Record<RungId, RungMeta> = {
   weight: {
     label: "Weight",
     ranks: [
-      "Dents deformables and breaks a brick in one hit.",
-      "Shatters mirrors and shards, and ignores an Ice fence.",
-      "Shoves a mover off its patrol for 2s on contact, and pays triple when locked.",
+      "Twice the mass: dents deformables and breaks a brick in a hit or two.",
+      "Four times the mass: wears mirrors and movers down, and Ice cannot slow it.",
+      "Six times the mass: shoves a mover off its patrol for 2s, and pays triple when locked.",
     ],
     color: 0x8d99ae,
   },
@@ -45,8 +45,8 @@ export const RUNG_META: Record<RungId, RungMeta> = {
     label: "Worth",
     ranks: [
       "Locks pay double.",
-      "Locks pay triple, and a superior lock pays five.",
-      "Locking it triples every later lock this map.",
+      "Locks pay triple.",
+      "Locks pay triple, and locking it triples every later lock this map.",
     ],
     color: 0xf2c14e,
   },
@@ -54,8 +54,8 @@ export const RUNG_META: Record<RungId, RungMeta> = {
     label: "Frost",
     ranks: [
       "Freezes for 2s on every third bounce.",
-      "Freezes the ball it collides with, 2s.",
-      "An Ice fence is a wall to it: it freezes on touching one, 4s.",
+      "Also freezes the ball it collides with, for 2s.",
+      "Also freezes for 4s on touching an Ice fence.",
     ],
     color: 0x7fd4ff,
   },
@@ -63,8 +63,8 @@ export const RUNG_META: Record<RungId, RungMeta> = {
     label: "Pace",
     ranks: [
       "20% slower.",
-      "Holds a steady speed: nothing changes it.",
-      "Starts every map frozen for 5s, then at 70% for 10s more.",
+      "20% slower, and holds a steady speed: no fence, bumper or ball changes it.",
+      "20% slower, steady, and starts every map frozen for 5s.",
     ],
     color: 0x9be36d,
   },
@@ -73,16 +73,16 @@ export const RUNG_META: Record<RungId, RungMeta> = {
     ranks: [
       "Its next bounce is drawn.",
       "Its next three bounces are drawn.",
-      "It glows where it will be in two seconds.",
+      "Its next five bounces are drawn.",
     ],
     color: 0xffffff,
   },
   grace: {
     label: "Grace",
     ranks: [
-      "Passes through a fence in its first quarter second of growth.",
-      "Costs no life the first time it cuts your fence each map.",
-      "A fence it cuts is lost, never the life.",
+      "A growing fence passes through it for its first quarter second.",
+      "Also: the first fence it cuts each map costs the fence, not the life.",
+      "Also: every fence it cuts costs the fence, never the life.",
     ],
     color: 0xb8a1ff,
   },

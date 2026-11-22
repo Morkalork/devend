@@ -75,6 +75,8 @@ export interface UpgradeConfig {
    * without a second list to keep in step.
    */
   grantsAbility?: string;
+  /** The ball tree (tree.yml): which branch this node is filed under. */
+  branch?: import('@/lib/tree').TreeBranch;
   /** Ability retainer card: the ability's own colour, for the inverted card. */
   abilityColor?: string;
   /** Ability retainer card: the effect kind, so the card draws the same glyph
@@ -209,6 +211,8 @@ export interface TagSetsConfig {
 
 export interface UpgradeData {
   pricing?: Partial<UpgradePricing>;
+  /** The ball tree's prices (lib/tree.ts). Read loosely; parseTreeConfig checks it. */
+  tree?: unknown;
   /** Draft rules: the contracts block (lib/contracts.ts). Read loosely; parseContracts checks it. */
   contracts?: unknown;
   tagSets?: TagSetsConfig;

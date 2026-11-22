@@ -218,8 +218,22 @@ export interface Ball {
   // ── The roster (lib/roster.ts): set on a ball the player brought under the tree rule set ──
   /** 1-based roster slot; absent on a ball the map or a spawner made. */
   slot?: number;
-  /** The rungs this ball holds, drawn as marks on it; their rules land in BALL_TREE_PLAN.md phase 2. */
+  /** The rungs this ball holds, drawn as marks on it. Their rules: physics/rungs.ts. */
   rungs?: Partial<Record<import('@/lib/roster').RungId, import('@/lib/roster').RungRank>>;
+  /** Weight: this ball's density, over its type's (destructibles.ts ballMass). */
+  density?: number;
+  /** Weight 2+: wears mirrors and movers like the black ball, and ignores an Ice fence. */
+  heavy?: boolean;
+  /** Weight 3: a mover it hits is shoved off its patrol for a moment. */
+  shoves?: boolean;
+  /** Pace 2+: holds a steady speed; no fence, bumper or ball changes it. */
+  steady?: boolean;
+  /** Frost 1: surface hits counted toward the next freeze. */
+  frostBounces?: number;
+  /** Grace: a growing fence phases through this ball for its first graceMs. */
+  graceMs?: number;
+  /** Grace 2+: fences this ball may cut this map at the cost of the fence, not the life. */
+  graceLives?: number;
   // ── Boss pair (issue #64) ────────────────────────────────────────────────
   bossShipped?: boolean;  // this boss ball was locked into the win area; a pair
                           // is only defeated once EVERY boss ball is shipped

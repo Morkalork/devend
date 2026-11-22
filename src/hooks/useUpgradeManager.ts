@@ -12,6 +12,7 @@ import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { prerequisitesMet, choiceGroups } from '@/lib/upgradeUnlock';
 import { LevelData } from '@/types/level';
 import { mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
+import { parseTreeConfig, setLiveTree } from '@/lib/tree';
 import { fetchConfig } from '@/lib/configFetch';
 import { catalogueFileFor, getActiveRuleSet } from '@/lib/cardRules';
 import { parseContracts, type Contract } from '@/lib/contracts';
@@ -105,6 +106,8 @@ export function useUpgradeManager() {
       const pricing = mergePricing(data.pricing);
       // Publish for inflationForLevel (the shop's market-rate multiplier).
       setLivePricing(pricing);
+      // The ball tree's prices (tree.yml `tree:`); the defaults for any other catalogue.
+      setLiveTree(parseTreeConfig(data.tree));
 
       const lookup = new Map<string, UpgradeConfig>();
 

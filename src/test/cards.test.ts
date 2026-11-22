@@ -254,6 +254,7 @@ describe("card text in every language", () => {
 
   it("reads the draft's own namespace, so a classic id with other numbers cannot leak in", () => {
     const content = readFileSync(resolve(__dirname, "../i18n/content.ts"), "utf8");
-    expect(content).toMatch(/getActiveRuleSet\(\) === 'draft' \? 'cards' : 'upgrades'/);
+    // The tree (tree.yml) has its own namespace too, for the same reason.
+    expect(content).toMatch(/rules === 'draft' \? 'cards' : rules === 'tree' \? 'tree' : 'upgrades'/);
   });
 });

@@ -33,6 +33,7 @@ import { vibrateFenceBreak } from "@/lib/gameHaptics";
 import { simNow } from "@/lib/simClock";
 import { spendGuardrailShield } from "./guardrailFence";
 import { restoreStash } from "@/lib/physics/verbCards";
+import { spendGrace } from "@/lib/physics/rungs";
 
 /**
  * How long a post-break freeze may last before the loop lifts it regardless.
@@ -201,6 +202,17 @@ export function ballStruckFence(
   // run's shield below, and said out loud: the fence vanishing with no life
   // gone would otherwise look like the hit simply did not count.
   if (spendGuardrailShield(game, ball, fenceTypeId, simNow())) {
+    game.activeWalls = [];
+    callbacks.onGameMessage?.("guardrailCaught");
+    recover(game, callbacks);
+    flashAndShake(callbacks, 150, unfreezeAfterShake);
+    return;
+  }
+
+  // Grace 2 and 3 (physics/rungs.ts): this ball's fence is lost, not the life.
+  // Before the run's shields, so a graced ball never spends what the fleet
+  // may need; said with the Guardrail's words, since it is the same mercy.
+  if (spendGrace(ball)) {
     game.activeWalls = [];
     callbacks.onGameMessage?.("guardrailCaught");
     recover(game, callbacks);

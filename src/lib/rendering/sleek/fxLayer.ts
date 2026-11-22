@@ -30,6 +30,7 @@ import { steerWorldOf } from "@/lib/physics/steering";
 import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
 import { BREAKPOINT_RADIUS, STICKY_HALF_LENGTH, STICKY_PATCH_MS } from "@/lib/physics/verbCards";
 import { RUNG_IDS, RUNG_META } from "@/lib/roster";
+import { sightBouncesOf } from "@/lib/physics/rungs";
 import { isArmedGuardrail } from "@/lib/physics/guardrailFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
@@ -403,12 +404,15 @@ export class FxLayer {
   ): void {
     const bounces = mods.ballPathPredictionBounces;
     const maxBalls = mods.ballPathPredictionBalls;
-    if (bounces <= 0 || maxBalls <= 0) return;
-
     const active = game.balls
       .filter(b => b.state === "active")
       .sort((a, b) => b.speed - a.speed);
-    const tracked = maxBalls >= 100 ? active : active.slice(0, maxBalls);
+    // Scrum Master draws the fastest N; a roster ball with the sight rung
+    // (physics/rungs.ts) draws its own, whatever the build.
+    const byBuild = bounces > 0 && maxBalls > 0 ? (maxBalls >= 100 ? active : active.slice(0, maxBalls)) : [];
+    const sighted = active.filter(b => sightBouncesOf(b) > 0 && !byBuild.includes(b));
+    const tracked = [...byBuild, ...sighted];
+    if (tracked.length === 0) return;
 
     // Built ONCE for the frame, not once per tracked ball: the surfaces are
     // identical for every prediction, and rebuilding them per ball made the cost
@@ -430,8 +434,9 @@ export class FxLayer {
       // exactly at the drawn ball rather than a step ahead of it.
       const start = ball.renderPosition ?? ball.position;
       const marks: number[] = [];
+      const own = Math.max(byBuild.includes(ball) ? bounces : 0, sightBouncesOf(ball));
       const wps = computeBallTrajectory(
-        start, ball.velocity, game.walls, bounces + 1, ball.radius,
+        start, ball.velocity, game.walls, own + 1, ball.radius,
         game.obstaclePolygons, game.movers, game.creepFactor || 1,
         trajectoryBallSnapshots(game.balls, ball, game.frozenBallId),
         segs,

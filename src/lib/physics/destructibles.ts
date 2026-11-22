@@ -130,7 +130,8 @@ const MAX_HIT_DAMAGE = 3.0;
 
 /** Relative mass of a ball: density × (radius / base radius)². */
 export function ballMass(ball: Ball): number {
-  const density = getBallType(ball.typeId)?.density ?? 1;
+  // A roster ball's weight rung sets its own density (physics/rungs.ts).
+  const density = ball.density ?? getBallType(ball.typeId)?.density ?? 1;
   const r = ball.radius / BASE_BALL_RADIUS;
   return density * r * r;
 }

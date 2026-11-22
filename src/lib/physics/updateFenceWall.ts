@@ -238,6 +238,10 @@ export function updateFenceWallFn(
     if (ball.flagOff) {
       continue;
     }
+    // Grace 1 (physics/rungs.ts): Ghost Protocol for this one ball.
+    if (ball.graceMs && wall.startTime && simNow() - wall.startTime < ball.graceMs) {
+      continue;
+    }
     let hit = false;
     for (const seg of allSegments) {
       if (circleCapsuleCollision(ball.position, ball.radius, seg.start, seg.end, wall.thickness / 2)) {

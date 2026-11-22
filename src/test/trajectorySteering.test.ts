@@ -322,7 +322,9 @@ describe("the drift is drawn as a fade, not a stub", () => {
   it("asks the predictor for one bounce more than the upgrade bought", () => {
     const call = draw.slice(draw.indexOf("computeBallTrajectory("),
                             draw.indexOf("if (wps.length < 2)"));
-    expect(call).toMatch(/game\.walls, bounces \+ 1,/);
+    // `own` is the build's bounces, or a sighted roster ball's own (physics/rungs.ts).
+    expect(draw).toMatch(/const own = Math\.max\(byBuild\.includes\(ball\) \? bounces : 0, sightBouncesOf\(ball\)\);/);
+    expect(call).toMatch(/game\.walls, own \+ 1,/);
   });
 
   it("draws only the paid-for bounces at full strength", () => {

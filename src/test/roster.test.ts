@@ -79,6 +79,12 @@ describe("the tree spawns the roster", () => {
     setActiveRuleSet("classic");
     const { game: classic } = createBotGame(level, 5);
     expect(classic.balls.some(b => b.slot !== undefined)).toBe(false);
+    // An authored ballTypeIds is the map's count of its own balls: set aside under the tree.
+    setActiveRuleSet("tree");
+    const launcher = byLevel(ARCHIVE, 12)!;
+    expect(launcher.ballTypeIds).toBeDefined();
+    const { game: tree } = createBotGame(launcher, 12);
+    expect(tree.balls.filter(b => b.slot !== undefined).length).toBe(2);
   });
 
   it("caps the roster at a map's maxBalls, and a one-ball map gets the first ball", () => {

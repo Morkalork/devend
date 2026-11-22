@@ -2765,6 +2765,156 @@
         "name": "Legacykod",
         "description": "Dina stängsel byggs 35% långsammare på nästa bana."
       }
+    },
+    "tree": {
+      "fast_compile": {
+        "name": "Snabb kompilering",
+        "description": "Stängsel byggs 35% snabbare."
+      },
+      "fast_compile_plus": {
+        "name": "Snabb kompilering+",
+        "description": "Stängsel byggs 60% snabbare."
+      },
+      "multithreading": {
+        "name": "Multitrådning",
+        "description": "Rita ett stängsel till samtidigt."
+      },
+      "multithreading_plus": {
+        "name": "Multitrådning+",
+        "description": "Rita två stängsel till samtidigt."
+      },
+      "add_guardrails": {
+        "name": "Skyddsräcke",
+        "description": "Lägger till skyddsräcket: en gång per bana kostar en boll genom det stängslet, inte ett liv. Det byggs 15% långsammare."
+      },
+      "cold_storage_ice": {
+        "name": "Isstängsel",
+        "description": "Lägger till isstängslet: bollar som studsar mot det tappar fart. Det byggs 30% långsammare."
+      },
+      "incident_flare": {
+        "name": "Blosstängsel",
+        "description": "Lägger till blosstängslet: bollar som studsar mot det får mer fart, och snabba bollar är värda mer.",
+        "downside": "Snabba bollar är svårare att stängsla in, och det byggs 30% långsammare."
+      },
+      "hotfix_tripwire": {
+        "name": "Snubbeltråd",
+        "description": "Lägger till snubbeltråden: den byggs 40% snabbare.",
+        "downside": "Den första bollen som rör en färdig snubbeltråd bryter den."
+      },
+      "acquire_the_mutex": {
+        "name": "Mutex-stängsel",
+        "description": "Lägger till mutex-stängslet: det låser bara en ficka med exakt en boll i, och betalar extra när det gör det."
+      },
+      "rolling_redeploy": {
+        "name": "Redeploy-stängsel",
+        "description": "Lägger till redeploy-stängslet: ta tag i ett färdigt och slunga iväg bollarna framför det.",
+        "downside": "Det byggs 40% långsammare."
+      },
+      "raise_the_semaphore": {
+        "name": "Semafor-stängsel",
+        "description": "Lägger till semafor-stängslet: det låser bara två eller fler bollar samtidigt, och betalar enormt för dem.",
+        "downside": "Det kan inte låsa en ensam boll, och det byggs 40% långsammare."
+      },
+      "crash_barrier": {
+        "name": "Krockbarriär",
+        "description": "Skyddsräcket har två sköldar till på varje bana. Kräver skyddsräcket."
+      },
+      "afterburner": {
+        "name": "Efterbrännare",
+        "description": "En boll som låses medan den går snabbare än sin normala fart ger tre gånger låsbonusen. Ett blosstängsel är det som gör den så snabb."
+      },
+      "tensioned_wire": {
+        "name": "Spänd tråd",
+        "description": "En snubbeltråd tål två beröringar till innan den går av. Kräver snubbeltråden."
+      },
+      "hot_reload": {
+        "name": "Omladdning",
+        "description": "Ett Redeploy-staket laddar om en gång, så det kan kastas två gånger innan det är förbrukat. Kräver Redeploy-staketet."
+      },
+      "feature_freeze": {
+        "name": "Feature Freeze",
+        "description": "Tryck på en boll för att frysa den i 3s. Två tryck per bana."
+      },
+      "feature_freeze_plus": {
+        "name": "Feature Freeze+",
+        "description": "Tryck på en boll för att frysa den och dess närmaste granne i 3s. Två tryck per bana."
+      },
+      "rate_limiter": {
+        "name": "Hastighetsspärr",
+        "description": "Tryck på en vägg för att göra en sträcka klibbig i 2 s. Nästa boll som träffar den stannar tvärt i 3 s. Tre tryck per bana."
+      },
+      "breakpoint": {
+        "name": "Brytpunkt",
+        "description": "Tryck på en tom plats för att sätta en fälla. Första bollen som korsar den fryser där i 3 s. Två fällor per bana."
+      },
+      "refactor": {
+        "name": "Refaktorera",
+        "description": "Håll på ett färdigt staket för att ta bort det, en gång per bana. Erövrad yta förblir erövrad, så bara de öppna gångarna ändras. Ett staket som håller tillbaka erövrad yta kan inte tas bort."
+      },
+      "stash": {
+        "name": "Förråd",
+        "description": "En förmågeknapp som minns var varje boll är, en gång per bana. Nästa boll som skulle kosta dig ett liv sätter i stället tillbaka alla."
+      },
+      "merge_conflict": {
+        "name": "Sammanslagningskonflikt",
+        "description": "Två vanliga bollar som krockar smälter samman till en större, långsammare boll, värd bådas låsbonus. Bossar och specialbollar smälter inte samman."
+      },
+      "control_freak": {
+        "name": "Kontrollfreak",
+        "description": "Håll in på ett rörligt objekt för att stoppa det, och dra det längs sin egen bana."
+      },
+      "scrum_master": {
+        "name": "Scrum Master",
+        "description": "Se vart varje boll är på väg: dess tre nästa studsar ritas på brädet. En boll med siktsteget ritar sina ändå."
+      },
+      "hot_start": {
+        "name": "Varmstart",
+        "description": "De två första stängslen på varje bana blir klara direkt."
+      },
+      "fault_tolerance": {
+        "name": "Feltolerans",
+        "description": "Ett extra liv, så länge du har kvar det här kortet."
+      },
+      "defensive_programming": {
+        "name": "Defensiv programmering",
+        "description": "Varje bana börjar med en sköld: den första bollen som träffar ett växande stängsel kostar skölden, inte ett liv."
+      },
+      "defensive_programming_plus": {
+        "name": "Defensiv programmering+",
+        "description": "Varje bana börjar med två sköldar."
+      },
+      "performance_bonus": {
+        "name": "Prestationsbonus",
+        "description": "Varje bana ger 25% mer övertid."
+      },
+      "performance_bonus_plus": {
+        "name": "Prestationsbonus+",
+        "description": "Varje bana ger 50% mer övertid."
+      },
+      "compound_interest": {
+        "name": "Ränta på ränta",
+        "description": "Varje butik ger 8% ränta på timmarna du har."
+      },
+      "expense_account": {
+        "name": "Utgiftskonto",
+        "description": "Varje nod i trädet kostar 30% mindre."
+      },
+      "ship_early": {
+        "name": "Leverera tidigt",
+        "description": "Fönstren för tidig leverans varar 4s längre per boll, och Tempo ger dubbelt."
+      },
+      "onboarding": {
+        "name": "Onboarding",
+        "description": "Varje bana börjar med 15% av brädet redan erövrat."
+      },
+      "scaffolding": {
+        "name": "Byggställning",
+        "description": "Varje stängsel börjar 30% ritat."
+      },
+      "fault_tolerance_2": {
+        "name": "Redundans",
+        "description": "Ett andra extraliv, så länge du har den här noden."
+      }
     }
   },
   "features": {

@@ -109,13 +109,9 @@ export function setActiveRuleSet(rules: RuleSet): void {
   active = rules;
 }
 
-/**
- * The catalogue file a rule set reads. The tree reads the draft's until
- * `tree.yml` exists (BALL_TREE_PLAN.md phase 3): under the tree nothing is
- * bought yet, and the loader still needs a catalogue to resolve owned ids.
- */
+/** The catalogue file a rule set reads. */
 export function catalogueFileFor(rules: RuleSet): string {
-  return rules === "classic" ? "/upgrades.yml" : "/cards.yml";
+  return rules === "classic" ? "/upgrades.yml" : rules === "tree" ? "/tree.yml" : "/cards.yml";
 }
 
 /** A card's "+": the upgraded version, which rides on its card and takes no slot. */

@@ -23,6 +23,8 @@ export interface MoverState {
   motion?: "linear" | "rotate";
   /** Rotor: current angle, radians. Plays the part `offset` plays for a shuttle. */
   angle?: number;
+  /** Weight 3 (physics/rungs.ts): sim ms until which a shoved mover stands still. */
+  shovedUntil?: number;
   /** Rotor: half the sweep in radians. Absent means it spins all the way round. */
   halfSweep?: number;
   /**

@@ -88,6 +88,7 @@ import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { getActiveRuleSet } from "@/lib/cardRules";
 import { getActiveRoster, rosterForMap } from "@/lib/roster";
+import { applyRungsAtSpawn } from "@/lib/physics/rungs";
 import { BIG_BALL_MIN_LEVEL, BIG_BALL_CHANCE, BIG_BALL_RADIUS_SCALE, BIG_BALL_LOCK_BONUS, CHAINED_MIN_LEVEL, CHAINED_CHANCE, canAnchorChain } from "@/lib/ballGifts";
 import { makeChain } from "@/lib/physics/chain";
 import { clampWeather } from "@/lib/rendering/motes";
@@ -973,10 +974,11 @@ export function createInitialGameData(
   let selectedTypes: BallTypeDef[];
   // The tree (lib/roster.ts): the map brings no balls. The player's roster
   // spawns, every ball as the catalogue's red with its rungs on it, and the
-  // map's maxBalls is a cap on the roster rather than a count of its own.
-  // The Playground's ballTypeIds override still wins, so a tester can put any
-  // catalogue ball on a tree board to look at it.
-  const treeRoster = getActiveRuleSet() === "tree" && level.ballTypeIds === undefined
+  // map's maxBalls is a cap on the roster rather than a count of its own. An
+  // authored ballTypeIds (the archive's launcher maps have one) is a count
+  // of the map's own balls, so under the tree it is set aside like the rest;
+  // the Playground's Balls picker reaches the board by leaving the tree.
+  const treeRoster = getActiveRuleSet() === "tree"
     ? rosterForMap(getActiveRoster(), level.maxBalls)
     : null;
   if (treeRoster) {
@@ -1076,8 +1078,7 @@ export function createInitialGameData(
     if (treeRoster) {
       const mine = treeRoster[i];
       ball.id = `roster-${mine.slot}`;
-      ball.slot = mine.slot;
-      ball.rungs = { ...mine.rungs };
+      applyRungsAtSpawn(ball, mine, spawnTime);
     }
     return ball;
   });

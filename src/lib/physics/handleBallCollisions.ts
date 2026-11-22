@@ -11,6 +11,7 @@ import { triggerBallHit } from "@/lib/ballEffects";
 import { playBallCollideSound } from "@/lib/gameAudio";
 import { simNow } from "@/lib/simClock";
 import { isMergeable, mergeBalls } from "@/lib/physics/verbCards";
+import { frostOnCollision } from "@/lib/physics/rungs";
 
 /** Resolve all pairwise ball-to-ball collisions for this physics step. */
 export function handleBallCollisions(game: CanvasGameState): void {
@@ -128,6 +129,9 @@ export function handleBallCollisions(game: CanvasGameState): void {
           // yellow's random speed range is shrunk by the same amount.
           if (ball1.ability === 'slowOthers') slowBall(ball2, preSpeed2, ball1.speedReduction ?? 0);
           if (ball2.ability === 'slowOthers') slowBall(ball1, preSpeed1, ball2.speedReduction ?? 0);
+          // Frost 2 (physics/rungs.ts): the ball it struck freezes.
+          frostOnCollision(ball1, ball2, now);
+          frostOnCollision(ball2, ball1, now);
         }
       }
     }
