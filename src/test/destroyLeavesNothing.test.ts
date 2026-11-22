@@ -43,7 +43,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon } from "@/lib/polygon";
 
 const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels;
 
 const CB = { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} };

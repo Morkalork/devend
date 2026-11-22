@@ -26,7 +26,7 @@ import {
   DEFAULT_SMASH_CLASS,
 } from "@/lib/destructibleClass";
 import {
-  smashDemands, cutWouldBurySmashes, smashRequirementLost,
+  smashDemands, smashRequirementLost,
 } from "@/lib/physics/smashReach";
 import { winSpecProblems, evaluateWinCondition, baseWinSpec } from "@/lib/winSpec";
 import { winHighlightRects } from "@/lib/winHighlight";
@@ -166,64 +166,6 @@ describe("what a spec demands", () => {
 });
 
 // ── the refusal, which is the correctness fix ──────────────────────────────
-
-describe("a cut that would bury one class", () => {
-  /**
-   * The bug the class-blind version had, and the reason this was not only a
-   * presentation change: a board with six shards on the near side and one
-   * monolith on the far side passes a total-based reach check with room to
-   * spare, and the monolith clause is dead the moment the fence lands.
-   */
-  const mixed = () => board([
-    shard("s1", 80, 100), shard("s2", 80, 200), shard("s3", 80, 300),
-    shard("s4", 140, 100), shard("s5", 140, 200), shard("s6", 140, 300),
-    monolith("m1", 480, 300),
-  ]);
-
-  it("refuses the cut that orphans the map's last monolith", () => {
-    expect(cutWouldBurySmashes(
-      mixed(), spec({ kind: "smashed", count: 1, of: "monoliths" }), cutAt(300), 6,
-    )).toBe(true);
-  });
-
-  it("would have allowed it while the classes were counted together", () => {
-    // Not a hypothetical: `of: any` IS the old behaviour, and it says yes,
-    // because six reachable shards cover a demand for one of anything. This is
-    // the assertion that would have failed to exist before the split.
-    expect(cutWouldBurySmashes(
-      mixed(), spec({ kind: "smashed", count: 1 }), cutAt(300), 6,
-    )).toBe(false);
-  });
-
-  it("still allows a cut that buries nothing either class owes", () => {
-    expect(cutWouldBurySmashes(
-      mixed(),
-      spec({ kind: "smashed", count: 2, of: "shards" },
-           { kind: "smashed", count: 1, of: "monoliths" }),
-      [{ start: { x: 40, y: 0 }, end: { x: 40, y: 200 } }], 6,
-    )).toBe(false);
-  });
-
-  it("refuses when EITHER class would be buried, not only the first", () => {
-    // A cut sealing the shard column away, on a map that owes both.
-    const game = mixed();
-    expect(cutWouldBurySmashes(
-      game,
-      spec({ kind: "smashed", count: 6, of: "shards" },
-           { kind: "smashed", count: 1, of: "monoliths" }),
-      [{ start: { x: 200, y: 0 }, end: { x: 200, y: 600 } }], 6,
-    )).toBe(true);
-  });
-
-  it("counts a monolith already broken, which nothing can take away", () => {
-    const game = board([
-      shard("s1", 80, 100), monolith("m1", 480, 300, true),
-    ]);
-    expect(cutWouldBurySmashes(
-      game, spec({ kind: "smashed", count: 1, of: "monoliths" }), cutAt(300), 6,
-    )).toBe(false);
-  });
-});
 
 describe("a map already beyond reach, per class", () => {
   it("is lost when the class it owes is gone, though the other is fine", () => {

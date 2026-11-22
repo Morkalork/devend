@@ -2923,7 +2923,6 @@
     "lifeLostMover": "Un bloque movil atraveso tu valla. Vida perdida.",
     "guardrailCaught": "Tu valla Guardrail aguantó el golpe. Pierdes la valla, no la vida. Su escudo ya está gastado en este mapa.",
     "cutWouldTrapBall": "Ese corte habria encerrado una bola sin salida, asi que no se aplico. Dejale una ruta.",
-    "cutWouldBurySlabs": "Ese corte habría dejado fuera de alcance lo que aún tienes que romper, así que no se aplicó.",
     "cutWouldBuryArea": "Ese corte habría dejado sin ninguna bola que aún pueda entrar en la zona, así que no se aplicó.",
     "partnersTurn": "Le toca a tu compañero. Mira su valla, la siguiente es tuya.",
     "oneFenceATurn": "Una valla por turno. Tu compañero sigue cuando esta esté construida.",

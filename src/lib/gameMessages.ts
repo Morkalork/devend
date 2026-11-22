@@ -59,8 +59,6 @@ export type GameMessageId =
    * screenshot and the question "could there be an invisible object there?".
    */
   | "cutWouldTrapBall"
-  /** The finished cut would have put the slabs the win needs out of reach. */
-  | "cutWouldBurySlabs"
   /** The finished cut would have left no ball that can still get into the zone the win needs. */
   | "cutWouldBuryArea"
   /** In a pair, it is the partner's turn: this player is watching (net/pairTurn.ts). */
@@ -137,7 +135,6 @@ const ALL_MESSAGE_IDS: Record<GameMessageId, true> = {
   stashRestored: true,
   guardrailCaught: true,
   cutWouldTrapBall: true,
-  cutWouldBurySlabs: true,
   cutWouldBuryArea: true,
   partnersTurn: true,
   oneFenceATurn: true,

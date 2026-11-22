@@ -40,7 +40,7 @@ const PUBLIC = path.resolve(__dirname, "../../public");
  * exists in the window where those two have RESOLVED and the other nine have
  * not, so the test has to build that window on purpose.
  */
-const FIRST_PAIR = ["map.yml", "upgrades.yml"];
+const FIRST_PAIR = ["maps-archive.yml", "upgrades.yml"];
 let release: Array<() => void> = [];
 function stagedFetch() {
   return vi.fn(async (url: string) => {

@@ -14,7 +14,7 @@
  * it simply never finishes, which is why winSpecProblems exists at all.
  *
  * The ladder is ten maps while act II onwards is rebuilt, so every check here
- * runs over whatever `public/map.yml` currently holds and covers each new map
+ * runs over whatever `public/maps-archive.yml` currently holds and covers each new map
  * the day it lands. Nothing is scoped to a level number: these rules apply to
  * every map that will ever ship, which is the point of them.
  */
@@ -26,9 +26,9 @@ import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import { gateAreas } from "@/lib/coloredAreas";
 import type { LevelConfig } from "@/types/level";
 import { entityIsDestructible } from "@/lib/physics/destructibles";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
-const LEVELS = LADDER;
+const LEVELS = ARCHIVE;
 
 /** Bosses state their win as the boss and are out of scope here. */
 const PLAYABLE = LEVELS.filter(l => !l.boss && l.level != null);

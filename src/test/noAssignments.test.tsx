@@ -15,7 +15,7 @@ import path from "path";
 import "@/i18n";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
-import { LADDER_END } from "./fixtures/maps";
+import { ARCHIVE_END } from "./fixtures/maps";
 
 afterEach(cleanup);
 
@@ -24,7 +24,9 @@ describe("the map after every 5th (session integration)", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      const file = String(url).split("?")[0].replace(/^\//, "");
+      // A run long enough to test: these read the 45 archived maps as the ladder
+    // (the live map.yml was started over for the brick pivot and is two maps).
+    const file = String(url).split("?")[0].replace(/^\//, "").replace(/^map\.yml$/, "maps-archive.yml");
       const full = path.join(PUBLIC, file);
       if (!fs.existsSync(full)) {
         return { ok: false, status: 404, text: async () => "" } as Response;
@@ -39,7 +41,7 @@ describe("the map after every 5th (session integration)", () => {
     return { nav, session: useGameSession(nav) };
   }
 
-  it.runIf(LADDER_END >= 6)("opens the shop after map 5, like after any other map", async () => {
+  it.runIf(ARCHIVE_END >= 6)("opens the shop after map 5, like after any other map", async () => {
     const { result } = renderHook(() => useSession());
     await act(async () => { await result.current.session.handleStartGame(undefined, true); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));

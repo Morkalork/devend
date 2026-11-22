@@ -29,7 +29,7 @@ import { mergePricing, computeUpgradeCost } from "@/lib/upgradePricing";
 
 const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8");
 const upgradeDoc = yaml.load(read("public/upgrades.yml")) as { pricing?: Record<string, number> };
-const levelDoc = yaml.load(read("public/map.yml")) as { levels: Array<{ points: number }> };
+const levelDoc = yaml.load(read("public/maps-archive.yml")) as { levels: Array<{ points: number }> };
 
 describe("the shipped config moved together", () => {
   it("keeps the cheapest hire at about one good map", () => {

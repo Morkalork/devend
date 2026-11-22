@@ -29,12 +29,14 @@ describe("map time limit", () => {
     expect(DEFAULT_MAP_TIME_LIMIT).toBe(60);
   });
 
-  it("honours a per-map override, but never on an exempt level", () => {
+  it("honours a per-map override, in the tutorial band too", () => {
     expect(getMapTimeLimit({ timeLimit: 90 }, 12)).toBe(90);
     // A generous ascension map, say.
     expect(getMapTimeLimit({ timeLimit: 120 }, 31)).toBe(120);
-    // Override is ignored while the level is still in the tutorial band.
-    expect(getMapTimeLimit({ timeLimit: 90 }, 2)).toBeNull();
+    // An authored clock is the map's own design: the brick ladder's second map
+    // is thirty seconds on purpose. The band only spares a map the DEFAULT clock.
+    expect(getMapTimeLimit({ timeLimit: 30 }, 2)).toBe(30);
+    expect(getMapTimeLimit({}, 2)).toBeNull();
   });
 
   it("falls back to the default for a garbage override", () => {

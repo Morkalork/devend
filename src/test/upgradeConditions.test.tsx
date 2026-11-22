@@ -32,7 +32,7 @@ const upgrades = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8"),
 ) as UpgradeData).upgrades;
 const levels = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels;
 
 const conditional = upgrades.filter(u => u.condition);

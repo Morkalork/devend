@@ -11,9 +11,9 @@ import { describe, it, expect } from "vitest";
 import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import type { LevelConfig, WallEntity } from "@/types/level";
 
-import { LADDER, LADDER_END } from "./fixtures/maps";
+import { ARCHIVE, ARCHIVE_END } from "./fixtures/maps";
 
-const at = (n: number) => LADDER.find(l => l.level === n)!;
+const at = (n: number) => ARCHIVE.find(l => l.level === n)!;
 const ACT_VI = [41, 42, 43, 44, 45].map(at);
 const PLAYABLE = ACT_VI.filter(l => !l.boss);
 type Rect = { x: number; y: number; width: number; height: number; angle?: number };
@@ -22,7 +22,7 @@ const entity = <T,>(l: LevelConfig, id: string) => (l.entities ?? []).find(e => 
 describe("the act exists and ends the ladder", () => {
   it("has all five maps, and 45 is the last", () => {
     for (const l of ACT_VI) expect(l, "a map is missing").toBeTruthy();
-    expect(LADDER_END).toBe(45);
+    expect(ARCHIVE_END).toBe(45);
     expect(at(45).boss).toBeTruthy();
   });
 

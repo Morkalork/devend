@@ -26,7 +26,7 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { getBallType } from "@/lib/ballTypes";
 import { setRunSeedText } from "@/lib/runRng";
 import type { LevelConfig } from "@/types/level";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 /** Spawn a map and report each ball's base speed, in spawn order. */
 function speedsOf(level: LevelConfig, mods = DEFAULT_MODIFIERS): number[] {
@@ -83,7 +83,7 @@ describe("a map can set its own ball speed", () => {
   it("leaves a map that never asked completely alone", () => {
     // The regression that would be invisible: a default of 0 or NaN anywhere in
     // the chain zeroes every ball on every map on the ladder.
-    for (const lv of LADDER.filter(l => l.ballSpeedScale === undefined)) {
+    for (const lv of ARCHIVE.filter(l => l.ballSpeedScale === undefined)) {
       for (const s of speedsOf(lv)) expect(s, lv.id).toBeGreaterThan(0);
     }
   });
@@ -93,7 +93,7 @@ describe("what the ladder actually authors", () => {
   it("keeps every authored scale inside the range the builder offers", () => {
     // The panel clamps to 25-200%. A value outside that could only arrive by
     // hand-editing the YAML, and 0 would freeze the map solid.
-    for (const lv of LADDER) {
+    for (const lv of ARCHIVE) {
       if (lv.ballSpeedScale === undefined) continue;
       expect(lv.ballSpeedScale, `${lv.id} authors an unplayable speed`)
         .toBeGreaterThanOrEqual(0.25);
@@ -103,7 +103,7 @@ describe("what the ladder actually authors", () => {
   });
 
   it("has level 13 at three quarters, which is what was asked for", () => {
-    const l13 = LADDER.find(l => l.level === 13)!;
+    const l13 = ARCHIVE.find(l => l.level === 13)!;
     expect(l13.ballSpeedScale).toBe(0.75);
   });
 });

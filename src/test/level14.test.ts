@@ -24,9 +24,9 @@ import { pickMapRotation } from "@/lib/mapRotation";
 import { BOUNCER_MAX_SPEED_SCALE } from "@/lib/physics/bouncer";
 import { edgeLook } from "@/lib/rendering/sleek/edgeCue";
 import { BOARD_SIDES } from "@/lib/physics/boardEdges";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
-const l14 = LADDER.find(l => l.level === 14)!;
+const l14 = ARCHIVE.find(l => l.level === 14)!;
 
 describe("level 14 holds together", () => {
   it("makes all four walls do exactly the same thing", () => {
@@ -111,7 +111,7 @@ describe("level 14 holds together", () => {
     // clause available that a lock cannot produce. 14 and 15 get out of that by
     // having nothing to smash rather than by being handed a mechanic they do
     // not need.
-    const band = LADDER.filter(l => (l.level ?? 0) >= 11);
+    const band = ARCHIVE.filter(l => (l.level ?? 0) >= 11);
     const noSmash = band.filter(l => !(l.win?.require ?? []).some(c => c.kind === "smashed"));
     // 16 makes three, and for the same reason rather than by drifting: its
     // furniture (bumpers, a deformable slab, two phasing pillars) is all
@@ -144,7 +144,7 @@ describe("level 14 holds together", () => {
     // 15 first shipped carrying this map's weather as well as its own wells,
     // and played as two gravities at once. 14 is the pull you cannot escape;
     // 15 is the pull you can walk around. Exactly one of them pulls globally.
-    const l15 = LADDER.find(l => l.level === 15)!;
+    const l15 = ARCHIVE.find(l => l.level === 15)!;
     expect(l14.mutator, "14 is the map with the global pull").toBeTruthy();
     expect(l15.mutator, "15 must not carry a second gravity").toBeUndefined();
     expect(l14.gravityWells ?? [], "the local pull belongs to 15").toHaveLength(0);

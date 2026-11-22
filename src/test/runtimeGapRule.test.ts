@@ -39,7 +39,7 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { LevelConfig, LevelData } from "@/types/level";
 
 const MAPS = (yaml.load(
-  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+  readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 
 const SEAM_MAX = 12;

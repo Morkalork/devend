@@ -16,7 +16,7 @@ import {
 } from "@/lib/winSpec";
 import { mapGoals } from "@/lib/goalTracker";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
-import { LADDER } from "@/test/fixtures/maps";
+import { ARCHIVE } from "@/test/fixtures/maps";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseOfferCatalogue } from "@/lib/sprintOffers";
@@ -87,7 +87,7 @@ describe("and left off the maps that cannot", () => {
   it("does not double up on a map that already asks for it", () => {
     // Level 2 authored this clause itself. A second copy would list the same
     // requirement twice and let a run rule overrule the author's own count.
-    const l = LADDER.find(x => x.id === "level-2")!;
+    const l = ARCHIVE.find(x => x.id === "level-2")!;
     expect(kinds(l, NO_RUN_RULES)).toEqual(["space", "splitLocks"]);
     expect(kinds(l, ON)).toEqual(["space", "splitLocks"]);
   });
@@ -95,7 +95,7 @@ describe("and left off the maps that cannot", () => {
   it("never makes a shipped map unwinnable", () => {
     // The whole ladder, against the rule rather than against a hand-picked
     // sample: an appended clause must never ask for more balls than the map has.
-    for (const l of LADDER) {
+    for (const l of ARCHIVE) {
       const spec = resolveWinSpec(l, ON);
       const split = spec.require.find(c => c.kind === "splitLocks");
       if (!split || split.kind !== "splitLocks") continue;

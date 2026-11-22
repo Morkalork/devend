@@ -29,7 +29,7 @@ import { createBotGame, stepBot, plainModifiers, installClock, releaseClock } fr
 import { setRunSeedText } from "@/lib/runRng";
 import { advanceSimClock, resetSimClock, simNow, SIM_CLOCK_START_MS } from "@/lib/simClock";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 // ── What counts as "inside a tick" ──────────────────────────────────────────
 
@@ -170,7 +170,7 @@ describe("the sim clock", () => {
   });
 
   it("puts a run's outcome in the hands of its seed, not the machine's speed", () => {
-    const level = LADDER.find(l => l.level === 14)!;
+    const level = ARCHIVE.find(l => l.level === 14)!;
     const play = (pauseEveryNTicks: number) => {
       releaseClock();
       installClock();

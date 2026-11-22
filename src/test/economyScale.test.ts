@@ -35,7 +35,7 @@ const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const load = <T>(p: string): T => yaml.load(read(p)) as T;
 
 const upgradeDoc = load<UpgradeData>("public/upgrades.yml");
-const mapDoc = load<LevelData>("public/map.yml");
+const mapDoc = load<LevelData>("public/maps-archive.yml");
 const gameConfig = load<{ pickups: { effects: Record<string, { weight?: number; value?: number }> } }>(
   "public/game-config.yml",
 );

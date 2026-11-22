@@ -24,7 +24,7 @@ import { createBotGame, stepBot, plainModifiers, installClock, releaseClock } fr
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { setRunSeedText } from "@/lib/runRng";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import type { LevelConfig } from "@/types/level";
 
 /** Play a map with no cutting at all, and report when a life was docked. */
@@ -44,7 +44,7 @@ function livesDockedAt(level: LevelConfig, levelNumber: number, seconds: number)
   } finally { releaseClock(); }
 }
 
-const board = LADDER.find(l => l.level === 14)!;
+const board = ARCHIVE.find(l => l.level === 14)!;
 
 describe("the map deadline reaches the harness", () => {
   it("docks a life the moment an authored timer runs out", () => {
@@ -65,7 +65,7 @@ describe("the map deadline reaches the harness", () => {
   it("leaves the tutorial band alone", () => {
     // Levels 1-3 are exempt by design, and a harness that invented a deadline
     // for them would report losses on maps that cannot lose that way.
-    const l1 = LADDER.find(l => l.level === 1)!;
+    const l1 = ARCHIVE.find(l => l.level === 1)!;
     expect(getMapTimeLimit(l1, 1)).toBeNull();
     expect(livesDockedAt(l1, 1, 20)).toEqual([]);
   });

@@ -22,7 +22,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Wall } from "@/lib/wallGeometry";
 
 const read = (p: string) => readFileSync(p, "utf8");
-const LEVELS = (yaml.load(read("public/map.yml")) as LevelData).levels;
+const LEVELS = (yaml.load(read("public/maps-archive.yml")) as LevelData).levels;
 
 function build(n: number): CanvasGameState {
   resetMapIds();

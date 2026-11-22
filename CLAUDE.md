@@ -38,7 +38,8 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
 - `src/types/` — shared TypeScript types.
 - `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv,bn}.json` (Bangla draws in the bundled Noto Sans Bengali; see `src/ui/fonts.ts`).
 - `src/test/` — Vitest tests.
-- `public/*.yml` — runtime game config (`map.yml`, `upgrades.yml`,
+- `public/*.yml` — runtime game config (`map.yml`, the ladder; `maps-archive.yml`,
+  the 45 maps from before the brick pivot, opened in the Playground; `upgrades.yml`,
   `scoring-config.yml`, `offers.yml`, `certificates.yml`, `balls.yml`,
   `bugs.yml`, …),
   loaded at runtime with `js-yaml`.
@@ -74,6 +75,9 @@ emulated 2022 phones in CI, and on real phones in Firebase Test Lab, and
 **LATE_GAME_PLAN.md** for the plan and build record of the late game's
 continued innovation (maps 30-45: the Autoscaler and Feature Flag balls, the
 late mutators, the reshaped bosses, the late palettes and clocks), and
+**BRICKS_PLAN.md** for the brick pivot (breaking bricks at the centre of the
+game, the ladder restarted in `map.yml` and the old maps kept in
+`maps-archive.yml`; started), and
 **CARDS_PLAN.md** for the redo of the upgrades as a card draft (one card free
 after every map, the hours spent at the shop after a boss, a build of six,
 `public/cards.yml`; the classic store and `upgrades.yml` remain behind an

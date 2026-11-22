@@ -18,9 +18,9 @@ import { describe, it, expect } from "vitest";
 import { resolveWinSpec, winSpecProblems, NO_RUN_RULES } from "@/lib/winSpec";
 import type { LevelConfig, WallEntity } from "@/types/level";
 
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
-const at = (n: number) => LADDER.find(l => l.level === n)!;
+const at = (n: number) => ARCHIVE.find(l => l.level === n)!;
 const ACT_IV = [31, 32, 33, 34, 35].map(at);
 const PLAYABLE = ACT_IV.filter(l => !l.boss);
 const entity = (l: LevelConfig, id: string) =>

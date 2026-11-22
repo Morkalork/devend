@@ -24,7 +24,7 @@ import { BOARD_SIDES, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
 import { createRectPolygon } from "@/lib/polygon";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 const BOUNDS = { minX: 45, minY: 45, maxX: 855, maxY: 855 };
 
@@ -226,7 +226,7 @@ describe("the cue reaches the screen", () => {
 });
 
 describe("level 14 is legible", () => {
-  const l14 = LADDER.find(l => l.level === 14)!;
+  const l14 = ARCHIVE.find(l => l.level === 14)!;
 
   it("gives every side it authors something to see", () => {
     // The map's whole premise is that the outer walls behave. A side that

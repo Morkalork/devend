@@ -23,7 +23,7 @@ import type { LevelConfig, LevelData } from "@/types/level";
 import { entityIsDestructible } from "@/lib/physics/destructibles";
 
 const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 
 /**

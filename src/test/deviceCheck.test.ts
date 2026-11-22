@@ -73,7 +73,7 @@ describe("the verdict", () => {
 });
 
 describe("the maps it plays", () => {
-  const levels = (yaml.load(read("public/map.yml")) as { levels: Array<Record<string, unknown>> }).levels;
+  const levels = (yaml.load(read("public/maps-archive.yml")) as { levels: Array<Record<string, unknown>> }).levels;
 
   it("exist, and each plays from its first frame: no launcher waiting for a pull", () => {
     for (const n of DEVICE_CHECK_LEVELS) {

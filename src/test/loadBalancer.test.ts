@@ -27,7 +27,7 @@ import type { LevelConfig, LevelData } from "@/types/level";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 
 const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 
 /** A map with several ball types, so "the fastest" is a real distinction. */

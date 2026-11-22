@@ -45,7 +45,7 @@ import { DEFAULT_BUG_CONFIG } from "@/types/bugs";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { CellState, isPositionActive, type SpaceGrid } from "@/lib/spaceGrid";
 import { installClock, releaseClock, plainModifiers, createBotGame, stepBot } from "@/lib/bot/headlessGame";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { setRunSeedText } from "@/lib/runRng";
 import { simNow } from "@/lib/simClock";
 import type { Ball, DestructibleState } from "@/types/game";
@@ -372,7 +372,7 @@ describe("the map's own say", () => {
     // The four Demolition maps opted in, and nothing else. This is a design
     // decision that was argued (a Meet beat introduces one thing, so 5 and 6
     // stay out), so it is worth being told when it silently changes.
-    const map = read("public/map.yml");
+    const map = read("public/maps-archive.yml");
     // Split on the level headers rather than matching across them: a lazy
     // regex over the whole file happily runs from one map's header to a later
     // map's bugChance, which reported levels 1, 8 and 10 as opted in.
@@ -798,7 +798,7 @@ describe("admin can reach it", () => {
 describe("on a real Demolition map, through the harness", () => {
   it("carries bugs in its shards, lets them out on a break, and flies them", () => {
     setRunSeedText("bugs-integration");
-    const level = byLevel(LADDER, 7)!;
+    const level = byLevel(ARCHIVE, 7)!;
     // Every eligible shard carries one and the cap is lifted, so the break is
     // what is being measured rather than the roll.
     const ctxBot = createBotGame(level, 7, plainModifiers(), {
@@ -830,7 +830,7 @@ describe("on a real Demolition map, through the harness", () => {
 
   it("leaves a map with bugs off exactly as it was", () => {
     setRunSeedText("bugs-off");
-    const level = byLevel(LADDER, 7)!;
+    const level = byLevel(ARCHIVE, 7)!;
     const ctxBot = createBotGame(level, 7, plainModifiers());  // bugs off by default
     expect(ctxBot.game.bugConfig).toBeNull();
     expect(ctxBot.game.destructibles.some(d => d.bug), "a sweep grew bugs it did not ask for").toBe(false);
@@ -1054,7 +1054,7 @@ describe("shards carrying bugs", () => {
   });
 
   it("is what level 17 promises: one named brick holds the hammer", () => {
-    const level = byLevel(LADDER, 17)!;
+    const level = byLevel(ARCHIVE, 17)!;
     const authored = authoredBugCarriers(level as { entities?: { id?: string; bug?: boolean | string }[] });
     expect([...authored.entries()]).toEqual([["brick-a1", "forcePush"]]);
   });

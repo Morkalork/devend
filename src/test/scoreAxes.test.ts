@@ -37,7 +37,7 @@ const CEIL = getAxisCeilings(DEFAULT_SCORING_CONFIG);
  * One fact, stated once.
  */
 const MAP_BASE_POINTS = (() => {
-  const doc = yaml.load(readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8")) as
+  const doc = yaml.load(readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8")) as
     { levels?: Array<{ points?: number }> };
   const points = (doc.levels ?? []).map(l => l.points).filter((p): p is number => typeof p === "number");
   if (points.length === 0) throw new Error("map.yml has no levels with points");
@@ -415,7 +415,7 @@ describe("the shipped config is the config these tests measure", () => {
 
   it("keeps the backstop clear of a full set of axes on every shipped map", () => {
     const maps = yaml.load(
-      readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+      readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8"),
     ) as { levels: { level?: number; points: number }[] };
     const headroom = (yaml.load(
       readFileSync(resolve(__dirname, "../../public/scoring-config.yml"), "utf8"),

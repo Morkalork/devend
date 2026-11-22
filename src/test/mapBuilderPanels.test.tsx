@@ -22,7 +22,7 @@ import { MechanicSpreadPanel } from "@/components/admin/MechanicSpreadPanel";
 import { ROTATION_MIN_LEVEL } from "@/lib/mapRotation";
 import type { LevelConfig, LevelData } from "@/types/level";
 
-import { ENGINE_MAPS, LADDER } from "./fixtures/maps";
+import { ENGINE_MAPS, ARCHIVE } from "./fixtures/maps";
 
 const LEVELS = ENGINE_MAPS as LevelConfig[];
 const lvl = (n: number) => LEVELS.find(l => l.level === n)!;
@@ -87,7 +87,7 @@ describe("the mechanics panel", () => {
     // The ladder is what Admin feeds the panel, and since it reached 45 every
     // headline mechanic on it has a second map, so there is no warning to
     // show. Take one away: without level 42 the ball gate is on 33 alone.
-    const short = LADDER.filter(l => l.level !== 42);
+    const short = ARCHIVE.filter(l => l.level !== 42);
     render(<MechanicSpreadPanel levels={short} current={lvl(6)} />);
     expect(screen.getAllByText(/introduced and never developed/).length).toBeGreaterThan(0);
   });

@@ -21,7 +21,7 @@ import { BOUNCER_MAX_SPEED_SCALE } from "@/lib/physics/bouncer";
 import { pickMapRotation } from "@/lib/mapRotation";
 import { mutatorById } from "@/lib/mapMutators";
 import type { Ball } from "@/types/game";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 const BOUNDS = { minX: 45, minY: 45, maxX: 855, maxY: 855 };
 
@@ -115,7 +115,7 @@ describe("what an edge does to a ball", () => {
 });
 
 describe("level 14 holds together", () => {
-  const l14 = LADDER.find(l => l.level === 14)!;
+  const l14 = ARCHIVE.find(l => l.level === 14)!;
 
   it("authors edges at all, and the same one on every side", () => {
     expect(l14.boardEdges, "level 14 lost its live walls").toBeTruthy();

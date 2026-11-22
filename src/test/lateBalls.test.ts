@@ -11,7 +11,7 @@ import {
 import { armFeatureFlag, flagOffAt, flagSecondsToSwitch, tickFeatureFlags } from "@/lib/physics/featureFlag";
 import type { Ball, Region } from "@/types/game";
 import type { LevelConfig } from "@/types/level";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import en from "@/i18n/locales/en.json";
 import es from "@/i18n/locales/es.json";
 import sv from "@/i18n/locales/sv.json";
@@ -26,7 +26,7 @@ const region = (id: string, cells: number): Region => ({
   id, polygon: { vertices: [] }, estimatedArea: cells, samplePoints: Array.from({ length: cells }, () => ({ x: 0, y: 0 })),
 }) as unknown as Region;
 
-const map = (n: number): LevelConfig => LADDER.find(l => l.level === n)!;
+const map = (n: number): LevelConfig => ARCHIVE.find(l => l.level === n)!;
 
 describe("the Autoscaler", () => {
   it("is in the catalogue from 36, and never spat", () => {
@@ -114,13 +114,13 @@ describe("where the ladder introduces them", () => {
   it("meets the Autoscaler on 36 and uses it on 39", () => {
     expect(map(36).ballTypeIds).toContain("autoscaler");
     expect(map(39).ballTypeIds).toContain("autoscaler");
-    expect(LADDER.filter(l => (l.level ?? 0) < 36).some(l => l.ballTypeIds?.includes("autoscaler"))).toBe(false);
+    expect(ARCHIVE.filter(l => (l.level ?? 0) < 36).some(l => l.ballTypeIds?.includes("autoscaler"))).toBe(false);
   });
 
   it("meets the Feature Flag on 41 and uses it on 44", () => {
     expect(map(41).ballTypeIds).toContain("featureflag");
     expect(map(44).ballTypeIds).toContain("featureflag");
-    expect(LADDER.filter(l => (l.level ?? 0) < 41).some(l => l.ballTypeIds?.includes("featureflag"))).toBe(false);
+    expect(ARCHIVE.filter(l => (l.level ?? 0) < 41).some(l => l.ballTypeIds?.includes("featureflag"))).toBe(false);
   });
 
   it("names both in every locale", () => {

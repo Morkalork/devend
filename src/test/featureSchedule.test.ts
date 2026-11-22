@@ -23,7 +23,7 @@
  * the difficulty contract. That is the mechanism working as designed rather
  * than an exception to it: the list describes what has been authored, and three
  * acts stopped being authored. Everything below that spans the whole ladder is
- * scoped to `LADDER_END` for the same reason, so each check re-arms by itself
+ * scoped to `ARCHIVE_END` for the same reason, so each check re-arms by itself
  * as maps land instead of needing an edit per map.
  */
 import { describe, it, expect } from "vitest";
@@ -31,12 +31,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { LevelConfig } from "@/types/level";
-import { LADDER, LADDER_END } from "./fixtures/maps";
+import { ARCHIVE, ARCHIVE_END } from "./fixtures/maps";
 import { TILT_MIN_LEVEL } from "@/lib/boardTiltRoll";
 import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { ROTATION_MIN_LEVEL } from "@/lib/mapRotation";
 
-const MAPS = LADDER;
+const MAPS = ARCHIVE;
 
 /** Acts, by the boss that closes each one. */
 const ACTS = [
@@ -93,7 +93,7 @@ const has = {
 describe("the ladder is sane at all", () => {
   it("has one entry per level, with variants sharing a number", () => {
     const levels = new Set(MAPS.map(l => l.level));
-    for (let n = 1; n <= LADDER_END; n++) {
+    for (let n = 1; n <= ARCHIVE_END; n++) {
       expect(levels.has(n), `level ${n} missing`).toBe(true);
     }
   });
@@ -106,7 +106,7 @@ describe("the ladder is sane at all", () => {
   it("closes each act with a boss", () => {
     // Only the acts that exist. A boss is the last map of its act, so 20, 30
     // and 35 are checked the moment their acts are rebuilt that far.
-    for (const n of BOSS_LEVELS.filter(n => n <= LADDER_END)) {
+    for (const n of BOSS_LEVELS.filter(n => n <= ARCHIVE_END)) {
       const boss = MAPS.filter(l => l.level === n).find(l => l.boss);
       expect(boss, `level ${n} should be a boss`).toBeTruthy();
     }
@@ -139,7 +139,7 @@ describe("no mechanic debuts before its code gate", () => {
     // RANDOM tilt, which this map would not have used anyway.
     const first = firstLevelWith(has.well);
     if (first === null) {
-      expect(LADDER_END, "the ladder reaches act III but has no well anywhere")
+      expect(ARCHIVE_END, "the ladder reaches act III but has no well anywhere")
         .toBeLessThan(21);
       return;
     }
@@ -194,7 +194,7 @@ describe("headline mechanics get developed, not just introduced", () => {
 
   for (const [name, pred, want, owedAt] of BEATS) {
     it(`${name} appear on at least ${want} maps`, () => {
-      if (LADDER_END < owedAt) {
+      if (ARCHIVE_END < owedAt) {
         const on = MAPS.filter(pred).map(l => l.level);
         // Not owed yet, but a mechanic appearing EARLY still has to be caught:
         // the schedule is about where things debut, not only how often.
@@ -210,7 +210,7 @@ describe("headline mechanics get developed, not just introduced", () => {
 
   /** Act III existed to be the act with nothing of its own. */
   it("gives act III mechanics beyond movers and mirrors", () => {
-    if (LADDER_END < 30) return;   // act III is not rebuilt yet
+    if (ARCHIVE_END < 30) return;   // act III is not rebuilt yet
     const act3 = inAct({ from: 21, to: 29 });
     const owned = [has.well, has.stream, has.charge, has.phasing]
       .filter(p => act3.some(p)).length;

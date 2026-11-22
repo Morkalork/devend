@@ -26,7 +26,7 @@ import { describe, it, expect } from "vitest";
 import {
   createBotGame, stepBot, plainModifiers, installClock, releaseClock, type BotGame,
 } from "@/lib/bot/headlessGame";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { runBot } from "@/lib/bot/runBot";
 import { setRunSeedText } from "@/lib/runRng";
 import { lostRequirement, clauseStillPossible } from "@/lib/physics/requirementReach";
@@ -57,7 +57,7 @@ function claimSideOf(grid: SpaceGrid, line: number, right: boolean): void {
   repaintRegions(grid);
 }
 
-const LEVEL_2 = byLevel(LADDER, 2)!;
+const LEVEL_2 = byLevel(ARCHIVE, 2)!;
 const SPEC_2 = resolveWinSpec(LEVEL_2, NO_RUN_RULES);
 
 /** A dealt, stepped level 2 with both balls parked on the left of the midline. */
@@ -339,11 +339,11 @@ describe("and it stays out of the way of every other map", () => {
 
   // An explicit timeout, and not a generous default: this plays two real runs
   // of every shipped map, which took 15s here and past vitest's 30s default on
-  // CI once the cut refusal (smashReach.cutWouldBurySmashes) started simulating
+  // CI once the cut refusal (since removed, see BRICKS_PLAN.md) started simulating
   // each fence. A sweep that fails for being slow teaches nothing about maps.
   it("never strands a map that names no place", () => {
     const stranded: string[] = [];
-    for (const level of LADDER) {
+    for (const level of ARCHIVE) {
       const n = level.level ?? 0;
       const spec = resolveWinSpec(level, NO_RUN_RULES);
       const positional = spec.require.some(c => POSITIONAL.has(c.kind));

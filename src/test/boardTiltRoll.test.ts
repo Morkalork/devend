@@ -29,7 +29,7 @@ import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import type { GravityWell, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
-import { ENGINE_MAPS, LADDER } from "./fixtures/maps";
+import { ENGINE_MAPS, ARCHIVE } from "./fixtures/maps";
 
 const WELL: GravityWell = { x: 300, y: 300, width: 200, height: 170 };
 const QUARTER = Math.PI / 2;
@@ -76,7 +76,7 @@ describe("which maps tilt at all", () => {
     const withWells = MAPS.filter(l => (l.gravityWells?.length ?? 0) > 0);
     expect(withWells.length, "no map has a well at all").toBeGreaterThan(0);
     const firstWellLevel = Math.min(...withWells.map(l => l.level));
-    const ladderEnd = Math.max(...LADDER.map(l => l.level ?? 0));
+    const ladderEnd = Math.max(...ARCHIVE.map(l => l.level ?? 0));
     if (ladderEnd >= TILT_MIN_LEVEL) {
       // Act III exists: some well must sit where the roll can reach it.
       expect(Math.max(...withWells.map(l => l.level))).toBeGreaterThanOrEqual(TILT_MIN_LEVEL);

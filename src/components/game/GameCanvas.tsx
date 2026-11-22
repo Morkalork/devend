@@ -153,7 +153,7 @@ import { recordRendererStart } from "@/lib/rendering/rendererDiag";
 import { recordZoomEvent } from "@/lib/zoomRecorder";
 import { BUILD_SHA } from "@/lib/buildInfo";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { applyCutFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
+import { applyCutFn, settleBrickHeldLocksFn, checkSpaceWin, evaluateWinConditions, countBallsInPlay } from "@/lib/physics/applyCut";
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -1383,6 +1383,9 @@ export function GameCanvas({
       // a board it was never placed on, and its effect would land on a ball
       // that did not exist when it spawned.
       game.bugs = [];
+      // No lock is waiting on a brick on a fresh board.
+      game.brickHeldLocks = false;
+      game.brickLockRecheckDue = false;
       game.bugSplats = [];
       game.lastBugRollAt = 0;
       game.bugRollContext = `bugs:${level.id}`;
@@ -1978,6 +1981,9 @@ export function GameCanvas({
             shakeTimeoutRef.current = setTimeout(() => { setIsShaking(false); shakeTimeoutRef.current = null; }, 260);
           },
         }, levelNumber, activeModifiers);
+        // A pocket that held a ball and a brick could not lock; if that was its
+        // last brick, it locks now, without waiting for the next fence.
+        settleBrickHeldLocksFn(game, level, levelNumber, activeModifiers, cumulativeLockedBalls, callbacks);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
         // win check a completed cut runs, or the map shows CLEAR but never ends.

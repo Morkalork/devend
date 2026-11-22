@@ -34,7 +34,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { DestructibleState } from "@/types/game";
 
 const LEVELS = (yaml.load(
-  readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  readFileSync(resolve(process.cwd(), "public/maps-archive.yml"), "utf8"),
 ) as LevelData).levels as LevelConfig[];
 
 const CB = { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} };

@@ -14,9 +14,9 @@ import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import { castRayWithReflections } from "@/lib/wallGeometry";
 import type { LevelConfig, WallEntity, BoxEntity } from "@/types/level";
 
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
-const at = (n: number) => LADDER.find(l => l.level === n)!;
+const at = (n: number) => ARCHIVE.find(l => l.level === n)!;
 const ACT_V = [36, 37, 38, 39, 40].map(at);
 const PLAYABLE = ACT_V.filter(l => !l.boss);
 type Rect = { x: number; y: number; width: number; height: number };

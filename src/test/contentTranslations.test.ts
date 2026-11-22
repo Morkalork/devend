@@ -38,7 +38,7 @@ const f = (...paths: string[]) => paths.map(p => ({ path: p, key: p.split(".").p
 function sources(): Source[] {
   const upgrades = load("upgrades.yml") as { upgrades: Item[]; tagSets: { bonuses: Item[] } };
   const offers = load("offers.yml") as Record<string, Item[]>;
-  const levels = (load("map.yml") as { levels: Item[] }).levels;
+  const levels = (load("maps-archive.yml") as { levels: Item[] }).levels;
   const bossLevels = levels.filter(l => l.boss);
   return [
     { kind: "abilities", items: load("abilities.yml").abilities as Item[], fields: f("name", "description", "howTo") },

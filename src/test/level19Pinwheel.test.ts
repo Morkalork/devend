@@ -16,10 +16,10 @@ import { mapGravityActive, steerWorldOf } from "@/lib/physics/steering";
 import { BOARD_SIDES } from "@/lib/physics/boardEdges";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import type { LevelConfig } from "@/types/level";
 
-const L19 = LADDER.find(l => l.id === "level-19")!;
+const L19 = ARCHIVE.find(l => l.id === "level-19")!;
 const SIZE = 900;
 
 interface RectEntity {

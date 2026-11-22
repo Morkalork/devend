@@ -14,9 +14,9 @@ import { captureSimModuleState } from "@/lib/net/simState";
 import { createInitialGameData } from "@/lib/initGame";
 import { DEFAULT_BUG_CONFIG } from "@/types/bugs";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 
-const LEVEL = byLevel(LADDER, 18)!;
+const LEVEL = byLevel(ARCHIVE, 18)!;
 const maxFrames = Math.ceil(((LEVEL.timeLimit ?? 90) + 5) / PHYSICS_STEP);
 const play = (seed: number) => {
   const r = runBot(LEVEL, 18, seed, { modifiers: plainModifiers(), maxFrames, bugs: DEFAULT_BUG_CONFIG, lives: 3 });

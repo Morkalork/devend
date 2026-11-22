@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import { createInitialGameData } from "@/lib/initGame";
 import { plainModifiers } from "@/lib/bot/headlessGame";
 import {
@@ -112,7 +112,7 @@ describe("the height rule", () => {
 
 describe("authored heights reach the board", () => {
   it("carries a map's rise from map.yml to the obstacle it was written on", () => {
-    const l1 = LADDER.find(l => l.level === 1)!;
+    const l1 = ARCHIVE.find(l => l.level === 1)!;
     const data = createInitialGameData(l1, 1, plainModifiers());
     const rises = [...data.obstacleRise.values()].sort();
     expect(rises).toEqual([0.75, 1.5, 1.5]);
@@ -121,13 +121,13 @@ describe("authored heights reach the board", () => {
   });
 
   it("carries a mover's rise onto its state", () => {
-    const l8 = LADDER.find(l => l.level === 8)!;
+    const l8 = ARCHIVE.find(l => l.level === 8)!;
     const data = createInitialGameData(l8, 8, plainModifiers());
     expect(data.movers.find(m => m.id === "door")?.rise).toBe(1.5);
   });
 
   it("keeps every authored rise in range, on something that stands", () => {
-    for (const level of LADDER) {
+    for (const level of ARCHIVE) {
       for (const e of level.entities ?? []) {
         if (e.rise === undefined) continue;
         expect(["wall", "mover", "launcher", "cage", "box"], `${level.id}/${e.id}`).toContain(e.kind);
@@ -138,9 +138,9 @@ describe("authored heights reach the board", () => {
   });
 
   it("states every ladder map's height story in map.yml", () => {
-    const yml = read("public/map.yml");
+    const yml = read("public/maps-archive.yml");
     const notes = yml.match(/^\s+# Heights \(3D board, objectRise\.ts\): .+$/gm) ?? [];
-    expect(notes.length).toBeGreaterThanOrEqual(LADDER.length);
+    expect(notes.length).toBeGreaterThanOrEqual(ARCHIVE.length);
   });
 
   it("gives the editor a height control", () => {

@@ -7,11 +7,11 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LevelPanel } from "@/components/admin/LevelPanel";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 
 describe("the Measure pockets button", () => {
   it("reports the smallest one-fence pocket and whether it grades superior", () => {
-    render(<LevelPanel level={byLevel(LADDER, 1)!} onUpdateLevel={() => {}} />);
+    render(<LevelPanel level={byLevel(ARCHIVE, 1)!} onUpdateLevel={() => {}} />);
     expect(screen.queryByText(/Smallest one-fence pocket/)).toBeNull();
     fireEvent.click(screen.getByText("Measure pockets"));
     const out = screen.getByText(/Smallest one-fence pocket/).textContent ?? "";

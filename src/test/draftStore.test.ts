@@ -13,7 +13,7 @@ import {
   draftBarLine, draftBuild, draftPriceOf, freePickIdsOf, needsReplacement, nextMapFeatureKeys,
 } from "@/ui/screens/draftStoreModel";
 import { FREE_PICKS, PICK_CHOICES, SHOP_CHOICES, catalogueFileFor, getActiveRuleSet, preferredRuleSet, setActiveRuleSet, setPreferredRuleSet, storeKindAfter } from "@/lib/cardRules";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { contractFor, parseContracts, CONTRACT_MIN_LEVEL } from "@/lib/contracts";
 import { inflationForLevel, mergePricing, resolveUpgradeCost } from "@/lib/upgradePricing";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -32,9 +32,9 @@ describe("the pick and the shop", () => {
     // Slay the Spire's shape: a card reward after every fight, and the gold
     // spent at a shop. Here the pick is one of three, free, and the hours
     // wait for the shop after the boss.
-    expect(storeKindAfter(byLevel(LADDER, 3))).toBe("pick");
-    expect(storeKindAfter(byLevel(LADDER, 10))).toBe("shop");
-    expect(storeKindAfter(byLevel(LADDER, 20))).toBe("shop");
+    expect(storeKindAfter(byLevel(ARCHIVE, 3))).toBe("pick");
+    expect(storeKindAfter(byLevel(ARCHIVE, 10))).toBe("shop");
+    expect(storeKindAfter(byLevel(ARCHIVE, 20))).toBe("shop");
     expect(storeKindAfter(null)).toBe("pick");
     expect(PICK_CHOICES).toBe(3);
     expect(SHOP_CHOICES).toBeGreaterThan(PICK_CHOICES);
@@ -127,7 +127,7 @@ describe("contracts", () => {
   it("are offered in turn, never early, never on a boss or after the last map", () => {
     expect(contractFor(plain, CONTRACT_MIN_LEVEL - 1, contracts)).toBeNull();
     expect(contractFor(null, 12, contracts)).toBeNull();
-    expect(contractFor(byLevel(LADDER, 20) as LevelConfig, 20, contracts)).toBeNull();
+    expect(contractFor(byLevel(ARCHIVE, 20) as LevelConfig, 20, contracts)).toBeNull();
     const seen = new Set([5, 6, 7, 8, 9].map(n => contractFor(plain, n, contracts)!.id));
     expect(seen.size).toBe(contracts.length);
   });
@@ -214,7 +214,7 @@ describe("the shelf points at payoffs", () => {
 
 describe("the next map's line", () => {
   it("names what a card can care about on a boss map", () => {
-    const boss = byLevel(LADDER, 20) as LevelConfig;
+    const boss = byLevel(ARCHIVE, 20) as LevelConfig;
     expect(nextMapFeatureKeys(boss)).toContain("boss");
   });
 

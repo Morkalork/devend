@@ -16,7 +16,9 @@ const PUBLIC = path.resolve(__dirname, "../../public");
 beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const file = String(url).split("?")[0].replace(/^\//, "");
+    // A run long enough to test: these read the 45 archived maps as the ladder
+    // (the live map.yml was started over for the brick pivot and is two maps).
+    const file = String(url).split("?")[0].replace(/^\//, "").replace(/^map\.yml$/, "maps-archive.yml");
     const full = path.join(PUBLIC, file);
     if (!fs.existsSync(full)) return { ok: false, status: 404, text: async () => "" } as Response;
     const body = fs.readFileSync(full, "utf8");

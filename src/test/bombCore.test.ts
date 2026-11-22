@@ -204,7 +204,7 @@ import {
 import type { LevelData, LevelConfig } from "@/types/level";
 import { setRunSeedText } from "@/lib/runRng";
 
-const LEVELS = (yaml.load(read("public/map.yml")) as LevelData).levels;
+const LEVELS = (yaml.load(read("public/maps-archive.yml")) as LevelData).levels;
 const NO_CB = { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} };
 
 function buildLevel(n: number): CanvasGameState {

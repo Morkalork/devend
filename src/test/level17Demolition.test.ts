@@ -9,11 +9,11 @@
  * keeps the moat from being captured at load (section 7.6).
  */
 import { describe, it, expect } from "vitest";
-import { LADDER, byLevel } from "./fixtures/maps";
+import { ARCHIVE, byLevel } from "./fixtures/maps";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import type { WallRectEntity } from "@/types/level";
 
-const level = byLevel(LADDER, 17)!;
+const level = byLevel(ARCHIVE, 17)!;
 const walls = (level.entities ?? []).filter(e => e.kind === "wall") as WallRectEntity[];
 const bricks = walls.filter(e => e.brittle);
 const breakables = walls.filter(e => e.breakable || e.chest || e.brittle);

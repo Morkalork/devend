@@ -25,7 +25,7 @@ import { setRunSeedText } from "@/lib/runRng";
 import { rowLook } from "@/ui/game/AcceptanceTicketModel";
 import { ROLE } from "@/ui/theme";
 import { isFullDebrief, setFullDebrief } from "@/ui/screens/debriefMode";
-import { LADDER } from "../fixtures/maps";
+import { ARCHIVE } from "../fixtures/maps";
 
 const t = i18n.t.bind(i18n) as unknown as TFunction;
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
@@ -72,7 +72,7 @@ describe("marking a criterion", () => {
 });
 
 describe("every criterion on the ladder can be marked", () => {
-  it.each(LADDER.map(l => [l.level, l] as const))("level %s", (n, level) => {
+  it.each(ARCHIVE.map(l => [l.level, l] as const))("level %s", (n, level) => {
     // A row with no check would come back from the map with no mark at all,
     // which on a filled-in ticket reads as "forgot to check".
     const unmarked = winConditions(t, level, n, DEFAULT_MODIFIERS).filter(x => !x.check);
@@ -83,7 +83,7 @@ describe("every criterion on the ladder can be marked", () => {
 describe("the marks a dealt board gets", () => {
   const deal = (n: number) => {
     setRunSeedText(`ticket-${n}`);
-    const level = LADDER.find(l => l.level === n)!;
+    const level = ARCHIVE.find(l => l.level === n)!;
     return { level, game: createBotGame(level, n).game };
   };
 

@@ -22,7 +22,7 @@ import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { resetTouchTrace, setTouchTraceEnabled, touchTraceLines } from "@/lib/touchTrace";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GameMessageId } from "@/lib/gameMessages";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 const VIEW_W = 850; // so the right-hand grip band sits over the board (x > 826)
 
@@ -34,7 +34,7 @@ let unmount: () => void;
 beforeEach(() => {
   installClock();
   setRunSeedText("fence-touches");
-  game = createBotGame(LADDER.find(l => l.level === 1)!, 1, plainModifiers()).game;
+  game = createBotGame(ARCHIVE.find(l => l.level === 1)!, 1, plainModifiers()).game;
   game.boardRect = { left: 0, top: 0, width: 900, height: 900, scale: 1 };
   canvas = document.createElement("canvas");
   canvas.width = 900; canvas.height = 900;

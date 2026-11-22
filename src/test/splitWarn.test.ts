@@ -14,7 +14,7 @@ import {
 } from "@/lib/splitWarn";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import type { WinCondition } from "@/types/winSpec";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 type Split = Extract<WinCondition, { kind: "splitLocks" }>;
 const leftRight: Split = { kind: "splitLocks", count: 1 };
@@ -109,18 +109,18 @@ describe("how it looks", () => {
 
 describe("the maps that ask for it", () => {
   it("level 2 has a split clause for the tint to answer to", () => {
-    const level2 = LADDER.find(l => l.level === 2)!;
+    const level2 = ARCHIVE.find(l => l.level === 2)!;
     expect(splitClauseOf(resolveWinSpec(level2, NO_RUN_RULES))?.kind).toBe("splitLocks");
   });
 
   it("a map with no split clause has nothing to tint", () => {
-    const level1 = LADDER.find(l => l.level === 1)!;
+    const level1 = ARCHIVE.find(l => l.level === 1)!;
     expect(splitClauseOf(resolveWinSpec(level1, NO_RUN_RULES))).toBeNull();
   });
 
   it("the run-wide split rule (the Playground's knob) gets the tint too", () => {
     // Every map the run rule reaches, not one that may or may not accept it.
-    const reached = LADDER.filter(l => !splitClauseOf(resolveWinSpec(l, NO_RUN_RULES)))
+    const reached = ARCHIVE.filter(l => !splitClauseOf(resolveWinSpec(l, NO_RUN_RULES)))
       .map(l => splitClauseOf(resolveWinSpec(l, { winRequiresSplitLocks: 1 })))
       .filter(Boolean);
     expect(reached.length, "the run rule reached no map, so this proves nothing").toBeGreaterThan(0);

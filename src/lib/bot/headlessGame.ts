@@ -37,7 +37,7 @@ import { collectPhasedOut, tickPhasing } from "@/lib/physics/phasing";
 import { updateBall } from "@/lib/physics/updateBall";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import {
-  applyCutFn, checkSpaceWin,
+  applyCutFn, settleBrickHeldLocksFn, checkSpaceWin,
   evaluateWinConditions as evaluateWinConditionsFn,
 } from "@/lib/physics/applyCut";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -632,6 +632,8 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   if (game.pendingWallBreaks.length > 0) processWallBreaksFn(game, callbacks);
   if (game.pendingDestroys.length > 0) {
     processDestroysFn(game, callbacks, levelNumber, modifiers);
+    // A pocket that was waiting on its bricks locks now, as in the browser's loop.
+    settleBrickHeldLocksFn(game, level, levelNumber, modifiers, 0, callbacks);
     // The real loop re-checks the win here: a destroy can capture pocket cells
     // and take the remaining space past the goal with no fence involved, and
     // without this the map shows CLEAR and never ends.

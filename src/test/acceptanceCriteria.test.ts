@@ -27,13 +27,13 @@ import yaml from "js-yaml";
 import type { TFunction } from "i18next";
 import { winConditions, renderCriteria, CRITERION_GROUPS } from "@/lib/winConditions";
 import type { LevelConfig } from "@/types/level";
-import { LADDER, ENGINE_MAPS, RETIRED } from "./fixtures/maps";
+import { ARCHIVE, ENGINE_MAPS, RETIRED } from "./fixtures/maps";
 
 /** Echoes the key, so a test asserts which STRING was chosen, not its English. */
 const t = ((key: string, params?: Record<string, unknown>) =>
   params ? `${key}(${JSON.stringify(params)})` : key) as unknown as TFunction;
 
-const LEVELS = LADDER;
+const LEVELS = ARCHIVE;
 const at = (n: number) => LEVELS.find(l => l.level === n)!;
 const groups = (n: number) => groupsOf(at(n), n);
 

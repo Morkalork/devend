@@ -181,7 +181,9 @@ describe("the wiring", () => {
     // obstacles and old fences, and a rule read off the boundary would depend
     // on geometry the player was not thinking about.
     const src = read("src/lib/physics/applyCut.ts");
-    expect(src).toMatch(/wall\.fenceTypeId \?\? STANDARD_FENCE_ID,\n\s*\);/);
+    // Handed to the lock pass (runLockPass), which passes it straight on.
+    expect(src).toMatch(/preCaptureCells, capturedRegions, wall\.fenceTypeId \?\? STANDARD_FENCE_ID,\n\s*\)\) \{/);
+    expect(src).toMatch(/resolveWinSpec\(level, activeModifiers\),[\s\S]{0,420}fenceTypeId,\n\s*\);/);
   });
 
   it("keys the pay to the real ball count, never the multiplier", () => {

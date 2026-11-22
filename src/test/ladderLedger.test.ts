@@ -10,18 +10,18 @@
  *
  * So the table is a claim the suite can falsify. It is prose, deliberately - a
  * generated list nobody writes is a list nobody reads - but the numbers in it
- * are now checked against public/map.yml on every run.
+ * are now checked against public/maps-archive.yml on every run.
  *
  * When a mechanic moves, the map and this table change together. That is the
  * whole point: the cost of moving one is having to say so.
  *
- * THE LADDER IS BEING REBUILT, so most of the table is currently a promise
+ * THE ARCHIVE IS BEING REBUILT, so most of the table is currently a promise
  * rather than a description: maps 11-35 were removed and are being reauthored
  * one at a time. That does not make the ledger unfalsifiable, it splits it in
- * two, and both halves are checked below against `LADDER_END`:
+ * two, and both halves are checked below against `ARCHIVE_END`:
  *
- *   meet <= LADDER_END   the map exists, so the number must be exactly right
- *   meet >  LADDER_END   the map does not exist, so the mechanic must be on NO
+ *   meet <= ARCHIVE_END   the map exists, so the number must be exactly right
+ *   meet >  ARCHIVE_END   the map does not exist, so the mechanic must be on NO
  *                        map at all
  *
  * The second half is not a placeholder. It catches a mechanic quietly landing
@@ -34,9 +34,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { MECHANICS } from "@/lib/admin/mechanicSpread";
-import { LADDER, LADDER_END } from "./fixtures/maps";
+import { ARCHIVE, ARCHIVE_END } from "./fixtures/maps";
 
-const LEVELS = LADDER;
+const LEVELS = ARCHIVE;
 const DOC = readFileSync(resolve(process.cwd(), "MAP_DESIGN_GUIDELINES.md"), "utf8");
 
 /** Every map a mechanic appears on, lowest first. */
@@ -112,7 +112,7 @@ describe("the ledger describes the maps that exist", () => {
         expect(on, `${row.mechanic} is on maps but the ledger says none`).toEqual([]);
         return;
       }
-      if (Number(row.meet) > LADDER_END) {
+      if (Number(row.meet) > ARCHIVE_END) {
         // Scheduled for a map that has not been rebuilt yet. Being on a map
         // anyway means it debuted early, on a map act I owns.
         expect(on, `${row.mechanic} is scheduled for ${row.meet} but already on `
@@ -124,7 +124,7 @@ describe("the ledger describes the maps that exist", () => {
     });
 
   it.each(checkable
-    .filter(r => /^\d+$/.test(r.use) && Number(r.use) <= LADDER_END)
+    .filter(r => /^\d+$/.test(r.use) && Number(r.use) <= ARCHIVE_END)
     .map(r => [r.mechanic, r] as const))(
     "%s is used again where the ledger says", (_m, row) => {
       expect(mapsFor(LABEL[row.mechanic]), `${row.mechanic}'s second map`)
@@ -157,7 +157,7 @@ describe("nobody meets a mechanic during a boss fight", () => {
       if (!debuts.has(first)) debuts.set(first, []);
       debuts.get(first)!.push(m.label);
     }
-    for (const boss of [10, 20, 30, 35].filter(b => b <= LADDER_END)) {
+    for (const boss of [10, 20, 30, 35].filter(b => b <= ARCHIVE_END)) {
       expect(debuts.get(boss) ?? [], `level ${boss} is a boss and teaches something new`)
         .toEqual([]);
     }

@@ -16,11 +16,11 @@ import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { enqueueCommand, drainCommands, type GameCommand } from "@/lib/net/commands";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 afterEach(() => { releaseClock(); setRunSeedText(null); });
 
-const board = LADDER.find(l => l.level === 3)!;
+const board = ARCHIVE.find(l => l.level === 3)!;
 
 /** Everything about the board that two devices have to agree on. */
 function fingerprint(game: import("@/types/gameState").CanvasGameState): string {

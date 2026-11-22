@@ -112,7 +112,7 @@ describe("splicing an entry back in", () => {
 // ── Against the real file ───────────────────────────────────────────────────
 
 describe("the real map.yml", () => {
-  const RAW = readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8");
+  const RAW = readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8");
   const parsed = yaml.load(RAW) as { levels: Record<string, unknown>[] };
 
   it("has comments worth protecting", () => {
@@ -166,7 +166,7 @@ describe("the real map.yml", () => {
  * map.yml perfectly well. It is how the file got flattened once already.
  */
 describe("splicing several entries at once", () => {
-  const RAW = readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8");
+  const RAW = readFileSync(resolve(__dirname, "../../public/maps-archive.yml"), "utf8");
   const commentLines = (text: string) =>
     text.split(/\r?\n/).filter(l => l.trim().startsWith("#")).length;
 

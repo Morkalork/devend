@@ -28,9 +28,9 @@
  */
 import type { CanvasGameState } from "@/types/gameState";
 import type { DestructibleState } from "@/types/game";
-import type { SpaceGrid } from "@/lib/spaceGrid";
-import { CellState, rasterizeCutToGrid, captureUnreachableCells } from "@/lib/spaceGrid";
-import type { Vector2 } from "@/lib/polygon";
+import { CellState, type SpaceGrid } from "@/lib/spaceGrid";
+import { lineSegmentIntersection } from "@/lib/polygon";
+import { isPlayerFence } from "@/lib/wallGeometry";
 import type { WinSpec } from "@/types/winSpec";
 import {
   DEFAULT_SMASH_CLASS, matchesSmashClass, type SmashClassFilter,
@@ -88,7 +88,7 @@ export function strikeCells(
 }
 
 /** What canStillStrike reads, so a caller that has less can still ask. */
-export type StrikeBoard = Pick<CanvasGameState, "spaceGrid" | "balls">;
+export type StrikeBoard = Pick<CanvasGameState, "spaceGrid" | "balls"> & Partial<Pick<CanvasGameState, "walls">>;
 
 /** Smallest radius among the balls still in play; the game's default when none. */
 function strikingRadius(game: StrikeBoard): number {
@@ -130,10 +130,25 @@ export function canStillStrike(
   const c1 = Math.min(grid.width - 1, Math.ceil((b.x1 + reach - grid.originX) / grid.cellSize));
   const r0 = Math.max(0, Math.floor((b.y0 - reach - grid.originY) / grid.cellSize));
   const r1 = Math.min(grid.height - 1, Math.ceil((b.y1 + reach - grid.originY) / grid.cellSize));
+  // A fence the player drew between the open cell and the slab means the ball
+  // standing there cannot hit it, however close it is. Without this the ring
+  // read straight through a fence: a ball fenced into a sliver BESIDE the
+  // bricks counted as able to break them, so a map whose bricks had just been
+  // walled off kept running with nothing left to do (BRICKS_PLAN.md). Only
+  // the player's fences block: the bricks' own edges and the map's walls are
+  // what a ring is measured around, and a brick behind another brick is
+  // reached by breaking the one in front.
+  const fences = (game.walls ?? []).filter(isPlayerFence);
   for (let row = r0; row <= r1; row++) {
     const base = row * grid.width;
     for (let col = c0; col <= c1; col++) {
-      if (grid.cells[base + col] === CellState.ACTIVE) return true;
+      if (grid.cells[base + col] !== CellState.ACTIVE) continue;
+      if (fences.length === 0) return true;
+      const cx = grid.originX + (col + 0.5) * grid.cellSize;
+      const cy = grid.originY + (row + 0.5) * grid.cellSize;
+      const target = { x: Math.max(b.x0, Math.min(b.x1, cx)), y: Math.max(b.y0, Math.min(b.y1, cy)) };
+      const from = { x: cx, y: cy };
+      if (!fences.some(f => lineSegmentIntersection(from, target, f.start, f.end))) return true;
     }
   }
   return false;
@@ -287,70 +302,68 @@ export function regionHoldsNeededSlab(
 }
 
 /**
- * Would this cut, if it landed, leave the map unable to meet its smash clause?
+ * Does this pocket hold a brick that is still standing?
  *
- * The third rule, and the one the other two left a hole for. Sealing a pocket
- * WITH a ball in it is refused as a lock; sealing one with no ball in it fails
- * the map. That second case is correct when the clause asks for one slab out of
- * many - you have to go out of your way to bury the only one that counts - and
- * it turns vicious the moment the clause asks for HALF of them, because then an
- * ordinary early cut across a run of bricks can put the map beyond reach on the
- * second fence, at 88% of the board still live, with nothing having gone wrong
- * that the player could see.
+ * The rule a lock is held to (BRICKS_PLAN.md): a ball and a brick in one pocket
+ * do not lock, whatever the win is asking for, because the lock would bury the
+ * brick. The pocket locks when its last brick breaks.
  *
- * Measured, on the eight-seed sweep, when act I's counts went to half: level 6
- * fell from 7 wins to 3, level 7 from 7 to 4, level 13 from 8 to 3, and every
- * single loss was objectiveBuried. The counts were not the problem - a map that
- * asks you to break six of twelve bricks is a fine map - the problem was that
- * getting the ORDER wrong cost a life instead of a cut.
- *
- * So the cut is refused instead, exactly as a ball-orphaning cut already is
- * (applyCut's "reject walls that would orphan a ball"): the fence does not
- * land, nothing is spent, and the board is unchanged. The player tries
- * somewhere else, which is the correct lesson and a free one.
- *
- * ── The prediction ─────────────────────────────────────────────────────────
- *
- * Simulated on a COPY of the grid rather than reasoned about: rasterise the
- * candidate segments, run the same capture the real cut would run, and count
- * what could still be struck afterwards. The alternative - working out which
- * slabs a line would orphan by geometry - is a second implementation of
- * reachability that would be free to disagree with the first, and this rule is
- * only as trustworthy as its agreement with what actually happens.
- *
- * A map whose clause is ALREADY beyond reach refuses nothing. That state
- * belongs to smashRequirementLost, which ends the map and says why; refusing
- * every subsequent cut instead would leave the player fencing at a board that
- * silently declines to change.
+ * Asked by BODY, not by reach: a brick is in the pocket when a cell touching
+ * it belongs to the pocket. regionHoldsNeededSlab above asks by striking reach,
+ * which is wider than a fence is thick, so it can say yes for a brick on the
+ * far side of one; this one cannot, and a lock is refused only for a brick the
+ * ball can actually get to.
  */
-export function cutWouldBurySmashes(
-  game: CanvasGameState,
-  spec: WinSpec,
-  segments: ReadonlyArray<{ start: Vector2; end: Vector2 }>,
-  thickness: number,
+export function regionHoldsStandingBrick(
+  game: CanvasGameState, cellIndices: readonly number[],
 ): boolean {
-  const demands = smashDemands(spec);
-  if (demands.length === 0) return false;
   const grid = game.spaceGrid;
-  if (!grid || segments.length === 0) return false;
-  if (breakables(game).length === 0) return false;
-  // Already lost: not this cut's doing, and not this rule's to report.
-  if (!allDemandsReachable(game, demands)) return false;
-
-  const after: SpaceGrid = {
-    ...grid,
-    cells: Uint8Array.from(grid.cells),
-    cellRegionIds: [...grid.cellRegionIds],
-  };
-  for (const seg of segments) {
-    rasterizeCutToGrid(after, seg.start, seg.end, thickness);
+  if (!grid) {
+    return false;
   }
-  captureUnreachableCells(after, game.balls, [...game.walls, ...segments]);
+  const standing = breakables(game).filter(d => !d.destroyed);
+  if (standing.length === 0) {
+    return false;
+  }
+  const cells = new Set(cellIndices);
+  for (const d of standing) {
+    for (const i of touchingCells(grid, d)) {
+      if (cells.has(i)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
-  // Per demand, not per total: a cut that orphans the map's last monolith is
-  // refused even though six shards are still perfectly reachable. Counting
-  // them together is what made the monolith pointless in the first place, and
-  // it would let this rule wave through the exact burial it exists to stop.
-  const probe = { ...game, spaceGrid: after } as CanvasGameState;
-  return !allDemandsReachable(game, demands, probe);
+/** The cells a brick's body covers, and the one-cell ring around it. */
+function touchingCells(grid: SpaceGrid, d: DestructibleState): number[] {
+  const b = boundsOf(d);
+  if (!b) {
+    return [];
+  }
+  const c0 = Math.max(0, Math.floor((b.x0 - grid.originX) / grid.cellSize) - 1);
+  const c1 = Math.min(grid.width - 1, Math.floor((b.x1 - grid.originX) / grid.cellSize) + 1);
+  const r0 = Math.max(0, Math.floor((b.y0 - grid.originY) / grid.cellSize) - 1);
+  const r1 = Math.min(grid.height - 1, Math.floor((b.y1 - grid.originY) / grid.cellSize) + 1);
+  const out: number[] = [];
+  for (let row = r0; row <= r1; row++) {
+    for (let col = c0; col <= c1; col++) {
+      out.push(row * grid.width + col);
+    }
+  }
+  return out;
+}
+
+
+/**
+ * Does the win still owe bricks: some smash demand not yet met?
+ *
+ * Read by the lock pass, which keeps the last ball in play while this holds:
+ * with every ball locked nothing can break anything, so the last lock would end
+ * a map that the bricks could still win.
+ */
+export function smashesOwed(game: CanvasGameState, spec: WinSpec): boolean {
+  return smashDemands(spec).some(dem =>
+    breakables(game).filter(d => d.destroyed && matchesSmashClass(d, dem.of)).length < dem.count);
 }

@@ -24,11 +24,11 @@ import { captureSimModuleState, restoreSimModuleState } from "@/lib/net/simState
 import type { GameCommand, PlayerId } from "@/lib/net/commands";
 import { STANDARD_FENCE_ID } from "@/lib/fences";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 
 afterEach(() => { releaseClock(); setRunSeedText(null); pairWallMs = 0; });
 
-const board = LADDER.find(l => l.level === 3)!;
+const board = ARCHIVE.find(l => l.level === 3)!;
 
 /**
  * One device: its own game, its own clock reading, its own session.

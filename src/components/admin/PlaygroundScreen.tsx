@@ -223,6 +223,12 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
   // Level picker
   const [allLevels, setAllLevels] = useState<LevelConfig[]>([]);
+  // The maps from before the brick pivot (public/maps-archive.yml), listed in
+  // the picker to be tried again. They are not on the ladder and never saved
+  // from here: `fromArchive` says the open map is one of them, which matters
+  // because the two files reuse ids (both have a level-1).
+  const [archiveLevels, setArchiveLevels] = useState<LevelConfig[]>([]);
+  const [fromArchive, setFromArchive] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig | null>(null);
   const [levelPickerOpen, setLevelPickerOpen] = useState(false);
 
@@ -288,6 +294,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         }
       })
       .catch(() => {/* silently ignore */});
+    // The archive, for the picker's second list. Missing is fine: no list.
+    fetch('/maps-archive.yml')
+      .then(r => r.text())
+      .then(text => {
+        const data = yaml.load(text) as LevelData;
+        if (data?.levels) setArchiveLevels(data.levels.map(l => ({ ...l, balls: l.balls ?? [] })));
+      })
+      .catch(() => {/* no archive: the picker shows the ladder alone */});
     // Load the ball catalogue (balls.yml) so the picker lists the latest types,
     // then restart so the running game reflects the loaded catalogue.
     loadBallTypes().then(() => { setBallCatalog([...getAllBallTypes()]); setGameKey(k => k + 1); });
@@ -311,7 +325,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
    * the blank tester is chosen on purpose.
    */
   const levelLabel = selectedLevel
-    ? `L${selectedLevel.level}: ${selectedLevel.id}`
+    ? `${fromArchive ? 'Archive ' : ''}L${selectedLevel.level}: ${selectedLevel.id}`
     : 'Sandbox';
 
   // The balls the game spawns by default for this level - what the picker shows
@@ -506,9 +520,11 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     if (!editDraft) return;
     const updated = editDraft;
     setSelectedLevel(updated);
-    setAllLevels(prev => prev.map(l => l.id === updated.id ? updated : l));
+    // Into the list the map came from: the archive and the ladder share ids.
+    const setList = fromArchive ? setArchiveLevels : setAllLevels;
+    setList(prev => prev.map(l => l.id === updated.id ? updated : l));
     setGameKey(k => k + 1);
-  }, [editDraft]);
+  }, [editDraft, fromArchive]);
 
   /**
    * The YAML the current draft would write, also used by the download fallback.
@@ -538,7 +554,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   }, [editDraft, allLevels]);
 
   const saveEditsToDisk = useCallback(async () => {
-    if (!editDraft) return;
+    // An archived map is for trying out: it is never written back, and saving
+    // it here would splice it over the ladder map that shares its id.
+    if (!editDraft || fromArchive) return;
     setEditSaveStatus('saving');
     const updated = editDraft;
     const nextLevels = allLevels.map(l => l.id === updated.id ? updated : l);
@@ -572,7 +590,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setEditSaveStatus('saved');
     setSaveError(null);
     setTimeout(() => setEditSaveStatus('idle'), 1200);
-  }, [editDraft, allLevels, draftYaml]);
+  }, [editDraft, allLevels, draftYaml, fromArchive]);
 
   /** Fallback when there is no dev server: hand the YAML over as a file. */
   const downloadYaml = useCallback(() => {
@@ -625,11 +643,13 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   }, []);
 
   const stepLevel = useCallback((delta: 1 | -1) => {
-    if (allLevels.length === 0) return;
-    const idx = selectedLevel ? allLevels.findIndex(l => l.id === selectedLevel.id) : -1;
-    setSelectedLevel(allLevels[stepLevelIndex(idx, allLevels.length, delta)]);
+    // Step within the list the open map came from.
+    const list = fromArchive ? archiveLevels : allLevels;
+    if (list.length === 0) return;
+    const idx = selectedLevel ? list.findIndex(l => l.id === selectedLevel.id) : -1;
+    setSelectedLevel(list[stepLevelIndex(idx, list.length, delta)]);
     setGameKey(k => k + 1);
-  }, [allLevels, selectedLevel]);
+  }, [allLevels, archiveLevels, fromArchive, selectedLevel]);
 
   const goToNextLevel = useCallback(() => stepLevel(1), [stepLevel]);
   const goToPreviousLevel = useCallback(() => stepLevel(-1), [stepLevel]);
@@ -929,7 +949,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           >
             <button
               onClick={saveEditsToDisk}
-              disabled={editSaveStatus === 'saving'}
+              disabled={editSaveStatus === 'saving' || fromArchive}
+              title={fromArchive ? 'An archived map is for trying out: it is not saved' : undefined}
               className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-semibold"
               style={{
                 backgroundColor:
@@ -942,6 +963,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               {editSaveStatus === 'saved'  ? <><Check className="w-4 h-4" /> Saved!</> :
                editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> {mapSaveMessage(saveError ?? 'server', saveDetail ?? undefined)}</> :
                editSaveStatus === 'saving' ? 'Saving…' :
+               fromArchive ? <><Save className="w-4 h-4" /> Archived map (not saved)</> :
                <><Save className="w-4 h-4" /> Save map</>}
             </button>
             {saveError === 'unavailable' && (
@@ -1310,7 +1332,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     backgroundColor: !selectedLevel ? '#a855f722' : 'rgba(255,255,255,0.03)',
                     border: `1px solid ${!selectedLevel ? '#a855f755' : 'rgba(255,255,255,0.06)'}`,
                   }}
-                  onClick={() => { setSelectedLevel(null); setGameKey(k => k + 1); setLevelPickerOpen(false); }}
+                  onClick={() => { setSelectedLevel(null); setFromArchive(false); setGameKey(k => k + 1); setLevelPickerOpen(false); }}
                 >
                   <div className="text-xs font-semibold" style={{ color: !selectedLevel ? '#a855f7' : 'hsl(var(--muted-foreground))' }}>
                     Playground (default)
@@ -1321,7 +1343,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 </button>
 
                 {allLevels.map(lvl => {
-                  const isActive = selectedLevel?.id === lvl.id;
+                  const isActive = selectedLevel?.id === lvl.id && fromArchive === false;
                   return (
                     <button
                       key={lvl.id}
@@ -1330,7 +1352,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                         backgroundColor: isActive ? '#a855f722' : 'rgba(255,255,255,0.03)',
                         border: `1px solid ${isActive ? '#a855f755' : 'rgba(255,255,255,0.06)'}`,
                       }}
-                      onClick={() => { setSelectedLevel(lvl); setGameKey(k => k + 1); setLevelPickerOpen(false); }}
+                      onClick={() => { setSelectedLevel(lvl); setFromArchive(false); setGameKey(k => k + 1); setLevelPickerOpen(false); }}
                     >
                       <div className="text-xs font-semibold" style={{ color: isActive ? '#a855f7' : 'hsl(var(--foreground))' }}>
                         L{lvl.level}: {lvl.id}
@@ -1342,6 +1364,37 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     </button>
                   );
                 })}
+
+
+                {/* The maps from before the brick pivot: open one to try it, nothing here is saved. */}
+                {archiveLevels.length > 0 && (
+                  <div id="playground-archive-heading" className="pt-3 pb-1 px-1 text-[10px] font-bold tracking-widest uppercase" style={{ color: '#a855f799' }}>
+                    Archive: the {archiveLevels.length} old maps (try them, edits are not saved)
+                  </div>
+                )}
+                {archiveLevels.map(lvl => {
+                  const isActive = selectedLevel?.id === lvl.id && fromArchive === true;
+                  return (
+                    <button
+                      key={`archive-${lvl.id}`}
+                      className="w-full text-left px-3 py-2 rounded-lg transition-colors"
+                      style={{
+                        backgroundColor: isActive ? '#a855f722' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${isActive ? '#a855f755' : 'rgba(255,255,255,0.06)'}`,
+                      }}
+                      onClick={() => { setSelectedLevel(lvl); setFromArchive(true); setGameKey(k => k + 1); setLevelPickerOpen(false); }}
+                    >
+                      <div className="text-xs font-semibold" style={{ color: isActive ? '#a855f7' : 'hsl(var(--foreground))' }}>
+                        L{lvl.level}: {lvl.id}
+                      </div>
+                      <div className="text-[10px]" style={{ color: 'hsl(var(--muted-foreground) / 0.6)', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {(() => { const n = lvl.maxBalls ?? lvl.balls?.length ?? 0; return `max ${n} ball${n !== 1 ? 's' : ''}`; })()} · threshold {lvl.sizeThreshold}%
+                        {lvl.entities?.length ? ` · ${lvl.entities.length} entity` : ''}
+                      </div>
+                    </button>
+                  );
+                })}
+
 
                 {allLevels.length === 0 && (
                   <div className="text-xs text-center py-4" style={{ color: 'hsl(var(--muted-foreground))' }}>

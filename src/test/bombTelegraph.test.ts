@@ -19,7 +19,7 @@ import { boardEntityCopy } from "@/ui/game/BoardEntityInfoModalModel";
 import { REACH_RING, reachDashes } from "@/lib/rendering/sleek/bombLook";
 import { createBotGame } from "@/lib/bot/headlessGame";
 import { setRunSeedText } from "@/lib/runRng";
-import { LADDER } from "./fixtures/maps";
+import { ARCHIVE } from "./fixtures/maps";
 import en from "@/i18n/locales/en.json";
 import es from "@/i18n/locales/es.json";
 import sv from "@/i18n/locales/sv.json";
@@ -43,11 +43,11 @@ describe("box blasts wait for act II", () => {
   });
 
   it("leave every act I map quiet", () => {
-    const blasting = LADDER.filter(l => mapCanHaveBoxBlasts(l)).map(l => l.level);
+    const blasting = ARCHIVE.filter(l => mapCanHaveBoxBlasts(l)).map(l => l.level);
     expect(blasting.length).toBeGreaterThan(0);
     expect(blasting.every(n => n >= 11)).toBe(true);
     // Act I has boxes (chest met at 7, slab at 8), so the gate is doing work.
-    expect(LADDER.some(l => l.level < 11 && (l.entities ?? []).some(e => e.kind === "wall" && "chest" in e && e.chest))).toBe(true);
+    expect(ARCHIVE.some(l => l.level < 11 && (l.entities ?? []).some(e => e.kind === "wall" && "chest" in e && e.chest))).toBe(true);
   });
 
   it("are dealt that way, by the browser and the harness alike", () => {
@@ -56,7 +56,7 @@ describe("box blasts wait for act II", () => {
     }
     const at = (n: number) => {
       setRunSeedText(`box-blast-${n}`);
-      return createBotGame(LADDER.find(l => l.level === n)!, n, undefined, { bombs: CFG }).game;
+      return createBotGame(ARCHIVE.find(l => l.level === n)!, n, undefined, { bombs: CFG }).game;
     };
     expect(at(7).boxBombBlast).toBeNull();
     expect(at(11).boxBombBlast).toEqual(CFG.box);
