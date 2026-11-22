@@ -8,3 +8,4 @@ export * from "./arcade";
 export * from "./arcadeStyle";
 export * from "./pipeline";
 export * from "./pipelineStyle";
+export * from "./pan";

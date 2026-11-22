@@ -3345,6 +3345,11 @@
       "fences": "বেড়া",
       "hands": "হাত",
       "office": "অফিস"
-    }
+    },
+    "legendOwned": "কেনা",
+    "legendCanBuy": "কেনা যায়",
+    "legendLocked": "তালাবদ্ধ",
+    "dragHint": "ঘুরে দেখতে টেনে আনো।",
+    "nextBall": "পরের বল"
   }
 }

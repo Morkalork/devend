@@ -3361,6 +3361,11 @@
       "fences": "Staket",
       "hands": "Händer",
       "office": "Kontor"
-    }
+    },
+    "legendOwned": "Köpt",
+    "legendCanBuy": "Kan köpas",
+    "legendLocked": "Låst",
+    "dragHint": "Dra för att se dig om.",
+    "nextBall": "Nästa boll"
   }
 }

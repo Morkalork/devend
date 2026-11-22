@@ -1487,6 +1487,11 @@
       "fences": "Fences",
       "hands": "Hands",
       "office": "Office"
-    }
+    },
+    "legendOwned": "Owned",
+    "legendCanBuy": "Can buy",
+    "legendLocked": "Locked",
+    "dragHint": "Drag to look around.",
+    "nextBall": "Next ball"
   }
 }

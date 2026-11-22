@@ -130,6 +130,12 @@ const shopMods = { ...DEFAULT_MODIFIERS, spendInstantFencePerChunk: 1, runwayIns
 
 /** The tree's catalogue, read raw: the gallery has no loader. */
 const treeNodes = ((yaml.load(treeYaml) as { upgrades: UpgradeConfig[] }).upgrades ?? []);
+/** Locked by the tree's own edges, as the upgrade manager would read them. */
+const treeLocked = (id: string, owned: string[]): boolean => {
+  const n = treeNodes.find(u => u.id === id);
+  if (!n) return true;
+  return [...(n.prerequisites ?? []), ...(n.upgradeOf ? [n.upgradeOf] : [])].some(p => !owned.includes(p));
+};
 
 const shopProps = {
   playerPoints: 120, upgrades: shopUpgrades, ownedUpgradeIds: shopOwned, completedLevel: 10, isLocked,
@@ -283,7 +289,7 @@ export const entries: GalleryEntry[] = [
     // The ball tree (BALL_TREE_PLAN.md): the roster first, the branches below, a node ticket on tap.
     id: "TreeScreen", group: "screen",
     render: () => <TreeScreen hours={64} roster={[{ slot: 1, rungs: { weight: 2, worth: 1 } }, { slot: 2, rungs: { pace: 1 } }]}
-      nodes={treeNodes} ownedIds={["fast_compile", "feature_freeze"]} isLocked={isLocked} completedLevel={4}
+      nodes={treeNodes} ownedIds={["fast_compile", "feature_freeze"]} isLocked={treeLocked} completedLevel={4}
       nextMap={{ level: 5, name: "Merge Conflict", features: ["breakables", "moving objects"] }}
       pipeline={{ ...samplePlan(4), promotion: false, tree: true }}
       onBuyNode={noop} onBuyRung={noop} onBuyBall={noop} onContinue={noop} accentColor={ACCENT} />,
@@ -291,7 +297,7 @@ export const entries: GalleryEntry[] = [
   {
     // The run start under the tree: the first ball's trait, one of three, weight always among them.
     id: "TreeScreen-start", group: "screen",
-    render: () => <TreeScreen hours={0} roster={[{ slot: 1, rungs: {} }]} nodes={treeNodes} ownedIds={[]} isLocked={isLocked} completedLevel={0}
+    render: () => <TreeScreen hours={0} roster={[{ slot: 1, rungs: {} }]} nodes={treeNodes} ownedIds={[]} isLocked={treeLocked} completedLevel={0}
       onBuyNode={noop} onBuyRung={noop} onBuyBall={noop} onContinue={noop} accentColor={ACCENT}
       start={{ offer: ["weight", "sight", "grace"], onPick: noop }} />,
   },

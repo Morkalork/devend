@@ -17,16 +17,17 @@
  */
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Check, Circle, Hand, Landmark, Layers, Lock, Plus, Sparkles, Fence } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, Check, Lock, Plus, Sparkles } from "lucide-react";
+import type { Graphics } from "pixi.js";
 import type { UpgradeConfig } from "@/types/upgrade";
 import { contentText } from "@/i18n/content";
 import { getUpgradeIcon } from "@/components/game/upgradeIcons";
 import { resolveUpgradeCost, getLivePricing } from "@/lib/upgradePricing";
 import { RUNG_IDS, RUNG_META, ROSTER_MAX, type Roster, type RosterBall, type RungId } from "@/lib/roster";
-import { TREE_BRANCHES, ballPrice, nodesOf, rungOffers, type TreeBranch } from "@/lib/tree";
+import { ballPrice, rungOffers } from "@/lib/tree";
+import { NODE_H, NODE_W, layoutTree, type LayoutNode } from "./treeLayout";
 import {
-  Appear, ArcadeButton, ArcadeText, Icon, Label, Modal, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, arcadeInk, hex, tint, useUiScreen,
+  Appear, ArcadeButton, ArcadeText, Icon, Label, Modal, PanView, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, arcadeInk, hex, tint, useUiScreen,
 } from "../kit/ui";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, samplePlan, type BetweenMapPlan } from "./pipelineModel";
@@ -57,8 +58,6 @@ export interface TreeScreenProps {
    */
   start?: { offer: RungId[]; onPick: (rung: RungId) => void } | null;
 }
-
-const BRANCH_ICON: Record<TreeBranch, LucideIcon> = { balls: Circle, fences: Fence, hands: Hand, office: Landmark };
 
 /** A ball's rungs as short chips. */
 function RungChips({ ball, size = TEXT.xs }: { ball: RosterBall; size?: number }) {
@@ -93,6 +92,25 @@ export function TreeScreen({
   const priceOf = (u: UpgradeConfig): number => Math.max(1, Math.round((resolveUpgradeCost(u, pricing) ?? 0) * discount));
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
   const nextBallPrice = ballPrice(roster.length, undefined, discount);
+
+  // ── The map ───────────────────────────────────────────────────────────────
+  // A ball is a node of the balls branch, each hanging off the one before it,
+  // and the next slot hangs off the last; a general node hangs off what it
+  // requires. Placed once per catalogue and roster size.
+  const addId = "ball:add";
+  const tree = useMemo(() => {
+    const items: LayoutNode[] = [];
+    roster.forEach((b, i) => items.push({ id: `ball:${b.slot}`, branch: "balls", requires: i === 0 ? [] : [`ball:${roster[i - 1].slot}`] }));
+    if (roster.length < ROSTER_MAX) {
+      items.push({ id: addId, branch: "balls", requires: [`ball:${roster[roster.length - 1].slot}`] });
+    }
+    for (const n of nodes) {
+      if (!n.branch || n.branch === "balls") continue;
+      items.push({ id: n.id, branch: n.branch, requires: [...(n.prerequisites ?? []), ...(n.upgradeOf ? [n.upgradeOf] : [])] });
+    }
+    return layoutTree(items);
+  }, [nodes, roster]);
+
 
   // ── The run start: one trait, free ────────────────────────────────────────
   if (start) {
@@ -225,7 +243,116 @@ export function TreeScreen({
     );
   })();
 
-  const branches = TREE_BRANCHES.filter(b => b !== "balls");
+  const PAD = 80;
+  const contentWidth = tree.maxX - tree.minX + PAD * 2;
+  const contentHeight = tree.maxY - tree.minY + PAD * 2;
+  const toContent = (x: number, y: number) => ({ x: x - tree.minX + PAD, y: y - tree.minY + PAD });
+  const mapWidth = screen.width;
+  const mapHeight = Math.max(360, screen.height - 300);
+  const origin = toContent(0, 0);
+
+  type NodeState = "owned" | "canBuy" | "tooDear" | "locked";
+  const stateOf = (id: string): NodeState => {
+    if (id.startsWith("ball:")) {
+      if (id === addId) return nextBallPrice !== null && hours >= nextBallPrice ? "canBuy" : "tooDear";
+      return "owned";
+    }
+    const node = byId.get(id);
+    if (!node) return "locked";
+    if (ownedIds.includes(node.id)) return "owned";
+    if (isLocked(node.id, ownedIds)) return "locked";
+    return hours >= priceOf(node) ? "canBuy" : "tooDear";
+  };
+  const INK_OF: Record<NodeState, number> = { owned: 0x000000, canBuy: ROLE.ink, tooDear: ROLE.muted, locked: ROLE.muted };
+  const FILL_OF: Record<NodeState, number> = { owned: accent, canBuy: ROLE.surface, tooDear: ROLE.surface, locked: ROLE.surface };
+  const EDGE_OF: Record<NodeState, number> = { owned: accent, canBuy: accent, tooDear: ROLE.edge, locked: ROLE.edge };
+  const ALPHA_OF: Record<NodeState, number> = { owned: 1, canBuy: 1, tooDear: 0.75, locked: 0.38 };
+
+  const drawEdges = (g: Graphics) => {
+    g.clear();
+    const at = new Map(tree.nodes.map(n => [n.id, toContent(n.x, n.y)]));
+    // The trunks: the root to every first-ring node.
+    for (const n of tree.nodes) {
+      if (n.depth !== 0) continue;
+      const p = at.get(n.id)!;
+      const s = stateOf(n.id);
+      g.moveTo(origin.x, origin.y).lineTo(p.x, p.y).stroke({ width: 2, color: s === "locked" ? ROLE.edge : accent, alpha: s === "owned" ? 0.9 : s === "canBuy" ? 0.45 : 0.18 });
+    }
+    for (const e of tree.edges) {
+      const a = at.get(e.from), b = at.get(e.to);
+      if (!a || !b) continue;
+      const s = stateOf(e.to);
+      const lit = stateOf(e.from) === "owned";
+      g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2, color: lit && s !== "locked" ? accent : ROLE.edge, alpha: lit ? (s === "owned" ? 0.9 : 0.6) : 0.35 });
+    }
+    g.circle(origin.x, origin.y, 16).fill({ color: ROLE.surface }).stroke({ width: 2, color: accent, alpha: 0.9 });
+  };
+
+  const legend: { state: NodeState; text: string }[] = [
+    { state: "owned", text: t("tree.legendOwned") },
+    { state: "canBuy", text: t("tree.legendCanBuy") },
+    { state: "locked", text: t("tree.legendLocked") },
+  ];
+
+  const map = (
+    <PanView
+      layout={{ width: mapWidth, height: mapHeight, backgroundColor: ROLE.raised }}
+      contentWidth={contentWidth}
+      contentHeight={contentHeight}
+      initialX={origin.x - mapWidth / 2}
+      initialY={origin.y - mapHeight / 2}
+    >
+      <View layout={{ width: contentWidth, height: contentHeight }}>
+        <pixiGraphics draw={drawEdges} layout={false} />
+        <View layout={{ position: "absolute", left: origin.x - 16, top: origin.y - 16, width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+          <Label text={`${hours}h`} size={TEXT.xs} weight="700" color={accent} />
+        </View>
+        {tree.nodes.map(n => {
+          const p = toContent(n.x, n.y);
+          const state = stateOf(n.id);
+          const box = { position: "absolute" as const, left: p.x - NODE_W / 2, top: p.y - NODE_H / 2, width: NODE_W, height: NODE_H,
+            flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingLeft: 8, paddingRight: 8,
+            borderRadius: RADIUS.sm, borderWidth: state === "canBuy" ? 2 : 1, borderColor: EDGE_OF[state], backgroundColor: FILL_OF[state] };
+          if (n.id.startsWith("ball:")) {
+            if (n.id === addId) {
+              return (
+                <Pressable key={n.id} onTap={state === "canBuy" && nextBallPrice !== null ? () => onBuyBall(nextBallPrice) : undefined} alpha={ALPHA_OF[state]} label={t("tree.addBall", { hours: nextBallPrice ?? 0 })} layout={box}>
+                  <Icon icon={Plus} size={14} color={INK_OF[state]} />
+                  <View layout={{ flex: 1 }}><Label text={t("tree.nextBall")} size={TEXT.xs} weight="700" color={INK_OF[state]} truncate /></View>
+                  <Label text={`${nextBallPrice ?? 0}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />
+                </Pressable>
+              );
+            }
+            const slot = Number(n.id.slice(5));
+            const ball = roster.find(b => b.slot === slot);
+            const held = ball ? RUNG_IDS.filter(id => (ball.rungs[id] ?? 0) > 0) : [];
+            return (
+              <Pressable key={n.id} onTap={() => setOpenBall(slot)} label={t("tree.ballN", { n: slot })} layout={box}>
+                <View layout={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 0xff5b5b, alignItems: "center", justifyContent: "center" }}>
+                  <Label text={String(slot)} size={10} weight="700" color={0x000000} />
+                </View>
+                <View layout={{ flex: 1 }}><Label text={ball?.name ?? t("tree.ballN", { n: slot })} size={TEXT.xs} weight="700" color={INK_OF.owned} truncate /></View>
+                <View layout={{ flexDirection: "row", gap: 2 }}>
+                  {held.map(id => <View key={id} layout={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RUNG_META[id].color }} />)}
+                </View>
+              </Pressable>
+            );
+          }
+          const node = byId.get(n.id);
+          if (!node) return null;
+          const icon = getUpgradeIcon(node, nodes);
+          const price = priceOf(node);
+          return (
+            <Pressable key={n.id} onTap={() => setOpenNode(node.id)} alpha={ALPHA_OF[state]} label={contentText.upgradeName(t, node)} layout={box}>
+              {state === "owned" ? <Icon icon={Check} size={12} color={INK_OF.owned} /> : state === "locked" ? <Icon icon={Lock} size={12} color={INK_OF.locked} /> : icon ? <Icon icon={icon} size={12} color={INK_OF[state]} /> : <Icon icon={Sparkles} size={12} color={INK_OF[state]} />}
+              <View layout={{ flex: 1 }}><Label text={contentText.upgradeName(t, node)} size={TEXT.xs} weight="600" color={INK_OF[state]} truncate /></View>
+              {state !== "owned" && <Label text={`${price}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />}
+            </Pressable>
+          );
+        })}
+      </View>
+    </PanView>
+  );
 
   return (
     <PipelineFrame
@@ -237,6 +364,7 @@ export function TreeScreen({
         caption: plan.last ? t("pipeline.toSpendLast") : t("pipeline.toSpend", { level: completedLevel + 1 }),
       }}
       overlay={ballModal || nodeModal || undefined}
+      shelf={map}
       footer={
         <Appear fromY={20} delay={0.3}>
           <ArcadeButton onTap={onContinue} iconAfter={ArrowRight}>
@@ -245,45 +373,8 @@ export function TreeScreen({
         </Appear>
       }
     >
-      {/* The roster: the build's face. */}
       <Appear fromY={-8} delay={0.08}>
         <View layout={{ gap: 8 }}>
-          <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Icon icon={Layers} size={14} color={ROLE.muted} />
-            <Label text={t("tree.yourBalls")} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted} />
-          </View>
-          <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {roster.map(ball => (
-              <Pressable
-                key={ball.slot}
-                onTap={() => setOpenBall(ball.slot)}
-                label={t("tree.ballN", { n: ball.slot })}
-                layout={{ minWidth: 140, flex: 1, padding: 10, gap: 6, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: tint(accent, 0.5), backgroundColor: ROLE.surface }}
-              >
-                <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View layout={{ width: 22, height: 22, borderRadius: 11, backgroundColor: 0xff5b5b, alignItems: "center", justifyContent: "center" }}>
-                    <Label text={String(ball.slot)} size={TEXT.xs} weight="700" color={0x000000} />
-                  </View>
-                  <View layout={{ flex: 1 }}>
-                    <Label text={ball.name ?? t("tree.ballN", { n: ball.slot })} size={TEXT.sm} weight="700" color={ROLE.ink} truncate />
-                  </View>
-                </View>
-                <RungChips ball={ball} />
-                <Label text={t("tree.tapForRungs")} size={TEXT.xs} color={ROLE.muted} />
-              </Pressable>
-            ))}
-            {roster.length < ROSTER_MAX && nextBallPrice !== null && (
-              <Pressable
-                onTap={hours >= nextBallPrice ? () => onBuyBall(nextBallPrice) : undefined}
-                alpha={hours >= nextBallPrice ? 1 : 0.5}
-                label={t("tree.addBall", { hours: nextBallPrice })}
-                layout={{ minWidth: 140, flex: 1, padding: 10, gap: 6, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: ROLE.edge, alignItems: "center", justifyContent: "center" }}
-              >
-                <Icon icon={Plus} size={18} color={hours >= nextBallPrice ? accent : ROLE.muted} />
-                <Label text={t("tree.addBall", { hours: nextBallPrice })} size={TEXT.xs} weight="700" color={hours >= nextBallPrice ? accent : ROLE.muted} align="center" wrap />
-              </Pressable>
-            )}
-          </View>
           {nextMap && (
             <Label
               text={nextMap.features.length > 0
@@ -292,51 +383,17 @@ export function TreeScreen({
               size={TEXT.xs} color={ROLE.muted} wrap
             />
           )}
+          <View layout={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Label text={t("tree.dragHint")} size={TEXT.xs} color={ROLE.muted} />
+            {legend.map(l => (
+              <View key={l.state} layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <View layout={{ width: 12, height: 12, borderRadius: 3, borderWidth: l.state === "canBuy" ? 2 : 1, borderColor: EDGE_OF[l.state], backgroundColor: FILL_OF[l.state] }} alpha={ALPHA_OF[l.state]} />
+                <Label text={l.text} size={TEXT.xs} color={ROLE.muted} />
+              </View>
+            ))}
+          </View>
         </View>
       </Appear>
-
-      {/* The branches: every node, always in view. */}
-      {branches.map((branch, bi) => {
-        const list = nodesOf(branch, nodes);
-        if (list.length === 0) return null;
-        return (
-          <Appear key={branch} fromY={-8} delay={0.12 + bi * 0.05}>
-            <View layout={{ gap: 8, marginTop: 8 }}>
-              <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Icon icon={BRANCH_ICON[branch]} size={14} color={ROLE.muted} />
-                <Label text={t(`tree.branch.${branch}`)} size={TEXT.xs} weight="700" upper letterSpacing={1} color={ROLE.muted} />
-              </View>
-              <View layout={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                {list.map(node => {
-                  const owned = ownedIds.includes(node.id);
-                  const locked = !owned && isLocked(node.id, ownedIds);
-                  const price = priceOf(node);
-                  const can = !owned && !locked && hours >= price;
-                  const icon = getUpgradeIcon(node, nodes);
-                  const ink = owned ? accent : locked ? ROLE.muted : can ? ROLE.ink : ROLE.muted;
-                  return (
-                    <Pressable
-                      key={node.id}
-                      onTap={() => setOpenNode(node.id)}
-                      label={contentText.upgradeName(t, node)}
-                      layout={{
-                        flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 8, paddingRight: 8, paddingTop: 6, paddingBottom: 6,
-                        borderRadius: RADIUS.sm, borderWidth: 1,
-                        borderColor: owned ? accent : can ? tint(accent, 0.6) : ROLE.edge,
-                        backgroundColor: owned ? tint(accent, 0.12) : ROLE.surface,
-                      }}
-                    >
-                      {owned ? <Icon icon={Check} size={12} color={accent} /> : locked ? <Icon icon={Lock} size={12} color={ROLE.muted} /> : icon ? <Icon icon={icon} size={12} color={ink} /> : <Icon icon={Sparkles} size={12} color={ink} />}
-                      <Label text={contentText.upgradeName(t, node)} size={TEXT.xs} weight="600" color={ink} />
-                      {!owned && <Label text={`${price}h`} size={TEXT.xs} weight="700" color={can ? ROLE.hours : ROLE.muted} />}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </Appear>
-        );
-      })}
     </PipelineFrame>
   );
 }

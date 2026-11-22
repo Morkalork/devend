@@ -3361,6 +3361,11 @@
       "fences": "Vallas",
       "hands": "Manos",
       "office": "Oficina"
-    }
+    },
+    "legendOwned": "Comprado",
+    "legendCanBuy": "Se puede comprar",
+    "legendLocked": "Bloqueado",
+    "dragHint": "Arrastra para moverte.",
+    "nextBall": "Siguiente bola"
   }
 }
