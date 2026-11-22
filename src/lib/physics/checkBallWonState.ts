@@ -42,7 +42,7 @@ import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scori
 import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
-import { regionHoldsNeededSlab } from "@/lib/physics/smashReach";
+import { regionHoldsNeededSlab, regionHoldsStandingBrick } from "@/lib/physics/smashReach";
 import { bandAllowsLock, ballsSharingPocket } from "@/lib/physics/lockBand";
 import { getFenceType } from "@/lib/fences";
 import { qualifiedHoursFor } from "@/lib/qualifiedOvertime";
@@ -487,6 +487,17 @@ export function checkAndUpdateBallWonStates(
     // Lifted once the clause is satisfied: past that the slabs stop being
     // objectives and a pocket around one is an ordinary lock again.
     if (!stranded && winSpec && regionHoldsNeededSlab(game, winSpec, ballRegion.cellIndices)) {
+      diagnose('below-gate', null);
+      continue;
+    }
+
+    // And around ANY brick still standing, owed or not (BRICKS_PLAN.md): a ball
+    // and a brick in one pocket do not lock, because the lock would bury the
+    // brick. The pocket is the right size and stays open; it locks when its
+    // last brick breaks, with no further cut (applyCut's settleBrickHeldLocks,
+    // which this flag arms).
+    if (!stranded && regionHoldsStandingBrick(game, ballRegion.cellIndices)) {
+      game.brickHeldLocks = true;
       diagnose('below-gate', null);
       continue;
     }

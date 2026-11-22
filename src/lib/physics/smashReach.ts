@@ -29,7 +29,10 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { DestructibleState } from "@/types/game";
 import type { SpaceGrid } from "@/lib/spaceGrid";
-import { CellState, rasterizeCutToGrid, captureUnreachableCells } from "@/lib/spaceGrid";
+import {
+  CellState, rasterizeCutToGrid, captureUnreachableCells, findGridRegions, buildGridRegionMap, findGridRegionForBall,
+} from "@/lib/spaceGrid";
+import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import type { Vector2 } from "@/lib/polygon";
 import type { WinSpec } from "@/types/winSpec";
 import {
@@ -287,6 +290,60 @@ export function regionHoldsNeededSlab(
 }
 
 /**
+ * Does this pocket hold a brick that is still standing?
+ *
+ * The rule a lock is held to (BRICKS_PLAN.md): a ball and a brick in one pocket
+ * do not lock, whatever the win is asking for, because the lock would bury the
+ * brick. The pocket locks when its last brick breaks.
+ *
+ * Asked by BODY, not by reach: a brick is in the pocket when a cell touching
+ * it belongs to the pocket. regionHoldsNeededSlab above asks by striking reach,
+ * which is wider than a fence is thick, so it can say yes for a brick on the
+ * far side of one; this one cannot, and a lock is refused only for a brick the
+ * ball can actually get to.
+ */
+export function regionHoldsStandingBrick(
+  game: CanvasGameState, cellIndices: readonly number[],
+): boolean {
+  const grid = game.spaceGrid;
+  if (!grid) {
+    return false;
+  }
+  const standing = breakables(game).filter(d => !d.destroyed);
+  if (standing.length === 0) {
+    return false;
+  }
+  const cells = new Set(cellIndices);
+  for (const d of standing) {
+    for (const i of touchingCells(grid, d)) {
+      if (cells.has(i)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** The cells a brick's body covers, and the one-cell ring around it. */
+function touchingCells(grid: SpaceGrid, d: DestructibleState): number[] {
+  const b = boundsOf(d);
+  if (!b) {
+    return [];
+  }
+  const c0 = Math.max(0, Math.floor((b.x0 - grid.originX) / grid.cellSize) - 1);
+  const c1 = Math.min(grid.width - 1, Math.floor((b.x1 - grid.originX) / grid.cellSize) + 1);
+  const r0 = Math.max(0, Math.floor((b.y0 - grid.originY) / grid.cellSize) - 1);
+  const r1 = Math.min(grid.height - 1, Math.floor((b.y1 - grid.originY) / grid.cellSize) + 1);
+  const out: number[] = [];
+  for (let row = r0; row <= r1; row++) {
+    for (let col = c0; col <= c1; col++) {
+      out.push(row * grid.width + col);
+    }
+  }
+  return out;
+}
+
+/**
  * Would this cut, if it landed, leave the map unable to meet its smash clause?
  *
  * The third rule, and the one the other two left a hole for. Sealing a pocket
@@ -347,10 +404,53 @@ export function cutWouldBurySmashes(
   }
   captureUnreachableCells(after, game.balls, [...game.walls, ...segments]);
 
+  // And the locks the cut would cause. A ball the cut leaves in a lock-sized
+  // pocket with no brick in it is locked the moment the fence lands, and its
+  // pocket is captured with it, so it breaks nothing afterwards. Leaving it in
+  // the count let through the cut this rule exists to refuse: a fence between
+  // the last free ball and the bricks, with the ball in a sliver beside them.
+  // The sliver is inside the bricks' striking reach, so they read as reachable,
+  // the cut landed, the ball locked, and the map ended as locked out.
+  const probeBalls = ballsLeftAfterLocks(game, after);
+  if (probeBalls.length < game.balls.length) {
+    captureUnreachableCells(after, probeBalls, [...game.walls, ...segments]);
+  }
+
   // Per demand, not per total: a cut that orphans the map's last monolith is
   // refused even though six shards are still perfectly reachable. Counting
   // them together is what made the monolith pointless in the first place, and
   // it would let this rule wave through the exact burial it exists to stop.
-  const probe = { ...game, spaceGrid: after } as CanvasGameState;
+  const probe = { ...game, spaceGrid: after, balls: probeBalls } as CanvasGameState;
   return !allDemandsReachable(game, demands, probe);
+}
+
+/**
+ * The balls still in play once the locks a grid would cause have happened.
+ *
+ * The lock's own size test (checkBallWonState): a pocket at most the lock
+ * threshold, as a percent of the larger of the live board and one ball's share
+ * of the whole board. A pocket holding a standing brick does not lock.
+ */
+function ballsLeftAfterLocks(game: CanvasGameState, grid: SpaceGrid): CanvasGameState["balls"] {
+  const active = game.balls.filter(b => b.state === "active");
+  if (active.length === 0) {
+    return game.balls;
+  }
+  const regions = findGridRegions(grid);
+  const regionMap = buildGridRegionMap(regions);
+  const threshold = game.lockWinThresholdPercent ?? BALL_WON_REGION_THRESHOLD;
+  const denominator = Math.max(grid.activeCount, Math.floor(grid.initialActiveCount / Math.max(1, active.length)));
+  const probe = { ...game, spaceGrid: grid } as CanvasGameState;
+  const locked = new Set<string>();
+  for (const ball of active) {
+    const region = findGridRegionForBall(grid, regionMap, ball.position.x, ball.position.y);
+    if (!region) {
+      continue;
+    }
+    const percent = (region.cellIndices.length / Math.max(1, denominator)) * 100;
+    if (percent <= threshold && !regionHoldsStandingBrick(probe, region.cellIndices)) {
+      locked.add(ball.id);
+    }
+  }
+  return locked.size === 0 ? game.balls : game.balls.filter(b => !locked.has(b.id));
 }

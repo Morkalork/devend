@@ -163,6 +163,196 @@ const CLAIM_FLASH_MS = 420;
 const CLAIM_MIN_CELLS = 6;
 
 /**
+ * The lock pass: lock every ball whose pocket now qualifies, then capture and
+ * tint what those locks closed off.
+ *
+ * Lifted out of applyCutFn so it can run WITHOUT a cut. A pocket that holds a
+ * ball and a brick does not lock (the brick would be buried); it locks when its
+ * last brick breaks, and nothing is being cut at that moment
+ * (settleBrickHeldLocks below). One body for both, so a lock that waited is
+ * paid, captured and tinted exactly like one that did not.
+ *
+ * Returns false when the pass ended the map (a ball sealed inside a barrel
+ * that had not finished ejecting): the caller stops there.
+ */
+function runLockPass(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  cumulativeLockedBalls: number,
+  callbacks: GameCallbacks,
+  preCaptureCells: Uint8Array | null,
+  capturedRegions: Parameters<typeof checkAndUpdateBallWonStates>[5],
+  fenceTypeId: string,
+): boolean {
+  const lockedBefore = game.lockedBallsCount;
+  game.percentBeforeLocks = getGridRemainingPercent(game);
+  // Snapshot the superior tally so the tint pass below can tell whether the
+  // lock it is about to paint was a tight seal. The grade is decided inside
+  // checkBallWonState and nothing else carries it out here.
+  const superiorBefore = game.superiorLockCount;
+  // Who was already sealed before this cut, so the launcher check below reads
+  // only the balls THIS cut locked.
+  const wonBefore = new Set(game.balls.filter(b => b.state === "won").map(b => b.id));
+  const anyBallWon = checkAndUpdateBallWonStates(
+    game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions,
+    resolveWinSpec(level, activeModifiers),
+    // The cut that SEALED it decides the lock band and the qualified pay, not
+    // the walls that happen to bound the pocket. "I closed this with a
+    // Semaphore" is what the player did; a rule read off the boundary would
+    // depend on geometry they were not thinking about.
+    fenceTypeId,
+  );
+  // A boss that broke out of a trap has jumped to another room: read it again.
+  if (game.spaceGrid) {
+    retargetAutoscalers(game.balls, game.regions, game.spaceGrid.initialActiveCount);
+  }
+  const wasSuperior = game.superiorLockCount > superiorBefore;
+
+  // A ball sealed inside a barrel that has not finished ejecting fails the map.
+  // Reached only if a cut ever completes while a launcher is un-armed - which
+  // the fence block in useGameInput is meant to prevent - so this is the rule's
+  // safety net rather than its everyday path. Same shape as the time-up fail:
+  // dock ONE life and restart the map fresh, or end the run at the last life.
+  if (anyBallWon) {
+    const justWon = game.balls.filter(b => b.state === "won" && !wonBefore.has(b.id));
+    if (lockedInsideUnarmedLauncher(game, justWon)) {
+      failMapCostingALife(
+        game, level, levelNumber, activeModifiers, callbacks,
+        mapFailure("launcherPrematureLock", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
+      return false;
+    }
+  }
+  if (anyBallWon) {
+    // How many balls this cut locked: the simultaneous-trap multiplier pays
+    // x2/x3 for multi-locks, and the tint mask below stores the same count so
+    // multi-ball pockets render brighter (pay and visual stay in sync).
+    const newlyLocked = Math.max(1, game.lockedBallsCount - lockedBefore);
+    // A ball locked during this cut. It was still an active ball when the capture
+    // above ran, so the region it locked in wasn't captured then and would linger
+    // as an uncaptured (active) region beside the obstacle until the next cut -
+    // the "shadow behind the obstacle". Capture ball-free regions again now that
+    // it's won, and repaint (the region-fill's space-grid mask then renders those
+    // cells as captured instead of punching them dark).
+    const grid = game.spaceGrid;
+    // Snapshot ACTIVE cells so we can tag what this lock captures and give it
+    // the persistent accent tint that marks locked territory.
+    const before = grid ? Uint8Array.from(grid.cells) : null;
+    captureUnreachableSpace(game);
+    if (grid && before) {
+      if (!grid.lockCaptured) grid.lockCaptured = new Uint8Array(grid.cells.length);
+      // The capture diff alone under-covers the pocket: the sealing fence's own
+      // raster band and any cells captured in the PRE-lock pass (e.g. the acute
+      // tip of a wedge the ball never fit into) aren't in the diff, so they
+      // rendered as dark, cell-quantized fringes between the tint and the fence
+      // line. Flood from the diff across REMOVED cells, stopping at actual wall
+      // segments: the tint then spans the whole enclosed chamber, up to (never
+      // across) each bounding fence, obstacle edge and board edge.
+      const seeds: number[] = [];
+      for (let i = 0; i < grid.cells.length; i++) {
+        if (before[i] === CellState.ACTIVE && grid.cells[i] === CellState.REMOVED) {
+          seeds.push(i);
+        }
+      }
+      if (seeds.length > 0) {
+        // The mask stores the lock INTENSITY (balls locked by this cut), not
+        // just 0/1: pockets that trapped 2+ balls at once render a brighter
+        // tint (see GameCanvas step 2b). Never downgrade an earlier pocket.
+        const intensity = Math.min(newlyLocked, 255);
+        // Bounded to the captured area's own box, generously inflated so the
+        // tint can still pick up cells captured in an earlier pass within the
+        // same chamber, while a flood escaping through a sub-ball-width gap
+        // cannot reach the space beyond. A cell budget could not tell those two
+        // apart; a box can.
+        const pad = 6;
+        let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+        for (const idx of seeds) {
+          const r = (idx / grid.width) | 0;
+          const c = idx % grid.width;
+          if (c < minCol) minCol = c;
+          if (c > maxCol) maxCol = c;
+          if (r < minRow) minRow = r;
+          if (r > maxRow) maxRow = r;
+        }
+        // Smallest ball still in play, so the gate only blocks a slit that NO
+        // ball could have passed. Blocking on a bigger ball's width would wall
+        // off gaps a smaller one legitimately uses, and under-fill the tint.
+        const liveRadii = game.balls
+          .filter(b => b.state !== 'won' && b.state !== 'dormant')
+          .map(b => b.radius);
+        const throatWidth = 2 * (liveRadii.length > 0 ? Math.min(...liveRadii) : BASE_BALL_RADIUS);
+        const bounded = floodRemovedEnclosure(grid, seeds, game.walls, {
+          bounds: {
+            minCol: minCol - pad, maxCol: maxCol + pad,
+            minRow: minRow - pad, maxRow: maxRow + pad,
+          },
+          minThroatWidth: throatWidth,
+        });
+        if (!grid.superiorCaptured) grid.superiorCaptured = new Uint8Array(grid.cells.length);
+        for (const idx of bounded) {
+          if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;
+          // Never downgrade: a pocket that ever held a superior lock keeps the
+          // mark, the same way lockCaptured keeps its highest intensity.
+          if (wasSuperior) grid.superiorCaptured[idx] = 1;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Lock the pockets that were waiting on their bricks.
+ *
+ * A pocket holding a ball and a brick is refused as a lock (checkBallWonState),
+ * and nothing cuts when its last brick breaks, so the lock that is now due
+ * would wait for the player's next fence. This runs the lock pass at once:
+ * called each frame after the destroys are processed, and a no-op unless a
+ * brick broke while a lock was waiting.
+ *
+ * Everything a cut does after its lock pass, minus what belongs to the fence:
+ * no cut is counted and no fence effect fires.
+ */
+export function settleBrickHeldLocksFn(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  cumulativeLockedBalls: number,
+  callbacks: GameCallbacks,
+): void {
+  if (!game.brickLockRecheckDue) {
+    return;
+  }
+  game.brickLockRecheckDue = false;
+  if (game.levelComplete || game.gameOver || !game.spaceGrid) {
+    return;
+  }
+  // Re-armed by the pass itself if a pocket is still held by a brick.
+  game.brickHeldLocks = false;
+  const lockedBefore = game.lockedBallsCount;
+  if (!runLockPass(
+    game, level, levelNumber, activeModifiers, cumulativeLockedBalls, callbacks,
+    null, null, STANDARD_FENCE_ID,
+  )) {
+    return;
+  }
+  if (game.lockedBallsCount === lockedBefore) {
+    return;
+  }
+  wasteCapturedPickups(game);
+  callbacks.repaintRegionCanvas();
+  callbacks.render();
+  applyMicroManagerSpeedCap(game.balls, activeModifiers, cumulativeLockedBalls + game.lockedBallsCount);
+  const percent = evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
+  if (percent !== null) {
+    game.spaceRemainingPercent = percent;
+  }
+}
+
+/**
  * Flash the ground this cut just took.
  *
  * The cells are the difference between the grid before the capture and after,
@@ -393,118 +583,11 @@ export function applyCutFn(
   // the board. Measured here, the number is the space this cut genuinely
   // captured, so "the space target was also met" can only be said when it is
   // independently true.
-  const lockedBefore = game.lockedBallsCount;
-  game.percentBeforeLocks = getGridRemainingPercent(game);
-  // Snapshot the superior tally so the tint pass below can tell whether the
-  // lock it is about to paint was a tight seal. The grade is decided inside
-  // checkBallWonState and nothing else carries it out here.
-  const superiorBefore = game.superiorLockCount;
-  // Who was already sealed before this cut, so the launcher check below reads
-  // only the balls THIS cut locked.
-  const wonBefore = new Set(game.balls.filter(b => b.state === "won").map(b => b.id));
-  const anyBallWon = checkAndUpdateBallWonStates(
-    game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions,
-    resolveWinSpec(level, activeModifiers),
-    // The cut that SEALED it decides the lock band and the qualified pay, not
-    // the walls that happen to bound the pocket. "I closed this with a
-    // Semaphore" is what the player did; a rule read off the boundary would
-    // depend on geometry they were not thinking about.
-    wall.fenceTypeId ?? STANDARD_FENCE_ID,
-  );
-  // A boss that broke out of a trap has jumped to another room: read it again.
-  if (game.spaceGrid) {
-    retargetAutoscalers(game.balls, game.regions, game.spaceGrid.initialActiveCount);
-  }
-  const wasSuperior = game.superiorLockCount > superiorBefore;
-
-  // A ball sealed inside a barrel that has not finished ejecting fails the map.
-  // Reached only if a cut ever completes while a launcher is un-armed - which
-  // the fence block in useGameInput is meant to prevent - so this is the rule's
-  // safety net rather than its everyday path. Same shape as the time-up fail:
-  // dock ONE life and restart the map fresh, or end the run at the last life.
-  if (anyBallWon) {
-    const justWon = game.balls.filter(b => b.state === "won" && !wonBefore.has(b.id));
-    if (lockedInsideUnarmedLauncher(game, justWon)) {
-      failMapCostingALife(
-        game, level, levelNumber, activeModifiers, callbacks,
-        mapFailure("launcherPrematureLock", resolveWinSpec(level, activeModifiers), readWinSnapshot(game, level)));
-      return;
-    }
-  }
-  if (anyBallWon) {
-    // How many balls this cut locked: the simultaneous-trap multiplier pays
-    // x2/x3 for multi-locks, and the tint mask below stores the same count so
-    // multi-ball pockets render brighter (pay and visual stay in sync).
-    const newlyLocked = Math.max(1, game.lockedBallsCount - lockedBefore);
-    // A ball locked during this cut. It was still an active ball when the capture
-    // above ran, so the region it locked in wasn't captured then and would linger
-    // as an uncaptured (active) region beside the obstacle until the next cut -
-    // the "shadow behind the obstacle". Capture ball-free regions again now that
-    // it's won, and repaint (the region-fill's space-grid mask then renders those
-    // cells as captured instead of punching them dark).
-    const grid = game.spaceGrid;
-    // Snapshot ACTIVE cells so we can tag what this lock captures and give it
-    // the persistent accent tint that marks locked territory.
-    const before = grid ? Uint8Array.from(grid.cells) : null;
-    captureUnreachableSpace(game);
-    if (grid && before) {
-      if (!grid.lockCaptured) grid.lockCaptured = new Uint8Array(grid.cells.length);
-      // The capture diff alone under-covers the pocket: the sealing fence's own
-      // raster band and any cells captured in the PRE-lock pass (e.g. the acute
-      // tip of a wedge the ball never fit into) aren't in the diff, so they
-      // rendered as dark, cell-quantized fringes between the tint and the fence
-      // line. Flood from the diff across REMOVED cells, stopping at actual wall
-      // segments: the tint then spans the whole enclosed chamber, up to (never
-      // across) each bounding fence, obstacle edge and board edge.
-      const seeds: number[] = [];
-      for (let i = 0; i < grid.cells.length; i++) {
-        if (before[i] === CellState.ACTIVE && grid.cells[i] === CellState.REMOVED) {
-          seeds.push(i);
-        }
-      }
-      if (seeds.length > 0) {
-        // The mask stores the lock INTENSITY (balls locked by this cut), not
-        // just 0/1: pockets that trapped 2+ balls at once render a brighter
-        // tint (see GameCanvas step 2b). Never downgrade an earlier pocket.
-        const intensity = Math.min(newlyLocked, 255);
-        // Bounded to the captured area's own box, generously inflated so the
-        // tint can still pick up cells captured in an earlier pass within the
-        // same chamber, while a flood escaping through a sub-ball-width gap
-        // cannot reach the space beyond. A cell budget could not tell those two
-        // apart; a box can.
-        const pad = 6;
-        let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
-        for (const idx of seeds) {
-          const r = (idx / grid.width) | 0;
-          const c = idx % grid.width;
-          if (c < minCol) minCol = c;
-          if (c > maxCol) maxCol = c;
-          if (r < minRow) minRow = r;
-          if (r > maxRow) maxRow = r;
-        }
-        // Smallest ball still in play, so the gate only blocks a slit that NO
-        // ball could have passed. Blocking on a bigger ball's width would wall
-        // off gaps a smaller one legitimately uses, and under-fill the tint.
-        const liveRadii = game.balls
-          .filter(b => b.state !== 'won' && b.state !== 'dormant')
-          .map(b => b.radius);
-        const throatWidth = 2 * (liveRadii.length > 0 ? Math.min(...liveRadii) : BASE_BALL_RADIUS);
-        const bounded = floodRemovedEnclosure(grid, seeds, game.walls, {
-          bounds: {
-            minCol: minCol - pad, maxCol: maxCol + pad,
-            minRow: minRow - pad, maxRow: maxRow + pad,
-          },
-          minThroatWidth: throatWidth,
-        });
-        if (!grid.superiorCaptured) grid.superiorCaptured = new Uint8Array(grid.cells.length);
-        for (const idx of bounded) {
-          if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;
-          // Never downgrade: a pocket that ever held a superior lock keeps the
-          // mark, the same way lockCaptured keeps its highest intensity.
-          if (wasSuperior) grid.superiorCaptured[idx] = 1;
-        }
-      }
-    }
+  if (!runLockPass(
+    game, level, levelNumber, activeModifiers, cumulativeLockedBalls, callbacks,
+    preCaptureCells, capturedRegions, wall.fenceTypeId ?? STANDARD_FENCE_ID,
+  )) {
+    return;
   }
 
   // Pickups: any token whose cell got captured WITHOUT a lock claiming it is

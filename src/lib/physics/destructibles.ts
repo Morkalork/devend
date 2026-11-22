@@ -1072,5 +1072,9 @@ export function processDestroysFn(
   // ball and runs every check a normal cut runs.
   for (const d of pending) resumeDrillThrough(game, d);
 
+  // A pocket that could not lock because of a brick may be able to now.
+  if (game.brickHeldLocks) {
+    game.brickLockRecheckDue = true;
+  }
   callbacks.onObjectDestroyed?.();
 }

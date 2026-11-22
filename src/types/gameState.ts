@@ -399,6 +399,14 @@ export interface CanvasGameState {
   openingSlowSeconds?: number;
   /** Permafrost: seconds an Ice fence freezes the ball it slows (0 = off). Set at map start. */
   iceFreezeSeconds?: number;
+  /**
+   * A lock is waiting on bricks: some pocket is the right size to lock its
+   * ball but still holds a standing brick (checkBallWonState). Read when a
+   * brick breaks, to run the lock pass again without a cut.
+   */
+  brickHeldLocks?: boolean;
+  /** A brick broke while a lock was waiting: run the lock pass this frame. */
+  brickLockRecheckDue?: boolean;
   /** Crash Barrier: Guardrail shields on top of the fence type's own. Set at map start. */
   guardrailExtraShields?: number;
   /** Tensioned Wire: touches added to a fence type's hit budget. Set at map start. */

@@ -121,11 +121,18 @@ function activeCellsIn(grid: SpaceGrid, poly: Polygon): number {
   return n;
 }
 
-/** Seal the top-left pocket with two cuts; the pocket ball locks. */
+/**
+ * Seal the top-left pocket with two cuts, with no ball in it, so it is captured
+ * as empty ground with the box inside.
+ *
+ * It used to hold a ball, which locked. A pocket with a ball AND a breakable
+ * no longer locks until the breakable is gone (brickHeldLock.test.ts), so a
+ * box can only end up inside captured ground the way it does here.
+ */
 function sealPocket(game: CanvasGameState): void {
   game.balls = game.balls.slice(0, 2);
   const [A, B] = game.balls;
-  A.position = { x: 200, y: 210 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+  A.position = { x: 620, y: 700 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
   B.position = { x: 620, y: 420 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
   // Vertical fence at x=64, then diagonal (285,169)->(64,472), like the report.
   applyCutFn(completedWall({ x: 64, y: 500 }, { x: 64, y: 169 }, { x: 64, y: 855 }), game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
@@ -148,7 +155,7 @@ describe("destroy-reopen inside captured territory (#incomplete pocket fill)", (
   it("sealing the pocket captures it fully (base invariant)", () => {
     const game = makeGame();
     sealPocket(game);
-    expect(game.balls[0].state).toBe("won"); // pocket ball locked
+    expect(game.balls.every(b => b.state === "active")).toBe(true); // nobody was in it
     // Every cell of the pocket triangle is REMOVED (captured), except the box
     // footprint which is REMOVED too (obstacle).
     const pocketProbe: Polygon = { vertices: [{ x: 70, y: 175 }, { x: 270, y: 175 }, { x: 70, y: 455 }] };
