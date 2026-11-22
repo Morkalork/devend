@@ -89,25 +89,37 @@ Reported from play on map 2. The rule is about what is IN the pocket
    pocket is lock-sized, it locks there and then, with no further fence
    (`settleBrickHeldLocksFn`, run after the frame's destroys; the lock pass was
    lifted out of the cut so both paths pay, capture and tint the same way).
-3. **Any fence may be drawn.** Fencing a ball off beside the bricks is the
-   player's call: its pocket has no brick in it, so it locks, and the bricks
-   are the other pocket's business. A refusal for that fence (one that
-   predicted the lock it would cause) was built and taken back at the owner's
-   word. The older refusal is unchanged: a cut that leaves owed bricks where
-   no ball can reach them at all.
+3. **Any fence may be drawn.** No fence is turned away for the bricks. Both
+   refusals that once did (one predicting the lock a fence would cause, and
+   the older one for a fence leaving owed bricks out of reach) were taken out
+   at the owner's word.
+4. **Fencing bricks off with no ball beside them claims them, bricks and all.**
+   If the bricks still in reach are enough for the win, the map goes on: on a
+   map with bricks spread about, areas of them may be fenced away freely. If
+   they are not enough, the map is lost there and then ("objective buried"),
+   like any other requirement that can no longer be met
+   (`brickBurial.test.ts`).
+5. **Reach does not pass through a fence.** A brick counts as in reach only if
+   a ball's open ground touches it with no player fence between
+   (`canStillStrike`). Before, a ball in a sliver just across a fence from the
+   block read as able to break it.
+6. **The last ball stays free while bricks are owed.** A lock-sized pocket
+   around the last moving ball does not lock while the win still needs bricks
+   broken, so a brick map never ends "locked out" with bricks standing. If
+   that ball cannot reach the bricks, rule 4 ends the map, and says bricks.
 
-What that costs, measured on map 2 with the bot cutting carelessly (60 runs):
-7 end locked out (both balls locked away from bricks still standing) and 2 on
-a buried brick. Those are careless fences; a player who watches where the
-balls are does not draw them. With the refusal in, both were 0 to 1.
+Measured on map 2 (60 bot runs, all nine bricks needed): 42 won, 15 ran out of
+time, 3 buried a brick, none locked out. The bot now looks before it fences
+(`lib/bot/lookBeforeFencing.ts`), as a player does by eye; a bot fencing
+blindly buried the block in 52 of 60, which is the rule doing what it says.
 
 ## Open
 
-- A brick can still be buried with no lock involved: the capture pass keeps a
-  ball-less strip beside the block while a narrow gap reads as passable, and
-  drops it when a neighbouring brick goes.
-- Whether a map should END when every ball is locked and bricks still stand
-  (today: yes, "locked out"), or whether the last ball should be kept free.
+- The 3 buried: the capture pass keeps a ball-less strip beside the block
+  while a narrow gap reads as passable, and drops it when a neighbouring brick
+  goes. No fence of the player's causes it.
+- Nothing warns before a fence that will lose the map. A preview tint on the
+  bricks a drawn line would cut off is the obvious help, if play asks for it.
 
 - Whether "cut the board down to X%" stays a goal on most maps or steps back.
 - The slingshot as a standing tool, and where on the ladder it arrives.

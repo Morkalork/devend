@@ -6,6 +6,7 @@
  * every frame. Everything is seeded, so a report can be replayed exactly.
  */
 import { PHYSICS_STEP } from "@/lib/gameConstants";
+import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import { setRunSeedText } from "@/lib/runRng";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "./headlessGame";
 import { checkInvariants, checkTerminal, winNotShipped, type Violation } from "./invariants";
@@ -14,6 +15,7 @@ import { resolveWinSpec, requirementsMet, metAlternative, evaluateWinCondition }
 import { fireLauncher, fencesBlockedByLauncher } from "@/lib/physics/launcher";
 import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, planFreeze, seededRandom } from "./policy";
+import { fenceWouldLoseTheBricks } from "./lookBeforeFencing";
 import { concurrentFenceLimit } from "@/lib/concurrentFences";
 import { enqueueCommand } from "@/lib/net/commands";
 import type { BugConfig } from "@/types/bugs";
@@ -194,7 +196,11 @@ export function runBot(
       const wantZone = !!areaClause
         && !evaluateWinCondition(areaClause, readWinSnapshot(ctx.game, level)).met;
       const plan = planCut(ctx.game, rng, desperation, wantZone);
-      if (plan) tryCut(ctx, plan.origin, plan.direction);
+      // Not a fence that walls off bricks the win still owes: the game lets
+      // it land and the map is lost, and a player sees that coming.
+      if (plan && !fenceWouldLoseTheBricks(ctx.game, spec, plan.origin, plan.direction, WALL_THICKNESS)) {
+        tryCut(ctx, plan.origin, plan.direction);
+      }
     }
 
     stepBot(ctx, PHYSICS_STEP);

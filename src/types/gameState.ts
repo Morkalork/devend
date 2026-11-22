@@ -217,7 +217,7 @@ export interface CanvasGameState {
   splitClause?: Extract<import("@/types/winSpec").WinCondition, { kind: "splitLocks" }> | null;
   /**
    * `activePlaySeconds` when a cut was last refused for burying the slabs the
-   * win still needs (smashReach.cutWouldBurySmashes).
+   * win still needs (a refusal since removed; nothing sets this now).
    *
    * A refused cut is silent by default - the ball-orphaning refusal beside it
    * always has been - and silence is affordable when the refusal is rare and

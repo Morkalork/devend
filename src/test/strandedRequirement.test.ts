@@ -339,7 +339,7 @@ describe("and it stays out of the way of every other map", () => {
 
   // An explicit timeout, and not a generous default: this plays two real runs
   // of every shipped map, which took 15s here and past vitest's 30s default on
-  // CI once the cut refusal (smashReach.cutWouldBurySmashes) started simulating
+  // CI once the cut refusal (since removed, see BRICKS_PLAN.md) started simulating
   // each fence. A sweep that fails for being slow teaches nothing about maps.
   it("never strands a map that names no place", () => {
     const stranded: string[] = [];

@@ -131,16 +131,14 @@ describe("the brick's own pocket, by body and not by reach", () => {
 });
 
 describe("fencing a ball off from the bricks", () => {
-  it("is allowed: no fence is refused for the lock it would cause", () => {
-    // Tried and taken back at the owner's word. A refusal that predicted the
-    // lock a fence would cause stopped the player fencing a ball off beside
-    // the bricks, and that is theirs to do: the lock rule is about what is IN
-    // the pocket, not about where the fence may go. The older refusal stays
-    // (a cut that buries owed bricks where no ball can reach them at all).
+  it("is allowed: no fence is refused for what it does to the bricks", () => {
+    // Any fence may be drawn. Two refusals are gone: the one that predicted
+    // the lock a fence would cause, and the older one for a fence that buries
+    // bricks the win still needs.
     const reach = readFileSync(resolve(__dirname, "../lib/physics/smashReach.ts"), "utf8");
-    expect(reach).not.toMatch(/ballsLeftAfterLocks/);
-    const refusal = reach.slice(reach.indexOf("export function cutWouldBurySmashes"));
-    expect(refusal).toMatch(/const probe = \{ \.\.\.game, spaceGrid: after \} as CanvasGameState;/);
+    expect(reach).not.toMatch(/ballsLeftAfterLocks|cutWouldBurySmashes/);
+    const cut = readFileSync(resolve(__dirname, "../lib/physics/applyCut.ts"), "utf8");
+    expect(cut).not.toMatch(/cutWouldBurySmashes|cutWouldBurySlabs/);
   });
 
   it("locks a ball whose pocket has no brick in it, bricks next door or not", () => {

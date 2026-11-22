@@ -47,7 +47,7 @@ import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { anyGateTargetCanReach, bossTrappedOutside, gateAreas, sealedPendingCells } from "@/lib/coloredAreas";
 import { getFenceType, STANDARD_FENCE_ID } from "@/lib/fences";
-import { smashRequirementLost, cutWouldBurySmashes } from "@/lib/physics/smashReach";
+import { smashRequirementLost } from "@/lib/physics/smashReach";
 import { cutWouldBuryArea } from "@/lib/physics/areaReach";
 import { retargetAutoscalers } from "@/lib/physics/autoscale";
 import { smashCounts } from "@/lib/destructibleClass";
@@ -413,7 +413,7 @@ export function applyCutFn(
     }
   }
 
-  // Reject walls that would orphan a ball, or bury the map's smash clause
+  // Reject walls that would orphan a ball
   {
     const allSegs: { start: Vector2; end: Vector2 }[] = [];
     for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -433,25 +433,10 @@ export function applyCutFn(
         return;
       }
     }
-    // The same refusal for the slabs the win still needs. Sealing a pocket WITH
-    // a ball in it already refuses to lock rather than stranding the slab
-    // inside it; this is that rule for the cut itself, and act I needs it now
-    // that its maps ask for half their bricks rather than one: at those counts
-    // an ordinary early fence across a run can put the map beyond reach on the
-    // second cut, and failing it there charges a life for an order-of-play
-    // mistake the board never showed. A refused cut costs nothing and teaches
-    // the same thing. See smashReach.cutWouldBurySmashes.
-    if (cutWouldBurySmashes(game, resolveWinSpec(level, activeModifiers), allSegs, wall.thickness)) {
-      game.activeWalls = game.activeWalls.filter(w => w !== wall);
-      // Flare the win markers, so the refusal points at what it protected...
-      game.smashRefusedAtSeconds = game.activePlaySeconds;
-      // ...and say it in words, because the markers can be anywhere. The cut
-      // that prompted this was drawn in the right-hand chamber of level 9
-      // while the slabs it would have orphaned were in the left one, so the
-      // only cue fired where the player was not looking.
-      callbacks.onGameMessage?.("cutWouldBurySlabs");
-      return;
-    }
+    // A fence that buries bricks the win still needs is NOT refused: any fence
+    // may be drawn (BRICKS_PLAN.md). If enough bricks are left elsewhere the
+    // map goes on; if not, it is lost, like any other requirement that can no
+    // longer be met (evaluateWinConditions, "objectiveBuried").
     // And for the zone the win still needs a ball locked in: sealing it empty
     // used to cost a life on the spot (the areaUnreachable failure below), on
     // the map that introduces the zone. See areaReach.cutWouldBuryArea.

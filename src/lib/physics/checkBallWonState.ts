@@ -42,7 +42,7 @@ import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scori
 import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
-import { regionHoldsNeededSlab, regionHoldsStandingBrick } from "@/lib/physics/smashReach";
+import { regionHoldsNeededSlab, regionHoldsStandingBrick, smashesOwed } from "@/lib/physics/smashReach";
 import { bandAllowsLock, ballsSharingPocket } from "@/lib/physics/lockBand";
 import { getFenceType } from "@/lib/fences";
 import { qualifiedHoursFor } from "@/lib/qualifiedOvertime";
@@ -512,6 +512,19 @@ export function checkAndUpdateBallWonStates(
     // completed most recently would refuse a delivery for a rule it had no part
     // in.
     if (!stranded && !bandAllowsLock(sealingFenceTypeId, ballsInPocket(ballRegion.id))) {
+      diagnose('below-gate', null);
+      continue;
+    }
+
+    // The last ball stays in play while the win still owes bricks. With every
+    // ball locked nothing can break anything, so this lock would end a map the
+    // bricks could still win. Held like the brick pocket above, and for as
+    // long: it locks once the bricks are paid (which wins the map anyway), and
+    // if they can no longer be reached the map is lost for THAT reason, said
+    // as such (evaluateWinConditions, "objectiveBuried").
+    if (!stranded && winSpec && smashesOwed(game, winSpec)
+        && !game.balls.some(b => b !== ball && b.state === 'active')) {
+      game.brickHeldLocks = true;
       diagnose('below-gate', null);
       continue;
     }
