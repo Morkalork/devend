@@ -48,14 +48,25 @@ mechanics met at least two maps earlier. A map that is the same furniture as
 its neighbour with one object added is a repeat, not a Meet (13 was 12 plus a
 mirror, and read that way).
 
-## 5. Build to the engine
+## 5. The balls are the player's
+
+A map brings no balls (BALL_TREE_PLAN.md). `maxBalls` is a **cap** on the
+player's roster, never a floor: a run may be played with one ball from the
+first map to the last, so every map must be clearable, and fair, with one
+ball and the standard fence. Difficulty comes from the board: the clock, the
+fence budget, the capture target, the bricks, movers, wells and the lock or
+brick goal. A goal counted in balls ("lock two") is a lean toward the fleet,
+and needs a one-ball route beside it. Nothing on the ladder may require a
+purchase. A boss is the board, not a ball.
+
+## 6. Build to the engine
 
 Gaps are 12 or less, or 60 or more. Leave drawing lanes where cuts are meant
 to go. Nothing overlaps. From level 4 the map is dealt in four rotations:
 "down" does not turn, authored coordinates are not runtime coordinates, and a
 column that stands on one deal is a row on another.
 
-## 6. Measure, do not eyeball
+## 7. Measure, do not eyeball
 
 Press **Measure pockets** in the Map Builder while drawing: the smallest pocket
 one fence closes, whether it grades superior, and how much of the board has

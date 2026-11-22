@@ -76,6 +76,20 @@ a player should do better than 4 in 16, but running out of time loses the map
 whatever lives remain. If it plays too hard: ask for 8 of the 9 (the design
 card's "every counted clause has a spare"), or give it 40 seconds.
 
+## The balls are the player's
+
+Decided 2026-11-22 (BALL_TREE_PLAN.md, the upgrade tree that replaces the
+cards): **a map brings no balls.** The player's roster of one to three balls
+rolls onto every map, and `maxBalls` is a cap on it, never a floor. So every
+map on this ladder, map 2 included, has to be clearable and fair with ONE
+ball and the standard fence, from today; a map that needs two balls to reach
+its bricks in time is a map that needs a smaller board, a longer clock or a
+lower count. Tools (the slingshot among them) are bought from the tree, so
+the ladder places a map where a tool is worth buying, never one that
+requires it. Bricks pay hours as locks do, by the map's goal. A boss is the
+board, never a ball. The ladder's cards go with the tree; tools and the
+things a card changed about a tool become its nodes.
+
 ## Locks and bricks
 
 Reported from play on map 2. The rule is about what is IN the pocket

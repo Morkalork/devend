@@ -211,8 +211,10 @@ under rule 1 there are none. Three options, in the order I would try them:
    is taken over for the map and has to be won back. Thematically the best
    fit for "build balls"; the most work.
 
-The plan assumes option 2 for the first build and option 1 as the design
-goal, with the boss maps retuned last.
+**Decided (2026-11-22): option 1, the boss is the board**, from the first
+boss written on the new ladder. The brick ladder has no bosses yet, so there
+is nothing to convert; a boss map is an objective map whose antagonist is
+terrain and beats acting on the player's balls.
 
 ## 7. The map ladder under one ball
 
@@ -243,14 +245,13 @@ three before anything else is touched; then the rest.
 
 ## 8. What happens to the card system
 
-- `cards.yml`, the pick and the shop, `ruleSet: "draft"`, the Sprint
-  Planning offers as a separate draft, and the contract machinery stay in the
-  code behind the rule set switch until the tree has shipped maps 1 to 10
-  and been played. Then the draft goes, the way the classic store was going
-  to. Contracts come back later as elite maps under the tree if they earn
-  it; they are the natural home for "lose a ball for the run".
-- The classic store (`upgrades.yml`) goes with it. Two legacy systems is one
-  too many to keep testable.
+- **Decided (2026-11-22): the tree replaces the cards outright on the new
+  ladder from phase 1.** The draft, the classic store and Sprint Planning as
+  a separate draft stay only as long as the archive maps do, and go with
+  them. The verb cards and the fence payoffs carry over as nodes, so nothing
+  from the card work is lost but the shelf. Contracts come back later as
+  elite maps under the tree if they earn it; they are the natural home for
+  "lose a ball for the run".
 - Certificates stay: they are the meta layer across runs, and a certificate
   that starts a run with a rung already bought is exactly what they were for.
 - The Daily and a pair run play the tree, as they played the draft, and for
@@ -289,11 +290,27 @@ rule set switch keeps the draft playable meanwhile. Phase 5 is the first
 moment it can be judged, and nothing after it should start before it has
 been played.
 
-## 11. Open questions
+## 11. Decisions taken, and what is still open
 
-- The three-ball cap: a fleet of four is a different game again, and three
-  keeps every ball readable on a phone. To be read in phase 5.
-- Whether the run-start trait is a choice of three or the whole root row.
-- Whether a boss should ever be one of your balls (option 3 in section 6).
+Decided 2026-11-22, all on the recommendation:
+
+- **Both pay.** Bricks and locks both earn hours, by the map's goal, so the
+  super ball farms brick maps and the fleet farms lock maps, and most maps
+  pay for both.
+- **Tools are nodes** in the Hands branch. The ladder places a map where a
+  tool is worth buying, never one that requires it; a run must be winnable
+  with one ball and the standard fence.
+- **The ball cap rule is in MAP_DESIGN_CARD.md and BRICKS_PLAN.md**, so the
+  maps being written now are written to it.
+- **The boss is the board** (section 6).
+- **The tree replaces the cards outright** on the new ladder (section 8).
+- The roster cap is three. The run starts with a choice of one trait from
+  three, and weight one is always among the three because the ladder is
+  bricks. A map's `maxBalls` is a cap and never a floor. A certificate may
+  start a run with a rung already bought.
+
+Still open:
 - The names: "rung", "trait", "roster" are the plan's words; the game's
   words come with the tree stage's copy.
+- Whether a boss should ever be one of your balls (option 3 in section 6),
+  as a late map's twist.
