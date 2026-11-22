@@ -276,7 +276,7 @@ In the same commit as each piece, as CLAUDE.md requires:
 
 | Phase | What | Done when |
 |---|---|---|
-| 1 | The roster: type, save, spawn from it under `ruleSet: "tree"`, slot badge and the rung marks on the ball; the Playground roster editor | a run spawns one plain ball on map 1 and the tester can give it any rung from Admin |
+| 1 | The roster: type, save, spawn from it under `ruleSet: "tree"`, slot badge and the rung marks on the ball; the Playground roster editor | **built** (2026-11-22): `lib/roster.ts`, the `tree` rule set (Admin > Store rules), the roster on the run save, `initGame` spawning it with `maxBalls` as the cap, the fx layer's badge and ticks, Playground > Roster. No store stage yet: the next map follows the debrief. |
 | 2 | The per-ball rungs: weight, worth, frost, pace, sight, grace, each a rule in physics with a test; second and third ball | the super ball and the fleet both exist on the board |
 | 3 | The tree data (`public/tree.yml`): nodes, prices, requirements, the stack factor; the general branches mapped onto existing modifiers | the tree validates and every node reaches the engine |
 | 4 | The tree stage on the canvas: roster first, branches below, the next map's line; the run-start choice of one trait | a run can be played start to finish buying from the tree |

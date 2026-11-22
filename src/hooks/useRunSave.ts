@@ -67,7 +67,9 @@ export interface RunSave {
    * the catalogue its owned ids belong to. Absent on a save from before the
    * draft, which was a classic run.
    */
-  ruleSet?: 'classic' | 'draft';
+  ruleSet?: 'classic' | 'draft' | 'tree';
+  /** The tree's roster (lib/roster.ts): the player's balls and their rungs. Absent before the tree. */
+  roster?: import('@/lib/roster').Roster;
   /** Draft rules: the contract on the map being played, and a won one's payout still owed. */
   contractId?: string | null;
   contractReward?: boolean;

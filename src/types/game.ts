@@ -215,6 +215,11 @@ export interface Ball {
   birthDirY?: number;
   // ── Enlarged "big ball" gift (issue #64) ─────────────────────────────────
   enlarged?: boolean;     // rolled at spawn (5% past L11): radius x1.3, harder to fence
+  // ── The roster (lib/roster.ts): set on a ball the player brought under the tree rule set ──
+  /** 1-based roster slot; absent on a ball the map or a spawner made. */
+  slot?: number;
+  /** The rungs this ball holds, drawn as marks on it; their rules land in BALL_TREE_PLAN.md phase 2. */
+  rungs?: Partial<Record<import('@/lib/roster').RungId, import('@/lib/roster').RungRank>>;
   // ── Boss pair (issue #64) ────────────────────────────────────────────────
   bossShipped?: boolean;  // this boss ball was locked into the win area; a pair
                           // is only defeated once EVERY boss ball is shipped

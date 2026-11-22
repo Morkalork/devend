@@ -1,6 +1,10 @@
 /**
- * Which rules a run plays its store by (CARDS_PLAN.md).
+ * Which rules a run plays its store by (CARDS_PLAN.md, BALL_TREE_PLAN.md).
  *
+ *  - `tree`: the ball tree. A map brings no balls; the player's roster
+ *    (lib/roster.ts) rolls onto every map, and everything else is bought
+ *    from the tree between maps. Being built in phases: in phase 1 the
+ *    roster spawns and is drawn, and there is no store stage at all.
  *  - `classic`: the original store. upgrades.yml, every card bought with hours,
  *    no limit on how many a build holds.
  *  - `draft`: cards.yml, a build of CARD_SLOTS cards (a seventh means dropping
@@ -29,8 +33,12 @@
 import type { UpgradeConfig } from "@/types/upgrade";
 import type { LevelConfig } from "@/types/level";
 
-export type RuleSet = "classic" | "draft";
+export type RuleSet = "classic" | "draft" | "tree";
 
+/**
+ * The stored preference. Historically "1" (classic) or "0" (draft); the tree
+ * is stored by name. Read all three.
+ */
 const CLASSIC_KEY = "devend:classicStore";
 
 /** How many cards a draft build holds. A card's "+" rides on its card. */
@@ -64,11 +72,14 @@ const DEFAULT_RULES: RuleSet = import.meta.env.MODE === "test" ? "classic" : "dr
 export function preferredRuleSet(): RuleSet {
   try {
     const stored = localStorage.getItem(CLASSIC_KEY);
-    if (stored === "1") {
+    if (stored === "1" || stored === "classic") {
       return "classic";
     }
-    if (stored === "0") {
+    if (stored === "0" || stored === "draft") {
       return "draft";
+    }
+    if (stored === "tree") {
+      return "tree";
     }
     return DEFAULT_RULES;
   } catch {
@@ -78,7 +89,7 @@ export function preferredRuleSet(): RuleSet {
 
 export function setPreferredRuleSet(rules: RuleSet): void {
   try {
-    localStorage.setItem(CLASSIC_KEY, rules === "classic" ? "1" : "0");
+    localStorage.setItem(CLASSIC_KEY, rules === "classic" ? "1" : rules === "draft" ? "0" : rules);
   } catch {
     /* storage blocked: stays on the default */
   }
@@ -98,9 +109,13 @@ export function setActiveRuleSet(rules: RuleSet): void {
   active = rules;
 }
 
-/** The catalogue file a rule set reads. */
+/**
+ * The catalogue file a rule set reads. The tree reads the draft's until
+ * `tree.yml` exists (BALL_TREE_PLAN.md phase 3): under the tree nothing is
+ * bought yet, and the loader still needs a catalogue to resolve owned ids.
+ */
 export function catalogueFileFor(rules: RuleSet): string {
-  return rules === "draft" ? "/cards.yml" : "/upgrades.yml";
+  return rules === "classic" ? "/upgrades.yml" : "/cards.yml";
 }
 
 /** A card's "+": the upgraded version, which rides on its card and takes no slot. */

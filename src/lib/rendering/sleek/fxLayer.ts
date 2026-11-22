@@ -29,6 +29,7 @@ import {
 import { steerWorldOf } from "@/lib/physics/steering";
 import { isLoadedSling, slingShape, slingCatches, slingGrabReach } from "@/lib/physics/slingFence";
 import { BREAKPOINT_RADIUS, STICKY_HALF_LENGTH, STICKY_PATCH_MS } from "@/lib/physics/verbCards";
+import { RUNG_IDS, RUNG_META } from "@/lib/roster";
 import { isArmedGuardrail } from "@/lib/physics/guardrailFence";
 import { getFenceType } from "@/lib/fences";
 import { dashedLine } from "./dashedLine";
@@ -150,6 +151,7 @@ export class FxLayer {
     }
     this.drawFalling(game, light, w2s, now);
     this.drawAbilityFx(game, w2s, scale, now);
+    this.drawRoster(game, w2s, scale);
     this.drawVerbCards(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);
     this.drawPickupFeedback(game, w2s, scale, now);
@@ -567,6 +569,39 @@ export class FxLayer {
   }
 
   /** Magnet: a fading ring at the point the player pulled toward. */
+  /**
+   * The roster (lib/roster.ts): a ball the player brought wears its slot
+   * number above it and one tick per rung around it, the tick's length its
+   * rank, in the rung's colour. So a fleet of three never looks like three
+   * plain balls, and the super ball reads as one from across the board.
+   */
+  private drawRoster(game: CanvasGameState, w2s: W2S, scale: number): void {
+    for (const ball of game.balls) {
+      if (ball.slot === undefined || ball.state !== "active") continue;
+      const pos = ball.renderPosition ?? ball.position;
+      const p = w2s(pos.x, pos.y);
+      const r = ball.radius * scale;
+      // The rungs: short arcs just outside the ball, one per rung held, spaced
+      // round the top half so the badge above stays readable.
+      const held = RUNG_IDS.filter(id => (ball.rungs?.[id] ?? 0) > 0);
+      held.forEach((id, i) => {
+        const rank = ball.rungs![id]!;
+        const centre = Math.PI + (Math.PI * (i + 1)) / (held.length + 1);
+        const span = 0.18 + 0.14 * rank;
+        const ring = r + 5 * scale;
+        const STEPS = 6;
+        this.over.moveTo(p.x + Math.cos(centre - span) * ring, p.y + Math.sin(centre - span) * ring);
+        for (let s = 1; s <= STEPS; s++) {
+          const a = centre - span + (2 * span * s) / STEPS;
+          this.over.lineTo(p.x + Math.cos(a) * ring, p.y + Math.sin(a) * ring);
+        }
+        this.over.stroke({ width: Math.max(2, 3 * scale), color: RUNG_META[id].color, alpha: 0.9, cap: "round" });
+      });
+      // The slot number, above the ball. The label pool is the splat names'.
+      this.drawSplatName(String(ball.slot), p.x, p.y - r - 7 * scale, 0xffffff, 0.85, scale * 0.85, 0);
+    }
+  }
+
   /**
    * The verb cards (physics/verbCards.ts): a trap waiting, a trap firing, a
    * sticky stretch on a wall, two balls becoming one, and the balls going

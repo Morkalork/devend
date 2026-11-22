@@ -86,6 +86,8 @@ import {
 } from "@/lib/gameUtils";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
+import { getActiveRuleSet } from "@/lib/cardRules";
+import { getActiveRoster, rosterForMap } from "@/lib/roster";
 import { BIG_BALL_MIN_LEVEL, BIG_BALL_CHANCE, BIG_BALL_RADIUS_SCALE, BIG_BALL_LOCK_BONUS, CHAINED_MIN_LEVEL, CHAINED_CHANCE, canAnchorChain } from "@/lib/ballGifts";
 import { makeChain } from "@/lib/physics/chain";
 import { clampWeather } from "@/lib/rendering/motes";
@@ -969,7 +971,18 @@ export function createInitialGameData(
   // those types — even an empty list, which means "no balls". Only when the
   // field is absent do we fall back to the normal deterministic selection.
   let selectedTypes: BallTypeDef[];
-  if (level.ballTypeIds !== undefined) {
+  // The tree (lib/roster.ts): the map brings no balls. The player's roster
+  // spawns, every ball as the catalogue's red with its rungs on it, and the
+  // map's maxBalls is a cap on the roster rather than a count of its own.
+  // The Playground's ballTypeIds override still wins, so a tester can put any
+  // catalogue ball on a tree board to look at it.
+  const treeRoster = getActiveRuleSet() === "tree" && level.ballTypeIds === undefined
+    ? rosterForMap(getActiveRoster(), level.maxBalls)
+    : null;
+  if (treeRoster) {
+    const red = getBallType("red");
+    selectedTypes = red ? treeRoster.map(() => red) : [];
+  } else if (level.ballTypeIds !== undefined) {
     selectedTypes = level.ballTypeIds.map(id => getBallType(id)).filter((t): t is BallTypeDef => !!t);
   } else {
     selectedTypes = selectBallTypesForMap(level.id, levelNumber, maxBalls);
@@ -1057,6 +1070,14 @@ export function createInitialGameData(
     if (enlarged) {
       ball.enlarged = true;
       ball.lockMultiplier = ball.lockMultiplier + BIG_BALL_LOCK_BONUS;
+    }
+    // A roster ball wears its slot and its rungs (lib/roster.ts). Its id is
+    // the slot's, so the same ball is the same ball on every map.
+    if (treeRoster) {
+      const mine = treeRoster[i];
+      ball.id = `roster-${mine.slot}`;
+      ball.slot = mine.slot;
+      ball.rungs = { ...mine.rungs };
     }
     return ball;
   });

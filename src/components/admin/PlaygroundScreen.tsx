@@ -21,6 +21,8 @@ import { useColorProgression } from '@/hooks/useColorProgression';
 import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
 import { BallTypeDef, BALL_PATTERNS, getAllBallTypes, getBallType, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
+import { getActiveRuleSet, setActiveRuleSet } from '@/lib/cardRules';
+import { RUNG_IDS, RUNG_META, ROSTER_MAX, defaultRoster, setActiveRoster, type Roster, type RungRank } from '@/lib/roster';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
@@ -238,6 +240,27 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballCatalog, setBallCatalog] = useState<BallTypeDef[]>(getAllBallTypes());
   const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
+  // The roster editor (BALL_TREE_PLAN.md): while on, the board plays the tree
+  // rule set and spawns THIS roster, so a tester can walk onto any map with
+  // any build. The ball picker above still wins when it is set, as in initGame.
+  const [rosterOn, setRosterOn] = useState(false);
+  const [roster, setRoster] = useState<Roster>(defaultRoster);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  // The roster reaches the game through the module state initGame reads; the
+  // rule set it was opened under comes back when the editor is switched off
+  // or the Playground is left, so a run started afterwards is not a tree run
+  // by accident.
+  useEffect(() => {
+    if (!rosterOn) return;
+    const previous = getActiveRuleSet();
+    setActiveRuleSet('tree');
+    setActiveRoster(roster);
+    setGameKey(k => k + 1);
+    return () => {
+      setActiveRuleSet(previous);
+    };
+  }, [rosterOn, roster]);
+
   /** The phone's version of the floating toolbar: one button, one sheet. */
   const [devMenuOpen, setDevMenuOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
@@ -876,6 +899,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <span className="bg-black/30 px-1.5 rounded-full text-[10px] font-bold">{effectiveBallIds.length}</span>
             )}
           </button>
+          <button
+            onClick={() => setRosterOpen(true)}
+            title="Roster (the ball tree)"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg flex-shrink-0 shadow-lg text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: rosterOn ? accent : '#1a1f1a', color: rosterOn ? '#000' : accent, border: `1px solid ${accent}55` }}
+          >
+            <Layers className="w-4 h-4" /> Roster
+            {rosterOn && <span className="bg-black/30 px-1.5 rounded-full text-[10px] font-bold">{roster.length}</span>}
+          </button>
         </div>
         </div>}
       </div>
@@ -1048,6 +1080,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             {ballTypeIds !== null && (
               <span className="ml-1 bg-black/30 px-1.5 py-0.5 rounded-full text-xs font-bold">{effectiveBallIds.length}</span>
             )}
+          </button>
+          <button
+            onClick={() => setRosterOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg flex-shrink-0 font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: rosterOn ? accent : '#1a1f1a', color: rosterOn ? '#000' : accent, border: `1px solid ${accent}55` }}
+          >
+            <Layers className="w-4 h-4" />
+            Roster
+            {rosterOn && <span className="ml-1 bg-black/30 px-1.5 py-0.5 rounded-full text-xs font-bold">{roster.length}</span>}
           </button>
           <button
             onClick={openModal}
@@ -1409,6 +1450,111 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
       {/* Ball picker modal */}
       {createPortal(<AnimatePresence>
+        {rosterOpen && (
+          <motion.div
+            key="roster-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+            onClick={() => setRosterOpen(false)}
+          >
+            <motion.div
+              key="roster-panel"
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md max-h-[85vh] rounded-xl overflow-hidden flex flex-col"
+              style={{ backgroundColor: '#0a0f0a', border: `1px solid ${accent}55`, boxShadow: `0 0 40px ${accent}22` }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}33` }}>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4" style={{ color: accent }} />
+                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Michroma, sans-serif', color: accent }}>
+                    Roster
+                  </span>
+                </div>
+                <button onClick={() => setRosterOpen(false)}>
+                  <X className="w-5 h-5" style={{ color: `${accent}99` }} />
+                </button>
+              </div>
+              <div className="px-5 pt-4 flex-shrink-0">
+                <button
+                  onClick={() => setRosterOn(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: rosterOn ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${rosterOn ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                    color: rosterOn ? accent : 'rgba(255,255,255,0.7)',
+                  }}
+                >
+                  <span className="text-sm font-semibold">Spawn this roster (the tree rule set)</span>
+                  <span className="text-xs">{rosterOn ? 'ON' : 'OFF'}</span>
+                </button>
+                <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  BALL_TREE_PLAN.md: the map brings no balls, your roster does. A map's maxBalls caps it.
+                  The Balls picker still wins when it is set. Rungs are marks on the ball until phase 2 gives them rules.
+                </p>
+              </div>
+              <div className="px-5 py-4 overflow-y-auto flex flex-col gap-3">
+                {roster.map((ball, i) => (
+                  <div key={ball.slot} className="rounded-lg p-3" style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold" style={{ color: accent }}>Ball {ball.slot}</span>
+                      {roster.length > 1 && (
+                        <button title="Remove" onClick={() => setRoster(r => r.filter((_, j) => j !== i).map((b, j) => ({ ...b, slot: j + 1 })))}>
+                          <Trash2 className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {RUNG_IDS.map(id => {
+                        const rank = ball.rungs[id] ?? 0;
+                        return (
+                          <label key={id} className="flex items-center justify-between gap-2 text-xs" title={RUNG_META[id].ranks[Math.max(0, rank - 1)]}>
+                            <span style={{ color: 'rgba(255,255,255,0.75)' }}>{RUNG_META[id].label}</span>
+                            <select
+                              className="bg-black/40 border border-white/10 rounded px-1 py-0.5 text-xs"
+                              style={{ color: accent }}
+                              value={rank}
+                              onChange={e => {
+                                const next = Number(e.target.value);
+                                setRoster(r => r.map((b, j) => {
+                                  if (j !== i) return b;
+                                  const rungs = { ...b.rungs };
+                                  if (next === 0) delete rungs[id];
+                                  else rungs[id] = next as RungRank;
+                                  return { ...b, rungs };
+                                }));
+                              }}
+                            >
+                              <option value={0}>none</option>
+                              <option value={1}>1</option>
+                              <option value={2}>2</option>
+                              <option value={3}>3</option>
+                            </select>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {roster.length < ROSTER_MAX && (
+                  <button
+                    onClick={() => setRoster(r => [...r, { slot: r.length + 1, rungs: {} }])}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
+                    style={{ border: `1px dashed ${accent}66`, color: accent }}
+                  >
+                    <Plus className="w-4 h-4" /> Add a ball
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
         {ballPickerOpen && (
           <motion.div
             key="ball-picker-backdrop"

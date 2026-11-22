@@ -70,6 +70,7 @@ import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
 import { getActiveRuleSet, setActiveRuleSet, preferredRuleSet, storeKindAfter, withPlus } from '@/lib/cardRules';
+import { defaultRoster, parseRoster, setActiveRoster, type Roster } from '@/lib/roster';
 
 /**
  * Drop one debug query param, keeping the rest. Replacing the whole search
@@ -200,6 +201,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // whether the last contracted map was won, which the next store pays out.
   const [activeContractId, setActiveContractId] = useState<string | null>(null);
   const [contractReward, setContractReward] = useState(false);
+  // The tree's roster (lib/roster.ts): the player's balls. Mirrored into the
+  // module state initGame reads, synchronously where a run starts or resumes
+  // and by effect after, so a change here is what spawns on the next map.
+  const [roster, setRosterState] = useState<Roster>(defaultRoster);
+  const setRoster = useCallback((next: Roster) => {
+    setActiveRoster(next);
+    setRosterState(next);
+  }, []);
+  useEffect(() => { setActiveRoster(roster); }, [roster]);
   const spentThisShopVisitRef = useRef(0);
 
   // Free-store-item pickups (issue #48): each claimed token makes the next
@@ -804,6 +814,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     capstoneId: capstone?.id ?? null,
     takenOfferId,
     ruleSet: getActiveRuleSet(),
+    roster,
     contractId: activeContractId,
     contractReward,
     runTrajectory: runTrajectoryRef.current,
@@ -976,6 +987,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // is gated while the host shops and adopts the host's run record, which
     // carries the picks, the contract and the rule set, at every map start).
     setActiveRuleSet(pairRunRef.current ? 'draft' : preferredRuleSet());
+    // A new run's roster: one plain ball (the run-start trait is phase 4's).
+    setRoster(defaultRoster());
     // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     // Held across the WHOLE fetch, not just until the first pair land.
@@ -1236,6 +1249,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // The rules the run was started under: its owned ids are that catalogue's.
     // A save from before the draft existed is a classic run.
     setActiveRuleSet(save.ruleSet ?? 'classic');
+    setRoster(parseRoster(save.roster));
 
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -1741,7 +1755,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const liveBetweenMapPlan = useMemo<BetweenMapPlan>(() => ({
     clearedLevel: currentLevelIndex + 1,
     promotion: !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
-    store: true,
+    // The tree has no store stage until its own (BALL_TREE_PLAN.md phase 4).
+    store: getActiveRuleSet() !== 'tree',
     // The draft's shop after a boss (lib/cardRules.ts); the classic store is one store.
     shop: getActiveRuleSet() === 'draft' && storeKindAfter(currentLevel) === 'shop',
     last: isLastLevel,
@@ -1806,9 +1821,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Beat the final level: the run is won, and that is the end of it.
       handleFinishRun();
     } else if (!offerCapstoneIfDue()) {
-      proceedToShop();
+      // The tree (phase 1): nothing to buy yet, so the next map follows the debrief.
+      if (getActiveRuleSet() === 'tree') finishShopPhase();
+      else proceedToShop();
     }
-  }, [leaveDebrief, isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
+  }, [leaveDebrief, isLastLevel, offerCapstoneIfDue, proceedToShop, finishShopPhase, handleFinishRun]);
 
   /**
    * A run saved between maps, routed back to the stage it was saved on once
@@ -2334,6 +2351,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     contractReward,
     /** The run's store rules (lib/cardRules.ts). Read at render; fixed per run. */
     ruleSet: getActiveRuleSet(),
+    /** The tree's roster (lib/roster.ts): the player's balls. */
+    roster,
+    setRoster,
     handlePurchaseAbility,
     retainedAbilityIds,
     freeAbilityGrant,

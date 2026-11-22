@@ -124,6 +124,25 @@ describe("every URL dev flag has an admin control", () => {
   }
 });
 
+describe("the roster can be built in the Playground", () => {
+  // BALL_TREE_PLAN.md: a per-ball rung is a new class of thing the engine
+  // reads. The Playground's roster editor lists every rung from the catalogue
+  // (RUNG_IDS / RUNG_META), never a hardcoded list, and switches the board to
+  // the tree rule set so the roster is what spawns. Admin picks the rule set
+  // for new runs by name, the tree among them.
+  it("renders every rung from the catalogue and spawns the roster", () => {
+    expect(PLAYGROUND).toMatch(/RUNG_IDS\.map\(/);
+    expect(PLAYGROUND).toMatch(/RUNG_META\[id\]\.label/);
+    expect(PLAYGROUND).toMatch(/setActiveRoster\(roster\)/);
+    expect(PLAYGROUND).toMatch(/setActiveRuleSet\('tree'\)/);
+    expect(PLAYGROUND).toMatch(/ROSTER_MAX/);
+  });
+
+  it("lets Admin start a run under the tree", () => {
+    expect(ADMIN).toMatch(/<option value="tree">/);
+  });
+});
+
 describe("every persisted dev switch has an admin control", () => {
   // The other class of flag in devFlags.ts: a stored switch with no URL form
   // at all (infinite lives, the forced 2-Player relay, the simulated server

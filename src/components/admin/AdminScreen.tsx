@@ -13,7 +13,7 @@ import {
   isLauncherHandAlwaysEnabled, setLauncherHandAlwaysEnabled,
 } from '@/lib/devFlags';
 import { allOffers } from '@/lib/sprintOffers';
-import { CARD_SLOTS, preferredRuleSet, setPreferredRuleSet } from '@/lib/cardRules';
+import { CARD_SLOTS, preferredRuleSet, setPreferredRuleSet, type RuleSet } from '@/lib/cardRules';
 import { isTouchTraceEnabled, setTouchTraceEnabled } from '@/lib/touchTrace';
 import { isUiOnDemandEnabled, setUiOnDemandEnabled, uiRenderStats } from '@/ui/onDemand';
 import { showDiagnostics } from '@/lib/bootDiagnostics';
@@ -51,7 +51,7 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
   const [sprintOffer, setSprintOfferState] = useState<string | null>(getForcedSprintOffer);
   const [jackpot, setJackpotState] = useState(getForcedJackpot);
   const [sprintAlways, setSprintAlwaysState] = useState(isSprintAlwaysOn);
-  const [classicStore, setClassicStoreState] = useState(() => preferredRuleSet() === 'classic');
+  const [storeRules, setStoreRulesState] = useState<RuleSet>(() => preferredRuleSet());
   const [tenureDepth, setTenureDepthState] = useState<number | null>(getForcedTenureDepth);
   const [launcherHand, setLauncherHandState] = useState(isLauncherHandAlwaysEnabled);
   const [nap, setNap] = useState<SimulatedNap>(getSimulatedNap);
@@ -299,9 +299,13 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" id="classic-store" checked={classicStore}
-                onChange={e => { setPreferredRuleSet(e.target.checked ? 'classic' : 'draft'); setClassicStoreState(e.target.checked); }} />
-              Classic store for new runs (off: the card draft, one card free a map, hours spent at the shop after a boss, a build of {CARD_SLOTS})
+              Store rules for new runs
+              <select id="store-rules" className="bg-background border border-border rounded px-2 py-1 text-sm" value={storeRules}
+                onChange={e => { const rules = e.target.value as RuleSet; setPreferredRuleSet(rules); setStoreRulesState(rules); }}>
+                <option value="draft">Card draft (one card free a map, the shop after a boss, a build of {CARD_SLOTS})</option>
+                <option value="tree">Ball tree (BALL_TREE_PLAN.md: your roster spawns, no store yet)</option>
+                <option value="classic">Classic store (upgrades.yml, every card bought)</option>
+              </select>
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" id="sprint-always-on" checked={sprintAlways}
