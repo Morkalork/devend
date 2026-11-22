@@ -83,7 +83,8 @@ after every map, the hours spent at the shop after a boss, a build of six,
 `public/cards.yml`; the classic store and `upgrades.yml` remain behind an
 Admin toggle), **BALL_TREE_PLAN.md** for the plan to replace the cards with
 an upgrade tree where the balls are the player's (one super ball or a fleet
-of good ones; no map balls; planned, not built), and
+of good ones; no map balls; phases 1 to 4 built: the roster, the rungs' rules,
+`public/tree.yml` and the tree stage; the maps' retune is open), and
 **UPGRADE_SWEEP_REPORT.md** for what each upgrade measurably changes when the bot
 plays it (and `src/test/upgradeSweep.test.ts`, the opt-in sweep that made it), and
 **PLAY_RELEASE_PLAN.md** for the first Play release (an invite-only beta): the

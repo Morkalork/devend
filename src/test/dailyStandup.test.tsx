@@ -73,6 +73,8 @@ describe("Daily Stand-up", () => {
   it("handleStartDaily arms today's seed, saves the dailyKey, and Continue restores it", async () => {
     const { result, unmount } = renderHook(() => useSession());
     await act(async () => { await result.current.session.handleStartDaily(); });
+    // The tree (BALL_TREE_PLAN.md): the Daily opens on the first ball's trait; pick one.
+    await act(async () => { result.current.session.handleTreeStartPick("weight"); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
 
     expect(result.current.session.dailyKey).toBe(todayKey());
@@ -95,6 +97,8 @@ describe("Daily Stand-up", () => {
   it("a normal Start Game after a daily clears the seeded context", async () => {
     const { result } = renderHook(() => useSession());
     await act(async () => { await result.current.session.handleStartDaily(); });
+    // The tree (BALL_TREE_PLAN.md): the Daily opens on the first ball's trait; pick one.
+    await act(async () => { result.current.session.handleTreeStartPick("weight"); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
     expect(getRunSeedText()).not.toBeNull();
 
@@ -107,6 +111,8 @@ describe("Daily Stand-up", () => {
   it("a finished daily files on the daily ledger and starts the streak", async () => {
     const { result } = renderHook(() => useSession());
     await act(async () => { await result.current.session.handleStartDaily(); });
+    // The tree (BALL_TREE_PLAN.md): the Daily opens on the first ball's trait; pick one.
+    await act(async () => { result.current.session.handleTreeStartPick("weight"); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
 
     await act(async () => {

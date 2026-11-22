@@ -70,7 +70,8 @@ import { MAX_ABILITY_SLOTS } from '@/lib/abilities';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
 import { getActiveRuleSet, setActiveRuleSet, preferredRuleSet, storeKindAfter, withPlus } from '@/lib/cardRules';
-import { defaultRoster, parseRoster, setActiveRoster, type Roster } from '@/lib/roster';
+import { defaultRoster, parseRoster, setActiveRoster, type Roster, type RungId, type RungRank } from '@/lib/roster';
+import { startTraitOffer } from '@/lib/tree';
 
 /**
  * Drop one debug query param, keeping the rest. Replacing the whole search
@@ -210,6 +211,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setRosterState(next);
   }, []);
   useEffect(() => { setActiveRoster(roster); }, [roster]);
+  // The run start under the tree: the three rank-one rungs offered for the
+  // first ball, until one is picked (TreeScreen `start`).
+  const [treeStart, setTreeStart] = useState<{ offer: RungId[] } | null>(null);
   const spentThisShopVisitRef = useRef(0);
 
   // Free-store-item pickups (issue #48): each claimed token makes the next
@@ -961,12 +965,55 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const seeded = opts.seeded ?? false;
     const tenureOwed = !seeded && tenureSteps(getForcedTenureDepth() ?? metaStats.lastRunDepth) > 0;
     const draftOn = SPRINT_PLANNING_ENABLED && wantsDraft && (sprintUnlocked || tenureOwed || isSprintAlwaysOn());
+    // The tree: the first ball's trait, one of three, weight always among
+    // them, dealt from the run seed so a Daily deals everyone the same. The
+    // debug jump and a pair run skip the pick as they skip the draft (both
+    // phones must start from one state): the first ball takes weight one.
+    if (getActiveRuleSet() === 'tree') {
+      if (!wantsDraft) {
+        setRoster([{ slot: 1, rungs: { weight: 1 } }]);
+        nav.startGame();
+        return;
+      }
+      setTreeStart({ offer: startTraitOffer(getRunRng('treeStart')) });
+      nav.goToUpgradeShop();
+      return;
+    }
     const cards = draftOn ? dealSprint({ seeded }) : [];
     if (cards.length > 0) {
       setPendingSprint({ cards });
       nav.goToRunDraft();
     } else nav.startGame();
-  }, [metaStats.lastRunDepth, sprintUnlocked, dealSprint, nav.goToRunDraft, nav.startGame]);
+  }, [metaStats.lastRunDepth, sprintUnlocked, dealSprint, setRoster, nav.goToRunDraft, nav.goToUpgradeShop, nav.startGame]);
+
+  /** The run-start trait picked: the first ball takes it at rank one, and the run starts. */
+  const handleTreeStartPick = useCallback((rung: RungId) => {
+    setRoster([{ slot: 1, rungs: { [rung]: 1 as RungRank } }]);
+    setTreeStart(null);
+    nav.startGame();
+  }, [setRoster, nav.startGame]);
+
+  /** A rung bought on a ball (TreeScreen): the hours go, the ball gains the rank. */
+  const handleBuyRung = useCallback((slot: number, rung: RungId, price: number) => {
+    setTotalScore(prev => Math.max(0, prev - price));
+    spentThisShopVisitRef.current += price;
+    const next = roster.map(b => {
+      if (b.slot !== slot) return b;
+      const held = b.rungs[rung] ?? 0;
+      if (held >= 3) return b;
+      return { ...b, rungs: { ...b.rungs, [rung]: (held + 1) as RungRank } };
+    });
+    setRoster(next);
+    analytics.upgradePurchased({ upgradeId: `rung:${rung}`, price, level: currentLevelIndex + 1 });
+  }, [roster, setRoster, currentLevelIndex]);
+
+  /** A ball bought (TreeScreen): the roster grows by one plain ball. */
+  const handleBuyBall = useCallback((price: number) => {
+    setTotalScore(prev => Math.max(0, prev - price));
+    spentThisShopVisitRef.current += price;
+    setRoster([...roster, { slot: roster.length + 1, rungs: {} }]);
+    analytics.upgradePurchased({ upgradeId: 'ball', price, level: currentLevelIndex + 1 });
+  }, [roster, setRoster, currentLevelIndex]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean, runSeed?: string) => {
     // Whose run this is, decided first (see pairRunRef).
@@ -986,8 +1033,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // one catalogue, and the store is the host's decision already (the guest
     // is gated while the host shops and adopts the host's run record, which
     // carries the picks, the contract and the rule set, at every map start).
-    setActiveRuleSet(pairRunRef.current ? 'draft' : preferredRuleSet());
-    // A new run's roster: one plain ball (the run-start trait is phase 4's).
+    setActiveRuleSet(pairRunRef.current ? 'tree' : preferredRuleSet());
+    // A new run's roster: one plain ball; the run start gives it a trait.
     setRoster(defaultRoster());
     // The offer catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
@@ -1095,9 +1142,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     dailyKeyRef.current = key;
     setDailyKey(key);
     // The Daily is one shared run for everyone, so it keeps one rule set, and
-    // never the Admin preference: the draft, whose shelf, rerolls and
-    // contracts are all dealt from the run seed.
-    setActiveRuleSet('draft');
+    // never the Admin preference: the tree, whose run-start offer is dealt
+    // from the run seed.
+    setActiveRuleSet('tree');
 
     // Held across the WHOLE fetch, not just until the first pair land.
     setBootingRun(true);
@@ -1721,6 +1768,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, activeModifiers.shopInterestPercent, totalScore, abilityCharges, currentLevelIndex]);
 
   const proceedToShop = useCallback(() => {
+    // The tree has no lock toll and no shelf: the stage simply opens.
+    if (getActiveRuleSet() === 'tree') {
+      setStoreClosed(false);
+      setStoreDealt(null);
+      goToUpgradeShop();
+      return;
+    }
     arriveAtStore();
     goToUpgradeShop();
   }, [arriveAtStore, goToUpgradeShop]);
@@ -1755,8 +1809,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const liveBetweenMapPlan = useMemo<BetweenMapPlan>(() => ({
     clearedLevel: currentLevelIndex + 1,
     promotion: !capstone && getCapstones().length > 0 && capstoneDueAfter(currentLevelIndex + 1),
-    // The tree has no store stage until its own (BALL_TREE_PLAN.md phase 4).
-    store: getActiveRuleSet() !== 'tree',
+    store: true,
+    // The ball tree (BALL_TREE_PLAN.md): the stage is the tree.
+    tree: getActiveRuleSet() === 'tree',
     // The draft's shop after a boss (lib/cardRules.ts); the classic store is one store.
     shop: getActiveRuleSet() === 'draft' && storeKindAfter(currentLevel) === 'shop',
     last: isLastLevel,
@@ -1821,11 +1876,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Beat the final level: the run is won, and that is the end of it.
       handleFinishRun();
     } else if (!offerCapstoneIfDue()) {
-      // The tree (phase 1): nothing to buy yet, so the next map follows the debrief.
-      if (getActiveRuleSet() === 'tree') finishShopPhase();
-      else proceedToShop();
+      proceedToShop();
     }
-  }, [leaveDebrief, isLastLevel, offerCapstoneIfDue, proceedToShop, finishShopPhase, handleFinishRun]);
+  }, [leaveDebrief, isLastLevel, offerCapstoneIfDue, proceedToShop, handleFinishRun]);
 
   /**
    * A run saved between maps, routed back to the stage it was saved on once
@@ -2354,6 +2407,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     /** The tree's roster (lib/roster.ts): the player's balls. */
     roster,
     setRoster,
+    treeStart,
+    handleTreeStartPick,
+    handleBuyRung,
+    handleBuyBall,
     handlePurchaseAbility,
     retainedAbilityIds,
     freeAbilityGrant,

@@ -20,6 +20,9 @@ import { RunDraftScreen } from "../../screens/RunDraftScreen";
 import { CapstoneDraftScreen } from "../../screens/CapstoneDraftScreen";
 import { PipelineDebriefSample, PipelineStoreSample } from "./pipelineSample";
 import { samplePlan } from "../../screens/pipelineModel";
+import { TreeScreen } from "../../screens/TreeScreen";
+import treeYaml from "../../../../public/tree.yml?raw";
+import yaml from "js-yaml";
 
 const ACCENT = "#00ff88";
 const noop = () => {};
@@ -124,6 +127,9 @@ const isLocked = (id: string, owned: string[]) => {
   return !u || !(u.prerequisites ?? []).every(p => owned.includes(p));
 };
 const shopMods = { ...DEFAULT_MODIFIERS, spendInstantFencePerChunk: 1, runwayInstantFenceAt: 25, runwayConcurrentFenceAt: 150 };
+
+/** The tree's catalogue, read raw: the gallery has no loader. */
+const treeNodes = ((yaml.load(treeYaml) as { upgrades: UpgradeConfig[] }).upgrades ?? []);
 
 const shopProps = {
   playerPoints: 120, upgrades: shopUpgrades, ownedUpgradeIds: shopOwned, completedLevel: 10, isLocked,
@@ -272,6 +278,22 @@ export const entries: GalleryEntry[] = [
       draft={{ kind: "pick", slots: 2, onDrop: noop, onHours: noop, nextMap: { level: 4, name: "Merge Conflict", features: ["2 balls", "a boss", "moving objects"] },
         contract: { id: "hotfix_friday", name: "Hotfix Friday", description: "All balls move 30% faster on the next map.", modifiers: { ballSpeedMultiplier: 1.3 } },
         onContract: noop }} />,
+  },
+  {
+    // The ball tree (BALL_TREE_PLAN.md): the roster first, the branches below, a node ticket on tap.
+    id: "TreeScreen", group: "screen",
+    render: () => <TreeScreen hours={64} roster={[{ slot: 1, rungs: { weight: 2, worth: 1 } }, { slot: 2, rungs: { pace: 1 } }]}
+      nodes={treeNodes} ownedIds={["fast_compile", "feature_freeze"]} isLocked={isLocked} completedLevel={4}
+      nextMap={{ level: 5, name: "Merge Conflict", features: ["breakables", "moving objects"] }}
+      pipeline={{ ...samplePlan(4), promotion: false, tree: true }}
+      onBuyNode={noop} onBuyRung={noop} onBuyBall={noop} onContinue={noop} accentColor={ACCENT} />,
+  },
+  {
+    // The run start under the tree: the first ball's trait, one of three, weight always among them.
+    id: "TreeScreen-start", group: "screen",
+    render: () => <TreeScreen hours={0} roster={[{ slot: 1, rungs: {} }]} nodes={treeNodes} ownedIds={[]} isLocked={isLocked} completedLevel={0}
+      onBuyNode={noop} onBuyRung={noop} onBuyBall={noop} onContinue={noop} accentColor={ACCENT}
+      start={{ offer: ["weight", "sight", "grace"], onPick: noop }} />,
   },
   {
     // Draft rules: the shop after a boss, where the banked hours are spent: the pick, priced cards, the ability slot and a reroll.

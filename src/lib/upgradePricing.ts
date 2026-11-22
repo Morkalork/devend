@@ -106,6 +106,11 @@ export function setLivePricing(pricing: UpgradePricing): void {
   livePricing = pricing;
 }
 
+/** The catalogue's pricing block as loaded; the default until then. */
+export function getLivePricing(): UpgradePricing {
+  return livePricing;
+}
+
 /**
  * Price multiplier in effect at the shop after `completedLevel`. Shops run
  * after levels 1-4 at ×1; the first assignment (level 5) starts block 2.

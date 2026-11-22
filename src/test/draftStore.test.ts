@@ -243,9 +243,9 @@ describe("the rule set", () => {
     expect(session).toMatch(/setActiveRuleSet\(save\.ruleSet \?\? 'classic'\)/);
     // A pair and the Daily play the draft on every phone, never the Admin
     // preference, so everyone in one run reads one catalogue.
-    expect(session).toMatch(/setActiveRuleSet\(pairRunRef\.current \? 'draft' : preferredRuleSet\(\)\)/);
+    expect(session).toMatch(/setActiveRuleSet\(pairRunRef\.current \? 'tree' : preferredRuleSet\(\)\)/);
     const daily = session.slice(session.indexOf("const handleStartDaily"));
-    expect(daily.slice(0, 2000)).toMatch(/setActiveRuleSet\('draft'\)/);
+    expect(daily.slice(0, 2000)).toMatch(/setActiveRuleSet\('tree'\)/);
     setActiveRuleSet("classic");
     expect(getActiveRuleSet()).toBe("classic");
   });

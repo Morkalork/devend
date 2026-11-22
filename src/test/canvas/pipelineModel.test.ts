@@ -52,6 +52,11 @@ describe("the Continue buttons name where they go", () => {
     expect(continueLabel(plan({ promotion: false, shop: true }), "debrief", t)).toBe("Open the shop");
     expect(pipelineStages(plan({ shop: true }), "store", t).map(s => s.title)).toEqual(["Debrief", "Promotion", "Shop", "Level 11"]);
   });
+
+  it("names the tree, where a tree run spends its hours", () => {
+    expect(continueLabel(plan({ promotion: false, tree: true }), "debrief", t)).toBe("Open the tree");
+    expect(pipelineStages(plan({ tree: true }), "store", t).map(s => s.title)).toEqual(["Debrief", "Promotion", "Tree", "Level 11"]);
+  });
 });
 
 describe("pipelineStages", () => {
@@ -90,7 +95,8 @@ describe("the three stages share one frame", () => {
     const session = read("src/hooks/useGameSession.ts");
     expect(session).toContain("frozenBetweenMapPlan");
     const index = read("src/pages/Index.tsx");
-    expect(index.match(/pipeline=\{session\.betweenMapPlan\}/g)?.length).toBe(3);
+    // The debrief, the Promotion, and the store stage in both its forms: the shop and the tree.
+    expect(index.match(/pipeline=\{session\.betweenMapPlan\}/g)?.length).toBe(4);
   });
 
   it("has a gallery entry for a map with no Promotion and for the last map", () => {

@@ -1395,7 +1395,9 @@
     "toSpendLast": "to spend",
     "pickOne": "Pick 1 of {{count}}",
     "shop": "Shop",
-    "toShop": "Open the shop"
+    "toShop": "Open the shop",
+    "tree": "Tree",
+    "toTree": "Open the tree"
   },
   "sprint": {
     "kind": {
@@ -1466,5 +1468,25 @@
     "shop": "The shop: one card free, and your hours buy the rest.",
     "shopTaken": "Free card taken. Everything else costs hours.",
     "contractFree": "Contract won: your free card comes from the rarer ones."
+  },
+  "tree": {
+    "startTitle": "Your first ball",
+    "startBody": "Every run starts with one ball and the standard fence. Give the ball one trait, free. Everything else is bought from the tree between maps.",
+    "forBricks": "for the bricks",
+    "startWith": "Start with {{trait}}",
+    "pickOne": "Pick a trait",
+    "yourBalls": "Your balls",
+    "ballN": "Ball {{n}}",
+    "tapForRungs": "Tap for its next rungs",
+    "ballFull": "Every rung at its top. Nothing left to buy on this ball.",
+    "addBall": "Add a ball: {{hours}}h",
+    "buyFor": "Buy for {{hours}}h",
+    "owned": "Owned",
+    "requires": "Requires {{names}}",
+    "branch": {
+      "fences": "Fences",
+      "hands": "Hands",
+      "office": "Office"
+    }
   }
 }

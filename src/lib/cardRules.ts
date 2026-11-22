@@ -66,7 +66,7 @@ export function storeKindAfter(cleared: Pick<LevelConfig, "boss"> | null | undef
  * catalogue's own ladders by id; they are about the classic store, and a test
  * of the draft asks for it by name (setPreferredRuleSet).
  */
-const DEFAULT_RULES: RuleSet = import.meta.env.MODE === "test" ? "classic" : "draft";
+const DEFAULT_RULES: RuleSet = import.meta.env.MODE === "test" ? "classic" : "tree";
 
 /** The rule set a NEW solo run starts with: the draft, unless Admin asked for the classic store. */
 export function preferredRuleSet(): RuleSet {

@@ -33,6 +33,7 @@ import { LevelCompleteOverlay } from '@/ui/screens/LevelCompleteOverlay';
 import { SPRINT_PLANNING_ENABLED } from '@/lib/sprintPlanning';
 import { isFullDebrief } from '@/ui/screens/debriefMode';
 import { UpgradeShop } from '@/ui/screens/UpgradeShop';
+import { TreeScreen } from '@/ui/screens/TreeScreen';
 import { nextMapInfo } from '@/ui/screens/draftStoreModel';
 import { CARD_SLOTS, storeKindAfter } from '@/lib/cardRules';
 import { contractFor } from '@/lib/contracts';
@@ -651,7 +652,28 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 />
               </CanvasLayer>
             )}
-            {navigation.currentScreen === 'upgradeShop' && (
+            {navigation.currentScreen === 'upgradeShop' && session.ruleSet === 'tree' && (
+              <CanvasLayer id="screen-TreeScreen" z={10}>
+                <TreeScreen
+                  hours={session.totalScore}
+                  roster={session.roster}
+                  nodes={session.upgrades}
+                  ownedIds={session.ownedUpgradeIds}
+                  isLocked={session.isUpgradeLocked}
+                  completedLevel={session.currentLevelIndex + 1}
+                  nextMap={nextMapInfo(session.nextLevel, session.currentLevelIndex + 2, t)}
+                  discount={session.activeModifiers.shopDiscountMultiplier}
+                  onBuyNode={session.handlePurchaseUpgrade}
+                  onBuyRung={session.handleBuyRung}
+                  onBuyBall={session.handleBuyBall}
+                  onContinue={session.handleContinueFromShop}
+                  accentColor={accentHex}
+                  pipeline={session.betweenMapPlan}
+                  start={session.treeStart ? { offer: session.treeStart.offer, onPick: session.handleTreeStartPick } : null}
+                />
+              </CanvasLayer>
+            )}
+            {navigation.currentScreen === 'upgradeShop' && session.ruleSet !== 'tree' && (
               <CanvasLayer id="screen-UpgradeShop" z={10}>
                 <UpgradeShop
                   runContext={session.nextRunContext}

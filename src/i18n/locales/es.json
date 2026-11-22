@@ -3302,7 +3302,9 @@
     "toSpendLast": "para gastar",
     "pickOne": "Elige 1 de {{count}}",
     "shop": "Tienda del jefe",
-    "toShop": "Abrir la tienda del jefe"
+    "toShop": "Abrir la tienda del jefe",
+    "tree": "Árbol",
+    "toTree": "Abrir el árbol"
   },
   "sprint": {
     "kind": {
@@ -3339,6 +3341,26 @@
       "boon": "Pequeñas y seguras. La mayoría ayuda en tus primeros mapas.",
       "specialisation": "Solo se ofrecen aquí. Inclinan la tienda hacia un arquetipo toda la partida.",
       "gamble": "Un precio ahora por un premio que tardarías diez mapas en alcanzar."
+    }
+  },
+  "tree": {
+    "startTitle": "Tu primera bola",
+    "startBody": "Cada partida empieza con una bola y la valla estándar. Dale a la bola un rasgo, gratis. Todo lo demás se compra en el árbol entre mapas.",
+    "forBricks": "para los ladrillos",
+    "startWith": "Empezar con {{trait}}",
+    "pickOne": "Elige un rasgo",
+    "yourBalls": "Tus bolas",
+    "ballN": "Bola {{n}}",
+    "tapForRungs": "Toca para ver sus próximos peldaños",
+    "ballFull": "Todos los peldaños al máximo. No queda nada que comprar en esta bola.",
+    "addBall": "Añadir una bola: {{hours}} h",
+    "buyFor": "Comprar por {{hours}} h",
+    "owned": "Comprado",
+    "requires": "Requiere {{names}}",
+    "branch": {
+      "fences": "Vallas",
+      "hands": "Manos",
+      "office": "Oficina"
     }
   }
 }

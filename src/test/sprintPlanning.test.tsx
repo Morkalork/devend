@@ -86,22 +86,26 @@ describe("when the draft opens", () => {
     await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("game"));
   });
 
-  it("deals the Daily from its seed: the same cards for everyone, and no Tenure", async () => {
+  it("deals the Daily from its seed: the same first-ball traits for everyone, and no Tenure", async () => {
+    // The Daily plays the tree (BALL_TREE_PLAN.md), so its run start is the
+    // first ball's trait, one of three, dealt from the day's seed.
     const deal = async () => {
       localStorage.clear();
       localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify({ unlockedFeatureIds: ["sprintPlanning"] }));
       localStorage.setItem("jezzball_meta_stats", JSON.stringify({ lastRunDepth: 25 }));
       const hook = renderHook(() => useSession());
       await act(async () => { await hook.result.current.session.handleStartDaily(); });
-      await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("runDraft"));
-      const cards = hook.result.current.session.pendingSprint!.cards;
+      await waitFor(() => expect(hook.result.current.nav.currentScreen).toBe("upgradeShop"));
+      const offer = hook.result.current.session.treeStart!.offer;
+      expect(hook.result.current.session.pendingSprint).toBeNull();
       hook.unmount();
-      return cards;
+      return offer;
     };
     const a = await deal();
     const b = await deal();
-    expect(a.some(c => c.tenure)).toBe(false);
-    expect(a.map(c => [c.offer.id, c.grants.map(u => u.id)])).toEqual(b.map(c => [c.offer.id, c.grants.map(u => u.id)]));
+    expect(a[0]).toBe("weight");
+    expect(a.length).toBe(3);
+    expect(a).toEqual(b);
   });
 });
 

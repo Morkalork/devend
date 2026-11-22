@@ -25,6 +25,8 @@ export interface BetweenMapPlan {
    * are spent) rather than the pick; names the stage and its button.
    */
   shop?: boolean;
+  /** The store is the ball tree (BALL_TREE_PLAN.md): names the stage and its button. */
+  tree?: boolean;
   /** This was the last level: the run ends, a win, on the result screen. */
   last: boolean;
 }
@@ -81,7 +83,7 @@ export function stageTitle(plan: BetweenMapPlan, id: PipelineStageId, t: TFuncti
   switch (id) {
     case "debrief": return t("pipeline.debrief");
     case "promotion": return t("pipeline.promotion");
-    case "store": return t(plan.shop ? "pipeline.shop" : "pipeline.store");
+    case "store": return t(plan.tree ? "pipeline.tree" : plan.shop ? "pipeline.shop" : "pipeline.store");
     default: return plan.last ? t("pipeline.finish") : t("pipeline.level", { level: plan.clearedLevel + 1 });
   }
 }
@@ -91,7 +93,7 @@ export function continueLabel(plan: BetweenMapPlan, at: PipelineStageId, t: TFun
   const to = nextStage(plan, at);
   switch (to) {
     case "promotion": return t("pipeline.toPromotion");
-    case "store": return t(plan.shop ? "pipeline.toShop" : "pipeline.toStore");
+    case "store": return t(plan.tree ? "pipeline.toTree" : plan.shop ? "pipeline.toShop" : "pipeline.toStore");
     default: return plan.last ? t("pipeline.toFinish") : t("pipeline.toLevel", { level: plan.clearedLevel + 1 });
   }
 }

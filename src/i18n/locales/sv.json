@@ -3302,7 +3302,9 @@
     "toSpendLast": "att spendera",
     "pickOne": "Välj 1 av {{count}}",
     "shop": "Bossbutik",
-    "toShop": "Öppna bossbutiken"
+    "toShop": "Öppna bossbutiken",
+    "tree": "Träd",
+    "toTree": "Öppna trädet"
   },
   "sprint": {
     "kind": {
@@ -3339,6 +3341,26 @@
       "boon": "Små och säkra. De flesta hjälper dina första banor.",
       "specialisation": "Erbjuds bara här. Lutar butiken mot en arketyp hela omgången.",
       "gamble": "Ett pris nu för en vinst som skulle ta tio banor att nå."
+    }
+  },
+  "tree": {
+    "startTitle": "Din första boll",
+    "startBody": "Varje omgång börjar med en boll och standardstaketet. Ge bollen ett drag, gratis. Allt annat köps i trädet mellan banorna.",
+    "forBricks": "för tegelstenarna",
+    "startWith": "Börja med {{trait}}",
+    "pickOne": "Välj ett drag",
+    "yourBalls": "Dina bollar",
+    "ballN": "Boll {{n}}",
+    "tapForRungs": "Tryck för nästa steg",
+    "ballFull": "Varje steg på topp. Inget mer att köpa på den här bollen.",
+    "addBall": "Lägg till en boll: {{hours}} h",
+    "buyFor": "Köp för {{hours}} h",
+    "owned": "Köpt",
+    "requires": "Kräver {{names}}",
+    "branch": {
+      "fences": "Staket",
+      "hands": "Händer",
+      "office": "Kontor"
     }
   }
 }

@@ -302,8 +302,8 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAt
               Store rules for new runs
               <select id="store-rules" className="bg-background border border-border rounded px-2 py-1 text-sm" value={storeRules}
                 onChange={e => { const rules = e.target.value as RuleSet; setPreferredRuleSet(rules); setStoreRulesState(rules); }}>
+                <option value="tree">Ball tree (BALL_TREE_PLAN.md: your roster spawns, the tree between maps)</option>
                 <option value="draft">Card draft (one card free a map, the shop after a boss, a build of {CARD_SLOTS})</option>
-                <option value="tree">Ball tree (BALL_TREE_PLAN.md: your roster spawns, no store yet)</option>
                 <option value="classic">Classic store (upgrades.yml, every card bought)</option>
               </select>
             </label>
