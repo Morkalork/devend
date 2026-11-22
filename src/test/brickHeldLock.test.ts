@@ -1,20 +1,19 @@
 /**
  * A ball and a brick in one pocket do not lock (BRICKS_PLAN.md).
  *
- * Reported from play on the brick ladder's map 2. Three rules, each pinned:
+ * Reported from play on the brick ladder's map 2. Each rule pinned:
  *
  *  1. A pocket that holds a standing brick is refused as a lock, whatever the
  *     win asks for: the lock would bury the brick.
  *  2. It locks when its last brick breaks, with no further fence.
- *  3. A fence that would lock the last free ball away from bricks the win
- *     still owes is refused. That one used to land: the ball ended in a sliver
- *     beside the bricks, inside their striking reach, so they read as
- *     reachable; the ball locked and the map ended as locked out. Over 150
- *     bot runs on map 2 that was 17 map-ending locks; it is none.
+ *  3. Fencing a ball off from the bricks is allowed. Its pocket has no brick
+ *     in it, so it locks. (A refusal for that fence was tried and taken back:
+ *     where a fence may go is the player's call.)
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "@/lib/bot/headlessGame";
-import { planCut, seededRandom } from "@/lib/bot/policy";
 import { regionHoldsStandingBrick } from "@/lib/physics/smashReach";
 import { findGridRegions, buildGridRegionMap, findGridRegionForBall } from "@/lib/spaceGrid";
 import { setRunSeedText } from "@/lib/runRng";
@@ -131,41 +130,40 @@ describe("the brick's own pocket, by body and not by reach", () => {
   });
 });
 
-describe("map 2 never ends on a lock", () => {
-  it("is not locked out by any fence, over 60 runs of careless cutting", () => {
-    const ends: Record<string, number> = {};
-    for (let seed = 1; seed <= 60; seed++) {
-      installClock();
-      setRunSeedText(`careless-${seed}`);
-      try {
-        const ctx = createBotGame(MAP2, 2, plainModifiers(), { lives: 9 });
-        const rng = seededRandom(seed);
-        let end = "clock";
-        for (let f = 0; f < 120 * 30; f++) {
-          if (f % 30 === 0 && ctx.game.activeWalls.length === 0) {
-            const plan = planCut(ctx.game, rng, 0.8, false);
-            if (plan) {
-              tryCut(ctx, plan.origin, plan.direction);
-            }
-          }
-          stepBot(ctx);
-          if (ctx.game.gameOver || ctx.game.levelComplete) {
-            end = ctx.game.levelComplete ? "win" : String(ctx.game.failure?.kind);
-            break;
-          }
-        }
-        ends[end] = (ends[end] ?? 0) + 1;
-      } finally {
-        releaseClock();
+describe("fencing a ball off from the bricks", () => {
+  it("is allowed: no fence is refused for the lock it would cause", () => {
+    // Tried and taken back at the owner's word. A refusal that predicted the
+    // lock a fence would cause stopped the player fencing a ball off beside
+    // the bricks, and that is theirs to do: the lock rule is about what is IN
+    // the pocket, not about where the fence may go. The older refusal stays
+    // (a cut that buries owed bricks where no ball can reach them at all).
+    const reach = readFileSync(resolve(__dirname, "../lib/physics/smashReach.ts"), "utf8");
+    expect(reach).not.toMatch(/ballsLeftAfterLocks/);
+    const refusal = reach.slice(reach.indexOf("export function cutWouldBurySmashes"));
+    expect(refusal).toMatch(/const probe = \{ \.\.\.game, spaceGrid: after \} as CanvasGameState;/);
+  });
+
+  it("locks a ball whose pocket has no brick in it, bricks next door or not", () => {
+    // Both balls held still; one fence walls the left third off with a ball in
+    // it and no brick. That pocket is lock-sized (widened here) and empty of
+    // bricks, so it locks at once: the bricks are the other pocket's business.
+    installClock();
+    setRunSeedText("fenced-off");
+    try {
+      const ctx = createBotGame(LOCK_WIN, 2, plainModifiers({ lockThresholdBonus: 60, spawnFreezeSeconds: 9999 }), { lives: 9 });
+      const g = ctx.game;
+      const [alone, withBricks] = g.balls;
+      alone.position = { x: 150, y: 450 };
+      withBricks.position = { x: 450, y: 250 };
+      expect(tryCut(ctx, { x: 280, y: 450 }, { x: 0, y: 1 })).toBe(true);
+      for (let n = 0; g.activeWalls.length > 0 && n < 2000; n++) {
+        stepBot(ctx);
       }
+      expect(alone.state).toBe("won");
+      expect(withBricks.state).toBe("active");
+      expect(standing(g)).toBe(9);
+    } finally {
+      releaseClock();
     }
-    // The lock-caused ending, which was 9 of these 60 before the fix.
-    expect(ends.lockedOut ?? 0).toBe(0);
-    // One run in these 60 still buries a brick, and not by a lock: the capture
-    // pass keeps a ball-less strip beside the block while a narrow gap reads as
-    // passable, and drops it when a neighbouring brick goes (BRICKS_PLAN.md,
-    // open). Held at that one, so it cannot quietly grow.
-    expect(ends.objectiveBuried ?? 0).toBeLessThanOrEqual(1);
-    expect(ends.win ?? 0).toBeGreaterThan(10);
   });
 });
