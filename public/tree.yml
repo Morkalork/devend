@@ -11,7 +11,12 @@
 #               the modifier pipeline, the fence slots and the abilities read
 #               them unchanged. `branch` files a node under Fences, Hands or
 #               Office; `prerequisites` are the tree's edges; an `upgradeOf`
-#               rides its node as a "+" did. No node slows, shrinks or
+#               rides its node as a "+" did. Each branch has ONE Junior root
+#               (Fast Compile, Feature Freeze, Performance Bonus) that every
+#               other node of the branch descends from, families chain
+#               Senior to Principal to Architect, and a node may need two
+#               parents, so an early, modest buy is what opens the branch and
+#               the branches meet further out. No node slows, shrinks or
 #               steadies all balls: those were the cards the player could not
 #               feel, and under the tree the balls are theirs.
 #
@@ -22,19 +27,25 @@ pricing:
   minCost: 2
   anchorHours: 23
   blockInflation: 1.0
+  # A map's pay, measured through calculateScore: ordinary about 16h, good
+  # about 34h, flawless about 47h (upgradePricing.ts). The tiers sit on those
+  # rungs so effort reads at the tree: an ordinary map buys a Junior root
+  # (15h), a great map buys a Senior (30h), a flawless one or two maps buy a
+  # Principal (44h), and an Architect (58h) is a saved-up moment.
   tierFactor:
-    Junior: 0.7
-    Senior: 0.95
-    Principal: 1.3
-    Architect: 1.7
-    Wizard: 2.1
+    Junior: 0.65
+    Senior: 1.3
+    Principal: 1.9
+    Architect: 2.5
+    Wizard: 3.2
 tree:
-  # Hours for a rung at rank one, two and three, before stacking.
-  rungBase: [12, 20, 32]
+  # Hours for a rung at rank one, two and three, before stacking: an ordinary
+  # map's rank one, a great map's rank two, a flawless map's rank three.
+  rungBase: [15, 30, 45]
   # The next rung on a ball costs this much more per rung the ball already holds.
-  stackFactor: 1.35
-  # The second ball, then the third. Flat, with no traits: the fleet is many cheap decisions.
-  ballCost: [30, 50]
+  stackFactor: 1.25
+  # The second ball, then the third: a great map each. Flat, with no traits.
+  ballCost: [30, 45]
 tagSets:
   threshold: 99
   bonuses: []
@@ -50,78 +61,137 @@ upgrades:
 - id: fast_compile_plus
   branch: fences
   name: Fast Compile+
-  tier: Junior
+  tier: Senior
   tags: [tempo]
   upgradeOf: fast_compile
+  prerequisites: [fast_compile]
   description: Fences build 60% faster.
   modifiers: {fenceGenerationSpeedMultiplier: 1.185}
+- id: hot_start
+  branch: fences
+  name: Hot Start
+  tier: Senior
+  icon: flame
+  tags: [tempo]
+  prerequisites: [fast_compile]
+  description: The first two fences of every map finish instantly.
+  modifiers: {instantFencesPerMap: 2}
+- id: scaffolding
+  branch: fences
+  name: Scaffolding
+  tier: Senior
+  icon: land-plot
+  tags: [tempo, safety]
+  prerequisites: [fast_compile]
+  description: Every fence starts 30% drawn.
+  modifiers: {fenceHeadStart: 0.3}
 - id: multithreading
   branch: fences
   name: Multithreading
   tier: Senior
   icon: split
   tags: [tempo]
+  prerequisites: [fast_compile]
   description: Draw one more fence at the same time.
   modifiers: {additionalConcurrentFences: 1}
 - id: multithreading_plus
   branch: fences
   name: Multithreading+
-  tier: Senior
+  tier: Principal
   tags: [tempo]
   upgradeOf: multithreading
+  prerequisites: [multithreading, fast_compile_plus]
   description: Draw two more fences at the same time.
   modifiers: {additionalConcurrentFences: 1}
 - id: add_guardrails
   branch: fences
   name: Guardrail Fence
-  tier: Junior
+  tier: Senior
   icon: fence
   tags: [safety]
   prerequisites: [fast_compile]
   description: 'Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. It builds 15% slower.'
   grantsFenceType: guardrail
   modifiers: {}
+- id: crash_barrier
+  branch: fences
+  name: Crash Barrier
+  tier: Principal
+  icon: shield-check
+  tags: [safety]
+  prerequisites: [add_guardrails]
+  description: The Guardrail fence carries two more shields every map. Needs the Guardrail fence.
+  modifiers: {guardrailExtraShields: 2}
+- id: hotfix_tripwire
+  branch: fences
+  name: Tripwire Fence
+  tier: Principal
+  icon: zap
+  tags: [tempo, risk]
+  prerequisites: [add_guardrails]
+  description: 'Adds the Tripwire fence: it builds 40% faster.'
+  downside: The first ball to touch a finished Tripwire breaks it.
+  grantsFenceType: tripwire
+  modifiers: {}
+- id: tensioned_wire
+  branch: fences
+  name: Tensioned Wire
+  tier: Architect
+  icon: spline
+  tags: [tempo]
+  prerequisites: [hotfix_tripwire]
+  description: A Tripwire survives two more touches before it breaks. Needs the Tripwire fence.
+  modifiers: {fenceExtraHits: 2}
 - id: cold_storage_ice
   branch: fences
   name: Ice Fence
   tier: Senior
   icon: refrigerator
   tags: [freeze]
-  prerequisites: [fast_compile]
+  prerequisites: [fast_compile_plus]
   description: 'Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower.'
   grantsFenceType: ice
   modifiers: {}
 - id: incident_flare
   branch: fences
   name: Flare Fence
-  tier: Senior
+  tier: Principal
   icon: flame-kindling
   tags: [risk]
-  prerequisites: [fast_compile]
+  prerequisites: [cold_storage_ice]
   description: 'Adds the Flare fence: balls bouncing off it speed up, and faster balls are worth more.'
   downside: Faster balls are harder to fence, and it builds 30% slower.
   grantsFenceType: flare
   modifiers: {}
-- id: hotfix_tripwire
+- id: afterburner
   branch: fences
-  name: Tripwire Fence
-  tier: Senior
-  icon: zap
-  tags: [tempo, risk]
-  prerequisites: [fast_compile]
-  description: 'Adds the Tripwire fence: it builds 40% faster.'
-  downside: The first ball to touch a finished Tripwire breaks it.
-  grantsFenceType: tripwire
-  modifiers: {}
+  name: Afterburner
+  tier: Architect
+  icon: rocket
+  tags: [risk, lock]
+  prerequisites: [incident_flare, multithreading]
+  description: A ball locked while it is running faster than its normal speed pays triple the lock bonus. A Flare fence is what makes one that fast.
+  modifiers: {fastLockBonus: 2}
 - id: acquire_the_mutex
   branch: fences
   name: Mutex Fence
-  tier: Senior
+  tier: Principal
   icon: lock-keyhole
   tags: [lock, safety]
-  prerequisites: [fast_compile]
+  prerequisites: [fast_compile, hot_start]
   description: 'Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does.'
   grantsFenceType: mutex
+  modifiers: {}
+- id: raise_the_semaphore
+  branch: fences
+  name: Semaphore Fence
+  tier: Architect
+  icon: flag
+  tags: [lock, risk]
+  prerequisites: [acquire_the_mutex, multithreading]
+  description: 'Adds the Semaphore fence: it locks only two or more balls at once, and pays hugely for them.'
+  downside: It cannot lock a ball on its own, and it builds 40% slower.
+  grantsFenceType: semaphore
   modifiers: {}
 - id: rolling_redeploy
   branch: fences
@@ -129,53 +199,15 @@ upgrades:
   tier: Principal
   icon: rotate-ccw
   tags: [risk, tempo]
-  prerequisites: [fast_compile]
+  prerequisites: [multithreading, scaffolding]
   description: 'Adds the Redeploy fence: grab a finished one and fling the balls in front of it.'
   downside: It builds 40% slower.
   grantsFenceType: redeploy
   modifiers: {}
-- id: raise_the_semaphore
-  branch: fences
-  name: Semaphore Fence
-  tier: Principal
-  icon: flag
-  tags: [lock, risk]
-  prerequisites: [fast_compile]
-  description: 'Adds the Semaphore fence: it locks only two or more balls at once, and pays hugely for them.'
-  downside: It cannot lock a ball on its own, and it builds 40% slower.
-  grantsFenceType: semaphore
-  modifiers: {}
-- id: crash_barrier
-  branch: fences
-  name: Crash Barrier
-  tier: Senior
-  icon: shield-check
-  tags: [safety]
-  prerequisites: [add_guardrails]
-  description: The Guardrail fence carries two more shields every map. Needs the Guardrail fence.
-  modifiers: {guardrailExtraShields: 2}
-- id: afterburner
-  branch: fences
-  name: Afterburner
-  tier: Senior
-  icon: rocket
-  tags: [risk, lock]
-  prerequisites: [incident_flare]
-  description: A ball locked while it is running faster than its normal speed pays triple the lock bonus. A Flare fence is what makes one that fast.
-  modifiers: {fastLockBonus: 2}
-- id: tensioned_wire
-  branch: fences
-  name: Tensioned Wire
-  tier: Senior
-  icon: spline
-  tags: [tempo]
-  prerequisites: [hotfix_tripwire]
-  description: A Tripwire survives two more touches before it breaks. Needs the Tripwire fence.
-  modifiers: {fenceExtraHits: 2}
 - id: hot_reload
   branch: fences
   name: Hot Reload
-  tier: Senior
+  tier: Architect
   icon: refresh-cw
   tags: [risk, tempo]
   prerequisites: [rolling_redeploy]
@@ -192,99 +224,75 @@ upgrades:
 - id: feature_freeze_plus
   branch: hands
   name: Feature Freeze+
-  tier: Junior
+  tier: Senior
   tags: [freeze]
   upgradeOf: feature_freeze
+  prerequisites: [feature_freeze]
   description: Tap a ball to freeze it and its nearest neighbour for 3s. Two taps per map.
   modifiers: {ballFreezeCount: 1}
+- id: scrum_master
+  branch: hands
+  name: Scrum Master
+  tier: Senior
+  icon: route
+  tags: [safety]
+  prerequisites: [feature_freeze]
+  description: 'See where every ball is going: its next three bounces are drawn on the board. A ball with the sight rung draws its own either way.'
+  modifiers: {ballPathPredictionBounces: 3, ballPathPredictionBalls: 999}
 - id: rate_limiter
   branch: hands
   name: Rate Limiter
-  tier: Junior
+  tier: Senior
   icon: hand
   tags: [freeze]
+  prerequisites: [feature_freeze]
   description: Tap a wall to make a stretch of it sticky for 2s. The next ball to hit it stops dead for 3s. Three taps a map.
   modifiers: {stickyTapsPerMap: 3}
 - id: breakpoint
   branch: hands
   name: Breakpoint
-  tier: Senior
+  tier: Principal
   icon: crosshair
   tags: [freeze, lock]
+  prerequisites: [feature_freeze_plus, scrum_master]
   description: Tap an empty spot to set a trap. The first ball to cross it freezes there for 3s. Two traps a map.
   modifiers: {breakpointsPerMap: 2}
 - id: refactor
   branch: hands
   name: Refactor
-  tier: Senior
+  tier: Principal
   icon: eraser
   tags: [tempo]
+  prerequisites: [rate_limiter]
   description: Press and hold a finished fence to delete it, once a map. Captured space stays captured, so only the open lanes change. A fence holding back captured space cannot go.
   modifiers: {refactorsPerMap: 1}
-- id: stash
-  branch: hands
-  name: Stash
-  tier: Principal
-  icon: archive
-  tags: [risk]
-  description: An ability button that remembers where every ball is, once a map. The next ball that would cost you a life puts them all back there instead.
-  modifiers: {stashPerMap: 1}
 - id: merge_conflict
   branch: hands
   name: Merge Conflict
-  tier: Senior
+  tier: Principal
   icon: git-merge
   tags: [lock]
+  prerequisites: [rate_limiter, feature_freeze_plus]
   description: Two plain balls that collide fuse into one bigger, slower ball, worth both their lock bonuses. Bosses and special balls do not merge.
   modifiers: {ballMerge: 1}
+- id: stash
+  branch: hands
+  name: Stash
+  tier: Architect
+  icon: archive
+  tags: [risk]
+  prerequisites: [breakpoint]
+  description: An ability button that remembers where every ball is, once a map. The next ball that would cost you a life puts them all back there instead.
+  modifiers: {stashPerMap: 1}
 - id: control_freak
   branch: hands
   name: Control Freak
-  tier: Senior
+  tier: Architect
   icon: grab
   tags: [safety]
+  prerequisites: [refactor, scrum_master]
   description: Press and hold a moving object to stop it, and drag it along its own track.
   modifiers: {moverBrake: 1, moverDrive: 1}
-- id: scrum_master
-  branch: hands
-  name: Scrum Master
-  tier: Junior
-  icon: route
-  tags: [safety]
-  description: 'See where every ball is going: its next three bounces are drawn on the board. A ball with the sight rung draws its own either way.'
-  modifiers: {ballPathPredictionBounces: 3, ballPathPredictionBalls: 999}
-- id: hot_start
-  branch: hands
-  name: Hot Start
-  tier: Junior
-  icon: flame
-  tags: [tempo]
-  description: The first two fences of every map finish instantly.
-  modifiers: {instantFencesPerMap: 2}
-- id: fault_tolerance
-  branch: office
-  name: Fault Tolerance
-  tier: Senior
-  icon: heart
-  tags: [safety]
-  description: One extra life, for as long as you hold this card.
-  modifiers: {extraLives: 1}
-- id: defensive_programming
-  branch: office
-  name: Defensive Programming
-  tier: Junior
-  icon: shield
-  tags: [safety]
-  description: 'Each map starts with a shield: the first ball to hit a growing fence costs the shield, not a life.'
-  modifiers: {wallShieldsPerMap: 1}
-- id: defensive_programming_plus
-  branch: office
-  name: Defensive Programming+
-  tier: Junior
-  tags: [safety]
-  upgradeOf: defensive_programming
-  description: Each map starts with two shields.
-  modifiers: {wallShieldsPerMap: 1}
 - id: performance_bonus
   branch: office
   name: Performance Bonus
@@ -296,57 +304,81 @@ upgrades:
 - id: performance_bonus_plus
   branch: office
   name: Performance Bonus+
-  tier: Junior
+  tier: Senior
   tags: [bank]
   upgradeOf: performance_bonus
+  prerequisites: [performance_bonus]
   description: Every map pays 50% more overtime.
   modifiers: {scoreMultiplier: 1.2}
-- id: compound_interest
+- id: defensive_programming
   branch: office
-  name: Compound Interest
+  name: Defensive Programming
   tier: Senior
-  icon: piggy-bank
-  tags: [bank]
-  description: Every store pays 8% interest on the hours you hold.
-  modifiers: {shopInterestPercent: 8}
-- id: expense_account
-  branch: office
-  name: Expense Account
-  tier: Junior
-  icon: receipt
-  tags: [bank]
-  description: Every node in the tree costs 30% less.
-  modifiers: {shopDiscountMultiplier: 0.7}
+  icon: shield
+  tags: [safety]
+  prerequisites: [performance_bonus]
+  description: 'Each map starts with a shield: the first ball to hit a growing fence costs the shield, not a life.'
+  modifiers: {wallShieldsPerMap: 1}
 - id: ship_early
   branch: office
   name: Ship Early
   tier: Senior
   icon: timer
   tags: [bank, tempo]
+  prerequisites: [performance_bonus]
   description: Ship Early windows last 4s longer per ball, and Tempo pays double.
   modifiers: {shipEarlySecondsPerBall: 4, shipEarlyBonusMultiplier: 2}
+- id: defensive_programming_plus
+  branch: office
+  name: Defensive Programming+
+  tier: Principal
+  tags: [safety]
+  upgradeOf: defensive_programming
+  prerequisites: [defensive_programming]
+  description: Each map starts with two shields.
+  modifiers: {wallShieldsPerMap: 1}
+- id: fault_tolerance
+  branch: office
+  name: Fault Tolerance
+  tier: Principal
+  icon: heart
+  tags: [safety]
+  prerequisites: [defensive_programming]
+  description: One extra life, for as long as you hold this card.
+  modifiers: {extraLives: 1}
+- id: compound_interest
+  branch: office
+  name: Compound Interest
+  tier: Principal
+  icon: piggy-bank
+  tags: [bank]
+  prerequisites: [performance_bonus_plus]
+  description: Every store pays 8% interest on the hours you hold.
+  modifiers: {shopInterestPercent: 8}
 - id: onboarding
   branch: office
   name: Onboarding
-  tier: Junior
+  tier: Principal
   icon: sunrise
   tags: [tempo]
+  prerequisites: [ship_early]
   description: Every map starts with 15% of the board already captured.
   modifiers: {startingCapturePercent: 15}
-- id: scaffolding
-  branch: office
-  name: Scaffolding
-  tier: Junior
-  icon: land-plot
-  tags: [tempo, safety]
-  description: Every fence starts 30% drawn.
-  modifiers: {fenceHeadStart: 0.3}
 - id: fault_tolerance_2
   branch: office
   name: Redundancy
-  tier: Principal
+  tier: Architect
   icon: heart
   tags: [risk]
-  prerequisites: [fault_tolerance]
+  prerequisites: [fault_tolerance, defensive_programming_plus]
   description: A second extra life, for as long as you hold this node.
   modifiers: {extraLives: 1}
+- id: expense_account
+  branch: office
+  name: Expense Account
+  tier: Architect
+  icon: receipt
+  tags: [bank]
+  prerequisites: [compound_interest, ship_early]
+  description: Every node in the tree costs 30% less.
+  modifiers: {shopDiscountMultiplier: 0.7}

@@ -309,6 +309,26 @@ Decided 2026-11-22, all on the recommendation:
   bricks. A map's `maxBalls` is a cap and never a floor. A certificate may
   start a run with a rung already bought.
 
+Decided 2026-11-22, from the owner's first play of the tree stage:
+
+- **The tree grows in steps.** Each branch has one Junior root (Fast Compile,
+  Feature Freeze, Performance Bonus) that everything else in the branch
+  descends from; families chain Senior to Principal to Architect; several
+  nodes need two parents (Afterburner needs the Flare fence and
+  Multithreading; Stash needs Breakpoint, which needs Feature Freeze+ and
+  Scrum Master), so an early, modest buy is what opens a family and the
+  branches meet further out. `tree.test.ts` holds one root per branch,
+  every edge inside its branch, at least six two-parent nodes, and a child
+  never cheaper than its parent's tier.
+- **Effort is priced.** The map pays about 16h ordinary, 34h good, 47h
+  flawless (upgradePricing.ts, through calculateScore), so the tiers sit on
+  those steps: a Junior root is 15h (an ordinary map buys one), a Senior
+  30h (a great map), a Principal 44h (a flawless map, or two ordinary), an
+  Architect 58h (saved up). The roster's rungs follow the same three steps
+  (15, 30, 45 before stacking, 1.25 a rung held), and the second and third
+  ball are a great map each (30, 45). "A good map buys one cheap thing, a
+  great map one expensive thing" is the rule the numbers are held to.
+
 Still open:
 - The names: "rung", "trait", "roster" are the plan's words; the game's
   words come with the tree stage's copy.

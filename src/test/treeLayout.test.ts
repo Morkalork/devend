@@ -52,8 +52,9 @@ describe("the tree's map", () => {
       expect(to.depth).toBeGreaterThan(from.depth);
       expect(Math.hypot(to.x, to.y)).toBeGreaterThan(Math.hypot(from.x, from.y) + NODE_W / 4);
     }
-    // Every fence type hangs off Fast Compile; a payoff off its fence.
-    expect(layout.edges).toContainEqual({ from: "fast_compile", to: "cold_storage_ice" });
+    // A family chains: the Ice fence hangs off Fast Compile+, a payoff off its fence.
+    expect(layout.edges).toContainEqual({ from: "fast_compile", to: "fast_compile_plus" });
+    expect(layout.edges).toContainEqual({ from: "fast_compile_plus", to: "cold_storage_ice" });
     expect(layout.edges).toContainEqual({ from: "add_guardrails", to: "crash_barrier" });
     expect(layout.edges).toContainEqual({ from: "ball:2", to: "ball:add" });
   });
@@ -61,8 +62,11 @@ describe("the tree's map", () => {
   it("reads depth through the chain and survives a cycle", () => {
     const byId = new Map(catalogue.map(n => [n.id, n]));
     expect(depthOf("fast_compile", byId)).toBe(0);
-    expect(depthOf("cold_storage_ice", byId)).toBe(1);
+    expect(depthOf("fast_compile_plus", byId)).toBe(1);
+    expect(depthOf("cold_storage_ice", byId)).toBe(2);
     expect(depthOf("crash_barrier", byId)).toBe(2);
+    // Two parents: the deeper one decides the ring.
+    expect(depthOf("afterburner", byId)).toBe(4);
     const loop = new Map<string, LayoutNode>([["a", { id: "a", branch: "hands", requires: ["b"] }], ["b", { id: "b", branch: "hands", requires: ["a"] }]]);
     expect(depthOf("a", loop)).toBeLessThanOrEqual(2);
   });

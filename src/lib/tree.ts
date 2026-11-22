@@ -34,9 +34,9 @@ export interface TreeConfig {
 }
 
 export const DEFAULT_TREE: TreeConfig = {
-  rungBase: [12, 20, 32],
-  stackFactor: 1.35,
-  ballCost: [30, 50],
+  rungBase: [15, 30, 45],
+  stackFactor: 1.25,
+  ballCost: [30, 45],
 };
 
 /** Read the `tree:` block of tree.yml over the defaults, field by field. */

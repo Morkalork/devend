@@ -60,6 +60,47 @@ describe("tree.yml", () => {
     }
   });
 
+  it("grows in steps: one root a branch, every other node behind a parent, some behind two", () => {
+    // The owner's rule: X1 before X2, and X1 and Z1 before Y1, so an early,
+    // modest buy opens a family and the branches meet further out.
+    for (const branch of ["fences", "hands", "office"] as const) {
+      const mine = nodesOf(branch, nodes);
+      const roots = mine.filter(n => (n.prerequisites ?? []).length === 0 && !n.upgradeOf);
+      expect(roots.map(r => r.id), branch).toHaveLength(1);
+      expect(roots[0].tier).toBe("Junior");
+      for (const n of mine) {
+        for (const p of n.prerequisites ?? []) {
+          expect(byId.get(p)!.branch, `${n.id} reaches across to ${p}`).toBe(branch);
+        }
+      }
+    }
+    const twoParents = nodes.filter(n => (n.prerequisites ?? []).length >= 2);
+    expect(twoParents.length).toBeGreaterThanOrEqual(6);
+    // Deeper is dearer: a child's tier never falls below a parent's.
+    const rank = { Junior: 0, Senior: 1, Principal: 2, Architect: 3, Wizard: 4 } as Record<string, number>;
+    for (const n of nodes) {
+      for (const p of [...(n.prerequisites ?? []), ...(n.upgradeOf ? [n.upgradeOf] : [])]) {
+        expect(rank[n.tier], `${n.id} under ${p}`).toBeGreaterThanOrEqual(rank[byId.get(p)!.tier]);
+      }
+    }
+  });
+
+  it("prices effort: an ordinary map buys a root, a great map a Senior, a flawless map a Principal", () => {
+    // upgradePricing.ts measured ordinary 16h, good 34h, flawless 47h.
+    const pricing = mergePricing(data.pricing);
+    const at = (tier: string) => resolveUpgradeCost({ tier: tier as UpgradeConfig["tier"] }, pricing)!;
+    expect(at("Junior")).toBeLessThanOrEqual(16);
+    expect(at("Senior")).toBeGreaterThan(16);
+    expect(at("Senior")).toBeLessThanOrEqual(34);
+    expect(at("Principal")).toBeGreaterThan(34);
+    expect(at("Principal")).toBeLessThanOrEqual(47);
+    expect(at("Architect")).toBeGreaterThan(47);
+    // The roster's rungs follow the same three steps.
+    expect(DEFAULT_TREE.rungBase[0]).toBeLessThanOrEqual(16);
+    expect(DEFAULT_TREE.rungBase[1]).toBeLessThanOrEqual(34);
+    expect(DEFAULT_TREE.rungBase[2]).toBeLessThanOrEqual(47);
+  });
+
   it("files every fence type and every verb", () => {
     const fences = nodesOf("fences", nodes).map(n => n.grantsFenceType).filter(Boolean);
     for (const id of ["ice", "flare", "tripwire", "guardrail", "redeploy", "mutex", "semaphore"]) {
@@ -74,7 +115,7 @@ describe("tree.yml", () => {
 
 describe("the roster's prices", () => {
   it("reads the tree block, falling back field by field", () => {
-    expect(parseTreeConfig(data.tree)).toEqual({ rungBase: [12, 20, 32], stackFactor: 1.35, ballCost: [30, 50] });
+    expect(parseTreeConfig(data.tree)).toEqual({ rungBase: [15, 30, 45], stackFactor: 1.25, ballCost: [30, 45] });
     expect(parseTreeConfig(null)).toEqual(DEFAULT_TREE);
     expect(parseTreeConfig({ stackFactor: 0.5, rungBase: [1, 2] })).toEqual(DEFAULT_TREE);
   });
@@ -83,21 +124,21 @@ describe("the roster's prices", () => {
     const plain = { slot: 1, rungs: {} };
     const one = { slot: 1, rungs: { weight: 1 as const } };
     const three = { slot: 1, rungs: { weight: 1 as const, worth: 1 as const, pace: 1 as const } };
-    expect(rungPrice(plain, "weight", DEFAULT_TREE)).toBe(12);
-    expect(rungPrice(one, "weight", DEFAULT_TREE)).toBe(Math.round(20 * 1.35));
-    expect(rungPrice(one, "worth", DEFAULT_TREE)).toBe(Math.round(12 * 1.35));
-    expect(rungPrice(three, "frost", DEFAULT_TREE)).toBe(Math.round(12 * Math.pow(1.35, 3)));
+    expect(rungPrice(plain, "weight", DEFAULT_TREE)).toBe(15);
+    expect(rungPrice(one, "weight", DEFAULT_TREE)).toBe(Math.round(30 * 1.25));
+    expect(rungPrice(one, "worth", DEFAULT_TREE)).toBe(Math.round(15 * 1.25));
+    expect(rungPrice(three, "frost", DEFAULT_TREE)).toBe(Math.round(15 * Math.pow(1.25, 3)));
     expect(nextRank({ slot: 1, rungs: { sight: 3 } }, "sight")).toBeNull();
     expect(rungPrice({ slot: 1, rungs: { sight: 3 } }, "sight", DEFAULT_TREE)).toBeNull();
     expect(rungOffers(plain, DEFAULT_TREE).map(o => o.rung)).toEqual([...RUNG_IDS]);
     expect(rungOffers({ slot: 1, rungs: { sight: 3 } }, DEFAULT_TREE).map(o => o.rung)).not.toContain("sight");
     // Expense Account's discount.
-    expect(rungPrice(plain, "weight", DEFAULT_TREE, 0.7)).toBe(Math.round(12 * 0.7));
+    expect(rungPrice(plain, "weight", DEFAULT_TREE, 0.7)).toBe(Math.round(15 * 0.7));
   });
 
   it("breadth costs more per ball, up to the cap", () => {
     expect(ballPrice(1, DEFAULT_TREE)).toBe(30);
-    expect(ballPrice(2, DEFAULT_TREE)).toBe(50);
+    expect(ballPrice(2, DEFAULT_TREE)).toBe(45);
     expect(ballPrice(ROSTER_MAX, DEFAULT_TREE)).toBeNull();
     expect(ballPrice(0, DEFAULT_TREE)).toBeNull();
   });
