@@ -44,11 +44,15 @@ export interface TreeLayout {
   maxY: number;
 }
 
-/** A node's box, in px: the width a name and a price need, the height a row. */
-export const NODE_W = 148;
-export const NODE_H = 40;
+/**
+ * A node's box, in px: a row for the name and the price, and under it the
+ * node's description, three lines at most (BRIEF_MAX in tree.test.ts is what
+ * keeps a description that short).
+ */
+export const NODE_W = 176;
+export const NODE_H = 72;
 /** The first ring's radius. */
-export const RING_0 = 150;
+export const RING_0 = 170;
 /**
  * The step between rings: along a sideways branch a node's WIDTH lies on the
  * radius, so the step clears that; up and down it is the height that does.

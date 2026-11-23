@@ -1492,6 +1492,7 @@
     "legendCanBuy": "Can buy",
     "legendLocked": "Locked",
     "dragHint": "Drag to look around.",
-    "nextBall": "Next ball"
+    "nextBall": "Next ball",
+    "nextBallBrief": "One more ball on every map."
   }
 }

@@ -2785,15 +2785,17 @@
       },
       "add_guardrails": {
         "name": "Skyddsräcke",
-        "description": "Lägger till skyddsräcket: en gång per bana kostar en boll genom det stängslet, inte ett liv. Det byggs 15% långsammare."
+        "description": "Skyddsräcke: en gång per bana kostar en boll stängslet, inte ett liv.",
+        "detail": "Det byggs 15% långsammare."
       },
       "cold_storage_ice": {
         "name": "Isstängsel",
-        "description": "Lägger till isstängslet: bollar som studsar mot det tappar fart. Det byggs 30% långsammare."
+        "description": "Isstängsel: bollar som studsar mot det tappar fart.",
+        "detail": "Det byggs 30% långsammare."
       },
       "incident_flare": {
         "name": "Blosstängsel",
-        "description": "Lägger till blosstängslet: bollar som studsar mot det får mer fart, och snabba bollar är värda mer.",
+        "description": "Blosstängsel: bollar som studsar får fart och är värda mer.",
         "downside": "Snabba bollar är svårare att stängsla in, och det byggs 30% långsammare."
       },
       "hotfix_tripwire": {
@@ -2803,33 +2805,34 @@
       },
       "acquire_the_mutex": {
         "name": "Mutex-stängsel",
-        "description": "Lägger till mutex-stängslet: det låser bara en ficka med exakt en boll i, och betalar extra när det gör det."
+        "description": "Mutex-stängsel: låser bara en ensam boll, och betalar extra."
       },
       "rolling_redeploy": {
         "name": "Redeploy-stängsel",
-        "description": "Lägger till redeploy-stängslet: ta tag i ett färdigt och slunga iväg bollarna framför det.",
+        "description": "Redeploy-stängsel: ta tag i ett färdigt och slunga bollarna.",
         "downside": "Det byggs 40% långsammare."
       },
       "raise_the_semaphore": {
         "name": "Semafor-stängsel",
-        "description": "Lägger till semafor-stängslet: det låser bara två eller fler bollar samtidigt, och betalar enormt för dem.",
+        "description": "Semafor-stängsel: låser bara 2+ bollar, med enorm bonus.",
         "downside": "Det kan inte låsa en ensam boll, och det byggs 40% långsammare."
       },
       "crash_barrier": {
         "name": "Krockbarriär",
-        "description": "Skyddsräcket har två sköldar till på varje bana. Kräver skyddsräcket."
+        "description": "Skyddsräcket har två sköldar till per bana."
       },
       "afterburner": {
         "name": "Efterbrännare",
-        "description": "En boll som låses medan den går snabbare än sin normala fart ger tre gånger låsbonusen. Ett blosstängsel är det som gör den så snabb."
+        "description": "Lås en boll över sin normala fart: tredubbel låsbonus.",
+        "detail": "Ett blosstängsel är det som gör den så snabb."
       },
       "tensioned_wire": {
         "name": "Spänd tråd",
-        "description": "En snubbeltråd tål två beröringar till innan den går av. Kräver snubbeltråden."
+        "description": "En snubbeltråd tål två beröringar till."
       },
       "hot_reload": {
         "name": "Omladdning",
-        "description": "Ett Redeploy-staket laddar om en gång, så det kan kastas två gånger innan det är förbrukat. Kräver Redeploy-staketet."
+        "description": "Ett Redeploy-stängsel kan kastas två gånger."
       },
       "feature_freeze": {
         "name": "Feature Freeze",
@@ -2837,35 +2840,40 @@
       },
       "feature_freeze_plus": {
         "name": "Feature Freeze+",
-        "description": "Tryck på en boll för att frysa den och dess närmaste granne i 3s. Två tryck per bana."
+        "description": "Tryck på en boll: den och grannen fryser 3s. Två per bana."
       },
       "rate_limiter": {
         "name": "Hastighetsspärr",
-        "description": "Tryck på en vägg för att göra en sträcka klibbig i 2 s. Nästa boll som träffar den stannar tvärt i 3 s. Tre tryck per bana."
+        "description": "Tryck på en vägg: nästa boll som träffar stannar 3s. 3 per bana.",
+        "detail": "Sträckan är klibbig i 2s."
       },
       "breakpoint": {
         "name": "Brytpunkt",
-        "description": "Tryck på en tom plats för att sätta en fälla. Första bollen som korsar den fryser där i 3 s. Två fällor per bana."
+        "description": "Tryck på en plats: första bollen över fryser 3s. 2 per bana."
       },
       "refactor": {
         "name": "Refaktorera",
-        "description": "Håll på ett färdigt staket för att ta bort det, en gång per bana. Erövrad yta förblir erövrad, så bara de öppna gångarna ändras. Ett staket som håller tillbaka erövrad yta kan inte tas bort."
+        "description": "Håll på ett färdigt stängsel för att ta bort det, en gång per bana.",
+        "detail": "Erövrad yta förblir erövrad, så bara de öppna gångarna ändras. Ett stängsel som håller tillbaka erövrad yta kan inte tas bort."
       },
       "stash": {
         "name": "Förråd",
-        "description": "En förmågeknapp som minns var varje boll är, en gång per bana. Nästa boll som skulle kosta dig ett liv sätter i stället tillbaka alla."
+        "description": "En gång per bana: spara bollarnas lägen, återställ i stället för ett liv.",
+        "detail": "En förmågeknapp. Nästa boll som skulle kosta dig ett liv sätter i stället tillbaka alla."
       },
       "merge_conflict": {
         "name": "Sammanslagningskonflikt",
-        "description": "Två vanliga bollar som krockar smälter samman till en större, långsammare boll, värd bådas låsbonus. Bossar och specialbollar smälter inte samman."
+        "description": "Två vanliga bollar som krockar blir en stor, långsam boll.",
+        "detail": "Den är värd bådas låsbonus. Bossar och specialbollar smälter inte samman."
       },
       "control_freak": {
         "name": "Kontrollfreak",
-        "description": "Håll in på ett rörligt objekt för att stoppa det, och dra det längs sin egen bana."
+        "description": "Håll in på ett rörligt objekt för att stoppa och dra det."
       },
       "scrum_master": {
         "name": "Scrum Master",
-        "description": "Se vart varje boll är på väg: dess tre nästa studsar ritas på brädet. En boll med siktsteget ritar sina ändå."
+        "description": "Varje bolls tre nästa studsar ritas ut.",
+        "detail": "En boll med siktsteget ritar sina ändå."
       },
       "hot_start": {
         "name": "Varmstart",
@@ -2877,7 +2885,8 @@
       },
       "defensive_programming": {
         "name": "Defensiv programmering",
-        "description": "Varje bana börjar med en sköld: den första bollen som träffar ett växande stängsel kostar skölden, inte ett liv."
+        "description": "Varje bana börjar med en sköld mot en stängselträff.",
+        "detail": "Den första bollen som träffar ett växande stängsel kostar skölden, inte ett liv."
       },
       "defensive_programming_plus": {
         "name": "Defensiv programmering+",
@@ -2901,7 +2910,7 @@
       },
       "ship_early": {
         "name": "Leverera tidigt",
-        "description": "Fönstren för tidig leverans varar 4s längre per boll, och Tempo ger dubbelt."
+        "description": "Tidig leverans varar 4s längre per boll. Tempo ger dubbelt."
       },
       "onboarding": {
         "name": "Onboarding",
@@ -3366,6 +3375,7 @@
     "legendCanBuy": "Kan köpas",
     "legendLocked": "Låst",
     "dragHint": "Dra för att se dig om.",
-    "nextBall": "Nästa boll"
+    "nextBall": "Nästa boll",
+    "nextBallBrief": "En boll till på varje bana."
   }
 }

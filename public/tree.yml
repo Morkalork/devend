@@ -110,7 +110,8 @@ upgrades:
   icon: fence
   tags: [safety]
   prerequisites: [fast_compile]
-  description: 'Adds the Guardrail fence: once a map, a ball through it costs the fence, not a life. It builds 15% slower.'
+  description: 'Guardrail fence: once a map, a ball breaks it, not a life.'
+  detail: It builds 15% slower.
   grantsFenceType: guardrail
   modifiers: {}
 - id: crash_barrier
@@ -120,7 +121,7 @@ upgrades:
   icon: shield-check
   tags: [safety]
   prerequisites: [add_guardrails]
-  description: The Guardrail fence carries two more shields every map. Needs the Guardrail fence.
+  description: Guardrail fences carry two more shields a map.
   modifiers: {guardrailExtraShields: 2}
 - id: hotfix_tripwire
   branch: fences
@@ -140,7 +141,7 @@ upgrades:
   icon: spline
   tags: [tempo]
   prerequisites: [hotfix_tripwire]
-  description: A Tripwire survives two more touches before it breaks. Needs the Tripwire fence.
+  description: A Tripwire survives two more touches.
   modifiers: {fenceExtraHits: 2}
 - id: cold_storage_ice
   branch: fences
@@ -149,7 +150,8 @@ upgrades:
   icon: refrigerator
   tags: [freeze]
   prerequisites: [fast_compile_plus]
-  description: 'Adds the Ice fence: balls bouncing off it lose speed. It builds 30% slower.'
+  description: 'Ice fence: balls bouncing off it slow down.'
+  detail: It builds 30% slower.
   grantsFenceType: ice
   modifiers: {}
 - id: incident_flare
@@ -159,7 +161,7 @@ upgrades:
   icon: flame-kindling
   tags: [risk]
   prerequisites: [cold_storage_ice]
-  description: 'Adds the Flare fence: balls bouncing off it speed up, and faster balls are worth more.'
+  description: 'Flare fence: bounced balls speed up and pay more.'
   downside: Faster balls are harder to fence, and it builds 30% slower.
   grantsFenceType: flare
   modifiers: {}
@@ -170,7 +172,8 @@ upgrades:
   icon: rocket
   tags: [risk, lock]
   prerequisites: [incident_flare, multithreading]
-  description: A ball locked while it is running faster than its normal speed pays triple the lock bonus. A Flare fence is what makes one that fast.
+  description: 'Lock a ball above its normal speed: triple lock bonus.'
+  detail: A Flare fence is what makes one that fast.
   modifiers: {fastLockBonus: 2}
 - id: acquire_the_mutex
   branch: fences
@@ -179,7 +182,7 @@ upgrades:
   icon: lock-keyhole
   tags: [lock, safety]
   prerequisites: [fast_compile, hot_start]
-  description: 'Adds the Mutex fence: it locks a pocket only when one ball is in it, and pays extra when it does.'
+  description: 'Mutex fence: locks one ball alone, and pays extra.'
   grantsFenceType: mutex
   modifiers: {}
 - id: raise_the_semaphore
@@ -189,7 +192,7 @@ upgrades:
   icon: flag
   tags: [lock, risk]
   prerequisites: [acquire_the_mutex, multithreading]
-  description: 'Adds the Semaphore fence: it locks only two or more balls at once, and pays hugely for them.'
+  description: 'Semaphore fence: locks only 2+ balls, for a huge bonus.'
   downside: It cannot lock a ball on its own, and it builds 40% slower.
   grantsFenceType: semaphore
   modifiers: {}
@@ -200,7 +203,7 @@ upgrades:
   icon: rotate-ccw
   tags: [risk, tempo]
   prerequisites: [multithreading, scaffolding]
-  description: 'Adds the Redeploy fence: grab a finished one and fling the balls in front of it.'
+  description: 'Redeploy fence: grab a finished one and fling the balls.'
   downside: It builds 40% slower.
   grantsFenceType: redeploy
   modifiers: {}
@@ -211,7 +214,7 @@ upgrades:
   icon: refresh-cw
   tags: [risk, tempo]
   prerequisites: [rolling_redeploy]
-  description: A Redeploy fence reloads once, so it can be thrown twice before it is spent. Needs the Redeploy fence.
+  description: A Redeploy fence can be thrown twice.
   modifiers: {slingExtraThrows: 1}
 - id: feature_freeze
   branch: hands
@@ -228,7 +231,7 @@ upgrades:
   tags: [freeze]
   upgradeOf: feature_freeze
   prerequisites: [feature_freeze]
-  description: Tap a ball to freeze it and its nearest neighbour for 3s. Two taps per map.
+  description: 'Tap a ball: it and its neighbour freeze 3s. Twice a map.'
   modifiers: {ballFreezeCount: 1}
 - id: scrum_master
   branch: hands
@@ -237,7 +240,8 @@ upgrades:
   icon: route
   tags: [safety]
   prerequisites: [feature_freeze]
-  description: 'See where every ball is going: its next three bounces are drawn on the board. A ball with the sight rung draws its own either way.'
+  description: 'Every ball''s next three bounces are drawn.'
+  detail: A ball with the sight rung draws its own either way.
   modifiers: {ballPathPredictionBounces: 3, ballPathPredictionBalls: 999}
 - id: rate_limiter
   branch: hands
@@ -246,7 +250,8 @@ upgrades:
   icon: hand
   tags: [freeze]
   prerequisites: [feature_freeze]
-  description: Tap a wall to make a stretch of it sticky for 2s. The next ball to hit it stops dead for 3s. Three taps a map.
+  description: 'Tap a wall: the next ball to hit it stops 3s. 3 a map.'
+  detail: The stretch stays sticky for 2s.
   modifiers: {stickyTapsPerMap: 3}
 - id: breakpoint
   branch: hands
@@ -255,7 +260,7 @@ upgrades:
   icon: crosshair
   tags: [freeze, lock]
   prerequisites: [feature_freeze_plus, scrum_master]
-  description: Tap an empty spot to set a trap. The first ball to cross it freezes there for 3s. Two traps a map.
+  description: 'Tap a spot: the first ball across freezes 3s. 2 a map.'
   modifiers: {breakpointsPerMap: 2}
 - id: refactor
   branch: hands
@@ -264,7 +269,8 @@ upgrades:
   icon: eraser
   tags: [tempo]
   prerequisites: [rate_limiter]
-  description: Press and hold a finished fence to delete it, once a map. Captured space stays captured, so only the open lanes change. A fence holding back captured space cannot go.
+  description: Hold a finished fence to delete it, once a map.
+  detail: Captured space stays captured, so only the open lanes change. A fence holding back captured space cannot go.
   modifiers: {refactorsPerMap: 1}
 - id: merge_conflict
   branch: hands
@@ -273,7 +279,8 @@ upgrades:
   icon: git-merge
   tags: [lock]
   prerequisites: [rate_limiter, feature_freeze_plus]
-  description: Two plain balls that collide fuse into one bigger, slower ball, worth both their lock bonuses. Bosses and special balls do not merge.
+  description: Two plain balls that collide fuse into one big slow ball.
+  detail: It is worth both their lock bonuses. Bosses and special balls do not merge.
   modifiers: {ballMerge: 1}
 - id: stash
   branch: hands
@@ -282,7 +289,8 @@ upgrades:
   icon: archive
   tags: [risk]
   prerequisites: [breakpoint]
-  description: An ability button that remembers where every ball is, once a map. The next ball that would cost you a life puts them all back there instead.
+  description: 'Once a map: save every ball''s spot, restore on a lost life.'
+  detail: An ability button. The next ball that would cost you a life puts them all back instead.
   modifiers: {stashPerMap: 1}
 - id: control_freak
   branch: hands
@@ -291,7 +299,7 @@ upgrades:
   icon: grab
   tags: [safety]
   prerequisites: [refactor, scrum_master]
-  description: Press and hold a moving object to stop it, and drag it along its own track.
+  description: Hold a moving object to stop it and drag it on its track.
   modifiers: {moverBrake: 1, moverDrive: 1}
 - id: performance_bonus
   branch: office
@@ -317,7 +325,8 @@ upgrades:
   icon: shield
   tags: [safety]
   prerequisites: [performance_bonus]
-  description: 'Each map starts with a shield: the first ball to hit a growing fence costs the shield, not a life.'
+  description: Each map starts with a shield against one fence hit.
+  detail: The first ball to hit a growing fence costs the shield, not a life.
   modifiers: {wallShieldsPerMap: 1}
 - id: ship_early
   branch: office
@@ -326,7 +335,7 @@ upgrades:
   icon: timer
   tags: [bank, tempo]
   prerequisites: [performance_bonus]
-  description: Ship Early windows last 4s longer per ball, and Tempo pays double.
+  description: Ship Early lasts 4s longer per ball. Tempo pays double.
   modifiers: {shipEarlySecondsPerBall: 4, shipEarlyBonusMultiplier: 2}
 - id: defensive_programming_plus
   branch: office

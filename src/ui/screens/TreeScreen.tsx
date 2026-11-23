@@ -6,8 +6,8 @@
  * The roster first, because the balls are the build's face: each ball with
  * its rungs, tappable for the rungs it could take next and what they cost,
  * and a slot for the next ball while the roster is under its cap. The tree
- * below, by branch, every node always in view: what the player cannot afford
- * they can still read, which is the planning the store's shelf never allowed.
+ * below, by branch, every node always in view WITH its description on it:
+ * what the player cannot afford they can still read, which is the planning the store's shelf never allowed.
  * A node opens a ticket with its words, its price and what it requires, and
  * the buy is a button on that ticket, so nothing is bought by a brush of the
  * thumb while scrolling.
@@ -209,6 +209,7 @@ export function TreeScreen({
       .filter(id => !ownedIds.includes(id)).map(id => byId.get(id)).filter((n): n is UpgradeConfig => !!n);
     const icon = getUpgradeIcon(node, nodes);
     const downside = contentText.upgradeDownside(t, node);
+    const detail = contentText.treeDetail(t, node);
     return (
       <Modal screen={screen} maxWidth={400} onClose={() => setOpenNode(null)} accent={accent}>
         <View layout={{ gap: 10 }}>
@@ -218,7 +219,8 @@ export function TreeScreen({
               <Label text={contentText.upgradeName(t, node)} size={TEXT.base} font="display" weight="700" color={accent} wrap />
             </View>
           </View>
-          <Label text={contentText.upgradeDesc(t, node)} size={TEXT.sm} lineHeight={20} color={ROLE.ink} wrap />
+          <Label text={contentText.treeBrief(t, node)} size={TEXT.sm} lineHeight={20} color={ROLE.ink} wrap />
+          {detail && <Label text={detail} size={TEXT.xs} lineHeight={17} color={ROLE.muted} wrap />}
           {downside && <Label text={downside} size={TEXT.xs} color={ROLE.cost} wrap />}
           {requires.length > 0 && (
             <View layout={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -266,7 +268,12 @@ export function TreeScreen({
   const INK_OF: Record<NodeState, number> = { owned: 0x000000, canBuy: ROLE.ink, tooDear: ROLE.muted, locked: ROLE.muted };
   const FILL_OF: Record<NodeState, number> = { owned: accent, canBuy: ROLE.surface, tooDear: ROLE.surface, locked: ROLE.surface };
   const EDGE_OF: Record<NodeState, number> = { owned: accent, canBuy: accent, tooDear: ROLE.edge, locked: ROLE.edge };
-  const ALPHA_OF: Record<NodeState, number> = { owned: 1, canBuy: 1, tooDear: 0.75, locked: 0.38 };
+  // The description under a node's name: quieter than the name, and still
+  // readable on a node the player cannot buy yet, since reading ahead is the point.
+  const BRIEF_SIZE = 10.5;
+  const BRIEF_LINE = 13;
+  const BRIEF_INK: Record<NodeState, number> = { owned: 0x0b1f14, canBuy: ROLE.ink, tooDear: ROLE.muted, locked: ROLE.muted };
+  const ALPHA_OF: Record<NodeState, number> = { owned: 1, canBuy: 1, tooDear: 0.8, locked: 0.55 };
 
   const drawEdges = (g: Graphics) => {
     g.clear();
@@ -310,16 +317,20 @@ export function TreeScreen({
         {tree.nodes.map(n => {
           const p = toContent(n.x, n.y);
           const state = stateOf(n.id);
+          const head = { flexDirection: "row" as const, alignItems: "center" as const, gap: 6 };
           const box = { position: "absolute" as const, left: p.x - NODE_W / 2, top: p.y - NODE_H / 2, width: NODE_W, height: NODE_H,
-            flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingLeft: 8, paddingRight: 8,
+            flexDirection: "column" as const, justifyContent: "flex-start" as const, gap: 4, paddingLeft: 8, paddingRight: 8, paddingTop: 7, paddingBottom: 6,
             borderRadius: RADIUS.sm, borderWidth: state === "canBuy" ? 2 : 1, borderColor: EDGE_OF[state], backgroundColor: FILL_OF[state] };
           if (n.id.startsWith("ball:")) {
             if (n.id === addId) {
               return (
                 <Pressable key={n.id} onTap={state === "canBuy" && nextBallPrice !== null ? () => onBuyBall(nextBallPrice) : undefined} alpha={ALPHA_OF[state]} label={t("tree.addBall", { hours: nextBallPrice ?? 0 })} layout={box}>
-                  <Icon icon={Plus} size={14} color={INK_OF[state]} />
-                  <View layout={{ flex: 1 }}><Label text={t("tree.nextBall")} size={TEXT.xs} weight="700" color={INK_OF[state]} truncate /></View>
-                  <Label text={`${nextBallPrice ?? 0}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />
+                  <View layout={head}>
+                    <Icon icon={Plus} size={14} color={INK_OF[state]} />
+                    <View layout={{ flex: 1 }}><Label text={t("tree.nextBall")} size={TEXT.xs} weight="700" color={INK_OF[state]} truncate /></View>
+                    <Label text={`${nextBallPrice ?? 0}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />
+                  </View>
+                  <Label text={t("tree.nextBallBrief")} size={BRIEF_SIZE} lineHeight={BRIEF_LINE} color={BRIEF_INK[state]} wrap />
                 </Pressable>
               );
             }
@@ -328,13 +339,16 @@ export function TreeScreen({
             const held = ball ? RUNG_IDS.filter(id => (ball.rungs[id] ?? 0) > 0) : [];
             return (
               <Pressable key={n.id} onTap={() => setOpenBall(slot)} label={t("tree.ballN", { n: slot })} layout={box}>
-                <View layout={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 0xff5b5b, alignItems: "center", justifyContent: "center" }}>
-                  <Label text={String(slot)} size={10} weight="700" color={0x000000} />
+                <View layout={head}>
+                  <View layout={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 0xff5b5b, alignItems: "center", justifyContent: "center" }}>
+                    <Label text={String(slot)} size={10} weight="700" color={0x000000} />
+                  </View>
+                  <View layout={{ flex: 1 }}><Label text={ball?.name ?? t("tree.ballN", { n: slot })} size={TEXT.xs} weight="700" color={INK_OF.owned} truncate /></View>
                 </View>
-                <View layout={{ flex: 1 }}><Label text={ball?.name ?? t("tree.ballN", { n: slot })} size={TEXT.xs} weight="700" color={INK_OF.owned} truncate /></View>
-                <View layout={{ flexDirection: "row", gap: 2 }}>
-                  {held.map(id => <View key={id} layout={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RUNG_META[id].color }} />)}
-                </View>
+                <Label
+                  text={held.length > 0 ? held.map(id => `${RUNG_META[id].label} ${ball!.rungs[id]}`).join(", ") : t("tree.tapForRungs")}
+                  size={BRIEF_SIZE} lineHeight={BRIEF_LINE} color={BRIEF_INK.owned} wrap
+                />
               </Pressable>
             );
           }
@@ -344,9 +358,12 @@ export function TreeScreen({
           const price = priceOf(node);
           return (
             <Pressable key={n.id} onTap={() => setOpenNode(node.id)} alpha={ALPHA_OF[state]} label={contentText.upgradeName(t, node)} layout={box}>
-              {state === "owned" ? <Icon icon={Check} size={12} color={INK_OF.owned} /> : state === "locked" ? <Icon icon={Lock} size={12} color={INK_OF.locked} /> : icon ? <Icon icon={icon} size={12} color={INK_OF[state]} /> : <Icon icon={Sparkles} size={12} color={INK_OF[state]} />}
-              <View layout={{ flex: 1 }}><Label text={contentText.upgradeName(t, node)} size={TEXT.xs} weight="600" color={INK_OF[state]} truncate /></View>
-              {state !== "owned" && <Label text={`${price}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />}
+              <View layout={head}>
+                {state === "owned" ? <Icon icon={Check} size={12} color={INK_OF.owned} /> : state === "locked" ? <Icon icon={Lock} size={12} color={INK_OF.locked} /> : icon ? <Icon icon={icon} size={12} color={INK_OF[state]} /> : <Icon icon={Sparkles} size={12} color={INK_OF[state]} />}
+                <View layout={{ flex: 1 }}><Label text={contentText.upgradeName(t, node)} size={TEXT.xs} weight="700" color={INK_OF[state]} truncate /></View>
+                {state !== "owned" && <Label text={`${price}h`} size={TEXT.xs} weight="700" color={state === "canBuy" ? ROLE.hours : ROLE.muted} />}
+              </View>
+              <Label text={contentText.treeBrief(t, node)} size={BRIEF_SIZE} lineHeight={BRIEF_LINE} color={BRIEF_INK[state]} wrap />
             </Pressable>
           );
         })}

@@ -19,6 +19,25 @@ const data = yaml.load(readFileSync(resolve(__dirname, "../../public/tree.yml"),
 const nodes = data.upgrades;
 const byId = new Map(nodes.map(n => [n.id, n]));
 
+/** The longest description a node has room to draw (ui/screens/treeLayout.ts NODE_W, NODE_H). */
+const BRIEF_MAX = 60;
+/** Translations run longer than English; this is what three lines hold. */
+const BRIEF_MAX_TRANSLATED = 90;
+
+describe("the tree's words in every language", () => {
+  it.each(["es", "sv", "bn"])("%s keeps every node's description short enough for its node", (lang) => {
+    const locale = JSON.parse(readFileSync(resolve(__dirname, `../i18n/locales/${lang}.json`), "utf8"));
+    const words = locale.content.tree as Record<string, { description?: string; detail?: string }>;
+    for (const n of nodes) {
+      const text = words[n.id]?.description;
+      expect(text, `${lang}: ${n.id} has no description`).toBeTruthy();
+      expect(text!.length, `${lang}: ${n.id}: "${text}"`).toBeLessThanOrEqual(BRIEF_MAX_TRANSLATED);
+      // The fine print is translated wherever the English has some.
+      expect(!!words[n.id]?.detail, `${lang}: ${n.id} detail`).toBe(!!n.detail);
+    }
+  });
+});
+
 describe("tree.yml", () => {
   it("is the tree rule set's catalogue", () => {
     expect(catalogueFileFor("tree")).toBe("/tree.yml");
@@ -32,6 +51,10 @@ describe("tree.yml", () => {
     expect(n.name).toBeTruthy();
     expect(n.description).toBeTruthy();
     expect(n.description).not.toContain("—");
+    // The tree draws the description ON the node, three lines of it at most,
+    // so it is one short line; what only a buyer needs goes in `detail`.
+    expect(n.description.length, `${n.id}: "${n.description}"`).toBeLessThanOrEqual(BRIEF_MAX);
+    expect(n.detail ?? "").not.toContain("—");
     for (const key of Object.keys(n.modifiers ?? {})) {
       expect(key in DEFAULT_MODIFIERS, `${n.id}: ${key}`).toBe(true);
     }

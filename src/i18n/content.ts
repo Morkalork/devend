@@ -52,6 +52,13 @@ export const contentText = {
       ? field(t, 'abilities', u.grantsAbility, 'description', u.description)
       : field(t, upgradeKind(), u.id, 'description', u.description),
 
+  /**
+   * A tree node's own words (tree.yml), whatever it grants: the short line
+   * drawn on the node, and the fine print its ticket adds under it.
+   */
+  treeBrief: (t: TFunction, u: WithId & { description?: string }) => field(t, 'tree', u.id, 'description', u.description),
+  treeDetail: (t: TFunction, u: WithId & { detail?: string }) => field(t, 'tree', u.id, 'detail', u.detail),
+
   /** A draft card's cost line (cards.yml `downside`). */
   upgradeDownside: (t: TFunction, u: WithId & { downside?: string }) =>
     field(t, upgradeKind(), u.id, 'downside', u.downside),

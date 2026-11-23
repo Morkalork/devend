@@ -21,6 +21,12 @@ export interface UpgradeConfig {
   tier: UpgradeTier;
   description: string;
   /**
+   * The fine print, shown on the node's ticket under the description. The
+   * tree draws `description` on the node itself (tree.yml), so that stays one
+   * short line and anything a buyer only needs before buying goes here.
+   */
+  detail?: string;
+  /**
    * Overtime cost. Optional in the YAML source: when omitted the loader derives
    * it from the unlock level's base points x the tier factor (see
    * src/lib/upgradePricing.ts). After loading, this field is always populated
