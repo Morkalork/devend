@@ -161,3 +161,32 @@ describe("the last ball", () => {
     }
   });
 });
+
+describe("a fence drawn across a brick", () => {
+  // Reported from play on map 2: a fence along the top of the block, the balls
+  // below it. The line is thick enough to take every cell a brick of the top
+  // row has, and the row vanished with a ball right beside it.
+  it.each([410, 414, 418, 420, 422])("at y=%i does not bury it: the ball beside it can still break it", (y) => {
+    installClock();
+    setRunSeedText("across");
+    try {
+      const level = { ...MAP2, id: "across", timeLimit: 300 } as LevelConfig;
+      const ctx = createBotGame(level, 2, plainModifiers({ spawnFreezeSeconds: 9999 }), { lives: 3 });
+      const g = ctx.game;
+      g.balls[0].position = { x: 300, y: 600 };
+      g.balls[1].position = { x: 600, y: 600 };
+      expect(tryCut(ctx, { x: 200, y }, { x: 1, y: 0 })).toBe(true);
+      for (let n = 0; g.activeWalls.length > 0 && n < 2000; n++) {
+        stepBot(ctx);
+      }
+      // Whatever the line took, every brick stands, is in reach, and the map goes on.
+      expect((g.destructibles ?? []).filter(d => d.buried).map(d => d.id)).toEqual([]);
+      expect(standing(g)).toHaveLength(9);
+      expect(standing(g).every(d => canStillStrike(g, d))).toBe(true);
+      expect(g.failure ?? null).toBeNull();
+      expect(ctx.events.livesLost).toBe(0);
+    } finally {
+      releaseClock();
+    }
+  });
+});

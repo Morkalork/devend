@@ -16,6 +16,7 @@ import { BOMB_BLAST_COLOR, SHARD_BREAK_BLAST, blastBalls, bombHitDamage, shardBo
 import { carveBlast } from "@/lib/physics/blastCarve";
 import { CanvasGameState } from "@/types/gameState";
 import { isPlayerFence } from "@/lib/wallGeometry";
+import { canStillStrike } from "@/lib/physics/smashReach";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import {
   DestructibleState,
@@ -681,7 +682,8 @@ export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[
  *
  * A brittle brick is never sealed into the grid, so when the ground it stands
  * on is captured its own cells go REMOVED with the rest. A standing brick
- * whose every cell is captured has no ball that can reach it any more: it
+ * whose every cell is captured, with no ball's ground left beside it
+ * (smashReach.canStillStrike), has no ball that can reach it any more: it
  * leaves the board (polygon and edges), is marked buried, and is never
  * counted as smashed. Whether the map can still be won is the smash clause's
  * question (smashReach.smashRequirementLost), asked after this.
@@ -722,6 +724,14 @@ export function buryClaimedBricks(game: CanvasGameState): DestructibleState[] {
       if (grid.cells[i] === CellState.ACTIVE) { allClaimed = false; break; }
     }
     if (!allClaimed) continue;
+    // Claimed, and out of every ball's reach. A fence drawn ACROSS a brick
+    // takes the cells under its own line, and a brick is only a cell or two
+    // tall, so the line alone can take every cell a brick has while a ball's
+    // open ground still lies right beside it. That brick is not fenced off:
+    // it stands, the ball can break it, and burying it hid a brick the
+    // player could see their ball next to (and, on a map that needs every
+    // brick, lost the map for a fence that cut nothing away).
+    if (canStillStrike(game, d)) continue;
     d.buried = true;
     game.obstaclePolygons = game.obstaclePolygons.filter(p => p !== poly);
     const prefix = `obstacle-${d.id}-edge-`;

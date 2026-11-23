@@ -141,6 +141,14 @@ time, 3 buried a brick, none locked out. The bot now looks before it fences
 (`lib/bot/lookBeforeFencing.ts`), as a player does by eye; a bot fencing
 blindly buried the block in 52 of 60, which is the rule doing what it says.
 
+A fence drawn ACROSS a brick does not bury it (2026-11-23, reported from play
+on map 2: the top row vanished under a fence with the ball beside it). The
+line takes the cells under itself, which can be every cell a brick has, so
+burial now also asks that no ball can still strike the brick
+(`canStillStrike`); `brickBurial.test.ts` holds it. Before, 159 of 300 random
+four-fence games near the block erased a brick that was still beside live
+ground; after, 63, each one behind a fence from every ball.
+
 ## Open
 
 - The 3 buried: the capture pass keeps a ball-less strip beside the block

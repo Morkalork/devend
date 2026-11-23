@@ -24,9 +24,12 @@ export function boardWinKey(game: CanvasGameState): string {
     }
     balls = (balls * 31 + h + Math.round(b.radius)) | 0;
   }
+  // Broken and buried both: a buried brick can no longer be smashed, which is
+  // exactly what the smash clause's lost-map check reads.
   let destroyed = 0;
   for (const d of game.destructibles ?? []) {
     if (d.destroyed) destroyed++;
+    if (d.buried) destroyed += 1000;
   }
   let areas = 0;
   for (const a of game.coloredAreas ?? []) {
