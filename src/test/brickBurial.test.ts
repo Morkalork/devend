@@ -190,3 +190,65 @@ describe("a fence drawn across a brick", () => {
     }
   });
 });
+
+describe("a fence lying along a brick's face", () => {
+  // Reported from play on map 2, twice: 6 of 9, the ball alone in a pocket with
+  // no brick left to see, no lock and no end. The top fence lay along the
+  // lower edge of the top row. A fence has a body, so it covered the only face
+  // the ball could reach: the ball bounced off the fence and never touched the
+  // three bricks behind it, while the reach test, which only asked whether a
+  // line to the brick's edge crossed the fence's centre, still called them
+  // breakable.
+  const shootAtTopRow = (y: number) => {
+    const level = { ...MAP2, id: "face", timeLimit: 300 } as LevelConfig;
+    const ctx = createBotGame(level, 2, plainModifiers({ spawnFreezeSeconds: 9999 }), { lives: 9 });
+    const g = ctx.game;
+    g.balls[0].position = { x: 300, y: 620 };
+    g.balls[1].position = { x: 600, y: 620 };
+    expect(tryCut(ctx, { x: 200, y }, { x: 1, y: 0 })).toBe(true);
+    for (let n = 0; g.activeWalls.length > 0 && n < 2000; n++) {
+      stepBot(ctx);
+    }
+    return { ctx, g };
+  };
+  const topRow = (g: CanvasGameState) =>
+    (g.destructibles ?? []).filter(d => (d.obstaclePolygon?.vertices[0].y ?? 999) < 415 || d.buried);
+
+  it.each([428, 429, 430, 431])("at y=%i puts the row out of reach, and the map is lost for it", (y) => {
+    installClock();
+    setRunSeedText("face");
+    try {
+      const { g } = shootAtTopRow(y);
+      const row = topRow(g);
+      expect(row).toHaveLength(3);
+      expect(row.some(d => !d.buried && canStillStrike(g, d))).toBe(false);
+      expect(g.failure?.kind).toBe("objectiveBuried");
+    } finally {
+      releaseClock();
+    }
+  });
+
+  it.each([420, 424, 426])("at y=%i, with the row's edge still showing, a ball fired at it breaks it", (y) => {
+    installClock();
+    setRunSeedText("face");
+    try {
+      const { ctx, g } = shootAtTopRow(y);
+      expect(g.failure ?? null).toBeNull();
+      const brick = topRow(g).find(d => Math.abs((d.obstaclePolygon?.vertices[0].x ?? 0) - 420) < 5)!;
+      expect(canStillStrike(g, brick)).toBe(true);
+      const ball = g.balls[0];
+      // Straight up the middle column: the two bricks below go first.
+      for (let shot = 0; shot < 5 && !brick.destroyed; shot++) {
+        ball.frozenUntil = 0;
+        ball.position = { x: 450, y: 540 };
+        ball.velocity = { x: 0, y: -ball.speed };
+        for (let n = 0; n < 50 && !brick.destroyed; n++) {
+          stepBot(ctx);
+        }
+      }
+      expect(brick.destroyed).toBe(true);
+    } finally {
+      releaseClock();
+    }
+  });
+});

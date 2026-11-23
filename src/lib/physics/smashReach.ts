@@ -29,7 +29,7 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { DestructibleState } from "@/types/game";
 import { CellState, type SpaceGrid } from "@/lib/spaceGrid";
-import { lineSegmentIntersection } from "@/lib/polygon";
+import { lineSegmentIntersection, pointToSegmentDistance } from "@/lib/polygon";
 import { isPlayerFence } from "@/lib/wallGeometry";
 import type { WinSpec } from "@/types/winSpec";
 import {
@@ -99,6 +99,9 @@ function strikingRadius(game: StrikeBoard): number {
   return r === Infinity ? 18 : r;
 }
 
+/** How far past a fence's own face a brick's edge must show before a ball can hit it, in world units. */
+const FENCE_FACE_SLACK = 0.5;
+
 /**
  * Can a ball still get to this slab?
  *
@@ -146,9 +149,24 @@ export function canStillStrike(
       if (fences.length === 0) return true;
       const cx = grid.originX + (col + 0.5) * grid.cellSize;
       const cy = grid.originY + (row + 0.5) * grid.cellSize;
+      // A ball's centre is never inside the brick. Its own cells are live
+      // ground now (a brick is not sealed into the grid), and a cell under the
+      // brick would otherwise vouch for it from zero distance.
+      if (cx > b.x0 && cx < b.x1 && cy > b.y0 && cy < b.y1) continue;
       const target = { x: Math.max(b.x0, Math.min(b.x1, cx)), y: Math.max(b.y0, Math.min(b.y1, cy)) };
       const from = { x: cx, y: cy };
-      if (!fences.some(f => lineSegmentIntersection(from, target, f.start, f.end))) return true;
+      // The fence must neither cross the way to the brick nor LIE ON the face
+      // the ball would hit. A fence has a body: drawn along a brick's edge it
+      // covers that edge, the ball bounces off the fence, and the brick behind
+      // it is never touched, though no line from the ball's ground to the
+      // brick's edge crosses the fence's centre. Reported from play on map 2:
+      // a fence along the lower edge of the top row left three bricks that
+      // nothing could break, counted as breakable, so the map neither locked
+      // nor ended.
+      const blocked = fences.some(f =>
+        lineSegmentIntersection(from, target, f.start, f.end) !== null
+        || pointToSegmentDistance(target, f.start, f.end) <= (f.thickness ?? 0) / 2 + FENCE_FACE_SLACK);
+      if (!blocked) return true;
     }
   }
   return false;

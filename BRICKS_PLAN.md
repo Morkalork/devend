@@ -149,6 +149,17 @@ burial now also asks that no ball can still strike the brick
 four-fence games near the block erased a brick that was still beside live
 ground; after, 63, each one behind a fence from every ball.
 
+A fence lying ALONG a brick's face puts the brick out of reach (2026-11-23,
+the same report, still happening after the fix above). A fence has a body:
+drawn along the lower edge of the top row it covered the only face the ball
+could hit, the ball bounced off the fence, and the three bricks behind it were
+never touched. The reach test asked only whether a line to the brick's edge
+crossed the fence's centre, so it called them breakable: no lock (bricks
+owed), no loss (bricks "reachable"), 6 of 9 for good. `canStillStrike` now
+also refuses a face the fence's body covers, checked against firing a ball at
+the row for every fence height (`brickBurial.test.ts`). The map is then lost
+when that fence lands, as rule 4 says.
+
 ## Open
 
 - The 3 buried: the capture pass keeps a ball-less strip beside the block
