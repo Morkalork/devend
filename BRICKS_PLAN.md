@@ -121,6 +121,20 @@ Reported from play on map 2. The rule is about what is IN the pocket
    around the last moving ball does not lock while the win still needs bricks
    broken, so a brick map never ends "locked out" with bricks standing. If
    that ball cannot reach the bricks, rule 4 ends the map, and says bricks.
+7. **A brick is never a wall.** Reported from play on map 2, twice over: a
+   fence drawn at the block stopped at a brick as if it were a wall, and a
+   room "shut" by a brick counted as sealed. Now a cut passes through a brick
+   (`cuttableWalls`: the cut, its preview, the bot's look-ahead and the admin
+   probe all cast past brittle walls), a brick is not sealed into the capture
+   grid (the ground under it is one room with the ground beside it, so no
+   fence can lean on it), and bricks fenced off with no ball beside them are
+   buried with the ground (`buryClaimedBricks`: hidden, uncounted, out of
+   reach, so rule 4 fires on them as before). Balls still bounce off bricks:
+   it is the FENCE a brick is nothing to, not the ball. Breaking a brick
+   rebuilds the sample regions even though it reopens no grid ground, or a
+   ball rolling onto where it stood was "outside every region" and thrown
+   back (`brickNeverAWall.test.ts`). Archive maps that used brick runs as
+   partitions (7, 17) lost that sealing; the archive is Playground-only.
 
 Measured on map 2 (60 bot runs, all nine bricks needed): 42 won, 15 ran out of
 time, 3 buried a brick, none locked out. The bot now looks before it fences

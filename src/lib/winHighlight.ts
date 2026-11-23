@@ -81,7 +81,7 @@ export function winHighlightRects(
       // Breakables only, matching the clause: mirrors and movers are
       // destructible too and are scenery, not a job.
       for (const d of game.destructibles ?? []) {
-        if (d.kind !== "breakable" || d.destroyed) continue;
+        if (d.kind !== "breakable" || d.destroyed || d.buried) continue;
         // ...and matching the clause's CLASS. A map asking for six shards and
         // one monolith carries two clauses, and each must point only at what
         // would pay it: a ring over a monolith on a shards clause is the same

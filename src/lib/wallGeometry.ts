@@ -16,6 +16,13 @@ export interface Wall {
   isMirror?: boolean;
   isObstacleBoundary?: boolean;
   /**
+   * An edge of a brittle brick (BRICKS_PLAN.md). A ball bounces off it and
+   * breaks it; a cut passes straight through it, and the capture grid never
+   * sealed it, so a brick is NEVER a wall to fence against or to close a
+   * pocket with. Only the player's fences and the map's solids are.
+   */
+  brittle?: boolean;
+  /**
    * Pass rule for the obstacle this edge belongs to (one-way membrane, ball
    * gate). An obstacle lives in TWO collision systems - the polygon
    * penetration check and the unified wall model - and honouring the rule in
@@ -310,6 +317,11 @@ export function lineIntersectsWalls(
  * Cast a ray from origin in direction, reflecting off mirror walls up to maxBounces times.
  * Returns waypoints array [origin, bounce1, ..., finalHitPoint] and the final wall id.
  */
+/** The walls a cut can land on: everything but a brittle brick's edges. */
+export function cuttableWalls(walls: readonly Wall[]): Wall[] {
+  return walls.filter(w => !w.brittle);
+}
+
 export function castRayWithReflections(
   origin: Vector2,
   direction: Vector2,

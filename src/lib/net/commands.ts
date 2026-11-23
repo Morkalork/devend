@@ -34,7 +34,7 @@ import type { Ball, GrowingWall, Vector2 } from "@/types/game";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { GameMessageId } from "@/lib/gameMessages";
 import { vec2Length, vec2Normalize, vec2Sub } from "@/lib/polygon";
-import { WALL_THICKNESS, castRayWithReflections } from "@/lib/wallGeometry";
+import { WALL_THICKNESS, castRayWithReflections, cuttableWalls } from "@/lib/wallGeometry";
 import { STANDARD_FENCE_ID, getFenceType } from "@/lib/fences";
 import { reportFreezeTap } from "@/lib/gameTelemetry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -367,8 +367,12 @@ function applyCut(
   const direction = bent ? outgoingDirection(bent) : vec2Normalize(vec2Sub(cmd.end, cmd.start));
   const backDir   = bent ? incomingDirection(bent) : { x: -direction.x, y: -direction.y };
 
-  const forwardResult  = castRayWithReflections(bent ? bent[bent.length - 1] : origin, direction, game.walls);
-  const backwardResult = castRayWithReflections(origin, backDir, game.walls);
+  // A brittle brick is never a wall to a cut (wallGeometry.ts `brittle`): the
+  // fence runs through it to the next solid, and the brick stays standing in
+  // its path until a ball breaks it.
+  const surfaces = cuttableWalls(game.walls);
+  const forwardResult  = castRayWithReflections(bent ? bent[bent.length - 1] : origin, direction, surfaces);
+  const backwardResult = castRayWithReflections(origin, backDir, surfaces);
   if (!forwardResult || !backwardResult) return;
 
   const endWaypoints   = bent ? joinProjection(bent, forwardResult.waypoints) : forwardResult.waypoints;

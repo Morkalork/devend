@@ -234,7 +234,10 @@ export function carveBlast(game: CanvasGameState, centre: Vector2, radius: numbe
   // Every solid near the blast seals its outline back into the grid: the ring
   // of cells a solid's edge crosses was reopened above if its centre fell
   // outside the solid, and without it the ground floods past the wall.
+  // A brittle brick was never sealed (initGame), so it is not sealed back.
+  const brittle = new Set(game.destructibles.filter(d => d.brittle && d.obstaclePolygon).map(d => d.obstaclePolygon));
   for (const poly of [...game.obstaclePolygons, ...(game.mirrorPolygons ?? [])]) {
+    if (brittle.has(poly)) continue;
     if (polygonTouchesCircle(poly, centre, radius + cs)) sealPolygonToGrid(grid, poly);
   }
 

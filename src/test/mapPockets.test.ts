@@ -36,7 +36,9 @@ const NO_SUPERIOR_NOOK: Record<string, string> = {
   "level-13": "the box behind the mirror is the precision ask",
   "level-14": "bare by design, so the fall is the only thing to read",
   "level-16": "the divider is the map; nothing is meant to be sealed against a pillar",
-  "level-17": "the demolition wall and the vault chest are its rewards",
+  // level-17 came off the list when bricks stopped being walls to a fence
+  // (BRICKS_PLAN.md rule 7): a fence now runs through its demolition wall, and
+  // the vault behind it closes as a one-fence pocket.
   "level-18": "the windmill room pays triple, which is its precision reward",
   "level-19": "the pinwheel's four-fold symmetry leaves no nook by design",
   "level-20": "boss map: the light box is the target, not a lock",

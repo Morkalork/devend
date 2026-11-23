@@ -463,6 +463,12 @@ export interface DestructibleState {
   maxHits: number;             // hits needed to destroy (3)
   lastHitAt: number;           // performance.now() of last counted hit (debounce)
   destroyed: boolean;          // queued/processed for removal
+  /**
+   * Fenced off with no ball beside it: its ground was captured and the brick
+   * went with it (BRICKS_PLAN.md). Gone from the board, never counted as
+   * smashed, and no ball can reach it (destructibles.ts buryClaimedBricks).
+   */
+  buried?: boolean;
   destroyedBy?: string;        // id of the ball that landed the killing hit
   mirrorPolygon?: Polygon;     // mirror: reference into obstacle/mirror polygon arrays
   moverId?: string;            // mover: id of the MoverState

@@ -27,7 +27,7 @@ import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { runtimeDefaults } from "./runtimeDefaults";
 import { DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
-import { castRayWithReflections } from "@/lib/wallGeometry";
+import { castRayWithReflections, cuttableWalls } from "@/lib/wallGeometry";
 import { vec2Normalize } from "@/lib/polygon";
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { easeAutoscalers } from "@/lib/physics/autoscale";
@@ -693,8 +693,9 @@ export function tryCut(ctx: BotGame, origin: Vector2, direction: Vector2): boole
   // Cheap, and the alternative is the harness owning a second copy of the
   // fence-building code - which is exactly what it used to own, thickness 4
   // and all, on a board whose fences are WALL_THICKNESS wide.
-  const forward = castRayWithReflections(origin, dir, game.walls);
-  const backward = castRayWithReflections(origin, neg, game.walls);
+  const surfaces = cuttableWalls(game.walls);
+  const forward = castRayWithReflections(origin, dir, surfaces);
+  const backward = castRayWithReflections(origin, neg, surfaces);
   // A ray can find no wall at all (from a spot on a board that opens already
   // part captured, Onboarding's): the command treats that as no cut, and so
   // must this, or the bot crashes on a map a player plays fine.

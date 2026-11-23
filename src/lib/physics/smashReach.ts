@@ -113,7 +113,7 @@ export function canStillStrike(
 ): boolean {
   const grid = game.spaceGrid;
   if (!grid) return true;
-  if (d.destroyed) return false;
+  if (d.destroyed || d.buried) return false;
   // A slab with no polygon cannot be located, and UNKNOWN IS NOT LOST. Reading
   // "I cannot measure this" as "nothing can reach it" points the error the
   // dangerous way: this rule ends maps, so a slab it cannot see has to be
@@ -321,7 +321,7 @@ export function regionHoldsStandingBrick(
   if (!grid) {
     return false;
   }
-  const standing = breakables(game).filter(d => !d.destroyed);
+  const standing = breakables(game).filter(d => !d.destroyed && !d.buried);
   if (standing.length === 0) {
     return false;
   }
