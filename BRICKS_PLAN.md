@@ -160,6 +160,21 @@ also refuses a face the fence's body covers, checked against firing a ball at
 the row for every fence height (`brickBurial.test.ts`). The map is then lost
 when that fence lands, as rule 4 says.
 
+**What the "pocket that will not lock" was all along** (2026-11-23). The
+bricks were there and nothing drew them. Once the fences closed all the way
+round the ball, claimed ground was one piece with the pocket as a hole in it,
+and the 2D cover put every outline into one fill, which Pixi 8 fills rather
+than punches. The pocket was painted over as taken ground, bricks included;
+on the 3D board the same cover showed them as a faint flat picture. So the
+count stuck short, the pocket looked empty, and it read as a lock that would
+not fire. The cover now cuts its holes (`boardLayer.drawCover`,
+`coverKeepsPocketOpen.test.ts`). The rule changes above were made chasing this
+and stand on their own, but none of them was the cause.
+
+A pocket also locks only at 10% of the board or less; the reports were 15 and
+16%. With the bricks in view that no longer reads as a fault: the map ends on
+the ninth brick, not on a lock.
+
 ## Open
 
 - The 3 buried: the capture pass keeps a ball-less strip beside the block

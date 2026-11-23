@@ -15,7 +15,7 @@
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapOutlineToWalls, traceLockContours, traceContours } from "@/lib/rendering/regionContour";
-import { filledGround, standingOnFill } from "@/lib/rendering/filledGround";
+import { filledGround, nestLoops, standingOnFill } from "@/lib/rendering/filledGround";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
 import { washSpriteAlpha, washStops } from "./boardWash";
@@ -441,10 +441,28 @@ export class BoardLayer {
     if (loops.length === 0) {
       return;
     }
-    for (const loop of loops) {
-      this.coverFill.poly(loop);
+    // Each piece of fill, then ITS holes cut out one by one. A hole is live
+    // ground the fill surrounds: the ball's own pocket, once the fences have
+    // closed all the way round it. Every loop used to go into one fill(), and
+    // Pixi 8 fills a second poly() rather than punching it (the strip above
+    // met the same thing), so the cover painted the pocket over: the board
+    // read as taken wall to wall and the bricks standing in the pocket were
+    // gone from sight while the ball went on breaking them. Reported from play
+    // on map 2 as a pocket with nothing left in it that would not lock.
+    for (const shape of ground.shapes) {
+      if (shape.outer.length < 3) {
+        continue;
+      }
+      this.coverFill.poly(project(shape.outer));
+      this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
+      for (const hole of shape.holes) {
+        if (hole.length < 3) {
+          continue;
+        }
+        this.coverFill.poly(project(hole));
+        this.coverFill.cut();
+      }
     }
-    this.coverFill.fill({ color: PALETTE.captured, alpha: 1 });
     // The edge of the fill: where the player's ground ends.
     for (const loop of loops) {
       this.coverFill.poly(loop);
@@ -465,16 +483,21 @@ export class BoardLayer {
       if (raw.length === 0) {
         break; // tiers are cumulative, so nothing above this exists
       }
-      let drew = false;
-      for (const loop of snapOutlineToWalls(raw, game.walls, grid.cellSize)) {
-        if (loop.length < 3) {
+      // Outer by outer, holes cut, for the same reason as the fill above: a
+      // tint ring round live ground must not tint the ground inside it.
+      for (const shape of nestLoops(snapOutlineToWalls(raw, game.walls, grid.cellSize))) {
+        if (shape.outer.length < 3) {
           continue;
         }
-        this.coverLocked.poly(project(loop));
-        drew = true;
-      }
-      if (drew) {
+        this.coverLocked.poly(project(shape.outer));
         this.coverLocked.fill({ color: PALETTE.accent, alpha: LOCK_TIER_ALPHA });
+        for (const hole of shape.holes) {
+          if (hole.length < 3) {
+            continue;
+          }
+          this.coverLocked.poly(project(hole));
+          this.coverLocked.cut();
+        }
       }
     }
   }
