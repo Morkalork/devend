@@ -16,7 +16,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Vector2 } from "@/types/game";
 import type { WinSpec } from "@/types/winSpec";
 import type { Wall } from "@/lib/wallGeometry";
-import { castRayWithReflections } from "@/lib/wallGeometry";
+import { castRayWithReflections, cuttableWalls } from "@/lib/wallGeometry";
 import { rasterizeCutToGrid, captureUnreachableCells, type SpaceGrid } from "@/lib/spaceGrid";
 import { smashDemands, smashRequirementLost } from "@/lib/physics/smashReach";
 import { vec2Normalize } from "@/lib/polygon";
@@ -26,7 +26,7 @@ function fenceSegments(game: CanvasGameState, origin: Vector2, direction: Vector
   const dir = vec2Normalize(direction);
   const out: { start: Vector2; end: Vector2 }[] = [];
   for (const heading of [dir, { x: -dir.x, y: -dir.y }]) {
-    const ray = castRayWithReflections(origin, heading, game.walls);
+    const ray = castRayWithReflections(origin, heading, cuttableWalls(game.walls));
     if (!ray) {
       return [];
     }

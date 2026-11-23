@@ -38,6 +38,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
+import { buryClaimedBricks } from "@/lib/physics/destructibles";
 import { reportFenceFinished, reportLifeLost } from "@/lib/gameTelemetry";
 import { engagementProgress } from "@/lib/scoreEngagement";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
@@ -138,6 +139,8 @@ function captureUnreachableSpace(game: CanvasGameState): {
   // Wall segments let the capture verify borderline corridors geometrically
   // instead of severing every gap the cell grid can't resolve (false locks).
   captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
+  // The bricks that ground was holding go with it (BRICKS_PLAN.md rule 4).
+  buryClaimedBricks(game);
 
   // Recompute the surviving regions (all now ball-reachable) for downstream
   // bookkeeping. Neighbour-search fallback locates balls whose grid-cell centre

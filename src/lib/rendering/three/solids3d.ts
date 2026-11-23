@@ -72,7 +72,7 @@ function disc(cx: number, cy: number, r: number): Vector2[] {
 export function roleRises(game: CanvasGameState): Map<Polygon, number> {
   const out = new Map<Polygon, number>();
   for (const d of game.destructibles ?? []) {
-    if (d.kind !== "breakable" || !d.obstaclePolygon || d.destroyed) continue;
+    if (d.kind !== "breakable" || !d.obstaclePolygon || d.destroyed || d.buried) continue;
     // A fence-style breakable is drawn as a barrier line, so it stands like one.
     const rise = d.chest ? ROLE_RISE.chest
       : d.brittle ? ROLE_RISE.shard

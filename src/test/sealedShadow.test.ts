@@ -43,7 +43,16 @@ afterEach(() => vi.restoreAllMocks());
 
 function board(levelNumber: number) {
   vi.spyOn(Math, "random").mockReturnValue(0.5);
-  const level = LEVELS.find(l => l.level === levelNumber)!;
+  const authored = LEVELS.find(l => l.level === levelNumber)!;
+  // The partition is made SOLID here. A brittle brick is never a wall any more
+  // (BRICKS_PLAN.md, "Locks and bricks" rule 7): it is not sealed into the
+  // grid, so it holds no pocket shut and has no shadow to give back. This file
+  // is about a wall coming down, so its wall has to be one that holds.
+  const level = {
+    ...authored,
+    entities: (authored.entities ?? []).map(e =>
+      e.id.startsWith("partition-") ? { ...e, brittle: false, breakable: true } : e),
+  } as LevelConfig;
   const data = createInitialGameData(level, levelNumber, DEFAULT_MODIFIERS);
   return {
     ...data, activeWalls: [], objectDebris: [], pendingDestroys: [],

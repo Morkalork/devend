@@ -17,7 +17,7 @@
  * and a preview that disagrees with the cut is worse than none.
  */
 import type { CanvasGameState } from "@/types/gameState";
-import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { castRayWithReflections, WALL_THICKNESS, cuttableWalls } from "@/lib/wallGeometry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { bentDrawnPath, joinProjection, outgoingDirection, incomingDirection } from "@/lib/physics/bentCut";
 import { captureUnreachableCells, rasterizeCutToGrid, CellState, type SpaceGrid } from "@/lib/spaceGrid";
@@ -43,8 +43,12 @@ export function previewCutPaths(game: CanvasGameState): CutPreview | null {
   const bent = bentDrawnPath(game);
   const dir = bent ? outgoingDirection(bent) : vec2Normalize(delta);
   const backDir = bent ? incomingDirection(bent) : { x: -dir.x, y: -dir.y };
-  const fwd = castRayWithReflections(bent ? bent[bent.length - 1] : swipeStart, dir, game.walls);
-  const bwd = castRayWithReflections(bent ? bent[0] : swipeStart, backDir, game.walls);
+  // The same surfaces the cut itself will reflect off: a brittle brick is
+  // not one of them (wallGeometry.ts `brittle`), so the preview passes
+  // through a brick exactly as the fence will.
+  const surfaces = cuttableWalls(game.walls);
+  const fwd = castRayWithReflections(bent ? bent[bent.length - 1] : swipeStart, dir, surfaces);
+  const bwd = castRayWithReflections(bent ? bent[0] : swipeStart, backDir, surfaces);
   if (!fwd || !bwd) return null;
 
   const forwardPath = bent ? joinProjection(bent, fwd.waypoints) : fwd.waypoints;

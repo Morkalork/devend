@@ -43,6 +43,7 @@ import {
   gridIndexToWorld,
   captureUnreachableCells,
   obstacleSealReach,
+  worldToGridIndex,
 } from "@/lib/spaceGrid";
 import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
@@ -675,6 +676,63 @@ export function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[
 }
 
 /**
+ * Bury the bricks the capture just claimed (BRICKS_PLAN.md rule 4: "fencing
+ * bricks off with no ball beside them claims them, bricks and all").
+ *
+ * A brittle brick is never sealed into the grid, so when the ground it stands
+ * on is captured its own cells go REMOVED with the rest. A standing brick
+ * whose every cell is captured has no ball that can reach it any more: it
+ * leaves the board (polygon and edges), is marked buried, and is never
+ * counted as smashed. Whether the map can still be won is the smash clause's
+ * question (smashReach.smashRequirementLost), asked after this.
+ *
+ * Called after every capture pass. Returns the bricks buried this time.
+ */
+export function buryClaimedBricks(game: CanvasGameState): DestructibleState[] {
+  const grid = game.spaceGrid;
+  if (!grid) return [];
+  const buried: DestructibleState[] = [];
+  for (const d of game.destructibles) {
+    if (d.kind !== 'breakable' || !d.brittle || d.destroyed || d.buried || !d.obstaclePolygon) continue;
+    const poly = d.obstaclePolygon;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const v of poly.vertices) {
+      if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+    }
+    // Every cell whose centre the brick covers, and at least the cell under
+    // its own centre: a brick thinner than a cell covers no centre at all.
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const indices = new Set<number>();
+    const centre = worldToGridIndex(grid, cx, cy);
+    if (centre >= 0) indices.add(centre);
+    const c0 = Math.max(0, Math.floor((minX - grid.originX) / grid.cellSize));
+    const c1 = Math.min(grid.width - 1, Math.floor((maxX - grid.originX) / grid.cellSize));
+    const r0 = Math.max(0, Math.floor((minY - grid.originY) / grid.cellSize));
+    const r1 = Math.min(grid.height - 1, Math.floor((maxY - grid.originY) / grid.cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const wx = grid.originX + col * grid.cellSize + grid.cellSize / 2;
+        const wy = grid.originY + row * grid.cellSize + grid.cellSize / 2;
+        if (pointInPolygon({ x: wx, y: wy }, poly)) indices.add(row * grid.width + col);
+      }
+    }
+    let allClaimed = indices.size > 0;
+    for (const i of indices) {
+      if (grid.cells[i] === CellState.ACTIVE) { allClaimed = false; break; }
+    }
+    if (!allClaimed) continue;
+    d.buried = true;
+    game.obstaclePolygons = game.obstaclePolygons.filter(p => p !== poly);
+    const prefix = `obstacle-${d.id}-edge-`;
+    game.walls = game.walls.filter(w => !w.id.startsWith(prefix));
+    game.obstacleVersion = (game.obstacleVersion ?? 0) + 1;
+    buried.push(d);
+  }
+  return buried;
+}
+
+/**
  * Remove an obstacle polygon from the world (polygon ref, edge walls) and
  * reopen its carved footprint as capturable space. Returns cells opened.
  * Arrays are reassigned (not spliced) so renderFrame's reference-keyed glow /
@@ -965,6 +1023,7 @@ export function processDestroysFn(
 
   const now = simNow();
   let opened = 0;
+  let brickWent = false;
 
   for (const d of pending) {
     // Mirror/mover kills drop the destroying (black) ball's lock multiplier.
@@ -1041,6 +1100,9 @@ export function processDestroysFn(
       }
     }
     opened += detachObstacle(game, d.id, poly);
+    if (d.brittle) {
+      brickWent = true;
+    }
 
     if (d.kind === 'mirror') {
       game.mirrorPolygons = game.mirrorPolygons.filter(p => p !== poly);
@@ -1064,6 +1126,15 @@ export function processDestroysFn(
   callbacks.repaintRegionCanvas();
 
   settleReopenedGround(game, callbacks, opened);
+  // A brick stands on open ground (it is never sealed into the grid, so a fence
+  // can never lean on it), so breaking one reopens nothing and the settle above
+  // did not run. The sample regions still need rebuilding: the flood that drew
+  // them at the last cut stopped at the brick's walls, and a ball rolling onto
+  // the ground it stood on would otherwise be "outside every region" and thrown
+  // back where it came from. Found by the boxed-ball test on map 2.
+  if (brickWent && opened <= 0 && game.spaceGrid) {
+    rebuildRegionsKeepAll(game);
+  }
 
   // A drill that was eating one of these carries on through the gap it just
   // made (FENCE_TYPES_PLAN.md). LAST, and after the region rebuild above, for

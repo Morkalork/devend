@@ -720,6 +720,10 @@ export function createInitialGameData(
           ...(entity.passTypes?.length ? { passTypes: entity.passTypes } : {}),
         };
         const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
+        // A brittle brick's edges bounce balls and nothing else (wallGeometry.ts).
+        if ((entity as WallEntity).brittle === true) {
+          for (const w of obstacleWalls) w.brittle = true;
+        }
         if (!isEmptyRule(rule)) {
           obstacleRules.set(obstaclePolygon, rule);
           // The SAME object on both, so a future edit cannot update one path
@@ -1204,7 +1208,14 @@ export function createInitialGameData(
   // Sealed areas are carved out of the grid like obstacles (removed, and NOT
   // counted in initialActiveCount), so they read as locked until their gate
   // breaks and restores them.
-  const spaceGrid   = createSpaceGrid(boardPolygon, sealedPolys.length ? [...obstaclePolygons, ...sealedPolys] : obstaclePolygons, initGridSize);
+  // A brittle brick is not sealed into the grid (BRICKS_PLAN.md): its cells
+  // stay live ground, so a fence ending beside a brick row closes nothing and
+  // a brick never stands in for a wall. The ball still cannot enter it; the
+  // physics keeps the polygon. Fenced off with no ball beside it, its cells
+  // are captured like any ground and the brick is buried (destructibles.ts).
+  const brittlePolys = new Set(obstacleEntities.filter(o => o.brittle).map(o => o.polygon));
+  const sealedObstacles = obstaclePolygons.filter(p => !brittlePolys.has(p));
+  const spaceGrid   = createSpaceGrid(boardPolygon, sealedPolys.length ? [...sealedObstacles, ...sealedPolys] : sealedObstacles, initGridSize);
   // The obstacles a ball can pass, as ground the capture flood may cross
   // (spaceGrid.ts, GridLink): a room whose only way in is a membrane, a gate or
   // a portal is not unreachable while a ball can still go through.

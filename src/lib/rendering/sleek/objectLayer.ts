@@ -152,7 +152,7 @@ export class ObjectLayer {
   private animating(game: CanvasGameState): boolean {
     if (anyObstacleImpactsActive()) return true;
     for (const d of game.destructibles) {
-      if (!d.destroyed && (d.bug || d.bombExposed)) return true;
+      if (!d.destroyed && !d.buried && (d.bug || d.bombExposed)) return true;
     }
     for (const p of game.phasingObjects ?? []) {
       if (p.alpha > 0.02 && p.alpha < 0.98) return true;
@@ -163,7 +163,7 @@ export class ObjectLayer {
   private keptKeyFor(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): string {
     let state = "";
     for (const d of game.destructibles) {
-      state += `${d.id}:${d.hits}:${d.destroyed ? 1 : 0}:${d.dents?.length ?? 0},`;
+      state += `${d.id}:${d.hits}:${d.destroyed || d.buried ? 1 : 0}:${d.dents?.length ?? 0},`;
     }
     for (const p of game.phasingObjects ?? []) {
       state += `p${p.phase}:${p.alpha > 0.5 ? 1 : 0},`;
@@ -236,7 +236,7 @@ export class ObjectLayer {
     const phasingPolys = new Set((game.phasingObjects ?? []).map(p => p.polygon));
 
     for (const d of game.destructibles) {
-      if (d.destroyed) continue;
+      if (d.destroyed || d.buried) continue;
       const poly = d.obstaclePolygon ?? d.mirrorPolygon;
       if (!poly || phasingPolys.has(poly)) continue;
       const damage = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;

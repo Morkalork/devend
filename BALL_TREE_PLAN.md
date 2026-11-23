@@ -237,7 +237,9 @@ What changes in MAP_DESIGN_GUIDELINES.md:
 - **Every ball type the maps taught becomes a rung the player may own**, so
   the teaching unit (Meet, Use, Fight, Break) now teaches the player's own
   tools: map 8 taught the black ball; under the tree it is the map where
-  weight pays, with a brick wall between you and the pocket.
+  weight pays, with a brick wall between you and the pocket (a wall to the
+  BALL only: a fence runs through bricks, BRICKS_PLAN.md rule 7, so the map
+  must make the pocket worth the ball getting there, not the fence).
 - The pocket probe and the slack rule still hold, read for one ball.
 
 The retune is by act: maps 1 to 10 first, played with one ball and with

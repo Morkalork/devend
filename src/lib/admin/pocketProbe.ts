@@ -19,7 +19,7 @@
  * same castRayWithReflections the input layer uses (so a mirror bends it), then
  * rasterised onto a copy of the grid and the regions read back fresh.
  */
-import { castRayWithReflections, WALL_THICKNESS, type Wall } from "@/lib/wallGeometry";
+import { castRayWithReflections, WALL_THICKNESS, type Wall, cuttableWalls } from "@/lib/wallGeometry";
 import {
   CellState, rasterizeCutToGrid, findGridRegions, worldToGridIndex,
   exportGridRegionIdCounter, importGridRegionIdCounter, type SpaceGrid,
@@ -73,13 +73,15 @@ export function probePockets(
 
   const x0 = grid.originX + STEP / 2, y0 = grid.originY + STEP / 2;
   const x1 = grid.originX + grid.width * grid.cellSize, y1 = grid.originY + grid.height * grid.cellSize;
+  // The surfaces a cut reflects off: a brittle brick is not one.
+  const surfaces = cuttableWalls(board.walls);
   for (let y = y0; y < y1; y += STEP) {
     for (let x = x0; x < x1; x += STEP) {
       const idx = worldToGridIndex(grid, x, y);
       if (idx < 0 || grid.cells[idx] !== CellState.ACTIVE) continue;
       for (const d of [{ x: 1, y: 0 }, { x: 0, y: 1 }]) {
-        const fwd = castRayWithReflections({ x, y }, d, board.walls);
-        const back = castRayWithReflections({ x, y }, { x: -d.x, y: -d.y }, board.walls);
+        const fwd = castRayWithReflections({ x, y }, d, surfaces);
+        const back = castRayWithReflections({ x, y }, { x: -d.x, y: -d.y }, surfaces);
         if (!fwd || !back) continue;
         // Without the origin: it sits on the straight run between the two
         // halves, and keeping it made every starting spot a "different" fence
