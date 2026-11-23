@@ -70,3 +70,23 @@ describe("claimed ground closed all the way round the ball", () => {
     expect(cover).not.toMatch(/for \(const loop of loops\) \{\s*this\.coverFill\.poly\(loop\);\s*\}\s*this\.coverFill\.fill/);
   });
 });
+
+describe("an outline near a brick", () => {
+  it("is never pulled onto the brick's face", async () => {
+    const { snapOutlineToWalls } = await import("@/lib/rendering/regionContour");
+    // A claimed edge running along y=380, 12 units above a brick whose top is
+    // at y=392. Snapped to the brick it would drop onto 392: the tab of
+    // claimed colour reported from play on map 2.
+    const loop: { x: number; y: number }[] = [];
+    for (let x = 300; x <= 420; x += 5) {
+      loop.push({ x, y: 380 });
+    }
+    loop.push({ x: 420, y: 300 }, { x: 300, y: 300 });
+    const brickTop = { start: { x: 352, y: 392 }, end: { x: 412, y: 392 }, brittle: true };
+    const [snapped] = snapOutlineToWalls([loop], [brickTop], 15);
+    expect(snapped.every(p => p.y <= 380)).toBe(true);
+    // The same line as a solid wall still snaps, as it always has.
+    const [solid] = snapOutlineToWalls([loop], [{ ...brickTop, brittle: false }], 15);
+    expect(solid.some(p => p.y > 385)).toBe(true);
+  });
+});

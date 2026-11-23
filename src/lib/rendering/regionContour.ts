@@ -111,6 +111,8 @@ export function traceContours(grid: SpaceGrid, inside: CellInside): ContourPoint
 export interface WallSegment {
   start: ContourPoint;
   end: ContourPoint;
+  /** A brittle brick's edge (wallGeometry.ts): never snapped to, see snapOutlineToWalls. */
+  brittle?: boolean;
 }
 
 /**
@@ -377,8 +379,14 @@ export function snapOutlineToWalls(
   walls: WallSegment[],
   cellSize: number,
 ): ContourPoint[][] {
+  // Never onto a brick. A brick stands on live ground (it is not sealed into
+  // the grid), so no outline ends at one, and pulling the edge of claimed
+  // ground onto a brick's face dragged a tab of claimed colour into the
+  // pocket wherever a fence ran within reach of the block. Reported from play
+  // on map 2 as the lock colour bleeding into the leftmost bricks.
+  const solid = walls.some(w => w.brittle) ? walls.filter(w => !w.brittle) : walls;
   return snapContoursToWalls(
-    loops, walls,
+    loops, solid,
     cellSize * OUTLINE_SNAP_REACH_CELLS,
     "segment",
     cellSize * OUTLINE_SNAP_FULL_CELLS,
