@@ -26,13 +26,21 @@ levels:
   # cell count). Nothing points at it. Some players will seal there by accident
   # and get paid, which teaches pocket size better than any explanation.
   # Heights (3D board, objectRise.ts): the doorway is the map, so its jambs stand tall; the nook's lip sits low, the invitation to seal.
+  #
+  # Par 5 and points 8 (were 3 and 5), so a first run can buy something
+  # after it (BOT_PLAYERS.md). Pay holds while a player is within two fences
+  # of par and falls off a cliff at three over (the base is cut to a fifth and
+  # the space bonus goes): at par 3 a beginner drawing six fences was paid 9h,
+  # under the 15h of the cheapest rung or Junior root. Now: 22h at par, 18h one
+  # over, 17h two over, measured with the bot's own clears and par set to land
+  # it there. Still under map 2, which is harder and pays more.
   - id: level-1
     name: Hello World
     level: 1
     premise: "The one where locking the only ball wins outright, so the corner nook is a button marked finish now."
     sizeThreshold: 40
-    expectedCuts: 3
-    points: 5
+    expectedCuts: 5
+    points: 8
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -85,9 +93,9 @@ levels:
   # walls a brick off is a lesson and not the end of the map. Space is not
   # asked for: here a fence is a tool for breaking, not the goal.
   #
-  # Pays more than map 1 (points 18 against 5): it is the harder map. At par
-  # it pays about 25h to map 1's 24h; at 5 it paid 12h, less than the map
-  # before it.
+  # Pays more than map 1 (points 22 against 8): it is the harder map. At 5 it
+  # paid 12h at par, less than the map before it; 22 keeps it above map 1
+  # after map 1's own retune.
   #
   # Measured (BOT_PLAYERS.md, the six players in practice, 30 runs each, par
   # +60 so the bot's pay reads as a tidy player's): the Casual player wins 59%
@@ -103,7 +111,7 @@ levels:
     sizeThreshold: 15
     timeLimit: 30
     expectedCuts: 4
-    points: 18
+    points: 22
     variety: 0
     randomShapes: 0
     maxBalls: 2

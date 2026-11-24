@@ -52,8 +52,14 @@ describe("the new ladder", () => {
     }
   });
 
-  it("keeps the old first map exactly as it was", () => {
-    expect(byLevel(LADDER, 1)).toEqual(byLevel(ARCHIVE, 1));
+  it("keeps the old first map's board and win, with a tutorial's par and pay", () => {
+    // Retuned 2026-11-24 (BOT_PLAYERS.md): par 3 to 5 and points 5 to 8, so a
+    // first run can buy something after it. Everything else is the old map.
+    const now = byLevel(LADDER, 1)!;
+    const old = byLevel(ARCHIVE, 1)!;
+    expect({ ...now, expectedCuts: old.expectedCuts, points: old.points }).toEqual(old);
+    expect(now.expectedCuts).toBe(5);
+    expect(now.points).toBe(8);
   });
 });
 

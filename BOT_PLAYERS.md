@@ -115,9 +115,16 @@ Practice, 30 runs per player, par +60:
 | Level 2 pay at par | 12h | 25h (map 1: 24h) |
 | Real runs that finish the ladder | 57% | 77-80% |
 
-Open: the bosses. Archive 10 is lost almost only to the boss being left
-outside, which is how boss maps place their own balls. That needs its own pass
-before a boss joins the ladder.
+Map 1 then got a tutorial's par: 5 instead of 3, and points 8 instead of 5.
+Pay holds while a player is within two fences of par and falls off a cliff at
+three over (the base cut to a fifth, the space bonus gone). So at par 3, a
+beginner drawing six fences was paid 9h, under the 15h of the cheapest buy;
+now it is 17-22h. Map 2's points went to 22 to stay above it. Both maps meet
+the checklist (practice, par +60: map 1 27h, map 2 29h).
+
+The bosses: archive 10 is lost almost only to the boss being left outside,
+which is how boss maps place their own balls. The new setting, where the boss
+is a structure to break, is in BOSS_PLAN.md.
 
 ## First readings (2026-11-24, before the retune)
 
