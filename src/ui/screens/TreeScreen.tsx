@@ -27,7 +27,7 @@ import { RUNG_IDS, RUNG_META, ROSTER_MAX, type Roster, type RosterBall, type Run
 import { ballPrice, rungOffers } from "@/lib/tree";
 import { NODE_H, NODE_W, layoutTree, type LayoutNode } from "./treeLayout";
 import {
-  Appear, ArcadeButton, ArcadeText, Icon, Label, Modal, PanView, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, arcadeInk, hex, tint, useUiScreen,
+  Appear, ArcadeButton, ArcadeText, Icon, Label, Modal, PanView, Pressable, RADIUS, ROLE, ScrollView, TEXT, View, arcadeInk, hex, tint, useUiScreen, withAlpha,
 } from "../kit/ui";
 import { PipelineFrame } from "./PipelineFrame";
 import { continueLabel, samplePlan, type BetweenMapPlan } from "./pipelineModel";
@@ -134,7 +134,7 @@ export function TreeScreen({
                   label={meta.label}
                   layout={{
                     padding: 14, gap: 6, borderRadius: RADIUS.md, borderWidth: 2,
-                    borderColor: on ? meta.color : ROLE.edge, backgroundColor: on ? tint(meta.color, 0.12) : ROLE.surface,
+                    borderColor: on ? meta.color : ROLE.edge, backgroundColor: on ? withAlpha(meta.color, 0.12, ROLE.surface) : ROLE.surface,
                   }}
                 >
                   <View layout={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
