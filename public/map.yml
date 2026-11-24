@@ -71,25 +71,39 @@ levels:
 
   # 2 "Unit Tests" - MEET the brick, and the clock.
   #
-  # Nine bricks in a block in the middle of an open board, two balls, thirty
-  # seconds. Nothing else. A brick breaks on one touch, so the only question is
-  # how often a ball gets to the block, and that is the lesson: on the open
-  # board two balls wander and the clock runs out, and every fence that takes
-  # empty board away sends them back to the block sooner. Locking the board
-  # down is how the bricks get broken.
+  # Nine bricks in a block in the middle of an open board, thirty seconds.
+  # Nothing else. The only question is how often a ball gets to the block, and
+  # that is the lesson: on the open board the ball wanders and the clock runs
+  # out, and every fence that takes empty board away sends it back to the block
+  # sooner. Locking the board down is how the bricks get broken.
   #
-  # The win is the bricks alone. Space is not asked for: here a fence is a tool
-  # for breaking, not the goal.
+  # Built for ONE ball (MAP_DESIGN_CARD.md section 5): under the tree a player
+  # arrives here with the one ball they started with, and a second costs about
+  # three maps of pay. maxBalls 2 is the cap a later fleet would be held to.
   #
-  # Measured: see BRICKS_PLAN.md (the bot's clears with and without fences).
+  # The win is seven of the nine: two spare (section 3), so one fence that
+  # walls a brick off is a lesson and not the end of the map. Space is not
+  # asked for: here a fence is a tool for breaking, not the goal.
+  #
+  # Pays more than map 1 (points 18 against 5): it is the harder map. At par
+  # it pays about 25h to map 1's 24h; at 5 it paid 12h, less than the map
+  # before it.
+  #
+  # Measured (BOT_PLAYERS.md, the six players in practice, 30 runs each, par
+  # +60 so the bot's pay reads as a tidy player's): the Casual player wins 59%
+  # of attempts, the Fence Engineer 77% (Fast Compile, bought after map 1, is
+  # time against the clock), the clock is 56% of losses and walled-off bricks
+  # most of the rest. Real runs finish the ladder 77-80% of the time. At nine
+  # of nine and points 5 Casual won 46%, the clock took two losses in three,
+  # and no player could buy anything before it.
   - id: level-2
     name: Unit Tests
     level: 2
-    premise: "The one where nine bricks sit in the middle and thirty seconds is only enough if you fence the balls in around them."
+    premise: "The one where nine bricks sit in the middle and thirty seconds is only enough if you fence your ball in around them."
     sizeThreshold: 15
     timeLimit: 30
     expectedCuts: 4
-    points: 5
+    points: 18
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -97,7 +111,7 @@ levels:
     win:
       require:
         - kind: smashed
-          count: 9
+          count: 7
           of: shards
     entities:
       - id: brick-a1

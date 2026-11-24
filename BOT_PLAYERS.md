@@ -61,6 +61,7 @@ ARCHETYPE_SWEEP=1 ARCHETYPE_OUT=/tmp/players npx vitest run src/test/archetypeSw
 | `ARCHETYPE_MAPS` | Stop each run after this many maps |
 | `ARCHETYPE_ENDLESS=1` | Practice mode |
 | `ARCHETYPE_ONLY` | Only these players, e.g. `fleet,fencer` |
+| `ARCHETYPE_PAR` | Added to every map's par: `60` takes the over-par cut off the base, so the pay reads as a tidy player's |
 
 The report has a table per player (maps won, lives spent, hours earned,
 attempts won, seconds per win, and the build at the end), a table of maps won
@@ -68,7 +69,57 @@ per map per player, and each player's most common purchases and where its runs
 ended. The ladder's two maps take about a minute for 30 runs each; 15 archive
 maps in practice take about seven minutes for 12 runs each.
 
-## First readings (2026-11-24)
+## The map checklist
+
+The report ends with a checklist per map (`src/lib/bot/mapChecklist.ts`), the
+targets in MAP_DESIGN_CARD.md section 7:
+
+| Target | Pass when |
+|---|---|
+| Band | Casual wins 50-80% of its attempts |
+| Build | some player wins 15 points more than Casual |
+| Losses | no single cause is over 70% of them |
+| Pay | no map Casual finds harder than an earlier one pays less than it |
+
+The first map is the tutorial and is held to no band. Each miss is written out
+("too hard: Casual wins 32%", "one knob: timeUp is 96% of losses").
+
+**Read pay with `ARCHETYPE_PAR=60`.** The bot draws a fence every
+three-quarters of a second all map long. On a map whose win is bricks it ends
+twenty fences over a par of four, and a map's base is cut to a fifth from
+three over par. So its own pay is a sloppy player's pay. Par 60 removes that
+cut and slightly overstates pay through the under-par bonus.
+
+A fence budget for the bot was tried and dropped. Its fences are random, so
+held to par plus two it could not finish map 1, and the budget measured its
+aim rather than the map.
+
+## The first retune (2026-11-24)
+
+From the readings below:
+
+- Level 2 now asks for seven of its nine bricks (two spare), is written for one
+  ball, and pays more than map 1 (`points` 5 to 18). Its clock stays at 30s.
+- `ladderRoster.test.ts` holds every ladder map to one-ball clearability and a
+  spare on every smash clause.
+- Pay follows difficulty, and every map after the first must test a build
+  (MAP_DESIGN_CARD.md).
+
+Practice, 30 runs per player, par +60:
+
+| | Before | After |
+|---|---|---|
+| Level 2, Casual wins per attempt | 46% | 59% |
+| Level 2, best player over Casual | 1 point | 18 points (Fence Engineer: Fast Compile after map 1) |
+| Level 2, the clock's share of losses | 65% | 56% |
+| Level 2 pay at par | 12h | 25h (map 1: 24h) |
+| Real runs that finish the ladder | 57% | 77-80% |
+
+Open: the bosses. Archive 10 is lost almost only to the boss being left
+outside, which is how boss maps place their own balls. That needs its own pass
+before a boss joins the ladder.
+
+## First readings (2026-11-24, before the retune)
 
 **The ladder (2 maps), real runs, 30 each.** Every player finishes about 57%
 of the time, and the endings are the same for all: lives spent on map 2 to

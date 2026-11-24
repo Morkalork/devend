@@ -53,6 +53,12 @@ export interface CampaignOptions {
   endless?: boolean;
   /** Tries per map in practice (default 3). */
   attemptsPerMap?: number;
+  /**
+   * Laid over the build's modifiers on every map, for an experiment: a
+   * generous par (`parBonus`) reads what a tidier player than the bot would be
+   * paid, since the bot usually finishes three fences over par.
+   */
+  extraModifiers?: Partial<GameModifiers>;
 }
 
 export interface MapAttempt {
@@ -251,7 +257,7 @@ export function runCampaign(
       lastPlayed = n;
       for (let attempt = 0; !won && (endless ? attempt < tries : lives > 0); attempt++) {
         setActiveRoster(roster);
-        const modifiers = modifiersFor(owned, i);
+        const modifiers = { ...modifiersFor(owned, i), ...(opts.extraModifiers ?? {}) };
         const r = runBot(level, n, seed * 1000 + n * 10 + attempt, {
           // In practice the board still plays real lives within a map, from a full set.
           modifiers, maxFrames, lives: endless ? CAMPAIGN_LIVES : lives,

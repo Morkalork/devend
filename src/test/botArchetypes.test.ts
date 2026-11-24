@@ -14,7 +14,8 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import { ARCHETYPES, archetypeById, pickTrait } from "@/lib/bot/archetypes";
-import { runCampaign, shopVisit, type CampaignCatalogue } from "@/lib/bot/runCampaign";
+import { runCampaign, shopVisit, type CampaignCatalogue, type CampaignResult } from "@/lib/bot/runCampaign";
+import { checkMaps } from "@/lib/bot/mapChecklist";
 import { seededRandom } from "@/lib/bot/policy";
 import { computeGameModifiers } from "@/hooks/useActiveModifiers";
 import { mergePricing } from "@/lib/upgradePricing";
@@ -170,4 +171,41 @@ describe("a run on the ladder", () => {
     const cost = result.attempts.reduce((s, a) => s + a.livesLost, 0);
     expect(result.livesLeft).toBe(Math.max(0, 3 + granted - cost));
   }, 120000);
+});
+
+describe("the map checklist", () => {
+  const attempt = (level: number, won: boolean, failKind?: string, pay = 10) =>
+    ({ level, won, failKind, seconds: 10, pay: won ? pay : 0, livesLost: won ? 0 : 1 }) as CampaignResult["attempts"][number];
+  const run = (attempts: CampaignResult["attempts"]) => ({ attempts } as CampaignResult);
+  const tries = (level: number, wins: number, of: number, failKind = "timeUp", pay = 10) =>
+    Array.from({ length: of }, (_, i) => attempt(level, i < wins, i < wins ? undefined : failKind, pay));
+
+  it("passes a map in the band with a build that pays off", () => {
+    const [, m] = checkMaps({
+      casual: [run([...tries(1, 10, 10), ...tries(2, 6, 8), ...tries(2, 0, 2, "objectiveBuried")])],
+      fleet: [run([...tries(1, 10, 10), ...tries(2, 9, 10, "ballHitFence")])],
+    }, 2);
+    expect(m.casual).toBe(0.6);
+    expect(m.best.id).toBe("fleet");
+    expect(m.flags).toEqual([]);
+  });
+
+  it("flags a wall, a map no build changes, and a map decided by one cause", () => {
+    const [, m] = checkMaps({ casual: [run([...tries(1, 10, 10), ...tries(2, 2, 10)])], fleet: [run([...tries(1, 10, 10), ...tries(2, 3, 10)])] }, 2);
+    expect(m.flags.join(" | ")).toMatch(/too hard/);
+    expect(m.flags.join(" | ")).toMatch(/no build tested/);
+    expect(m.flags.join(" | ")).toMatch(/one knob: timeUp/);
+  });
+
+  it("holds the tutorial to no band", () => {
+    const [m] = checkMaps({ casual: [run(tries(1, 10, 10))], fleet: [run(tries(1, 10, 10))] }, 1);
+    expect(m.flags).toEqual([]);
+  });
+
+  it("flags a harder map that pays less than an easier one", () => {
+    const checks = checkMaps({
+      casual: [run([...tries(1, 9, 10, "timeUp", 30), ...tries(2, 5, 10, "timeUp", 12)])],
+    }, 2);
+    expect(checks[1].flags.join(" | ")).toMatch(/pays 12h, less than easier map 1 \(30h\)/);
+  });
 });

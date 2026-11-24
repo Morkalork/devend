@@ -15,6 +15,8 @@ import { plainModifiers } from "@/lib/bot/headlessGame";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { resolveWinSpec, NO_RUN_RULES } from "@/lib/winSpec";
 import { PHYSICS_STEP } from "@/lib/gameConstants";
+import { getActiveRuleSet, setActiveRuleSet } from "@/lib/cardRules";
+import { getActiveRoster, setActiveRoster } from "@/lib/roster";
 import type { LevelConfig } from "@/types/level";
 
 const src = (f: string) => readFileSync(resolve(__dirname, "..", f), "utf8");
@@ -55,7 +57,7 @@ describe("the new ladder", () => {
   });
 });
 
-describe("map 2: nine bricks, two balls, thirty seconds", () => {
+describe("map 2: nine bricks, one ball, thirty seconds", () => {
   const map = byLevel(LADDER, 2) as LevelConfig;
   const bricks = (map.entities ?? []) as { id: string; x: number; y: number; width: number; height: number; brittle?: boolean }[];
 
@@ -75,8 +77,8 @@ describe("map 2: nine bricks, two balls, thirty seconds", () => {
     expect(ys[1] - ys[0] - bricks[0].height).toBeLessThanOrEqual(12);
   });
 
-  it("is won by breaking all nine, and by nothing else", () => {
-    expect(map.win?.require).toEqual([{ kind: "smashed", count: 9, of: "shards" }]);
+  it("is won by breaking seven of the nine (two spare), and by nothing else", () => {
+    expect(map.win?.require).toEqual([{ kind: "smashed", count: 7, of: "shards" }]);
     expect(resolveWinSpec(map, NO_RUN_RULES).authored).toBe(true);
     expect(map.maxBalls).toBe(2);
   });
@@ -86,21 +88,37 @@ describe("map 2: nine bricks, two balls, thirty seconds", () => {
     expect(getMapTimeLimit(map, 2)).toBe(30);
   });
 
-  // The lesson, measured: the open board does not get there in time, and
-  // fencing the balls in does. Sixteen seeds each, the bot's own plain fences.
-  const play = (cutEvery: number) => Array.from({ length: 16 }, (_, i) => runBot(map, 2, i + 1, {
-    modifiers: plainModifiers(), maxFrames: Math.ceil(35 / PHYSICS_STEP), cutEvery, lives: 3,
-  }));
+  // The lesson, measured as the ladder is played: under the tree, with the
+  // one ball a run starts with (weight, the trait the map is for). The open
+  // board does not get there in time, and fencing the ball in does. Sixteen
+  // seeds each, the bot's own plain fences.
+  const play = (cutEvery: number) => {
+    const rules = getActiveRuleSet();
+    const roster = getActiveRoster();
+    setActiveRuleSet("tree");
+    setActiveRoster([{ slot: 1, rungs: { weight: 1 } }]);
+    try {
+      return Array.from({ length: 16 }, (_, i) => runBot(map, 2, i + 1, {
+        modifiers: plainModifiers(), maxFrames: Math.ceil(35 / PHYSICS_STEP), cutEvery, lives: 3,
+      }));
+    } finally {
+      setActiveRuleSet(rules);
+      setActiveRoster(roster);
+    }
+  };
 
-  it("is never cleared without a fence", () => {
+  it("is almost never cleared without a fence", () => {
+    // One lucky ball in sixteen, in the last seconds: the open board is a
+    // gamble against the clock, never a plan.
     const runs = play(1e9);
-    expect(runs.filter(r => r.won)).toHaveLength(0);
-    expect(runs.every(r => r.failKind === "timeUp")).toBe(true);
+    expect(runs.filter(r => r.won).length).toBeLessThanOrEqual(2);
+    expect(runs.filter(r => !r.won).every(r => r.failKind === "timeUp")).toBe(true);
   });
 
-  it("can be cleared with fences, inside the clock", () => {
+  it("is usually cleared with fences, inside the clock", () => {
+    // Measured 13 of 16 (2026-11-24); the losses are bricks walled off.
     const wins = play(45).filter(r => r.won);
-    expect(wins.length).toBeGreaterThanOrEqual(3);
+    expect(wins.length).toBeGreaterThanOrEqual(10);
     for (const r of wins) {
       expect(r.frames * PHYSICS_STEP).toBeLessThanOrEqual(30);
     }

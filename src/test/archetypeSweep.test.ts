@@ -15,6 +15,8 @@
  *   ARCHETYPE_ENDLESS=1           practice: three tries a map, a lost map
  *                                 skipped, lives never end the run, so every
  *                                 build grows over the whole ladder
+ *   ARCHETYPE_PAR=<n>             add n to every map's par, to read what a
+ *                                 tidier player than the bot would be paid
  */
 import { describe, it, vi } from "vitest";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -27,6 +29,7 @@ import { mergePricing } from "@/lib/upgradePricing";
 import { parseTreeConfig } from "@/lib/tree";
 import { loadScoringConfig } from "@/lib/scoring";
 import { ARCHIVE, LADDER } from "./fixtures/maps";
+import { checkMaps, CASUAL_BAND, BUILD_GAP, ONE_CAUSE_MAX } from "@/lib/bot/mapChecklist";
 
 const ENABLED = process.env.ARCHETYPE_SWEEP === "1";
 
@@ -84,6 +87,7 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
     const ladderName = process.env.ARCHETYPE_LADDER === "archive" ? "archive" : "ladder";
     const ladder = ladderName === "archive" ? ARCHIVE : LADDER;
     const endless = process.env.ARCHETYPE_ENDLESS === "1";
+    const parBonus = Number(process.env.ARCHETYPE_PAR ?? 0);
     const maxMaps = process.env.ARCHETYPE_MAPS ? Number(process.env.ARCHETYPE_MAPS) : undefined;
     const seeds = Array.from({ length: Number(process.env.ARCHETYPE_SEEDS ?? 20) }, (_, i) => 1 + i);
     const only = process.env.ARCHETYPE_ONLY?.split(",");
@@ -96,7 +100,9 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
     for (const a of players) {
       results[a.id] = [];
       for (const seed of seeds) {
-        results[a.id].push(runCampaign(a, ladder, catalogue, seed, { maxMaps, endless }));
+        results[a.id].push(runCampaign(a, ladder, catalogue, seed, {
+          maxMaps, endless, extraModifiers: parBonus > 0 ? { parBonus } : undefined,
+        }));
         vi.clearAllTimers();
       }
       console.log(`[archetypes] ${a.id} done, ${((Date.now() - started) / 1000).toFixed(0)}s`);
@@ -104,7 +110,7 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
     vi.useRealTimers();
 
     const maps = Math.min(ladder.length, maxMaps ?? ladder.length);
-    writeFileSync(resolve(outDir, "results.json"), JSON.stringify({ ladder: ladderName, maps, endless, seeds, results }, null, 1));
+    writeFileSync(resolve(outDir, "results.json"), JSON.stringify({ ladder: ladderName, maps, endless, parBonus, seeds, results }, null, 1));
 
     const rows = players.map(a => {
       const runs = results[a.id];
@@ -128,6 +134,7 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
       `${n}`,
       ...players.map(a => pct(results[a.id].filter(r => r.attempts.some(x => x.level === n && x.won)).length, results[a.id].length)),
     ]);
+    const checks = checkMaps(results, maps);
     const lines = [
       `# Bot players on the ${ladderName} (${maps} maps, ${seeds.length} runs each${endless ? ", practice" : ""})`,
       "",
@@ -142,6 +149,14 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
       `| Map | ${players.map(a => a.name).join(" | ")} |`,
       `|---|${players.map(() => "---").join("|")}|`,
       ...perMap.map(r => `| ${r.join(" | ")} |`),
+      "",
+      "## Checklist (MAP_DESIGN_CARD.md section 7)",
+      "",
+      `Casual in ${CASUAL_BAND[0] * 100}-${CASUAL_BAND[1] * 100}% of attempts; some player ${BUILD_GAP * 100} points over Casual; no loss cause over ${ONE_CAUSE_MAX * 100}%; pay follows difficulty.${parBonus > 0 ? ` Pay read with par +${parBonus}.` : " Pay is the bot's own, usually well over par."}`,
+      "",
+      "| Map | Casual | Best | Top loss | Pay | Misses |",
+      "|---|---|---|---|---|---|",
+      ...checks.map(c => `| ${c.level} | ${Math.round(c.casual * 100)}% | ${c.best.id} ${Math.round(c.best.share * 100)}% | ${c.topLoss ? `${c.topLoss.kind} ${Math.round(c.topLoss.share * 100)}%` : "-"} | ${c.pay}h | ${c.flags.join("; ") || "meets all"} |`),
       "",
       "## Builds and endings",
       "",

@@ -56,8 +56,18 @@ first map to the last, so every map must be clearable, and fair, with one
 ball and the standard fence. Difficulty comes from the board: the clock, the
 fence budget, the capture target, the bricks, movers, wells and the lock or
 brick goal. A goal counted in balls ("lock two") is a lean toward the fleet,
-and needs a one-ball route beside it. Nothing on the ladder may require a
-purchase. A boss is the board, not a ball.
+and needs a one-ball route beside it (`ladderRoster.test.ts` holds both).
+Nothing on the ladder may require a purchase. A boss is the board, not a ball.
+
+**Every map after the first tests one thing a build buys**, and says which in
+its notes: tough bricks (weight), several pockets at once (balls), a tight
+clock over open ground (fence speed), fences drawn close to balls (grace,
+shields, freezes), a high ceiling for clean play (worth, pay). A map no build
+changes is decided by the hands alone, and the tree stops mattering.
+
+**Pay follows difficulty.** A map harder than the one before it pays at least
+as much: `points` is the lever. Early maps pay enough to buy something (a
+rank-one rung or a Junior root, 15h) after every map.
 
 ## 6. Build to the engine
 
@@ -79,5 +89,22 @@ split locks: time a ball spends where the map wants it, crossings through a
 door, ball speed over time. Every number in the map's notes names what it was
 measured against, since a physics fix can move it (the shard-stack fix moved
 6 and 17).
+
+Then play it with the six bot players (BOT_PLAYERS.md), 30 runs each in
+practice, with par out of the way so the pay reads as a tidy player's:
+
+```sh
+ARCHETYPE_SWEEP=1 ARCHETYPE_OUT=/tmp/p ARCHETYPE_SEEDS=30 ARCHETYPE_ENDLESS=1 ARCHETYPE_PAR=60 \
+  npx vitest run src/test/archetypeSweep.test.ts
+```
+
+The report's checklist holds every map but the first to four targets:
+
+- **Band:** the Casual player wins 50-80% of its attempts.
+- **Build:** some player wins 15 points more than Casual.
+- **Losses:** no single cause takes over 70% of them.
+- **Pay:** no harder map pays less than an easier one.
+
+A miss is a reason to change the map or to say in its notes why not.
 
 Then go through section 10 of the guidelines, item by item.
