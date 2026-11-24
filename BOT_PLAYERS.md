@@ -122,6 +122,13 @@ beginner drawing six fences was paid 9h, under the 15h of the cheapest buy;
 now it is 17-22h. Map 2's points went to 22 to stay above it. Both maps meet
 the checklist (practice, par +60: map 1 27h, map 2 29h).
 
+The balls then went from 30h and 45h to 100h and 150h (tree.yml), on the
+owner's word that a ball releases too much power to arrive after map 2.
+Practice on 15 archive maps, par +60, 12 runs: Fleet, saving for it, buys its
+second ball after map 4 in every run and its third after map 11; the Earner
+buys its second around map 13; Casual never saves long enough. Early maps pay
+about 24-28h, so 100h is four maps saved whole.
+
 The bosses: archive 10 is lost almost only to the boss being left outside,
 which is how boss maps place their own balls. The new setting, where the boss
 is a structure to break, is in BOSS_PLAN.md.

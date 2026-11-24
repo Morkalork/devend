@@ -44,8 +44,12 @@ tree:
   rungBase: [15, 30, 45]
   # The next rung on a ball costs this much more per rung the ball already holds.
   stackFactor: 1.25
-  # The second ball, then the third: a great map each. Flat, with no traits.
-  ballCost: [30, 45]
+  # The second ball, then the third. Flat, with no traits. A ball is the
+  # biggest thing the tree sells (more locks, more pay, more risk), so it is
+  # priced as a goal, not a purchase: 100h is about four early maps of pay
+  # saved whole, so a player who saves for it plays map 5 with two balls.
+  # The third keeps the old 1.5x step. Were 30 and 45: a ball after map 2.
+  ballCost: [100, 150]
 tagSets:
   threshold: 99
   bonuses: []

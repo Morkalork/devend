@@ -79,8 +79,9 @@ describe("the six players", () => {
 
 describe("at the tree stage", () => {
   it("Fleet buys a ball first, and saves for it when short", () => {
-    expect(shop("fleet", 30).bought.map(b => b.label)).toEqual(["ball"]);
-    expect(shop("fleet", 20).bought).toEqual([]);
+    expect(shop("fleet", 100).bought.map(b => b.label)).toEqual(["ball"]);
+    // Short of it, Fleet saves rather than spend down on rungs.
+    expect(shop("fleet", 90).bought).toEqual([]);
     // With a full roster it spreads: the ball with no rungs comes first.
     const full: Roster = [{ slot: 1, rungs: { weight: 1 } }, { slot: 2, rungs: {} }, { slot: 3, rungs: {} }];
     const v = shop("fleet", 15, full);

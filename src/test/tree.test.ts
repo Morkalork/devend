@@ -138,7 +138,7 @@ describe("tree.yml", () => {
 
 describe("the roster's prices", () => {
   it("reads the tree block, falling back field by field", () => {
-    expect(parseTreeConfig(data.tree)).toEqual({ rungBase: [15, 30, 45], stackFactor: 1.25, ballCost: [30, 45] });
+    expect(parseTreeConfig(data.tree)).toEqual({ rungBase: [15, 30, 45], stackFactor: 1.25, ballCost: [100, 150] });
     expect(parseTreeConfig(null)).toEqual(DEFAULT_TREE);
     expect(parseTreeConfig({ stackFactor: 0.5, rungBase: [1, 2] })).toEqual(DEFAULT_TREE);
   });
@@ -160,8 +160,9 @@ describe("the roster's prices", () => {
   });
 
   it("breadth costs more per ball, up to the cap", () => {
-    expect(ballPrice(1, DEFAULT_TREE)).toBe(30);
-    expect(ballPrice(2, DEFAULT_TREE)).toBe(45);
+    // A ball is a goal saved for: about four early maps of pay (tree.yml).
+    expect(ballPrice(1, DEFAULT_TREE)).toBe(100);
+    expect(ballPrice(2, DEFAULT_TREE)).toBe(150);
     expect(ballPrice(ROSTER_MAX, DEFAULT_TREE)).toBeNull();
     expect(ballPrice(0, DEFAULT_TREE)).toBeNull();
   });

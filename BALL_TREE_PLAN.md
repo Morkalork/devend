@@ -327,9 +327,12 @@ Decided 2026-11-22, from the owner's first play of the tree stage:
   those steps: a Junior root is 15h (an ordinary map buys one), a Senior
   30h (a great map), a Principal 44h (a flawless map, or two ordinary), an
   Architect 58h (saved up). The roster's rungs follow the same three steps
-  (15, 30, 45 before stacking, 1.25 a rung held), and the second and third
-  ball are a great map each (30, 45). "A good map buys one cheap thing, a
-  great map one expensive thing" is the rule the numbers are held to.
+  (15, 30, 45 before stacking, 1.25 a rung held). "A good map buys one cheap
+  thing, a great map one expensive thing" is the rule the numbers are held
+  to. The balls are the exception, priced as goals rather than purchases
+  (2026-11-24, on the owner's word): the second is 100h, about four early
+  maps of pay saved whole, so it arrives for map 5 at the earliest; the
+  third 150h. They were 30 and 45, a ball after map 2.
 
 Still open:
 - The names: "rung", "trait", "roster" are the plan's words; the game's

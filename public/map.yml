@@ -86,8 +86,8 @@ levels:
   # sooner. Locking the board down is how the bricks get broken.
   #
   # Built for ONE ball (MAP_DESIGN_CARD.md section 5): under the tree a player
-  # arrives here with the one ball they started with, and a second costs about
-  # three maps of pay. maxBalls 2 is the cap a later fleet would be held to.
+  # arrives here with the one ball they started with, and a second costs 100h,
+  # about four maps of pay. maxBalls 2 is the cap a later fleet would be held to.
   #
   # The win is seven of the nine: two spare (section 3), so one fence that
   # walls a brick off is a lesson and not the end of the map. Space is not
