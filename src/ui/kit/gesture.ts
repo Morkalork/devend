@@ -13,6 +13,21 @@
 
 /** The owner of each live pointer's drag, by pointer id. */
 const owners = new Map<number, symbol>();
+/**
+ * A drag promised to one participant before anyone has claimed it: the pan
+ * view reserves every touch that lands on it. Nobody else may claim a
+ * reserved pointer, but a reservation is not a claim, so a tap under the
+ * finger still fires until the reserver actually takes the drag.
+ *
+ * Why it exists: the ball tree's map is a pan view inside the between-map
+ * screen's scroll view. Both heard the same finger, and on a phone the first
+ * move often jumps past both slops in one event, so a vertical drag on the map
+ * went to whichever listener ran first, often the page. A page pulled down at
+ * its top rubber-bands, and a scroll view still moving claims the NEXT
+ * touch-down to catch it, so the drag after that was the page's too. Reported
+ * as the tree being very hard to pan, worst when dragging down.
+ */
+const reservations = new Map<number, symbol>();
 /** The DOM event that started each pointer's current gesture. */
 const starts = new Map<number, unknown>();
 
@@ -30,12 +45,29 @@ export function beginPointer(pointerId: number, start: unknown): void {
   }
   starts.set(pointerId, start);
   owners.delete(pointerId);
+  reservations.delete(pointerId);
+}
+
+/**
+ * Promise this touch's drag to `owner`: nobody else may claim it. Called from
+ * a pointer-down, after beginPointer. The innermost participant hears the
+ * pointer-down first, so a pan view inside a scroll view reserves before the
+ * scroll view can claim on touch-down.
+ */
+export function reservePointer(pointerId: number, owner: symbol): void {
+  if (!reservations.has(pointerId)) {
+    reservations.set(pointerId, owner);
+  }
 }
 
 /** Take the drag. True when it is now (or already was) yours. */
 export function claimPointer(pointerId: number, owner: symbol): boolean {
   const current = owners.get(pointerId);
   if (current !== undefined && current !== owner) {
+    return false;
+  }
+  const reserved = reservations.get(pointerId);
+  if (reserved !== undefined && reserved !== owner) {
     return false;
   }
   owners.set(pointerId, owner);
@@ -52,5 +84,8 @@ export function claimedByOther(pointerId: number, owner?: symbol): boolean {
 export function releasePointer(pointerId: number, owner: symbol): void {
   if (owners.get(pointerId) === owner) {
     owners.delete(pointerId);
+  }
+  if (reservations.get(pointerId) === owner) {
+    reservations.delete(pointerId);
   }
 }

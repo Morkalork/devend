@@ -6,16 +6,17 @@
  *
  * Same plumbing as the ScrollView: Yoga lays the content out at its own size
  * under `overflow: "scroll"`, the library's own scroller is unhooked, and the
- * content container is moved by hand. A drag claims the pointer once it has
- * moved past a small slop in ANY direction, so the ScrollView around it does
- * not scroll the page and a Pressable under the finger does not fire; a tap
- * that never moves is left to the node it landed on.
+ * content container is moved by hand. A touch that lands here is reserved for
+ * the pan (gesture.ts), so the ScrollView around it can never take it; the
+ * drag is claimed once it has moved past a small slop in ANY direction, and
+ * from then a Pressable under the finger does not fire. A tap that never
+ * moves is left to the node it landed on.
  */
 import { useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
 import { Ticker, type FederatedPointerEvent } from "pixi.js";
 import type { LayoutContainer } from "@pixi/layout/components";
 import type { Layout } from "./core";
-import { beginPointer, claimPointer, claimedByOther, releasePointer } from "./gesture";
+import { beginPointer, claimPointer, claimedByOther, releasePointer, reservePointer } from "./gesture";
 
 const LIBRARY_SCROLL_EVENTS = ["pointerdown", "pointerup", "pointerupoutside", "pointermove", "pointercancel", "wheel"] as const;
 /** Movement before a press becomes a pan, in CSS px. Under the ScrollView's, so the pan wins a diagonal. */
@@ -79,6 +80,9 @@ export function PanView({ layout, contentWidth, contentHeight, initialX = 0, ini
 
   const onPointerDown = useCallback((e: FederatedPointerEvent) => {
     beginPointer(e.pointerId, e.nativeEvent);
+    // The drag is the map's, whichever way it goes: a scroll view around it
+    // may not take it, not even to catch its own fling (gesture.ts).
+    reservePointer(e.pointerId, owner.current);
     drag.current = {
       pointerId: e.pointerId, startX: e.global.x, startY: e.global.y,
       fromX: pos.current.x, fromY: pos.current.y, claimed: false,
@@ -117,9 +121,7 @@ export function PanView({ layout, contentWidth, contentHeight, initialX = 0, ini
       return;
     }
     drag.current = null;
-    if (d.claimed) {
-      releasePointer(e.pointerId, owner.current);
-    }
+    releasePointer(e.pointerId, owner.current);
   }, []);
 
   return (
