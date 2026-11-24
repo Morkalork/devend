@@ -85,6 +85,7 @@ Admin toggle), **BALL_TREE_PLAN.md** for the plan to replace the cards with
 an upgrade tree where the balls are the player's (one super ball or a fleet
 of good ones; no map balls; phases 1 to 4 built: the roster, the rungs' rules,
 `public/tree.yml` and the tree stage; the maps' retune is open), and
+**BOT_PLAYERS.md** for the six bot players (archetypes that build a run differently under the tree: Fleet, Super Ball, Fence Engineer, Overtime Earner, Safe Hands, Casual), how a whole run is played (`src/lib/bot/runCampaign.ts`) and the opt-in sweep that compares them on a ladder, and
 **UPGRADE_SWEEP_REPORT.md** for what each upgrade measurably changes when the bot
 plays it (and `src/test/upgradeSweep.test.ts`, the opt-in sweep that made it), and
 **PLAY_RELEASE_PLAN.md** for the first Play release (an invite-only beta): the
