@@ -143,6 +143,18 @@ runs each:
 | 4 Firewall | 76% | Fence Engineer 83% | clock 60% | 38h | no build tested (7 points; 18 at 20 runs) |
 | 5 The Monolith | 50% | Super Ball 71% | clock 71% | 56h | one knob (the bot never walls the Core off) |
 
+Then map 3 was judged far too hard in play, and given two ways to win: break
+one slab and lock the ball, or break three. Its points went to 10 and map 4's
+to 40 so pay still follows difficulty. Same sweep after:
+
+| Map | Casual | Best | Top loss | Pay | Checklist |
+|---|---|---|---|---|---|
+| 3 Code Review | 91% | Super Ball 94% | clock 71% | 41h | too easy, no build tested (the owner's call) |
+| 4 Firewall | 73% | Fence Engineer 83% | clock 56% | 46h | no build tested (11 points) |
+| 5 The Monolith | 58% | Super Ball 71% | clock 73% | 56h | no build tested (12 points), one knob |
+
+Players reach the boss with more bought now, so Casual does better there.
+
 Map 4 is a Use map that combines the brick and the slab, and both weight and
 fence speed help, so the Casual player's mix does about as well as either
 specialist. Shorter clocks (45s, 40s) did not change that. It is the open

@@ -200,40 +200,42 @@ levels:
   #
   # Four slabs, one in each quarter of an open board. A slab is a brick that
   # takes about three solid hits, and the force of a hit is the ball's weight
-  # times its speed, so this is the map that tells a run its weight rung is
-  # worth having: a plain ball needs three good hits a slab, weight one about
-  # two, weight two one or two. Win: three of the four (one spare, MAP_DESIGN_
-  # CARD.md section 3).
+  # times its speed, so weight is the shorter way through a slab.
   #
-  # A slab is solid ground (unlike a brick, it is sealed into the grid), so a
-  # fence can stop against it. That is the other half of the lesson: box the
-  # ball in beside a slab and every bounce is a hit. Wall a slab off with no
-  # ball beside it and it is gone, and with only one spare that costs the map.
+  # Two ways to win, on the owner's word (2026-11-25, "way too hard" when it
+  # asked for three of four): break ONE slab and lock the ball, or break THREE.
+  # The ball cannot be locked before its one slab is down (the last ball stays
+  # free while bricks are owed, BRICKS_PLAN.md), so locking early never costs
+  # the map. A slab is solid ground (sealed into the grid), so a fence can stop
+  # against one: box the ball in beside a slab and every bounce is a hit.
   #
-  # Tests a build: weight (MAP_DESIGN_CARD.md section 5).
+  # Points 10 (were 26): a lock pays well, and at 26 this map paid 57h, more
+  # than the harder maps 4 and 5. Now about 41h.
   #
-  # Measured (BOT_PLAYERS.md, practice, par +60, 20 runs): Casual wins 56% of
-  # attempts, Super Ball 91% (weight two or three by here), Safe Hands 12% (it
-  # starts with grace, not weight). The checklist flags one knob: the clock
-  # takes 84% of losses. That is the bot, not the map: it checks before every
-  # fence that the fence will not wall off a slab the win needs, so it never
-  # loses that way, and a person will. Slabs moved flush to the board's edges
-  # (so walling one off is easy) made the map a wall for the bot instead, 3%
-  # to 16%, because a ball rarely meets a slab against a wall.
+  # Measured (BOT_PLAYERS.md, practice, par +60, 30 runs): Casual wins 91% of
+  # attempts in about 16 seconds, and no build stands out (Super Ball 94%).
+  # The checklist calls that too easy; it is the owner's call. At three of
+  # four it was Casual 53%, Super Ball 91%, Safe Hands 12%.
   - id: level-3
     name: Code Review
     level: 3
-    premise: "The one where every slab takes three solid hits, so a heavier ball is the shorter way through."
+    premise: "The one where every slab takes three solid hits, so you break one and lock up, or break three."
     sizeThreshold: 15
     timeLimit: 45
     expectedCuts: 4
-    points: 26
+    points: 10
     variety: 0
     randomShapes: 0
     maxBalls: 2
     pickupChance: 0
     win:
       require:
+        - kind: smashed
+          count: 1
+          of: monoliths
+        - kind: locks
+          count: 1
+      alsoWinIf:
         - kind: smashed
           count: 3
           of: monoliths
@@ -299,7 +301,7 @@ levels:
     sizeThreshold: 15
     timeLimit: 55
     expectedCuts: 5
-    points: 32
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
