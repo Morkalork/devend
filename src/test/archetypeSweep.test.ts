@@ -29,7 +29,7 @@ import { mergePricing } from "@/lib/upgradePricing";
 import { parseTreeConfig } from "@/lib/tree";
 import { loadScoringConfig } from "@/lib/scoring";
 import { ARCHIVE, LADDER } from "./fixtures/maps";
-import { checkMaps, CASUAL_BAND, BUILD_GAP, ONE_CAUSE_MAX } from "@/lib/bot/mapChecklist";
+import { checkMaps, CASUAL_BAND, BOSS_BAND, BUILD_GAP, ONE_CAUSE_MAX } from "@/lib/bot/mapChecklist";
 
 const ENABLED = process.env.ARCHETYPE_SWEEP === "1";
 
@@ -134,7 +134,7 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
       `${n}`,
       ...players.map(a => pct(results[a.id].filter(r => r.attempts.some(x => x.level === n && x.won)).length, results[a.id].length)),
     ]);
-    const checks = checkMaps(results, maps);
+    const checks = checkMaps(results, maps, ladder.slice(0, maps).flatMap((l, i) => (l.boss ? [i + 1] : [])));
     const lines = [
       `# Bot players on the ${ladderName} (${maps} maps, ${seeds.length} runs each${endless ? ", practice" : ""})`,
       "",
@@ -152,7 +152,7 @@ describe.skipIf(!ENABLED)("archetype sweep", () => {
       "",
       "## Checklist (MAP_DESIGN_CARD.md section 7)",
       "",
-      `Casual in ${CASUAL_BAND[0] * 100}-${CASUAL_BAND[1] * 100}% of attempts; some player ${BUILD_GAP * 100} points over Casual; no loss cause over ${ONE_CAUSE_MAX * 100}%; pay follows difficulty.${parBonus > 0 ? ` Pay read with par +${parBonus}.` : " Pay is the bot's own, usually well over par."}`,
+      `Casual in ${CASUAL_BAND[0] * 100}-${CASUAL_BAND[1] * 100}% of attempts (a boss ${BOSS_BAND[0] * 100}-${BOSS_BAND[1] * 100}%); some player ${BUILD_GAP * 100} points over Casual; no loss cause over ${ONE_CAUSE_MAX * 100}%; pay follows difficulty.${parBonus > 0 ? ` Pay read with par +${parBonus}.` : " Pay is the bot's own, usually well over par."}`,
       "",
       "| Map | Casual | Best | Top loss | Pay | Misses |",
       "|---|---|---|---|---|---|",

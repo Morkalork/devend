@@ -129,6 +129,31 @@ second ball after map 4 in every run and its third after map 11; the Earner
 buys its second around map 13; Casual never saves long enough. Early maps pay
 about 24-28h, so 100h is four maps saved whole.
 
+## The ladder to the first boss (2026-11-25)
+
+Maps 3 and 4 and the Monolith (map 5, BOSS_PLAN.md) were tuned against the
+checklist, the boss to its own band (Casual 30-60%). Practice, par +60, 30
+runs each:
+
+| Map | Casual | Best | Top loss | Pay | Checklist |
+|---|---|---|---|---|---|
+| 1 Hello World | 100% | all | - | 27h | tutorial |
+| 2 Unit Tests | 59% | Fence Engineer 77% | clock 56% | 29h | meets all |
+| 3 Code Review | 53% | Super Ball 91% | clock 83% | 33h | one knob (the bot never walls a slab off) |
+| 4 Firewall | 76% | Fence Engineer 83% | clock 60% | 38h | no build tested (7 points; 18 at 20 runs) |
+| 5 The Monolith | 50% | Super Ball 71% | clock 71% | 56h | one knob (the bot never walls the Core off) |
+
+Map 4 is a Use map that combines the brick and the slab, and both weight and
+fence speed help, so the Casual player's mix does about as well as either
+specialist. Shorter clocks (45s, 40s) did not change that. It is the open
+item on the ladder.
+
+Real runs (three lives for the whole run): 0-10% of runs reach the end of map
+5, against 77-80% when the ladder was two maps. Most lives go to the bot's own
+fences hitting its ball (ballHitFence), which carry from map to map. A person
+draws fewer fences into a ball, but whether five maps on three lives is the
+right length is worth watching once people play it.
+
 The bosses: archive 10 is lost almost only to the boss being left outside,
 which is how boss maps place their own balls. The new setting, where the boss
 is a structure to break, is in BOSS_PLAN.md.

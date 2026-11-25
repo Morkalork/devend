@@ -304,3 +304,26 @@ function budPosition(anchor: Ball): { x: number; y: number } {
   };
 }
 
+/**
+ * A Legacy System's Core (BOSS_PLAN.md): the breakable that IS the boss, named
+ * by `level.boss.core`. Its hits left are the nameplate's health, and breaking
+ * it defeats the boss. Followed from the per-frame win check because a hit
+ * lands in physics with no callback of its own.
+ *
+ * Writes `game.bossHp` and `game.bossDefeated`, and returns the new health
+ * only when it CHANGED, so the caller re-renders the nameplate on a hit and
+ * not on every frame. Null on a map with no Core, or a boss with a ball.
+ */
+export function followCoreHealth(
+  game: CanvasGameState, level: LevelConfig,
+): { hp: number; maxHp: number } | null {
+  const coreId = level.boss?.core;
+  if (!coreId || level.boss?.bossBall) return null;
+  const core = game.destructibles.find(d => d.id === coreId);
+  if (!core) return null;
+  const hp = core.destroyed ? 0 : Math.max(0, Math.ceil(core.maxHits - core.hits));
+  if (hp === game.bossHp) return null;
+  game.bossHp = hp;
+  game.bossDefeated = hp === 0;
+  return { hp, maxHp: core.maxHits };
+}

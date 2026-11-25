@@ -318,7 +318,11 @@
       "compiling": "compiling map",
       "newRun": "booting new run"
     },
-    "fullGravityStinger": "Full Gravity!"
+    "fullGravityStinger": "Full Gravity!",
+    "beatEffectRestore": "broken bricks are rebuilt",
+    "beatEffectRollback": "your fences near the core are blown away",
+    "beatPatch": "Patch incoming",
+    "beatRollback": "Rollback"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",

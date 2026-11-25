@@ -10,11 +10,21 @@
  *   - breakId:     force-break a destructible (topples supports / reveals sealed
  *                  space / grants a chest) via the normal pendingDestroys path
  *   - speedSpike:  a permanent ball-speed bump folded into creepFactor
+ *   - restore:     rebuild broken bricks (a boss's Patch, BOSS_PLAN.md)
+ *   - rollback:    a blast from a breakable's centre through fences and
+ *                  claimed ground (a boss's Rollback), carved by the destroy pass
+ *
+ * Triggers: space remaining, active seconds, the hits a named breakable has
+ * taken (`atHitsOn`, a boss's Core), and a repeat interval (`everySeconds`).
  */
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig, MapBeat } from "@/types/level";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { spawnAdds } from "@/lib/physics/bossPhases";
+import { CellState, worldToGridIndex } from "@/lib/spaceGrid";
+import { createWallsFromPolygon } from "@/lib/wallGeometry";
+import { polygonCentroid, type Polygon } from "@/lib/polygon";
+import type { DestructibleState } from "@/types/game";
 
 /** Default lead time (ms) for a beat's telegraph warning. */
 const DEFAULT_LEAD_MS = 1600;
@@ -66,6 +76,8 @@ export function beatEffectLines(beat: MapBeat, levelNumber: number): BeatEffectL
     lines.push({ key: "game.beatEffectSpeed", values: { percent: Math.round(beat.speedSpike * 100) } });
   }
   if (beat.breakId) lines.push({ key: "game.beatEffectBreak" });
+  if (beat.restore && beat.restore.length > 0) lines.push({ key: "game.beatEffectRestore" });
+  if (beat.rollback) lines.push({ key: "game.beatEffectRollback" });
   return lines;
 }
 
@@ -102,7 +114,17 @@ export function tickMapBeats(
   const spaceRemaining = game.spaceGrid ? getRemainingPercent(game.spaceGrid) : 100;
 
   for (const beat of beats) {
-    const bySpace = beat.atSpaceRemaining != null && spaceRemaining <= beat.atSpaceRemaining;
+    // A repeating beat runs on its own clock: warned `leadMs` ahead of every
+    // firing, as a time beat is, and rescheduled each time it lands.
+    if (beat.everySeconds != null && beat.everySeconds > 0) {
+      tickRepeatingBeat(game, beat, levelNumber, onWarn);
+      continue;
+    }
+
+    const byHits = beat.atHitsOn != null && hitsTaken(game, beat.atHitsOn.id) >= beat.atHitsOn.hits;
+    // The Core's damage is the player's doing, like the space they clear, so
+    // it is telegraphed as a space beat is: the warning first, then the lead.
+    const bySpace = (beat.atSpaceRemaining != null && spaceRemaining <= beat.atSpaceRemaining) || byHits;
     const byTime = beat.atSeconds != null && game.activePlaySeconds >= beat.atSeconds;
 
     // Telegraph: warn ahead of a time beat by leadMs; a space beat warns as it
@@ -141,6 +163,39 @@ export function tickMapBeats(
   }
 }
 
+/** Hits a breakable has taken; a broken one counts as all of them. */
+function hitsTaken(game: CanvasGameState, id: string): number {
+  const d = game.destructibles.find(x => x.id === id);
+  if (!d) {
+    return 0;
+  }
+  return d.destroyed ? Math.max(d.hits, d.maxHits) : d.hits;
+}
+
+function tickRepeatingBeat(
+  game: CanvasGameState,
+  beat: MapBeat,
+  levelNumber: number,
+  onWarn?: (announce: string, effects: BeatEffectLine[]) => void,
+): void {
+  const every = beat.everySeconds!;
+  const next = (game.beatNextAt ??= {})[beat.id] ?? (beat.atSeconds ?? every);
+  game.beatNextAt[beat.id] = next;
+  const now = game.activePlaySeconds;
+  if (beat.announce) {
+    const key = `${beat.id}@${next}`;
+    const leadSec = (beat.leadMs ?? DEFAULT_LEAD_MS) / 1000;
+    if (!game.warnedBeats.includes(key) && now >= next - leadSec) {
+      game.warnedBeats.push(key);
+      onWarn?.(beat.announce, beatEffectLines(beat, levelNumber));
+    }
+  }
+  if (now >= next) {
+    game.beatNextAt[beat.id] = next + every;
+    applyBeat(game, beat, levelNumber);
+  }
+}
+
 function applyBeat(game: CanvasGameState, beat: MapBeat, levelNumber: number): void {
   // "mitosis": the anchor visibly divides, the level-10 boss's move. Gated to
   // level 11+ by beatSpawnCount, so the boss teaches it first.
@@ -152,6 +207,78 @@ function applyBeat(game: CanvasGameState, beat: MapBeat, levelNumber: number): v
   if (beat.breakId) {
     forceBreak(game, beat.breakId);
   }
+  if (beat.restore) {
+    for (const id of beat.restore) {
+      restoreBrick(game, id);
+    }
+  }
+  if (beat.rollback) {
+    const at = game.destructibles.find(x => x.id === beat.rollback!.at);
+    const poly = at?.obstaclePolygon;
+    if (poly) {
+      (game.pendingRollbacks ??= []).push({ centre: polygonCentroid(poly), radius: beat.rollback.radius });
+    }
+  }
+}
+
+/** A ball's centre this close to a brick's outline (beyond its radius) holds the brick off. */
+const RESTORE_CLEARANCE = 4;
+
+/**
+ * Put a broken brick back (a boss's Patch): its body, its edges and a full
+ * count of hits. Refused, silently and only for this firing, while a ball
+ * overlaps it, when it was buried rather than broken, or when the ground
+ * under it has been claimed: a Patch never traps a ball, and never reopens or
+ * stands on the player's ground. Returns whether it came back.
+ */
+export function restoreBrick(game: CanvasGameState, id: string): boolean {
+  const d = game.destructibles.find(x => x.id === id);
+  const poly = d?.obstaclePolygon;
+  if (!d || !poly || !d.destroyed || d.buried || d.kind !== "breakable") {
+    return false;
+  }
+  if (brickBlocked(game, d, poly)) {
+    return false;
+  }
+  d.destroyed = false;
+  d.hits = 0;
+  d.lastHitAt = 0;
+  d.dents = undefined;
+  game.obstaclePolygons = [...game.obstaclePolygons, poly];
+  const walls = createWallsFromPolygon(poly, `obstacle-${d.id}`);
+  if (d.brittle) {
+    for (const w of walls) {
+      w.brittle = true;
+    }
+  }
+  game.walls = [...game.walls, ...walls];
+  game.obstacleVersion = (game.obstacleVersion ?? 0) + 1;
+  return true;
+}
+
+function brickBlocked(game: CanvasGameState, d: DestructibleState, poly: Polygon): boolean {
+  const xs = poly.vertices.map(v => v.x);
+  const ys = poly.vertices.map(v => v.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  for (const b of game.balls) {
+    if (b.state !== "active" && b.state !== "dormant") {
+      continue;
+    }
+    const nx = Math.max(x0, Math.min(x1, b.position.x));
+    const ny = Math.max(y0, Math.min(y1, b.position.y));
+    if (Math.hypot(b.position.x - nx, b.position.y - ny) < b.radius + RESTORE_CLEARANCE) {
+      return true;
+    }
+  }
+  const grid = game.spaceGrid;
+  if (grid) {
+    const c = polygonCentroid(poly);
+    const idx = worldToGridIndex(grid, c.x, c.y);
+    if (idx >= 0 && grid.cells[idx] !== CellState.ACTIVE) {
+      return true;
+    }
+  }
+  return d.buried === true;
 }
 
 /**

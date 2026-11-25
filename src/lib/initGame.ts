@@ -882,6 +882,18 @@ export function createInitialGameData(
   const rHeight  = bounds.maxY - bounds.minY;
   const centroid = polygonCentroid(boardPolygon);
 
+  // The fortress of a boss with a Core: the box round every breakable on the
+  // map (isBallPositionValid keeps spawns out of it).
+  const fortress = level.boss?.core
+    ? destructibles
+      .filter(d => d.kind === "breakable" && d.obstaclePolygon)
+      .map(d => polygonBounds(d.obstaclePolygon!))
+      .reduce<{ minX: number; minY: number; maxX: number; maxY: number } | null>((box, b) => box === null ? { ...b } : {
+        minX: Math.min(box.minX, b.minX), minY: Math.min(box.minY, b.minY),
+        maxX: Math.max(box.maxX, b.maxX), maxY: Math.max(box.maxY, b.maxY),
+      }, null)
+    : null;
+
   const isBallPositionValid = (pos: Vector2, radius: number): boolean => {
     const safeRadius = radius + 5;
 
@@ -923,6 +935,17 @@ export function createInitialGameData(
 
     if (pos.x - safeRadius < left  || pos.x + safeRadius > right ||
         pos.y - safeRadius < top   || pos.y + safeRadius > bottom) {
+      return false;
+    }
+
+    // A Legacy System (BOSS_PLAN.md): never inside the fortress. Balls start
+    // near the middle of the board and the fortress stands there, so a ball
+    // began beside the Core on many deals, inside the Shell, with half the
+    // fight already won. The box is every breakable's, the Core's Shell
+    // included; the ground round it is the player's to start on.
+    if (fortress &&
+        pos.x + safeRadius > fortress.minX && pos.x - safeRadius < fortress.maxX &&
+        pos.y + safeRadius > fortress.minY && pos.y - safeRadius < fortress.maxY) {
       return false;
     }
 
@@ -1138,6 +1161,15 @@ export function createInitialGameData(
         chains.push(makeChain(bosses[0], bosses[1], true));
       }
       bossActive = true; bossHp = hp; bossMaxHp = hp;
+    }
+  }
+  // A Legacy System (BOSS_PLAN.md): the boss is a breakable, and its hits are
+  // the nameplate's health. GameCanvas follows it as the Core is struck.
+  const coreId = level.boss?.core;
+  if (!bossBall && coreId) {
+    const core = destructibles.find(d => d.id === coreId);
+    if (core) {
+      bossActive = true; bossHp = core.maxHits; bossMaxHp = core.maxHits;
     }
   }
 

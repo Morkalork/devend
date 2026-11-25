@@ -102,6 +102,8 @@ export const entries: GalleryEntry[] = [
           <View layout={{ gap: 8 }}>
             <BossBanner name="The Auditor" timeLimit={90} activeSeconds={31} hp={3} maxHp={5} defeated={false} />
             <BossBanner name="Legacy Monolith" timeLimit={90} activeSeconds={83} hp={1} maxHp={6} defeated={false} />
+            {/* A Legacy System's Core (BOSS_PLAN.md): twenty-eight hits, narrow pips. */}
+            <BossBanner name="The Monolith" timeLimit={65} activeSeconds={40} hp={19} maxHp={28} defeated={false} />
             <BossBanner name="The Auditor" timeLimit={null} activeSeconds={40} hp={0} maxHp={5} defeated />
           </View>
         )],

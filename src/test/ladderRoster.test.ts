@@ -80,6 +80,15 @@ describe("the ladder's counted clauses", () => {
       if (c.kind !== "smashed") {
         continue;
       }
+      // A Legacy System's Core (BOSS_PLAN.md) is the boss itself: breaking it
+      // is the fight, so it has no spare by design. Exempt only when the
+      // clause asks for exactly the Core and the Core is the map's one slab.
+      const core = level.boss?.core;
+      const coreIsTheOnlySlab = core !== undefined && monoliths === 1
+        && (entities as { id?: string; breakable?: boolean }[]).some(e => e.id === core && e.breakable === true);
+      if (coreIsTheOnlySlab && c.of === "monoliths" && c.count === 1) {
+        continue;
+      }
       const have = c.of === "shards" ? shards : c.of === "monoliths" ? monoliths : shards + monoliths;
       expect(c.count, `${level.id} asks for ${c.count} of ${c.of ?? "all"} and has ${have}: no spare`).toBeLessThan(have);
     }

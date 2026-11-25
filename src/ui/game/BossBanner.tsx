@@ -14,7 +14,7 @@
 import { Skull } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Icon, Label, RADIUS, View, hex, tint, usePulse, type Layout } from "../kit/ui";
-import { bossBannerState } from "./bossBannerModel";
+import { bossBannerState, pipSize } from "./bossBannerModel";
 
 interface BossBannerProps {
   name: string;
@@ -35,6 +35,7 @@ export function BossBanner({ name, timeLimit, activeSeconds, hp, maxHp, defeated
   const { t } = useTranslation();
   const accent = hex(accentColor);
   const s = bossBannerState(timeLimit, activeSeconds, hp, maxHp, defeated);
+  const pip = pipSize(s.pips?.length ?? 0);
 
   return (
     <layoutContainer eventMode="none" layout={{ flexDirection: "column", alignItems: "center", gap: 4, ...(layout ?? {}) }}>
@@ -50,13 +51,13 @@ export function BossBanner({ name, timeLimit, activeSeconds, hp, maxHp, defeated
         {s.remaining != null && <Countdown seconds={s.remaining} urgent={s.urgent} />}
       </View>
 
-      <View layout={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <View layout={{ flexDirection: "row", alignItems: "center", gap: pip.gap }}>
         {defeated ? (
           <Label text={t("boss.defeated")} font="display" size={12} weight="700" upper letterSpacing={0.6} color={DEFEATED} glow={8} />
         ) : (
           s.pips?.map((full, i) => (
             <View key={i} layout={{
-              width: 16, height: 8, borderRadius: 2,
+              width: pip.width, height: 8, borderRadius: 2,
               backgroundColor: full ? accent : tint(0xffffff, 0.15),
             }} />
           ))

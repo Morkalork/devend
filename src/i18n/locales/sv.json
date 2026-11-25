@@ -318,7 +318,11 @@
       "compiling": "kompilerar karta",
       "newRun": "startar ny runda"
     },
-    "fullGravityStinger": "Full gravitation!"
+    "fullGravityStinger": "Full gravitation!",
+    "beatEffectRestore": "trasiga tegelstenar byggs upp igen",
+    "beatEffectRollback": "dina staket nära kärnan sprängs bort",
+    "beatPatch": "Patch på väg",
+    "beatRollback": "Återställning"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -2268,6 +2272,11 @@
         "name": "Leverera inom budget",
         "description": "Nöt ner bygget två gånger och stängsla sedan in det i den ljusa rutan, inom tjugosex staket.",
         "clarify": "Bygget kräver tre fångster. De två första kan ske var som helst och kostar inget liv: det sliter sig loss, snabbare och mindre, och den första återställer ett av dina staket. Den tredje måste ske inne i den ljusa rutan (uppe till vänster). Hela striden har tjugosex staket; när det sista är förbrukat utan vinst misslyckas banan. Tar tiden slut misslyckas den också."
+      },
+      "monolith-early": {
+        "name": "Hotfix-fredag",
+        "description": "Krossa Kärnan inom 45 sekunders spel.",
+        "clarify": "Krossa Monolitens Kärna inom 45 aktiva sekunder för extra övertid. Pauser räknas inte."
       }
     },
     "tagSets": {
@@ -2320,6 +2329,10 @@
       "level-45": {
         "name": "Production Outage",
         "intro": "Allt på en gång, och allt du har lärt dig. Ett kedjat par där varje halva kräver två fångster, som Merge Conflict; en radering av varje staket på brädet var tjugofemte sekund, som Force Push; och överstora minioner som läcker ut hela tiden, som Memory Leak. Nöt ner båda halvorna, stängsla sedan in dem i den ljusa rutan uppe till höger, där din första boss levererades. Fånga dem på en pelare, spara en frysning till raderingen, och leverera."
+      },
+      "level-5": {
+        "name": "Monoliten",
+        "intro": "Den äldsta koden i företaget, och ingen vågar röra den. Krossa dess Kärna före release. Skalet lagas var 15:e sekund, och när Kärnan är halvt krossad rullar den tillbaka dina stängsel runt sig. En boll klarar det; en tyngre, eller två, gör det fortare."
       }
     },
     "levels": {
@@ -2328,20 +2341,20 @@
         "premise": "Den där du vinner direkt genom att låsa in den enda bollen, så hörnvrån är en knapp märkt klart nu."
       },
       "level-2": {
-        "name": "Pull Request",
-        "premise": "Den där dörröppningen håller isär två bollar, och vinsten vill ha en inlåst på var sin sida om den."
+        "name": "Enhetstester",
+        "premise": "Den där nio tegelstenar står i mitten och trettio sekunder bara räcker om du stängslar in din boll intill dem."
       },
       "level-3": {
-        "name": "Definition of Done",
-        "premise": "Den där den ljusa syntaxrutan är vinsten: rensa brädet och lås in en boll inuti den."
+        "name": "Kodgranskning",
+        "premise": "Den där varje platta tål tre rejäla träffar, så en tyngre boll är den kortare vägen igenom."
       },
       "level-4": {
-        "name": "Code Owner",
-        "premise": "Den där en vakt patrullerar framför lådans dörr, så att stänga lådan blir en fråga om när."
+        "name": "Brandvägg",
+        "premise": "Den där plattorna står bakom en mur av tegel, så du bryter dig in innan du krossar dem."
       },
       "level-5": {
-        "name": "Flaky test",
-        "premise": "Den där en enda beröring öppnar en lucka i en kort kolumn av skärvor, och inget annat är nytt."
+        "name": "Monoliten",
+        "premise": "Den där bossen är en platta på tjugoåtta träffar bakom ett skal som lagar sig självt."
       },
       "level-6": {
         "name": "Refactor",

@@ -11,6 +11,9 @@
  *   PAY        a map harder than an earlier one (Casual wins less) does not
  *              pay less than it. Pay follows difficulty.
  *
+ * A boss is held to a lower band, BOSS_BAND: it is the act's exam, and a
+ * Casual player should lose it about as often as it wins (BOSS_PLAN.md).
+ *
  * The first map is the tutorial: it is meant to be won and to test nothing,
  * so BAND and BUILD are not asked of it (TUTORIAL_MAPS).
  *
@@ -23,6 +26,8 @@
 import type { CampaignResult } from "./runCampaign";
 
 export const CASUAL_BAND: readonly [number, number] = [0.5, 0.8];
+/** A boss's band for the Casual player (BOSS_PLAN.md). */
+export const BOSS_BAND: readonly [number, number] = [0.3, 0.6];
 export const BUILD_GAP = 0.15;
 export const ONE_CAUSE_MAX = 0.7;
 /** Maps that teach the loop and are held to no band: the ladder's first. */
@@ -51,7 +56,12 @@ const median = (xs: number[]): number => {
 };
 
 /** Check every map of a sweep, map 1 first. `results` is per player id. */
-export function checkMaps(results: Record<string, CampaignResult[]>, maps: number): MapCheck[] {
+export function checkMaps(
+  results: Record<string, CampaignResult[]>,
+  maps: number,
+  /** Map numbers that are bosses, held to BOSS_BAND. */
+  bossMaps: readonly number[] = [],
+): MapCheck[] {
   const ids = Object.keys(results);
   const shareOf = (id: string, level: number): number => {
     const tries = results[id].flatMap(r => r.attempts).filter(a => a.level === level);
@@ -80,9 +90,10 @@ export function checkMaps(results: Record<string, CampaignResult[]>, maps: numbe
 
     const flags: string[] = [];
     if (Number.isFinite(casual) && !TUTORIAL_MAPS.includes(level)) {
-      if (casual < CASUAL_BAND[0]) {
+      const band = bossMaps.includes(level) ? BOSS_BAND : CASUAL_BAND;
+      if (casual < band[0]) {
         flags.push(`too hard: Casual wins ${Math.round(casual * 100)}%`);
-      } else if (casual > CASUAL_BAND[1]) {
+      } else if (casual > band[1]) {
         flags.push(`too easy: Casual wins ${Math.round(casual * 100)}%`);
       }
       if (best.share - casual < BUILD_GAP) {

@@ -577,7 +577,9 @@ export function GameScreen({
   const [bossPhaseLabel, setBossPhaseLabel] = useState<string | null>(null);
   const prevBossHpRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!level.boss || !gameState.bossActive) { prevBossHpRef.current = null; return; }
+    // A boss BALL's lives: a Legacy System's Core (BOSS_PLAN.md) loses a point
+    // a hit, and flashing a phase name on every one of sixteen is noise.
+    if (!level.boss?.bossBall || !gameState.bossActive) { prevBossHpRef.current = null; return; }
     const hp = gameState.bossHp;
     const prev = prevBossHpRef.current;
     prevBossHpRef.current = hp;

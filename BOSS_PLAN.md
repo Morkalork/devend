@@ -1,7 +1,7 @@
-# Bosses: Legacy Systems (plan)
+# Bosses: Legacy Systems (plan and build record)
 
-The setting for bosses on the brick ladder. Not built yet; this is the design
-to agree on before the first one is.
+The setting for bosses on the brick ladder. The first, The Monolith, is built
+as map 5 (2026-11-25); the build record is at the end.
 
 ## Why a new setting
 
@@ -82,16 +82,23 @@ beat Casual by 15 points, each a different way.
 
 ## The first one: "The Monolith"
 
-Proposed as map 5, closing the brick ladder's first act. It holds one Core,
-one Shell and two incidents, so it teaches the setting on its own:
+Map 5, closing the brick ladder's first act. It holds one Core, one Shell and
+two incidents, so it teaches the setting on its own. As built:
 
-- **Core:** 16 hits, in the middle.
-- **Shell:** ten 2-hit bricks, with a gap facing a different way on each of
-  the four deals.
-- **Patch** every 15 seconds.
-- **Rollback** once, at half the Core's hits.
-- **Clock:** 75 seconds.
-- **Points:** 40.
+- **Core:** a 95x60 slab of 28 hits, in the middle (first drawn at 16).
+- **Shell:** thirteen one-touch bricks round it, with one 68-wide gap, on the
+  right as authored and on another side on each of the four deals. (The plan
+  said 2-hit bricks; a brick breaks on one touch whatever its count, and that
+  is the brick the player already knows.)
+- **Patch** every 15 seconds, rebuilding the Shell.
+- **Rollback** once, at 14 of the Core's 28 hits: a blast of radius 160 from
+  the Core.
+- **Clock:** 70 seconds (first drawn at 75).
+- **Spawn:** no ball starts inside the fortress (the box round the Core and
+  its Shell). Balls start near the board's middle, and on many deals one began
+  beside the Core with half the fight already won.
+- **Points:** 40, and Hotfix Friday: 10h more for breaking the Core inside 45
+  seconds.
 - **Win:** smash the Core (`smashed`, 1 of `monoliths`); the Shell counts for
   nothing.
 
@@ -132,3 +139,59 @@ already exist:
   the old bosses unlocked features?
 - Should the Patch rebuild bricks under claimed ground as solid wall, so
   fencing near the Core has a cost, or never?
+
+## Build record (2026-11-25)
+
+Built with maps 3 and 4 as bridges, at the owner's choice, so the boss sits at
+map 5 as asked: 3 "Code Review" meets the slab (a brick of three hits, where
+weight pays), 4 "Firewall" puts slabs behind a wall of bricks (break in, then
+break them), and 5 is the Monolith.
+
+The engine, all of it map beats and breakables the game already had:
+
+| Piece | Where |
+|---|---|
+| `everySeconds`: a beat that repeats, warned ahead of each firing | `mapBeats.ts` tickRepeatingBeat |
+| `atHitsOn`: a beat on a breakable's damage, telegraphed like a space beat | `mapBeats.ts` |
+| `restore`: the Patch. Never on a ball, a buried brick or claimed ground | `mapBeats.ts` restoreBrick |
+| `rollback`: the blast, carved and settled by the destroy pass | `mapBeats.ts`, `destructibles.ts` (blastCarve) |
+| `boss.core`: the nameplate's health is the Core's hits left | `bossPhases.ts` followCoreHealth, `initGame.ts` |
+| Pips that fit any count | `bossBannerModel.ts` pipSize |
+| Banner words in four languages | `game.beatPatch`, `game.beatRollback`, `game.beatEffectRestore`, `game.beatEffectRollback` |
+
+The Rollback was planned as "crack the newest fence". On a one-ball board
+almost every finished fence holds claimed ground on one side, and the game
+never breaks those (Refactor's rule), so it would almost never have fired. A
+blast through fences and claimed ground near the Core takes back exactly the
+boxing-in the plan meant, and the bombs had already made it safe.
+
+The nameplate's per-hit flash ("REVERTED", "PANIC MODE") stays with the boss
+balls: on a Core it would fire on every one of 28 hits.
+
+Tuned with the six bot players through maps 1-5 in practice, par +60, the
+checklist holding a boss to Casual 30-60%:
+
+| Variant | Casual | Super Ball | Fence Engineer | Verdict |
+|---|---|---|---|---|
+| Core 16, 75s | 76% | 87% | 80% | too easy, no build stands out |
+| Core 20, 75s | 70% | 83% | 80% | too easy |
+| Core 16, Patch every 10s | 80% | 83% | 76% | too easy |
+| Core 24, 75s | 64% | 83% | 74% | too easy |
+| Core 28, 65s, Patch every 12s (30 runs) | 64% | 68% | 67% | too easy, no build stands out |
+| Core 28, 65s (30 runs) | 55% | 79% | 62% | meets all |
+| Core 32, 70s (30 runs) | 57% | 79% | 62% | meets all |
+| Core 28, 65s, no spawn inside (30 runs) | 48% | 71% | | the clock 72% of losses |
+| **Core 28, 70s, no spawn inside (30 runs)** | **50%** | **71%** | | **the clock 71% of losses** |
+
+The spawn rule came last, from looking at the map in a browser: a ball began
+inside the Shell beside the Core on many deals, and every row above it was
+measured with that luck in it. Keeping spawns out made the boss harder, and
+70 seconds is the shipped clock. The one-knob flag that remains is the bot's
+blind spot (it never walls the Core off; a person will), recorded on the map.
+
+Fleet, arriving with the second ball it saved 100h for, wins about 36%: two
+balls are more fences hit, not more hits on the Core. Safe Hands, without
+weight, about 19%. Tests: `legacySystem.test.ts`.
+
+Still open from the plan: the Code freeze incident (`shieldSeconds`), the
+three later systems, and the owner's questions above.

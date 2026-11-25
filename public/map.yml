@@ -195,3 +195,445 @@ levels:
         height: 22
         brittle: true
     balls: []
+
+  # 3 "Code Review" - MEET the slab.
+  #
+  # Four slabs, one in each quarter of an open board. A slab is a brick that
+  # takes about three solid hits, and the force of a hit is the ball's weight
+  # times its speed, so this is the map that tells a run its weight rung is
+  # worth having: a plain ball needs three good hits a slab, weight one about
+  # two, weight two one or two. Win: three of the four (one spare, MAP_DESIGN_
+  # CARD.md section 3).
+  #
+  # A slab is solid ground (unlike a brick, it is sealed into the grid), so a
+  # fence can stop against it. That is the other half of the lesson: box the
+  # ball in beside a slab and every bounce is a hit. Wall a slab off with no
+  # ball beside it and it is gone, and with only one spare that costs the map.
+  #
+  # Tests a build: weight (MAP_DESIGN_CARD.md section 5).
+  #
+  # Measured (BOT_PLAYERS.md, practice, par +60, 20 runs): Casual wins 56% of
+  # attempts, Super Ball 91% (weight two or three by here), Safe Hands 12% (it
+  # starts with grace, not weight). The checklist flags one knob: the clock
+  # takes 84% of losses. That is the bot, not the map: it checks before every
+  # fence that the fence will not wall off a slab the win needs, so it never
+  # loses that way, and a person will. Slabs moved flush to the board's edges
+  # (so walling one off is easy) made the map a wall for the bot instead, 3%
+  # to 16%, because a ball rarely meets a slab against a wall.
+  - id: level-3
+    name: Code Review
+    level: 3
+    premise: "The one where every slab takes three solid hits, so a heavier ball is the shorter way through."
+    sizeThreshold: 15
+    timeLimit: 45
+    expectedCuts: 4
+    points: 26
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    pickupChance: 0
+    win:
+      require:
+        - kind: smashed
+          count: 3
+          of: monoliths
+    entities:
+      - id: slab-nw
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 270
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-ne
+        kind: wall
+        shape: rect
+        x: 630
+        'y': 270
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-sw
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 590
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-se
+        kind: wall
+        shape: rect
+        x: 630
+        'y': 590
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+    balls: []
+
+  # 4 "Firewall" - USE the brick and the slab together.
+  #
+  # A wall of twelve bricks runs the width of the board, and three slabs stand
+  # behind it. Bricks are not walls (BRICKS_PLAN.md rule 7): a fence passes
+  # through them, but a ball does not, so the ball has to break in before it
+  # can break the slabs. Win: two of the three slabs (one spare).
+  #
+  # The rehearsal for the boss on map 5: something to break through, and
+  # something to break behind it. The gaps at the wall's ends are under 12, so
+  # no ball slips round it.
+  #
+  # Tests a build: fences (box the ball against the wall, then behind it) and
+  # weight (the slabs).
+  #
+  # Measured (practice, par +60, 20 runs): Casual wins 73% of attempts, the
+  # Fence Engineer 91%; the clock takes 63% of losses; pays about 38h.
+  - id: level-4
+    name: Firewall
+    level: 4
+    premise: "The one where the slabs stand behind a wall of bricks, so you break in before you break them."
+    sizeThreshold: 15
+    timeLimit: 55
+    expectedCuts: 5
+    points: 32
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    pickupChance: 0
+    win:
+      require:
+        - kind: smashed
+          count: 2
+          of: monoliths
+    entities:
+      - id: fw-1
+        kind: wall
+        shape: rect
+        x: 56
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-2
+        kind: wall
+        shape: rect
+        x: 122
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-3
+        kind: wall
+        shape: rect
+        x: 188
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-4
+        kind: wall
+        shape: rect
+        x: 254
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-5
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-6
+        kind: wall
+        shape: rect
+        x: 386
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-7
+        kind: wall
+        shape: rect
+        x: 452
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-8
+        kind: wall
+        shape: rect
+        x: 518
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-9
+        kind: wall
+        shape: rect
+        x: 584
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-10
+        kind: wall
+        shape: rect
+        x: 650
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-11
+        kind: wall
+        shape: rect
+        x: 716
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: fw-12
+        kind: wall
+        shape: rect
+        x: 782
+        'y': 330
+        width: 62
+        height: 22
+        brittle: true
+      - id: slab-l
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 160
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-m
+        kind: wall
+        shape: rect
+        x: 405
+        'y': 160
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+      - id: slab-r
+        kind: wall
+        shape: rect
+        x: 660
+        'y': 160
+        width: 90
+        height: 40
+        breakable: true
+        hitsToBreak: 3
+    balls: []
+
+  # 5 "The Monolith" - BOSS: the first Legacy System (BOSS_PLAN.md).
+  #
+  # The boss is the board. In the middle stands the Core, a slab of
+  # twenty-eight hits; around it, a Shell of thirteen bricks with one gap, on the right as
+  # authored and on another side on each of the four deals. Break the Core and
+  # the map is won; the Shell counts for nothing (it is in the way, not in the
+  # win). The nameplate's health is the Core's hits left.
+  #
+  # The system defends itself with two incidents, both telegraphed:
+  #   PATCH     every 15 seconds the Shell's broken bricks are rebuilt, except
+  #             where a ball stands or the ground is claimed. Break fast, or
+  #             keep the ball inside.
+  #   ROLLBACK  once, at half the Core's hits: a blast from the Core through
+  #             fences and claimed ground within 160. Whatever boxing-in you
+  #             did close to the Core is undone, once, and has to be redone.
+  #
+  # Two answers: through the Shell (break a gap, keep the ball in with the
+  # Core) or through the gap (fence the ball in on that side). One ball can win
+  # it inside the clock; weight, a second ball (affordable after map 4) and
+  # fence speed each make it faster. Breaking the Core inside 45 seconds pays
+  # an extra 10h.
+  #
+  # Channels round the Core are 68 wide, and the Shell's gap 68: section 6's
+  # gap rule. No boss ball, so no "boss outside": the losses are the clock and
+  # the Core walled off from every ball.
+  #
+  # No ball starts inside the fortress (initGame): balls spawn near the middle
+  # of the board, and on many deals one began beside the Core with half the
+  # fight already won.
+  #
+  # Measured (BOT_PLAYERS.md, the six players in practice through maps 1-5,
+  # par +60, 30 runs each): Casual wins 50% of attempts (the boss band is
+  # 30-60%), Super Ball 71% (weight); it pays about 56h. Tried first at 16
+  # hits and 75 seconds: Casual won 76% and no build stood out. A Patch every
+  # 12 seconds instead of 15 made the careful players harder to tell apart,
+  # so it stays at 15. Fleet, arriving with the second ball it saved for, wins
+  # less than Super Ball: two balls are more fences hit, not more hits.
+  #
+  # The checklist flags one knob: the clock takes 71% of losses. The same
+  # blind spot as map 3: the bot never walls the Core off, and a person will.
+  - id: level-5
+    name: The Monolith
+    level: 5
+    premise: "The one where the boss is a slab of twenty-eight hits behind a shell that patches itself."
+    sizeThreshold: 15
+    timeLimit: 70
+    expectedCuts: 6
+    points: 40
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    pickupChance: 0
+    win:
+      require:
+        - kind: smashed
+          count: 1
+          of: monoliths
+    boss:
+      name: The Monolith
+      intro: "The oldest code in the company, and nobody dares touch it. Break its Core before release. Its Shell patches itself every 15 seconds, and when the Core is half broken it rolls back your fences around it. One ball can do it; a heavier one, or two, does it faster."
+      core: core
+      objective:
+        id: monolith-early
+        name: Hotfix Friday
+        description: Break the Core within 45 seconds of play.
+        clarify: "Break the Monolith's Core inside 45 active seconds for extra overtime. Pauses do not count."
+        kind: speedClear
+        params:
+          seconds: 45
+        reward: 10
+    beats:
+      - id: patch
+        everySeconds: 15
+        announce: game.beatPatch
+        leadMs: 2000
+        restore: [shell-top-1, shell-top-2, shell-top-3, shell-top-4, shell-bottom-1, shell-bottom-2, shell-bottom-3, shell-bottom-4, shell-left-1, shell-left-2, shell-left-3, shell-right-1, shell-right-3]
+      - id: rollback
+        atHitsOn:
+          id: core
+          hits: 14
+        announce: game.beatRollback
+        leadMs: 1600
+        rollback:
+          at: core
+          radius: 160
+    entities:
+      - id: core
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 420
+        width: 95
+        height: 60
+        breakable: true
+        hitsToBreak: 28
+        objective: true
+        rise: 1.5
+      - id: shell-top-1
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 330
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-top-2
+        kind: wall
+        shape: rect
+        x: 390
+        'y': 330
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-top-3
+        kind: wall
+        shape: rect
+        x: 460
+        'y': 330
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-top-4
+        kind: wall
+        shape: rect
+        x: 530
+        'y': 330
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-bottom-1
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 548
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-bottom-2
+        kind: wall
+        shape: rect
+        x: 390
+        'y': 548
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-bottom-3
+        kind: wall
+        shape: rect
+        x: 460
+        'y': 548
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-bottom-4
+        kind: wall
+        shape: rect
+        x: 530
+        'y': 548
+        width: 65
+        height: 22
+        brittle: true
+      - id: shell-left-1
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 357
+        width: 22
+        height: 58
+        brittle: true
+      - id: shell-left-2
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 420
+        width: 22
+        height: 58
+        brittle: true
+      - id: shell-left-3
+        kind: wall
+        shape: rect
+        x: 320
+        'y': 483
+        width: 22
+        height: 58
+        brittle: true
+      - id: shell-right-1
+        kind: wall
+        shape: rect
+        x: 573
+        'y': 357
+        width: 22
+        height: 58
+        brittle: true
+      - id: shell-right-3
+        kind: wall
+        shape: rect
+        x: 573
+        'y': 483
+        width: 22
+        height: 58
+        brittle: true
+    balls: []

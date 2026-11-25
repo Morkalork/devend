@@ -1029,11 +1029,28 @@ export function processDestroysFn(
 ): void {
   const pending = game.pendingDestroys;
   game.pendingDestroys = [];
-  if (pending.length === 0) return;
+  const rollbacks = game.pendingRollbacks ?? [];
+  game.pendingRollbacks = [];
+  if (pending.length === 0 && rollbacks.length === 0) return;
 
   const now = simNow();
   let opened = 0;
   let brickWent = false;
+
+  // A boss's Rollback (mapBeats.ts): a blast from its Core through fences and
+  // claimed ground, settled below with whatever else this pass opened. It
+  // strikes nothing and throws no ball: it takes back ground, nothing more.
+  for (const r of rollbacks) {
+    opened += carveBlast(game, r.centre, r.radius).opened;
+    const ring = { vertices: Array.from({ length: 16 }, (_, i) => ({
+      x: r.centre.x + Math.cos((i / 16) * Math.PI * 2) * r.radius * 0.35,
+      y: r.centre.y + Math.sin((i / 16) * Math.PI * 2) * r.radius * 0.35,
+    })) } as Polygon;
+    const fire = spawnDebris(ring, BOMB_BLAST_COLOR, now, BOMB_BLAST_PARTICLES, 1.8);
+    fire.reach = r.radius * 2;
+    game.objectDebris.push(fire);
+    if (game.objectDebris.length > MAX_OBJECT_DEBRIS) game.objectDebris.shift();
+  }
 
   for (const d of pending) {
     // Mirror/mover kills drop the destroying (black) ball's lock multiplier.

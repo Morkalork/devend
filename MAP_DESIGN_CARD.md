@@ -100,7 +100,7 @@ ARCHETYPE_SWEEP=1 ARCHETYPE_OUT=/tmp/p ARCHETYPE_SEEDS=30 ARCHETYPE_ENDLESS=1 AR
 
 The report's checklist holds every map but the first to four targets:
 
-- **Band:** the Casual player wins 50-80% of its attempts.
+- **Band:** the Casual player wins 50-80% of its attempts (a boss 30-60%).
 - **Build:** some player wins 15 points more than Casual.
 - **Losses:** no single cause takes over 70% of them.
 - **Pay:** no harder map pays less than an easier one.

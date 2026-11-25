@@ -630,7 +630,8 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   // three end-of-frame passes came to be missing from it before.
   tickDrills(game, dt);
   if (game.pendingWallBreaks.length > 0) processWallBreaksFn(game, callbacks);
-  if (game.pendingDestroys.length > 0) {
+  // A boss's Rollback rides the destroy pass (mapBeats.ts), so it runs it too.
+  if (game.pendingDestroys.length > 0 || (game.pendingRollbacks?.length ?? 0) > 0) {
     processDestroysFn(game, callbacks, levelNumber, modifiers);
     // A pocket that was waiting on its bricks locks now, as in the browser's loop.
     settleBrickHeldLocksFn(game, level, levelNumber, modifiers, 0, callbacks);

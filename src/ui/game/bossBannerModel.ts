@@ -9,6 +9,21 @@ export interface BossBannerState {
   pips: boolean[] | null;
 }
 
+/**
+ * How wide one pip is, and the gap after it. A boss ball has a handful of
+ * lives and gets fat pips; a Legacy System's Core (BOSS_PLAN.md) has sixteen
+ * hits or more, and the row must still fit a small phone, so the pips narrow
+ * to keep the whole row near PIP_ROW_MAX.
+ */
+export const PIP_ROW_MAX = 220;
+export function pipSize(count: number): { width: number; gap: number } {
+  if (count <= 10) {
+    return { width: 16, gap: 4 };
+  }
+  const gap = count > 24 ? 2 : 3;
+  return { width: Math.max(2, Math.floor((PIP_ROW_MAX - gap * (count - 1)) / count)), gap };
+}
+
 export function bossBannerState(
   timeLimit: number | null, activeSeconds: number, hp: number, maxHp: number, defeated: boolean,
 ): BossBannerState {

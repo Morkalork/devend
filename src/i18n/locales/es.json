@@ -318,7 +318,11 @@
       "compiling": "compilando mapa",
       "newRun": "iniciando nueva partida"
     },
-    "fullGravityStinger": "¡Gravedad Total!"
+    "fullGravityStinger": "¡Gravedad Total!",
+    "beatEffectRestore": "los ladrillos rotos se reconstruyen",
+    "beatEffectRollback": "tus vallas cerca del núcleo saltan por los aires",
+    "beatPatch": "Llega un parche",
+    "beatRollback": "Reversión"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -2268,6 +2272,11 @@
         "name": "Entregar dentro del presupuesto",
         "description": "Desgasta la build dos veces y luego enciérrala en la caja clara, con veintiséis vallas.",
         "clarify": "La build necesita tres atrapadas. Las dos primeras pueden ser en cualquier sitio y no cuestan vida: se suelta, más rápida y más pequeña, y la primera revierte una de tus vallas. La tercera debe ser dentro de la caja clara (arriba a la izquierda). Toda la pelea tiene veintiséis vallas; si gastas la última sin ganar, el mapa falla. Quedarte sin tiempo también lo hace fallar."
+      },
+      "monolith-early": {
+        "name": "Hotfix de viernes",
+        "description": "Rompe el Núcleo en 45 segundos de juego.",
+        "clarify": "Rompe el Núcleo del Monolito en 45 segundos activos para ganar horas extra. Las pausas no cuentan."
       }
     },
     "tagSets": {
@@ -2320,6 +2329,10 @@
       "level-45": {
         "name": "Production Outage",
         "intro": "Todo a la vez, y todo lo que has aprendido. Una pareja encadenada que necesita dos atrapadas por mitad, como el Merge Conflict; un borrado de cada valla del tablero cada veinticinco segundos, como el Force Push; y minions enormes escapándose todo el rato, como el Memory Leak. Desgasta las dos mitades y luego enciérralas en la caja clara, arriba a la derecha, donde entregaste a tu primer jefe. Engánchalas en un pilar, guarda una congelación para el borrado y entrégalo."
+      },
+      "level-5": {
+        "name": "El Monolito",
+        "intro": "El código más viejo de la empresa, y nadie se atreve a tocarlo. Rompe su Núcleo antes del lanzamiento. Su Caparazón se parchea cada 15 segundos, y cuando el Núcleo está medio roto revierte tus vallas a su alrededor. Una bola puede hacerlo; una más pesada, o dos, lo hacen más rápido."
       }
     },
     "levels": {
@@ -2328,20 +2341,20 @@
         "premise": "En la que encerrar la única bola gana de golpe, así que el rincón de la esquina es un botón que dice terminar ya."
       },
       "level-2": {
-        "name": "Pull Request",
-        "premise": "En la que la puerta separa dos bolas, y para ganar hay que sellar una a cada lado."
+        "name": "Pruebas unitarias",
+        "premise": "En la que nueve ladrillos esperan en el centro y treinta segundos solo alcanzan si encierras tu bola junto a ellos."
       },
       "level-3": {
-        "name": "Definición de Hecho",
-        "premise": "En la que la caja de sintaxis clara es la victoria: limpia el tablero y encierra una bola dentro."
+        "name": "Revisión de código",
+        "premise": "En la que cada losa aguanta tres golpes sólidos, así que una bola más pesada es el camino corto."
       },
       "level-4": {
-        "name": "Code Owner",
-        "premise": "En la que un guardia patrulla la puerta de la caja, así que cerrarla es cuestión de cuándo."
+        "name": "Cortafuegos",
+        "premise": "En la que las losas están detrás de un muro de ladrillos, así que hay que entrar antes de romperlas."
       },
       "level-5": {
-        "name": "Test Inestable",
-        "premise": "En la que un solo toque abre un hueco en una columna corta de fragmentos, y nada más es nuevo."
+        "name": "El Monolito",
+        "premise": "En la que el jefe es una losa de veintiocho golpes detrás de un caparazón que se parchea solo."
       },
       "level-6": {
         "name": "Refactor",

@@ -198,6 +198,15 @@ describe("the map checklist", () => {
     expect(m.flags.join(" | ")).toMatch(/one knob: timeUp/);
   });
 
+  it("holds a boss to its own, lower band", () => {
+    const boss = [run([...tries(1, 10, 10), ...tries(2, 5, 10), ...tries(2, 0, 2, "objectiveBuried")])];
+    const fleet = [run([...tries(1, 10, 10), ...tries(2, 9, 10, "objectiveBuried")])];
+    // 42% is too hard for an ordinary map, and inside a boss's band.
+    expect(checkMaps({ casual: boss, fleet }, 2)[1].flags.join(" | ")).toMatch(/too hard/);
+    expect(checkMaps({ casual: boss, fleet }, 2, [2])[1].flags.join(" | ")).not.toMatch(/too hard/);
+    expect(checkMaps({ casual: [run([...tries(1, 10, 10), ...tries(2, 7, 10)])], fleet }, 2, [2])[1].flags.join(" | ")).toMatch(/too easy/);
+  });
+
   it("holds the tutorial to no band", () => {
     const [m] = checkMaps({ casual: [run(tries(1, 10, 10))], fleet: [run(tries(1, 10, 10))] }, 1);
     expect(m.flags).toEqual([]);

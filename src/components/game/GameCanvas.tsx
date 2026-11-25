@@ -54,7 +54,7 @@ import { raiseMessage, type GameMessage, type GameMessageId } from "@/lib/gameMe
 import { readLockAxes } from "@/lib/lockCapacity";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
-import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
+import { tickBossPhases, tickBossSpit, tickBossFenceWipe, followCoreHealth } from "@/lib/physics/bossPhases";
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { resolveBoardEdges, type BoardEdgeSpecs } from "@/lib/physics/boardEdges";
@@ -1633,6 +1633,8 @@ export function GameCanvas({
       game.firedBeats = [];
       game.warnedBeats = [];
       game.pendingBeats = [];
+      game.beatNextAt = {};
+      game.pendingRollbacks = [];
       game.beatSpeedMult = 1;
       setBeatBanner(null);
       lastTimeTierRef.current = 0; // fresh map: re-arm the time-tier toasts
@@ -1993,6 +1995,9 @@ export function GameCanvas({
       // finishes even if the space reached the goal by a path that didn't run
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () => {
+        // A Legacy System's Core is the boss's health (bossPhases.ts).
+        const core = followCoreHealth(game, level);
+        if (core) setBossHud({ active: core.hp > 0, hp: core.hp, maxHp: core.maxHp, defeated: core.hp === 0 });
         // Only when the BOARD changed since the last frame. The evaluation
         // below reads the whole board (reachability floods for an area or a
         // smash clause, a strike ring per brick for the markers), and it was

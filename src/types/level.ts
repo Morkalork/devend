@@ -666,6 +666,31 @@ export interface MapBeat {
   atSpaceRemaining?: number;
   /** Fire when active-play seconds reaches this (alternative/added trigger). */
   atSeconds?: number;
+  /**
+   * Fire again every this many seconds (BOSS_PLAN.md: a boss's Patch). The
+   * first time is `atSeconds`, or one interval in when that is absent; each
+   * repeat is telegraphed like the first.
+   */
+  everySeconds?: number;
+  /**
+   * Fire once the named breakable has taken this many hits, or is broken
+   * (BOSS_PLAN.md: a boss's Core). Player-driven, so it is telegraphed with
+   * its lead before it lands, as a space beat is.
+   */
+  atHitsOn?: { id: string; hits: number };
+  /**
+   * Rebuild these broken bricks (a boss's Patch). Never one a ball overlaps,
+   * one that was buried, or one standing on claimed ground: a Patch must not
+   * trap a ball or reopen the player's ground.
+   */
+  restore?: string[];
+  /**
+   * Blast outward from the centre of this breakable (a boss's Rollback):
+   * fences and claimed ground within `radius` go, as in a bomb blast
+   * (blastCarve.ts), and ground no ball can reach closes straight back up.
+   * Breakables, the boss itself among them, are untouched.
+   */
+  rollback?: { at: string; radius: number };
   /** Spawn this many extra balls ("adds") off live balls. */
   spawnAdds?: number;
   /** Force-break the destructible entity with this id (topples / reveals / rewards). */
@@ -922,6 +947,12 @@ export interface BossConfig {
   /** The boss antagonist ball. When set, a distinct boss ball spawns and must be
    *  defeated (the objective should be `defeatBoss`). */
   bossBall?: BossBall;
+  /**
+   * A Legacy System's Core (BOSS_PLAN.md): the id of the breakable that IS the
+   * boss. Its hits left are the nameplate's health, and breaking it defeats
+   * the boss. For a boss with no ball; the map's authored win says to break it.
+   */
+  core?: string;
 }
 
 /** The boss antagonist ("Release Candidate"): big, fast, spits minions, and takes

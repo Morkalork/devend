@@ -486,6 +486,16 @@ export interface CanvasGameState {
    */
   pendingBeats: { id: string; dueActiveSeconds: number }[];
   /**
+   * When each repeating beat (`everySeconds`) next fires, in activePlaySeconds,
+   * by beat id. Absent until the first repeat is scheduled.
+   */
+  beatNextAt?: Record<string, number>;
+  /**
+   * Rollback blasts a beat has queued (mapBeats.ts), carved by the next
+   * destroy pass so the ground they open is settled and painted with the rest.
+   */
+  pendingRollbacks?: { centre: { x: number; y: number }; radius: number }[];
+  /**
    * Which of the four orientations this map was dealt in (0 = as authored).
    *
    * initGame has always picked one and rotated the concrete geometry into it,

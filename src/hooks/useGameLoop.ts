@@ -722,7 +722,8 @@ export function createGameLoop(
 
     // Remove mirrors/movers a black ball finished off this frame (rebuilds
     // regions when a mirror reopens space — too heavy for the fixed-step loop).
-    if (game.pendingDestroys.length > 0) {
+    // A boss's Rollback rides the same pass (mapBeats.ts), so it runs it too.
+    if (game.pendingDestroys.length > 0 || (game.pendingRollbacks?.length ?? 0) > 0) {
       callbacks.processDestroys?.();
     }
 
