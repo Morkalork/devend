@@ -905,6 +905,47 @@ export function captureUnreachableCells(
   }
 
   // 5. Capture every ACTIVE cell no ball can reach (keep-active pockets stay).
+  // CRACKS stay live. A leftover patch with nowhere a ball could ever be
+  // centred (no core cell), that opens straight onto live ground, is a crack
+  // in the edge of the ball's own space, not a room: the strip between a
+  // fence and the underside of a slab, 33 units high for a 36-unit ball.
+  // Claiming it painted a stub of claimed colour sticking out of the fence
+  // into the pocket, reported from play on map 3 as a lock artifact. A room
+  // behind a doorway too narrow for the ball has somewhere a ball fits inside
+  // it, so it is claimed exactly as before; so is a crack sealed off on its
+  // own, which no live ground touches.
+  {
+    const seen = new Uint8Array(n);
+    const stack: number[] = [];
+    const comp: number[] = [];
+    const leftover = (i: number) => cells[i] === CellState.ACTIVE && !reachable[i] && !keep?.[i];
+    for (let start = 0; start < n; start++) {
+      if (seen[start] || !leftover(start)) continue;
+      comp.length = 0;
+      let opensOntoLive = false;
+      let roomForABall = false;
+      seen[start] = 1;
+      stack.push(start);
+      while (stack.length > 0) {
+        const cur = stack.pop()!;
+        comp.push(cur);
+        if (core[cur]) roomForABall = true;
+        const row = (cur / width) | 0, col = cur % width;
+        const visit = (ni: number) => {
+          if (reachable[ni] && cells[ni] === CellState.ACTIVE) { opensOntoLive = true; return; }
+          if (!seen[ni] && leftover(ni)) { seen[ni] = 1; stack.push(ni); }
+        };
+        if (row > 0) visit(cur - width);
+        if (row < height - 1) visit(cur + width);
+        if (col > 0) visit(cur - 1);
+        if (col < width - 1) visit(cur + 1);
+      }
+      if (opensOntoLive && !roomForABall) {
+        for (const i of comp) reachable[i] = 1;
+      }
+    }
+  }
+
   for (let i = 0; i < n; i++) {
     if (cells[i] === CellState.ACTIVE && !reachable[i] && !keep?.[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
   }

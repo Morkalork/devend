@@ -24,7 +24,7 @@ import type { LevelConfig } from "@/types/level";
 import { LADDER, byLevel } from "./fixtures/maps";
 
 describe("claimed ground closed all the way round the ball", () => {
-  it("is one piece with the pocket as a hole, the bricks inside the hole", () => {
+  it("covers none of the pocket: no live ground and no standing brick is under the fill", () => {
     installClock();
     setRunSeedText("cover");
     try {
@@ -44,16 +44,29 @@ describe("claimed ground closed all the way round the ball", () => {
         }
       }
       const ground = filledGround(g)!;
-      const withHoles = ground.shapes.filter(s => s.holes.length > 0);
-      expect(withHoles).toHaveLength(1);
-      const hole: Polygon = { vertices: withHoles[0].holes[0] } as Polygon;
+      const underFill = (p: { x: number; y: number }) => ground.shapes.some(sh =>
+        pointInPolygon(p, { vertices: sh.outer } as Polygon) && !sh.holes.some(h => pointInPolygon(p, { vertices: h } as Polygon)));
       const bricks = (g.destructibles ?? []).filter(d => !d.destroyed && !d.buried);
       expect(bricks).toHaveLength(9);
       for (const d of bricks) {
         const vs = d.obstaclePolygon!.vertices;
         const centre = { x: vs.reduce((s, v) => s + v.x, 0) / vs.length, y: vs.reduce((s, v) => s + v.y, 0) / vs.length };
-        expect(pointInPolygon(centre, hole), `${d.id} stands in the open pocket`).toBe(true);
+        expect(underFill(centre), `${d.id} is painted over`).toBe(false);
       }
+      // And the ball's own ground, cell by cell, away from the outline's edge.
+      const grid = g.spaceGrid!;
+      let covered = 0;
+      for (let i = 0; i < grid.cells.length; i++) {
+        if (grid.cells[i] !== 0) {
+          continue;
+        }
+        const col = i % grid.width, row = (i - col) / grid.width;
+        const p = { x: grid.originX + (col + 0.5) * grid.cellSize, y: grid.originY + (row + 0.5) * grid.cellSize };
+        if (underFill(p)) {
+          covered++;
+        }
+      }
+      expect(covered).toBeLessThan(grid.cells.filter(c => c === 0).length * 0.05);
     } finally {
       releaseClock();
     }
